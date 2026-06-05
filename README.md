@@ -1,17 +1,109 @@
-# keqdroid
+# KEQDIS
 
-Proxy/VPN flutter based client
+Клиент для подключения через подписку или отдельные конфиги. Android и Windows.
 
-## Getting Started
+[Скачать](https://github.com/Lemonochka/keqdroid/releases)
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## О приложении
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+KEQDIS работает с подписками провайдеров и ссылками на серверы. Есть список серверов, проверка задержки, правила маршрутизации, раздельное туннелирование, резервное копирование настроек.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+На Android — VPN для всего устройства.  
+На Windows — режим Proxy (системный прокси) или TUN (весь трафик через VPN-адаптер).
+
+---
+
+## Возможности
+
+- подписки по URL, автообновление по расписанию
+- ручное добавление серверов
+- подключение одним действием, автоподключение к последнему серверу
+- проверка серверов: TCP, HTTP, тест скорости
+- маршрутизация: напрямую / через VPN / блокировка; готовые списки
+- split tunnel: на Android — по приложениям, на Windows — по программам (в режиме TUN)
+- kill switch
+- экспорт и импорт настроек
+- тёмная и светлая тема
+- русский, English, Deutsch, 中文
+- обновление приложения из GitHub Releases
+
+---
+
+## Протоколы
+
+VLESS, VMess, Trojan, Shadowsocks, Hysteria 2.
+
+Форматы ссылок: `vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `hy2://`.
+
+Hysteria v1 не поддерживается.
+
+---
+
+## Скачать
+
+Сборки: [Releases](https://github.com/Lemonochka/keqdroid/releases).
+
+В одном релизе — файлы для Android и Windows:
+
+| Платформа | Файл |
+|-----------|------|
+| Android | `.apk` |
+| Windows | `.zip`, `.exe`, `.msi` или `.msix` |
+
+---
+
+## Android
+
+- Android 7.0 и новее
+- при первом подключении нужно разрешение VPN
+- уведомление в шторке, плитка в быстрых настройках
+- подписки обновляются в фоне
+
+---
+
+## Windows
+
+**Proxy** — системный прокси, подходит для браузеров и большинства программ.  
+**TUN** — весь трафик через VPN; запуск от имени администратора.
+
+Для TUN нужны `sing-box.exe` и `wintun.dll` (если их нет в сборке — рядом с `keqdroid.exe`).  
+Firefox может не использовать системный прокси; в приложении есть отдельная настройка.
+
+Окно можно свернуть в трей. Подписки обновляются, пока приложение открыто.
+
+### Настройки на диске
+
+Подписки и серверы хранятся в профиле Windows, не в папке с exe:
+
+`%APPDATA%\Roaming\com.keqdroid\keqdroid\`
+
+Для переноса на другой компьютер — экспорт/импорт в настройках приложения.
+
+---
+
+## Начало работы
+
+1. **Подписки** — добавить URL, нажать «Добавить и загрузить».
+2. **Серверы** — выбрать сервер.
+3. Подключиться.
+4. При необходимости — **Настройки**: маршрутизация, split tunnel.
+
+---
+
+## Сборка
+
+```bash
+flutter pub get
+flutter build apk --release      # Android
+flutter build windows --release  # Windows
+```
+
+Для Windows: `xray.exe` (и при необходимости `sing-box.exe`) в `assets/bin/windows/` до сборки. Подробнее — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
+
+---
+
+## Примечание
+
+Приложение не предоставляет серверы. Используйте свои подписки и соблюдайте законы вашей страны.
