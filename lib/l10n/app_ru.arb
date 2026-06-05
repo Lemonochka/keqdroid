@@ -496,5 +496,19 @@
   },
   "desktopConnectionMode": "Режим подключения",
   "desktopModeShort": "Режим",
-  "desktopDisconnectBeforeModeChange": "Отключитесь перед сменой режима подключения"
+  "desktopDisconnectBeforeModeChange": "Отключитесь перед сменой режима подключения",
+  "settingsDesktopTitle": "Windows",
+  "settingsDesktopSubtitle": "Трей, автозапуск, автоподключение",
+  "settingsMinimizeToTray": "Сворачивать в трей при закрытии",
+  "settingsMinimizeToTrayHint": "Если выключено, закрытие окна завершает приложение",
+  "settingsLaunchAtStartup": "Запускать с Windows",
+  "settingsLaunchAtStartupHint": "Запуск при входе в систему",
+  "settingsAutoConnectOnAutostart": "Подключаться при автозапуске",
+  "settingsAutoConnectOnAutostartHint": "Подключение к последнему серверу в режиме из боковой панели. Если для TUN нет прав администратора, используется Proxy",
+  "settingsAutoConnectRequiresAutostart": "Сначала включите «Запускать с Windows»",
+  "desktopTunAdminTitle": "Нужны права администратора",
+  "desktopTunAdminMessage": "Режим TUN требует запуск от имени администратора. Перезапустите приложение с повышенными правами — выбранный в боковой панели режим сохранится.",
+  "desktopTunAdminRestart": "Перезапустить от администратора",
+  "desktopTunAdminCancel": "Отмена",
+  "desktopTunAdminRestartFailed": "Не удалось перезапустить от администратора"
 }

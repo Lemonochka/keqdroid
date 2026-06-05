@@ -496,5 +496,19 @@
   },
   "desktopConnectionMode": "Verbindungsmodus",
   "desktopModeShort": "Modus",
-  "desktopDisconnectBeforeModeChange": "Trenne die Verbindung, bevor du den Verbindungsmodus änderst"
+  "desktopDisconnectBeforeModeChange": "Trenne die Verbindung, bevor du den Verbindungsmodus änderst",
+  "settingsDesktopTitle": "Windows",
+  "settingsDesktopSubtitle": "Tray, Autostart, Auto-Connect",
+  "settingsMinimizeToTray": "Beim Schließen in Tray minimieren",
+  "settingsMinimizeToTrayHint": "Wenn aus, beendet Schließen die App",
+  "settingsLaunchAtStartup": "Mit Windows starten",
+  "settingsLaunchAtStartupHint": "App beim Anmelden starten",
+  "settingsAutoConnectOnAutostart": "Bei Autostart verbinden",
+  "settingsAutoConnectOnAutostartHint": "Verbindet mit dem zuletzt gewählten Server im Modus der Seitenleiste. Ohne Admin-Rechte für TUN wird Proxy verwendet",
+  "settingsAutoConnectRequiresAutostart": "Zuerst „Mit Windows starten“ aktivieren",
+  "desktopTunAdminTitle": "Administratorrechte erforderlich",
+  "desktopTunAdminMessage": "Der TUN-Modus benötigt Administratorrechte. Starten Sie die App als Administrator neu — der Modus in der Seitenleiste bleibt erhalten.",
+  "desktopTunAdminRestart": "Als Administrator neu starten",
+  "desktopTunAdminCancel": "Abbrechen",
+  "desktopTunAdminRestartFailed": "Neustart als Administrator fehlgeschlagen"
 }

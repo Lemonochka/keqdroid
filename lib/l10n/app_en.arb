@@ -496,5 +496,19 @@
   },
   "desktopConnectionMode": "Connection mode",
   "desktopModeShort": "Mode",
-  "desktopDisconnectBeforeModeChange": "Disconnect before changing connection mode"
+  "desktopDisconnectBeforeModeChange": "Disconnect before changing connection mode",
+  "settingsDesktopTitle": "Windows",
+  "settingsDesktopSubtitle": "Tray, autostart, auto-connect",
+  "settingsMinimizeToTray": "Minimize to tray on close",
+  "settingsMinimizeToTrayHint": "When off, closing the window exits the app",
+  "settingsLaunchAtStartup": "Start with Windows",
+  "settingsLaunchAtStartupHint": "Launch the app when you sign in",
+  "settingsAutoConnectOnAutostart": "Connect on autostart",
+  "settingsAutoConnectOnAutostartHint": "Connect to the last selected server using the mode from the sidebar. If TUN needs admin rights and they are unavailable, Proxy is used",
+  "settingsAutoConnectRequiresAutostart": "Enable \"Start with Windows\" first",
+  "desktopTunAdminTitle": "Administrator rights required",
+  "desktopTunAdminMessage": "TUN mode needs administrator rights. Restart the app as administrator to use TUN. The current mode in the sidebar will be kept.",
+  "desktopTunAdminRestart": "Restart as administrator",
+  "desktopTunAdminCancel": "Cancel",
+  "desktopTunAdminRestartFailed": "Could not restart as administrator"
 }
