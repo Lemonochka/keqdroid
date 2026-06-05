@@ -32,6 +32,10 @@ class AppSettings {
   final bool systemProxyEnabled;
   /// `system` — язык ОС, иначе `en` / `ru`.
   final String appLanguageCode;
+  /// Windows: сворачивать в трей при закрытии окна.
+  final bool minimizeToTray;
+  /// Windows: запуск вместе с системой.
+  final bool launchAtStartup;
 
   const AppSettings({
     this.localPort = 2080,
@@ -57,6 +61,8 @@ class AppSettings {
     this.connectionMode = 'proxy',
     this.systemProxyEnabled = true,
     this.appLanguageCode = 'system',
+    this.minimizeToTray = true,
+    this.launchAtStartup = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -83,6 +89,8 @@ class AppSettings {
     'connectionMode': connectionMode,
     'systemProxyEnabled': systemProxyEnabled,
     'appLanguageCode': appLanguageCode,
+    'minimizeToTray': minimizeToTray,
+    'launchAtStartup': launchAtStartup,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -122,6 +130,8 @@ class AppSettings {
       appLanguageCode: _normalizeLanguageCode(
         json['appLanguageCode'] as String?,
       ),
+      minimizeToTray: json['minimizeToTray'] as bool? ?? true,
+      launchAtStartup: json['launchAtStartup'] as bool? ?? false,
     );
   }
 
@@ -166,6 +176,8 @@ class AppSettings {
     String? connectionMode,
     bool? systemProxyEnabled,
     String? appLanguageCode,
+    bool? minimizeToTray,
+    bool? launchAtStartup,
   }) =>
       AppSettings(
         localPort: localPort ?? this.localPort,
@@ -191,6 +203,8 @@ class AppSettings {
         connectionMode: connectionMode ?? this.connectionMode,
         systemProxyEnabled: systemProxyEnabled ?? this.systemProxyEnabled,
         appLanguageCode: appLanguageCode ?? this.appLanguageCode,
+        minimizeToTray: minimizeToTray ?? this.minimizeToTray,
+        launchAtStartup: launchAtStartup ?? this.launchAtStartup,
       );
 
   @override
@@ -220,7 +234,9 @@ class AppSettings {
               xrayCore == other.xrayCore &&
               connectionMode == other.connectionMode &&
               systemProxyEnabled == other.systemProxyEnabled &&
-              appLanguageCode == other.appLanguageCode;
+              appLanguageCode == other.appLanguageCode &&
+              minimizeToTray == other.minimizeToTray &&
+              launchAtStartup == other.launchAtStartup;
 
   @override
   int get hashCode => Object.hashAll([
@@ -247,6 +263,8 @@ class AppSettings {
     connectionMode,
     systemProxyEnabled,
     appLanguageCode,
+    minimizeToTray,
+    launchAtStartup,
   ]);
 
   ConnectionMode get connectionModeEnum =>

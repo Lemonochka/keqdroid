@@ -27,8 +27,9 @@ class TunnelSessionBuilder {
     List<String> includeProcesses = const [],
     String? serverName,
     AppRoutingMode routingMode = AppRoutingMode.allProxy,
+    ConnectionMode? modeOverride,
   }) {
-    final mode = resolveMode(settings);
+    final mode = modeOverride ?? resolveMode(settings);
 
     String? singboxConfig;
     if (Platform.isWindows && mode == ConnectionMode.tun) {

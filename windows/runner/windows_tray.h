@@ -6,6 +6,9 @@
 // System tray: hide on WM_CLOSE, restore from icon / menu.
 void WindowsTrayInit(HWND hwnd);
 void WindowsTrayDispose(HWND hwnd);
+void WindowsTraySetMinimizeToTray(bool enabled);
+bool WindowsTrayGetMinimizeToTray();
+bool WindowsTrayActivateMainWindow();
 bool WindowsTrayHandleMessage(HWND hwnd,
                               UINT message,
                               WPARAM wparam,

@@ -9,6 +9,7 @@ project(runner LANGUAGES CXX)
 add_executable(${BINARY_NAME} WIN32
   "flutter_window.cpp"
   "tunnel_channel_handler.cpp"
+  "windows_core_lifecycle.cpp"
   "windows_traffic_stats.cpp"
   "windows_tray.cpp"
   "proxy_debug_log.cpp"
@@ -38,7 +39,7 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
 # Add dependency libraries and include directories. Add any application-specific
 # dependencies here.
 target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app)
-target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib" "wininet.lib" "winhttp.lib" "gdiplus.lib" "iphlpapi.lib")
+target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib" "wininet.lib" "winhttp.lib" "gdiplus.lib" "iphlpapi.lib" "shell32.lib")
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.

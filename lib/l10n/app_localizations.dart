@@ -1967,6 +1967,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Disconnect before changing connection mode'**
   String get desktopDisconnectBeforeModeChange;
+
+  /// No description provided for @settingsDesktopTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Windows'**
+  String get settingsDesktopTitle;
+
+  /// No description provided for @settingsDesktopSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tray, autostart, auto-connect'**
+  String get settingsDesktopSubtitle;
+
+  /// No description provided for @settingsMinimizeToTray.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimize to tray on close'**
+  String get settingsMinimizeToTray;
+
+  /// No description provided for @settingsMinimizeToTrayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'When off, closing the window exits the app'**
+  String get settingsMinimizeToTrayHint;
+
+  /// No description provided for @settingsLaunchAtStartup.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with Windows'**
+  String get settingsLaunchAtStartup;
+
+  /// No description provided for @settingsLaunchAtStartupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Launch the app when you sign in'**
+  String get settingsLaunchAtStartupHint;
+
+  /// No description provided for @settingsAutoConnectOnAutostart.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect on autostart'**
+  String get settingsAutoConnectOnAutostart;
+
+  /// No description provided for @settingsAutoConnectOnAutostartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to the last selected server using the mode from the sidebar. If TUN needs admin rights and they are unavailable, Proxy is used'**
+  String get settingsAutoConnectOnAutostartHint;
+
+  /// No description provided for @settingsAutoConnectRequiresAutostart.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable \"Start with Windows\" first'**
+  String get settingsAutoConnectRequiresAutostart;
+
+  /// No description provided for @desktopTunAdminTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Administrator rights required'**
+  String get desktopTunAdminTitle;
+
+  /// No description provided for @desktopTunAdminMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN mode needs administrator rights. Restart the app as administrator to use TUN. The current mode in the sidebar will be kept.'**
+  String get desktopTunAdminMessage;
+
+  /// No description provided for @desktopTunAdminRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart as administrator'**
+  String get desktopTunAdminRestart;
+
+  /// No description provided for @desktopTunAdminCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get desktopTunAdminCancel;
+
+  /// No description provided for @desktopTunAdminRestartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not restart as administrator'**
+  String get desktopTunAdminRestartFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 
 import '../core/app_logger.dart';
 import '../tunnel/windows_core_paths.dart';
+import 'windows_desktop_service.dart';
 
 /// короткоживущий xray для url-пинга, как на android
 class EphemeralXrayPing {
@@ -165,6 +166,7 @@ class EphemeralXrayPing {
         workingDirectory: sessionDir.path,
         mode: ProcessStartMode.normal,
       );
+      unawaited(WindowsDesktopService.attachCoreProcess(process.pid));
 
       final portReady = await _waitForPort(
         '127.0.0.1',
@@ -236,6 +238,7 @@ class EphemeralXrayPing {
         workingDirectory: sessionDir.path,
         mode: ProcessStartMode.normal,
       );
+      unawaited(WindowsDesktopService.attachCoreProcess(process.pid));
 
       final portReady = await _waitForPort(
         '127.0.0.1',
