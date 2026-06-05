@@ -1,4 +1,4 @@
-# KEQDIS
+# KEQDIS/Keqdroid
 
 Клиент для подключения через подписку или отдельные конфиги. Android и Windows.
 
