@@ -1,0 +1,2 @@
+Lcom/keqdroid/keqdroid/MainActivity;
+Lcom/keqdroid/keqdroid/KeqdisVpnService;

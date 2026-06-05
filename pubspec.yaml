@@ -1,0 +1,74 @@
+﻿name: keqdroid
+description: "KEQDIS proxy/VPN client for Android and Windows."
+publish_to: 'none'
+
+version: 0.3.2+1
+
+environment:
+  sdk: ^3.11.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_markdown: ^0.7.0
+  flutter_riverpod: ^2.4.9
+  dio: ^5.4.0
+  shared_preferences: ^2.2.2
+  uuid: ^4.3.3
+  file_picker: ^11.0.2
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  share_plus: ^11.1.0
+  cupertino_icons: ^1.0.9
+  workmanager: ^0.6.0
+  flutter_local_notifications: ^17.0.0
+  dynamic_color: ^1.7.0
+  country_flags: ^2.0.0
+  firebase_core: ^4.0.0
+  firebase_crashlytics: ^5.0.0
+  intl: ^0.20.2
+  open_filex: ^4.5.0
+  package_info_plus: ^8.0.3
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
+  mocktail: ^1.0.4
+  image: ^4.8.0
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#ffb2bd"
+  adaptive_icon_foreground: "assets/icon_foreground.png"
+  adaptive_icon_monochrome: "assets/icon_foreground.png"
+  windows:
+    generate: true
+    image_path: "assets/icon_windows_launcher.png"
+    icon_size: 256
+
+flutter_native_splash:
+  color: "#FFF5F7"
+  color_dark: "#1A1014"
+  image: assets/icon.png
+  image_dark: assets/icon.png
+  android_12:
+    color: "#FFF5F7"
+    color_dark: "#1A1014"
+    image: assets/icon.png
+    image_dark: assets/icon.png
+
+flutter:
+  generate: true
+  uses-material-design: true
+  assets:
+    - assets/icon.png
+    - assets/icon_foreground.png
+    - assets/icon_windows_launcher.png
+    - assets/bin/windows/

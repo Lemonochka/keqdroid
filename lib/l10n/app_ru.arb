@@ -1,0 +1,500 @@
+{
+  "@@locale": "ru",
+  "appTitle": "KEQDIS",
+  "vpnConnectedTo": "Подключено к: {serverName}",
+  "@vpnConnectedTo": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "vpnConnecting": "Подключение...",
+  "vpnDisconnecting": "Отключение...",
+  "vpnTapToConnect": "Нажмите для подключения к {serverName}",
+  "@vpnTapToConnect": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "vpnSelectServer": "Выберите сервер ниже",
+  "vpnSelectServerFirst": "Сначала выберите сервер",
+  "updateTitle": "Доступно обновление",
+  "updateWhatsNew": "Что нового:",
+  "updateActionLater": "Позже",
+  "updateActionNow": "Обновить",
+  "errorSubscriptionTitle": "Ошибка подписки",
+  "errorConnectionPermission": "Ошибка подключения: разрешение",
+  "errorConnectionNetwork": "Ошибка подключения: сеть",
+  "errorConnectionConfig": "Ошибка подключения: конфигурация",
+  "errorConnectionAuth": "Ошибка подключения: авторизация",
+  "errorConnectionGeneric": "Ошибка подключения",
+  "errorProviderConfigTitle": "Требуется настройка у провайдера",
+  "errorProviderNoHostsMessage": "У провайдера не назначены hosts для этой подписки.",
+  "errorProviderNoHostsAction": "Откройте панель провайдера, добавьте или назначьте hosts, затем обновите подписку.",
+  "errorActionLabel": "Действие: {action}",
+  "@errorActionLabel": {
+    "placeholders": {
+      "action": {}
+    }
+  },
+  "splitTunnelingTitle": "Раздельное туннелирование",
+  "splitModeAllApps": "Все приложения",
+  "splitModeSelectedOnly": "Только выбранные",
+  "splitModeAllExceptSelected": "Все кроме выбранных",
+  "splitSearchHint": "Поиск приложений...",
+  "splitNoAppsFound": "Приложения не найдены",
+  "splitFailedLoadApps": "Не удалось загрузить приложения: {error}",
+  "@splitFailedLoadApps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "splitSelectedAppsCount": "Выбрано приложений: {count}",
+  "@splitSelectedAppsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "splitHideSystemApps": "Скрыть системные",
+  "splitShowSystemApps": "Показать системные",
+  "splitAddRussianAppsBypass": "Добавить российские приложения в обход",
+  "splitClear": "Очистить",
+  "splitNoRussianAppsFound": "Российские приложения не найдены в списке установленных",
+  "splitRussianAppsAlreadyAdded": "Все российские приложения уже в списке обхода",
+  "splitAddedRussianApps": "Добавлено российских приложений в обход: {count}",
+  "@splitAddedRussianApps": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "navServers": "Серверы",
+  "navSubscriptions": "Подписки",
+  "navSettings": "Настройки",
+  "serversEmptyTitle": "Серверов пока нет",
+  "serversEmptyHint": "Добавьте подписку во вкладке Подписки",
+  "subscriptionsTitle": "Подписки",
+  "subscriptionsAddButton": "Добавить подписку",
+  "subscriptionsEmptyTitle": "Нет подписок",
+  "subscriptionsEmptyHint": "Нажмите + чтобы добавить URL подписки",
+  "settingsTitle": "Настройки",
+  "settingsThemeTitle": "Тема",
+  "settingsSplitTitle": "Раздельное туннелирование",
+  "settingsRoutingTitle": "Правила маршрутизации",
+  "settingsSplitConfigured": "Настроено приложений: {count}",
+  "@settingsSplitConfigured": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsRoutingSubtitle": "Правила direct / proxy / block и пресеты",
+  "settingsResetRoutingTitle": "Сбросить настройки маршрутизации",
+  "settingsResetRoutingSubtitle": "Восстановить изначальные правила маршрутизации",
+  "settingsRoutingResetDone": "Правила маршрутизации сброшены",
+  "settingsRoutingHeaderDesc": "Выберите, какие сайты идут напрямую мимо VPN, какие принудительно через него, а какие блокируются. Начните с пресета, затем при необходимости отредактируйте списки ниже.",
+  "settingsRoutingPresetsTitle": "Быстрые пресеты",
+  "settingsRoutingPresetsHint": "Нажмите, чтобы добавить готовый список. После этого его можно отредактировать.",
+  "settingsRoutingPresetRuTitle": "Российские сайты — напрямую",
+  "settingsRoutingPresetRuDesc": "Все .ru / .рф и крупные сервисы РФ идут мимо VPN",
+  "settingsRoutingPresetBanksTitle": "Банки и госуслуги — напрямую",
+  "settingsRoutingPresetBanksDesc": "Банки, платежи и госпорталы идут мимо VPN",
+  "settingsRoutingPresetAdsTitle": "Реклама и трекеры — блок",
+  "settingsRoutingPresetAdsDesc": "Блокировать частые рекламные и аналитические домены",
+  "settingsRoutingPresetStreamingTitle": "Стриминг — через VPN",
+  "settingsRoutingPresetStreamingDesc": "YouTube, Netflix, Twitch принудительно через VPN",
+  "settingsRoutingPresetMessengersTitle": "Мессенджеры — через VPN",
+  "settingsRoutingPresetMessengersDesc": "Telegram, Discord, WhatsApp принудительно через VPN",
+  "settingsRoutingPresetApplied": "Добавлено: «{name}»",
+  "@settingsRoutingPresetApplied": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsRoutingDirectTitle": "Домены напрямую (мимо VPN)",
+  "settingsRoutingDirectDesc": "Эти узлы подключаются напрямую, без VPN.",
+  "settingsRoutingProxyTitle": "Домены через VPN",
+  "settingsRoutingProxyDesc": "Эти узлы всегда идут через VPN.",
+  "settingsRoutingBlockTitle": "Заблокированные домены",
+  "settingsRoutingBlockDesc": "Эти узлы блокируются и не подключаются.",
+  "settingsRoutingDirectIpsTitle": "IP / подсети напрямую (мимо VPN)",
+  "settingsRoutingDirectIpsDesc": "Адреса IPv4/IPv6 или диапазоны CIDR, идущие мимо VPN.",
+  "settingsRoutingValuesHint": "По одному в строке или через запятую",
+  "settingsRoutingSavedToast": "Маршрутизация обновлена",
+  "settingsRoutingItemCount": "{count, plural, =0{пусто} =1{1 запись} few{{count} записи} many{{count} записей} other{{count} записи}}",
+  "@settingsRoutingItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAndroidColorsSubtitle": "Цвета Android · {mode}",
+  "@settingsAndroidColorsSubtitle": {
+    "placeholders": {
+      "mode": {}
+    }
+  },
+  "settingsSystemColorsSubtitle": "Системные цвета · {mode}",
+  "@settingsSystemColorsSubtitle": {
+    "placeholders": {
+      "mode": {}
+    }
+  },
+  "themeModeDark": "Тёмная",
+  "themeModeLight": "Светлая",
+  "themeCustomizationTitle": "Настройка темы",
+  "themeUseDynamicColors": "Использовать тему Android",
+  "themeUseDynamicColorsSubtitle": "Использовать цветовую тему Android",
+  "themeDynamicPaletteHint": "Активна динамическая палитра Android. Светлая/тёмная работают независимо.",
+  "themeSystemPaletteHint": "Активна системная палитра. Светлая/тёмная работают независимо.",
+  "themeUseSystemColors": "Использовать системные цвета",
+  "themeUseSystemColorsSubtitle": "Цвета из акцента Windows или Linux, если доступны",
+  "themeCustomPaletteHint": "Активна пользовательская палитра. Светлая/тёмная работают независимо.",
+  "themeColorThemesTitle": "Цветовые темы",
+  "settingsLanProxyTitle": "LAN прокси",
+  "settingsOff": "Выкл",
+  "settingsLanSharingOnIp": "Раздача на {ip}",
+  "@settingsLanSharingOnIp": {
+    "placeholders": {
+      "ip": {}
+    }
+  },
+  "settingsHwidTitle": "Отправлять HWID устройства",
+  "settingsHwidEnabledRecommended": "Включено (рекомендуется)",
+  "settingsHwidDisabled": "Выключено",
+  "settingsHwidEnabledHint": "Некоторые провайдеры требуют HWID для обновления подписок и лимитов устройств.",
+  "settingsHwidDisabledHint": "Заголовки HWID не отправляются. Некоторые подписки могут не работать, если провайдер требует привязку устройства.",
+  "settingsDeviceIpListTitle": "IP-адреса устройства в сети:",
+  "settingsIpCopied": "IP скопирован",
+  "settingsSetupAnotherDeviceTitle": "Настройка на другом устройстве:",
+  "settingsSocks5PortLabel": "Порт SOCKS5",
+  "settingsHttpPortLabel": "Порт HTTP",
+  "settingsTurnOffToChange": "Выключите для изменения настройки",
+  "settingsProxyCopied": "{label} {address} скопирован",
+  "@settingsProxyCopied": {
+    "placeholders": {
+      "label": {},
+      "address": {}
+    }
+  },
+  "settingsXrayCoreTitle": "Ядро Xray",
+  "settingsXrayCoreSubtitle": "DNS, XMUX, лог и маршрутизация",
+  "settingsXrayDnsSection": "DNS",
+  "settingsXrayDnsCustom": "Свои DNS-серверы",
+  "settingsXrayDnsCustomHint": "Один адрес на строку (DoH, DoT или обычный)",
+  "settingsXrayDnsServers": "DNS-серверы",
+  "settingsXrayDnsSplitDirect": "Отдельный резолвер для direct-доменов",
+  "settingsXrayDnsSplitDirectHint": "Первый сервер — для доменов из списка direct",
+  "settingsXrayDnsQueryStrategy": "Стратегия запросов",
+  "settingsXrayDnsDisableCache": "Отключить кэш DNS",
+  "settingsXrayXmuxSection": "XMUX (XHTTP)",
+  "settingsXrayXmuxEnable": "Включить XMUX",
+  "settingsXrayXmuxEnableHint": "Мультиплексирование для транспорта XHTTP (только клиент)",
+  "settingsXrayGeneralSection": "Общие",
+  "settingsXrayLogLevel": "Уровень логов",
+  "settingsXrayDomainStrategy": "Стратегия доменов",
+  "settingsXraySniffing": "Sniffing на inbound",
+  "settingsXraySniffingRouteOnly": "Sniffing route only",
+  "settingsXrayCoreIntro": "Параметры попадают в конфиг Xray при подключении. Меняйте и добавляйте свои значения только если знаете для чего они используются",
+  "settingsXrayDnsDefaultNote": "По умолчанию: DoH Cloudflare и Google",
+  "settingsXrayXmuxParamsTitle": "Тонкая настройка",
+  "settingsXrayXmuxParamsHint": "Пустое поле — значение по умолчанию Xray. Можно число или диапазон (например 16-32).",
+  "settingsXraySniffingHint": "Определять протокол и домен назначения по входящему трафику",
+  "settingsXraySniffingRouteOnlyHint": "Sniffing только для маршрутизации, без подмены адреса",
+  "settingsXrayResetDefaults": "Сбросить настройки",
+  "settingsXrayResetDone": "Настройки ядра Xray восстановлены",
+  "settingsXrayXmuxMaxConcurrency": "Макс. параллельность",
+  "settingsXrayXmuxMaxConnections": "Макс. соединений",
+  "settingsXrayXmuxCMaxReuseTimes": "Лимит переиспользования",
+  "settingsXrayXmuxHMaxRequestTimes": "Макс. запросов на поток",
+  "settingsXrayXmuxHMaxReusableSecs": "Время жизни потока (сек)",
+  "settingsXrayXmuxHKeepAlivePeriod": "Keep-alive (сек)",
+  "settingsPingTitle": "Пинг серверов",
+  "settingsPingMethodTitle": "Метод пинга",
+  "settingsPingMethodTcp": "TCP пинг",
+  "settingsPingMethodTcpHint": "Быстрая проверка доступности",
+  "settingsPingMethodUrl": "HTTP пинг через прокси",
+  "settingsPingMethodUrlHint": "Замеряет пинг через GET запрос к серверу",
+  "settingsPingMethodSpeed": "Тест скорости",
+  "settingsPingMethodSpeedHint": "Качает некоторый объём данных через сервер и показывает скорость в Мбит/с",
+  "settingsPingTargetTitle": "URL для HTTP-пинга",
+  "settingsPingTargetGstatic": "Google (generate_204)",
+  "settingsPingTargetCloudflare": "Cloudflare (trace)",
+  "settingsPingTargetMicrosoft": "Microsoft (connect test)",
+  "settingsPingTargetCustom": "Свой URL",
+  "settingsPingCustomUrl": "Адрес",
+  "settingsPingCustomUrlHint": "Адрес для GET-запроса (https:// или http://)",
+  "settingsPingCustomUrlInvalid": "Некорректный или небезопасный URL (без localhost и локальных сетей)",
+  "subscriptionNameLabel": "Название",
+  "subscriptionNameHint": "Моя подписка",
+  "subscriptionUrlLabel": "URL",
+  "subscriptionUrlHint": "https://example.com/sub?token=...",
+  "subscriptionsAddSubscription": "Добавить подписку",
+  "subscriptionsAddAndFetch": "Добавить и загрузить",
+  "subscriptionsEditSubscription": "Редактировать подписку",
+  "subscriptionsCopyUrl": "Копировать URL",
+  "subscriptionsUrlCopied": "URL скопирован",
+  "subscriptionsDeleteSubscription": "Удалить подписку",
+  "subscriptionsDeleteConfirm": "Вы уверены, что хотите удалить \"{name}\"?\n\nЭто также удалит все связанные серверы.",
+  "@subscriptionsDeleteConfirm": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "subscriptionsRetry": "Повторить",
+  "subscriptionsCancel": "Отмена",
+  "subscriptionsDelete": "Удалить",
+  "subscriptionsSave": "Сохранить",
+  "subscriptionsMoveUp": "Переместить вверх",
+  "subscriptionsMoveDown": "Переместить вниз",
+  "subscriptionsAutoUpdate": "Автообновление",
+  "subscriptionsOn": "ВКЛ",
+  "subscriptionsOff": "ВЫКЛ",
+  "subscriptionsExpired": "Истекла",
+  "subscriptionsRefreshFailed": "Ошибка обновления",
+  "subscriptionsEveryHour": "Каждый час",
+  "subscriptionsEveryHours": "Каждые {hours} часа",
+  "@subscriptionsEveryHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsEveryDay": "Каждый день",
+  "subscriptionsEveryDays": "Каждые {days} дня",
+  "@subscriptionsEveryDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsAutoUpdateInterval": "Интервал автообновления",
+  "subscriptionsCurrentInterval": "каждые {hours}ч",
+  "@subscriptionsCurrentInterval": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsJustNow": "только что",
+  "subscriptionsMinutesAgo": "{minutes}м назад",
+  "@subscriptionsMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsHoursAgo": "{hours}ч назад",
+  "@subscriptionsHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsDaysAgo": "{days}д назад",
+  "@subscriptionsDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsInDays": "через {days}д",
+  "@subscriptionsInDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsInHours": "через {hours}ч",
+  "@subscriptionsInHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsSoon": "скоро",
+  "serversAddServer": "Добавить сервер",
+  "serversPasteLinks": "Вставить ссылку(и)",
+  "serversImportFile": "Импорт из файла",
+  "serversNotSupported": "Не поддерживается в этой сборке",
+  "serversAddServerTitle": "Добавить сервер",
+  "serversPasteVlessHint": "Вставьте vless://, vmess://, trojan://, ss://, hysteria2:// или hy2:// (по одному на строку)",
+  "serversPasteHint": "vless://… или hy2://host:port?auth=…",
+  "serversAdd": "Добавить",
+  "serversManualServers": "Ручные серверы",
+  "serversRefreshSubscription": "Обновить подписку",
+  "serversPingAll": "Пинговать все",
+  "settingsAdvanced": "Дополнительно",
+  "settingsAdvancedSubtitle": "Настройки ядра, пинг, маршрутизация, HWID и отладка",
+  "settingsBackupRestore": "Резервное копирование",
+  "settingsBackupRestoreSubtitle": "Экспорт/импорт раздельного туннелирования, подписок и серверов",
+  "settingsSelectAtLeastOne": "Выберите хотя бы один раздел для экспорта",
+  "settingsBackupSaved": "Резервная копия успешно сохранена",
+  "settingsSelectLocation": "Выберите место для сохранения",
+  "settingsExportFile": "Экспорт в файл",
+  "settingsImportFile": "Импорт из файла",
+  "settingsImportBackup": "Импорт резервной копии",
+  "settingsChooseWhatToImport": "Выберите что импортировать (выбранные разделы заменят текущие данные).",
+  "settingsSplitTunnelingApps": "Приложения раздельного туннелирования",
+  "settingsSubscriptions": "Подписки",
+  "settingsServersActive": "Серверы (и активный сервер)",
+  "settingsImport": "Импорт",
+  "settingsExport": "Экспорт",
+  "settingsCreateFileToSave": "Создайте файл, который можно сохранить и импортировать на другом устройстве.",
+  "settingsPickExportedFile": "Выберите ранее экспортированный файл и восстановите выбранные разделы.",
+  "settingsWorking": "Работаем...",
+  "settingsImportedSections": "Импортировано: {count} раздел(ов)",
+  "@settingsImportedSections": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsDebugMode": "Режим отладки",
+  "settingsDebugModeOn": "Расширенная диагностика включена",
+  "settingsDebugModeOff": "Выключен",
+  "settingsDebugModeHint": "Показывает живые метрики VPN на карточках серверов и позволяет просматривать логи ядра Xray.",
+  "settingsOpenXrayLogs": "Открыть логи Xray",
+  "settingsXrayCoreLogs": "Логи ядра Xray",
+  "settingsRefresh": "Обновить",
+  "settingsAppVersion": "Версия приложения",
+  "settingsChecking": "Проверка...",
+  "settingsCheckFailed": "Ошибка проверки",
+  "settingsUpdateAvailable": "Доступно обновление",
+  "settingsUpToDate": "Актуальная версия",
+  "settingsNewVersionAvailable": "Доступна новая версия",
+  "settingsSize": "Размер: {size}",
+  "@settingsSize": {
+    "placeholders": {
+      "size": {}
+    }
+  },
+  "settingsDownloading": "Загрузка...",
+  "settingsCheckForUpdates": "Проверить обновления",
+  "settingsShareDeviceHwid": "Делиться HWID устройства",
+  "settingsHwidWillBeSent": "HWID будет отправляться с запросами подписок",
+  "settingsHwidNotShared": "HWID не передаётся",
+  "settingsHwidHint": "Когда включено, уникальный ID вашего устройства (HWID) отправляется серверам подписок. Требуется некоторыми провайдерами для привязки HWID. Отключите для большей приватности.",
+  "settingsRoutingRules": "Правила маршрутизации",
+  "settingsNoRules": "Нет правил",
+  "settingsAddCustomRule": "Добавить своё правило",
+  "settingsAddRule": "Добавить правило",
+  "settingsEditRule": "Редактировать правило маршрутизации",
+  "settingsRuleName": "Название правила",
+  "settingsType": "Тип",
+  "settingsAction": "Действие",
+  "settingsValues": "Значения (что сопоставлять)",
+  "settingsOrder": "Порядок (приоритет правила)",
+  "settingsEnabled": "Включено",
+  "settingsNameAndValuesRequired": "Название и значения обязательны",
+  "settingsUseOnePerLine": "По одному значению на строку или через запятую.",
+  "settingsSmallerOrderFirst": "Меньшее число = проверяется раньше (например 1 перед 50)",
+  "settingsSmallerOrderWins": "Если два правила могут совпасть с одним трафиком, побеждает правило с меньшим порядковым номером.",
+  "settingsSaveChanges": "Сохранить изменения",
+  "settingsDeleteRule": "Удалить правило",
+  "settingsAddRuleTooltip": "Добавить правило",
+  "settingsDomain": "Домен",
+  "settingsIpCidr": "IP CIDR",
+  "settingsGeoIp": "GeoIP",
+  "settingsGeosite": "Geosite",
+  "settingsProcess": "Процесс",
+  "settingsProxy": "Прокси",
+  "settingsDirect": "Direct",
+  "settingsBlock": "Блокировка",
+  "settingsEgDomain": "напр. youtube.com, +google",
+  "settingsEgIpCidr": "напр. 1.1.1.1/32, 192.168.0.0/16",
+  "settingsEgGeoip": "напр. RU, US, DE",
+  "settingsEgGeosite": "напр. category-ads-all",
+  "settingsEgProcess": "напр. com.telegram.messenger",
+  "settingsExportFailed": "Ошибка экспорта: {error}",
+  "@settingsExportFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsImportFailed": "Ошибка импорта: {error}",
+  "@settingsImportFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsDownloadFailed": "Ошибка загрузки: {error}",
+  "@settingsDownloadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsCheckFailedError": "Ошибка проверки: {error}",
+  "@settingsCheckFailedError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsNoXrayLogsYet": "Логов Xray пока нет",
+  "settingsLanguageTitle": "Язык",
+  "settingsLanguageSubtitle": "{language}",
+  "@settingsLanguageSubtitle": {
+    "placeholders": {
+      "language": {}
+    }
+  },
+  "settingsLanguageSystem": "Как в системе",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageRussian": "Русский",
+  "settingsLanguageGerman": "Deutsch",
+  "settingsLanguageChinese": "中文",
+  "settingsLanguageSheetTitle": "Выберите язык",
+  "splitAddApp": "Добавить",
+  "splitAddAppTitle": "Добавить приложение",
+  "splitAddAppHint": "Путь к .exe или имя (например chrome.exe)",
+  "splitAddAppPickFile": "Обзор…",
+  "splitAddAppInvalid": "Укажите имя или путь к .exe",
+  "splitAddAppAdded": "Добавлено: {name}",
+  "@splitAddAppAdded": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "splitRunningApps": "Запущены",
+  "splitInstalledApps": "Установлены",
+  "splitShowSystemApps": "Показать системные",
+  "splitHideSystemApps": "Скрыть системные",
+  "splitCustomApps": "Вручную",
+  "splitClearAll": "Очистить всё",
+  "splitProxyModeWarning": "В режиме Proxy раздельное туннелирование не применяется — весь трафик идёт через системный прокси. Переключите режим подключения на TUN (в боковой панели), чтобы правила для процессов работали.",
+  "settingsLatestVersionInstalled": "У вас последняя версия",
+  "serversPingServer": "Пропинговать сервер",
+  "serversHealthCheck": "Проверка работоспособности",
+  "serversCopyAddress": "Копировать адрес сервера",
+  "serversCopiedToClipboard": "Скопировано в буфер обмена",
+  "serversCopyConfig": "Копировать конфигурацию",
+  "serversConfigCopied": "Конфигурация скопирована",
+  "serversDeleteServer": "Удалить сервер",
+  "serversHealthCheckDesc": "Проверка DNS, TCP и конфигурации",
+  "settingsDebugHintDesktop": "Показывает логи сессии Xray. Живые метрики VPN отображаются под кнопкой подключения.",
+  "settingsDebugHintMobile": "Показывает живые метрики VPN в карточках серверов и логи Xray.",
+  "serversErrorLoadingApps": "Ошибка загрузки приложений: {error}",
+  "@serversErrorLoadingApps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "desktopConnectionMode": "Режим подключения",
+  "desktopModeShort": "Режим",
+  "desktopDisconnectBeforeModeChange": "Отключитесь перед сменой режима подключения"
+}

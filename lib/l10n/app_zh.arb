@@ -1,0 +1,500 @@
+{
+  "@@locale": "zh",
+  "appTitle": "KEQDIS",
+  "vpnConnectedTo": "已连接到：{serverName}",
+  "@vpnConnectedTo": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "vpnConnecting": "正在连接...",
+  "vpnDisconnecting": "正在断开...",
+  "vpnTapToConnect": "点按以连接到 {serverName}",
+  "@vpnTapToConnect": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "vpnSelectServer": "请在下方选择服务器",
+  "vpnSelectServerFirst": "请先选择服务器",
+  "updateTitle": "有可用更新",
+  "updateWhatsNew": "更新内容：",
+  "updateActionLater": "稍后",
+  "updateActionNow": "更新",
+  "errorSubscriptionTitle": "订阅错误",
+  "errorConnectionPermission": "连接失败：权限",
+  "errorConnectionNetwork": "连接失败：网络",
+  "errorConnectionConfig": "连接失败：配置",
+  "errorConnectionAuth": "连接失败：认证",
+  "errorConnectionGeneric": "连接错误",
+  "errorProviderConfigTitle": "需要配置提供商",
+  "errorProviderNoHostsMessage": "提供商未为此订阅分配主机。",
+  "errorProviderNoHostsAction": "打开提供商面板，添加或分配主机，然后刷新订阅。",
+  "errorActionLabel": "操作：{action}",
+  "@errorActionLabel": {
+    "placeholders": {
+      "action": {}
+    }
+  },
+  "splitTunnelingTitle": "分应用代理",
+  "splitModeAllApps": "所有应用",
+  "splitModeSelectedOnly": "仅所选",
+  "splitModeAllExceptSelected": "除所选之外的全部",
+  "splitSearchHint": "搜索应用...",
+  "splitNoAppsFound": "未找到应用",
+  "splitFailedLoadApps": "加载应用失败：{error}",
+  "@splitFailedLoadApps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "splitSelectedAppsCount": "已选择 {count} 个应用",
+  "@splitSelectedAppsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "splitHideSystemApps": "隐藏系统应用",
+  "splitShowSystemApps": "显示系统应用",
+  "splitAddRussianAppsBypass": "将俄罗斯应用加入绕过列表",
+  "splitClear": "清除",
+  "splitNoRussianAppsFound": "在已安装应用列表中未找到俄罗斯应用",
+  "splitRussianAppsAlreadyAdded": "所有俄罗斯应用都已在绕过列表中",
+  "splitAddedRussianApps": "已将 {count} 个俄罗斯应用加入绕过列表",
+  "@splitAddedRussianApps": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "navServers": "服务器",
+  "navSubscriptions": "订阅",
+  "navSettings": "设置",
+  "serversEmptyTitle": "暂无服务器",
+  "serversEmptyHint": "在“订阅”标签页中添加订阅",
+  "subscriptionsTitle": "订阅",
+  "subscriptionsAddButton": "添加订阅",
+  "subscriptionsEmptyTitle": "暂无订阅",
+  "subscriptionsEmptyHint": "点按 + 以添加订阅 URL",
+  "settingsTitle": "设置",
+  "settingsThemeTitle": "主题",
+  "settingsSplitTitle": "分应用代理",
+  "settingsRoutingTitle": "路由规则",
+  "settingsSplitConfigured": "已配置 {count} 个应用",
+  "@settingsSplitConfigured": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsRoutingSubtitle": "直连 / 代理 / 阻止规则及预设",
+  "settingsResetRoutingTitle": "重置路由为默认值",
+  "settingsResetRoutingSubtitle": "恢复内置路由规则",
+  "settingsRoutingResetDone": "路由规则已重置",
+  "settingsRoutingHeaderDesc": "决定哪些站点直接绕过 VPN、哪些强制经过 VPN、哪些被阻止。可先使用预设快速开始，然后再微调下方的每个列表。",
+  "settingsRoutingPresetsTitle": "快速预设",
+  "settingsRoutingPresetsHint": "点按以添加精选列表。之后可以编辑或删除条目。",
+  "settingsRoutingPresetRuTitle": "俄罗斯站点 — 直连",
+  "settingsRoutingPresetRuDesc": "所有 .ru / .рф 及主要俄罗斯服务绕过 VPN",
+  "settingsRoutingPresetBanksTitle": "银行和政务 — 直连",
+  "settingsRoutingPresetBanksDesc": "银行、支付和政务门户绕过 VPN",
+  "settingsRoutingPresetAdsTitle": "广告和跟踪器 — 阻止",
+  "settingsRoutingPresetAdsDesc": "丢弃常见的广告 / 分析主机",
+  "settingsRoutingPresetStreamingTitle": "流媒体 — 代理",
+  "settingsRoutingPresetStreamingDesc": "强制 YouTube、Netflix、Twitch 经过 VPN",
+  "settingsRoutingPresetMessengersTitle": "即时通讯 — 代理",
+  "settingsRoutingPresetMessengersDesc": "强制 Telegram、Discord、WhatsApp 经过 VPN",
+  "settingsRoutingPresetApplied": "已添加“{name}”",
+  "@settingsRoutingPresetApplied": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsRoutingDirectTitle": "直连域名（绕过 VPN）",
+  "settingsRoutingDirectDesc": "这些主机将直接连接，不经过 VPN。",
+  "settingsRoutingProxyTitle": "代理域名（强制 VPN）",
+  "settingsRoutingProxyDesc": "这些主机始终经过 VPN。",
+  "settingsRoutingBlockTitle": "已阻止的域名",
+  "settingsRoutingBlockDesc": "这些主机将被丢弃且永不连接。",
+  "settingsRoutingDirectIpsTitle": "直连 IP / 子网（绕过 VPN）",
+  "settingsRoutingDirectIpsDesc": "绕过 VPN 的 IPv4/IPv6 地址或 CIDR 范围。",
+  "settingsRoutingValuesHint": "每行一个，或用逗号分隔",
+  "settingsRoutingSavedToast": "路由已更新",
+  "settingsRoutingItemCount": "{count, plural, =0{空} =1{1 个条目} other{{count} 个条目}}",
+  "@settingsRoutingItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAndroidColorsSubtitle": "Android 颜色 · {mode}",
+  "@settingsAndroidColorsSubtitle": {
+    "placeholders": {
+      "mode": {}
+    }
+  },
+  "settingsSystemColorsSubtitle": "系统颜色 · {mode}",
+  "@settingsSystemColorsSubtitle": {
+    "placeholders": {
+      "mode": {}
+    }
+  },
+  "themeModeDark": "深色",
+  "themeModeLight": "浅色",
+  "themeCustomizationTitle": "主题自定义",
+  "themeUseDynamicColors": "使用 Android 动态颜色",
+  "themeUseDynamicColorsSubtitle": "在可用时使用 Android 动态颜色",
+  "themeDynamicPaletteHint": "Android 动态调色板已启用。浅色/深色可独立工作。",
+  "themeSystemPaletteHint": "系统强调色调色板已启用。浅色/深色可独立工作。",
+  "themeUseSystemColors": "使用系统强调色",
+  "themeUseSystemColorsSubtitle": "在可用时跟随 Windows 或 Linux 的强调色",
+  "themeCustomPaletteHint": "自定义调色板已启用。浅色/深色可独立工作。",
+  "themeColorThemesTitle": "颜色主题",
+  "settingsLanProxyTitle": "LAN 代理",
+  "settingsOff": "关闭",
+  "settingsLanSharingOnIp": "正在 {ip} 上共享",
+  "@settingsLanSharingOnIp": {
+    "placeholders": {
+      "ip": {}
+    }
+  },
+  "settingsHwidTitle": "发送设备 HWID",
+  "settingsHwidEnabledRecommended": "已启用（推荐）",
+  "settingsHwidDisabled": "已禁用",
+  "settingsHwidEnabledHint": "部分提供商需要 HWID 来进行订阅更新和设备数量限制。",
+  "settingsHwidDisabledHint": "不发送 HWID 头。如果提供商要求设备绑定，部分订阅可能会失败。",
+  "settingsDeviceIpListTitle": "设备在网络中的 IP 地址：",
+  "settingsIpCopied": "IP 已复制",
+  "settingsSetupAnotherDeviceTitle": "在其他设备上设置：",
+  "settingsSocks5PortLabel": "SOCKS5 端口",
+  "settingsHttpPortLabel": "HTTP 端口",
+  "settingsTurnOffToChange": "关闭后才能更改此设置",
+  "settingsProxyCopied": "已复制 {label} {address}",
+  "@settingsProxyCopied": {
+    "placeholders": {
+      "label": {},
+      "address": {}
+    }
+  },
+  "settingsXrayCoreTitle": "Xray 内核",
+  "settingsXrayCoreSubtitle": "DNS、XMUX、日志与路由",
+  "settingsXrayDnsSection": "DNS",
+  "settingsXrayDnsCustom": "自定义 DNS 服务器",
+  "settingsXrayDnsCustomHint": "每行一个地址（DoH、DoT 或普通）",
+  "settingsXrayDnsServers": "DNS 服务器",
+  "settingsXrayDnsSplitDirect": "为直连域名使用独立解析器",
+  "settingsXrayDnsSplitDirectHint": "对直连列表中的域名使用第一个服务器",
+  "settingsXrayDnsQueryStrategy": "查询策略",
+  "settingsXrayDnsDisableCache": "禁用 DNS 缓存",
+  "settingsXrayXmuxSection": "XMUX (XHTTP)",
+  "settingsXrayXmuxEnable": "启用 XMUX",
+  "settingsXrayXmuxEnableHint": "用于 XHTTP 传输的多路复用（客户端侧）",
+  "settingsXrayGeneralSection": "常规",
+  "settingsXrayLogLevel": "日志级别",
+  "settingsXrayDomainStrategy": "路由域名策略",
+  "settingsXraySniffing": "入站嗅探",
+  "settingsXraySniffingRouteOnly": "仅用于路由的嗅探",
+  "settingsXrayCoreIntro": "这些选项会被注入到生成的 Xray 配置中。仅在你了解其作用时才更改。",
+  "settingsXrayDnsDefaultNote": "默认：Cloudflare 和 Google DoH",
+  "settingsXrayXmuxParamsTitle": "微调",
+  "settingsXrayXmuxParamsHint": "留空以使用 Xray 默认值。可以是数字或范围（例如 16-32）。",
+  "settingsXraySniffingHint": "从入站流量中检测目标协议和域名",
+  "settingsXraySniffingRouteOnlyHint": "仅将嗅探用于路由，不覆盖目标地址",
+  "settingsXrayResetDefaults": "重置为默认值",
+  "settingsXrayResetDone": "已恢复 Xray 内核设置",
+  "settingsXrayXmuxMaxConcurrency": "最大并发数",
+  "settingsXrayXmuxMaxConnections": "最大连接数",
+  "settingsXrayXmuxCMaxReuseTimes": "连接复用上限",
+  "settingsXrayXmuxHMaxRequestTimes": "每个流的最大请求数",
+  "settingsXrayXmuxHMaxReusableSecs": "流复用时间（秒）",
+  "settingsXrayXmuxHKeepAlivePeriod": "保活周期（秒）",
+  "settingsPingTitle": "服务器 Ping",
+  "settingsPingMethodTitle": "Ping 方式",
+  "settingsPingMethodTcp": "TCP Ping",
+  "settingsPingMethodTcpHint": "快速可达性检查",
+  "settingsPingMethodUrl": "通过代理的 HTTP",
+  "settingsPingMethodUrlHint": "测量通过服务器的 GET 延迟",
+  "settingsPingMethodSpeed": "速度测试",
+  "settingsPingMethodSpeedHint": "通过服务器下载固定大小的数据并以 Mbps 显示吞吐量（无需 VPN 即可工作）",
+  "settingsPingTargetTitle": "HTTP 测试 URL",
+  "settingsPingTargetGstatic": "Google (generate_204)",
+  "settingsPingTargetCloudflare": "Cloudflare (trace)",
+  "settingsPingTargetMicrosoft": "Microsoft (connect test)",
+  "settingsPingTargetCustom": "自定义 URL",
+  "settingsPingCustomUrl": "URL",
+  "settingsPingCustomUrlHint": "用于 GET 请求的 https:// 或 http:// 地址",
+  "settingsPingCustomUrlInvalid": "无效或不安全的 URL（不允许 localhost 或私有网络）",
+  "subscriptionNameLabel": "名称",
+  "subscriptionNameHint": "我的订阅",
+  "subscriptionUrlLabel": "URL",
+  "subscriptionUrlHint": "https://example.com/sub?token=...",
+  "subscriptionsAddSubscription": "添加订阅",
+  "subscriptionsAddAndFetch": "添加并获取",
+  "subscriptionsEditSubscription": "编辑订阅",
+  "subscriptionsCopyUrl": "复制 URL",
+  "subscriptionsUrlCopied": "URL 已复制",
+  "subscriptionsDeleteSubscription": "删除订阅",
+  "subscriptionsDeleteConfirm": "确定要删除“{name}”吗？\n\n这还会移除所有关联的服务器。",
+  "@subscriptionsDeleteConfirm": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "subscriptionsRetry": "重试",
+  "subscriptionsCancel": "取消",
+  "subscriptionsDelete": "删除",
+  "subscriptionsSave": "保存",
+  "subscriptionsMoveUp": "上移",
+  "subscriptionsMoveDown": "下移",
+  "subscriptionsAutoUpdate": "自动更新",
+  "subscriptionsOn": "开",
+  "subscriptionsOff": "关",
+  "subscriptionsExpired": "已过期",
+  "subscriptionsRefreshFailed": "刷新失败",
+  "subscriptionsEveryHour": "每小时",
+  "subscriptionsEveryHours": "每 {hours} 小时",
+  "@subscriptionsEveryHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsEveryDay": "每天",
+  "subscriptionsEveryDays": "每 {days} 天",
+  "@subscriptionsEveryDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsAutoUpdateInterval": "自动更新间隔",
+  "subscriptionsCurrentInterval": "每 {hours} 小时",
+  "@subscriptionsCurrentInterval": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsJustNow": "刚刚",
+  "subscriptionsMinutesAgo": "{minutes} 分钟前",
+  "@subscriptionsMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsHoursAgo": "{hours} 小时前",
+  "@subscriptionsHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsDaysAgo": "{days} 天前",
+  "@subscriptionsDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsInDays": "{days} 天后",
+  "@subscriptionsInDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsInHours": "{hours} 小时后",
+  "@subscriptionsInHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsSoon": "即将",
+  "serversAddServer": "添加服务器",
+  "serversPasteLinks": "粘贴链接",
+  "serversImportFile": "导入文件",
+  "serversNotSupported": "此版本不支持",
+  "serversAddServerTitle": "添加服务器",
+  "serversPasteVlessHint": "粘贴 vless://、vmess://、trojan://、ss://、hysteria2:// 或 hy2://（每行一个）",
+  "serversPasteHint": "vless://… 或 hy2://host:port?auth=…",
+  "serversAdd": "添加",
+  "serversManualServers": "手动服务器",
+  "serversRefreshSubscription": "刷新订阅",
+  "serversPingAll": "全部 Ping",
+  "settingsAdvanced": "高级",
+  "settingsAdvancedSubtitle": "内核设置、Ping、路由、HWID 和调试",
+  "settingsBackupRestore": "备份与恢复",
+  "settingsBackupRestoreSubtitle": "导出/导入分应用代理、订阅和服务器",
+  "settingsSelectAtLeastOne": "请至少选择一个要导出的部分",
+  "settingsBackupSaved": "备份保存成功",
+  "settingsSelectLocation": "选择备份的保存位置",
+  "settingsExportFile": "导出文件",
+  "settingsImportFile": "从文件导入",
+  "settingsImportBackup": "导入备份",
+  "settingsChooseWhatToImport": "选择要导入的内容（所选部分将替换你当前的数据）。",
+  "settingsSplitTunnelingApps": "分应用代理的应用",
+  "settingsSubscriptions": "订阅",
+  "settingsServersActive": "服务器（及当前活动服务器）",
+  "settingsImport": "导入",
+  "settingsExport": "导出",
+  "settingsCreateFileToSave": "创建一个可以保存并在其他设备上导入的文件。",
+  "settingsPickExportedFile": "选择先前导出的文件并恢复所选部分。",
+  "settingsWorking": "处理中...",
+  "settingsImportedSections": "已导入：{count} 个部分",
+  "@settingsImportedSections": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsDebugMode": "调试模式",
+  "settingsDebugModeOn": "已启用扩展诊断",
+  "settingsDebugModeOff": "关闭",
+  "settingsDebugModeHint": "在服务器卡片中显示实时 VPN 指标，并允许查看 Xray 内核日志。",
+  "settingsOpenXrayLogs": "打开 Xray 日志",
+  "settingsXrayCoreLogs": "Xray 内核日志",
+  "settingsRefresh": "刷新",
+  "settingsAppVersion": "应用版本",
+  "settingsChecking": "正在检查...",
+  "settingsCheckFailed": "检查失败",
+  "settingsUpdateAvailable": "有可用更新",
+  "settingsUpToDate": "已是最新",
+  "settingsNewVersionAvailable": "有新版本可用",
+  "settingsSize": "大小：{size}",
+  "@settingsSize": {
+    "placeholders": {
+      "size": {}
+    }
+  },
+  "settingsDownloading": "正在下载...",
+  "settingsCheckForUpdates": "检查更新",
+  "settingsShareDeviceHwid": "共享设备 HWID",
+  "settingsHwidWillBeSent": "HWID 将随订阅请求一起发送",
+  "settingsHwidNotShared": "不共享 HWID",
+  "settingsHwidHint": "启用后，你设备的唯一 ID（HWID）会被发送到订阅服务器。部分提供商需要它进行 HWID 绑定。禁用可提升隐私。",
+  "settingsRoutingRules": "路由规则",
+  "settingsNoRules": "无规则",
+  "settingsAddCustomRule": "添加自定义规则",
+  "settingsAddRule": "添加规则",
+  "settingsEditRule": "编辑路由规则",
+  "settingsRuleName": "规则名称",
+  "settingsType": "类型",
+  "settingsAction": "操作",
+  "settingsValues": "值（要匹配的内容）",
+  "settingsOrder": "顺序（规则优先级）",
+  "settingsEnabled": "已启用",
+  "settingsNameAndValuesRequired": "名称和值为必填项",
+  "settingsUseOnePerLine": "每行使用一个值，或用逗号分隔。",
+  "settingsSmallerOrderFirst": "数字越小 = 越早检查（例如 1 在 50 之前）",
+  "settingsSmallerOrderWins": "如果两条规则可匹配相同流量，则顺序较小的规则优先。",
+  "settingsSaveChanges": "保存更改",
+  "settingsDeleteRule": "删除规则",
+  "settingsAddRuleTooltip": "添加规则",
+  "settingsDomain": "域名",
+  "settingsIpCidr": "IP CIDR",
+  "settingsGeoIp": "GeoIP",
+  "settingsGeosite": "Geosite",
+  "settingsProcess": "进程",
+  "settingsProxy": "代理",
+  "settingsDirect": "直连",
+  "settingsBlock": "阻止",
+  "settingsEgDomain": "例如 youtube.com, +google",
+  "settingsEgIpCidr": "例如 1.1.1.1/32, 192.168.0.0/16",
+  "settingsEgGeoip": "例如 RU, US, DE",
+  "settingsEgGeosite": "例如 category-ads-all",
+  "settingsEgProcess": "例如 com.telegram.messenger",
+  "settingsExportFailed": "导出失败：{error}",
+  "@settingsExportFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsImportFailed": "导入失败：{error}",
+  "@settingsImportFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsDownloadFailed": "下载失败：{error}",
+  "@settingsDownloadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsCheckFailedError": "检查失败：{error}",
+  "@settingsCheckFailedError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsNoXrayLogsYet": "暂无 Xray 日志",
+  "settingsLanguageTitle": "语言",
+  "settingsLanguageSubtitle": "{language}",
+  "@settingsLanguageSubtitle": {
+    "placeholders": {
+      "language": {}
+    }
+  },
+  "settingsLanguageSystem": "系统默认",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageRussian": "Русский",
+  "settingsLanguageGerman": "Deutsch",
+  "settingsLanguageChinese": "中文",
+  "settingsLanguageSheetTitle": "选择语言",
+  "splitAddApp": "添加应用",
+  "splitAddAppTitle": "添加应用程序",
+  "splitAddAppHint": ".exe 路径或名称（例如 chrome.exe）",
+  "splitAddAppPickFile": "浏览…",
+  "splitAddAppInvalid": "请输入有效的 .exe 名称或路径",
+  "splitAddAppAdded": "已添加：{name}",
+  "@splitAddAppAdded": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "splitRunningApps": "运行中",
+  "splitInstalledApps": "已安装",
+  "splitShowSystemApps": "显示系统应用",
+  "splitHideSystemApps": "隐藏系统应用",
+  "splitCustomApps": "手动条目",
+  "splitClearAll": "全部清除",
+  "splitProxyModeWarning": "在 Proxy 模式下不会应用分应用代理 — 所有流量都经过系统代理。请将连接模式切换为 TUN（在侧边栏中），这样按进程的规则才会生效。",
+  "settingsLatestVersionInstalled": "你已是最新版本",
+  "serversPingServer": "Ping 服务器",
+  "serversHealthCheck": "健康检查",
+  "serversCopyAddress": "复制服务器地址",
+  "serversCopiedToClipboard": "已复制到剪贴板",
+  "serversCopyConfig": "复制配置",
+  "serversConfigCopied": "配置已复制",
+  "serversDeleteServer": "删除服务器",
+  "serversHealthCheckDesc": "DNS、TCP 和配置校验",
+  "settingsDebugHintDesktop": "显示 Xray 会话日志。实时 VPN 指标显示在连接按钮下方。",
+  "settingsDebugHintMobile": "在服务器卡片中显示实时 VPN 指标和 Xray 日志。",
+  "serversErrorLoadingApps": "加载应用出错：{error}",
+  "@serversErrorLoadingApps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "desktopConnectionMode": "连接模式",
+  "desktopModeShort": "模式",
+  "desktopDisconnectBeforeModeChange": "更改连接模式前请先断开连接"
+}

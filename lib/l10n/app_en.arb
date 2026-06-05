@@ -1,0 +1,500 @@
+{
+  "@@locale": "en",
+  "appTitle": "KEQDIS",
+  "vpnConnectedTo": "Connected to: {serverName}",
+  "@vpnConnectedTo": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "vpnConnecting": "Connecting...",
+  "vpnDisconnecting": "Disconnecting...",
+  "vpnTapToConnect": "Tap to connect to {serverName}",
+  "@vpnTapToConnect": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "vpnSelectServer": "Select a server below",
+  "vpnSelectServerFirst": "Select a server first",
+  "updateTitle": "Update Available",
+  "updateWhatsNew": "What's new:",
+  "updateActionLater": "Later",
+  "updateActionNow": "Update",
+  "errorSubscriptionTitle": "Subscription error",
+  "errorConnectionPermission": "Connection failed: permission",
+  "errorConnectionNetwork": "Connection failed: network",
+  "errorConnectionConfig": "Connection failed: config",
+  "errorConnectionAuth": "Connection failed: auth",
+  "errorConnectionGeneric": "Connection error",
+  "errorProviderConfigTitle": "Provider configuration required",
+  "errorProviderNoHostsMessage": "Provider has no hosts assigned to this subscription.",
+  "errorProviderNoHostsAction": "Open provider panel, add or assign hosts, then refresh subscription.",
+  "errorActionLabel": "Action: {action}",
+  "@errorActionLabel": {
+    "placeholders": {
+      "action": {}
+    }
+  },
+  "splitTunnelingTitle": "Split Tunneling",
+  "splitModeAllApps": "All apps",
+  "splitModeSelectedOnly": "Selected only",
+  "splitModeAllExceptSelected": "All except selected",
+  "splitSearchHint": "Search apps...",
+  "splitNoAppsFound": "No apps found",
+  "splitFailedLoadApps": "Failed to load apps: {error}",
+  "@splitFailedLoadApps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "splitSelectedAppsCount": "{count} app(s) selected",
+  "@splitSelectedAppsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "splitHideSystemApps": "Hide system apps",
+  "splitShowSystemApps": "Show system apps",
+  "splitAddRussianAppsBypass": "Add Russian apps to bypass",
+  "splitClear": "Clear",
+  "splitNoRussianAppsFound": "No Russian apps found in the installed apps list",
+  "splitRussianAppsAlreadyAdded": "All Russian apps already in bypass list",
+  "splitAddedRussianApps": "Added {count} Russian app(s) to bypass list",
+  "@splitAddedRussianApps": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "navServers": "Servers",
+  "navSubscriptions": "Subscriptions",
+  "navSettings": "Settings",
+  "serversEmptyTitle": "No servers yet",
+  "serversEmptyHint": "Add a subscription in the Subscriptions tab",
+  "subscriptionsTitle": "Subscriptions",
+  "subscriptionsAddButton": "Add subscription",
+  "subscriptionsEmptyTitle": "No subscriptions",
+  "subscriptionsEmptyHint": "Tap + to add a subscription URL",
+  "settingsTitle": "Settings",
+  "settingsThemeTitle": "Theme",
+  "settingsSplitTitle": "Split Tunneling",
+  "settingsRoutingTitle": "Routing Rules",
+  "settingsSplitConfigured": "{count} apps configured",
+  "@settingsSplitConfigured": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsRoutingSubtitle": "Direct / proxy / block rules and presets",
+  "settingsResetRoutingTitle": "Reset routing to defaults",
+  "settingsResetRoutingSubtitle": "Restore built-in routing rules",
+  "settingsRoutingResetDone": "Routing rules reset",
+  "settingsRoutingHeaderDesc": "Decide which sites go directly past the VPN, which are forced through it, and which are blocked. Use a preset for a quick start, then fine-tune each list below.",
+  "settingsRoutingPresetsTitle": "Quick presets",
+  "settingsRoutingPresetsHint": "Tap to add a curated list. You can edit or remove entries afterwards.",
+  "settingsRoutingPresetRuTitle": "Russian sites — Direct",
+  "settingsRoutingPresetRuDesc": "All .ru / .рф and major RU services bypass the VPN",
+  "settingsRoutingPresetBanksTitle": "Banks & gov — Direct",
+  "settingsRoutingPresetBanksDesc": "Banking, payments and state portals bypass the VPN",
+  "settingsRoutingPresetAdsTitle": "Ads & trackers — Block",
+  "settingsRoutingPresetAdsDesc": "Drop common ad / analytics hosts",
+  "settingsRoutingPresetStreamingTitle": "Streaming — Proxy",
+  "settingsRoutingPresetStreamingDesc": "Force YouTube, Netflix, Twitch through the VPN",
+  "settingsRoutingPresetMessengersTitle": "Messengers — Proxy",
+  "settingsRoutingPresetMessengersDesc": "Force Telegram, Discord, WhatsApp through the VPN",
+  "settingsRoutingPresetApplied": "Added \"{name}\"",
+  "@settingsRoutingPresetApplied": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsRoutingDirectTitle": "Direct domains (bypass VPN)",
+  "settingsRoutingDirectDesc": "These hosts connect directly, without the VPN.",
+  "settingsRoutingProxyTitle": "Proxy domains (force VPN)",
+  "settingsRoutingProxyDesc": "These hosts always go through the VPN.",
+  "settingsRoutingBlockTitle": "Blocked domains",
+  "settingsRoutingBlockDesc": "These hosts are dropped and never connect.",
+  "settingsRoutingDirectIpsTitle": "Direct IPs / subnets (bypass VPN)",
+  "settingsRoutingDirectIpsDesc": "IPv4/IPv6 addresses or CIDR ranges that bypass the VPN.",
+  "settingsRoutingValuesHint": "One per line, or comma separated",
+  "settingsRoutingSavedToast": "Routing updated",
+  "settingsRoutingItemCount": "{count, plural, =0{empty} =1{1 entry} other{{count} entries}}",
+  "@settingsRoutingItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAndroidColorsSubtitle": "Android colors · {mode}",
+  "@settingsAndroidColorsSubtitle": {
+    "placeholders": {
+      "mode": {}
+    }
+  },
+  "settingsSystemColorsSubtitle": "System colors · {mode}",
+  "@settingsSystemColorsSubtitle": {
+    "placeholders": {
+      "mode": {}
+    }
+  },
+  "themeModeDark": "Dark",
+  "themeModeLight": "Light",
+  "themeCustomizationTitle": "Theme customization",
+  "themeUseDynamicColors": "Use Android dynamic colors",
+  "themeUseDynamicColorsSubtitle": "Use Android dynamic colors when available",
+  "themeDynamicPaletteHint": "Dynamic Android palette is active. Light/Dark works independently.",
+  "themeSystemPaletteHint": "System accent palette is active. Light/Dark works independently.",
+  "themeUseSystemColors": "Use system accent colors",
+  "themeUseSystemColorsSubtitle": "Follow Windows or Linux accent colors when available",
+  "themeCustomPaletteHint": "Custom palette is active. Light/Dark works independently.",
+  "themeColorThemesTitle": "Color themes",
+  "settingsLanProxyTitle": "LAN Proxy",
+  "settingsOff": "Off",
+  "settingsLanSharingOnIp": "Sharing on {ip}",
+  "@settingsLanSharingOnIp": {
+    "placeholders": {
+      "ip": {}
+    }
+  },
+  "settingsHwidTitle": "Send device HWID",
+  "settingsHwidEnabledRecommended": "Enabled (recommended)",
+  "settingsHwidDisabled": "Disabled",
+  "settingsHwidEnabledHint": "Some providers require HWID for subscription updates and device limits.",
+  "settingsHwidDisabledHint": "HWID headers are not sent. Some subscriptions may fail if provider requires device binding.",
+  "settingsDeviceIpListTitle": "Device IP addresses on the network:",
+  "settingsIpCopied": "IP copied",
+  "settingsSetupAnotherDeviceTitle": "Setup on another device:",
+  "settingsSocks5PortLabel": "SOCKS5 port",
+  "settingsHttpPortLabel": "HTTP port",
+  "settingsTurnOffToChange": "Turn off to change setting",
+  "settingsProxyCopied": "{label} {address} copied",
+  "@settingsProxyCopied": {
+    "placeholders": {
+      "label": {},
+      "address": {}
+    }
+  },
+  "settingsXrayCoreTitle": "Xray core",
+  "settingsXrayCoreSubtitle": "DNS, XMUX, log and routing",
+  "settingsXrayDnsSection": "DNS",
+  "settingsXrayDnsCustom": "Custom DNS servers",
+  "settingsXrayDnsCustomHint": "One address per line (DoH, DoT, or plain)",
+  "settingsXrayDnsServers": "DNS servers",
+  "settingsXrayDnsSplitDirect": "Split resolver for direct domains",
+  "settingsXrayDnsSplitDirectHint": "Uses first server for domains from direct list",
+  "settingsXrayDnsQueryStrategy": "Query strategy",
+  "settingsXrayDnsDisableCache": "Disable DNS cache",
+  "settingsXrayXmuxSection": "XMUX (XHTTP)",
+  "settingsXrayXmuxEnable": "Enable XMUX",
+  "settingsXrayXmuxEnableHint": "Multiplexing for XHTTP transport (client-side)",
+  "settingsXrayGeneralSection": "General",
+  "settingsXrayLogLevel": "Log level",
+  "settingsXrayDomainStrategy": "Routing domain strategy",
+  "settingsXraySniffing": "Inbound sniffing",
+  "settingsXraySniffingRouteOnly": "Sniffing route only",
+  "settingsXrayCoreIntro": "These options are injected into the generated Xray config. Change only if you know what they do.",
+  "settingsXrayDnsDefaultNote": "Default: Cloudflare and Google DoH",
+  "settingsXrayXmuxParamsTitle": "Tuning",
+  "settingsXrayXmuxParamsHint": "Leave empty to use Xray defaults. Values can be a number or range (e.g. 16-32).",
+  "settingsXraySniffingHint": "Detect destination protocol and domain from inbound traffic",
+  "settingsXraySniffingRouteOnlyHint": "Use sniffing for routing only, without overriding the destination",
+  "settingsXrayResetDefaults": "Reset to defaults",
+  "settingsXrayResetDone": "Xray core settings restored",
+  "settingsXrayXmuxMaxConcurrency": "Max concurrency",
+  "settingsXrayXmuxMaxConnections": "Max connections",
+  "settingsXrayXmuxCMaxReuseTimes": "Connection reuse limit",
+  "settingsXrayXmuxHMaxRequestTimes": "Max requests per stream",
+  "settingsXrayXmuxHMaxReusableSecs": "Stream reuse time (sec)",
+  "settingsXrayXmuxHKeepAlivePeriod": "Keep-alive period (sec)",
+  "settingsPingTitle": "Server ping",
+  "settingsPingMethodTitle": "Ping method",
+  "settingsPingMethodTcp": "TCP ping",
+  "settingsPingMethodTcpHint": "Fast reachability check",
+  "settingsPingMethodUrl": "HTTP via proxy",
+  "settingsPingMethodUrlHint": "Measures GET latency through the server",
+  "settingsPingMethodSpeed": "Speed test",
+  "settingsPingMethodSpeedHint": "Downloads a fixed payload through the server and shows throughput in Mbps (works without VPN)",
+  "settingsPingTargetTitle": "HTTP test URL",
+  "settingsPingTargetGstatic": "Google (generate_204)",
+  "settingsPingTargetCloudflare": "Cloudflare (trace)",
+  "settingsPingTargetMicrosoft": "Microsoft (connect test)",
+  "settingsPingTargetCustom": "Custom URL",
+  "settingsPingCustomUrl": "URL",
+  "settingsPingCustomUrlHint": "https:// or http:// address for GET request",
+  "settingsPingCustomUrlInvalid": "Invalid or unsafe URL (no localhost or private networks)",
+  "subscriptionNameLabel": "Name",
+  "subscriptionNameHint": "My Subscription",
+  "subscriptionUrlLabel": "URL",
+  "subscriptionUrlHint": "https://example.com/sub?token=...",
+  "subscriptionsAddSubscription": "Add Subscription",
+  "subscriptionsAddAndFetch": "Add & Fetch",
+  "subscriptionsEditSubscription": "Edit subscription",
+  "subscriptionsCopyUrl": "Copy URL",
+  "subscriptionsUrlCopied": "URL copied",
+  "subscriptionsDeleteSubscription": "Delete subscription",
+  "subscriptionsDeleteConfirm": "Are you sure you want to delete \"{name}\"?\n\nThis will also remove all associated servers.",
+  "@subscriptionsDeleteConfirm": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "subscriptionsRetry": "Retry",
+  "subscriptionsCancel": "Cancel",
+  "subscriptionsDelete": "Delete",
+  "subscriptionsSave": "Save",
+  "subscriptionsMoveUp": "Move up",
+  "subscriptionsMoveDown": "Move down",
+  "subscriptionsAutoUpdate": "Auto-update",
+  "subscriptionsOn": "ON",
+  "subscriptionsOff": "OFF",
+  "subscriptionsExpired": "Expired",
+  "subscriptionsRefreshFailed": "Refresh failed",
+  "subscriptionsEveryHour": "Every hour",
+  "subscriptionsEveryHours": "Every {hours} hours",
+  "@subscriptionsEveryHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsEveryDay": "Every day",
+  "subscriptionsEveryDays": "Every {days} days",
+  "@subscriptionsEveryDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsAutoUpdateInterval": "Auto-update interval",
+  "subscriptionsCurrentInterval": "every {hours}h",
+  "@subscriptionsCurrentInterval": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsJustNow": "just now",
+  "subscriptionsMinutesAgo": "{minutes}m ago",
+  "@subscriptionsMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsHoursAgo": "{hours}h ago",
+  "@subscriptionsHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsDaysAgo": "{days}d ago",
+  "@subscriptionsDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsInDays": "in {days}d",
+  "@subscriptionsInDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsInHours": "in {hours}h",
+  "@subscriptionsInHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsSoon": "soon",
+  "serversAddServer": "Add server",
+  "serversPasteLinks": "Paste link(s)",
+  "serversImportFile": "Import file",
+  "serversNotSupported": "Not supported in this build",
+  "serversAddServerTitle": "Add Server",
+  "serversPasteVlessHint": "Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line)",
+  "serversPasteHint": "vless://… or hy2://host:port?auth=…",
+  "serversAdd": "Add",
+  "serversManualServers": "Manual servers",
+  "serversRefreshSubscription": "Refresh subscription",
+  "serversPingAll": "Ping all",
+  "settingsAdvanced": "Advanced",
+  "settingsAdvancedSubtitle": "Core settings, ping, routing, HWID and debug",
+  "settingsBackupRestore": "Backup & restore",
+  "settingsBackupRestoreSubtitle": "Export/import split tunneling, subscriptions and servers",
+  "settingsSelectAtLeastOne": "Select at least one section to export",
+  "settingsBackupSaved": "Backup saved successfully",
+  "settingsSelectLocation": "Select location to save backup",
+  "settingsExportFile": "Export file",
+  "settingsImportFile": "Import from file",
+  "settingsImportBackup": "Import backup",
+  "settingsChooseWhatToImport": "Choose what to import (selected sections will replace your current data).",
+  "settingsSplitTunnelingApps": "Split tunneling apps",
+  "settingsSubscriptions": "Subscriptions",
+  "settingsServersActive": "Servers (and active server)",
+  "settingsImport": "Import",
+  "settingsExport": "Export",
+  "settingsCreateFileToSave": "Create a file you can save and import on another device.",
+  "settingsPickExportedFile": "Pick a previously exported file and restore selected sections.",
+  "settingsWorking": "Working...",
+  "settingsImportedSections": "Imported: {count} section(s)",
+  "@settingsImportedSections": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsDebugMode": "Debug mode",
+  "settingsDebugModeOn": "Extended diagnostics enabled",
+  "settingsDebugModeOff": "Off",
+  "settingsDebugModeHint": "Shows live VPN metrics in server cards and allows viewing Xray core logs.",
+  "settingsOpenXrayLogs": "Open Xray logs",
+  "settingsXrayCoreLogs": "Xray core logs",
+  "settingsRefresh": "Refresh",
+  "settingsAppVersion": "App version",
+  "settingsChecking": "Checking...",
+  "settingsCheckFailed": "Check failed",
+  "settingsUpdateAvailable": "Update available",
+  "settingsUpToDate": "Up to date",
+  "settingsNewVersionAvailable": "New version available",
+  "settingsSize": "Size: {size}",
+  "@settingsSize": {
+    "placeholders": {
+      "size": {}
+    }
+  },
+  "settingsDownloading": "Downloading...",
+  "settingsCheckForUpdates": "Check for updates",
+  "settingsShareDeviceHwid": "Share device HWID",
+  "settingsHwidWillBeSent": "HWID will be sent with subscription requests",
+  "settingsHwidNotShared": "HWID not shared",
+  "settingsHwidHint": "When enabled, your device's unique ID (HWID) is sent to subscription servers. Required by some providers for HWID binding. Disable to increase privacy.",
+  "settingsRoutingRules": "Routing Rules",
+  "settingsNoRules": "No rules",
+  "settingsAddCustomRule": "Add custom rule",
+  "settingsAddRule": "Add rule",
+  "settingsEditRule": "Edit routing rule",
+  "settingsRuleName": "Rule name",
+  "settingsType": "Type",
+  "settingsAction": "Action",
+  "settingsValues": "Values (what to match)",
+  "settingsOrder": "Order (rule priority)",
+  "settingsEnabled": "Enabled",
+  "settingsNameAndValuesRequired": "Name and values are required",
+  "settingsUseOnePerLine": "Use one value per line, or separate with commas.",
+  "settingsSmallerOrderFirst": "Smaller number = checked earlier (e.g. 1 before 50)",
+  "settingsSmallerOrderWins": "If two rules can match the same traffic, the rule with smaller order wins.",
+  "settingsSaveChanges": "Save changes",
+  "settingsDeleteRule": "Delete rule",
+  "settingsAddRuleTooltip": "Add rule",
+  "settingsDomain": "Domain",
+  "settingsIpCidr": "IP CIDR",
+  "settingsGeoIp": "GeoIP",
+  "settingsGeosite": "Geosite",
+  "settingsProcess": "Process",
+  "settingsProxy": "Proxy",
+  "settingsDirect": "Direct",
+  "settingsBlock": "Block",
+  "settingsEgDomain": "e.g. youtube.com, +google",
+  "settingsEgIpCidr": "e.g. 1.1.1.1/32, 192.168.0.0/16",
+  "settingsEgGeoip": "e.g. RU, US, DE",
+  "settingsEgGeosite": "e.g. category-ads-all",
+  "settingsEgProcess": "e.g. com.telegram.messenger",
+  "settingsExportFailed": "Export failed: {error}",
+  "@settingsExportFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsImportFailed": "Import failed: {error}",
+  "@settingsImportFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsDownloadFailed": "Download failed: {error}",
+  "@settingsDownloadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsCheckFailedError": "Check failed: {error}",
+  "@settingsCheckFailedError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsNoXrayLogsYet": "No Xray logs yet",
+  "settingsLanguageTitle": "Language",
+  "settingsLanguageSubtitle": "{language}",
+  "@settingsLanguageSubtitle": {
+    "placeholders": {
+      "language": {}
+    }
+  },
+  "settingsLanguageSystem": "System default",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageRussian": "Русский",
+  "settingsLanguageGerman": "Deutsch",
+  "settingsLanguageChinese": "中文",
+  "settingsLanguageSheetTitle": "Choose language",
+  "splitAddApp": "Add app",
+  "splitAddAppTitle": "Add application",
+  "splitAddAppHint": "Path to .exe or name (e.g. chrome.exe)",
+  "splitAddAppPickFile": "Browse…",
+  "splitAddAppInvalid": "Enter a valid .exe name or path",
+  "splitAddAppAdded": "Added: {name}",
+  "@splitAddAppAdded": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "splitRunningApps": "Running",
+  "splitInstalledApps": "Installed",
+  "splitShowSystemApps": "Show system apps",
+  "splitHideSystemApps": "Hide system apps",
+  "splitCustomApps": "Manual entries",
+  "splitClearAll": "Clear all",
+  "splitProxyModeWarning": "Split tunneling is not applied in Proxy mode — all traffic goes through the system proxy. Switch the connection mode to TUN (in the side panel) so per-process rules work.",
+  "settingsLatestVersionInstalled": "You have the latest version",
+  "serversPingServer": "Ping server",
+  "serversHealthCheck": "Health check",
+  "serversCopyAddress": "Copy server address",
+  "serversCopiedToClipboard": "Copied to clipboard",
+  "serversCopyConfig": "Copy configuration",
+  "serversConfigCopied": "Configuration copied",
+  "serversDeleteServer": "Delete server",
+  "serversHealthCheckDesc": "DNS, TCP and config validation",
+  "settingsDebugHintDesktop": "Shows Xray session logs. Live VPN metrics are shown under the connect button.",
+  "settingsDebugHintMobile": "Shows live VPN metrics in server cards and Xray logs.",
+  "serversErrorLoadingApps": "Error loading apps: {error}",
+  "@serversErrorLoadingApps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "desktopConnectionMode": "Connection mode",
+  "desktopModeShort": "Mode",
+  "desktopDisconnectBeforeModeChange": "Disconnect before changing connection mode"
+}

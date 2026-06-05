@@ -1,0 +1,500 @@
+{
+  "@@locale": "de",
+  "appTitle": "KEQDIS",
+  "vpnConnectedTo": "Verbunden mit: {serverName}",
+  "@vpnConnectedTo": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "vpnConnecting": "Verbinden...",
+  "vpnDisconnecting": "Trennen...",
+  "vpnTapToConnect": "Tippen, um mit {serverName} zu verbinden",
+  "@vpnTapToConnect": {
+    "placeholders": {
+      "serverName": {}
+    }
+  },
+  "vpnSelectServer": "Wähle unten einen Server",
+  "vpnSelectServerFirst": "Wähle zuerst einen Server",
+  "updateTitle": "Update verfügbar",
+  "updateWhatsNew": "Neuerungen:",
+  "updateActionLater": "Später",
+  "updateActionNow": "Aktualisieren",
+  "errorSubscriptionTitle": "Abonnement-Fehler",
+  "errorConnectionPermission": "Verbindung fehlgeschlagen: Berechtigung",
+  "errorConnectionNetwork": "Verbindung fehlgeschlagen: Netzwerk",
+  "errorConnectionConfig": "Verbindung fehlgeschlagen: Konfiguration",
+  "errorConnectionAuth": "Verbindung fehlgeschlagen: Authentifizierung",
+  "errorConnectionGeneric": "Verbindungsfehler",
+  "errorProviderConfigTitle": "Provider-Konfiguration erforderlich",
+  "errorProviderNoHostsMessage": "Dem Provider sind für dieses Abonnement keine Hosts zugewiesen.",
+  "errorProviderNoHostsAction": "Öffne das Provider-Panel, füge Hosts hinzu oder weise sie zu und aktualisiere dann das Abonnement.",
+  "errorActionLabel": "Aktion: {action}",
+  "@errorActionLabel": {
+    "placeholders": {
+      "action": {}
+    }
+  },
+  "splitTunnelingTitle": "Split-Tunneling",
+  "splitModeAllApps": "Alle Apps",
+  "splitModeSelectedOnly": "Nur ausgewählte",
+  "splitModeAllExceptSelected": "Alle außer ausgewählte",
+  "splitSearchHint": "Apps suchen...",
+  "splitNoAppsFound": "Keine Apps gefunden",
+  "splitFailedLoadApps": "Apps konnten nicht geladen werden: {error}",
+  "@splitFailedLoadApps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "splitSelectedAppsCount": "{count} App(s) ausgewählt",
+  "@splitSelectedAppsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "splitHideSystemApps": "System-Apps ausblenden",
+  "splitShowSystemApps": "System-Apps anzeigen",
+  "splitAddRussianAppsBypass": "Russische Apps zum Umgehen hinzufügen",
+  "splitClear": "Löschen",
+  "splitNoRussianAppsFound": "Keine russischen Apps in der Liste der installierten Apps gefunden",
+  "splitRussianAppsAlreadyAdded": "Alle russischen Apps sind bereits in der Umgehungsliste",
+  "splitAddedRussianApps": "{count} russische App(s) zur Umgehungsliste hinzugefügt",
+  "@splitAddedRussianApps": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "navServers": "Server",
+  "navSubscriptions": "Abonnements",
+  "navSettings": "Einstellungen",
+  "serversEmptyTitle": "Noch keine Server",
+  "serversEmptyHint": "Füge im Tab Abonnements ein Abonnement hinzu",
+  "subscriptionsTitle": "Abonnements",
+  "subscriptionsAddButton": "Abonnement hinzufügen",
+  "subscriptionsEmptyTitle": "Keine Abonnements",
+  "subscriptionsEmptyHint": "Tippe auf +, um eine Abonnement-URL hinzuzufügen",
+  "settingsTitle": "Einstellungen",
+  "settingsThemeTitle": "Design",
+  "settingsSplitTitle": "Split-Tunneling",
+  "settingsRoutingTitle": "Routing-Regeln",
+  "settingsSplitConfigured": "{count} Apps konfiguriert",
+  "@settingsSplitConfigured": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsRoutingSubtitle": "Direct- / Proxy- / Block-Regeln und Presets",
+  "settingsResetRoutingTitle": "Routing auf Standard zurücksetzen",
+  "settingsResetRoutingSubtitle": "Integrierte Routing-Regeln wiederherstellen",
+  "settingsRoutingResetDone": "Routing-Regeln zurückgesetzt",
+  "settingsRoutingHeaderDesc": "Lege fest, welche Seiten direkt am VPN vorbei gehen, welche zwingend hindurch geleitet und welche blockiert werden. Beginne mit einem Preset und passe dann jede Liste unten an.",
+  "settingsRoutingPresetsTitle": "Schnelle Presets",
+  "settingsRoutingPresetsHint": "Tippen, um eine kuratierte Liste hinzuzufügen. Einträge können danach bearbeitet oder entfernt werden.",
+  "settingsRoutingPresetRuTitle": "Russische Seiten — Direkt",
+  "settingsRoutingPresetRuDesc": "Alle .ru / .рф und großen RU-Dienste umgehen das VPN",
+  "settingsRoutingPresetBanksTitle": "Banken & Behörden — Direkt",
+  "settingsRoutingPresetBanksDesc": "Banken, Zahlungen und Behördenportale umgehen das VPN",
+  "settingsRoutingPresetAdsTitle": "Werbung & Tracker — Blockieren",
+  "settingsRoutingPresetAdsDesc": "Gängige Werbe-/Analyse-Hosts verwerfen",
+  "settingsRoutingPresetStreamingTitle": "Streaming — Proxy",
+  "settingsRoutingPresetStreamingDesc": "YouTube, Netflix, Twitch zwingend über das VPN",
+  "settingsRoutingPresetMessengersTitle": "Messenger — Proxy",
+  "settingsRoutingPresetMessengersDesc": "Telegram, Discord, WhatsApp zwingend über das VPN",
+  "settingsRoutingPresetApplied": "\"{name}\" hinzugefügt",
+  "@settingsRoutingPresetApplied": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsRoutingDirectTitle": "Direkte Domains (VPN umgehen)",
+  "settingsRoutingDirectDesc": "Diese Hosts verbinden sich direkt, ohne VPN.",
+  "settingsRoutingProxyTitle": "Proxy-Domains (VPN erzwingen)",
+  "settingsRoutingProxyDesc": "Diese Hosts gehen immer über das VPN.",
+  "settingsRoutingBlockTitle": "Blockierte Domains",
+  "settingsRoutingBlockDesc": "Diese Hosts werden verworfen und verbinden nie.",
+  "settingsRoutingDirectIpsTitle": "Direkte IPs / Subnetze (VPN umgehen)",
+  "settingsRoutingDirectIpsDesc": "IPv4/IPv6-Adressen oder CIDR-Bereiche, die das VPN umgehen.",
+  "settingsRoutingValuesHint": "Eine pro Zeile oder durch Komma getrennt",
+  "settingsRoutingSavedToast": "Routing aktualisiert",
+  "settingsRoutingItemCount": "{count, plural, =0{leer} =1{1 Eintrag} other{{count} Einträge}}",
+  "@settingsRoutingItemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsAndroidColorsSubtitle": "Android-Farben · {mode}",
+  "@settingsAndroidColorsSubtitle": {
+    "placeholders": {
+      "mode": {}
+    }
+  },
+  "settingsSystemColorsSubtitle": "Systemfarben · {mode}",
+  "@settingsSystemColorsSubtitle": {
+    "placeholders": {
+      "mode": {}
+    }
+  },
+  "themeModeDark": "Dunkel",
+  "themeModeLight": "Hell",
+  "themeCustomizationTitle": "Design anpassen",
+  "themeUseDynamicColors": "Dynamische Android-Farben verwenden",
+  "themeUseDynamicColorsSubtitle": "Dynamische Android-Farben verwenden, wenn verfügbar",
+  "themeDynamicPaletteHint": "Die dynamische Android-Palette ist aktiv. Hell/Dunkel funktioniert unabhängig.",
+  "themeSystemPaletteHint": "Die System-Akzentpalette ist aktiv. Hell/Dunkel funktioniert unabhängig.",
+  "themeUseSystemColors": "System-Akzentfarben verwenden",
+  "themeUseSystemColorsSubtitle": "Akzentfarben von Windows oder Linux übernehmen, wenn verfügbar",
+  "themeCustomPaletteHint": "Die benutzerdefinierte Palette ist aktiv. Hell/Dunkel funktioniert unabhängig.",
+  "themeColorThemesTitle": "Farbthemen",
+  "settingsLanProxyTitle": "LAN-Proxy",
+  "settingsOff": "Aus",
+  "settingsLanSharingOnIp": "Freigabe auf {ip}",
+  "@settingsLanSharingOnIp": {
+    "placeholders": {
+      "ip": {}
+    }
+  },
+  "settingsHwidTitle": "Geräte-HWID senden",
+  "settingsHwidEnabledRecommended": "Aktiviert (empfohlen)",
+  "settingsHwidDisabled": "Deaktiviert",
+  "settingsHwidEnabledHint": "Einige Provider benötigen die HWID für Abonnement-Updates und Gerätelimits.",
+  "settingsHwidDisabledHint": "HWID-Header werden nicht gesendet. Manche Abonnements schlagen fehl, wenn der Provider eine Gerätebindung verlangt.",
+  "settingsDeviceIpListTitle": "IP-Adressen des Geräts im Netzwerk:",
+  "settingsIpCopied": "IP kopiert",
+  "settingsSetupAnotherDeviceTitle": "Einrichtung auf einem anderen Gerät:",
+  "settingsSocks5PortLabel": "SOCKS5-Port",
+  "settingsHttpPortLabel": "HTTP-Port",
+  "settingsTurnOffToChange": "Zum Ändern der Einstellung ausschalten",
+  "settingsProxyCopied": "{label} {address} kopiert",
+  "@settingsProxyCopied": {
+    "placeholders": {
+      "label": {},
+      "address": {}
+    }
+  },
+  "settingsXrayCoreTitle": "Xray-Kern",
+  "settingsXrayCoreSubtitle": "DNS, XMUX, Log und Routing",
+  "settingsXrayDnsSection": "DNS",
+  "settingsXrayDnsCustom": "Eigene DNS-Server",
+  "settingsXrayDnsCustomHint": "Eine Adresse pro Zeile (DoH, DoT oder einfach)",
+  "settingsXrayDnsServers": "DNS-Server",
+  "settingsXrayDnsSplitDirect": "Getrennter Resolver für Direct-Domains",
+  "settingsXrayDnsSplitDirectHint": "Verwendet den ersten Server für Domains aus der Direct-Liste",
+  "settingsXrayDnsQueryStrategy": "Abfragestrategie",
+  "settingsXrayDnsDisableCache": "DNS-Cache deaktivieren",
+  "settingsXrayXmuxSection": "XMUX (XHTTP)",
+  "settingsXrayXmuxEnable": "XMUX aktivieren",
+  "settingsXrayXmuxEnableHint": "Multiplexing für den XHTTP-Transport (clientseitig)",
+  "settingsXrayGeneralSection": "Allgemein",
+  "settingsXrayLogLevel": "Log-Level",
+  "settingsXrayDomainStrategy": "Routing-Domainstrategie",
+  "settingsXraySniffing": "Inbound-Sniffing",
+  "settingsXraySniffingRouteOnly": "Sniffing nur für Routing",
+  "settingsXrayCoreIntro": "Diese Optionen werden in die generierte Xray-Konfiguration eingefügt. Ändere sie nur, wenn du weißt, was sie bewirken.",
+  "settingsXrayDnsDefaultNote": "Standard: Cloudflare und Google DoH",
+  "settingsXrayXmuxParamsTitle": "Feineinstellung",
+  "settingsXrayXmuxParamsHint": "Leer lassen, um die Xray-Standardwerte zu verwenden. Werte können eine Zahl oder ein Bereich sein (z. B. 16-32).",
+  "settingsXraySniffingHint": "Zielprotokoll und Domain aus dem eingehenden Verkehr erkennen",
+  "settingsXraySniffingRouteOnlyHint": "Sniffing nur für das Routing nutzen, ohne das Ziel zu überschreiben",
+  "settingsXrayResetDefaults": "Auf Standard zurücksetzen",
+  "settingsXrayResetDone": "Xray-Kerneinstellungen wiederhergestellt",
+  "settingsXrayXmuxMaxConcurrency": "Max. Parallelität",
+  "settingsXrayXmuxMaxConnections": "Max. Verbindungen",
+  "settingsXrayXmuxCMaxReuseTimes": "Limit für Verbindungs-Wiederverwendung",
+  "settingsXrayXmuxHMaxRequestTimes": "Max. Anfragen pro Stream",
+  "settingsXrayXmuxHMaxReusableSecs": "Stream-Wiederverwendungszeit (Sek.)",
+  "settingsXrayXmuxHKeepAlivePeriod": "Keep-Alive-Intervall (Sek.)",
+  "settingsPingTitle": "Server-Ping",
+  "settingsPingMethodTitle": "Ping-Methode",
+  "settingsPingMethodTcp": "TCP-Ping",
+  "settingsPingMethodTcpHint": "Schnelle Erreichbarkeitsprüfung",
+  "settingsPingMethodUrl": "HTTP über Proxy",
+  "settingsPingMethodUrlHint": "Misst die GET-Latenz über den Server",
+  "settingsPingMethodSpeed": "Geschwindigkeitstest",
+  "settingsPingMethodSpeedHint": "Lädt eine feste Datenmenge über den Server herunter und zeigt den Durchsatz in Mbit/s an (funktioniert ohne VPN)",
+  "settingsPingTargetTitle": "HTTP-Test-URL",
+  "settingsPingTargetGstatic": "Google (generate_204)",
+  "settingsPingTargetCloudflare": "Cloudflare (trace)",
+  "settingsPingTargetMicrosoft": "Microsoft (connect test)",
+  "settingsPingTargetCustom": "Eigene URL",
+  "settingsPingCustomUrl": "URL",
+  "settingsPingCustomUrlHint": "https:// oder http:// Adresse für die GET-Anfrage",
+  "settingsPingCustomUrlInvalid": "Ungültige oder unsichere URL (kein localhost oder private Netzwerke)",
+  "subscriptionNameLabel": "Name",
+  "subscriptionNameHint": "Mein Abonnement",
+  "subscriptionUrlLabel": "URL",
+  "subscriptionUrlHint": "https://example.com/sub?token=...",
+  "subscriptionsAddSubscription": "Abonnement hinzufügen",
+  "subscriptionsAddAndFetch": "Hinzufügen & abrufen",
+  "subscriptionsEditSubscription": "Abonnement bearbeiten",
+  "subscriptionsCopyUrl": "URL kopieren",
+  "subscriptionsUrlCopied": "URL kopiert",
+  "subscriptionsDeleteSubscription": "Abonnement löschen",
+  "subscriptionsDeleteConfirm": "Möchtest du \"{name}\" wirklich löschen?\n\nDadurch werden auch alle zugehörigen Server entfernt.",
+  "@subscriptionsDeleteConfirm": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "subscriptionsRetry": "Erneut versuchen",
+  "subscriptionsCancel": "Abbrechen",
+  "subscriptionsDelete": "Löschen",
+  "subscriptionsSave": "Speichern",
+  "subscriptionsMoveUp": "Nach oben",
+  "subscriptionsMoveDown": "Nach unten",
+  "subscriptionsAutoUpdate": "Automatische Aktualisierung",
+  "subscriptionsOn": "EIN",
+  "subscriptionsOff": "AUS",
+  "subscriptionsExpired": "Abgelaufen",
+  "subscriptionsRefreshFailed": "Aktualisierung fehlgeschlagen",
+  "subscriptionsEveryHour": "Jede Stunde",
+  "subscriptionsEveryHours": "Alle {hours} Stunden",
+  "@subscriptionsEveryHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsEveryDay": "Täglich",
+  "subscriptionsEveryDays": "Alle {days} Tage",
+  "@subscriptionsEveryDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsAutoUpdateInterval": "Aktualisierungsintervall",
+  "subscriptionsCurrentInterval": "alle {hours} Std.",
+  "@subscriptionsCurrentInterval": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsJustNow": "gerade eben",
+  "subscriptionsMinutesAgo": "vor {minutes} Min.",
+  "@subscriptionsMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsHoursAgo": "vor {hours} Std.",
+  "@subscriptionsHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsDaysAgo": "vor {days} T.",
+  "@subscriptionsDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsInDays": "in {days} T.",
+  "@subscriptionsInDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsInHours": "in {hours} Std.",
+  "@subscriptionsInHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsSoon": "bald",
+  "serversAddServer": "Server hinzufügen",
+  "serversPasteLinks": "Link(s) einfügen",
+  "serversImportFile": "Datei importieren",
+  "serversNotSupported": "In diesem Build nicht unterstützt",
+  "serversAddServerTitle": "Server hinzufügen",
+  "serversPasteVlessHint": "Füge vless://, vmess://, trojan://, ss://, hysteria2:// oder hy2:// ein (eine pro Zeile)",
+  "serversPasteHint": "vless://… oder hy2://host:port?auth=…",
+  "serversAdd": "Hinzufügen",
+  "serversManualServers": "Manuelle Server",
+  "serversRefreshSubscription": "Abonnement aktualisieren",
+  "serversPingAll": "Alle anpingen",
+  "settingsAdvanced": "Erweitert",
+  "settingsAdvancedSubtitle": "Kerneinstellungen, Ping, Routing, HWID und Debug",
+  "settingsBackupRestore": "Sichern & wiederherstellen",
+  "settingsBackupRestoreSubtitle": "Split-Tunneling, Abonnements und Server exportieren/importieren",
+  "settingsSelectAtLeastOne": "Wähle mindestens einen Abschnitt zum Exportieren",
+  "settingsBackupSaved": "Sicherung erfolgreich gespeichert",
+  "settingsSelectLocation": "Speicherort für die Sicherung wählen",
+  "settingsExportFile": "Datei exportieren",
+  "settingsImportFile": "Aus Datei importieren",
+  "settingsImportBackup": "Sicherung importieren",
+  "settingsChooseWhatToImport": "Wähle, was importiert werden soll (ausgewählte Abschnitte ersetzen deine aktuellen Daten).",
+  "settingsSplitTunnelingApps": "Split-Tunneling-Apps",
+  "settingsSubscriptions": "Abonnements",
+  "settingsServersActive": "Server (und aktiver Server)",
+  "settingsImport": "Importieren",
+  "settingsExport": "Exportieren",
+  "settingsCreateFileToSave": "Erstelle eine Datei, die du speichern und auf einem anderen Gerät importieren kannst.",
+  "settingsPickExportedFile": "Wähle eine zuvor exportierte Datei und stelle ausgewählte Abschnitte wieder her.",
+  "settingsWorking": "Wird ausgeführt...",
+  "settingsImportedSections": "Importiert: {count} Abschnitt(e)",
+  "@settingsImportedSections": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsDebugMode": "Debug-Modus",
+  "settingsDebugModeOn": "Erweiterte Diagnose aktiviert",
+  "settingsDebugModeOff": "Aus",
+  "settingsDebugModeHint": "Zeigt Live-VPN-Metriken in Serverkarten an und ermöglicht das Anzeigen der Xray-Kern-Logs.",
+  "settingsOpenXrayLogs": "Xray-Logs öffnen",
+  "settingsXrayCoreLogs": "Xray-Kern-Logs",
+  "settingsRefresh": "Aktualisieren",
+  "settingsAppVersion": "App-Version",
+  "settingsChecking": "Wird geprüft...",
+  "settingsCheckFailed": "Prüfung fehlgeschlagen",
+  "settingsUpdateAvailable": "Update verfügbar",
+  "settingsUpToDate": "Aktuell",
+  "settingsNewVersionAvailable": "Neue Version verfügbar",
+  "settingsSize": "Größe: {size}",
+  "@settingsSize": {
+    "placeholders": {
+      "size": {}
+    }
+  },
+  "settingsDownloading": "Wird heruntergeladen...",
+  "settingsCheckForUpdates": "Nach Updates suchen",
+  "settingsShareDeviceHwid": "Geräte-HWID teilen",
+  "settingsHwidWillBeSent": "Die HWID wird mit Abonnement-Anfragen gesendet",
+  "settingsHwidNotShared": "HWID wird nicht geteilt",
+  "settingsHwidHint": "Wenn aktiviert, wird die eindeutige ID deines Geräts (HWID) an Abonnement-Server gesendet. Von manchen Providern für die HWID-Bindung erforderlich. Deaktivieren, um die Privatsphäre zu erhöhen.",
+  "settingsRoutingRules": "Routing-Regeln",
+  "settingsNoRules": "Keine Regeln",
+  "settingsAddCustomRule": "Eigene Regel hinzufügen",
+  "settingsAddRule": "Regel hinzufügen",
+  "settingsEditRule": "Routing-Regel bearbeiten",
+  "settingsRuleName": "Regelname",
+  "settingsType": "Typ",
+  "settingsAction": "Aktion",
+  "settingsValues": "Werte (was zutreffen soll)",
+  "settingsOrder": "Reihenfolge (Regelpriorität)",
+  "settingsEnabled": "Aktiviert",
+  "settingsNameAndValuesRequired": "Name und Werte sind erforderlich",
+  "settingsUseOnePerLine": "Verwende einen Wert pro Zeile oder trenne sie durch Kommas.",
+  "settingsSmallerOrderFirst": "Kleinere Zahl = früher geprüft (z. B. 1 vor 50)",
+  "settingsSmallerOrderWins": "Wenn zwei Regeln denselben Verkehr betreffen, gewinnt die Regel mit der kleineren Reihenfolge.",
+  "settingsSaveChanges": "Änderungen speichern",
+  "settingsDeleteRule": "Regel löschen",
+  "settingsAddRuleTooltip": "Regel hinzufügen",
+  "settingsDomain": "Domain",
+  "settingsIpCidr": "IP CIDR",
+  "settingsGeoIp": "GeoIP",
+  "settingsGeosite": "Geosite",
+  "settingsProcess": "Prozess",
+  "settingsProxy": "Proxy",
+  "settingsDirect": "Direkt",
+  "settingsBlock": "Blockieren",
+  "settingsEgDomain": "z. B. youtube.com, +google",
+  "settingsEgIpCidr": "z. B. 1.1.1.1/32, 192.168.0.0/16",
+  "settingsEgGeoip": "z. B. RU, US, DE",
+  "settingsEgGeosite": "z. B. category-ads-all",
+  "settingsEgProcess": "z. B. com.telegram.messenger",
+  "settingsExportFailed": "Export fehlgeschlagen: {error}",
+  "@settingsExportFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsImportFailed": "Import fehlgeschlagen: {error}",
+  "@settingsImportFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsDownloadFailed": "Download fehlgeschlagen: {error}",
+  "@settingsDownloadFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsCheckFailedError": "Prüfung fehlgeschlagen: {error}",
+  "@settingsCheckFailedError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsNoXrayLogsYet": "Noch keine Xray-Logs",
+  "settingsLanguageTitle": "Sprache",
+  "settingsLanguageSubtitle": "{language}",
+  "@settingsLanguageSubtitle": {
+    "placeholders": {
+      "language": {}
+    }
+  },
+  "settingsLanguageSystem": "Systemstandard",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageRussian": "Русский",
+  "settingsLanguageGerman": "Deutsch",
+  "settingsLanguageChinese": "中文",
+  "settingsLanguageSheetTitle": "Sprache wählen",
+  "splitAddApp": "App hinzufügen",
+  "splitAddAppTitle": "Anwendung hinzufügen",
+  "splitAddAppHint": "Pfad zur .exe oder Name (z. B. chrome.exe)",
+  "splitAddAppPickFile": "Durchsuchen…",
+  "splitAddAppInvalid": "Gib einen gültigen .exe-Namen oder Pfad ein",
+  "splitAddAppAdded": "Hinzugefügt: {name}",
+  "@splitAddAppAdded": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "splitRunningApps": "Laufend",
+  "splitInstalledApps": "Installiert",
+  "splitShowSystemApps": "System-Apps anzeigen",
+  "splitHideSystemApps": "System-Apps ausblenden",
+  "splitCustomApps": "Manuelle Einträge",
+  "splitClearAll": "Alle löschen",
+  "splitProxyModeWarning": "Im Proxy-Modus wird Split-Tunneling nicht angewendet — der gesamte Verkehr läuft über den System-Proxy. Wechsle den Verbindungsmodus auf TUN (im Seitenpanel), damit die Regeln pro Prozess wirken.",
+  "settingsLatestVersionInstalled": "Du hast die neueste Version",
+  "serversPingServer": "Server anpingen",
+  "serversHealthCheck": "Funktionsprüfung",
+  "serversCopyAddress": "Serveradresse kopieren",
+  "serversCopiedToClipboard": "In die Zwischenablage kopiert",
+  "serversCopyConfig": "Konfiguration kopieren",
+  "serversConfigCopied": "Konfiguration kopiert",
+  "serversDeleteServer": "Server löschen",
+  "serversHealthCheckDesc": "DNS-, TCP- und Konfigurationsprüfung",
+  "settingsDebugHintDesktop": "Zeigt Xray-Sitzungslogs an. Live-VPN-Metriken werden unter der Verbindungstaste angezeigt.",
+  "settingsDebugHintMobile": "Zeigt Live-VPN-Metriken in Serverkarten und Xray-Logs an.",
+  "serversErrorLoadingApps": "Fehler beim Laden der Apps: {error}",
+  "@serversErrorLoadingApps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "desktopConnectionMode": "Verbindungsmodus",
+  "desktopModeShort": "Modus",
+  "desktopDisconnectBeforeModeChange": "Trenne die Verbindung, bevor du den Verbindungsmodus änderst"
+}
