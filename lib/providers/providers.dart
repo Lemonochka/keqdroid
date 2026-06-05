@@ -20,7 +20,6 @@ import '../services/update_service.dart';
 import '../services/tunnel_session_builder.dart';
 import '../services/vpn_engine.dart';
 import '../tunnel/app_routing_mode.dart';
-import '../tunnel/connection_mode.dart';
 import '../utils/config_gen.dart';
 import '../utils/error_messages.dart';
 import '../utils/process_name_utils.dart';

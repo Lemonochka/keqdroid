@@ -934,20 +934,6 @@ class SubscriptionService {
     return out;
   }
 
-  static List<String> _decodeBase64Tokens(String input) {
-    final out = <String>[];
-    final tokenRe = RegExp(r'[A-Za-z0-9+/_=-]{80,}');
-    for (final m in tokenRe.allMatches(input)) {
-      final token = (m.group(0) ?? '').trim();
-      if (token.isEmpty) continue;
-      final decoded = _tryDecodeBase64Flexible(token);
-      if (decoded != null && decoded.trim().isNotEmpty) {
-        out.add(decoded);
-      }
-    }
-    return out;
-  }
-
   static String? _tryUriDecode(String input) {
     try {
       final decoded = Uri.decodeFull(input);
@@ -1078,7 +1064,7 @@ class SubscriptionService {
 
       if (current is List) {
         // ограничиваем размер списка
-        final itemsToProcess = (current as List).take(100);
+        final itemsToProcess = current.take(100);
         for (final item in itemsToProcess) {
           if (seen.add(item)) {
             queue.add((item, depth + 1, false));

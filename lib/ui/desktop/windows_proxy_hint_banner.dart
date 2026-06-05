@@ -8,8 +8,6 @@ import '../../providers/providers.dart';
 import '../../services/firefox_proxy_helper.dart';
 import '../../services/vpn_engine.dart';
 import '../../shared/ui/app_theme.dart';
-import '../../tunnel/connection_mode.dart';
-import '../../tunnel/tunnel_state.dart';
 
 /// windows proxy mode: chromium берёт системный прокси, firefox — отдельная настройка
 class WindowsProxyHintBanner extends ConsumerStatefulWidget {

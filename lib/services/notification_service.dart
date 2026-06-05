@@ -19,7 +19,6 @@ class NotificationService {
 
   FlutterLocalNotificationsPlugin? _plugin;
   bool _initialized = false;
-  VpnState? _lastState;
 
   /// init, один раз после BackgroundService.init()
   static Future<void> init() async {
@@ -54,7 +53,6 @@ class NotificationService {
     }
 
     final plugin = ns._plugin!;
-    ns._lastState = state;
 
     final (title, body, isConnected) = _buildContent(state, serverName);
 
@@ -225,7 +223,6 @@ class NotificationService {
   static Future<void> _handleConnect() async {
     try {
       // само подключение идёт через провайдер VPN, тут только сигнал
-      const channel = MethodChannel('keqdis_vpn_channel');
       AppLogger.instance.debug('VPN connect action from notification');
     } catch (e, st) {
       AppLogger.instance.error('Failed to handle connect action', error: e, stackTrace: st);

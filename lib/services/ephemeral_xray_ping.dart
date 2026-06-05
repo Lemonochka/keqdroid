@@ -335,7 +335,7 @@ class EphemeralXrayPing {
     try {
       client.findProxy = (_) => 'PROXY 127.0.0.1:$socksPort';
       client.connectionTimeout = Duration(milliseconds: timeoutMs.clamp(1000, 6000));
-      client.badCertificateCallback = (_, __, ___) => true;
+      client.badCertificateCallback = (_, _, _) => true;
 
       final sw = Stopwatch()..start();
       final request = await client.openUrl(

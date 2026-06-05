@@ -70,7 +70,7 @@ void main() {
 
   final fillPct = (bounds.width / rgba.width * 100).toStringAsFixed(0);
   stdout.writeln(
-    'Source content used ${fillPct}% of canvas before trim; '
+    'Source content used $fillPct% of canvas before trim; '
     'output ${_size}x$_size at ${(_fill * 100).round()}% fill.',
   );
   stdout.writeln('Wrote ${out.path}');

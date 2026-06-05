@@ -179,11 +179,7 @@ class SubscriptionsTab extends ConsumerWidget {
     bool loading = false;
 
     final bgColor = AppTheme.bg(context);
-    final cardColor = AppTheme.card(context);
     final textColor = AppTheme.text(context);
-    final textLightColor = AppTheme.textLight(context);
-    final accentColor = AppTheme.accent(context);
-    final dividerColor = AppTheme.divider(context);
     final accentContainerColor = AppTheme.accentContainer(context);
     final onAccentContainerColor = AppTheme.onAccentContainer(context);
 
@@ -417,7 +413,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final textColor = AppTheme.text(context);
     final textLightColor = AppTheme.textLight(context);
     final accentColor = AppTheme.accent(context);
-    final accentAlpha = accentColor.withValues(alpha: 0.12);
     final greenColor = AppTheme.green(context);
     final redColor = AppTheme.red(context);
     final orangeColor = AppTheme.orange(context);
@@ -612,7 +607,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                refreshError ?? l10n.subscriptionsRefreshFailed,
+                                refreshError,
                                 style: TextStyle(fontSize: 11, color: redColor),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,

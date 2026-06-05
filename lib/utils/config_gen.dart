@@ -155,9 +155,6 @@ class ConfigGeneratorV2 {
     }
 
     final networkType = getParam('type', isHysteria ? 'hysteria' : 'tcp');
-    final security = isVmess
-        ? (vmessConfig?['tls']?.toString().toLowerCase() == 'tls' ? 'tls' : 'none')
-        : getParam('security', scheme == 'trojan' ? 'tls' : (isHysteria ? 'none' : 'none'));
 
     final Map<String, dynamic> outbound;
     Map<String, dynamic> streamSettings = {'network': networkType};

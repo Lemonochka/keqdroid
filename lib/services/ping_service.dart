@@ -490,7 +490,7 @@ class PingService {
       client = HttpClient();
       client.findProxy = (_) => 'SOCKS5 127.0.0.1:$socksPort';
       client.connectionTimeout = Duration(seconds: timeoutSeconds);
-      client.badCertificateCallback = (_, __, ___) => true;
+      client.badCertificateCallback = (_, _, _) => true;
 
       final sw = Stopwatch()..start();
       final req = await client.getUrl(Uri.parse(testUrl));
