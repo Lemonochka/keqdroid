@@ -7,6 +7,7 @@ import '../core/app_logger.dart';
 import '../services/background_service.dart';
 import '../services/desktop_background_service.dart';
 import '../services/notification_service.dart';
+import '../services/windows_desktop_service.dart';
 
 /// платформенный init до runApp
 class PlatformBootstrap {
@@ -33,6 +34,7 @@ class PlatformBootstrap {
       } catch (_) {
         // Desktop may ship without Firebase options.
       }
+      await WindowsDesktopService.initCoreProcessGuard();
       await DesktopBackgroundService.init();
       return;
     }

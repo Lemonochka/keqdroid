@@ -1,11 +1,15 @@
 #include "tunnel_channel_handler.h"
 #include "proxy_debug_log.h"
+#include "single_instance.h"
 #include "windows_apps_list.h"
+#include "windows_core_lifecycle.h"
 #include "windows_traffic_stats.h"
+#include "windows_tray.h"
 
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
 
+#include <shellapi.h>
 #include <windows.h>
 #include <wininet.h>
 #include <winhttp.h>
@@ -740,6 +744,119 @@ bool IsProcessElevated() {
   return ok && elevation.TokenIsElevated;
 }
 
+bool SetLaunchAtStartupEnabled(bool enable) {
+  const wchar_t kRunKey[] =
+      L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+  const wchar_t kValueName[] = L"KeqDroid";
+
+  HKEY key = nullptr;
+  if (::RegOpenKeyExW(HKEY_CURRENT_USER, kRunKey, 0,
+                      KEY_SET_VALUE | KEY_QUERY_VALUE,
+                      &key) != ERROR_SUCCESS) {
+    return false;
+  }
+
+  if (!enable) {
+    ::RegDeleteValueW(key, kValueName);
+    ::RegCloseKey(key);
+    return true;
+  }
+
+  wchar_t exe_path[MAX_PATH] = {};
+  const DWORD path_len = ::GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
+  if (path_len == 0 || path_len >= MAX_PATH) {
+    ::RegCloseKey(key);
+    return false;
+  }
+
+  std::wstring command = L"\"";
+  command += exe_path;
+  command += L"\" --autostart";
+  const LSTATUS status = ::RegSetValueExW(
+      key, kValueName, 0, REG_SZ,
+      reinterpret_cast<const BYTE*>(command.c_str()),
+      static_cast<DWORD>((command.size() + 1) * sizeof(wchar_t)));
+  ::RegCloseKey(key);
+  return status == ERROR_SUCCESS;
+}
+
+bool IsLaunchAtStartupEnabled() {
+  const wchar_t kRunKey[] =
+      L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+  const wchar_t kValueName[] = L"KeqDroid";
+
+  HKEY key = nullptr;
+  if (::RegOpenKeyExW(HKEY_CURRENT_USER, kRunKey, 0, KEY_QUERY_VALUE,
+                      &key) != ERROR_SUCCESS) {
+    return false;
+  }
+
+  wchar_t buffer[1024] = {};
+  DWORD buffer_size = sizeof(buffer);
+  DWORD type = 0;
+  const LSTATUS status = ::RegQueryValueExW(
+      key, kValueName, nullptr, &type,
+      reinterpret_cast<LPBYTE>(buffer), &buffer_size);
+  ::RegCloseKey(key);
+  return status == ERROR_SUCCESS && type == REG_SZ;
+}
+
+bool RestartAsAdministrator() {
+  wchar_t exe_path[MAX_PATH] = {};
+  if (::GetModuleFileNameW(nullptr, exe_path, MAX_PATH) == 0) {
+    return false;
+  }
+
+  std::wstring exe_dir = exe_path;
+  const auto slash = exe_dir.find_last_of(L"\\/");
+  if (slash != std::wstring::npos) {
+    exe_dir.resize(slash);
+  }
+
+  std::wstring params;
+  bool has_admin_restart = false;
+  int argc = 0;
+  wchar_t** argv = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
+  if (argv != nullptr) {
+    for (int i = 1; i < argc; ++i) {
+      if (_wcsicmp(argv[i], L"--admin-restart") == 0) {
+        has_admin_restart = true;
+        continue;
+      }
+      if (!params.empty()) {
+        params += L' ';
+      }
+      params += L'"';
+      params += argv[i];
+      params += L'"';
+    }
+    ::LocalFree(argv);
+  }
+  if (!has_admin_restart) {
+    if (!params.empty()) {
+      params += L' ';
+    }
+    params += L"--admin-restart";
+  }
+
+  // Let the elevated process acquire the single-instance mutex immediately.
+  RunnerReleaseSingleInstanceMutex();
+
+  SHELLEXECUTEINFOW exec_info = {};
+  exec_info.cbSize = sizeof(exec_info);
+  exec_info.fMask = SEE_MASK_NOASYNC;
+  exec_info.lpVerb = L"runas";
+  exec_info.lpFile = exe_path;
+  exec_info.lpParameters = params.empty() ? L"--admin-restart" : params.c_str();
+  exec_info.lpDirectory = exe_dir.c_str();
+  exec_info.nShow = SW_SHOWDEFAULT;
+
+  if (!::ShellExecuteExW(&exec_info)) {
+    return false;
+  }
+  return exec_info.hInstApp > reinterpret_cast<HINSTANCE>(32);
+}
+
 // ───────── Platform-thread task marshaling ─────────
 // Heavy proxy operations (registry writes, WinINET broadcasts, `netsh winhttp
 // import`) block whichever thread runs them — sometimes for several seconds.
@@ -805,6 +922,8 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
   if (engine == nullptr) {
     return;
   }
+
+  KeqdisInitCoreProcessGuard();
 
   // Created on the platform thread so worker threads can marshal results back.
   EnsureMarshalWindow();
@@ -1002,6 +1121,107 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
 
         if (call.method_name() == "requestTunnelPermission") {
           result->Success(flutter::EncodableValue(IsProcessElevated()));
+          return;
+        }
+
+        if (call.method_name() == "setMinimizeToTray") {
+          bool enabled = true;
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (args) {
+            auto it = args->find(flutter::EncodableValue("enabled"));
+            if (it != args->end()) {
+              enabled = std::get<bool>(it->second);
+            }
+          }
+          WindowsTraySetMinimizeToTray(enabled);
+          result->Success();
+          return;
+        }
+
+        if (call.method_name() == "getMinimizeToTray") {
+          result->Success(
+              flutter::EncodableValue(WindowsTrayGetMinimizeToTray()));
+          return;
+        }
+
+        if (call.method_name() == "setLaunchAtStartup") {
+          bool enabled = false;
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (args) {
+            auto it = args->find(flutter::EncodableValue("enabled"));
+            if (it != args->end()) {
+              enabled = std::get<bool>(it->second);
+            }
+          }
+          if (!SetLaunchAtStartupEnabled(enabled)) {
+            result->Error("AUTOSTART_FAILED",
+                          "Failed to update Windows startup registry");
+            return;
+          }
+          result->Success();
+          return;
+        }
+
+        if (call.method_name() == "isLaunchAtStartup") {
+          result->Success(
+              flutter::EncodableValue(IsLaunchAtStartupEnabled()));
+          return;
+        }
+
+        if (call.method_name() == "restartAsAdministrator") {
+          if (!RestartAsAdministrator()) {
+            result->Error("ELEVATION_FAILED",
+                          "Failed to restart as administrator");
+            return;
+          }
+          result->Success();
+          PostToPlatformThread([]() { ::PostQuitMessage(0); });
+          return;
+        }
+
+        if (call.method_name() == "initCoreProcessGuard") {
+          KeqdisInitCoreProcessGuard();
+          result->Success();
+          return;
+        }
+
+        if (call.method_name() == "attachCoreProcess") {
+          int32_t pid = 0;
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (args) {
+            auto it = args->find(flutter::EncodableValue("pid"));
+            if (it != args->end()) {
+              pid = static_cast<int32_t>(std::get<int32_t>(it->second));
+            }
+          }
+          KeqdisAttachCoreProcess(static_cast<DWORD>(pid));
+          result->Success();
+          return;
+        }
+
+        if (call.method_name() == "registerSessionCoreProcesses") {
+          int32_t xray_pid = 0;
+          int32_t singbox_pid = 0;
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (args) {
+            auto xray_it = args->find(flutter::EncodableValue("xrayPid"));
+            if (xray_it != args->end()) {
+              xray_pid = static_cast<int32_t>(std::get<int32_t>(xray_it->second));
+            }
+            auto sing_it = args->find(flutter::EncodableValue("singboxPid"));
+            if (sing_it != args->end()) {
+              singbox_pid = static_cast<int32_t>(std::get<int32_t>(sing_it->second));
+            }
+          }
+          KeqdisRegisterSessionCoreProcesses(static_cast<DWORD>(xray_pid),
+                                             static_cast<DWORD>(singbox_pid));
+          result->Success();
+          return;
+        }
+
+        if (call.method_name() == "clearSessionCoreProcesses") {
+          KeqdisClearSessionCoreProcesses();
+          result->Success();
           return;
         }
 

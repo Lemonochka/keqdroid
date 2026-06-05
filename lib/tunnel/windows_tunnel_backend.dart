@@ -10,6 +10,7 @@ import '../core/exceptions.dart';
 import '../services/debug_log_service.dart';
 import '../services/ephemeral_xray_ping.dart';
 import '../services/firefox_proxy_helper.dart';
+import '../services/windows_desktop_service.dart';
 import 'connection_mode.dart';
 import 'socks_credential_generator.dart';
 import 'tunnel_backend.dart';
@@ -244,6 +245,11 @@ class WindowsTunnelBackend implements TunnelBackend {
         unawaited(_applyFirefoxProxyAfterConnect(request.httpPort));
       }
 
+      await WindowsDesktopService.registerSessionCoreProcesses(
+        xrayPid: _xrayProcess!.pid,
+        singboxPid: _singboxProcess?.pid ?? 0,
+      );
+
       _startStatsLoop(request.mode);
       _emitConnectedTelemetry(request.mode);
     } catch (e, st) {
@@ -282,6 +288,8 @@ class WindowsTunnelBackend implements TunnelBackend {
     await _killProcess(_xrayProcess);
     _singboxProcess = null;
     _xrayProcess = null;
+
+    await WindowsDesktopService.clearSessionCoreProcesses();
 
     final dir = _sessionDir;
     _sessionDir = null;

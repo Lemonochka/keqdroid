@@ -16,6 +16,7 @@ constexpr UINT kCmdTrayExit = 40002;
 NOTIFYICONDATAW g_tray = {};
 bool g_tray_added = false;
 HWND g_tray_hwnd = nullptr;
+bool g_minimize_to_tray = true;
 
 void EnsureTrayIcon() {
   if (g_tray_added || g_tray_hwnd == nullptr) {
@@ -86,6 +87,29 @@ void WindowsTrayInit(HWND hwnd) {
   g_tray_hwnd = hwnd;
 }
 
+void WindowsTraySetMinimizeToTray(bool enabled) {
+  g_minimize_to_tray = enabled;
+}
+
+bool WindowsTrayGetMinimizeToTray() {
+  return g_minimize_to_tray;
+}
+
+bool WindowsTrayActivateMainWindow() {
+  if (g_tray_hwnd == nullptr || !::IsWindow(g_tray_hwnd)) {
+    return false;
+  }
+  if (::IsIconic(g_tray_hwnd)) {
+    ::ShowWindow(g_tray_hwnd, SW_RESTORE);
+  } else if (!::IsWindowVisible(g_tray_hwnd)) {
+    ::ShowWindow(g_tray_hwnd, SW_SHOW);
+  } else {
+    ::ShowWindow(g_tray_hwnd, SW_SHOW);
+  }
+  ::SetForegroundWindow(g_tray_hwnd);
+  return true;
+}
+
 void WindowsTrayDispose(HWND hwnd) {
   (void)hwnd;
   RemoveTrayIcon();
@@ -118,8 +142,12 @@ bool WindowsTrayHandleMessage(HWND hwnd,
   }
 
   if (message == WM_CLOSE) {
-    // Minimize to tray instead of quitting (user can Exit from tray menu).
-    HideWindowToTray(hwnd);
+    if (g_minimize_to_tray) {
+      HideWindowToTray(hwnd);
+    } else {
+      RemoveTrayIcon();
+      ::DestroyWindow(hwnd);
+    }
     if (result != nullptr) {
       *result = 0;
     }

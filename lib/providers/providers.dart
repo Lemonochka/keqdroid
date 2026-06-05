@@ -740,7 +740,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
   }
 
-  Future<void> connect() async {
+  Future<void> connect({bool autostartTunFallback = false}) async {
     if (_connectInFlight) {
       AppLogger.instance.debug('VPN connect() ignored: connect already in progress');
       return;
@@ -780,7 +780,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         if (!permitted) throw const VpnPermissionDeniedException();
       }
 
-      final connectionMode = TunnelSessionBuilder.resolveMode(settings);
+      var connectionMode = TunnelSessionBuilder.resolveMode(settings);
       if (Platform.isWindows &&
           connectionMode == ConnectionMode.proxy &&
           routingMode != AppRoutingMode.allProxy) {
@@ -792,9 +792,16 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (Platform.isWindows && connectionMode == ConnectionMode.tun) {
         final elevated = await engine.requestVpnPermission();
         if (!elevated) {
-          AppLogger.instance.warn(
-            'TUN mode: app is not elevated. sing-box may fail to create routes.',
-          );
+          if (autostartTunFallback) {
+            connectionMode = ConnectionMode.proxy;
+            AppLogger.instance.warn(
+              'Autostart: TUN requires admin rights, falling back to Proxy',
+            );
+          } else {
+            AppLogger.instance.warn(
+              'TUN mode: app is not elevated. sing-box may fail to create routes.',
+            );
+          }
         }
       }
 
@@ -841,6 +848,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             : const [],
         routingMode: routingMode,
         serverName: server.displayName,
+        modeOverride: connectionMode,
       );
       await engine.startSession(session);
 

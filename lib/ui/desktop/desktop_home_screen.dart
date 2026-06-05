@@ -14,6 +14,7 @@ import '../../screens/settings_tab.dart';
 import '../../screens/subscriptions_tab.dart';
 import '../../services/update_service.dart';
 import '../../services/vpn_engine.dart';
+import '../../services/windows_desktop_service.dart';
 import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/update_dialog.dart';
 
@@ -29,6 +30,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     with WidgetsBindingObserver {
   int _index = 0;
   bool _updatePromptShown = false;
+  bool _startupTasksDone = false;
 
   @override
   void initState() {
@@ -39,7 +41,34 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       ref.read(homeTabIndexProvider.notifier).state = _index;
       ref.read(homeTabPageProvider.notifier).state = _index.toDouble();
       ref.read(updateInfoProvider);
+      unawaited(_runWindowsStartupTasks());
     });
+  }
+
+  Future<void> _runWindowsStartupTasks() async {
+    if (!Platform.isWindows || _startupTasksDone) return;
+    _startupTasksDone = true;
+
+    final storage = ref.read(storageProvider);
+    final settings = await storage.getSettings();
+    await WindowsDesktopService.applySettings(settings);
+
+    if (!WindowsDesktopService.isAutostartLaunch) return;
+    if (!settings.launchAtStartup || !settings.autoConnectLastServer) return;
+
+    await ref.read(serversProvider.notifier).reloadPreservingActive();
+    if (!mounted) return;
+
+    final active = ref.read(serversProvider).activeServer;
+    if (active == null) return;
+
+    final vpn = ref.read(vpnStateProvider).valueOrNull;
+    if (vpn?.status == VpnStatus.connected ||
+        vpn?.status == VpnStatus.connecting) {
+      return;
+    }
+
+    await ref.read(vpnStateProvider.notifier).connect(autostartTunFallback: true);
   }
 
   @override
@@ -319,6 +348,53 @@ Future<void> _applyMode(
       );
     }
     return;
+  }
+
+  if (next == ConnectionMode.tun) {
+    final elevated = await WindowsDesktopService.isProcessElevated();
+    if (!elevated) {
+      if (!context.mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      final restart = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.card(ctx),
+          title: Text(
+            l10n.desktopTunAdminTitle,
+            style: TextStyle(color: AppTheme.text(ctx)),
+          ),
+          content: Text(
+            l10n.desktopTunAdminMessage,
+            style: TextStyle(
+              color: AppTheme.textLight(ctx),
+              height: 1.4,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.desktopTunAdminCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.desktopTunAdminRestart),
+            ),
+          ],
+        ),
+      );
+      if (restart != true) return;
+
+      await ref.read(settingsNotifierProvider.notifier).save(
+            settings.copyWith(connectionMode: ConnectionMode.tun.storageValue),
+          );
+      final ok = await WindowsDesktopService.restartAsAdministrator();
+      if (!ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.desktopTunAdminRestartFailed)),
+        );
+      }
+      return;
+    }
   }
 
   await ref.read(settingsNotifierProvider.notifier).save(
