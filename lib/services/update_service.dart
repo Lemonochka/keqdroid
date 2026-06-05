@@ -40,11 +40,12 @@ class UpdateInfo {
 class UpdateService {
   static const _owner = 'Lemonochka';
   static const _repo = 'keqdroid';
-  static const _androidPrefix = 'Android';
-  static const _desktopPrefix = 'Desktop';
 
-  static String get _platformPrefix =>
-      Platform.isWindows ? _desktopPrefix : _androidPrefix;
+  /// Единый semver-тег релиза: v0.1.0, v0.4.1 (Android + Windows в одном release).
+  static final _releaseTagPattern = RegExp(
+    r'^v\d+\.\d+(\.\d+)?(-[\w.]+)?$',
+    caseSensitive: false,
+  );
 
   static final _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 10),
@@ -68,7 +69,7 @@ class UpdateService {
       }
 
       final currentVersion = await _getCurrentVersion();
-      final releases = await _fetchPlatformReleases();
+      final releases = await _fetchReleases();
       if (releases.isEmpty) return null;
 
       final latestRelease = releases.first;
@@ -117,10 +118,10 @@ class UpdateService {
 
   static Future<String> _getCurrentVersion() async {
     final info = await PackageInfo.fromPlatform();
-    return '$_platformPrefix${info.version}';
+    return info.version;
   }
 
-  static Future<List<Map<String, dynamic>>> _fetchPlatformReleases() async {
+  static Future<List<Map<String, dynamic>>> _fetchReleases() async {
     final response = await _dio.get(
       'https://api.github.com/repos/$_owner/$_repo/releases',
       options: Options(
@@ -133,12 +134,11 @@ class UpdateService {
     if (response.statusCode != 200) return [];
 
     final releases = response.data as List;
-    final prefix = _platformPrefix.toLowerCase();
     final filtered = <Map<String, dynamic>>[];
 
     for (final release in releases) {
       final tagName = (release['tag_name'] ?? '').toString();
-      if (!tagName.toLowerCase().startsWith(prefix)) {
+      if (!_isValidReleaseTag(tagName)) {
         continue;
       }
       if (release['prerelease'] == true) continue;
@@ -202,9 +202,19 @@ class UpdateService {
     return name.endsWith('.msix') || name.endsWith('.msi');
   }
 
-  /// Извлекает версию из тега, убирая префикс (Android/Desktop)
+  static bool _isValidReleaseTag(String tagName) {
+    return _releaseTagPattern.hasMatch(tagName.trim());
+  }
+
+  /// Извлекает semver из тега (v0.4.1 → 0.4.1; legacy Android/Desktop — для skip pref).
   static String _extractVersion(String tag) {
-    String cleaned = tag.replaceFirst(
+    var cleaned = tag.trim();
+    if (cleaned.toLowerCase().startsWith('v') &&
+        cleaned.length > 1 &&
+        RegExp(r'^\d').hasMatch(cleaned.substring(1))) {
+      cleaned = cleaned.substring(1);
+    }
+    cleaned = cleaned.replaceFirst(
       RegExp(r'^(Android|Desktop)', caseSensitive: false),
       '',
     );

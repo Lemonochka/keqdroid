@@ -12,7 +12,7 @@
 | Proxy debug logs | — | Yes |
 | Subscriptions | Foreground + WorkManager | Foreground + periodic timer while app runs |
 | Live speed / session stats | EventChannel from VpnService | `getTrafficStats` (virtual TUN or loopback in Proxy) |
-| App updates | GitHub `Android*` APK | GitHub `Desktop*` zip/msix (download or browser) |
+| App updates | GitHub `v*` release (`.apk` asset) | Same `v*` release (`.zip`/`.msix`/`.msi`/`.exe` asset) |
 | Notifications / background VPN | Yes | Not implemented (desktop has no VpnService) |
 | System proxy | — | Yes (+ Firefox user.js) |
 
