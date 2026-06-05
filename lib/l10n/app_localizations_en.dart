@@ -1060,4 +1060,51 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get desktopDisconnectBeforeModeChange =>
       'Disconnect before changing connection mode';
+
+  @override
+  String get settingsDesktopTitle => 'Windows';
+
+  @override
+  String get settingsDesktopSubtitle => 'Tray, autostart, auto-connect';
+
+  @override
+  String get settingsMinimizeToTray => 'Minimize to tray on close';
+
+  @override
+  String get settingsMinimizeToTrayHint =>
+      'When off, closing the window exits the app';
+
+  @override
+  String get settingsLaunchAtStartup => 'Start with Windows';
+
+  @override
+  String get settingsLaunchAtStartupHint => 'Launch the app when you sign in';
+
+  @override
+  String get settingsAutoConnectOnAutostart => 'Connect on autostart';
+
+  @override
+  String get settingsAutoConnectOnAutostartHint =>
+      'Connect to the last selected server using the mode from the sidebar. If TUN needs admin rights and they are unavailable, Proxy is used';
+
+  @override
+  String get settingsAutoConnectRequiresAutostart =>
+      'Enable \"Start with Windows\" first';
+
+  @override
+  String get desktopTunAdminTitle => 'Administrator rights required';
+
+  @override
+  String get desktopTunAdminMessage =>
+      'TUN mode needs administrator rights. Restart the app as administrator to use TUN. The current mode in the sidebar will be kept.';
+
+  @override
+  String get desktopTunAdminRestart => 'Restart as administrator';
+
+  @override
+  String get desktopTunAdminCancel => 'Cancel';
+
+  @override
+  String get desktopTunAdminRestartFailed =>
+      'Could not restart as administrator';
 }

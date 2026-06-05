@@ -1069,4 +1069,51 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get desktopDisconnectBeforeModeChange =>
       'Отключитесь перед сменой режима подключения';
+
+  @override
+  String get settingsDesktopTitle => 'Windows';
+
+  @override
+  String get settingsDesktopSubtitle => 'Трей, автозапуск, автоподключение';
+
+  @override
+  String get settingsMinimizeToTray => 'Сворачивать в трей при закрытии';
+
+  @override
+  String get settingsMinimizeToTrayHint =>
+      'Если выключено, закрытие окна завершает приложение';
+
+  @override
+  String get settingsLaunchAtStartup => 'Запускать с Windows';
+
+  @override
+  String get settingsLaunchAtStartupHint => 'Запуск при входе в систему';
+
+  @override
+  String get settingsAutoConnectOnAutostart => 'Подключаться при автозапуске';
+
+  @override
+  String get settingsAutoConnectOnAutostartHint =>
+      'Подключение к последнему серверу в режиме из боковой панели. Если для TUN нет прав администратора, используется Proxy';
+
+  @override
+  String get settingsAutoConnectRequiresAutostart =>
+      'Сначала включите «Запускать с Windows»';
+
+  @override
+  String get desktopTunAdminTitle => 'Нужны права администратора';
+
+  @override
+  String get desktopTunAdminMessage =>
+      'Режим TUN требует запуск от имени администратора. Перезапустите приложение с повышенными правами — выбранный в боковой панели режим сохранится.';
+
+  @override
+  String get desktopTunAdminRestart => 'Перезапустить от администратора';
+
+  @override
+  String get desktopTunAdminCancel => 'Отмена';
+
+  @override
+  String get desktopTunAdminRestartFailed =>
+      'Не удалось перезапустить от администратора';
 }

@@ -1016,4 +1016,48 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get desktopDisconnectBeforeModeChange => '更改连接模式前请先断开连接';
+
+  @override
+  String get settingsDesktopTitle => 'Windows';
+
+  @override
+  String get settingsDesktopSubtitle => '托盘、开机启动、自动连接';
+
+  @override
+  String get settingsMinimizeToTray => '关闭时最小化到托盘';
+
+  @override
+  String get settingsMinimizeToTrayHint => '关闭后应用不会退出';
+
+  @override
+  String get settingsLaunchAtStartup => '随 Windows 启动';
+
+  @override
+  String get settingsLaunchAtStartupHint => '登录系统时启动应用';
+
+  @override
+  String get settingsAutoConnectOnAutostart => '启动时自动连接';
+
+  @override
+  String get settingsAutoConnectOnAutostartHint =>
+      '连接上次选择的服务器，使用侧栏中的模式。TUN 需要管理员权限，否则使用 Proxy';
+
+  @override
+  String get settingsAutoConnectRequiresAutostart => '请先启用「随 Windows 启动」';
+
+  @override
+  String get desktopTunAdminTitle => '需要管理员权限';
+
+  @override
+  String get desktopTunAdminMessage =>
+      'TUN 模式需要以管理员身份运行。请以管理员身份重启应用，侧栏中选择的模式会保留。';
+
+  @override
+  String get desktopTunAdminRestart => '以管理员身份重启';
+
+  @override
+  String get desktopTunAdminCancel => '取消';
+
+  @override
+  String get desktopTunAdminRestartFailed => '无法以管理员身份重启';
 }
