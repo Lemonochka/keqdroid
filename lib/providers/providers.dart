@@ -752,12 +752,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       return;
     }
 
-    await ref.read(serversProvider.notifier).setActive(server);
-
     _connectInFlight = true;
-    state = const AsyncData(VpnState(status: VpnStatus.connecting));
 
     try {
+      await ref.read(serversProvider.notifier).setActive(server);
+      state = const AsyncData(VpnState(status: VpnStatus.connecting));
+
       final engine = ref.read(vpnEngineProvider);
       final settings = await ref.read(storageProvider).getSettings();
       final split = ref.read(splitTunnelingProvider);
