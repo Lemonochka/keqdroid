@@ -916,7 +916,41 @@ void PostToPlatformThread(std::function<void()> task) {
   }
 }
 
+bool HasAutostartFlag() {
+  int argc = 0;
+  wchar_t** argv = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
+  if (argv == nullptr) {
+    return false;
+  }
+  bool found = false;
+  for (int i = 1; i < argc; ++i) {
+    if (_wcsicmp(argv[i], L"--autostart") == 0) {
+      found = true;
+      break;
+    }
+  }
+  ::LocalFree(argv);
+  return found;
+}
+
+std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> g_vpn_channel;
+bool g_pending_autostart_connect = false;
+
+void DispatchAutostartConnectToDart() {
+  if (g_vpn_channel == nullptr) {
+    g_pending_autostart_connect = true;
+    return;
+  }
+  g_vpn_channel->InvokeMethod(
+      "onAutostartConnect",
+      std::make_unique<flutter::EncodableValue>());
+}
+
 }  // namespace
+
+void KeqdisRequestAutostartConnect() {
+  PostToPlatformThread([]() { DispatchAutostartConnectToDart(); });
+}
 
 void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
   if (engine == nullptr) {
@@ -1168,6 +1202,11 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
           return;
         }
 
+        if (call.method_name() == "isAutostartLaunch") {
+          result->Success(flutter::EncodableValue(HasAutostartFlag()));
+          return;
+        }
+
         if (call.method_name() == "restartAsAdministrator") {
           if (!RestartAsAdministrator()) {
             result->Error("ELEVATION_FAILED",
@@ -1318,7 +1357,9 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
         result->NotImplemented();
       });
 
-  static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
-      s_channel;
-  s_channel = std::move(channel);
+  g_vpn_channel = std::move(channel);
+  if (g_pending_autostart_connect) {
+    g_pending_autostart_connect = false;
+    DispatchAutostartConnectToDart();
+  }
 }
