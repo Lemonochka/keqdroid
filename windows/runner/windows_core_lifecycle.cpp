@@ -68,8 +68,33 @@ bool AttachProcessToCoreJob(DWORD pid) {
   return ok != FALSE;
 }
 
+bool EndsWithIgnoreCase(const std::wstring& value, const std::wstring& suffix) {
+  if (value.size() < suffix.size()) {
+    return false;
+  }
+  const std::wstring tail = value.substr(value.size() - suffix.size());
+  return _wcsicmp(tail.c_str(), suffix.c_str()) == 0;
+}
+
+bool IsKeqdisCoreProcess(DWORD pid) {
+  HANDLE process = ::OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+  if (process == nullptr) {
+    return false;
+  }
+  wchar_t path[MAX_PATH];
+  DWORD size = MAX_PATH;
+  bool is_core = false;
+  if (::QueryFullProcessImageNameW(process, 0, path, &size)) {
+    const std::wstring image(path);
+    is_core = EndsWithIgnoreCase(image, L"xray.exe") ||
+              EndsWithIgnoreCase(image, L"sing-box.exe");
+  }
+  ::CloseHandle(process);
+  return is_core;
+}
+
 bool TerminatePid(DWORD pid) {
-  if (pid == 0) {
+  if (pid == 0 || !IsKeqdisCoreProcess(pid)) {
     return false;
   }
   HANDLE process = ::OpenProcess(PROCESS_TERMINATE, FALSE, pid);
