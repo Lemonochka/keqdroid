@@ -76,6 +76,28 @@ object EphemeralXrayPing {
 
 
 
+    data class SpeedResult(
+
+        val success: Boolean,
+
+        val kbps: Int?,
+
+        val error: String?,
+
+    )
+
+
+
+    data class SpeedBatchResult(
+
+        val id: String,
+
+        val result: SpeedResult,
+
+    )
+
+
+
     fun urlTest(
 
         nativeLibraryDir: String,
@@ -182,6 +204,110 @@ object EphemeralXrayPing {
 
 
 
+    fun speedTest(
+
+        nativeLibraryDir: String,
+
+        filesDir: File,
+
+        assetDir: String,
+
+        xrayConfigJson: String,
+
+        socksPort: Int,
+
+        downloadUrl: String,
+
+        timeoutMs: Int,
+
+    ): SpeedResult = lock.withLock {
+
+        runSpeedSingle(
+
+            nativeLibraryDir = nativeLibraryDir,
+
+            filesDir = filesDir,
+
+            assetDir = assetDir,
+
+            xrayConfigJson = xrayConfigJson,
+
+            socksPort = socksPort,
+
+            downloadUrl = downloadUrl,
+
+            timeoutMs = timeoutMs,
+
+        )
+
+    }
+
+
+
+    fun speedTestBatch(
+
+        nativeLibraryDir: String,
+
+        filesDir: File,
+
+        assetDir: String,
+
+        socksPort: Int,
+
+        items: List<BatchItem>,
+
+        downloadUrl: String,
+
+        timeoutMs: Int,
+
+    ): List<SpeedBatchResult> = lock.withLock {
+
+        if (items.isEmpty()) return@withLock emptyList()
+
+        val binary = File(nativeLibraryDir, "libxray.so")
+
+        if (!binary.exists()) {
+
+            val err = SpeedResult(false, null, "libxray.so not found")
+
+            return@withLock items.map { SpeedBatchResult(it.id, err) }
+
+        }
+
+        items.map { item ->
+
+            SpeedBatchResult(
+
+                id = item.id,
+
+                result = runSpeedSingle(
+
+                    nativeLibraryDir = nativeLibraryDir,
+
+                    filesDir = filesDir,
+
+                    assetDir = assetDir,
+
+                    xrayConfigJson = item.xrayConfigJson,
+
+                    socksPort = socksPort,
+
+                    downloadUrl = downloadUrl,
+
+                    timeoutMs = timeoutMs,
+
+                    binary = binary,
+
+                ),
+
+            )
+
+        }
+
+    }
+
+
+
     private fun runSingle(
 
         nativeLibraryDir: String,
@@ -261,6 +387,104 @@ object EphemeralXrayPing {
                 }
 
                 // Brief wait so the port is released before the next server in a batch.
+
+                var i = 0
+
+                while (i < 4 && File("/proc/$pid").exists()) {
+
+                    Thread.sleep(40)
+
+                    i++
+
+                }
+
+            }
+
+            runCatching { configFile.delete() }
+
+        }
+
+    }
+
+
+
+    private fun runSpeedSingle(
+
+        nativeLibraryDir: String,
+
+        filesDir: File,
+
+        assetDir: String,
+
+        xrayConfigJson: String,
+
+        socksPort: Int,
+
+        downloadUrl: String,
+
+        timeoutMs: Int,
+
+        binary: File? = null,
+
+    ): SpeedResult {
+
+        val configFile = File(filesDir, "xray_speed_${UUID.randomUUID()}.json")
+
+        var pid = -1
+
+        try {
+
+            configFile.writeText(xrayConfigJson, Charsets.UTF_8)
+
+            val xrayBin = binary ?: File(nativeLibraryDir, "libxray.so")
+
+            if (!xrayBin.exists()) {
+
+                return SpeedResult(false, null, "libxray.so not found")
+
+            }
+
+
+
+            pid = NativeHelper.startXray(xrayBin.absolutePath, configFile.absolutePath, assetDir)
+
+            when {
+
+                pid == -1 -> return SpeedResult(false, null, "Xray binary not found")
+
+                pid == -2 -> return SpeedResult(false, null, "Xray config not found")
+
+                pid == -4 -> return SpeedResult(false, null, "Xray crashed on startup")
+
+                pid <= 0 -> return SpeedResult(false, null, "Failed to start Xray (pid=$pid)")
+
+            }
+
+
+
+            val portWaitMs = min(timeoutMs, 6_000)
+
+            if (!waitForPort("127.0.0.1", socksPort, portWaitMs)) {
+
+                return SpeedResult(false, null, "Xray SOCKS port $socksPort not ready")
+
+            }
+
+
+
+            return downloadProbeViaSocks(downloadUrl, socksPort, timeoutMs)
+
+        } finally {
+
+            if (pid > 0) {
+
+                try {
+
+                    android.os.Process.killProcess(pid)
+
+                } catch (_: Exception) {
+
+                }
 
                 var i = 0
 
@@ -398,6 +622,100 @@ object EphemeralXrayPing {
             Log.w(TAG, "httpProbeViaSocks failed: ${e.message}")
 
             Result(false, null, e.message ?: e.javaClass.simpleName, null)
+
+        } finally {
+
+            connection?.disconnect()
+
+        }
+
+    }
+
+
+
+    private fun downloadProbeViaSocks(
+
+        downloadUrl: String,
+
+        socksPort: Int,
+
+        timeoutMs: Int,
+
+    ): SpeedResult {
+
+        val safeUrl = ensureHttps(downloadUrl)
+
+        val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort))
+
+        var connection: HttpURLConnection? = null
+
+        val connectTimeoutMs = min(timeoutMs, 8_000)
+
+        val readTimeoutMs = min(timeoutMs, 30_000)
+
+        return try {
+
+            connection = (URL(safeUrl).openConnection(proxy) as HttpURLConnection).apply {
+
+                requestMethod = "GET"
+
+                connectTimeout = connectTimeoutMs
+
+                readTimeout = readTimeoutMs
+
+                instanceFollowRedirects = true
+
+                setRequestProperty("User-Agent", "KEQDIS/1.0")
+
+            }
+
+            val code = connection.responseCode
+
+            if (code !in 200..399) {
+
+                return SpeedResult(false, null, "HTTP $code")
+
+            }
+
+            val start = System.currentTimeMillis()
+
+            var bytes = 0
+
+            connection.inputStream.use { stream ->
+
+                val buf = ByteArray(8192)
+
+                while (true) {
+
+                    val n = stream.read(buf)
+
+                    if (n <= 0) break
+
+                    bytes += n
+
+                }
+
+            }
+
+            val elapsedMs = (System.currentTimeMillis() - start).coerceAtLeast(1)
+
+            val seconds = elapsedMs / 1000.0
+
+            if (bytes <= 0) {
+
+                return SpeedResult(false, null, "No data received")
+
+            }
+
+            val kbps = (bytes * 8.0 / 1000.0 / seconds).toInt()
+
+            SpeedResult(true, kbps, null)
+
+        } catch (e: Exception) {
+
+            Log.w(TAG, "downloadProbeViaSocks failed: ${e.message}")
+
+            SpeedResult(false, null, e.message ?: e.javaClass.simpleName)
 
         } finally {
 

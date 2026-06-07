@@ -235,17 +235,45 @@ class AndroidTunnelBackend implements TunnelBackend {
     required int socksPort,
     String downloadUrl = kDefaultSpeedTestUrl,
     int timeoutMs = 20000,
-  }) async =>
-      items
+  }) async {
+    if (items.isEmpty) return [];
+    try {
+      final result = await _method.invokeMethod<List>('xraySpeedTestBatch', {
+        'socksPort': socksPort,
+        'downloadUrl': downloadUrl,
+        'timeoutMs': timeoutMs,
+        'items': items
+            .map(
+              (e) => {
+                'id': e.$1,
+                'xrayConfig': e.$2,
+              },
+            )
+            .toList(),
+      });
+      if (result == null) return [];
+      return result.map((raw) {
+        final map = Map<Object?, Object?>.from(raw as Map);
+        return (
+          id: map['id'] as String? ?? '',
+          success: map['success'] as bool? ?? false,
+          kbps: (map['kbps'] as num?)?.toInt(),
+          error: map['error'] as String? ?? '',
+        );
+      }).toList();
+    } on PlatformException catch (e) {
+      return items
           .map(
-            (e) => (
-              id: e.$1,
+            (item) => (
+              id: item.$1,
               success: false,
               kbps: null,
-              error: 'Speed test is not available on this platform',
+              error: e.message ?? e.code,
             ),
           )
           .toList();
+    }
+  }
 
   AppException _wrap(PlatformException e, String method) => switch (e.code) {
         'PERMISSION_DENIED' => const VpnPermissionDeniedException(),

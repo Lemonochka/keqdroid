@@ -36,6 +36,8 @@ class MainActivity : FlutterFragmentActivity() {
         const val EVENT_CHANNEL          = "keqdis_vpn_status"
         const val EXTRA_LAUNCH_ACTION    = "action"
         private const val ICON_SIZE_PX   = 96
+        private const val DEFAULT_SPEED_TEST_URL =
+            "https://speed.cloudflare.com/__down?bytes=2000000"
 
         fun randomToken(length: Int): String {
             val chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -206,6 +208,41 @@ class MainActivity : FlutterFragmentActivity() {
                                 rawItems,
                                 socksPort,
                                 testUrl ?: "https://connectivitycheck.gstatic.com/generate_204",
+                                timeoutMs,
+                                result,
+                            )
+                        }
+                        "xraySpeedTest" -> {
+                            val xrayConfig = call.argument<String>("xrayConfig")
+                            val socksPort = call.argument<Int>("socksPort")
+                            val downloadUrl = call.argument<String>("downloadUrl")
+                            val timeoutMs = call.argument<Int>("timeoutMs") ?: 20_000
+                            if (xrayConfig.isNullOrBlank() || socksPort == null || socksPort <= 0) {
+                                result.error("INVALID_ARGS", "Missing xrayConfig or socksPort", null)
+                                return@setMethodCallHandler
+                            }
+                            xraySpeedTest(
+                                xrayConfig,
+                                socksPort,
+                                downloadUrl ?: DEFAULT_SPEED_TEST_URL,
+                                timeoutMs,
+                                result,
+                            )
+                        }
+                        "xraySpeedTestBatch" -> {
+                            val socksPort = call.argument<Int>("socksPort")
+                            val downloadUrl = call.argument<String>("downloadUrl")
+                            val timeoutMs = call.argument<Int>("timeoutMs") ?: 20_000
+                            @Suppress("UNCHECKED_CAST")
+                            val rawItems = call.argument<List<Map<String, Any?>>>("items")
+                            if (socksPort == null || socksPort <= 0 || rawItems.isNullOrEmpty()) {
+                                result.error("INVALID_ARGS", "Missing socksPort or items", null)
+                                return@setMethodCallHandler
+                            }
+                            xraySpeedTestBatch(
+                                rawItems,
+                                socksPort,
+                                downloadUrl ?: DEFAULT_SPEED_TEST_URL,
                                 timeoutMs,
                                 result,
                             )
@@ -464,6 +501,82 @@ class MainActivity : FlutterFragmentActivity() {
                         "latencyMs" to item.result.latencyMs,
                         "error" to item.result.error,
                         "httpStatus" to item.result.httpStatus,
+                    )
+                },
+            )
+        }
+    }
+
+    private fun xraySpeedTest(
+        xrayConfig: String,
+        socksPort: Int,
+        downloadUrl: String,
+        timeoutMs: Int,
+        result: MethodChannel.Result,
+    ) {
+        mainScope.launch {
+            val payload = withContext(Dispatchers.IO) {
+                runCatching {
+                    EphemeralXrayPing.speedTest(
+                        nativeLibraryDir = applicationInfo.nativeLibraryDir,
+                        filesDir = filesDir,
+                        assetDir = filesDir.absolutePath,
+                        xrayConfigJson = xrayConfig,
+                        socksPort = socksPort,
+                        downloadUrl = downloadUrl,
+                        timeoutMs = timeoutMs,
+                    )
+                }.getOrElse { e ->
+                    EphemeralXrayPing.SpeedResult(false, null, e.message ?: "speed test failed")
+                }
+            }
+            result.success(
+                mapOf(
+                    "success" to payload.success,
+                    "kbps" to payload.kbps,
+                    "error" to payload.error,
+                ),
+            )
+        }
+    }
+
+    private fun xraySpeedTestBatch(
+        rawItems: List<Map<String, Any?>>,
+        socksPort: Int,
+        downloadUrl: String,
+        timeoutMs: Int,
+        result: MethodChannel.Result,
+    ) {
+        mainScope.launch {
+            val payload = withContext(Dispatchers.IO) {
+                runCatching {
+                    val items = rawItems.mapNotNull { map ->
+                        val id = map["id"] as? String ?: return@mapNotNull null
+                        val config = map["xrayConfig"] as? String ?: return@mapNotNull null
+                        if (config.isBlank()) return@mapNotNull null
+                        EphemeralXrayPing.BatchItem(id, config)
+                    }
+                    EphemeralXrayPing.speedTestBatch(
+                        nativeLibraryDir = applicationInfo.nativeLibraryDir,
+                        filesDir = filesDir,
+                        assetDir = filesDir.absolutePath,
+                        socksPort = socksPort,
+                        items = items,
+                        downloadUrl = downloadUrl,
+                        timeoutMs = timeoutMs,
+                    )
+                }.getOrElse { e ->
+                    emptyList<EphemeralXrayPing.SpeedBatchResult>()
+                        .also { android.util.Log.e("KEQDIS", "xraySpeedTestBatch failed: ${e.message}") }
+                }
+            }
+            result.success(
+                payload.map { item ->
+                    mapOf(
+                        "id" to item.id,
+                        "success" to item.result.success,
+                        "kbps" to item.result.kbps,
+                        "error" to item.result.error,
                     )
                 },
             )
