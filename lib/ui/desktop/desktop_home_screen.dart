@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_logger.dart';
+import '../../platform/vpn_native_bridge.dart';
 import '../../services/desktop_background_service.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -29,13 +31,16 @@ class DesktopHomeScreen extends ConsumerStatefulWidget {
 class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     with WidgetsBindingObserver {
   int _index = 0;
-  bool _updatePromptShown = false;
   bool _startupTasksDone = false;
+  bool _autostartConnectInFlight = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    VpnNativeBridge.registerAutostartHandler(
+      () => _maybeAutostartConnect(force: true),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(homeTabIndexProvider.notifier).state = _index;
@@ -53,26 +58,61 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     final settings = await storage.getSettings();
     await WindowsDesktopService.applySettings(settings);
 
-    if (!WindowsDesktopService.isAutostartLaunch) return;
-    if (!settings.launchAtStartup || !settings.autoConnectLastServer) return;
+    await _maybeAutostartConnect();
+  }
 
-    await ref.read(serversProvider.notifier).reloadPreservingActive();
-    if (!mounted) return;
+  Future<void> _maybeAutostartConnect({bool force = false}) async {
+    if (!Platform.isWindows || _autostartConnectInFlight) return;
 
-    final active = ref.read(serversProvider).activeServer;
-    if (active == null) return;
-
-    final vpn = ref.read(vpnStateProvider).valueOrNull;
-    if (vpn?.status == VpnStatus.connected ||
-        vpn?.status == VpnStatus.connecting) {
-      return;
+    if (!force) {
+      final isAutostart = await WindowsDesktopService.isAutostartLaunch();
+      if (!isAutostart) return;
     }
 
-    await ref.read(vpnStateProvider.notifier).connect(autostartTunFallback: true);
+    final storage = ref.read(storageProvider);
+    final settings = await storage.getSettings();
+    if (!settings.launchAtStartup || !settings.autoConnectLastServer) return;
+
+    _autostartConnectInFlight = true;
+    try {
+      await ref.read(vpnStateProvider.future);
+      await ref.read(serversProvider.notifier).reloadPreservingActive();
+      if (!mounted) return;
+
+      final active = ref.read(serversProvider).activeServer;
+      if (active == null) {
+        AppLogger.instance.warn(
+          'Autostart connect skipped: no active server selected',
+        );
+        return;
+      }
+
+      final vpn = ref.read(vpnStateProvider).valueOrNull;
+      if (vpn?.status == VpnStatus.connected ||
+          vpn?.status == VpnStatus.connecting) {
+        return;
+      }
+
+      AppLogger.instance.info(
+        'Autostart: connecting to ${active.displayName}',
+      );
+      await ref
+          .read(vpnStateProvider.notifier)
+          .connect(autostartTunFallback: true);
+    } catch (e, st) {
+      AppLogger.instance.error(
+        'Autostart connect failed',
+        error: e,
+        stackTrace: st,
+      );
+    } finally {
+      _autostartConnectInFlight = false;
+    }
   }
 
   @override
   void dispose() {
+    VpnNativeBridge.registerAutostartHandler(null);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -95,10 +135,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     ref.listen<AsyncValue<UpdateInfo?>>(updateInfoProvider, (prev, next) {
-      if (_updatePromptShown) return;
+      if (!shouldAutoPromptForUpdate(prev, next)) return;
       final info = next.valueOrNull;
       if (info == null) return;
-      _updatePromptShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         showUpdateDialog(context, info);
