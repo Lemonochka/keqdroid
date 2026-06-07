@@ -43,7 +43,7 @@ abstract class TunnelBackend {
   });
 
   /// downloads a fixed payload through the core and reports kbps per server.
-  /// only implemented on windows; elsewhere returns success=false so callers fall back to a url ping.
+  /// implemented on windows (dart) and android (native); elsewhere returns success=false.
   Future<
       List<({
         String id,
