@@ -60,11 +60,8 @@ final vpnEngineProvider = Provider<VpnEngine>((ref) {
   return engine;
 });
 
-final updateInfoForceProvider = StateProvider<bool>((ref) => false);
-
 final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
-  final force = ref.watch(updateInfoForceProvider);
-  return UpdateService.checkForUpdate(force: force);
+  return UpdateService.checkForUpdate(force: false);
 });
 
 class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
@@ -754,6 +751,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       ));
       return;
     }
+
+    await ref.read(serversProvider.notifier).setActive(server);
 
     _connectInFlight = true;
     state = const AsyncData(VpnState(status: VpnStatus.connecting));
