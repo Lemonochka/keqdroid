@@ -7,6 +7,10 @@
 #include "tunnel_channel_handler.h"
 #include "windows_tray.h"
 
+namespace {
+constexpr UINT kAutostartConnectMsg = WM_APP + 100;
+}  // namespace
+
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
 
@@ -77,6 +81,9 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   }
 
   switch (message) {
+    case kAutostartConnectMsg:
+      KeqdisRequestAutostartConnect();
+      return 0;
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;
