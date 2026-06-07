@@ -64,17 +64,16 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   Future<void> _maybeAutostartConnect({bool force = false}) async {
     if (!Platform.isWindows || _autostartConnectInFlight) return;
 
-    if (!force) {
-      final isAutostart = await WindowsDesktopService.isAutostartLaunch();
-      if (!isAutostart) return;
-    }
-
-    final storage = ref.read(storageProvider);
-    final settings = await storage.getSettings();
-    if (!settings.launchAtStartup || !settings.autoConnectLastServer) return;
-
     _autostartConnectInFlight = true;
     try {
+      if (!force) {
+        final isAutostart = await WindowsDesktopService.isAutostartLaunch();
+        if (!isAutostart) return;
+      }
+
+      final storage = ref.read(storageProvider);
+      final settings = await storage.getSettings();
+      if (!settings.launchAtStartup || !settings.autoConnectLastServer) return;
       await ref.read(vpnStateProvider.future);
       await ref.read(serversProvider.notifier).reloadPreservingActive();
       if (!mounted) return;
