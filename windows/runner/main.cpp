@@ -13,10 +13,12 @@ constexpr wchar_t kWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
 constexpr wchar_t kWindowTitle[] = L"keqdroid";
 constexpr wchar_t kSingleInstanceMutex[] = L"Local\\KeqDroid.SingleInstance";
 constexpr wchar_t kAdminRestartFlag[] = L"--admin-restart";
+constexpr wchar_t kAutostartFlag[] = L"--autostart";
+constexpr UINT kAutostartConnectMsg = WM_APP + 100;
 
 HANDLE g_instance_mutex = nullptr;
 
-bool HasAdminRestartFlag() {
+bool HasCommandLineFlag(const wchar_t* flag) {
   int argc = 0;
   wchar_t** argv = ::CommandLineToArgvW(::GetCommandLineW(), &argc);
   if (argv == nullptr) {
@@ -24,13 +26,28 @@ bool HasAdminRestartFlag() {
   }
   bool found = false;
   for (int i = 1; i < argc; ++i) {
-    if (_wcsicmp(argv[i], kAdminRestartFlag) == 0) {
+    if (_wcsicmp(argv[i], flag) == 0) {
       found = true;
       break;
     }
   }
   ::LocalFree(argv);
   return found;
+}
+
+bool HasAdminRestartFlag() {
+  return HasCommandLineFlag(kAdminRestartFlag);
+}
+
+bool HasAutostartFlag() {
+  return HasCommandLineFlag(kAutostartFlag);
+}
+
+void NotifyExistingInstanceAutostart() {
+  HWND existing = ::FindWindowW(kWindowClassName, kWindowTitle);
+  if (existing != nullptr) {
+    ::PostMessageW(existing, kAutostartConnectMsg, 0, 0);
+  }
 }
 
 bool ActivateExistingInstance() {
@@ -104,6 +121,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
         ::CreateMutexW(nullptr, TRUE, kSingleInstanceMutex);
     if (g_instance_mutex != nullptr &&
         ::GetLastError() == ERROR_ALREADY_EXISTS) {
+      if (HasAutostartFlag()) {
+        NotifyExistingInstanceAutostart();
+      }
       ActivateExistingInstance();
       ::CloseHandle(g_instance_mutex);
       g_instance_mutex = nullptr;
