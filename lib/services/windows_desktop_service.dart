@@ -10,9 +10,11 @@ class WindowsDesktopService {
 
   static const _channel = MethodChannel('keqdis_vpn_channel');
 
-  static bool get isAutostartLaunch =>
-      Platform.isWindows &&
-      Platform.executableArguments.contains('--autostart');
+  static Future<bool> isAutostartLaunch() async {
+    if (!Platform.isWindows) return false;
+    if (Platform.executableArguments.contains('--autostart')) return true;
+    return await _channel.invokeMethod<bool>('isAutostartLaunch') ?? false;
+  }
 
   static Future<void> applySettings(AppSettings settings) async {
     if (!Platform.isWindows) return;
