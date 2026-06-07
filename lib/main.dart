@@ -101,7 +101,6 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
   static const _tabCount = 3;
 
   int _navIndex = 0;
-  bool _updatePromptShown = false;
   late final PageController _pageCtrl;
 
   @override
@@ -164,10 +163,9 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<UpdateInfo?>>(updateInfoProvider, (prev, next) {
-      if (_updatePromptShown) return;
+      if (!shouldAutoPromptForUpdate(prev, next)) return;
       final info = next.valueOrNull;
       if (info == null) return;
-      _updatePromptShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         showUpdateDialog(context, info);
