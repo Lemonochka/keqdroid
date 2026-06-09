@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-/// android: действия из уведомления; windows: автоподключение при автозапуске
+/// android: действия из уведомления; windows: автоподключение и меню трея
 class VpnNativeBridge {
   VpnNativeBridge._();
 
@@ -10,9 +10,12 @@ class VpnNativeBridge {
 
   static bool get supportsNotificationLaunch => Platform.isAndroid;
   static bool get supportsAutostartNotification => Platform.isWindows;
+  static bool get supportsTrayMenu => Platform.isWindows;
 
   static Future<void> Function(MethodCall call)? _launchHandler;
   static Future<void> Function()? _autostartHandler;
+  static Future<void> Function(MethodCall call)? _trayMenuHandler;
+  static Future<void> Function()? _trayMenuCloseHandler;
 
   static Future<String?> getLaunchAction() async {
     if (!supportsNotificationLaunch) return null;
@@ -38,14 +41,39 @@ class VpnNativeBridge {
     _syncMethodCallHandler();
   }
 
+  static void registerTrayMenuHandler(
+    Future<void> Function(MethodCall call)? handler,
+  ) {
+    _trayMenuHandler = handler;
+    _syncMethodCallHandler();
+  }
+
+  static void registerTrayMenuCloseHandler(
+    Future<void> Function()? handler,
+  ) {
+    _trayMenuCloseHandler = handler;
+    _syncMethodCallHandler();
+  }
+
   static void _syncMethodCallHandler() {
-    if (!supportsNotificationLaunch && !supportsAutostartNotification) {
+    final needsHandler = supportsNotificationLaunch ||
+        supportsAutostartNotification ||
+        supportsTrayMenu;
+    if (!needsHandler) {
       channel.setMethodCallHandler(null);
       return;
     }
     channel.setMethodCallHandler((call) async {
       if (call.method == 'onAutostartConnect' && supportsAutostartNotification) {
         await _autostartHandler?.call();
+        return;
+      }
+      if (call.method == 'onTrayMenuOpen' && supportsTrayMenu) {
+        await _trayMenuHandler?.call(call);
+        return;
+      }
+      if (call.method == 'onTrayMenuClose' && supportsTrayMenu) {
+        await _trayMenuCloseHandler?.call();
         return;
       }
       await _launchHandler?.call(call);

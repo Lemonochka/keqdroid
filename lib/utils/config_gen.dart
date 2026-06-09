@@ -452,7 +452,7 @@ class ConfigGeneratorV2 {
         if (dir.isNotEmpty) 'dir': dir,
         if (url.isNotEmpty) 'url': url,
         if (content.isNotEmpty) 'content': content,
-        if (statusCode != null) 'statusCode': statusCode,
+        'statusCode': ?statusCode,
       };
       return map;
     }

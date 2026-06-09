@@ -946,10 +946,56 @@ void DispatchAutostartConnectToDart() {
       std::make_unique<flutter::EncodableValue>());
 }
 
+void DispatchTrayMenuToDart() {
+  if (g_vpn_channel == nullptr) {
+    return;
+  }
+  POINT cursor = {};
+  ::GetCursorPos(&cursor);
+  flutter::EncodableMap args;
+  args[flutter::EncodableValue("x")] =
+      flutter::EncodableValue(static_cast<int32_t>(cursor.x));
+  args[flutter::EncodableValue("y")] =
+      flutter::EncodableValue(static_cast<int32_t>(cursor.y));
+  g_vpn_channel->InvokeMethod(
+      "onTrayMenuOpen",
+      std::make_unique<flutter::EncodableValue>(args));
+}
+
+void DispatchTrayMenuClosedToDart() {
+  if (g_vpn_channel == nullptr) {
+    return;
+  }
+  g_vpn_channel->InvokeMethod(
+      "onTrayMenuClose",
+      std::make_unique<flutter::EncodableValue>());
+}
+
 }  // namespace
 
 void KeqdisRequestAutostartConnect() {
   PostToPlatformThread([]() { DispatchAutostartConnectToDart(); });
+}
+
+void KeqdisRequestTrayMenu() {
+  PostToPlatformThread([]() {
+    // Show the popup immediately: Flutter may not pump frames while hidden.
+    HWND hwnd = WindowsTrayGetMainHwnd();
+    if (hwnd != nullptr) {
+      POINT cursor = {};
+      ::GetCursorPos(&cursor);
+      WindowsTrayShowMenuPopup(hwnd, cursor.x, cursor.y, 268, 320, false);
+    }
+    DispatchTrayMenuToDart();
+  });
+}
+
+void KeqdisNotifyTrayMenuClosed() {
+  PostToPlatformThread([]() { DispatchTrayMenuClosedToDart(); });
+}
+
+void KeqdisNotifyTrayMenuClosedImmediate() {
+  DispatchTrayMenuClosedToDart();
 }
 
 void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
@@ -1178,6 +1224,94 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
           return;
         }
 
+        if (call.method_name() == "showTrayMenu") {
+          int anchor_x = 0;
+          int anchor_y = 0;
+          int width = 268;
+          int height = 320;
+          bool dark_theme = false;
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (args != nullptr) {
+            auto read_int = [&](const char* key, int fallback) {
+              auto it = args->find(flutter::EncodableValue(key));
+              if (it == args->end()) {
+                return fallback;
+              }
+              const auto* value = std::get_if<int32_t>(&it->second);
+              if (value != nullptr) {
+                return static_cast<int>(*value);
+              }
+              const auto* value64 = std::get_if<int64_t>(&it->second);
+              if (value64 != nullptr) {
+                return static_cast<int>(*value64);
+              }
+              return fallback;
+            };
+            anchor_x = read_int("x", anchor_x);
+            anchor_y = read_int("y", anchor_y);
+            width = read_int("width", width);
+            height = read_int("height", height);
+            auto dark_it = args->find(flutter::EncodableValue("darkTheme"));
+            if (dark_it != args->end()) {
+              const auto* dark = std::get_if<bool>(&dark_it->second);
+              if (dark != nullptr) {
+                dark_theme = *dark;
+              }
+            }
+          }
+          HWND hwnd = WindowsTrayGetMainHwnd();
+          WindowsTrayShowMenuPopup(hwnd, anchor_x, anchor_y, width, height,
+                                   dark_theme);
+          result->Success();
+          return;
+        }
+
+        if (call.method_name() == "hideTrayMenu") {
+          WindowsTrayHideMenuPopup(WindowsTrayGetMainHwnd(), false);
+          result->Success();
+          return;
+        }
+
+        if (call.method_name() == "resizeTrayMenu") {
+          int width = 268;
+          int height = 320;
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (args != nullptr) {
+            auto read_int = [&](const char* key, int fallback) {
+              auto it = args->find(flutter::EncodableValue(key));
+              if (it == args->end()) {
+                return fallback;
+              }
+              const auto* value = std::get_if<int32_t>(&it->second);
+              if (value != nullptr) {
+                return static_cast<int>(*value);
+              }
+              const auto* value64 = std::get_if<int64_t>(&it->second);
+              if (value64 != nullptr) {
+                return static_cast<int>(*value64);
+              }
+              return fallback;
+            };
+            width = read_int("width", width);
+            height = read_int("height", height);
+          }
+          WindowsTrayResizeMenuPopup(WindowsTrayGetMainHwnd(), width, height);
+          result->Success();
+          return;
+        }
+
+        if (call.method_name() == "restoreMainWindow") {
+          result->Success(
+              flutter::EncodableValue(WindowsTrayRestoreMainWindow()));
+          return;
+        }
+
+        if (call.method_name() == "exitApp") {
+          WindowsTrayExitApplication(WindowsTrayGetMainHwnd());
+          result->Success();
+          return;
+        }
+
         if (call.method_name() == "setLaunchAtStartup") {
           bool enabled = false;
           const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
@@ -1319,9 +1453,22 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
         }
 
         if (call.method_name() == "getTrafficStats") {
+          std::string mode = "tun";
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (args != nullptr) {
+            const auto mode_it = args->find(flutter::EncodableValue("mode"));
+            if (mode_it != args->end()) {
+              const auto* mode_str =
+                  std::get_if<std::string>(&mode_it->second);
+              if (mode_str != nullptr && !mode_str->empty()) {
+                mode = *mode_str;
+              }
+            }
+          }
           uint64_t in_octets = 0;
           uint64_t out_octets = 0;
-          const bool ok = ReadSessionTrafficCounters(&in_octets, &out_octets);
+          const bool ok =
+              ReadSessionTrafficCounters(mode.c_str(), &in_octets, &out_octets);
           flutter::EncodableMap response;
           response[flutter::EncodableValue("ok")] =
               flutter::EncodableValue(ok);

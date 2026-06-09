@@ -1,11 +1,14 @@
-﻿import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/shared/extensions/build_context_l10n.dart';
 
+import '../../providers/providers.dart';
 import '../../services/update_service.dart';
 
-/// Сессионный флаг: диалог уже показывали (вручную или автоматически).
+/// ?????????? ????: ?????? ??? ?????????? (??????? ??? ?????????????).
 class UpdatePrompt {
   UpdatePrompt._();
 
@@ -14,25 +17,25 @@ class UpdatePrompt {
   static void markShown() => shownThisSession = true;
 }
 
-/// Автопоказ только при первом обнаружении обновления, не при refresh провайдера.
+/// ????????? ?????? ??? ?????? ??????????? ??????????, ?? ??? refresh ??????????.
 bool shouldAutoPromptForUpdate(
   AsyncValue<UpdateInfo?>? prev,
   AsyncValue<UpdateInfo?> next,
 ) {
   if (UpdatePrompt.shownThisSession) return false;
-  final info = next.valueOrNull;
+  final info = next.value;
   if (info == null) return false;
 
-  final prevInfo = prev?.valueOrNull;
+  final prevInfo = prev?.value;
   if (prevInfo?.latestVersion == info.latestVersion) return false;
 
-  // Повторный refresh с другой версией — не автопоказ (ручная проверка сама откроет).
+  // ????????? refresh ? ?????? ??????? ? ?? ????????? (?????? ???????? ???? ???????).
   if (prevInfo != null && prev?.isLoading != true) return false;
 
   return true;
 }
 
-/// GitHub release body часто содержит HTML-теги, которые flutter_markdown не парсит.
+/// GitHub release body ????? ???????? HTML-????, ??????? flutter_markdown ?? ??????.
 String sanitizeReleaseNotes(String raw) {
   var text = raw;
   text = text.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
@@ -54,7 +57,7 @@ String sanitizeReleaseNotes(String raw) {
 
 bool _updateDialogOpen = false;
 
-/// диалог обновления
+/// ?????? ??????????
 Future<void> showUpdateDialog(BuildContext context, UpdateInfo info) async {
   if (_updateDialogOpen) return;
   _updateDialogOpen = true;
@@ -70,17 +73,18 @@ Future<void> showUpdateDialog(BuildContext context, UpdateInfo info) async {
   }
 }
 
-class _UpdateDialog extends StatefulWidget {
+class _UpdateDialog extends ConsumerStatefulWidget {
   final UpdateInfo info;
 
   const _UpdateDialog({required this.info});
 
   @override
-  State<_UpdateDialog> createState() => _UpdateDialogState();
+  ConsumerState<_UpdateDialog> createState() => _UpdateDialogState();
 }
 
-class _UpdateDialogState extends State<_UpdateDialog> {
+class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
   bool _downloading = false;
+  bool _applying = false;
   double _progress = 0;
 
   @override
@@ -114,7 +118,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'v${widget.info.displayCurrentVersion} → v${widget.info.displayLatestVersion}',
+              'v${widget.info.displayCurrentVersion} ? v${widget.info.displayLatestVersion}',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: textColor,
@@ -200,14 +204,12 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             if (_downloading) ...[
               const SizedBox(height: 16),
               LinearProgressIndicator(
-                value: _progress > 0 ? _progress : null,
+                value: _applying || _progress <= 0 ? null : _progress,
                 borderRadius: BorderRadius.circular(4),
               ),
               const SizedBox(height: 6),
               Text(
-                _progress > 0
-                    ? '${(_progress * 100).toInt()}%'
-                    : 'Downloading...',
+                _statusLabel(context),
                 style: TextStyle(fontSize: 12, color: subtitleColor),
               ),
             ],
@@ -232,7 +234,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
           ),
           child: Text(
             _downloading
-                ? 'Downloading...'
+                ? _statusLabel(context)
                 : widget.info.openInBrowser
                     ? 'Open download'
                     : context.l10n.updateActionNow,
@@ -242,21 +244,45 @@ class _UpdateDialogState extends State<_UpdateDialog> {
     );
   }
 
+  String _statusLabel(BuildContext context) {
+    if (_applying) return context.l10n.updateApplying;
+    if (_progress > 0) return '${(_progress * 100).toInt()}%';
+    return context.l10n.settingsDownloading;
+  }
+
   Future<void> _downloadAndInstall() async {
-    setState(() => _downloading = true);
+    setState(() {
+      _downloading = true;
+      _applying = false;
+      _progress = 0;
+    });
 
     try {
-      await UpdateService.downloadAndInstall(
+      final restarting = await UpdateService.downloadAndInstall(
         widget.info,
         onProgress: (received, total) {
           if (total > 0 && mounted) {
             setState(() => _progress = received / total);
           }
         },
+        beforeRestart: Platform.isWindows
+            ? () async {
+                if (mounted) setState(() => _applying = true);
+                await ref.read(vpnStateProvider.notifier).disconnect();
+              }
+            : null,
       );
-    } catch (e) {
+      if (restarting) return;
       if (mounted) {
         setState(() => _downloading = false);
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _downloading = false;
+          _applying = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.settingsDownloadFailed('$e'))),
         );

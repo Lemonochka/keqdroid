@@ -1,9 +1,12 @@
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'windows_zip_updater.dart';
 
 /// инфа о доступном обновлении
 class UpdateInfo {
@@ -274,13 +277,15 @@ class UpdateService {
     await prefs.setString(_prefSkipVersion, version);
   }
 
-  static Future<void> downloadAndInstall(
+  /// Returns `true` when the app is exiting to apply a Windows portable update.
+  static Future<bool> downloadAndInstall(
     UpdateInfo info, {
     void Function(int received, int total)? onProgress,
+    Future<void> Function()? beforeRestart,
   }) async {
     if (info.openInBrowser) {
       await _openUrlInBrowser(info.downloadUrl);
-      return;
+      return false;
     }
 
     final dir = await getTemporaryDirectory();
@@ -301,7 +306,15 @@ class UpdateService {
       },
     );
 
+    if (Platform.isWindows && ext == '.zip') {
+      return WindowsZipUpdater.applyPortableZipUpdate(
+        zipPath: file.path,
+        beforeRestart: beforeRestart,
+      );
+    }
+
     await OpenFilex.open(file.path);
+    return false;
   }
 
   static String _extensionFromUrl(String url) {

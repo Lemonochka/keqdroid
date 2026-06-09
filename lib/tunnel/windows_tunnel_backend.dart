@@ -17,6 +17,7 @@ import 'tunnel_backend.dart';
 import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
 import 'windows_core_paths.dart';
+import 'xray_session_stats.dart';
 
 /// windows: xray всегда + sing-box только для tun, системный прокси через wininet
 class WindowsTunnelBackend implements TunnelBackend {
@@ -40,6 +41,7 @@ class WindowsTunnelBackend implements TunnelBackend {
   int _prevOutOctets = 0;
   int _totalDownload = 0;
   int _totalUpload = 0;
+  String? _xrayBinPath;
 
   @override
   Stream<VpnState> get stateStream => _stateCtrl.stream;
@@ -95,7 +97,19 @@ class WindowsTunnelBackend implements TunnelBackend {
 
       _sessionDir = await WindowsCorePaths.sessionDir();
       final xrayConfigFile = File('${_sessionDir!.path}/xray.json');
-      await xrayConfigFile.writeAsString(request.xrayConfig);
+      _xrayBinPath = xrayBin;
+
+      var xrayConfigBody = request.xrayConfig;
+      if (request.mode == ConnectionMode.proxy) {
+        final decoded = jsonDecode(request.xrayConfig) as Map<String, dynamic>;
+        xrayConfigBody = jsonEncode(
+          XraySessionStats.augmentConfig(
+            decoded,
+            apiPort: XraySessionStats.defaultApiPort,
+          ),
+        );
+      }
+      await xrayConfigFile.writeAsString(xrayConfigBody);
 
       // fail fast if the socks port is already taken
       final portAvailable = await _isPortAvailable('127.0.0.1', request.socksPort);
@@ -288,6 +302,7 @@ class WindowsTunnelBackend implements TunnelBackend {
     await _killProcess(_xrayProcess);
     _singboxProcess = null;
     _xrayProcess = null;
+    _xrayBinPath = null;
 
     await WindowsDesktopService.clearSessionCoreProcesses();
 
@@ -595,13 +610,27 @@ class WindowsTunnelBackend implements TunnelBackend {
   Future<void> _pollTrafficStats(ConnectionMode mode) async {
     if (_xrayProcess == null) return;
     try {
-      final result = await _method.invokeMethod<Map<Object?, Object?>>(
-        'getTrafficStats',
-      );
-      if (result == null || result['ok'] != true) return;
+      final int inOctets;
+      final int outOctets;
 
-      final inOctets = (result['inOctets'] as num?)?.toInt() ?? 0;
-      final outOctets = (result['outOctets'] as num?)?.toInt() ?? 0;
+      if (mode == ConnectionMode.proxy) {
+        final xrayBin = _xrayBinPath;
+        if (xrayBin == null) return;
+        final counters = await XraySessionStats.queryInboundCounters(
+          xrayExecutable: xrayBin,
+        );
+        if (counters == null) return;
+        inOctets = counters.download;
+        outOctets = counters.upload;
+      } else {
+        final result = await _method.invokeMethod<Map<Object?, Object?>>(
+          'getTrafficStats',
+          {'mode': 'tun'},
+        );
+        if (result == null || result['ok'] != true) return;
+        inOctets = (result['inOctets'] as num?)?.toInt() ?? 0;
+        outOctets = (result['outOctets'] as num?)?.toInt() ?? 0;
+      }
 
       if (_prevInOctets == 0 && _prevOutOctets == 0) {
         _prevInOctets = inOctets;

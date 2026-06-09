@@ -35,10 +35,14 @@ bool IsLoopbackAdapter(const MIB_IFROW& row) {
 
 }  // namespace
 
-bool ReadSessionTrafficCounters(uint64_t* in_octets, uint64_t* out_octets) {
+bool ReadSessionTrafficCounters(const char* mode,
+                                uint64_t* in_octets,
+                                uint64_t* out_octets) {
   if (in_octets == nullptr || out_octets == nullptr) {
     return false;
   }
+  const bool proxy_mode =
+      mode != nullptr && std::strcmp(mode, "proxy") == 0;
   *in_octets = 0;
   *out_octets = 0;
 
@@ -76,13 +80,13 @@ bool ReadSessionTrafficCounters(uint64_t* in_octets, uint64_t* out_octets) {
 
   std::free(table);
 
-  if (virtual_in > 0 || virtual_out > 0) {
-    *in_octets = virtual_in;
-    *out_octets = virtual_out;
+  if (proxy_mode) {
+    *in_octets = loop_in;
+    *out_octets = loop_out;
     return true;
   }
 
-  *in_octets = loop_in;
-  *out_octets = loop_out;
+  *in_octets = virtual_in;
+  *out_octets = virtual_out;
   return true;
 }
