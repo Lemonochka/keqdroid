@@ -80,7 +80,7 @@ Future<void> _showUpdateNotification({
   final plugin = FlutterLocalNotificationsPlugin();
 
   const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-  await plugin.initialize(const InitializationSettings(android: androidInit));
+  await plugin.initialize(settings: const InitializationSettings(android: androidInit));
 
   String title;
   String body;
@@ -98,10 +98,10 @@ Future<void> _showUpdateNotification({
   }
 
   await plugin.show(
-    _kNotifId,
-    title,
-    body,
-    const NotificationDetails(
+    id: _kNotifId,
+    title: title,
+    body: body,
+    notificationDetails: const NotificationDetails(
       android: AndroidNotificationDetails(
         _kNotifChannelId,
         _kNotifChannelName,
@@ -122,7 +122,6 @@ class BackgroundService {
   static Future<void> init() async {
     await Workmanager().initialize(
       callbackDispatcher,
-      isInDebugMode: false, // true → debug-нотификации на каждый запуск
     );
 
     // разрешение на нотификации (android 13+)
@@ -145,7 +144,7 @@ class BackgroundService {
       constraints: Constraints(
         networkType: NetworkType.connected,
       ),
-      existingWorkPolicy: ExistingWorkPolicy.update,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
       backoffPolicy: BackoffPolicy.exponential,
     );
   }
