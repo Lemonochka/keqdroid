@@ -25,6 +25,9 @@ import '../utils/error_messages.dart';
 import '../utils/process_name_utils.dart';
 import '../utils/socks5_credentials.dart';
 import '../utils/split_tunnel_routing.dart';
+import 'ui_state_providers.dart';
+
+export 'ui_state_providers.dart';
 
 final storageProvider = Provider<StorageService>((ref) {
   throw UnimplementedError('Override storageProvider before runApp');
@@ -33,25 +36,6 @@ final storageProvider = Provider<StorageService>((ref) {
 final subscriptionServiceProvider = Provider<SubscriptionService>((ref) {
   return SubscriptionService(ref.read(storageProvider));
 });
-
-// state для индикаторов на время обновления подписок/пинга
-final subscriptionRefreshingIdsProvider = StateProvider<Set<String>>((ref) => <String>{});
-final subscriptionRefreshErrorsProvider =
-    StateProvider<Map<String, String>>((ref) => <String, String>{});
-final pingingScopesProvider = StateProvider<Set<String>>((ref) => <String>{});
-final pingingServerIdsProvider = StateProvider<Set<String>>((ref) => <String>{});
-final collapsedServerGroupsProvider =
-    StateProvider<Map<String, bool>>((ref) => <String, bool>{});
-final collapsedSubscriptionCardsProvider =
-    StateProvider<Map<String, bool>>((ref) => <String, bool>{});
-final subscriptionReorderInProgressProvider =
-    StateProvider<bool>((ref) => false);
-
-/// индекс активной вкладки (0 = Servers)
-final homeTabIndexProvider = StateProvider<int>((ref) => 0);
-
-/// дробная позиция PageView для анимации при свайпе (0.0 = Servers)
-final homeTabPageProvider = StateProvider<double>((ref) => 0.0);
 
 final vpnEngineProvider = Provider<VpnEngine>((ref) {
   final engine = VpnEngine();
@@ -107,7 +91,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       );
     }
     final latest = await ref.read(storageProvider).getSubscriptions();
-    final current = state.valueOrNull;
+    final current = state.value;
     if (current == null) return;
     if (_hasSubscriptionsChanged(current, latest)) {
       state = AsyncData(latest);
@@ -173,7 +157,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
   }
 
   Future<void> add(Subscription sub) async {
-    final existing = state.valueOrNull ?? await ref.read(storageProvider).getSubscriptions();
+    final existing = state.value ?? await ref.read(storageProvider).getSubscriptions();
     final newUrl = _normalizeSubscriptionUrl(sub.url);
     final duplicate = existing.any(
       (s) => _normalizeSubscriptionUrl(s.url) == newUrl,
@@ -183,14 +167,14 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     }
 
     await ref.read(storageProvider).upsertSubscription(sub);
-    state = AsyncData([...?state.valueOrNull, sub]);
+    state = AsyncData([...?state.value, sub]);
     try {
       await refresh(sub);
     } catch (e) {
       // первое обновление упало — откатываем add, чтобы не висели пустые подписки
       await ref.read(storageProvider).deleteSubscription(sub.id);
       state = AsyncData(
-        (state.valueOrNull ?? []).where((s) => s.id != sub.id).toList(),
+        (state.value ?? []).where((s) => s.id != sub.id).toList(),
       );
       await ref.read(serversProvider.notifier).reloadPreservingActive();
       rethrow;
@@ -219,7 +203,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
   Future<void> remove(String id) async {
     await ref.read(storageProvider).deleteSubscription(id);
     state = AsyncData(
-      (state.valueOrNull ?? []).where((s) => s.id != id).toList(),
+      (state.value ?? []).where((s) => s.id != id).toList(),
     );
     await ref.read(serversProvider.notifier).reloadPreservingActive();
   }
@@ -228,7 +212,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     final result = await ref.read(subscriptionServiceProvider).updateSubscription(sub);
 
     if (result.success) {
-      final subs = (state.valueOrNull ?? [])
+      final subs = (state.value ?? [])
           .map((s) => s.id == sub.id ? result.subscription : s)
           .toList();
       state = AsyncData(subs);
@@ -265,7 +249,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
   }
 
   Future<void> refreshAll() async {
-    final subs = state.valueOrNull ?? [];
+    final subs = state.value ?? [];
     if (subs.isEmpty) return;
 
     final errors = <String>[];
@@ -288,7 +272,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
   }
 
   Future<void> updateInterval(String id, int hours) async {
-    final subs = state.valueOrNull ?? [];
+    final subs = state.value ?? [];
     final idx = subs.indexWhere((s) => s.id == id);
     if (idx == -1) return;
     final updated = subs[idx].copyWith(updateIntervalHours: hours);
@@ -298,7 +282,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
   }
 
   Future<void> toggleAutoUpdate(String id) async {
-    final subs = state.valueOrNull ?? [];
+    final subs = state.value ?? [];
     final idx = subs.indexWhere((s) => s.id == id);
     if (idx == -1) return;
     final updated = subs[idx].copyWith(autoUpdate: !subs[idx].autoUpdate);
@@ -317,7 +301,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       int newIndex, {
         bool fromReorderableList = true,
       }) async {
-    final subs = <Subscription>[...(state.valueOrNull ?? [])];
+    final subs = <Subscription>[...(state.value ?? [])];
     if (oldIndex < 0 || oldIndex >= subs.length) return;
 
     // ReorderableListView даёт newIndex до удаления — при движении вниз правим индекс
@@ -334,7 +318,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
 
   /// меняет имя/URL подписки, серверы не трогаем
   Future<void> editMeta(String id, {String? name, String? url}) async {
-    final subs = state.valueOrNull ?? [];
+    final subs = state.value ?? [];
     final idx = subs.indexWhere((s) => s.id == id);
     if (idx == -1) return;
     if (url != null) {
@@ -565,7 +549,7 @@ class ServersNotifier extends Notifier<ServersState> {
     final results = <PingResult>[];
     final pending = <String, ({int? pingMs, String? lastPingType})>{};
     final settings = await ref.read(storageProvider).getSettings();
-    final vpnState = ref.read(vpnStateProvider).valueOrNull;
+    final vpnState = ref.read(vpnStateProvider).value;
     final vpnConnected = vpnState?.status == VpnStatus.connected;
     final tunMode = vpnState?.activeMode == ConnectionMode.tun;
     // Raw TCP ping is unmeasurable through a TUN tunnel — switch to URL ping.
@@ -655,7 +639,7 @@ class ServersNotifier extends Notifier<ServersState> {
     }
     try {
       final settings = await ref.read(storageProvider).getSettings();
-      final vpnState = ref.read(vpnStateProvider).valueOrNull;
+      final vpnState = ref.read(vpnStateProvider).value;
       final vpnConnected = vpnState?.status == VpnStatus.connected;
       final tunMode = vpnState?.activeMode == ConnectionMode.tun;
       // Raw TCP ping is unmeasurable through a TUN tunnel — switch to URL ping.
@@ -725,7 +709,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         }
         return;
       }
-      final current = state.valueOrNull;
+      final current = state.value;
       if (current != null && current.telemetryEquals(s)) return;
       state = AsyncData(s);
     });
@@ -898,14 +882,14 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   Future<void> reconnectToActiveServer() async {
     if (_serverSwitchInProgress || _connectInFlight) return;
 
-    final status = state.valueOrNull?.status;
+    final status = state.value?.status;
     if (status != VpnStatus.connected && status != VpnStatus.connecting) {
       await connect();
       return;
     }
 
     _serverSwitchInProgress = true;
-    ref.read(vpnServerSwitchInProgressProvider.notifier).state = true;
+    ref.read(vpnServerSwitchInProgressProvider.notifier).set(true);
     try {
       state = const AsyncData(VpnState(status: VpnStatus.disconnecting));
       await ref.read(vpnEngineProvider).stopVpn();
@@ -913,7 +897,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       await connect();
     } finally {
       _serverSwitchInProgress = false;
-      ref.read(vpnServerSwitchInProgressProvider.notifier).state = false;
+      ref.read(vpnServerSwitchInProgressProvider.notifier).set(false);
     }
   }
 
@@ -921,7 +905,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     const timeout = Duration(seconds: 4);
     final deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline)) {
-      final status = state.valueOrNull?.status;
+      final status = state.value?.status;
       if (status == VpnStatus.disconnected || status == null) {
         await Future.delayed(const Duration(milliseconds: 350));
         return;
@@ -932,7 +916,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   }
 
   Future<void> toggle() async {
-    final status = state.valueOrNull?.status ?? VpnStatus.disconnected;
+    final status = state.value?.status ?? VpnStatus.disconnected;
     if (status == VpnStatus.connected || status == VpnStatus.connecting) {
       await disconnect();
     } else {
@@ -942,8 +926,6 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 }
 
 /// true пока переподключаемся при смене сервера — чтобы не показывать ложные ошибки
-final vpnServerSwitchInProgressProvider = StateProvider<bool>((ref) => false);
-
 final vpnStateProvider =
     AsyncNotifierProvider<VpnStateNotifier, VpnState>(VpnStateNotifier.new);
 
@@ -954,13 +936,13 @@ class RoutingRulesNotifier extends AsyncNotifier<List<RoutingRule>> {
   }
 
   Future<void> add(RoutingRule rule) async {
-    final rules = [...?state.valueOrNull, rule];
+    final rules = [...?state.value, rule];
     await ref.read(storageProvider).saveRules(rules);
     state = AsyncData(rules);
   }
 
   Future<void> updateRule(RoutingRule rule) async {
-    final rules = (state.valueOrNull ?? [])
+    final rules = (state.value ?? [])
         .map((r) => r.id == rule.id ? rule : r)
         .toList();
     await ref.read(storageProvider).saveRules(rules);
@@ -968,13 +950,13 @@ class RoutingRulesNotifier extends AsyncNotifier<List<RoutingRule>> {
   }
 
   Future<void> remove(String id) async {
-    final rules = (state.valueOrNull ?? []).where((r) => r.id != id).toList();
+    final rules = (state.value ?? []).where((r) => r.id != id).toList();
     await ref.read(storageProvider).saveRules(rules);
     state = AsyncData(rules);
   }
 
   Future<void> toggle(String id) async {
-    final rules = (state.valueOrNull ?? [])
+    final rules = (state.value ?? [])
         .map((r) => r.id == id ? r.copyWith(enabled: !r.enabled) : r)
         .toList();
     await ref.read(storageProvider).saveRules(rules);

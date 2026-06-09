@@ -1,4 +1,4 @@
-﻿import 'package:dynamic_color/dynamic_color.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -109,7 +109,7 @@ class _ThemedApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings =
-        ref.watch(settingsNotifierProvider).valueOrNull ?? const AppSettings();
+        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final preset = resolveThemePreset(settings.themePresetId);
     final customLight = buildPresetScheme(preset, Brightness.light);
     final customDark = buildPresetScheme(preset, Brightness.dark);
