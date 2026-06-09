@@ -28,7 +28,7 @@ class NotificationService {
     final plugin = FlutterLocalNotificationsPlugin();
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     await plugin.initialize(
-      const InitializationSettings(android: androidInit),
+      settings: const InitializationSettings(android: androidInit),
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
@@ -77,10 +77,10 @@ class NotificationService {
     );
 
     await plugin.show(
-      _notifId,
-      title,
-      body,
-      NotificationDetails(android: androidDetails),
+      id: _notifId,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(android: androidDetails),
     );
   }
 
@@ -93,7 +93,7 @@ class NotificationService {
   static Future<void> hideNotification() async {
     final ns = instance;
     if (!ns._initialized || ns._plugin == null) return;
-    await ns._plugin!.cancel(_notifId);
+    await ns._plugin!.cancel(id: _notifId);
   }
 
   /// Отменяет уведомление и освобождает ресурсы.

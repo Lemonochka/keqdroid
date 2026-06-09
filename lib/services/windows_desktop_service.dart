@@ -92,4 +92,47 @@ class WindowsDesktopService {
       // Best-effort.
     }
   }
+
+  static Future<void> showTrayMenu({
+    required double anchorX,
+    required double anchorY,
+    required double width,
+    required double height,
+    required bool darkTheme,
+  }) async {
+    if (!Platform.isWindows) return;
+    await _channel.invokeMethod<void>('showTrayMenu', {
+      'x': anchorX.round(),
+      'y': anchorY.round(),
+      'width': width.round(),
+      'height': height.round(),
+      'darkTheme': darkTheme,
+    });
+  }
+
+  static Future<void> hideTrayMenu() async {
+    if (!Platform.isWindows) return;
+    await _channel.invokeMethod<void>('hideTrayMenu');
+  }
+
+  static Future<void> resizeTrayMenu({
+    required double width,
+    required double height,
+  }) async {
+    if (!Platform.isWindows) return;
+    await _channel.invokeMethod<void>('resizeTrayMenu', {
+      'width': width.round(),
+      'height': height.round(),
+    });
+  }
+
+  static Future<bool> restoreMainWindow() async {
+    if (!Platform.isWindows) return false;
+    return await _channel.invokeMethod<bool>('restoreMainWindow') ?? false;
+  }
+
+  static Future<void> exitApp() async {
+    if (!Platform.isWindows) return;
+    await _channel.invokeMethod<void>('exitApp');
+  }
 }

@@ -63,7 +63,7 @@ class SingBoxTunConfigGen {
         'tag': 'proxy-dns',
         'type': 'udp',
         'server': host,
-        if (port != null) 'server_port': port,
+        'server_port': ?port,
         'detour': 'proxy',
       };
     }

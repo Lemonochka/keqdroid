@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:keqdroid/shared/extensions/build_context_l10n.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../services/update_service.dart';
-import 'update_dialog.dart';
+import 'package:keqdroid/shared/ui/update_dialog.dart';
 
 /// версия приложения и бейдж обновления
 class AppVersionInfo extends StatefulWidget {

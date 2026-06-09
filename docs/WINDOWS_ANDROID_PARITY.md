@@ -11,8 +11,8 @@
 | Xray debug logs | Native buffer | Session stdout/stderr export |
 | Proxy debug logs | — | Yes |
 | Subscriptions | Foreground + WorkManager | Foreground + periodic timer while app runs |
-| Live speed / session stats | EventChannel from VpnService | `getTrafficStats` (virtual TUN or loopback in Proxy) |
-| App updates | GitHub `v*` release (`.apk` asset) | Same `v*` release (`.zip`/`.msix`/`.msi`/`.exe` asset) |
+| Live speed / session stats | EventChannel from VpnService | TUN: virtual adapter counters; Proxy: Xray StatsService API |
+| App updates | GitHub `v*` release (`.apk` asset) | Same `v*` release; portable `.zip` is applied in-place (extract + replace + restart) |
 | Notifications / background VPN | Yes | Not implemented (desktop has no VpnService) |
 | System proxy | — | Yes (+ Firefox user.js) |
 
@@ -37,15 +37,16 @@
 
 - **Split tunnel in Proxy mode (Windows):** not equivalent to Android per-app VPN; use **TUN** mode.
 - **Background refresh on Windows:** runs on a timer and on app resume, not when the app is fully closed.
-- **Traffic stats in Proxy mode:** based on loopback adapter counters (approximate).
+- **Traffic stats in Proxy mode:** Xray inbound counters via StatsService (`127.0.0.1:10985`).
 
 ## Windows desktop shell
 
-- **System tray:** closing the window hides to tray; double-click tray icon or **Show KeqDroid** restores; **Exit** quits.
+- **System tray:** closing the window hides to tray; left-click (or double-click) restores the main window; right-click opens a themed Flutter menu (connect/disconnect, server list, Proxy/TUN, open app, exit).
 - Tray icon appears after the first minimize-to-tray (close button).
+- TUN from tray without admin rights opens the full app with the same restart-as-administrator dialog as the sidebar.
 
 ## Planned (not in code yet)
 
-- Autostart, in-app MSI installer
+- Autostart, MSI/MSIX in-app installer
 - Windows toast for subscription refresh results
 - Tray tooltip reflects VPN connected state
