@@ -168,6 +168,12 @@ abstract class AppLocalizations {
   /// **'Update'**
   String get updateActionNow;
 
+  /// No description provided for @updateApplying.
+  ///
+  /// In en, this message translates to:
+  /// **'Applying update...'**
+  String get updateApplying;
+
   /// No description provided for @errorSubscriptionTitle.
   ///
   /// In en, this message translates to:
@@ -2051,6 +2057,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not restart as administrator'**
   String get desktopTunAdminRestartFailed;
+
+  /// No description provided for @trayMenuTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'KeqDroid'**
+  String get trayMenuTitle;
+
+  /// No description provided for @trayCloseMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Close menu'**
+  String get trayCloseMenu;
+
+  /// No description provided for @trayConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get trayConnect;
+
+  /// No description provided for @trayDisconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get trayDisconnect;
+
+  /// No description provided for @trayOpenApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Open app'**
+  String get trayOpenApp;
+
+  /// No description provided for @trayExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get trayExit;
+
+  /// No description provided for @trayServersSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Servers'**
+  String get trayServersSection;
+
+  /// No description provided for @trayPickServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Select server…'**
+  String get trayPickServer;
+
+  /// No description provided for @trayModeProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy'**
+  String get trayModeProxy;
+
+  /// No description provided for @trayModeTun.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN'**
+  String get trayModeTun;
+
+  /// No description provided for @trayStatusConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get trayStatusConnected;
+
+  /// No description provided for @trayStatusDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnected'**
+  String get trayStatusDisconnected;
+
+  /// No description provided for @trayStatusError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get trayStatusError;
 }
 
 class _AppLocalizationsDelegate

@@ -46,6 +46,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateActionNow => 'Update';
 
   @override
+  String get updateApplying => 'Applying update...';
+
+  @override
   String get errorSubscriptionTitle => 'Subscription error';
 
   @override
@@ -1107,4 +1110,43 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get desktopTunAdminRestartFailed =>
       'Could not restart as administrator';
+
+  @override
+  String get trayMenuTitle => 'KeqDroid';
+
+  @override
+  String get trayCloseMenu => 'Close menu';
+
+  @override
+  String get trayConnect => 'Connect';
+
+  @override
+  String get trayDisconnect => 'Disconnect';
+
+  @override
+  String get trayOpenApp => 'Open app';
+
+  @override
+  String get trayExit => 'Exit';
+
+  @override
+  String get trayServersSection => 'Servers';
+
+  @override
+  String get trayPickServer => 'Select server…';
+
+  @override
+  String get trayModeProxy => 'Proxy';
+
+  @override
+  String get trayModeTun => 'TUN';
+
+  @override
+  String get trayStatusConnected => 'Connected';
+
+  @override
+  String get trayStatusDisconnected => 'Disconnected';
+
+  @override
+  String get trayStatusError => 'Error';
 }

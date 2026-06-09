@@ -1,12 +1,18 @@
 import 'dart:developer' as developer;
 
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
+
+import 'crashlytics_reporter.dart';
+import 'crashlytics_reporter_stub.dart'
+    if (dart.library.io) 'crashlytics_reporter_io.dart' as crashlytics;
 
 class AppLogger {
   AppLogger._();
 
   static final AppLogger instance = AppLogger._();
+
+  final CrashlyticsReporter _crashlytics =
+      crashlytics.createCrashlyticsReporter();
 
   bool _crashlyticsEnabled = false;
 
@@ -38,7 +44,7 @@ class AppLogger {
   }) async {
     _log('ERROR', reason, error: error, stackTrace: stackTrace);
     if (_crashlyticsEnabled) {
-      await FirebaseCrashlytics.instance.recordError(
+      await _crashlytics.recordError(
         error,
         stackTrace,
         reason: reason,

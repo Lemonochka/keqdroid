@@ -21,6 +21,7 @@
   "updateWhatsNew": "Neuerungen:",
   "updateActionLater": "Später",
   "updateActionNow": "Aktualisieren",
+  "updateApplying": "Update wird installiert...",
   "errorSubscriptionTitle": "Abonnement-Fehler",
   "errorConnectionPermission": "Verbindung fehlgeschlagen: Berechtigung",
   "errorConnectionNetwork": "Verbindung fehlgeschlagen: Netzwerk",
@@ -510,5 +511,18 @@
   "desktopTunAdminMessage": "Der TUN-Modus benötigt Administratorrechte. Starten Sie die App als Administrator neu — der Modus in der Seitenleiste bleibt erhalten.",
   "desktopTunAdminRestart": "Als Administrator neu starten",
   "desktopTunAdminCancel": "Abbrechen",
-  "desktopTunAdminRestartFailed": "Neustart als Administrator fehlgeschlagen"
+  "desktopTunAdminRestartFailed": "Neustart als Administrator fehlgeschlagen",
+  "trayMenuTitle": "KeqDroid",
+  "trayCloseMenu": "Menü schließen",
+  "trayConnect": "Verbinden",
+  "trayDisconnect": "Trennen",
+  "trayOpenApp": "App öffnen",
+  "trayExit": "Beenden",
+  "trayServersSection": "Server",
+  "trayPickServer": "Server wählen…",
+  "trayModeProxy": "Proxy",
+  "trayModeTun": "TUN",
+  "trayStatusConnected": "Verbunden",
+  "trayStatusDisconnected": "Getrennt",
+  "trayStatusError": "Fehler"
 }

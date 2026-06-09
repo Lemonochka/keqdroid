@@ -46,6 +46,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateActionNow => '更新';
 
   @override
+  String get updateApplying => '正在安装更新...';
+
+  @override
   String get errorSubscriptionTitle => '订阅错误';
 
   @override
@@ -1060,4 +1063,43 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get desktopTunAdminRestartFailed => '无法以管理员身份重启';
+
+  @override
+  String get trayMenuTitle => 'KeqDroid';
+
+  @override
+  String get trayCloseMenu => '关闭菜单';
+
+  @override
+  String get trayConnect => '连接';
+
+  @override
+  String get trayDisconnect => '断开';
+
+  @override
+  String get trayOpenApp => '打开应用';
+
+  @override
+  String get trayExit => '退出';
+
+  @override
+  String get trayServersSection => '服务器';
+
+  @override
+  String get trayPickServer => '选择服务器…';
+
+  @override
+  String get trayModeProxy => 'Proxy';
+
+  @override
+  String get trayModeTun => 'TUN';
+
+  @override
+  String get trayStatusConnected => '已连接';
+
+  @override
+  String get trayStatusDisconnected => '未连接';
+
+  @override
+  String get trayStatusError => '错误';
 }

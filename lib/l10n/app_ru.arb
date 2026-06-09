@@ -21,6 +21,7 @@
   "updateWhatsNew": "Что нового:",
   "updateActionLater": "Позже",
   "updateActionNow": "Обновить",
+  "updateApplying": "Установка обновления...",
   "errorSubscriptionTitle": "Ошибка подписки",
   "errorConnectionPermission": "Ошибка подключения: разрешение",
   "errorConnectionNetwork": "Ошибка подключения: сеть",
@@ -510,5 +511,18 @@
   "desktopTunAdminMessage": "Режим TUN требует запуск от имени администратора. Перезапустите приложение с повышенными правами — выбранный в боковой панели режим сохранится.",
   "desktopTunAdminRestart": "Перезапустить от администратора",
   "desktopTunAdminCancel": "Отмена",
-  "desktopTunAdminRestartFailed": "Не удалось перезапустить от администратора"
+  "desktopTunAdminRestartFailed": "Не удалось перезапустить от администратора",
+  "trayMenuTitle": "KeqDroid",
+  "trayCloseMenu": "Закрыть меню",
+  "trayConnect": "Подключить",
+  "trayDisconnect": "Отключить",
+  "trayOpenApp": "Открыть приложение",
+  "trayExit": "Выход",
+  "trayServersSection": "Серверы",
+  "trayPickServer": "Выберите сервер…",
+  "trayModeProxy": "Proxy",
+  "trayModeTun": "TUN",
+  "trayStatusConnected": "Подключено",
+  "trayStatusDisconnected": "Отключено",
+  "trayStatusError": "Ошибка"
 }
