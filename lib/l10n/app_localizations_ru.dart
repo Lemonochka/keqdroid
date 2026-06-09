@@ -46,6 +46,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get updateActionNow => 'Обновить';
 
   @override
+  String get updateApplying => 'Установка обновления...';
+
+  @override
   String get errorSubscriptionTitle => 'Ошибка подписки';
 
   @override
@@ -1116,4 +1119,43 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get desktopTunAdminRestartFailed =>
       'Не удалось перезапустить от администратора';
+
+  @override
+  String get trayMenuTitle => 'KeqDroid';
+
+  @override
+  String get trayCloseMenu => 'Закрыть меню';
+
+  @override
+  String get trayConnect => 'Подключить';
+
+  @override
+  String get trayDisconnect => 'Отключить';
+
+  @override
+  String get trayOpenApp => 'Открыть приложение';
+
+  @override
+  String get trayExit => 'Выход';
+
+  @override
+  String get trayServersSection => 'Серверы';
+
+  @override
+  String get trayPickServer => 'Выберите сервер…';
+
+  @override
+  String get trayModeProxy => 'Proxy';
+
+  @override
+  String get trayModeTun => 'TUN';
+
+  @override
+  String get trayStatusConnected => 'Подключено';
+
+  @override
+  String get trayStatusDisconnected => 'Отключено';
+
+  @override
+  String get trayStatusError => 'Ошибка';
 }

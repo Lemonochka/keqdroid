@@ -21,6 +21,7 @@
   "updateWhatsNew": "更新内容：",
   "updateActionLater": "稍后",
   "updateActionNow": "更新",
+  "updateApplying": "正在安装更新...",
   "errorSubscriptionTitle": "订阅错误",
   "errorConnectionPermission": "连接失败：权限",
   "errorConnectionNetwork": "连接失败：网络",
@@ -510,5 +511,18 @@
   "desktopTunAdminMessage": "TUN 模式需要以管理员身份运行。请以管理员身份重启应用，侧栏中选择的模式会保留。",
   "desktopTunAdminRestart": "以管理员身份重启",
   "desktopTunAdminCancel": "取消",
-  "desktopTunAdminRestartFailed": "无法以管理员身份重启"
+  "desktopTunAdminRestartFailed": "无法以管理员身份重启",
+  "trayMenuTitle": "KeqDroid",
+  "trayCloseMenu": "关闭菜单",
+  "trayConnect": "连接",
+  "trayDisconnect": "断开",
+  "trayOpenApp": "打开应用",
+  "trayExit": "退出",
+  "trayServersSection": "服务器",
+  "trayPickServer": "选择服务器…",
+  "trayModeProxy": "Proxy",
+  "trayModeTun": "TUN",
+  "trayStatusConnected": "已连接",
+  "trayStatusDisconnected": "未连接",
+  "trayStatusError": "错误"
 }
