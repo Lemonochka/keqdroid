@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -117,7 +117,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
   bool get _serversTabVisible => _isServersHomeTab();
 
   void _syncHeaderAnimations() {
-    final status = ref.read(vpnStateProvider).valueOrNull?.status;
+    final status = ref.read(vpnStateProvider).value?.status;
     final vpnActive = status == VpnStatus.connecting ||
         status == VpnStatus.disconnecting ||
         status == VpnStatus.connected;
@@ -145,7 +145,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
       final action = await VpnNativeBridge.getLaunchAction();
       if (action != 'connect_from_notification') return;
 
-      // сбрасываем флаг до connect(), иначе resume может запустить второй connect()
+      // ?????????? ???? ?? connect(), ????? resume ????? ????????? ?????? connect()
       await VpnNativeBridge.clearLaunchAction();
 
       if (!mounted) return;
@@ -174,8 +174,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
   @override
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<VpnState>>(vpnStateProvider, (prev, next) {
-      final prevStatus = prev?.valueOrNull?.status;
-      final nextStatus = next.valueOrNull?.status;
+      final prevStatus = prev?.value?.status;
+      final nextStatus = next.value?.status;
       if (prevStatus == nextStatus) return;
 
       final wasActive = prevStatus == VpnStatus.connected ||
@@ -230,11 +230,11 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
     final vpnStatus = ref.watch(
       vpnStateProvider.select(
-        (a) => a.valueOrNull?.status ?? VpnStatus.disconnected,
+        (a) => a.value?.status ?? VpnStatus.disconnected,
       ),
     );
     final vpnErrorMessage = ref.watch(
-      vpnStateProvider.select((a) => a.valueOrNull?.errorMessage),
+      vpnStateProvider.select((a) => a.value?.errorMessage),
     );
     final serverSwitchInProgress = ref.watch(vpnServerSwitchInProgressProvider);
     final activeServer = ref.watch(
@@ -248,7 +248,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
     final isActive = isConnected || isConnecting;
 
     final isDesktop = PlatformBootstrap.isDesktop;
-    // одинаковая высота на connecting/connected, чтобы не дёргалось при подключении
+    // ?????????? ?????? ?? connecting/connected, ????? ?? ????????? ??? ???????????
     final waveHeight = isDesktop
         ? (isActive ? 32.0 : 40.0)
         : (isActive ? 28.0 : 36.0);
@@ -481,7 +481,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
             ListTile(
               leading: Icon(Icons.link, color: AppTheme.accent(ctx)),
               title: Text(l10n.serversPasteLinks, style: TextStyle(color: AppTheme.text(ctx))),
-              subtitle: Text('vless, vmess, trojan, ss, hysteria2, hy2…', style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx))),
+              subtitle: Text('vless, vmess, trojan, ss, hysteria2, hy2?', style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx))),
               onTap: () {
                 Navigator.pop(ctx2);
                 _showPasteLinksSheet(ctx);
@@ -660,7 +660,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
   Future<void> _selectServer(ServerItem server) async {
     await ref.read(serversProvider.notifier).setActive(server);
-    final vpnStatus = ref.read(vpnStateProvider).valueOrNull?.status;
+    final vpnStatus = ref.read(vpnStateProvider).value?.status;
     if (vpnStatus == VpnStatus.connected || vpnStatus == VpnStatus.connecting) {
       await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
     }
@@ -709,7 +709,7 @@ class _ServersListPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final serversState = ref.watch(serversProvider);
-    final subs = ref.watch(subscriptionsProvider).valueOrNull ?? [];
+    final subs = ref.watch(subscriptionsProvider).value ?? [];
 
     if (serversState.isLoading) {
       return Center(
@@ -793,24 +793,24 @@ class _ServerGroupEntry {
   });
 }
 
-/// высота верхнего фейда списка
+/// ?????? ???????? ????? ??????
 const _listTopFadeHeight = 56.0;
-/// насколько первая плитка заезжает под фейд (как на android)
+/// ????????? ?????? ?????? ???????? ??? ???? (??? ?? android)
 const _listTopFadeTileOverlap = 34.0;
 
-// тянем фейд вверх на нижний padding шапки, чтобы не было полоски голого фона
+// ????? ???? ????? ?? ?????? padding ?????, ????? ?? ???? ??????? ?????? ????
 const _listTopFadeUpExtension = 8.0;
 const _listTopFadeOverlayHeight =
     _listTopFadeHeight + _listTopFadeUpExtension;
-// стоп непрозрачной части сдвинут вниз на extension, чтобы зона размытия не уехала
+// ???? ???????????? ????? ??????? ???? ?? extension, ????? ???? ???????? ?? ??????
 const _listTopFadeSolidStop =
     (_listTopFadeUpExtension + 0.45 * _listTopFadeHeight) /
         _listTopFadeOverlayHeight;
 
-/// общая высота строки заголовка подписки и [_ServerTile]
+/// ????? ?????? ?????? ????????? ???????? ? [_ServerTile]
 const _subCardRowHeight = 76.0;
 
-/// флаг в круге: прямоугольный asset через BoxFit.cover, без обрезки по полосам
+/// ???? ? ?????: ????????????? asset ????? BoxFit.cover, ??? ??????? ?? ???????
 Widget _countryFlagCircle({
   required String? countryCode,
   required Color protocolColor,
@@ -828,8 +828,10 @@ Widget _countryFlagCircle({
               alignment: Alignment.center,
               child: CountryFlag.fromCountryCode(
                 countryCode,
-                width: 60,
-                height: 40,
+                theme: const ImageTheme(
+                  width: 60,
+                  height: 40,
+                ),
               ),
             )
           : ColoredBox(
@@ -926,7 +928,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
         ? '${sub.name}  |  ${sub.usageLabel}'
         : 'Manual servers';
 
-    // кэшируем цвета, чтобы не дёргать Theme.of() на каждый виджет
+    // ???????? ?????, ????? ?? ??????? Theme.of() ?? ?????? ??????
     final cardColor = AppTheme.card(context);
     final dividerColor = AppTheme.divider(context);
     final accentColor = AppTheme.accent(context);
@@ -1130,7 +1132,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
     );
   }
 
-  // column вместо вложенного listview: тот растягивался на весь viewport и давал зазор сверху
+  // column ?????? ?????????? listview: ??? ???????????? ?? ???? viewport ? ????? ????? ??????
   Widget _buildExpandedServerList({
     required String? activeServerId,
     required Color textLightColor,
@@ -1323,7 +1325,7 @@ String _formatVpnDuration(Duration? d) {
   return '${s}s';
 }
 
-// статистика сессии на десктопе, как android-телеметрия в дебаге
+// Скорость и объём трафика под кнопкой подключения (desktop).
 class _DesktopConnectionStats extends ConsumerWidget {
   const _DesktopConnectionStats();
 
@@ -1331,7 +1333,7 @@ class _DesktopConnectionStats extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(
       vpnStateProvider.select((a) {
-        final v = a.valueOrNull;
+        final v = a.value;
         if (v == null) return (null, null, null, null);
         return (
           v.downloadSpeed,
@@ -1347,19 +1349,33 @@ class _DesktopConnectionStats extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _statChip(context, '↓', _formatVpnRate(stats.$1)),
+          _statChip(
+            context,
+            icon: Icons.arrow_downward,
+            value: _formatVpnRate(stats.$1),
+          ),
           const SizedBox(width: 8),
-          _statChip(context, '↑', _formatVpnRate(stats.$2)),
+          _statChip(
+            context,
+            icon: Icons.arrow_upward,
+            value: _formatVpnRate(stats.$2),
+          ),
           const SizedBox(width: 8),
-          _statChip(context, 'In', _formatVpnBytes(stats.$3)),
+          _statChip(context, label: 'In', value: _formatVpnBytes(stats.$3)),
           const SizedBox(width: 8),
-          _statChip(context, 'Time', _formatVpnDuration(stats.$4)),
+          _statChip(context, label: 'Time', value: _formatVpnDuration(stats.$4)),
         ],
       ),
     );
   }
 
-  Widget _statChip(BuildContext context, String label, String value) {
+  Widget _statChip(
+    BuildContext context, {
+    IconData? icon,
+    String? label,
+    required String value,
+  }) {
+    final color = AppTheme.textLight(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -1367,13 +1383,30 @@ class _DesktopConnectionStats extends ConsumerWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppTheme.divider(context)),
       ),
-      child: Text(
-        '$label $value',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          color: AppTheme.textLight(context),
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null)
+            Icon(icon, size: 12, color: color)
+          else
+            Text(
+              label ?? '',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1388,7 +1421,7 @@ class _ServerTileVpnDebugPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(
       vpnStateProvider.select((a) {
-        final v = a.valueOrNull;
+        final v = a.value;
         if (v == null) return (null, null, null, null, null);
         return (
           v.downloadSpeed,
@@ -1508,7 +1541,7 @@ class _ServerTile extends ConsumerWidget {
     );
     final settings = ref.watch(
       settingsNotifierProvider.select(
-        (async) => async.valueOrNull ?? const AppSettings(),
+        (async) => async.value ?? const AppSettings(),
       ),
     );
     final pingColorType = PingService.pingColorTypeForServer(
@@ -1523,14 +1556,14 @@ class _ServerTile extends ConsumerWidget {
     final vpnStatus = ref.watch(
       vpnStateProvider.select((a) {
         if (!isActive) return VpnStatus.disconnected;
-        return a.valueOrNull?.status ?? VpnStatus.disconnected;
+        return a.value?.status ?? VpnStatus.disconnected;
       }),
     );
     final showDebugStats = isActive &&
         !PlatformBootstrap.isDesktop &&
         ref.watch(
           settingsNotifierProvider.select(
-            (a) => a.valueOrNull?.debugMode ?? false,
+            (a) => a.value?.debugMode ?? false,
           ),
         );
 
@@ -1543,7 +1576,7 @@ class _ServerTile extends ConsumerWidget {
       bottom: isLast ? const Radius.circular(22) : Radius.zero,
     );
 
-    // кэшируем цвета, чтобы не дёргать Theme.of() на каждый виджет
+    // ???????? ?????, ????? ?? ??????? Theme.of() ?? ?????? ??????
     final cardBgColor = isActive ? AppTheme.accent(context).withValues(alpha: 0.13) : AppTheme.card(context);
     final textColor = AppTheme.text(context);
     final accentColor = AppTheme.accent(context);
@@ -1657,7 +1690,7 @@ class _ServerTile extends ConsumerWidget {
             child: InkWell(
               onTap: onTap,
               onLongPress: () => _showOptions(context),
-              // на десктопе правый клик открывает то же меню
+              // ?? ???????? ?????? ???? ????????? ?? ?? ????
               onSecondaryTap: () => _showOptions(context),
               splashColor: accentColor.withValues(alpha: 0.2),
               highlightColor: accentColor.withValues(alpha: 0.08),
@@ -2044,7 +2077,7 @@ String _vpnErrorStatusLabel(String? errorMessage, BuildContext context) {
   };
 }
 
-// волна в RepaintBoundary, чтобы изолировать перерисовки
+// ????? ? RepaintBoundary, ????? ??????????? ???????????
 class _WavePaintWidget extends StatelessWidget {
   final AnimationController waveCtrl;
   final AnimationController stateCtrl;
@@ -2060,7 +2093,7 @@ class _WavePaintWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // кэшируем цвета, чтобы не дёргать Theme.of() на каждый виджет
+    // ???????? ?????, ????? ?? ??????? Theme.of() ?? ?????? ??????
     final accentColor = AppTheme.accent(context);
     final greenColor = AppTheme.green(context);
 

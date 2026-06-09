@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -126,7 +126,7 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
     final page = _pageCtrl.page;
     if (page == null) return;
 
-    ref.read(homeTabPageProvider.notifier).state = page;
+    ref.read(homeTabPageProvider.notifier).set(page);
 
     final rounded = page.round().clamp(0, _tabCount - 1);
     if (rounded != _navIndex) {
@@ -135,8 +135,8 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
   }
 
   void _onPageSettled(int index) {
-    ref.read(homeTabIndexProvider.notifier).state = index;
-    ref.read(homeTabPageProvider.notifier).state = index.toDouble();
+    ref.read(homeTabIndexProvider.notifier).set(index);
+    ref.read(homeTabPageProvider.notifier).set(index.toDouble());
     if (_navIndex != index) {
       setState(() => _navIndex = index);
     }
@@ -144,11 +144,11 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
 
   void _selectTab(int index) {
     if (_navIndex == index) return;
-    ref.read(homeTabIndexProvider.notifier).state = index;
+    ref.read(homeTabIndexProvider.notifier).set(index);
 
     if ((index - _navIndex).abs() > 1) {
       _pageCtrl.jumpToPage(index);
-      ref.read(homeTabPageProvider.notifier).state = index.toDouble();
+      ref.read(homeTabPageProvider.notifier).set(index.toDouble());
       setState(() => _navIndex = index);
       return;
     }
@@ -164,7 +164,7 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<UpdateInfo?>>(updateInfoProvider, (prev, next) {
       if (!shouldAutoPromptForUpdate(prev, next)) return;
-      final info = next.valueOrNull;
+      final info = next.value;
       if (info == null) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -174,7 +174,7 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
 
     final isConnected = ref.watch(
       vpnStateProvider.select(
-        (a) => a.valueOrNull?.status == VpnStatus.connected,
+        (a) => a.value?.status == VpnStatus.connected,
       ),
     );
     return Scaffold(

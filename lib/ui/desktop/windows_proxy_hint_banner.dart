@@ -25,13 +25,13 @@ class _WindowsProxyHintBannerState extends ConsumerState<WindowsProxyHintBanner>
   Widget build(BuildContext context) {
     if (!Platform.isWindows) return const SizedBox.shrink();
 
-    final vpn = ref.watch(vpnStateProvider).valueOrNull;
+    final vpn = ref.watch(vpnStateProvider).value;
     if (vpn?.status != VpnStatus.connected ||
         vpn?.activeMode != ConnectionMode.proxy) {
       return const SizedBox.shrink();
     }
 
-    final settings = ref.watch(settingsNotifierProvider).valueOrNull;
+    final settings = ref.watch(settingsNotifierProvider).value;
     final httpPort = settings?.httpPort ?? 2081;
     final proxyLine = '127.0.0.1:$httpPort';
 

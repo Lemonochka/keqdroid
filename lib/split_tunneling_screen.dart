@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -292,7 +292,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
   Future<void> _addRussianApps() async {
     if (_isDesktop) return;
 
-    final allApps = ref.read(installedAppsProvider(true)).valueOrNull ?? [];
+    final allApps = ref.read(installedAppsProvider(true)).value ?? [];
     final russianPkgs = allApps
         .where((a) => _isRussianApp(a))
         .map((a) => a.packageName)
@@ -379,7 +379,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     final excludePackages = ref.watch(
       splitTunnelingProvider.select((s) => s.excludePackages),
     );
-    final settings = ref.watch(settingsNotifierProvider).valueOrNull;
+    final settings = ref.watch(settingsNotifierProvider).value;
     final checked = _checkedCount(includePackages, excludePackages);
     final proxyModeOnDesktop = _isDesktop &&
         settings?.connectionModeEnum == ConnectionMode.proxy;

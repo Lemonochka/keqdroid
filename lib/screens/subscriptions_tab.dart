@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
@@ -18,7 +18,7 @@ class SubscriptionsTab extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final subsAsync = ref.watch(subscriptionsProvider);
 
-    // кэшируем цвета
+    // ???????? ?????
     final bgColor = AppTheme.bg(context);
     final textColor = AppTheme.text(context);
     final accentColor = AppTheme.accent(context);
@@ -65,10 +65,10 @@ class SubscriptionsTab extends ConsumerWidget {
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                         buildDefaultDragHandles: false,
                         onReorderStart: (_) {
-                          ref.read(subscriptionReorderInProgressProvider.notifier).state = true;
+                          ref.read(subscriptionReorderInProgressProvider.notifier).set(true);
                         },
                         onReorderEnd: (_) {
-                          ref.read(subscriptionReorderInProgressProvider.notifier).state = false;
+                          ref.read(subscriptionReorderInProgressProvider.notifier).set(false);
                         },
                         onReorder: (oldIndex, newIndex) {
                           ref.read(subscriptionsProvider.notifier).reorder(
@@ -408,7 +408,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final hasRefreshError = refreshError != null;
     final pct = sub.usagePercent;
 
-    // кэшируем цвета, чтобы не дёргать Theme.of() на каждый виджет
+    // ???????? ?????, ????? ?? ??????? Theme.of() ?? ?????? ??????
     final cardColor = AppTheme.card(context);
     final textColor = AppTheme.text(context);
     final textLightColor = AppTheme.textLight(context);
@@ -705,8 +705,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
     );
   }
 
-  // mobile: вся карточка обёрнута в ReorderableDelayedDragStartListener
-  // desktop: ручка для мыши + long-press на заголовке как на телефоне
+  // mobile: ??? ???????? ???????? ? ReorderableDelayedDragStartListener
+  // desktop: ????? ??? ???? + long-press ?? ????????? ??? ?? ????????
   Widget _buildHeaderDragTarget({
     required bool isDesktop,
     required int listIndex,
@@ -838,7 +838,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       icon: Icons.keyboard_arrow_up,
                       tooltip: l10n.subscriptionsMoveUp,
                       onTap: () {
-                        final subs = ref.read(subscriptionsProvider).valueOrNull ?? [];
+                        final subs = ref.read(subscriptionsProvider).value ?? [];
                         final idx = subs.indexWhere((s) => s.id == sub.id);
                         if (idx > 0) ref.read(subscriptionsProvider.notifier).reorder(idx, idx - 1);
                       },
@@ -848,7 +848,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       icon: Icons.keyboard_arrow_down,
                       tooltip: l10n.subscriptionsMoveDown,
                       onTap: () {
-                        final subs = ref.read(subscriptionsProvider).valueOrNull ?? [];
+                        final subs = ref.read(subscriptionsProvider).value ?? [];
                         final idx = subs.indexWhere((s) => s.id == sub.id);
                         if (idx < subs.length - 1) {
                           ref.read(subscriptionsProvider.notifier).reorder(idx, idx + 1);

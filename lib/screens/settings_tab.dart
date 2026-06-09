@@ -125,7 +125,7 @@ class _LanguageSettingsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final settings = settingsAsync.valueOrNull ?? const AppSettings();
+    final settings = settingsAsync.value ?? const AppSettings();
     final label = appLanguageLabel(
       settings,
       systemLabel: l10n.settingsLanguageSystem,
@@ -351,12 +351,11 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       final picked = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: const ['json', 'keqdis'],
-        withData: true,
       );
       final res = picked?.files.single;
       if (res == null) return;
 
-      final bytes = res.bytes ?? await File(res.path!).readAsBytes();
+      final bytes = await res.readAsBytes();
       final text = utf8.decode(bytes);
       final parsed = jsonDecode(text);
       if (parsed is! Map<String, dynamic>) throw const FormatException('Invalid JSON file');
@@ -647,7 +646,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
         children: [
           _SettingsCard(
             title: l10n.settingsPingTitle,
-            subtitle: _pingSettingsSubtitle(l10n, settingsAsync.valueOrNull),
+            subtitle: _pingSettingsSubtitle(l10n, settingsAsync.value),
             icon: Icons.network_ping,
             onTap: () => Navigator.push(
               context,
@@ -657,7 +656,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           _SettingsCard(
             title: l10n.settingsXrayCoreTitle,
-            subtitle: _xrayCoreSettingsSubtitle(l10n, settingsAsync.valueOrNull),
+            subtitle: _xrayCoreSettingsSubtitle(l10n, settingsAsync.value),
             icon: Icons.settings_ethernet,
             onTap: () => Navigator.push(
               context,
@@ -681,7 +680,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
             icon: Icons.restore,
             isDestructive: false,
             onTap: () async {
-              final current = ref.read(settingsNotifierProvider).valueOrNull;
+              final current = ref.read(settingsNotifierProvider).value;
               if (current == null) return;
               await ref.read(settingsNotifierProvider.notifier).save(
                     current.copyWith(
@@ -720,7 +719,7 @@ class _WindowsDesktopSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final settings =
-        ref.watch(settingsNotifierProvider).valueOrNull ?? const AppSettings();
+        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
 
     Widget toggleRow({
       required String title,
@@ -950,7 +949,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final settings =
-        ref.watch(settingsNotifierProvider).valueOrNull ?? const AppSettings();
+        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final core = settings.xrayCore;
     final accent = AppTheme.accent(context);
 
@@ -1506,7 +1505,7 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final settings =
-        ref.watch(settingsNotifierProvider).valueOrNull ?? const AppSettings();
+        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final accent = AppTheme.accent(context);
     final isUrl = settings.pingType == 'url';
     final isCustom = settings.pingTestTarget == PingTestConfig.targetCustom;
@@ -1684,7 +1683,7 @@ class _DebugModeCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final settings = settingsAsync.valueOrNull ?? const AppSettings();
+    final settings = settingsAsync.value ?? const AppSettings();
     final enabled = settings.debugMode;
 
     Future<void> save(bool value) async {
@@ -1860,7 +1859,7 @@ class _ShareHwidCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = settingsAsync.valueOrNull ?? const AppSettings();
+    final settings = settingsAsync.value ?? const AppSettings();
     final enabled = settings.shareDeviceHwid;
 
     Future<void> save(bool value) async {
@@ -1944,7 +1943,7 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
   @override
   void initState() {
     super.initState();
-    final s = widget.settingsAsync.valueOrNull ?? const AppSettings();
+    final s = widget.settingsAsync.value ?? const AppSettings();
     _socksCtrl = TextEditingController(text: s.lanSocksPort.toString());
     _httpCtrl = TextEditingController(text: s.lanHttpPort.toString());
     _fetchLocalIp();
@@ -1996,11 +1995,11 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final settings = widget.settingsAsync.valueOrNull ?? const AppSettings();
+    final settings = widget.settingsAsync.value ?? const AppSettings();
     final isLan = settings.lanSharing;
     final isConnected = ref.watch(
       vpnStateProvider.select((a) {
-        final status = a.valueOrNull?.status;
+        final status = a.value?.status;
         return status == VpnStatus.connected ||
             status == VpnStatus.connecting;
       }),
@@ -2202,7 +2201,7 @@ class _ThemeCustomizationCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final settings = settingsAsync.valueOrNull ?? const AppSettings();
+    final settings = settingsAsync.value ?? const AppSettings();
     final preset = resolveThemePreset(settings.themePresetId);
     final modeLabel = settings.darkTheme ? l10n.themeModeDark : l10n.themeModeLight;
     final isDesktop = PlatformBootstrap.isDesktop;
@@ -2230,7 +2229,7 @@ class _ThemeCustomizationScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final current = ref.watch(settingsNotifierProvider).valueOrNull ?? settings;
+    final current = ref.watch(settingsNotifierProvider).value ?? settings;
     final previewDark = current.darkTheme;
     final controlsAccent = AppTheme.accent(context);
     final isDesktop = PlatformBootstrap.isDesktop;
@@ -2914,7 +2913,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
     final l10n = AppLocalizations.of(context)!;
     final accent = AppTheme.accent(context);
     final updateState = ref.watch(updateInfoProvider);
-    final updateInfo = updateState.valueOrNull;
+    final updateInfo = updateState.value;
     final checking = updateState.isLoading || _forceChecking;
     final error = updateState.hasError;
     final updateAvailable = updateInfo != null;
@@ -3147,7 +3146,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
   @override
   void initState() {
     super.initState();
-    final s = ref.read(settingsNotifierProvider).valueOrNull;
+    final s = ref.read(settingsNotifierProvider).value;
     _directDomains = TextEditingController(
       text: s?.directDomains ?? RoutingPresets.defaultDirectDomains,
     );
@@ -3179,7 +3178,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
   }
 
   Future<void> _persist() async {
-    final current = ref.read(settingsNotifierProvider).valueOrNull;
+    final current = ref.read(settingsNotifierProvider).value;
     if (current == null) return;
     await ref.read(settingsNotifierProvider.notifier).save(
           current.copyWith(

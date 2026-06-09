@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/app_logger.dart';
@@ -19,6 +20,7 @@ import '../../services/vpn_engine.dart';
 import '../../services/windows_desktop_service.dart';
 import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/update_dialog.dart';
+import 'tray_menu_screen.dart';
 
 /// desktop shell: фиксированный sidebar + вкладки (без NavigationRail — на windows ломается layout)
 class DesktopHomeScreen extends ConsumerStatefulWidget {
@@ -41,10 +43,12 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     VpnNativeBridge.registerAutostartHandler(
       () => _maybeAutostartConnect(force: true),
     );
+    VpnNativeBridge.registerTrayMenuHandler(_onTrayMenuOpen);
+    VpnNativeBridge.registerTrayMenuCloseHandler(_onTrayMenuClose);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(homeTabIndexProvider.notifier).state = _index;
-      ref.read(homeTabPageProvider.notifier).state = _index.toDouble();
+      ref.read(homeTabIndexProvider.notifier).set(_index);
+      ref.read(homeTabPageProvider.notifier).set(_index.toDouble());
       ref.read(updateInfoProvider);
       unawaited(_runWindowsStartupTasks());
     });
@@ -86,7 +90,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
         return;
       }
 
-      final vpn = ref.read(vpnStateProvider).valueOrNull;
+      final vpn = ref.read(vpnStateProvider).value;
       if (vpn?.status == VpnStatus.connected ||
           vpn?.status == VpnStatus.connecting) {
         return;
@@ -112,8 +116,48 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   @override
   void dispose() {
     VpnNativeBridge.registerAutostartHandler(null);
+    VpnNativeBridge.registerTrayMenuHandler(null);
+    VpnNativeBridge.registerTrayMenuCloseHandler(null);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  Future<void> _onTrayMenuOpen(MethodCall call) async {
+    if (!mounted) return;
+
+    final args = call.arguments;
+    final map = args is Map ? args : null;
+    final anchorX = (map?['x'] as num?)?.toDouble() ?? 0;
+    final anchorY = (map?['y'] as num?)?.toDouble() ?? 0;
+
+    final servers = ref.read(serversProvider).servers;
+    final settings =
+        ref.read(settingsNotifierProvider).value ?? const AppSettings();
+    final darkTheme = settings.darkTheme ||
+        (settings.followSystemTheme &&
+            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.dark);
+
+    ref.read(trayMenuVisibleProvider.notifier).set(true);
+    WidgetsBinding.instance.ensureVisualUpdate();
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+
+    await WindowsDesktopService.showTrayMenu(
+      anchorX: anchorX,
+      anchorY: anchorY,
+      width: TrayMenuScreen.width,
+      height: TrayMenuScreen.estimateHeight(
+        serverCount: servers.length,
+        serversExpanded: false,
+      ),
+      darkTheme: darkTheme,
+    );
+  }
+
+  Future<void> _onTrayMenuClose() async {
+    if (!mounted) return;
+    ref.read(trayMenuVisibleProvider.notifier).set(false);
   }
 
   @override
@@ -126,16 +170,21 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   void _selectTab(int index) {
     if (_index == index) return;
     setState(() => _index = index);
-    ref.read(homeTabIndexProvider.notifier).state = index;
-    ref.read(homeTabPageProvider.notifier).state = index.toDouble();
+    ref.read(homeTabIndexProvider.notifier).set(index);
+    ref.read(homeTabPageProvider.notifier).set(index.toDouble());
   }
 
   @override
   Widget build(BuildContext context) {
+    final trayMenuVisible = ref.watch(trayMenuVisibleProvider);
+    if (trayMenuVisible) {
+      return const TrayMenuScreen();
+    }
+
     final l10n = AppLocalizations.of(context)!;
     ref.listen<AsyncValue<UpdateInfo?>>(updateInfoProvider, (prev, next) {
       if (!shouldAutoPromptForUpdate(prev, next)) return;
-      final info = next.valueOrNull;
+      final info = next.value;
       if (info == null) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -299,7 +348,7 @@ class _ConnectionModeMenuButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings =
-        ref.watch(settingsNotifierProvider).valueOrNull ?? const AppSettings();
+        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final mode = settings.connectionModeEnum;
 
     return PopupMenuButton<ConnectionMode>(
@@ -331,7 +380,7 @@ class _ConnectionModeChip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings =
-        ref.watch(settingsNotifierProvider).valueOrNull ?? const AppSettings();
+        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final mode = settings.connectionModeEnum;
 
     return Column(
@@ -373,7 +422,7 @@ Future<void> _applyMode(
 ) async {
   if (next == settings.connectionModeEnum) return;
 
-  final vpn = ref.read(vpnStateProvider).valueOrNull;
+  final vpn = ref.read(vpnStateProvider).value;
   if (vpn?.status == VpnStatus.connected ||
       vpn?.status == VpnStatus.connecting) {
     if (context.mounted) {
