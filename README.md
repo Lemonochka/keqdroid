@@ -97,6 +97,7 @@ Firefox может не использовать системный прокси
 ```bash
 flutter pub get
 flutter build apk --release      # Android
+powershell -File tool/sync_windows_plugins.ps1  # Windows: exclude Firebase (Android-only)
 flutter build windows --release  # Windows
 ```
 
