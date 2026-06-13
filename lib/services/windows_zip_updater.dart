@@ -89,7 +89,7 @@ class WindowsZipUpdater {
           appDir,
           '-ExePath',
           exePath,
-          '-ProcessId',
+          '-AppPid',
           '$pid',
           '-CleanupDir',
           stagingRoot.path,
@@ -138,30 +138,81 @@ param(
   [Parameter(Mandatory = $true)][string]$SourceDir,
   [Parameter(Mandatory = $true)][string]$TargetDir,
   [Parameter(Mandatory = $true)][string]$ExePath,
-  [Parameter(Mandatory = $true)][int]$ProcessId,
+  [Parameter(Mandatory = $true)][int]$AppPid,
   [Parameter(Mandatory = $true)][string]$CleanupDir
 )
 
-$ErrorActionPreference = 'SilentlyContinue'
+# Keep going on non-terminating errors so robocopy failures don't abort the
+# relaunch, and log everything to a file for diagnosing failed updates.
+$ErrorActionPreference = 'Continue'
+$log = Join-Path $env:TEMP 'keqdroid_update.log'
+function Log($m) {
+  try { "$(Get-Date -Format o)  $m" | Out-File -FilePath $log -Append -Encoding utf8 } catch {}
+}
+Log "=== update start: source=$SourceDir target=$TargetDir exe=$ExePath pid=$AppPid"
 
+# 1) wait for the app to exit (max 120s), then a grace period so the OS
+#    releases the .exe / .dll file handles before we overwrite them.
 for ($i = 0; $i -lt 120; $i++) {
-  if (-not (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) {
-    break
-  }
+  if (-not (Get-Process -Id $AppPid -ErrorAction SilentlyContinue)) { break }
   Start-Sleep -Seconds 1
 }
+Start-Sleep -Milliseconds 1500
 
-foreach ($name in @('xray', 'sing-box')) {
+# 2) stop leftover core processes that may lock files.
+foreach ($name in @('xray', 'sing-box', 'kphttp-client')) {
   Get-Process -Name $name -ErrorAction SilentlyContinue |
     Stop-Process -Force -ErrorAction SilentlyContinue
 }
 
-& robocopy $SourceDir $TargetDir /E /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
-if ($LASTEXITCODE -ge 8) {
-  exit 1
+# 3) if the target isn't writable (e.g. installed under Program Files),
+#    relaunch this script elevated once to perform the copy.
+$writable = $false
+try {
+  $probe = Join-Path $TargetDir ('.upd_' + [System.Guid]::NewGuid().ToString('N'))
+  [System.IO.File]::WriteAllText($probe, 'x')
+  Remove-Item -LiteralPath $probe -Force -ErrorAction SilentlyContinue
+  $writable = $true
+} catch { $writable = $false }
+
+$isAdmin = ([Security.Principal.WindowsPrincipal] `
+  [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator)
+
+if (-not $writable -and -not $isAdmin) {
+  Log "target not writable; relaunching elevated"
+  try {
+    Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList @(
+      '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
+      '-File', $PSCommandPath,
+      '-SourceDir', $SourceDir, '-TargetDir', $TargetDir, '-ExePath', $ExePath,
+      '-AppPid', $AppPid, '-CleanupDir', $CleanupDir)
+    exit 0
+  } catch {
+    Log "elevation failed: $_"
+  }
 }
 
-Start-Process -FilePath $ExePath
+# 4) copy the new files in, retrying transient sharing violations.
+$copied = $false
+for ($attempt = 1; $attempt -le 5; $attempt++) {
+  $out = & robocopy $SourceDir $TargetDir /E /R:3 /W:2 /NFL /NDL /NJH /NJS /NP
+  $code = $LASTEXITCODE
+  Log "robocopy attempt $attempt exit=$code"
+  if ($code -lt 8) { $copied = $true; break }
+  Start-Sleep -Seconds 2
+}
+if (-not $copied) { Log "robocopy FAILED after retries; relaunching previous version" }
+
+# 5) always relaunch so the app reopens, with the app dir as working directory
+#    so it can load its DLLs regardless of where this script runs from.
+try {
+  Start-Process -FilePath $ExePath -WorkingDirectory $TargetDir
+  Log "relaunched $ExePath"
+} catch {
+  Log "relaunch failed: $_"
+}
+
 Start-Sleep -Seconds 2
 Remove-Item -LiteralPath $CleanupDir -Recurse -Force -ErrorAction SilentlyContinue
 ''';
