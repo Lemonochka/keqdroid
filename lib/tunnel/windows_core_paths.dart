@@ -9,9 +9,13 @@ class WindowsCorePaths {
 
   static const assetXray = 'assets/bin/windows/xray.exe';
   static const assetSingbox = 'assets/bin/windows/sing-box.exe';
+  static const assetKphttp = 'assets/bin/windows/kphttp-client.exe';
+  static const assetGeoip = 'assets/bin/windows/geoip.dat';
+  static const assetGeosite = 'assets/bin/windows/geosite.dat';
+  static const geoFileNames = ['geoip.dat', 'geosite.dat'];
 
   static const binariesHint =
-      'Положите xray.exe и sing-box.exe в assets/bin/windows/ '
+      'Положите xray.exe, sing-box.exe и kphttp-client.exe в assets/bin/windows/ '
       '(см. README) и пересоберите приложение, '
       'или рядом с keqdroid.exe.';
 
@@ -24,6 +28,71 @@ class WindowsCorePaths {
 
   static Future<String?> singboxExecutable() =>
       _resolveExecutable(assetSingbox, 'sing-box.exe');
+
+  static Future<String?> kphttpExecutable() =>
+      _resolveExecutable(assetKphttp, 'kphttp-client.exe');
+
+  /// Directory holding geoip.dat / geosite.dat for xray's asset lookup
+  /// (passed to xray via XRAY_LOCATION_ASSET so `geoip:`/`geosite:` rules
+  /// resolve regardless of the process working directory). Null if not found.
+  static Future<String?> geoAssetDir() async {
+    final besideAssets = _geoDirBesideFlutterAssets();
+    if (besideAssets != null) return besideAssets;
+
+    final exeDir = p.dirname(Platform.resolvedExecutable);
+    if (geoFileNames.any((f) => File(p.join(exeDir, f)).existsSync())) {
+      return exeDir;
+    }
+
+    return _extractGeoFilesToTemp();
+  }
+
+  static String? _geoDirBesideFlutterAssets() {
+    final dir = p.join(
+      p.dirname(Platform.resolvedExecutable),
+      'data',
+      'flutter_assets',
+      'assets',
+      'bin',
+      'windows',
+    );
+    final hasGeo = geoFileNames.any((f) => File(p.join(dir, f)).existsSync());
+    return hasGeo ? dir : null;
+  }
+
+  /// Extracts whatever geo files are bundled into a temp dir; returns the dir
+  /// when at least one extracted, else null.
+  static Future<String?> _extractGeoFilesToTemp() async {
+    try {
+      final outDir = Directory(
+        p.join(
+          (await Directory.systemTemp.createTemp('keqdis_geo_')).path,
+          'geo',
+        ),
+      );
+      if (!outDir.existsSync()) outDir.createSync(recursive: true);
+
+      var extracted = false;
+      for (final entry in {
+        assetGeoip: 'geoip.dat',
+        assetGeosite: 'geosite.dat',
+      }.entries) {
+        try {
+          final data = await rootBundle.load(entry.key);
+          await File(p.join(outDir.path, entry.value)).writeAsBytes(
+            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+            flush: true,
+          );
+          extracted = true;
+        } catch (_) {
+          // file not bundled — skip
+        }
+      }
+      return extracted ? outDir.path : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   static Future<String?> _resolveExecutable(String assetKey, String fileName) async {
     final fromFlutterBundle = _pathBesideFlutterAssets(fileName);

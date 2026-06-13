@@ -22,6 +22,7 @@ import '../platform/platform_bootstrap.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../ui/responsive/desktop_page_layout.dart';
 import '../utils/error_messages.dart';
+import '../utils/kphttp_profile.dart';
 
 class ServersTab extends ConsumerStatefulWidget {
   const ServersTab({super.key});
@@ -58,6 +59,15 @@ class _ServersTabState extends ConsumerState<ServersTab>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
+    // Seed the connected/disconnected wave style from the current VPN status.
+    // Without this, reopening from the tray rebuilds this tab fresh while the
+    // VPN is still connected — and since the listener only reacts to status
+    // *changes*, the wave would stay stuck in the disconnected style.
+    final initialStatus = ref.read(vpnStateProvider).value?.status;
+    final initiallyActive = initialStatus == VpnStatus.connected ||
+        initialStatus == VpnStatus.connecting ||
+        initialStatus == VpnStatus.disconnecting;
+    _stateCtrl.value = initiallyActive ? 1.0 : 0.0;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (Platform.isAndroid) {
@@ -481,7 +491,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
             ListTile(
               leading: Icon(Icons.link, color: AppTheme.accent(ctx)),
               title: Text(l10n.serversPasteLinks, style: TextStyle(color: AppTheme.text(ctx))),
-              subtitle: Text('vless, vmess, trojan, ss, hysteria2, hy2?', style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx))),
+              subtitle: Text('vless, vmess, trojan, ss, hysteria2, hy2, kphttp?', style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx))),
               onTap: () {
                 Navigator.pop(ctx2);
                 _showPasteLinksSheet(ctx);
@@ -541,7 +551,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                     if (raw.isEmpty) return;
                     setModalState(() => loading = true);
                     try {
-                      final configs = raw.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+                      final configs = KphttpProfile.splitPastedConfigs(raw);
                       for (final c in configs) {
                         await ref.read(serversProvider.notifier).addManual(c);
                       }
@@ -2033,6 +2043,7 @@ class _ServerTile extends ConsumerWidget {
 
   Color _protocolColor(String p, BuildContext ctx) => switch (p) {
     'vless'     => const Color(0xFF4A90D9),
+    'kphttp'    => const Color(0xFF7B61FF),
     'vmess'     => const Color(0xFF7B68EE),
     'trojan'    => const Color(0xFFE53935),
     'ss'        => const Color(0xFF43A047),

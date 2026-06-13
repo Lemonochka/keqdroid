@@ -11,6 +11,7 @@ import '../models/server_item.dart';
 import '../models/subscription.dart';
 import '../services/storage_service.dart';
 import '../core/exceptions.dart';
+import '../utils/kphttp_profile.dart';
 
 class UpdateResult {
   final bool success;
@@ -885,7 +886,7 @@ class SubscriptionService {
       throw FormatException(unsupported);
     }
     throw const FormatException(
-      'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://',
+      'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, kphttp:// or KpHTTP JSON',
     );
   }
 
@@ -1561,15 +1562,19 @@ class SubscriptionService {
     return links.toSet().toList();
   }
 
-  static bool _isValidConfig(String s) =>
-      s.toLowerCase().startsWith('vless://') ||
-          s.toLowerCase().startsWith('vmess://') ||
-          s.toLowerCase().startsWith('trojan://') ||
-          s.toLowerCase().startsWith('ss://') ||
-          s.toLowerCase().startsWith('ssr://') ||
-          s.toLowerCase().startsWith('hysteria://') ||
-          s.toLowerCase().startsWith('hysteria2://') ||
-          s.toLowerCase().startsWith('hy2://');
+  static bool _isValidConfig(String s) {
+    final lower = s.toLowerCase();
+    return lower.startsWith('vless://') ||
+        lower.startsWith('vmess://') ||
+        lower.startsWith('trojan://') ||
+        lower.startsWith('ss://') ||
+        lower.startsWith('ssr://') ||
+        lower.startsWith('hysteria://') ||
+        lower.startsWith('hysteria2://') ||
+        lower.startsWith('hy2://') ||
+        lower.startsWith('kphttp://') ||
+        KphttpProfile.isKphttpConfig(s);
+  }
 
   static bool _isMetadataConfig(String raw) {
     // заглушка от панелей: не сервер, а служебный маркер

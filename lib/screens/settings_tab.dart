@@ -665,6 +665,19 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           _SettingsCard(
+            title: l10n.settingsLocalPortsTitle,
+            subtitle: l10n.settingsLocalPortsSubtitle(
+              (settingsAsync.value ?? const AppSettings()).localPort.toString(),
+              (settingsAsync.value ?? const AppSettings()).httpPort.toString(),
+            ),
+            icon: Icons.settings_input_component,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const _LocalProxyPortsScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _SettingsCard(
             title: l10n.settingsRoutingTitle,
             subtitle: l10n.settingsRoutingSubtitle,
             icon: Icons.account_tree,
@@ -684,10 +697,9 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
               if (current == null) return;
               await ref.read(settingsNotifierProvider.notifier).save(
                     current.copyWith(
-                      directDomains: RoutingPresets.defaultDirectDomains,
-                      proxyDomains: RoutingPresets.defaultProxyDomains,
-                      blockedDomains: RoutingPresets.defaultBlockedDomains,
-                      directIps: RoutingPresets.defaultDirectIps,
+                      directRules: RoutingPresets.defaultDirectRules,
+                      proxyRules: RoutingPresets.defaultProxyRules,
+                      blockedRules: RoutingPresets.defaultBlockedRules,
                     ),
                   );
               if (context.mounted) {
@@ -701,6 +713,203 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
           _DebugModeCard(settingsAsync: settingsAsync),
           const SizedBox(height: 12),
           _ShareHwidCard(settingsAsync: settingsAsync),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocalProxyPortsScreen extends ConsumerStatefulWidget {
+  const _LocalProxyPortsScreen();
+
+  @override
+  ConsumerState<_LocalProxyPortsScreen> createState() =>
+      _LocalProxyPortsScreenState();
+}
+
+class _LocalProxyPortsScreenState
+    extends ConsumerState<_LocalProxyPortsScreen> {
+  final _socksCtrl = TextEditingController();
+  final _httpCtrl = TextEditingController();
+  bool _initialized = false;
+
+  @override
+  void dispose() {
+    _socksCtrl.dispose();
+    _httpCtrl.dispose();
+    super.dispose();
+  }
+
+  void _syncControllers(AppSettings settings) {
+    if (_initialized) return;
+    _socksCtrl.text = settings.localPort.toString();
+    _httpCtrl.text = settings.httpPort.toString();
+    _initialized = true;
+  }
+
+  Future<void> _apply(AppSettings settings) async {
+    final l10n = AppLocalizations.of(context)!;
+    final socks = int.tryParse(_socksCtrl.text.trim());
+    final http = int.tryParse(_httpCtrl.text.trim());
+
+    bool valid(int? p) => p != null && p > 0 && p < 65536;
+    if (!valid(socks) || !valid(http)) {
+      _socksCtrl.text = settings.localPort.toString();
+      _httpCtrl.text = settings.httpPort.toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsPortInvalid)),
+      );
+      return;
+    }
+    if (socks == http) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsPortsMustDiffer)),
+      );
+      return;
+    }
+    if (socks == settings.localPort && http == settings.httpPort) return;
+
+    await ref.read(settingsNotifierProvider.notifier).save(
+          settings.copyWith(localPort: socks, httpPort: http),
+        );
+  }
+
+  Future<void> _resetDefaults(AppSettings settings) async {
+    const defaults = AppSettings();
+    _socksCtrl.text = defaults.localPort.toString();
+    _httpCtrl.text = defaults.httpPort.toString();
+    await ref.read(settingsNotifierProvider.notifier).save(
+          settings.copyWith(
+            localPort: defaults.localPort,
+            httpPort: defaults.httpPort,
+          ),
+        );
+  }
+
+  Widget _portField(
+    BuildContext context,
+    String label,
+    TextEditingController ctrl,
+    bool enabled,
+    VoidCallback onSubmit,
+  ) {
+    return TextField(
+      controller: ctrl,
+      enabled: enabled,
+      keyboardType: TextInputType.number,
+      style: TextStyle(fontSize: 14, color: AppTheme.text(context)),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: AppTheme.textLight(context).withValues(alpha: 0.3),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.accent(context)),
+        ),
+        isDense: true,
+      ),
+      onSubmitted: (_) => onSubmit(),
+      onEditingComplete: onSubmit,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings =
+        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
+    _syncControllers(settings);
+
+    final isConnected = ref.watch(
+      vpnStateProvider.select((a) {
+        final status = a.value?.status;
+        return status == VpnStatus.connected || status == VpnStatus.connecting;
+      }),
+    );
+
+    return Scaffold(
+      backgroundColor: AppTheme.bg(context),
+      appBar: AppBar(
+        backgroundColor: AppTheme.bg(context),
+        elevation: 0,
+        title: Text(l10n.settingsLocalPortsTitle),
+      ),
+      body: ListView(
+        physics: const ClampingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.card(context),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppTheme.divider(context), width: 1),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _portField(
+                        context,
+                        l10n.settingsSocks5PortLabel,
+                        _socksCtrl,
+                        !isConnected,
+                        () => _apply(settings),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _portField(
+                        context,
+                        l10n.settingsHttpPortLabel,
+                        _httpCtrl,
+                        !isConnected,
+                        () => _apply(settings),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.settingsLocalPortsHint,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textLight(context),
+                    height: 1.35,
+                  ),
+                ),
+                if (isConnected) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.settingsTurnOffToChange,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.orange(context),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: isConnected ? null : () => _resetDefaults(settings),
+              icon: const Icon(Icons.restore, size: 18),
+              label: Text(l10n.settingsLocalPortsResetTitle),
+            ),
+          ),
         ],
       ),
     );
@@ -3137,37 +3346,33 @@ class _RoutingScreen extends ConsumerStatefulWidget {
 }
 
 class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
-  late final TextEditingController _directDomains;
-  late final TextEditingController _proxyDomains;
-  late final TextEditingController _blockedDomains;
-  late final TextEditingController _directIps;
+  late final TextEditingController _directRules;
+  late final TextEditingController _proxyRules;
+  late final TextEditingController _blockedRules;
   Timer? _debounce;
+  String? _selectedPresetId;
 
   @override
   void initState() {
     super.initState();
     final s = ref.read(settingsNotifierProvider).value;
-    _directDomains = TextEditingController(
-      text: s?.directDomains ?? RoutingPresets.defaultDirectDomains,
+    _directRules = TextEditingController(
+      text: s?.directRules ?? RoutingPresets.defaultDirectRules,
     );
-    _proxyDomains = TextEditingController(
-      text: s?.proxyDomains ?? RoutingPresets.defaultProxyDomains,
+    _proxyRules = TextEditingController(
+      text: s?.proxyRules ?? RoutingPresets.defaultProxyRules,
     );
-    _blockedDomains = TextEditingController(
-      text: s?.blockedDomains ?? RoutingPresets.defaultBlockedDomains,
-    );
-    _directIps = TextEditingController(
-      text: s?.directIps ?? RoutingPresets.defaultDirectIps,
+    _blockedRules = TextEditingController(
+      text: s?.blockedRules ?? RoutingPresets.defaultBlockedRules,
     );
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
-    _directDomains.dispose();
-    _proxyDomains.dispose();
-    _blockedDomains.dispose();
-    _directIps.dispose();
+    _directRules.dispose();
+    _proxyRules.dispose();
+    _blockedRules.dispose();
     super.dispose();
   }
 
@@ -3182,19 +3387,17 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     if (current == null) return;
     await ref.read(settingsNotifierProvider.notifier).save(
           current.copyWith(
-            directDomains: _directDomains.text,
-            proxyDomains: _proxyDomains.text,
-            blockedDomains: _blockedDomains.text,
-            directIps: _directIps.text,
+            directRules: _directRules.text,
+            proxyRules: _proxyRules.text,
+            blockedRules: _blockedRules.text,
           ),
         );
   }
 
   TextEditingController _controllerFor(RoutingField f) => switch (f) {
-        RoutingField.directDomains => _directDomains,
-        RoutingField.proxyDomains => _proxyDomains,
-        RoutingField.blockedDomains => _blockedDomains,
-        RoutingField.directIps => _directIps,
+        RoutingField.direct => _directRules,
+        RoutingField.proxy => _proxyRules,
+        RoutingField.blocked => _blockedRules,
       };
 
   Future<void> _applyPreset(RoutingPreset preset, String label) async {
@@ -3210,10 +3413,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
   }
 
   Future<void> _resetToDefaults() async {
-    _directDomains.text = RoutingPresets.defaultDirectDomains;
-    _proxyDomains.text = RoutingPresets.defaultProxyDomains;
-    _blockedDomains.text = RoutingPresets.defaultBlockedDomains;
-    _directIps.text = RoutingPresets.defaultDirectIps;
+    _directRules.text = RoutingPresets.defaultDirectRules;
+    _proxyRules.text = RoutingPresets.defaultProxyRules;
+    _blockedRules.text = RoutingPresets.defaultBlockedRules;
     await _persist();
     if (!mounted) return;
     setState(() {});
@@ -3225,7 +3427,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
 
   String _presetTitle(AppLocalizations l10n, String id) => switch (id) {
         'ru' => l10n.settingsRoutingPresetRuTitle,
+        'ru_geoip' => l10n.settingsRoutingPresetRuGeoipTitle,
         'banks' => l10n.settingsRoutingPresetBanksTitle,
+        'lan_ips' => l10n.settingsRoutingPresetLanIpsTitle,
         'ads' => l10n.settingsRoutingPresetAdsTitle,
         'streaming' => l10n.settingsRoutingPresetStreamingTitle,
         'messengers' => l10n.settingsRoutingPresetMessengersTitle,
@@ -3234,7 +3438,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
 
   String _presetDesc(AppLocalizations l10n, String id) => switch (id) {
         'ru' => l10n.settingsRoutingPresetRuDesc,
+        'ru_geoip' => l10n.settingsRoutingPresetRuGeoipDesc,
         'banks' => l10n.settingsRoutingPresetBanksDesc,
+        'lan_ips' => l10n.settingsRoutingPresetLanIpsDesc,
         'ads' => l10n.settingsRoutingPresetAdsDesc,
         'streaming' => l10n.settingsRoutingPresetStreamingDesc,
         'messengers' => l10n.settingsRoutingPresetMessengersDesc,
@@ -3243,7 +3449,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
 
   IconData _presetIcon(String id) => switch (id) {
         'ru' => Icons.flag_outlined,
+        'ru_geoip' => Icons.public,
         'banks' => Icons.account_balance_outlined,
+        'lan_ips' => Icons.lan_outlined,
         'ads' => Icons.block,
         'streaming' => Icons.play_circle_outline,
         'messengers' => Icons.chat_bubble_outline,
@@ -3251,10 +3459,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       };
 
   Color _presetColor(BuildContext context, RoutingField f) => switch (f) {
-        RoutingField.directDomains || RoutingField.directIps =>
-          AppTheme.green(context),
-        RoutingField.proxyDomains => AppTheme.accent(context),
-        RoutingField.blockedDomains => AppTheme.red(context),
+        RoutingField.direct => AppTheme.green(context),
+        RoutingField.proxy => AppTheme.accent(context),
+        RoutingField.blocked => AppTheme.red(context),
       };
 
   static int _countEntries(String raw) => raw
@@ -3298,8 +3505,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             icon: Icons.call_made,
             title: l10n.settingsRoutingDirectTitle,
             desc: l10n.settingsRoutingDirectDesc,
-            controller: _directDomains,
-            hint: 'ru, vk.com, .example.com',
+            controller: _directRules,
+            hint: 'ru, vk.com, .example.com, 10.0.0.0/8',
             l10n: l10n,
           ),
           const SizedBox(height: 12),
@@ -3309,8 +3516,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             icon: Icons.vpn_lock,
             title: l10n.settingsRoutingProxyTitle,
             desc: l10n.settingsRoutingProxyDesc,
-            controller: _proxyDomains,
-            hint: 'youtube.com, discord.com',
+            controller: _proxyRules,
+            hint: 'youtube.com, discord.com, 1.1.1.1',
             l10n: l10n,
           ),
           const SizedBox(height: 12),
@@ -3320,20 +3527,38 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             icon: Icons.block,
             title: l10n.settingsRoutingBlockTitle,
             desc: l10n.settingsRoutingBlockDesc,
-            controller: _blockedDomains,
-            hint: 'doubleclick.net',
+            controller: _blockedRules,
+            hint: 'doubleclick.net, 0.0.0.0/8',
             l10n: l10n,
           ),
-          const SizedBox(height: 12),
-          _section(
-            context: context,
-            color: AppTheme.green(context),
-            icon: Icons.lan_outlined,
-            title: l10n.settingsRoutingDirectIpsTitle,
-            desc: l10n.settingsRoutingDirectIpsDesc,
-            controller: _directIps,
-            hint: '192.168.0.0/16, 10.0.0.0/8',
-            l10n: l10n,
+          const SizedBox(height: 16),
+          _syntaxLegend(context, l10n),
+        ],
+      ),
+    );
+  }
+
+  Widget _syntaxLegend(BuildContext context, AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.card(context),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.help_outline, size: 18, color: AppTheme.textLight(context)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              l10n.settingsRoutingSyntaxHint,
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.5,
+                color: AppTheme.textLight(context),
+              ),
+            ),
           ),
         ],
       ),
@@ -3391,75 +3616,99 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             style: TextStyle(fontSize: 11.5, color: AppTheme.textLight(context)),
           ),
           const SizedBox(height: 12),
-          ...RoutingPresets.all.map((preset) {
-            final title = _presetTitle(l10n, preset.id);
-            final color = _presetColor(context, preset.field);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Material(
-                color: AppTheme.bg(context),
-                borderRadius: BorderRadius.circular(12),
-                child: InkWell(
+          _presetDropdown(context, l10n),
+        ],
+      ),
+    );
+  }
+
+  Widget _presetDropdown(BuildContext context, AppLocalizations l10n) {
+    RoutingPreset? findSelected() {
+      for (final p in RoutingPresets.all) {
+        if (p.id == _selectedPresetId) return p;
+      }
+      return null;
+    }
+
+    final selected = findSelected();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppTheme.bg(context),
                   borderRadius: BorderRadius.circular(12),
-                  onTap: () => _applyPreset(preset, title),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: _selectedPresetId,
+                    borderRadius: BorderRadius.circular(14),
+                    hint: Text(
+                      l10n.settingsRoutingPresetChoose,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        color: AppTheme.textLight(context),
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            _presetIcon(preset.id),
-                            size: 18,
-                            color: color,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
+                    dropdownColor: AppTheme.card(context),
+                    icon: Icon(
+                      Icons.arrow_drop_down,
+                      color: AppTheme.textLight(context),
+                    ),
+                    items: RoutingPresets.all.map((preset) {
+                      final color = _presetColor(context, preset.field);
+                      return DropdownMenuItem<String>(
+                        value: preset.id,
+                        child: Row(
+                          children: [
+                            Icon(_presetIcon(preset.id), size: 18, color: color),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _presetTitle(l10n, preset.id),
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 13.5,
-                                  fontWeight: FontWeight.w600,
                                   color: AppTheme.text(context),
                                 ),
                               ),
-                              const SizedBox(height: 1),
-                              Text(
-                                _presetDesc(l10n, preset.id),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppTheme.textLight(context),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.add_circle_outline,
-                          size: 20,
-                          color: AppTheme.textLight(context),
-                        ),
-                      ],
-                    ),
+                      );
+                    }).toList(),
+                    onChanged: (id) => setState(() => _selectedPresetId = id),
                   ),
                 ),
               ),
-            );
-          }),
+            ),
+            const SizedBox(width: 10),
+            FilledButton.icon(
+              onPressed: selected == null
+                  ? null
+                  : () => _applyPreset(
+                        selected,
+                        _presetTitle(l10n, selected.id),
+                      ),
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(l10n.settingsRoutingPresetAdd),
+            ),
+          ],
+        ),
+        if (selected != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _presetDesc(l10n, selected.id),
+            style: TextStyle(fontSize: 11.5, color: AppTheme.textLight(context)),
+          ),
         ],
-      ),
+      ],
     );
   }
 
