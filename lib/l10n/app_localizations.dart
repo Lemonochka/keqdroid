@@ -447,8 +447,20 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetsHint.
   ///
   /// In en, this message translates to:
-  /// **'Tap to add a curated list. You can edit or remove entries afterwards.'**
+  /// **'Pick a curated list and add it to the matching list below. You can edit or remove entries afterwards.'**
   String get settingsRoutingPresetsHint;
+
+  /// No description provided for @settingsRoutingPresetChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a preset…'**
+  String get settingsRoutingPresetChoose;
+
+  /// No description provided for @settingsRoutingPresetAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get settingsRoutingPresetAdd;
 
   /// No description provided for @settingsRoutingPresetRuTitle.
   ///
@@ -459,8 +471,20 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetRuDesc.
   ///
   /// In en, this message translates to:
-  /// **'All .ru / .рф and major RU services bypass the VPN'**
+  /// **'All .ru / .рф domains and major RU services bypass the VPN (adds domains to Direct)'**
   String get settingsRoutingPresetRuDesc;
+
+  /// No description provided for @settingsRoutingPresetRuGeoipTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Russia IPs (GeoIP) — Direct'**
+  String get settingsRoutingPresetRuGeoipTitle;
+
+  /// No description provided for @settingsRoutingPresetRuGeoipDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'All Russian IP ranges bypass the VPN via GeoIP — works in Proxy mode'**
+  String get settingsRoutingPresetRuGeoipDesc;
 
   /// No description provided for @settingsRoutingPresetBanksTitle.
   ///
@@ -473,6 +497,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Banking, payments and state portals bypass the VPN'**
   String get settingsRoutingPresetBanksDesc;
+
+  /// No description provided for @settingsRoutingPresetLanIpsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local network — Direct'**
+  String get settingsRoutingPresetLanIpsTitle;
+
+  /// No description provided for @settingsRoutingPresetLanIpsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Private LAN IP ranges (192.168.x, 10.x, …) bypass the VPN'**
+  String get settingsRoutingPresetLanIpsDesc;
 
   /// No description provided for @settingsRoutingPresetAdsTitle.
   ///
@@ -519,50 +555,44 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingDirectTitle.
   ///
   /// In en, this message translates to:
-  /// **'Direct domains (bypass VPN)'**
+  /// **'Direct (bypass VPN)'**
   String get settingsRoutingDirectTitle;
 
   /// No description provided for @settingsRoutingDirectDesc.
   ///
   /// In en, this message translates to:
-  /// **'These hosts connect directly, without the VPN.'**
+  /// **'Domains and IPs here connect directly, without the VPN.'**
   String get settingsRoutingDirectDesc;
 
   /// No description provided for @settingsRoutingProxyTitle.
   ///
   /// In en, this message translates to:
-  /// **'Proxy domains (force VPN)'**
+  /// **'Proxy (force VPN)'**
   String get settingsRoutingProxyTitle;
 
   /// No description provided for @settingsRoutingProxyDesc.
   ///
   /// In en, this message translates to:
-  /// **'These hosts always go through the VPN.'**
+  /// **'Domains and IPs here always go through the VPN.'**
   String get settingsRoutingProxyDesc;
 
   /// No description provided for @settingsRoutingBlockTitle.
   ///
   /// In en, this message translates to:
-  /// **'Blocked domains'**
+  /// **'Blocked'**
   String get settingsRoutingBlockTitle;
 
   /// No description provided for @settingsRoutingBlockDesc.
   ///
   /// In en, this message translates to:
-  /// **'These hosts are dropped and never connect.'**
+  /// **'Domains and IPs here are dropped and never connect.'**
   String get settingsRoutingBlockDesc;
 
-  /// No description provided for @settingsRoutingDirectIpsTitle.
+  /// No description provided for @settingsRoutingSyntaxHint.
   ///
   /// In en, this message translates to:
-  /// **'Direct IPs / subnets (bypass VPN)'**
-  String get settingsRoutingDirectIpsTitle;
-
-  /// No description provided for @settingsRoutingDirectIpsDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'IPv4/IPv6 addresses or CIDR ranges that bypass the VPN.'**
-  String get settingsRoutingDirectIpsDesc;
+  /// **'Each list accepts domains and IPs together, comma- or line-separated:\n• ru — every *.ru host (a bare word = domain suffix)\n• vk.com — that domain and its subdomains\n• .example.com — subdomains only\n• 10.0.0.0/8 or 1.2.3.4 — IP address or CIDR range\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite (Proxy mode only)\nPrivate/LAN IPs and your server always stay direct automatically.'**
+  String get settingsRoutingSyntaxHint;
 
   /// No description provided for @settingsRoutingValuesHint.
   ///
@@ -737,6 +767,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'HTTP port'**
   String get settingsHttpPortLabel;
+
+  /// No description provided for @settingsLocalPortsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local proxy ports'**
+  String get settingsLocalPortsTitle;
+
+  /// No description provided for @settingsLocalPortsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SOCKS {socks} · HTTP {http}'**
+  String settingsLocalPortsSubtitle(Object socks, Object http);
+
+  /// No description provided for @settingsLocalPortsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen ports for the local SOCKS5 and HTTP proxies (defaults 2080 / 2081). Applied on the next connection. The two ports must differ.'**
+  String get settingsLocalPortsHint;
+
+  /// No description provided for @settingsLocalPortsResetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to defaults'**
+  String get settingsLocalPortsResetTitle;
+
+  /// No description provided for @settingsPortInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a port between 1 and 65535'**
+  String get settingsPortInvalid;
+
+  /// No description provided for @settingsPortsMustDiffer.
+  ///
+  /// In en, this message translates to:
+  /// **'SOCKS and HTTP ports must differ'**
+  String get settingsPortsMustDiffer;
 
   /// No description provided for @settingsTurnOffToChange.
   ///

@@ -201,14 +201,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsRoutingPresetsHint =>
-      'Tap to add a curated list. You can edit or remove entries afterwards.';
+      'Pick a curated list and add it to the matching list below. You can edit or remove entries afterwards.';
+
+  @override
+  String get settingsRoutingPresetChoose => 'Choose a preset…';
+
+  @override
+  String get settingsRoutingPresetAdd => 'Add';
 
   @override
   String get settingsRoutingPresetRuTitle => 'Russian sites — Direct';
 
   @override
   String get settingsRoutingPresetRuDesc =>
-      'All .ru / .рф and major RU services bypass the VPN';
+      'All .ru / .рф domains and major RU services bypass the VPN (adds domains to Direct)';
+
+  @override
+  String get settingsRoutingPresetRuGeoipTitle => 'Russia IPs (GeoIP) — Direct';
+
+  @override
+  String get settingsRoutingPresetRuGeoipDesc =>
+      'All Russian IP ranges bypass the VPN via GeoIP — works in Proxy mode';
 
   @override
   String get settingsRoutingPresetBanksTitle => 'Banks & gov — Direct';
@@ -216,6 +229,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsRoutingPresetBanksDesc =>
       'Banking, payments and state portals bypass the VPN';
+
+  @override
+  String get settingsRoutingPresetLanIpsTitle => 'Local network — Direct';
+
+  @override
+  String get settingsRoutingPresetLanIpsDesc =>
+      'Private LAN IP ranges (192.168.x, 10.x, …) bypass the VPN';
 
   @override
   String get settingsRoutingPresetAdsTitle => 'Ads & trackers — Block';
@@ -243,33 +263,29 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsRoutingDirectTitle => 'Direct domains (bypass VPN)';
+  String get settingsRoutingDirectTitle => 'Direct (bypass VPN)';
 
   @override
   String get settingsRoutingDirectDesc =>
-      'These hosts connect directly, without the VPN.';
+      'Domains and IPs here connect directly, without the VPN.';
 
   @override
-  String get settingsRoutingProxyTitle => 'Proxy domains (force VPN)';
+  String get settingsRoutingProxyTitle => 'Proxy (force VPN)';
 
   @override
   String get settingsRoutingProxyDesc =>
-      'These hosts always go through the VPN.';
+      'Domains and IPs here always go through the VPN.';
 
   @override
-  String get settingsRoutingBlockTitle => 'Blocked domains';
+  String get settingsRoutingBlockTitle => 'Blocked';
 
   @override
   String get settingsRoutingBlockDesc =>
-      'These hosts are dropped and never connect.';
+      'Domains and IPs here are dropped and never connect.';
 
   @override
-  String get settingsRoutingDirectIpsTitle =>
-      'Direct IPs / subnets (bypass VPN)';
-
-  @override
-  String get settingsRoutingDirectIpsDesc =>
-      'IPv4/IPv6 addresses or CIDR ranges that bypass the VPN.';
+  String get settingsRoutingSyntaxHint =>
+      'Each list accepts domains and IPs together, comma- or line-separated:\n• ru — every *.ru host (a bare word = domain suffix)\n• vk.com — that domain and its subdomains\n• .example.com — subdomains only\n• 10.0.0.0/8 or 1.2.3.4 — IP address or CIDR range\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite (Proxy mode only)\nPrivate/LAN IPs and your server always stay direct automatically.';
 
   @override
   String get settingsRoutingValuesHint => 'One per line, or comma separated';
@@ -379,6 +395,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsHttpPortLabel => 'HTTP port';
+
+  @override
+  String get settingsLocalPortsTitle => 'Local proxy ports';
+
+  @override
+  String settingsLocalPortsSubtitle(Object socks, Object http) {
+    return 'SOCKS $socks · HTTP $http';
+  }
+
+  @override
+  String get settingsLocalPortsHint =>
+      'Listen ports for the local SOCKS5 and HTTP proxies (defaults 2080 / 2081). Applied on the next connection. The two ports must differ.';
+
+  @override
+  String get settingsLocalPortsResetTitle => 'Reset to defaults';
+
+  @override
+  String get settingsPortInvalid => 'Enter a port between 1 and 65535';
+
+  @override
+  String get settingsPortsMustDiffer => 'SOCKS and HTTP ports must differ';
 
   @override
   String get settingsTurnOffToChange => 'Turn off to change setting';
