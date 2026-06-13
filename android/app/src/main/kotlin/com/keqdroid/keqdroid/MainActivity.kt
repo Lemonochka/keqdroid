@@ -113,22 +113,36 @@ class MainActivity : FlutterFragmentActivity() {
                                 ?.filterIsInstance<String>() ?: emptyList()
                             val includePackages = call.argument<List<*>>("includePackages")
                                 ?.filterIsInstance<String>() ?: emptyList()
-                            if (backend != "xray") {
-                                result.error("UNSUPPORTED_BACKEND", "Unsupported VPN backend: $backend", null)
-                                return@setMethodCallHandler
-                            } else {
-                                val xrayConfig = call.argument<String>("xrayConfig") ?: run {
-                                    result.error("INVALID_ARGS", "Missing xrayConfig", null)
-                                    return@setMethodCallHandler
+                            when (backend) {
+                                KeqdisVpnService.VPN_BACKEND_KPHTTP -> {
+                                    val kphttpToml = call.argument<String>("kphttpTomlConfig") ?: run {
+                                        result.error("INVALID_ARGS", "Missing kphttpTomlConfig", null)
+                                        return@setMethodCallHandler
+                                    }
+                                    startVpnWithKphttp(
+                                        kphttpToml,
+                                        socksPort,
+                                        excludePackages,
+                                        includePackages,
+                                        serverName,
+                                        result,
+                                    )
                                 }
-                                startVpnWithXray(
-                                    xrayConfig,
-                                    socksPort,
-                                    excludePackages,
-                                    includePackages,
-                                    serverName,
-                                    result,
-                                )
+                                KeqdisVpnService.VPN_BACKEND_XRAY -> {
+                                    val xrayConfig = call.argument<String>("xrayConfig") ?: run {
+                                        result.error("INVALID_ARGS", "Missing xrayConfig", null)
+                                        return@setMethodCallHandler
+                                    }
+                                    startVpnWithXray(
+                                        xrayConfig,
+                                        socksPort,
+                                        excludePackages,
+                                        includePackages,
+                                        serverName,
+                                        result,
+                                    )
+                                }
+                                else -> result.error("UNSUPPORTED_BACKEND", "Unsupported VPN backend: $backend", null)
                             }
                         }
                         "stopVpn"              -> stopVpn(result)
@@ -374,6 +388,48 @@ class MainActivity : FlutterFragmentActivity() {
             // и синхронизацию с новым xray_config.json.
             pendingSocksUsername = null
             pendingSocksPassword = null
+
+            result.success(null)
+        }
+    }
+
+    private fun startVpnWithKphttp(
+        kphttpToml: String,
+        socksPort: Int,
+        excludePackages: List<String>,
+        includePackages: List<String>,
+        serverName: String?,
+        result: MethodChannel.Result,
+    ) {
+        if (VpnService.prepare(this) != null) {
+            result.error("PERMISSION_DENIED", "VPN permission not granted", null)
+            return
+        }
+
+        mainScope.launch {
+            val configPath = try {
+                withContext(Dispatchers.IO) { writeConfig(kphttpToml, "kphttp_client.toml") }
+            } catch (e: IOException) {
+                result.error("IO_ERROR", "Failed to write config: ${e.message}", null)
+                return@launch
+            }
+
+            getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                .edit()
+                .putInt("flutter.keqdis_socks_port", socksPort)
+                .apply()
+
+            startService(Intent(this@MainActivity, KeqdisVpnService::class.java).apply {
+                action = KeqdisVpnService.ACTION_START
+                putExtra(KeqdisVpnService.EXTRA_VPN_BACKEND, KeqdisVpnService.VPN_BACKEND_KPHTTP)
+                putExtra(KeqdisVpnService.EXTRA_KPHTTP_CONFIG, configPath)
+                putExtra("socks_port", socksPort)
+                putStringArrayListExtra("exclude_packages", ArrayList(excludePackages))
+                putStringArrayListExtra("include_packages", ArrayList(includePackages))
+                if (!serverName.isNullOrBlank()) {
+                    putExtra(KeqdisVpnService.EXTRA_SERVER_NAME, serverName)
+                }
+            })
 
             result.success(null)
         }

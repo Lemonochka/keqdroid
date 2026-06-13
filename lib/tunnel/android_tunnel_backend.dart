@@ -8,6 +8,7 @@ import '../core/exceptions.dart';
 import 'tunnel_backend.dart';
 import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
+import 'vpn_backend.dart';
 
 class AndroidTunnelBackend implements TunnelBackend {
   static const _method = MethodChannel('keqdis_vpn_channel');
@@ -65,8 +66,11 @@ class AndroidTunnelBackend implements TunnelBackend {
   Future<void> startSession(TunnelSessionRequest request) async {
     try {
       await _method.invokeMethod<void>('startVpn', {
-        'vpnBackend': 'xray',
+        'vpnBackend': request.vpnBackend.wireValue,
         'xrayConfig': request.xrayConfig,
+        if (request.kphttpTomlConfig != null &&
+            request.kphttpTomlConfig!.isNotEmpty)
+          'kphttpTomlConfig': request.kphttpTomlConfig,
         'socksPort': request.socksPort,
         'excludePackages': request.excludePackages,
         'includePackages': request.includePackages,

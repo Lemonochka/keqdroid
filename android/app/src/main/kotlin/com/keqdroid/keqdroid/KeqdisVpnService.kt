@@ -32,11 +32,13 @@ class KeqdisVpnService : VpnService() {
         const val ACTION_STOP          = "com.keqdis.vpn.STOP"
         const val ACTION_TOGGLE         = "com.keqdis.vpn.TOGGLE"
         const val EXTRA_XRAY_CONFIG    = "xray_config_path"
+        const val EXTRA_KPHTTP_CONFIG  = "kphttp_config_path"
         const val EXTRA_SOCKS_USERNAME = "socks_username"
         const val EXTRA_SOCKS_PASSWORD = "socks_password"
         const val EXTRA_SERVER_NAME    = "server_name"
         const val EXTRA_VPN_BACKEND    = "vpn_backend"
         const val VPN_BACKEND_XRAY     = "xray"
+        const val VPN_BACKEND_KPHTTP   = "kphttp"
         const val NOTIFICATION_ID      = 1337
         const val CHANNEL_ID           = "keqdis_vpn"
         const val CHANNEL_ID_CONTROL   = "keqdis_vpn_control"
@@ -137,32 +139,45 @@ class KeqdisVpnService : VpnService() {
                 val socksPort   = intent.getIntExtra("socks_port", 2080)
                 val excludePkgs = intent.getStringArrayListExtra("exclude_packages") ?: arrayListOf()
                 val includePkgs = intent.getStringArrayListExtra("include_packages") ?: arrayListOf()
-
-                val xrayPath = intent.getStringExtra(EXTRA_XRAY_CONFIG) ?: run {
-                    android.util.Log.e("KEQDIS", "onStartCommand: missing EXTRA_XRAY_CONFIG")
-                    return START_NOT_STICKY
-                }
-                val user = intent.getStringExtra(EXTRA_SOCKS_USERNAME)
-                val pass = intent.getStringExtra(EXTRA_SOCKS_PASSWORD)
                 currentServerName = intent.getStringExtra(EXTRA_SERVER_NAME)
-                if (user.isNullOrEmpty() || pass.isNullOrEmpty()) {
-                    android.util.Log.e("KEQDIS", "onStartCommand: SOCKS5 credentials missing in Intent — aborting start")
-                    return START_NOT_STICKY
-                }
-                socksUsername = user
-                socksPassword = pass
-                android.util.Log.d("KEQDIS", "onStartCommand: credentials received backend=$backend")
-                lastXrayConfigPath = xrayPath
                 lastSocksPort = socksPort
                 lastExcludePackages = excludePkgs
                 lastIncludePackages = includePkgs
 
-                // Persist "last selected server" snapshot for Quick Settings tile.
+                val configPath: String
+                val socksNoAuth: Boolean
+                if (backend == VPN_BACKEND_KPHTTP) {
+                    configPath = intent.getStringExtra(EXTRA_KPHTTP_CONFIG) ?: run {
+                        android.util.Log.e("KEQDIS", "onStartCommand: missing EXTRA_KPHTTP_CONFIG")
+                        return START_NOT_STICKY
+                    }
+                    socksNoAuth = true
+                    socksUsername = ""
+                    socksPassword = ""
+                } else {
+                    configPath = intent.getStringExtra(EXTRA_XRAY_CONFIG) ?: run {
+                        android.util.Log.e("KEQDIS", "onStartCommand: missing EXTRA_XRAY_CONFIG")
+                        return START_NOT_STICKY
+                    }
+                    val user = intent.getStringExtra(EXTRA_SOCKS_USERNAME)
+                    val pass = intent.getStringExtra(EXTRA_SOCKS_PASSWORD)
+                    if (user.isNullOrEmpty() || pass.isNullOrEmpty()) {
+                        android.util.Log.e("KEQDIS", "onStartCommand: SOCKS5 credentials missing in Intent — aborting start")
+                        return START_NOT_STICKY
+                    }
+                    socksUsername = user
+                    socksPassword = pass
+                    socksNoAuth = false
+                }
+
+                android.util.Log.d("KEQDIS", "onStartCommand: backend=$backend config=$configPath")
+                lastXrayConfigPath = configPath
+
                 runCatching {
                     getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE)
                         .edit()
                         .putString(KEY_QS_LAST_BACKEND, backend)
-                        .putString(KEY_QS_LAST_XRAY_CONFIG, xrayPath)
+                        .putString(KEY_QS_LAST_XRAY_CONFIG, configPath)
                         .putInt(KEY_QS_LAST_SOCKS_PORT, socksPort)
                         .putString(KEY_QS_LAST_SOCKS_USERNAME, socksUsername)
                         .putString(KEY_QS_LAST_SOCKS_PASSWORD, socksPassword)
@@ -172,19 +187,19 @@ class KeqdisVpnService : VpnService() {
                         .apply()
                 }
 
-                // [FIX-ANR-TILE] startForeground() ОБЯЗАН быть вызван синхронно в onStartCommand.
-                // Когда тайл использует startForegroundService(), Android даёт сервису 5 секунд
-                // на вызов startForeground() — иначе ForegroundServiceDidNotStartInTimeException
-                // и ANR. startVpnWithXray() работает в корутине и вызывает showControlNotification()
-                // через NotificationManager.notify(), который НЕ является startForeground().
-                // Поэтому при запуске через тайл startForeground() никогда не вызывался.
                 registerNotificationReceiver()
                 startForeground(
                     NOTIFICATION_ID,
                     buildControlNotification("Connecting…", isConnected = false, isTransitioning = true)
                 )
 
-                serviceScope.launch { startVpnWithXray(xrayPath, socksPort, excludePkgs, includePkgs) }
+                serviceScope.launch {
+                    if (backend == VPN_BACKEND_KPHTTP) {
+                        startVpnWithKphttp(configPath, socksPort, excludePkgs, includePkgs)
+                    } else {
+                        startVpnWithXray(configPath, socksPort, excludePkgs, includePkgs, socksNoAuth = false)
+                    }
+                }
             }
             ACTION_STOP -> serviceScope.launch { stopVpn() }
         }
@@ -221,20 +236,16 @@ class KeqdisVpnService : VpnService() {
         xrayConfigPath: String,
         socksPort: Int,
         excludePkgs: List<String>,
-        includePkgs: List<String>
+        includePkgs: List<String>,
+        socksNoAuth: Boolean = false,
     ) {
         if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) return
-        // registerNotificationReceiver() и startForeground("Connecting…") уже вызваны
-        // синхронно в onStartCommand — до запуска этой корутины.
         setStatus(VpnRunStatus.STARTING)
         try {
-            // [FIX-CREDENTIALS-GUARD] Дополнительная проверка перед запуском tun2socks.
-            // socksUsername/Password должны быть установлены в onStartCommand выше.
-            if (socksUsername.isEmpty() || socksPassword.isEmpty()) {
+            if (!socksNoAuth && (socksUsername.isEmpty() || socksPassword.isEmpty())) {
                 throw IllegalStateException("SOCKS5 credentials are empty — Intent was malformed")
             }
 
-            // 1. Запускаем Xray (приложение исключено из TUN — см. addDisallowedApplication).
             xrayPid = startXray(getBinaryPath("libxray.so"), xrayConfigPath)
 
             // 2. Ждём пока Xray поднимет SOCKS5 порт
@@ -252,7 +263,7 @@ class KeqdisVpnService : VpnService() {
             // 4. Запускаем tun2socks через нативный fork
             val tunRawFd = tun.fd
             activeSocksPort = socksPort
-            startTun2Socks(tunRawFd, socksPort)
+            startTun2Socks(tunRawFd, socksPort, socksNoAuth = socksNoAuth)
 
             startTime = System.currentTimeMillis()
             setStatus(VpnRunStatus.RUNNING)
@@ -261,6 +272,47 @@ class KeqdisVpnService : VpnService() {
 
         } catch (e: Exception) {
             android.util.Log.e("KEQDIS", "startVpn failed: ${e.message}", e)
+            setStatus(VpnRunStatus.ERROR, e.message)
+            cleanup()
+            showControlNotification(e.message ?: "Error", isConnected = false, isTransitioning = false)
+            stopForeground(true)
+            unregisterNotificationReceiver()
+            stopSelf()
+        }
+    }
+
+    private suspend fun startVpnWithKphttp(
+        kphttpConfigPath: String,
+        socksPort: Int,
+        excludePkgs: List<String>,
+        includePkgs: List<String>,
+    ) {
+        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) return
+        setStatus(VpnRunStatus.STARTING)
+        try {
+            xrayPid = startKphttp(getBinaryPath("libkphttp.so"), kphttpConfigPath)
+
+            var waited = 0
+            while (!isPortOpen("127.0.0.1", socksPort) && waited < 10000) {
+                delay(300); waited += 300
+            }
+            if (!isPortOpen("127.0.0.1", socksPort))
+                throw IllegalStateException("KpHTTP SOCKS5 port $socksPort not ready")
+
+            val tun = buildTunInterface(excludePkgs, includePkgs)
+            tunInterface = tun
+
+            val tunRawFd = tun.fd
+            activeSocksPort = socksPort
+            startTun2Socks(tunRawFd, socksPort, socksNoAuth = true)
+
+            startTime = System.currentTimeMillis()
+            setStatus(VpnRunStatus.RUNNING)
+            showControlNotification("Connected", isConnected = true, isTransitioning = false)
+            startStatsLoop()
+
+        } catch (e: Exception) {
+            android.util.Log.e("KEQDIS", "startVpnWithKphttp failed: ${e.message}", e)
             setStatus(VpnRunStatus.ERROR, e.message)
             cleanup()
             showControlNotification(e.message ?: "Error", isConnected = false, isTransitioning = false)
@@ -406,19 +458,17 @@ class KeqdisVpnService : VpnService() {
 
     // ── tun2socks ────────────────────────────────────────────────────────────
 
-    private fun startTun2Socks(tunRawFd: Int, socksPort: Int) {
-        // Запускаем libtun2socks.so напрямую из nativeLibraryDir —
-        // нативный fork+execv наследует SELinux-контекст родителя (app_data_file)
-        // который разрешает execv для файлов из /data/app/.../lib/
+    private fun startTun2Socks(tunRawFd: Int, socksPort: Int, socksNoAuth: Boolean = false) {
         val bin = File(applicationInfo.nativeLibraryDir, "libtun2socks.so")
         if (!bin.exists()) throw IllegalStateException("libtun2socks.so not found in ${applicationInfo.nativeLibraryDir}")
 
-        // [FIX-CREDENTIALS-GUARD] Проверка уже выполнена в startVpn, но дублируем
-        // для защиты от вызова startTun2Socks в обход стандартного флоу.
-        if (socksUsername.isEmpty() || socksPassword.isEmpty())
-            throw IllegalStateException("SOCKS5 credentials missing in startTun2Socks")
-
-        val proxyUrl = "socks5://$socksUsername:$socksPassword@127.0.0.1:$socksPort"
+        val proxyUrl = if (socksNoAuth) {
+            "socks5://127.0.0.1:$socksPort"
+        } else {
+            if (socksUsername.isEmpty() || socksPassword.isEmpty())
+                throw IllegalStateException("SOCKS5 credentials missing in startTun2Socks")
+            "socks5://$socksUsername:$socksPassword@127.0.0.1:$socksPort"
+        }
 
         android.util.Log.i("KEQDIS", "Starting tun2socks: fd=$tunRawFd bin=${bin.absolutePath}")
 
@@ -478,6 +528,36 @@ class KeqdisVpnService : VpnService() {
                     xrayPid = -1  // уже мёртв — не пытаемся убить повторно в cleanup()
                     cleanup()
                     setStatus(VpnRunStatus.ERROR, "Xray exited unexpectedly")
+                    stopForeground(true)
+                    stopSelf()
+                }
+            } catch (_: Exception) {}
+        }
+        return pid
+    }
+
+    private fun startKphttp(binary: String, config: String): Int {
+        val pid = NativeHelper.startKphttp(binary, config, filesDir.absolutePath)
+        when {
+            pid == -1 -> throw IllegalStateException("KpHTTP binary not found: $binary")
+            pid == -2 -> throw IllegalStateException("KpHTTP config not found: $config")
+            pid == -4 -> throw IllegalStateException("KpHTTP crashed on startup — see logcat KEQDIS/kphttp")
+            pid <= 0  -> throw IllegalStateException("fork() for KpHTTP failed (pid=$pid)")
+            else -> {}
+        }
+        android.util.Log.i("KEQDIS", "KpHTTP started pid=$pid")
+
+        val monitorPid = pid
+        serviceScope.launch(Dispatchers.IO) {
+            try {
+                while (File("/proc/$pid").exists()) delay(500)
+                android.util.Log.w("KEQDIS", "[kphttp] pid=$pid exited")
+                if ((status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) &&
+                    monitorPid == xrayPid) {
+                    android.util.Log.w("KEQDIS", "[kphttp] triggering full cleanup after unexpected exit")
+                    xrayPid = -1
+                    cleanup()
+                    setStatus(VpnRunStatus.ERROR, "KpHTTP exited unexpectedly")
                     stopForeground(true)
                     stopSelf()
                 }

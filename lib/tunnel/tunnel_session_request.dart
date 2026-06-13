@@ -1,9 +1,12 @@
 import 'connection_mode.dart';
+import 'vpn_backend.dart';
 
 /// параметры запуска туннеля (android tun и desktop proxy/tun)
 class TunnelSessionRequest {
   final ConnectionMode mode;
+  final VpnBackend vpnBackend;
   final String xrayConfig;
+  final String? kphttpTomlConfig;
   final int socksPort;
   final int httpPort;
   final String? singboxConfig;
@@ -17,7 +20,9 @@ class TunnelSessionRequest {
 
   const TunnelSessionRequest({
     required this.mode,
+    this.vpnBackend = VpnBackend.xray,
     required this.xrayConfig,
+    this.kphttpTomlConfig,
     this.socksPort = 2080,
     this.httpPort = 2081,
     this.singboxConfig,
@@ -36,7 +41,10 @@ class TunnelSessionRequest {
   }) =>
       {
         'connectionMode': mode.storageValue,
+        'vpnBackend': vpnBackend.wireValue,
         'xrayConfig': xrayConfig,
+        if (kphttpTomlConfig != null && kphttpTomlConfig!.isNotEmpty)
+          'kphttpTomlConfig': kphttpTomlConfig,
         'socksPort': socksPort,
         if (singboxConfig != null && singboxConfig!.isNotEmpty)
           'singboxConfig': singboxConfig,
