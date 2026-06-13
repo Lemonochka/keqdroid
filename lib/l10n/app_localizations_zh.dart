@@ -195,19 +195,40 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingPresetsTitle => '快速预设';
 
   @override
-  String get settingsRoutingPresetsHint => '点按以添加精选列表。之后可以编辑或删除条目。';
+  String get settingsRoutingPresetsHint => '选择一个精选列表并将其添加到下方对应的列表。之后可以编辑或删除条目。';
+
+  @override
+  String get settingsRoutingPresetChoose => '选择预设…';
+
+  @override
+  String get settingsRoutingPresetAdd => '添加';
 
   @override
   String get settingsRoutingPresetRuTitle => '俄罗斯站点 — 直连';
 
   @override
-  String get settingsRoutingPresetRuDesc => '所有 .ru / .рф 及主要俄罗斯服务绕过 VPN';
+  String get settingsRoutingPresetRuDesc =>
+      '所有 .ru / .рф 域名及主要俄罗斯服务绕过 VPN（向“直连”添加域名）';
+
+  @override
+  String get settingsRoutingPresetRuGeoipTitle => '俄罗斯 IP（GeoIP）— 直连';
+
+  @override
+  String get settingsRoutingPresetRuGeoipDesc =>
+      '通过 GeoIP 让所有俄罗斯 IP 段绕过 VPN — 仅代理模式有效';
 
   @override
   String get settingsRoutingPresetBanksTitle => '银行和政务 — 直连';
 
   @override
   String get settingsRoutingPresetBanksDesc => '银行、支付和政务门户绕过 VPN';
+
+  @override
+  String get settingsRoutingPresetLanIpsTitle => '本地网络 — 直连';
+
+  @override
+  String get settingsRoutingPresetLanIpsDesc =>
+      '私有局域网 IP 段（192.168.x、10.x …）绕过 VPN';
 
   @override
   String get settingsRoutingPresetAdsTitle => '广告和跟踪器 — 阻止';
@@ -235,28 +256,26 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get settingsRoutingDirectTitle => '直连域名（绕过 VPN）';
+  String get settingsRoutingDirectTitle => '直连（绕过 VPN）';
 
   @override
-  String get settingsRoutingDirectDesc => '这些主机将直接连接，不经过 VPN。';
+  String get settingsRoutingDirectDesc => '此列表中的域名和 IP 将直接连接，不经过 VPN。';
 
   @override
-  String get settingsRoutingProxyTitle => '代理域名（强制 VPN）';
+  String get settingsRoutingProxyTitle => '代理（强制 VPN）';
 
   @override
-  String get settingsRoutingProxyDesc => '这些主机始终经过 VPN。';
+  String get settingsRoutingProxyDesc => '此列表中的域名和 IP 始终经过 VPN。';
 
   @override
-  String get settingsRoutingBlockTitle => '已阻止的域名';
+  String get settingsRoutingBlockTitle => '已阻止';
 
   @override
-  String get settingsRoutingBlockDesc => '这些主机将被丢弃且永不连接。';
+  String get settingsRoutingBlockDesc => '此列表中的域名和 IP 将被丢弃且永不连接。';
 
   @override
-  String get settingsRoutingDirectIpsTitle => '直连 IP / 子网（绕过 VPN）';
-
-  @override
-  String get settingsRoutingDirectIpsDesc => '绕过 VPN 的 IPv4/IPv6 地址或 CIDR 范围。';
+  String get settingsRoutingSyntaxHint =>
+      '每个列表可同时填写域名和 IP，用逗号或换行分隔：\n• ru — 所有 *.ru 主机（不带点的词 = 域名后缀）\n• vk.com — 该域名及其子域名\n• .example.com — 仅子域名\n• 10.0.0.0/8 或 1.2.3.4 — IP 地址或 CIDR 范围\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite（仅代理模式）\n私有/局域网 IP 和你的服务器始终自动直连。';
 
   @override
   String get settingsRoutingValuesHint => '每行一个，或用逗号分隔';
@@ -359,6 +378,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsHttpPortLabel => 'HTTP 端口';
+
+  @override
+  String get settingsLocalPortsTitle => '本地代理端口';
+
+  @override
+  String settingsLocalPortsSubtitle(Object socks, Object http) {
+    return 'SOCKS $socks · HTTP $http';
+  }
+
+  @override
+  String get settingsLocalPortsHint =>
+      '本地 SOCKS5 和 HTTP 代理的监听端口（默认 2080 / 2081）。将在下次连接时生效。两个端口必须不同。';
+
+  @override
+  String get settingsLocalPortsResetTitle => '恢复默认';
+
+  @override
+  String get settingsPortInvalid => '请输入 1 到 65535 之间的端口';
+
+  @override
+  String get settingsPortsMustDiffer => 'SOCKS 和 HTTP 端口必须不同';
 
   @override
   String get settingsTurnOffToChange => '关闭后才能更改此设置';

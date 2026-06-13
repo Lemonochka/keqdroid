@@ -203,14 +203,28 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsRoutingPresetsHint =>
-      'Нажмите, чтобы добавить готовый список. После этого его можно отредактировать.';
+      'Выберите готовый список и добавьте его в соответствующее поле ниже. После этого его можно отредактировать.';
+
+  @override
+  String get settingsRoutingPresetChoose => 'Выберите пресет…';
+
+  @override
+  String get settingsRoutingPresetAdd => 'Добавить';
 
   @override
   String get settingsRoutingPresetRuTitle => 'Российские сайты — напрямую';
 
   @override
   String get settingsRoutingPresetRuDesc =>
-      'Все .ru / .рф и крупные сервисы РФ идут мимо VPN';
+      'Все домены .ru / .рф и крупные сервисы РФ идут мимо VPN (добавляет домены в «Напрямую»)';
+
+  @override
+  String get settingsRoutingPresetRuGeoipTitle =>
+      'IP России (GeoIP) — напрямую';
+
+  @override
+  String get settingsRoutingPresetRuGeoipDesc =>
+      'Все российские диапазоны IP идут мимо VPN через GeoIP — работает в режиме Proxy';
 
   @override
   String get settingsRoutingPresetBanksTitle => 'Банки и госуслуги — напрямую';
@@ -218,6 +232,13 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get settingsRoutingPresetBanksDesc =>
       'Банки, платежи и госпорталы идут мимо VPN';
+
+  @override
+  String get settingsRoutingPresetLanIpsTitle => 'Локальная сеть — напрямую';
+
+  @override
+  String get settingsRoutingPresetLanIpsDesc =>
+      'Приватные диапазоны IP локальной сети (192.168.x, 10.x, …) идут мимо VPN';
 
   @override
   String get settingsRoutingPresetAdsTitle => 'Реклама и трекеры — блок';
@@ -246,32 +267,29 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get settingsRoutingDirectTitle => 'Домены напрямую (мимо VPN)';
+  String get settingsRoutingDirectTitle => 'Напрямую (мимо VPN)';
 
   @override
   String get settingsRoutingDirectDesc =>
-      'Эти узлы подключаются напрямую, без VPN.';
+      'Домены и IP из этого списка подключаются напрямую, без VPN.';
 
   @override
-  String get settingsRoutingProxyTitle => 'Домены через VPN';
+  String get settingsRoutingProxyTitle => 'Через VPN';
 
   @override
-  String get settingsRoutingProxyDesc => 'Эти узлы всегда идут через VPN.';
+  String get settingsRoutingProxyDesc =>
+      'Домены и IP из этого списка всегда идут через VPN.';
 
   @override
-  String get settingsRoutingBlockTitle => 'Заблокированные домены';
+  String get settingsRoutingBlockTitle => 'Заблокировано';
 
   @override
   String get settingsRoutingBlockDesc =>
-      'Эти узлы блокируются и не подключаются.';
+      'Домены и IP из этого списка блокируются и не подключаются.';
 
   @override
-  String get settingsRoutingDirectIpsTitle =>
-      'IP / подсети напрямую (мимо VPN)';
-
-  @override
-  String get settingsRoutingDirectIpsDesc =>
-      'Адреса IPv4/IPv6 или диапазоны CIDR, идущие мимо VPN.';
+  String get settingsRoutingSyntaxHint =>
+      'Каждое поле принимает домены и IP вместе, через запятую или с новой строки:\n• ru — любой хост *.ru (слово без точки = суффикс домена)\n• vk.com — этот домен и его поддомены\n• .example.com — только поддомены\n• 10.0.0.0/8 или 1.2.3.4 — IP-адрес или диапазон CIDR\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite (только режим Proxy)\nПриватные IP локальной сети и ваш сервер всегда идут напрямую автоматически.';
 
   @override
   String get settingsRoutingValuesHint =>
@@ -385,6 +403,27 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsHttpPortLabel => 'Порт HTTP';
+
+  @override
+  String get settingsLocalPortsTitle => 'Локальные порты прокси';
+
+  @override
+  String settingsLocalPortsSubtitle(Object socks, Object http) {
+    return 'SOCKS $socks · HTTP $http';
+  }
+
+  @override
+  String get settingsLocalPortsHint =>
+      'Порты прослушивания локальных прокси SOCKS5 и HTTP (по умолчанию 2080 / 2081). Применяются при следующем подключении. Порты должны отличаться друг от друга.';
+
+  @override
+  String get settingsLocalPortsResetTitle => 'Сбросить по умолчанию';
+
+  @override
+  String get settingsPortInvalid => 'Введите порт от 1 до 65535';
+
+  @override
+  String get settingsPortsMustDiffer => 'Порты SOCKS и HTTP должны отличаться';
 
   @override
   String get settingsTurnOffToChange => 'Выключите для изменения настройки';

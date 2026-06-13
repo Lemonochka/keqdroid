@@ -7,10 +7,11 @@ import 'xray_core_settings.dart';
 class AppSettings {
   final int localPort;
   final int httpPort;
-  final String directDomains;
-  final String blockedDomains;
-  final String directIps;
-  final String proxyDomains;
+  /// Mixed routing lists: each may hold domains, IP/CIDR ranges and prefixed
+  /// rules (geosite:/geoip:/full:/regexp:). Split by the config generators.
+  final String directRules;
+  final String proxyRules;
+  final String blockedRules;
   final bool autoConnectLastServer;
   final String pingType;
   /// [PingTestConfig.targetGstatic] | cloudflare | microsoft | custom
@@ -40,10 +41,9 @@ class AppSettings {
   const AppSettings({
     this.localPort = 2080,
     this.httpPort = 2081,
-    this.directDomains = 'ru, yandex.ru, vk.com',
-    this.blockedDomains = '',
-    this.directIps = '192.168.0.0/16, 10.0.0.0/8, 127.0.0.0/8',
-    this.proxyDomains = '',
+    this.directRules = 'ru, yandex.ru, vk.com',
+    this.proxyRules = '',
+    this.blockedRules = '',
     this.autoConnectLastServer = false,
     this.pingType = 'tcp',
     this.pingTestTarget = PingTestConfig.targetGstatic,
@@ -68,10 +68,9 @@ class AppSettings {
   Map<String, dynamic> toJson() => {
     'localPort': localPort,
     'httpPort': httpPort,
-    'directDomains': directDomains,
-    'blockedDomains': blockedDomains,
-    'directIps': directIps,
-    'proxyDomains': proxyDomains,
+    'directRules': directRules,
+    'proxyRules': proxyRules,
+    'blockedRules': blockedRules,
     'autoConnectLastServer': autoConnectLastServer,
     'pingType': pingType,
     'pingTestTarget': pingTestTarget,
@@ -101,10 +100,24 @@ class AppSettings {
     return AppSettings(
       localPort: port('localPort', 2080),
       httpPort: port('httpPort', 2081),
-      directDomains: json['directDomains'] as String? ?? 'ru, yandex.ru, vk.com',
-      blockedDomains: json['blockedDomains'] as String? ?? '',
-      directIps: json['directIps'] as String? ?? '192.168.0.0/16, 10.0.0.0/8, 127.0.0.0/8',
-      proxyDomains: json['proxyDomains'] as String? ?? '',
+      directRules: _migrateRules(
+        json,
+        newKey: 'directRules',
+        legacyKeys: const ['directDomains', 'directIps'],
+        fallback: 'ru, yandex.ru, vk.com',
+      ),
+      proxyRules: _migrateRules(
+        json,
+        newKey: 'proxyRules',
+        legacyKeys: const ['proxyDomains'],
+        fallback: '',
+      ),
+      blockedRules: _migrateRules(
+        json,
+        newKey: 'blockedRules',
+        legacyKeys: const ['blockedDomains'],
+        fallback: '',
+      ),
       autoConnectLastServer: json['autoConnectLastServer'] as bool? ?? false,
       pingType: _normalizePingType(json['pingType'] as String?),
       pingTestTarget: PingTestConfig.normalizeTarget(
@@ -143,6 +156,35 @@ class AppSettings {
 
   static bool _validPort(int p) => p > 0 && p <= 65535;
 
+  /// Reads a mixed routing list, migrating from the old split domain/ip keys.
+  /// Prefers [newKey]; otherwise merges any present [legacyKeys] (deduped),
+  /// falling back to [fallback] when nothing was stored.
+  static String _migrateRules(
+    Map<String, dynamic> json, {
+    required String newKey,
+    required List<String> legacyKeys,
+    required String fallback,
+  }) {
+    final fresh = json[newKey] as String?;
+    if (fresh != null) return fresh;
+
+    final hasLegacy = legacyKeys.any(json.containsKey);
+    if (!hasLegacy) return fallback;
+
+    final seen = <String>{};
+    final merged = <String>[];
+    for (final key in legacyKeys) {
+      final raw = json[key] as String?;
+      if (raw == null) continue;
+      for (final token in raw.split(RegExp(r'[\n,]'))) {
+        final v = token.trim();
+        if (v.isEmpty) continue;
+        if (seen.add(v.toLowerCase())) merged.add(v);
+      }
+    }
+    return merged.join(', ');
+  }
+
   static const pingTypes = ['tcp', 'url', 'speed'];
 
   static String _normalizePingType(String? raw) {
@@ -155,10 +197,9 @@ class AppSettings {
   AppSettings copyWith({
     int? localPort,
     int? httpPort,
-    String? directDomains,
-    String? blockedDomains,
-    String? directIps,
-    String? proxyDomains,
+    String? directRules,
+    String? proxyRules,
+    String? blockedRules,
     bool? autoConnectLastServer,
     String? pingType,
     String? pingTestTarget,
@@ -182,10 +223,9 @@ class AppSettings {
       AppSettings(
         localPort: localPort ?? this.localPort,
         httpPort: httpPort ?? this.httpPort,
-        directDomains: directDomains ?? this.directDomains,
-        blockedDomains: blockedDomains ?? this.blockedDomains,
-        directIps: directIps ?? this.directIps,
-        proxyDomains: proxyDomains ?? this.proxyDomains,
+        directRules: directRules ?? this.directRules,
+        proxyRules: proxyRules ?? this.proxyRules,
+        blockedRules: blockedRules ?? this.blockedRules,
         autoConnectLastServer: autoConnectLastServer ?? this.autoConnectLastServer,
         pingType: pingType ?? this.pingType,
         pingTestTarget: pingTestTarget ?? this.pingTestTarget,
@@ -214,10 +254,9 @@ class AppSettings {
               runtimeType == other.runtimeType &&
               localPort == other.localPort &&
               httpPort == other.httpPort &&
-              directDomains == other.directDomains &&
-              blockedDomains == other.blockedDomains &&
-              directIps == other.directIps &&
-              proxyDomains == other.proxyDomains &&
+              directRules == other.directRules &&
+              proxyRules == other.proxyRules &&
+              blockedRules == other.blockedRules &&
               autoConnectLastServer == other.autoConnectLastServer &&
               pingType == other.pingType &&
               pingTestTarget == other.pingTestTarget &&
@@ -242,10 +281,9 @@ class AppSettings {
   int get hashCode => Object.hashAll([
     localPort,
     httpPort,
-    directDomains,
-    blockedDomains,
-    directIps,
-    proxyDomains,
+    directRules,
+    proxyRules,
+    blockedRules,
     autoConnectLastServer,
     pingType,
     pingTestTarget,
