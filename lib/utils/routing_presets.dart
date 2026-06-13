@@ -1,11 +1,12 @@
 // routing presets for the routing settings screen.
-// four lists in AppSettings drive routing: directDomains/proxyDomains bypass or
-// force the vpn, blockedDomains gets dropped, directIps bypasses by ip/cidr.
-// a bare token without a dot (e.g. `ru`) is treated as a suffix, so it matches
-// every *.ru host without shipping a geosite/geoip db.
+// three mixed lists in AppSettings drive routing: directRules bypasses the vpn,
+// proxyRules forces traffic through it, blockedRules gets dropped. each list may
+// hold domains, ip/cidr ranges and prefixed rules; the config generators split
+// them. a bare token without a dot (e.g. `ru`) is treated as a domain suffix, so
+// it matches every *.ru host without shipping a geosite/geoip db.
 
-/// which of the four routing lists a preset writes into.
-enum RoutingField { directDomains, proxyDomains, blockedDomains, directIps }
+/// which of the three routing lists a preset writes into.
+enum RoutingField { direct, proxy, blocked }
 
 /// one-tap preset that appends values into a target list.
 class RoutingPreset {
@@ -30,11 +31,18 @@ class RoutingPresets {
   RoutingPresets._();
 
   // mirror AppSettings constructor defaults so reset gives a working baseline.
-  static const String defaultDirectDomains = 'ru, yandex.ru, vk.com';
-  static const String defaultDirectIps =
-      '192.168.0.0/16, 10.0.0.0/8, 127.0.0.0/8';
-  static const String defaultProxyDomains = '';
-  static const String defaultBlockedDomains = '';
+  static const String defaultDirectRules = 'ru, yandex.ru, vk.com';
+  static const String defaultProxyRules = '';
+  static const String defaultBlockedRules = '';
+
+  /// private / LAN ranges — offered as a preset so users can discover that the
+  /// Direct list accepts IPs and CIDRs, not only domains.
+  static const List<String> lanIps = [
+    '192.168.0.0/16',
+    '10.0.0.0/8',
+    '172.16.0.0/12',
+    '127.0.0.0/8',
+  ];
 
   /// *.ru/*.su/*.рф plus major russian services on non-.ru tlds. suffix match
   /// keeps the list short while covering the long tail of .ru domains.
@@ -153,27 +161,39 @@ class RoutingPresets {
   static const List<RoutingPreset> all = [
     RoutingPreset(
       id: 'ru',
-      field: RoutingField.directDomains,
+      field: RoutingField.direct,
       values: russianSites,
     ),
     RoutingPreset(
+      id: 'ru_geoip',
+      field: RoutingField.direct,
+      // geoip:ru is resolved by xray from geoip.dat (Proxy mode); covers RU
+      // traffic by ip, complementing the domain-suffix `ru` preset.
+      values: ['geoip:ru'],
+    ),
+    RoutingPreset(
       id: 'banks',
-      field: RoutingField.directDomains,
+      field: RoutingField.direct,
       values: banksAndGov,
     ),
     RoutingPreset(
+      id: 'lan_ips',
+      field: RoutingField.direct,
+      values: lanIps,
+    ),
+    RoutingPreset(
       id: 'ads',
-      field: RoutingField.blockedDomains,
+      field: RoutingField.blocked,
       values: adsAndTrackers,
     ),
     RoutingPreset(
       id: 'streaming',
-      field: RoutingField.proxyDomains,
+      field: RoutingField.proxy,
       values: streaming,
     ),
     RoutingPreset(
       id: 'messengers',
-      field: RoutingField.proxyDomains,
+      field: RoutingField.proxy,
       values: messengers,
     ),
   ];

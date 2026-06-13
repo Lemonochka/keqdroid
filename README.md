@@ -33,9 +33,9 @@ KEQDIS работает с подписками провайдеров и ссы
 
 ## Протоколы
 
-VLESS, VMess, Trojan, Shadowsocks, Hysteria 2.
+VLESS, VMess, Trojan, Shadowsocks, Hysteria 2, **KpHTTP** (собственное ядро из `rust-kp`).
 
-Форматы ссылок: `vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `hy2://`.
+Форматы ссылок: `vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `hy2://`, `kphttp://` (или JSON-профиль из панели KpHTTP).
 
 Hysteria v1 не поддерживается.
 
@@ -101,7 +101,7 @@ powershell -File tool/sync_windows_plugins.ps1  # Windows: exclude Firebase (And
 flutter build windows --release  # Windows
 ```
 
-Для Windows: `xray.exe` (и при необходимости `sing-box.exe`) в `assets/bin/windows/` до сборки. Подробнее — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
+Для Windows: `xray.exe` (и при необходимости `sing-box.exe`, `kphttp-client.exe`) в `assets/bin/windows/` до сборки. Сборка KpHTTP: `powershell -File tool/build_kphttp.ps1`. Подробнее — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
 
 ---
 

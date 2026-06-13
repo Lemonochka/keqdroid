@@ -16,6 +16,7 @@ import 'socks_credential_generator.dart';
 import 'tunnel_backend.dart';
 import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
+import 'vpn_backend.dart';
 import 'windows_core_paths.dart';
 import 'xray_session_stats.dart';
 
@@ -28,11 +29,13 @@ class WindowsTunnelBackend implements TunnelBackend {
 
   final _stateCtrl = StreamController<VpnState>.broadcast();
   Process? _xrayProcess;
+  Process? _kphttpProcess;
   Process? _singboxProcess;
   Directory? _sessionDir;
   ({String username, String password})? _pendingCreds;
   ConnectionMode? _activeMode;
   final StringBuffer _xrayLog = StringBuffer();
+  final StringBuffer _kphttpLog = StringBuffer();
   final StringBuffer _singboxLog = StringBuffer();
 
   Timer? _statsTimer;
@@ -60,6 +63,7 @@ class WindowsTunnelBackend implements TunnelBackend {
   String exportSessionLogs({int maxLines = 400}) {
     final combined = StringBuffer()
       ..writeln(_xrayLog)
+      ..writeln(_kphttpLog)
       ..writeln(_singboxLog);
     return _tail(combined, maxLines: maxLines);
   }
@@ -82,189 +86,28 @@ class WindowsTunnelBackend implements TunnelBackend {
     _emit(VpnState(status: VpnStatus.connecting, activeMode: request.mode));
     _activeMode = request.mode;
     _xrayLog.clear();
+    _kphttpLog.clear();
     _singboxLog.clear();
 
     try {
       await stopSession();
       activeInstance = this;
 
-      final xrayBin = await WindowsCorePaths.xrayExecutable();
-      if (xrayBin == null) {
-        throw VpnStartException(
-          'xray.exe not found. ${WindowsCorePaths.binariesHint}',
-        );
-      }
-
       _sessionDir = await WindowsCorePaths.sessionDir();
-      final xrayConfigFile = File('${_sessionDir!.path}/xray.json');
-      _xrayBinPath = xrayBin;
 
-      var xrayConfigBody = request.xrayConfig;
-      if (request.mode == ConnectionMode.proxy) {
-        final decoded = jsonDecode(request.xrayConfig) as Map<String, dynamic>;
-        xrayConfigBody = jsonEncode(
-          XraySessionStats.augmentConfig(
-            decoded,
-            apiPort: XraySessionStats.defaultApiPort,
-          ),
-        );
-      }
-      await xrayConfigFile.writeAsString(xrayConfigBody);
-
-      // fail fast if the socks port is already taken
-      final portAvailable = await _isPortAvailable('127.0.0.1', request.socksPort);
-      if (!portAvailable) {
-        throw VpnStartException(
-          'SOCKS port ${request.socksPort} is already in use. '
-          'Check if another Xray instance is running or close the blocking application.',
-        );
-      }
-      if (request.mode == ConnectionMode.proxy &&
-          request.systemProxy &&
-          !await _isPortAvailable('127.0.0.1', request.httpPort)) {
-        throw VpnStartException(
-          'HTTP port ${request.httpPort} is already in use. '
-          'System proxy requires the Xray HTTP inbound on this port.',
-        );
+      if (request.vpnBackend == VpnBackend.kphttp) {
+        await _startKphttpSession(request);
+      } else {
+        await _startXraySession(request);
       }
 
-      _xrayProcess = await Process.start(
-        xrayBin,
-        ['run', '-c', xrayConfigFile.path],
-        workingDirectory: _sessionDir!.path,
-        mode: ProcessStartMode.normal,
-      );
-      _pipeProcessOutput(_xrayProcess!, _xrayLog, 'xray');
-
-      final socksReady = await _waitForPort(
-        '127.0.0.1',
-        request.socksPort,
-        process: _xrayProcess,
-        log: _xrayLog,
-        processLabel: 'Xray',
-      );
-      if (!socksReady) {
-        throw VpnStartException(
-          'Xray SOCKS port ${request.socksPort} did not open.\n${_tail(_xrayLog)}',
-        );
-      }
-
-      if (request.mode == ConnectionMode.proxy && request.systemProxy) {
-        final httpReady = await _waitForPort(
-          '127.0.0.1',
-          request.httpPort,
-          process: _xrayProcess,
-          log: _xrayLog,
-          processLabel: 'Xray HTTP',
-        );
-        if (!httpReady) {
-          throw VpnStartException(
-            'Xray HTTP port ${request.httpPort} did not open. '
-            'System proxy needs the HTTP inbound.\n${_tail(_xrayLog)}',
-          );
-        }
-      }
-
-      if (request.mode == ConnectionMode.tun) {
-        final singBin = await WindowsCorePaths.singboxExecutable();
-        if (singBin == null) {
-          throw VpnStartException(
-            'sing-box.exe not found. ${WindowsCorePaths.binariesHint}',
-          );
-        }
-        final singConfig = request.singboxConfig;
-        if (singConfig == null || singConfig.isEmpty) {
-          throw const VpnStartException('singboxConfig is required for TUN mode');
-        }
-
-        final singConfigFile = File('${_sessionDir!.path}/sing-box.json');
-        await singConfigFile.writeAsString(singConfig);
-
-        final singWorkDir = p.dirname(singBin);
-        _singboxProcess = await Process.start(
-          singBin,
-          ['run', '-c', singConfigFile.path],
-          workingDirectory: singWorkDir,
-          mode: ProcessStartMode.normal,
-        );
-        _pipeProcessOutput(_singboxProcess!, _singboxLog, 'sing-box');
-
-        final singReady = await _waitForSingbox(
-          process: _singboxProcess!,
-          log: _singboxLog,
-        );
-        if (!singReady) {
-          throw VpnStartException(
-            'sing-box TUN did not start. Run as Administrator and ensure '
-            'wintun.dll is next to sing-box.exe if required.\n${_tail(_singboxLog)}',
-          );
-        }
-      }
-
-      if (request.mode == ConnectionMode.proxy && request.systemProxy) {
-        AppLogger.instance.info(
-          'setSystemProxy: socks=${request.socksPort} http=${request.httpPort}',
-        );
-        try {
-          final proxyResult = await _method.invokeMethod<Map<Object?, Object?>>(
-            'setSystemProxy',
-            {
-              'enabled': true,
-              'host': '127.0.0.1',
-              'socksPort': request.socksPort,
-              'httpPort': request.httpPort,
-              'probe': false,
-            },
-          );
-          final registryEnabled = proxyResult?['registryEnabled'] == true;
-          final registryServer =
-              proxyResult?['registryServer']?.toString() ?? '';
-          final logFile = proxyResult?['logFile']?.toString() ?? '';
-          AppLogger.instance.info(
-            'System proxy OK: registry enabled=$registryEnabled '
-            'server=$registryServer logFile=$logFile',
-          );
-          unawaited(_logProxyProbesInBackground(request.httpPort));
-          if (!registryEnabled ||
-              !_registryProxyMatchesHttp(registryServer, request.httpPort)) {
-            await _appendProxyDebugLogs('validation failed');
-            throw VpnStartException(
-              'System proxy was not applied (enabled=$registryEnabled, '
-              'server="$registryServer", expected HTTP on 127.0.0.1:${request.httpPort}). '
-              'Check Windows proxy settings (Settings → Network → Proxy).',
-            );
-          }
-        } on PlatformException catch (e) {
-          await _appendProxyDebugLogs('setSystemProxy PlatformException');
-          final details = e.details;
-          final detailLogs = details is Map
-              ? details['logs']?.toString()
-              : null;
-          final logFile = details is Map
-              ? details['logFile']?.toString()
-              : null;
-          final buffer = StringBuffer(e.message ?? e.code);
-          if (logFile != null && logFile.isNotEmpty) {
-            buffer.writeln();
-            buffer.writeln('Log file: $logFile');
-          }
-          if (detailLogs != null && detailLogs.isNotEmpty) {
-            buffer.writeln();
-            buffer.writeln('--- Proxy debug (native) ---');
-            buffer.writeln(detailLogs);
-          }
-          throw VpnStartException(buffer.toString(), cause: e);
-        }
-
-        unawaited(_applyFirefoxProxyAfterConnect(request.httpPort));
-      }
-
+      final corePid = _kphttpProcess?.pid ?? _xrayProcess?.pid ?? 0;
       await WindowsDesktopService.registerSessionCoreProcesses(
-        xrayPid: _xrayProcess!.pid,
+        xrayPid: corePid,
         singboxPid: _singboxProcess?.pid ?? 0,
       );
 
-      _startStatsLoop(request.mode);
+      _startStatsLoop(request.mode, request.vpnBackend);
       _emitConnectedTelemetry(request.mode);
     } catch (e, st) {
       AppLogger.instance.error('Windows tunnel start failed', error: e, stackTrace: st);
@@ -279,6 +122,260 @@ class WindowsTunnelBackend implements TunnelBackend {
       if (e is AppException) rethrow;
       throw VpnStartException(e.toString(), cause: e);
     }
+  }
+
+  Future<void> _startXraySession(TunnelSessionRequest request) async {
+    final xrayBin = await WindowsCorePaths.xrayExecutable();
+    if (xrayBin == null) {
+      throw VpnStartException(
+        'xray.exe not found. ${WindowsCorePaths.binariesHint}',
+      );
+    }
+
+    final xrayConfigFile = File('${_sessionDir!.path}/xray.json');
+    _xrayBinPath = xrayBin;
+
+    var xrayConfigBody = request.xrayConfig;
+    if (request.mode == ConnectionMode.proxy) {
+      final decoded = jsonDecode(request.xrayConfig) as Map<String, dynamic>;
+      xrayConfigBody = jsonEncode(
+        XraySessionStats.augmentConfig(
+          decoded,
+          apiPort: XraySessionStats.defaultApiPort,
+        ),
+      );
+    }
+    await xrayConfigFile.writeAsString(xrayConfigBody);
+
+    await _ensurePortsAvailable(request, needsHttpFromXray: true);
+
+    // point xray at geoip.dat / geosite.dat so geoip:/geosite: rules resolve
+    // even though the working dir is a temp session dir.
+    final geoDir = await WindowsCorePaths.geoAssetDir();
+
+    _xrayProcess = await Process.start(
+      xrayBin,
+      ['run', '-c', xrayConfigFile.path],
+      workingDirectory: _sessionDir!.path,
+      environment: geoDir != null ? {'XRAY_LOCATION_ASSET': geoDir} : null,
+      mode: ProcessStartMode.normal,
+    );
+    _pipeProcessOutput(_xrayProcess!, _xrayLog, 'xray');
+
+    final socksReady = await _waitForPort(
+      '127.0.0.1',
+      request.socksPort,
+      process: _xrayProcess,
+      log: _xrayLog,
+      processLabel: 'Xray',
+    );
+    if (!socksReady) {
+      throw VpnStartException(
+        'Xray SOCKS port ${request.socksPort} did not open.\n${_tail(_xrayLog)}',
+      );
+    }
+
+    if (request.mode == ConnectionMode.proxy && request.systemProxy) {
+      final httpReady = await _waitForPort(
+        '127.0.0.1',
+        request.httpPort,
+        process: _xrayProcess,
+        log: _xrayLog,
+        processLabel: 'Xray HTTP',
+      );
+      if (!httpReady) {
+        throw VpnStartException(
+          'Xray HTTP port ${request.httpPort} did not open. '
+          'System proxy needs the HTTP inbound.\n${_tail(_xrayLog)}',
+        );
+      }
+    }
+
+    if (request.mode == ConnectionMode.tun) {
+      await _startSingboxSession(request);
+    }
+
+    if (request.mode == ConnectionMode.proxy && request.systemProxy) {
+      await _applySystemProxy(request);
+    }
+  }
+
+  Future<void> _startKphttpSession(TunnelSessionRequest request) async {
+    final kphttpBin = await WindowsCorePaths.kphttpExecutable();
+    if (kphttpBin == null) {
+      throw VpnStartException(
+        'kphttp-client.exe not found. ${WindowsCorePaths.binariesHint}',
+      );
+    }
+
+    final toml = request.kphttpTomlConfig;
+    if (toml == null || toml.isEmpty) {
+      throw const VpnStartException('kphttpTomlConfig is required for KpHTTP');
+    }
+
+    final configFile = File('${_sessionDir!.path}/kphttp-client.toml');
+    await configFile.writeAsString(toml);
+
+    await _ensurePortsAvailable(
+      request,
+      needsHttpFromXray: false,
+      needsSingboxHttpBridge:
+          request.mode == ConnectionMode.proxy && request.systemProxy,
+    );
+
+    _kphttpProcess = await Process.start(
+      kphttpBin,
+      ['--config', configFile.path],
+      workingDirectory: _sessionDir!.path,
+      mode: ProcessStartMode.normal,
+    );
+    _pipeProcessOutput(_kphttpProcess!, _kphttpLog, 'kphttp');
+
+    final socksReady = await _waitForPort(
+      '127.0.0.1',
+      request.socksPort,
+      process: _kphttpProcess,
+      log: _kphttpLog,
+      processLabel: 'KpHTTP',
+    );
+    if (!socksReady) {
+      throw VpnStartException(
+        'KpHTTP SOCKS port ${request.socksPort} did not open.\n${_tail(_kphttpLog)}',
+      );
+    }
+
+    if (request.mode == ConnectionMode.tun ||
+        (request.mode == ConnectionMode.proxy && request.systemProxy)) {
+      await _startSingboxSession(request);
+    }
+
+    if (request.mode == ConnectionMode.proxy && request.systemProxy) {
+      final httpReady = await _waitForPort(
+        '127.0.0.1',
+        request.httpPort,
+        process: _singboxProcess,
+        log: _singboxLog,
+        processLabel: 'sing-box HTTP',
+      );
+      if (!httpReady) {
+        throw VpnStartException(
+          'sing-box HTTP port ${request.httpPort} did not open for KpHTTP proxy bridge.\n${_tail(_singboxLog)}',
+        );
+      }
+      await _applySystemProxy(request);
+    }
+  }
+
+  Future<void> _startSingboxSession(TunnelSessionRequest request) async {
+    final singBin = await WindowsCorePaths.singboxExecutable();
+    if (singBin == null) {
+      throw VpnStartException(
+        'sing-box.exe not found. ${WindowsCorePaths.binariesHint}',
+      );
+    }
+    final singConfig = request.singboxConfig;
+    if (singConfig == null || singConfig.isEmpty) {
+      throw const VpnStartException('singboxConfig is required');
+    }
+
+    final singConfigFile = File('${_sessionDir!.path}/sing-box.json');
+    await singConfigFile.writeAsString(singConfig);
+
+    final singWorkDir = p.dirname(singBin);
+    _singboxProcess = await Process.start(
+      singBin,
+      ['run', '-c', singConfigFile.path],
+      workingDirectory: singWorkDir,
+      mode: ProcessStartMode.normal,
+    );
+    _pipeProcessOutput(_singboxProcess!, _singboxLog, 'sing-box');
+
+    if (request.mode == ConnectionMode.tun) {
+      final singReady = await _waitForSingbox(
+        process: _singboxProcess!,
+        log: _singboxLog,
+      );
+      if (!singReady) {
+        throw VpnStartException(
+          'sing-box TUN did not start. Run as Administrator and ensure '
+          'wintun.dll is next to sing-box.exe if required.\n${_tail(_singboxLog)}',
+        );
+      }
+    }
+  }
+
+  Future<void> _ensurePortsAvailable(
+    TunnelSessionRequest request, {
+    required bool needsHttpFromXray,
+    bool needsSingboxHttpBridge = false,
+  }) async {
+    final portAvailable = await _isPortAvailable('127.0.0.1', request.socksPort);
+    if (!portAvailable) {
+      throw VpnStartException(
+        'SOCKS port ${request.socksPort} is already in use.',
+      );
+    }
+    if ((needsHttpFromXray || needsSingboxHttpBridge) &&
+        request.mode == ConnectionMode.proxy &&
+        request.systemProxy &&
+        !await _isPortAvailable('127.0.0.1', request.httpPort)) {
+      throw VpnStartException(
+        'HTTP port ${request.httpPort} is already in use.',
+      );
+    }
+  }
+
+  Future<void> _applySystemProxy(TunnelSessionRequest request) async {
+    AppLogger.instance.info(
+      'setSystemProxy: socks=${request.socksPort} http=${request.httpPort}',
+    );
+    try {
+      final proxyResult = await _method.invokeMethod<Map<Object?, Object?>>(
+        'setSystemProxy',
+        {
+          'enabled': true,
+          'host': '127.0.0.1',
+          'socksPort': request.socksPort,
+          'httpPort': request.httpPort,
+          'probe': false,
+        },
+      );
+      final registryEnabled = proxyResult?['registryEnabled'] == true;
+      final registryServer = proxyResult?['registryServer']?.toString() ?? '';
+      final logFile = proxyResult?['logFile']?.toString() ?? '';
+      AppLogger.instance.info(
+        'System proxy OK: registry enabled=$registryEnabled '
+        'server=$registryServer logFile=$logFile',
+      );
+      unawaited(_logProxyProbesInBackground(request.httpPort));
+      if (!registryEnabled ||
+          !_registryProxyMatchesHttp(registryServer, request.httpPort)) {
+        await _appendProxyDebugLogs('validation failed');
+        throw VpnStartException(
+          'System proxy was not applied (enabled=$registryEnabled, '
+          'server="$registryServer", expected HTTP on 127.0.0.1:${request.httpPort}). '
+          'Check Windows proxy settings (Settings → Network → Proxy).',
+        );
+      }
+    } on PlatformException catch (e) {
+      await _appendProxyDebugLogs('setSystemProxy PlatformException');
+      final details = e.details;
+      final detailLogs = details is Map ? details['logs']?.toString() : null;
+      final logFile = details is Map ? details['logFile']?.toString() : null;
+      final buffer = StringBuffer(e.message ?? e.code);
+      if (logFile != null && logFile.isNotEmpty) {
+        buffer.writeln();
+        buffer.writeln('Log file: $logFile');
+      }
+      if (detailLogs != null && detailLogs.isNotEmpty) {
+        buffer.writeln();
+        buffer.writeln('--- Proxy debug (native) ---');
+        buffer.writeln(detailLogs);
+      }
+      throw VpnStartException(buffer.toString(), cause: e);
+    }
+
+    unawaited(_applyFirefoxProxyAfterConnect(request.httpPort));
   }
 
   @override
@@ -300,8 +397,10 @@ class WindowsTunnelBackend implements TunnelBackend {
 
     await _killProcess(_singboxProcess);
     await _killProcess(_xrayProcess);
+    await _killProcess(_kphttpProcess);
     _singboxProcess = null;
     _xrayProcess = null;
+    _kphttpProcess = null;
     _xrayBinPath = null;
 
     await WindowsDesktopService.clearSessionCoreProcesses();
@@ -331,7 +430,7 @@ class WindowsTunnelBackend implements TunnelBackend {
 
   @override
   Future<VpnState> getCurrentState() async {
-    if (_xrayProcess != null) {
+    if (_xrayProcess != null || _kphttpProcess != null) {
       return _buildConnectedState(_activeMode);
     }
     return VpnState.disconnected;
@@ -584,7 +683,7 @@ class WindowsTunnelBackend implements TunnelBackend {
     if (!_stateCtrl.isClosed) _stateCtrl.add(state);
   }
 
-  void _startStatsLoop(ConnectionMode mode) {
+  void _startStatsLoop(ConnectionMode mode, VpnBackend backend) {
     _stopStatsLoop();
     _sessionStartedAt = DateTime.now();
     _prevInOctets = 0;
@@ -592,9 +691,9 @@ class WindowsTunnelBackend implements TunnelBackend {
     _totalDownload = 0;
     _totalUpload = 0;
     _statsTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      unawaited(_pollTrafficStats(mode));
+      unawaited(_pollTrafficStats(mode, backend));
     });
-    unawaited(_pollTrafficStats(mode));
+    unawaited(_pollTrafficStats(mode, backend));
   }
 
   void _stopStatsLoop() {
@@ -607,13 +706,15 @@ class WindowsTunnelBackend implements TunnelBackend {
     _totalUpload = 0;
   }
 
-  Future<void> _pollTrafficStats(ConnectionMode mode) async {
-    if (_xrayProcess == null) return;
+  Future<void> _pollTrafficStats(ConnectionMode mode, VpnBackend backend) async {
+    if (_xrayProcess == null && _kphttpProcess == null) return;
     try {
       final int inOctets;
       final int outOctets;
 
-      if (mode == ConnectionMode.proxy) {
+      if (mode == ConnectionMode.proxy &&
+          backend == VpnBackend.xray &&
+          _xrayProcess != null) {
         final xrayBin = _xrayBinPath;
         if (xrayBin == null) return;
         final counters = await XraySessionStats.queryInboundCounters(
@@ -622,7 +723,7 @@ class WindowsTunnelBackend implements TunnelBackend {
         if (counters == null) return;
         inOctets = counters.download;
         outOctets = counters.upload;
-      } else {
+      } else if (mode == ConnectionMode.tun) {
         final result = await _method.invokeMethod<Map<Object?, Object?>>(
           'getTrafficStats',
           {'mode': 'tun'},
@@ -630,6 +731,8 @@ class WindowsTunnelBackend implements TunnelBackend {
         if (result == null || result['ok'] != true) return;
         inOctets = (result['inOctets'] as num?)?.toInt() ?? 0;
         outOctets = (result['outOctets'] as num?)?.toInt() ?? 0;
+      } else {
+        return;
       }
 
       if (_prevInOctets == 0 && _prevOutOctets == 0) {

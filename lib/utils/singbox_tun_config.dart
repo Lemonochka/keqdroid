@@ -4,6 +4,7 @@ import 'dart:io';
 import '../models/app_settings.dart';
 import '../tunnel/app_routing_mode.dart';
 import 'process_name_utils.dart';
+import 'routing_entry.dart';
 
 /// sing-box tun-конфиг: весь трафик tun → socks5 (auth) → локальный xray.
 /// xray поднимает upstream (vless, vmess, hysteria, …), sing-box только
@@ -17,6 +18,8 @@ class SingBoxTunConfigGen {
     required AppSettings settings,
     List<String> managedProcessNames = const [],
     AppRoutingMode routingMode = AppRoutingMode.allProxy,
+    /// KpHTTP local SOCKS5 has no auth — omit username/password in outbound.
+    bool localSocksNoAuth = false,
     /// this app's own exe (e.g. keqdroid.exe). routed direct so our tcp/url ping
     /// sockets measure latency from the local pc, not through the active server.
     String appProcessName = '',
@@ -135,10 +138,14 @@ class SingBoxTunConfigGen {
       });
     }
 
-    final directDomains = parseList(settings.directDomains);
-    final blockedDomains = parseList(settings.blockedDomains);
-    final proxyDomains = parseList(settings.proxyDomains);
-    final directIps = parseList(settings.directIps);
+    // each list is mixed (domains + ip/cidr + geoip:); split per kind.
+    final directSplit = splitDomainsAndIps(parseList(settings.directRules));
+    final proxySplit = splitDomainsAndIps(parseList(settings.proxyRules));
+    final blockedSplit = splitDomainsAndIps(parseList(settings.blockedRules));
+
+    final directDomains = directSplit.domains;
+    final blockedDomains = blockedSplit.domains;
+    final proxyDomains = proxySplit.domains;
 
     bool isIPv4OrCidr(String value) {
       final v = value.trim();
@@ -154,7 +161,9 @@ class SingBoxTunConfigGen {
       return ipV6.hasMatch(v) || cidrV6.hasMatch(v);
     }
 
-    final directIpsForSingBox = directIps
+    // sing-box has no built-in geoip db here, so keep only literal ip/cidr
+    // (plus geoip:private which it understands) and drop other geoip: codes.
+    List<String> ipsForSingBox(List<String> ips) => ips
         .where(
           (entry) =>
               isIPv4OrCidr(entry) ||
@@ -163,6 +172,10 @@ class SingBoxTunConfigGen {
         )
         .map((e) => e.trim())
         .toList();
+
+    final directIpsForSingBox = ipsForSingBox(directSplit.ips);
+    final proxyIpsForSingBox = ipsForSingBox(proxySplit.ips);
+    final blockedIpsForSingBox = ipsForSingBox(blockedSplit.ips);
 
     const tunInboundTag = 'tun-in';
 
@@ -236,6 +249,9 @@ class SingBoxTunConfigGen {
         outbound: 'block',
       );
     }
+    if (blockedIpsForSingBox.isNotEmpty) {
+      rules.add({'ip_cidr': blockedIpsForSingBox, 'outbound': 'block'});
+    }
 
     if (serverIpToExclude.isNotEmpty) {
       final cidrs = serverIpToExclude.contains('/')
@@ -273,6 +289,9 @@ class SingBoxTunConfigGen {
         outbound: 'proxy',
       );
     }
+    if (proxyIpsForSingBox.isNotEmpty) {
+      rules.add({'ip_cidr': proxyIpsForSingBox, 'outbound': 'proxy'});
+    }
 
     var routeFinal =
         routingMode == AppRoutingMode.onlySelected ? 'direct' : 'proxy';
@@ -291,8 +310,10 @@ class SingBoxTunConfigGen {
       'server': '127.0.0.1',
       'server_port': localSocksPort,
       'version': '5',
-      'username': socksUsername,
-      'password': socksPassword,
+      if (!localSocksNoAuth) ...{
+        'username': socksUsername,
+        'password': socksPassword,
+      },
     };
 
     final tunInbound = <String, dynamic>{
