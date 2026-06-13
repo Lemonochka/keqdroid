@@ -474,6 +474,135 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
     return (jint)pid2;
 }
 
+JNIEXPORT jint JNICALL
+Java_com_keqdroid_keqdroid_NativeHelper_startKphttp(
+        JNIEnv *env, jclass clazz,
+        jstring jBinPath, jstring jConfigPath, jstring jAssetDir) {
+
+    const char *binPath    = (*env)->GetStringUTFChars(env, jBinPath,    NULL);
+    const char *configPath = (*env)->GetStringUTFChars(env, jConfigPath, NULL);
+    const char *assetDir   = (*env)->GetStringUTFChars(env, jAssetDir,   NULL);
+
+    if (access(binPath, F_OK) != 0) {
+        (*env)->ReleaseStringUTFChars(env, jBinPath, binPath);
+        (*env)->ReleaseStringUTFChars(env, jConfigPath, configPath);
+        (*env)->ReleaseStringUTFChars(env, jAssetDir, assetDir);
+        return -1;
+    }
+    if (access(configPath, F_OK) != 0) {
+        (*env)->ReleaseStringUTFChars(env, jBinPath, binPath);
+        (*env)->ReleaseStringUTFChars(env, jConfigPath, configPath);
+        (*env)->ReleaseStringUTFChars(env, jAssetDir, assetDir);
+        return -2;
+    }
+
+    int pipefd[2] = {-1, -1};
+    if (pipe(pipefd) != 0) {
+        (*env)->ReleaseStringUTFChars(env, jBinPath, binPath);
+        (*env)->ReleaseStringUTFChars(env, jConfigPath, configPath);
+        (*env)->ReleaseStringUTFChars(env, jAssetDir, assetDir);
+        return -3;
+    }
+
+    int pidpipe[2];
+    if (pipe(pidpipe) != 0) {
+        close(pipefd[0]); close(pipefd[1]);
+        (*env)->ReleaseStringUTFChars(env, jBinPath, binPath);
+        (*env)->ReleaseStringUTFChars(env, jConfigPath, configPath);
+        (*env)->ReleaseStringUTFChars(env, jAssetDir, assetDir);
+        return -3;
+    }
+
+    pid_t pid1 = fork();
+    if (pid1 < 0) {
+        close(pipefd[0]); close(pipefd[1]);
+        close(pidpipe[0]); close(pidpipe[1]);
+        (*env)->ReleaseStringUTFChars(env, jBinPath, binPath);
+        (*env)->ReleaseStringUTFChars(env, jConfigPath, configPath);
+        (*env)->ReleaseStringUTFChars(env, jAssetDir, assetDir);
+        return -3;
+    }
+
+    if (pid1 == 0) {
+        close(pidpipe[0]);
+        close(pipefd[0]);
+
+        setsid();
+        prctl(PR_SET_PDEATHSIG, 0);
+
+        pid_t pid2 = fork();
+        if (pid2 < 0) {
+            pid_t err = -1;
+            write(pidpipe[1], &err, sizeof(err));
+            close(pidpipe[1]);
+            close(pipefd[1]);
+            _exit(1);
+        }
+
+        if (pid2 == 0) {
+            close(pidpipe[1]);
+
+            dup2(pipefd[1], STDOUT_FILENO);
+            dup2(pipefd[1], STDERR_FILENO);
+            close(pipefd[1]);
+
+            prctl(PR_SET_PDEATHSIG, 0);
+
+            int max = (int)sysconf(_SC_OPEN_MAX);
+            for (int i = 3; i < max; i++) close(i);
+
+            char *argv[] = { (char *)binPath, "--config", (char *)configPath, NULL };
+            execv(binPath, argv);
+            dprintf(STDOUT_FILENO, "execv failed errno=%d path=%s\n", errno, binPath);
+            _exit(127);
+        }
+
+        close(pipefd[1]);
+        write(pidpipe[1], &pid2, sizeof(pid2));
+        close(pidpipe[1]);
+        _exit(0);
+    }
+
+    close(pipefd[1]);
+    close(pidpipe[1]);
+
+    waitpid(pid1, NULL, 0);
+
+    pid_t pid2 = -1;
+    read(pidpipe[0], &pid2, sizeof(pid2));
+    close(pidpipe[0]);
+
+    (*env)->ReleaseStringUTFChars(env, jBinPath,    binPath);
+    (*env)->ReleaseStringUTFChars(env, jConfigPath, configPath);
+    (*env)->ReleaseStringUTFChars(env, jAssetDir,   assetDir);
+
+    if (pid2 <= 0) {
+        close(pipefd[0]);
+        return -3;
+    }
+
+    if (pipefd[0] >= 0) {
+        int *fdptr = (int *)malloc(sizeof(int));
+        if (fdptr != NULL) {
+            *fdptr = pipefd[0];
+            pthread_t thr;
+            pthread_attr_t attr;
+            pthread_attr_init(&attr);
+            pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+            int rc = pthread_create(&thr, &attr, xray_log_reader, fdptr);
+            pthread_attr_destroy(&attr);
+            if (rc != 0) {
+                free(fdptr);
+                close(pipefd[0]);
+            }
+        } else {
+            close(pipefd[0]);
+        }
+    }
+
+    return (jint)pid2;
+}
+
 /* ── base64 decode ──────────────────────────────────────────────────────── */
 
 static int b64val(char c) {

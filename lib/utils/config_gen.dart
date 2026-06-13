@@ -2,6 +2,7 @@ import 'dart:convert';
 import '../models/app_settings.dart';
 import '../models/xray_core_settings.dart';
 import '../utils/hysteria_uri.dart';
+import '../utils/routing_entry.dart';
 import '../utils/socks5_credentials.dart';
 
 /// builds client outbound json for xray 26.x. a few quirks: no empty fingerprint
@@ -598,10 +599,17 @@ class ConfigGeneratorV2 {
       return 'domain:$c';
     }).toList();
 
-    final directDomains  = normalizeDomains(parseList(settings.directDomains));
-    final blockedDomains = normalizeDomains(parseList(settings.blockedDomains));
-    final proxyDomains   = normalizeDomains(parseList(settings.proxyDomains));
-    final directIps      = parseList(settings.directIps);
+    // each list is mixed (domains + ip/cidr + geoip:); split per kind.
+    final directSplit  = splitDomainsAndIps(parseList(settings.directRules));
+    final proxySplit   = splitDomainsAndIps(parseList(settings.proxyRules));
+    final blockedSplit = splitDomainsAndIps(parseList(settings.blockedRules));
+
+    final directDomains  = normalizeDomains(directSplit.domains);
+    final blockedDomains = normalizeDomains(blockedSplit.domains);
+    final proxyDomains   = normalizeDomains(proxySplit.domains);
+    final directIps      = directSplit.ips;
+    final proxyIps       = proxySplit.ips;
+    final blockedIps     = blockedSplit.ips;
 
     final core = settings.xrayCore;
     final dns = isPingMode
@@ -655,6 +663,9 @@ class ConfigGeneratorV2 {
     if (blockedDomains.isNotEmpty) {
       rules.add({'type': 'field', 'domain': blockedDomains, 'outboundTag': 'block'});
     }
+    if (blockedIps.isNotEmpty) {
+      rules.add({'type': 'field', 'ip': blockedIps, 'outboundTag': 'block'});
+    }
     final isServerIp = RegExp(r'^(\d{1,3}\.){3}\d{1,3}$').hasMatch(serverAddress);
     if (isServerIp) {
       rules.add({'type': 'field', 'ip': [serverAddress], 'outboundTag': 'direct'});
@@ -693,6 +704,9 @@ class ConfigGeneratorV2 {
     ], 'outboundTag': 'direct'});
     if (proxyDomains.isNotEmpty) {
       rules.add({'type': 'field', 'domain': proxyDomains, 'outboundTag': 'proxy'});
+    }
+    if (proxyIps.isNotEmpty) {
+      rules.add({'type': 'field', 'ip': proxyIps, 'outboundTag': 'proxy'});
     }
 
     // kill switch: 0.0.0.0/1 + 128.0.0.0/1 ловят весь трафик в обход default route

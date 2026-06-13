@@ -87,7 +87,8 @@ bool IsKeqdisCoreProcess(DWORD pid) {
   if (::QueryFullProcessImageNameW(process, 0, path, &size)) {
     const std::wstring image(path);
     is_core = EndsWithIgnoreCase(image, L"xray.exe") ||
-              EndsWithIgnoreCase(image, L"sing-box.exe");
+              EndsWithIgnoreCase(image, L"sing-box.exe") ||
+              EndsWithIgnoreCase(image, L"kphttp-client.exe");
   }
   ::CloseHandle(process);
   return is_core;
