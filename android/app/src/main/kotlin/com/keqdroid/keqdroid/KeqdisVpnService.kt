@@ -17,6 +17,7 @@ import android.os.ParcelFileDescriptor
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
+import org.amnezia.awg.GoBackend
 import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -32,13 +33,18 @@ class KeqdisVpnService : VpnService() {
         const val ACTION_STOP          = "com.keqdis.vpn.STOP"
         const val ACTION_TOGGLE         = "com.keqdis.vpn.TOGGLE"
         const val EXTRA_XRAY_CONFIG    = "xray_config_path"
-        const val EXTRA_KPHTTP_CONFIG  = "kphttp_config_path"
         const val EXTRA_SOCKS_USERNAME = "socks_username"
         const val EXTRA_SOCKS_PASSWORD = "socks_password"
         const val EXTRA_SERVER_NAME    = "server_name"
         const val EXTRA_VPN_BACKEND    = "vpn_backend"
         const val VPN_BACKEND_XRAY     = "xray"
-        const val VPN_BACKEND_KPHTTP   = "kphttp"
+        const val VPN_BACKEND_AWG      = "awg"
+        // AmneziaWG: ядро amneziawg-go само владеет TUN, конфиг приходит из .conf.
+        const val EXTRA_AWG_UAPI        = "awg_uapi"
+        const val EXTRA_AWG_ADDRESSES   = "awg_addresses"
+        const val EXTRA_AWG_DNS         = "awg_dns"
+        const val EXTRA_AWG_ALLOWED_IPS = "awg_allowed_ips"
+        const val EXTRA_AWG_MTU         = "awg_mtu"
         const val NOTIFICATION_ID      = 1337
         const val CHANNEL_ID           = "keqdis_vpn"
         const val CHANNEL_ID_CONTROL   = "keqdis_vpn_control"
@@ -81,6 +87,8 @@ class KeqdisVpnService : VpnService() {
     @Volatile private var lastIncludePackages: List<String> = emptyList()
     @Volatile private var xrayPid:            Int                   = -1
     @Volatile private var tun2socksPid:       Int                   = -1
+    // AmneziaWG tunnel handle из amneziawg-go (>=0 когда активен awg-бэкенд).
+    @Volatile private var awgHandle:          Int                   = -1
     @Volatile private var tunInterface:       ParcelFileDescriptor? = null
     @Volatile private var cleanupDone:       Boolean              = false
     @Volatile private var activeSocksPort:   Int                  = 2080
@@ -144,31 +152,46 @@ class KeqdisVpnService : VpnService() {
                 lastExcludePackages = excludePkgs
                 lastIncludePackages = includePkgs
 
-                val configPath: String
-                val socksNoAuth: Boolean
-                if (backend == VPN_BACKEND_KPHTTP) {
-                    configPath = intent.getStringExtra(EXTRA_KPHTTP_CONFIG) ?: run {
-                        android.util.Log.e("KEQDIS", "onStartCommand: missing EXTRA_KPHTTP_CONFIG")
+                if (backend == VPN_BACKEND_AWG) {
+                    val uapi = intent.getStringExtra(EXTRA_AWG_UAPI) ?: run {
+                        android.util.Log.e("KEQDIS", "onStartCommand: missing EXTRA_AWG_UAPI")
                         return START_NOT_STICKY
                     }
-                    socksNoAuth = true
-                    socksUsername = ""
-                    socksPassword = ""
-                } else {
-                    configPath = intent.getStringExtra(EXTRA_XRAY_CONFIG) ?: run {
-                        android.util.Log.e("KEQDIS", "onStartCommand: missing EXTRA_XRAY_CONFIG")
-                        return START_NOT_STICKY
+                    val addresses = intent.getStringArrayListExtra(EXTRA_AWG_ADDRESSES) ?: arrayListOf()
+                    val dns = intent.getStringArrayListExtra(EXTRA_AWG_DNS) ?: arrayListOf()
+                    val allowedIps = intent.getStringArrayListExtra(EXTRA_AWG_ALLOWED_IPS) ?: arrayListOf()
+                    val mtu = intent.getIntExtra(EXTRA_AWG_MTU, 0)
+
+                    runCatching {
+                        getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE).edit()
+                            .putString(KEY_QS_LAST_BACKEND, backend)
+                            .putString(KEY_QS_LAST_SERVER_NAME, currentServerName)
+                            .apply()
                     }
-                    val user = intent.getStringExtra(EXTRA_SOCKS_USERNAME)
-                    val pass = intent.getStringExtra(EXTRA_SOCKS_PASSWORD)
-                    if (user.isNullOrEmpty() || pass.isNullOrEmpty()) {
-                        android.util.Log.e("KEQDIS", "onStartCommand: SOCKS5 credentials missing in Intent — aborting start")
-                        return START_NOT_STICKY
+
+                    registerNotificationReceiver()
+                    startForeground(
+                        NOTIFICATION_ID,
+                        buildControlNotification("Connecting…", isConnected = false, isTransitioning = true)
+                    )
+                    serviceScope.launch {
+                        startVpnWithAwg(uapi, addresses, dns, allowedIps, mtu, excludePkgs, includePkgs)
                     }
-                    socksUsername = user
-                    socksPassword = pass
-                    socksNoAuth = false
+                    return START_NOT_STICKY
                 }
+
+                val configPath = intent.getStringExtra(EXTRA_XRAY_CONFIG) ?: run {
+                    android.util.Log.e("KEQDIS", "onStartCommand: missing EXTRA_XRAY_CONFIG")
+                    return START_NOT_STICKY
+                }
+                val user = intent.getStringExtra(EXTRA_SOCKS_USERNAME)
+                val pass = intent.getStringExtra(EXTRA_SOCKS_PASSWORD)
+                if (user.isNullOrEmpty() || pass.isNullOrEmpty()) {
+                    android.util.Log.e("KEQDIS", "onStartCommand: SOCKS5 credentials missing in Intent — aborting start")
+                    return START_NOT_STICKY
+                }
+                socksUsername = user
+                socksPassword = pass
 
                 android.util.Log.d("KEQDIS", "onStartCommand: backend=$backend config=$configPath")
                 lastXrayConfigPath = configPath
@@ -194,11 +217,7 @@ class KeqdisVpnService : VpnService() {
                 )
 
                 serviceScope.launch {
-                    if (backend == VPN_BACKEND_KPHTTP) {
-                        startVpnWithKphttp(configPath, socksPort, excludePkgs, includePkgs)
-                    } else {
-                        startVpnWithXray(configPath, socksPort, excludePkgs, includePkgs, socksNoAuth = false)
-                    }
+                    startVpnWithXray(configPath, socksPort, excludePkgs, includePkgs, socksNoAuth = false)
                 }
             }
             ACTION_STOP -> serviceScope.launch { stopVpn() }
@@ -281,47 +300,6 @@ class KeqdisVpnService : VpnService() {
         }
     }
 
-    private suspend fun startVpnWithKphttp(
-        kphttpConfigPath: String,
-        socksPort: Int,
-        excludePkgs: List<String>,
-        includePkgs: List<String>,
-    ) {
-        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) return
-        setStatus(VpnRunStatus.STARTING)
-        try {
-            xrayPid = startKphttp(getBinaryPath("libkphttp.so"), kphttpConfigPath)
-
-            var waited = 0
-            while (!isPortOpen("127.0.0.1", socksPort) && waited < 10000) {
-                delay(300); waited += 300
-            }
-            if (!isPortOpen("127.0.0.1", socksPort))
-                throw IllegalStateException("KpHTTP SOCKS5 port $socksPort not ready")
-
-            val tun = buildTunInterface(excludePkgs, includePkgs)
-            tunInterface = tun
-
-            val tunRawFd = tun.fd
-            activeSocksPort = socksPort
-            startTun2Socks(tunRawFd, socksPort, socksNoAuth = true)
-
-            startTime = System.currentTimeMillis()
-            setStatus(VpnRunStatus.RUNNING)
-            showControlNotification("Connected", isConnected = true, isTransitioning = false)
-            startStatsLoop()
-
-        } catch (e: Exception) {
-            android.util.Log.e("KEQDIS", "startVpnWithKphttp failed: ${e.message}", e)
-            setStatus(VpnRunStatus.ERROR, e.message)
-            cleanup()
-            showControlNotification(e.message ?: "Error", isConnected = false, isTransitioning = false)
-            stopForeground(true)
-            unregisterNotificationReceiver()
-            stopSelf()
-        }
-    }
-
     private suspend fun stopVpn() {
         if (status == VpnRunStatus.STOPPED) return
 
@@ -349,6 +327,13 @@ class KeqdisVpnService : VpnService() {
     }
 
     private suspend fun cleanup() {
+        val h = awgHandle
+        if (h >= 0) {
+            try { GoBackend.awgTurnOff(h) }
+            catch (e: Exception) { android.util.Log.w("KEQDIS", "awgTurnOff failed: ${e.message}") }
+            awgHandle = -1
+        }
+
         val t2sPid = tun2socksPid
         if (t2sPid > 0) {
             try { android.os.Process.killProcess(t2sPid) } catch (_: Exception) {}
@@ -392,52 +377,8 @@ class KeqdisVpnService : VpnService() {
             .setSession("KEQDIS")
             .setBlocking(false)
 
-        if (inc.isNotEmpty()) {
-            // [FIX-HUAWEI] Считаем сколько пакетов реально добавилось.
-            // runCatching молча глотал PackageManager.NameNotFoundException —
-            // если все пакеты невалидны, establish() на Huawei/Honor возвращает null.
-            var addedInc = 0
-            inc.forEach { pkg ->
-                try {
-                    b.addAllowedApplication(pkg)
-                    addedInc++
-                } catch (e: Exception) {
-                    android.util.Log.w("KEQDIS", "buildTun: addAllowedApplication skipped pkg=$pkg err=${e.message}")
-                }
-            }
-            if (addedInc == 0) {
-                // Ни одного валидного пакета в allowlist — откатываемся на полный туннель,
-                // иначе Huawei вернёт null из establish().
-                android.util.Log.w("KEQDIS", "buildTun: include list produced 0 valid apps, falling back to full tunnel")
-                runCatching { b.addDisallowedApplication(packageName) }
-            }
-        } else {
-            runCatching { b.addDisallowedApplication(packageName) }
-            exc.forEach { pkg ->
-                try {
-                    b.addDisallowedApplication(pkg)
-                } catch (e: Exception) {
-                    android.util.Log.w("KEQDIS", "buildTun: addDisallowedApplication skipped pkg=$pkg err=${e.message}")
-                }
-            }
-        }
-
-        // Huawei/Honor: setUnderlyingNetworks required for establish() with split tunneling.
-        val manufacturer = Build.MANUFACTURER.uppercase()
-        if (manufacturer == "HUAWEI" || manufacturer == "HONOR") {
-            try {
-                val cm = getSystemService(android.net.ConnectivityManager::class.java)
-                val activeNet = cm?.activeNetwork
-                if (activeNet != null) {
-                    b.setUnderlyingNetworks(arrayOf(activeNet))
-                    android.util.Log.d("KEQDIS", "buildTun: setUnderlyingNetworks applied for $manufacturer")
-                } else {
-                    android.util.Log.w("KEQDIS", "buildTun: activeNetwork is null on $manufacturer")
-                }
-            } catch (e: Exception) {
-                android.util.Log.w("KEQDIS", "buildTun: setUnderlyingNetworks failed on $manufacturer: ${e.message}")
-            }
-        }
+        applyAppFilter(b, inc, exc)
+        applyHuaweiUnderlying(b)
 
         val tun = b.establish()
         if (tun == null) {
@@ -455,6 +396,165 @@ class KeqdisVpnService : VpnService() {
         return tun
     }
 
+
+    /// inc/exc split-tunnel app filter, общий для xray- и awg-туннелей.
+    private fun applyAppFilter(b: Builder, inc: List<String>, exc: List<String>) {
+        if (inc.isNotEmpty()) {
+            // [FIX-HUAWEI] Считаем сколько пакетов реально добавилось.
+            // runCatching молча глотал PackageManager.NameNotFoundException —
+            // если все пакеты невалидны, establish() на Huawei/Honor возвращает null.
+            var addedInc = 0
+            inc.forEach { pkg ->
+                try {
+                    b.addAllowedApplication(pkg)
+                    addedInc++
+                } catch (e: Exception) {
+                    android.util.Log.w("KEQDIS", "buildTun: addAllowedApplication skipped pkg=$pkg err=${e.message}")
+                }
+            }
+            if (addedInc == 0) {
+                android.util.Log.w("KEQDIS", "buildTun: include list produced 0 valid apps, falling back to full tunnel")
+                runCatching { b.addDisallowedApplication(packageName) }
+            }
+        } else {
+            runCatching { b.addDisallowedApplication(packageName) }
+            exc.forEach { pkg ->
+                try {
+                    b.addDisallowedApplication(pkg)
+                } catch (e: Exception) {
+                    android.util.Log.w("KEQDIS", "buildTun: addDisallowedApplication skipped pkg=$pkg err=${e.message}")
+                }
+            }
+        }
+    }
+
+    /// Huawei/Honor: setUnderlyingNetworks нужен для establish() со split tunneling.
+    private fun applyHuaweiUnderlying(b: Builder) {
+        val manufacturer = Build.MANUFACTURER.uppercase()
+        if (manufacturer != "HUAWEI" && manufacturer != "HONOR") return
+        try {
+            val cm = getSystemService(android.net.ConnectivityManager::class.java)
+            val activeNet = cm?.activeNetwork
+            if (activeNet != null) {
+                b.setUnderlyingNetworks(arrayOf(activeNet))
+            } else {
+                android.util.Log.w("KEQDIS", "buildTun: activeNetwork is null on $manufacturer")
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("KEQDIS", "buildTun: setUnderlyingNetworks failed on $manufacturer: ${e.message}")
+        }
+    }
+
+    // ── AmneziaWG ─────────────────────────────────────────────────────────────
+
+    private suspend fun startVpnWithAwg(
+        uapi: String,
+        addresses: List<String>,
+        dns: List<String>,
+        allowedIps: List<String>,
+        mtu: Int,
+        excludePkgs: List<String>,
+        includePkgs: List<String>,
+    ) {
+        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) return
+        setStatus(VpnRunStatus.STARTING)
+        try {
+            val tun = buildAwgTunInterface(addresses, dns, allowedIps, mtu, excludePkgs, includePkgs)
+            tunInterface = tun
+
+            val handle = GoBackend.awgTurnOn("awg0", tun.fd, uapi)
+            if (handle < 0)
+                throw IllegalStateException("amneziawg-go failed to start (awgTurnOn=$handle)")
+            awgHandle = handle
+            // fd теперь принадлежит ядру (device.Close() его закроет) — снимаем владение
+            // у ParcelFileDescriptor, чтобы cleanup() не закрыл его повторно.
+            runCatching { tun.detachFd() }
+
+            // WG egress-сокет должен идти мимо туннеля, иначе петля маршрутизации.
+            protectAwgSockets(handle)
+
+            startTime = System.currentTimeMillis()
+            setStatus(VpnRunStatus.RUNNING)
+            showControlNotification("Connected", isConnected = true, isTransitioning = false)
+            startStatsLoop()
+        } catch (e: Exception) {
+            android.util.Log.e("KEQDIS", "startVpnWithAwg failed: ${e.message}", e)
+            setStatus(VpnRunStatus.ERROR, e.message)
+            cleanup()
+            showControlNotification(e.message ?: "Error", isConnected = false, isTransitioning = false)
+            stopForeground(true)
+            unregisterNotificationReceiver()
+            stopSelf()
+        }
+    }
+
+    private fun protectAwgSockets(handle: Int) {
+        val v4 = GoBackend.awgGetSocketV4(handle)
+        if (v4 >= 0) runCatching { protect(v4) }
+        val v6 = GoBackend.awgGetSocketV6(handle)
+        if (v6 >= 0) runCatching { protect(v6) }
+    }
+
+    private fun buildAwgTunInterface(
+        addresses: List<String>,
+        dns: List<String>,
+        allowedIps: List<String>,
+        mtu: Int,
+        exc: List<String>,
+        inc: List<String>,
+    ): ParcelFileDescriptor {
+        val b = Builder()
+            .setMtu(if (mtu > 0) mtu else 1280)
+            .setSession("KEQDIS-AWG")
+            .setBlocking(true)
+
+        var addrCount = 0
+        addresses.forEach { addr ->
+            parseCidr(addr)?.let { (ip, prefix) ->
+                try { b.addAddress(ip, prefix); addrCount++ }
+                catch (e: Exception) { android.util.Log.w("KEQDIS", "awg addAddress skipped $addr: ${e.message}") }
+            }
+        }
+        if (addrCount == 0)
+            throw IllegalStateException("AmneziaWG config has no valid Interface Address")
+
+        var routeCount = 0
+        allowedIps.forEach { cidr ->
+            parseCidr(cidr)?.let { (ip, prefix) ->
+                try { b.addRoute(ip, prefix); routeCount++ }
+                catch (e: Exception) { android.util.Log.w("KEQDIS", "awg addRoute skipped $cidr: ${e.message}") }
+            }
+        }
+        if (routeCount == 0) runCatching { b.addRoute("0.0.0.0", 0) }
+
+        if (dns.isEmpty()) {
+            b.addDnsServer("1.1.1.1")
+        } else {
+            dns.forEach { d ->
+                val ip = d.substringBefore('/').trim()
+                runCatching { b.addDnsServer(ip) }
+            }
+        }
+
+        applyAppFilter(b, inc, exc)
+        applyHuaweiUnderlying(b)
+
+        return b.establish() ?: throw IllegalStateException(
+            "TUN establish() returned null on ${Build.MANUFACTURER} ${Build.MODEL}")
+    }
+
+    /// Разбирает `ip/prefix` (или голый ip → /32 для v4, /128 для v6).
+    private fun parseCidr(raw: String): Pair<String, Int>? {
+        val s = raw.trim()
+        if (s.isEmpty()) return null
+        val slash = s.indexOf('/')
+        if (slash < 0) {
+            return Pair(s, if (s.contains(':')) 128 else 32)
+        }
+        val ip = s.substring(0, slash).trim()
+        val prefix = s.substring(slash + 1).trim().toIntOrNull() ?: return null
+        return if (ip.isEmpty()) null else Pair(ip, prefix)
+    }
 
     // ── tun2socks ────────────────────────────────────────────────────────────
 
@@ -528,36 +628,6 @@ class KeqdisVpnService : VpnService() {
                     xrayPid = -1  // уже мёртв — не пытаемся убить повторно в cleanup()
                     cleanup()
                     setStatus(VpnRunStatus.ERROR, "Xray exited unexpectedly")
-                    stopForeground(true)
-                    stopSelf()
-                }
-            } catch (_: Exception) {}
-        }
-        return pid
-    }
-
-    private fun startKphttp(binary: String, config: String): Int {
-        val pid = NativeHelper.startKphttp(binary, config, filesDir.absolutePath)
-        when {
-            pid == -1 -> throw IllegalStateException("KpHTTP binary not found: $binary")
-            pid == -2 -> throw IllegalStateException("KpHTTP config not found: $config")
-            pid == -4 -> throw IllegalStateException("KpHTTP crashed on startup — see logcat KEQDIS/kphttp")
-            pid <= 0  -> throw IllegalStateException("fork() for KpHTTP failed (pid=$pid)")
-            else -> {}
-        }
-        android.util.Log.i("KEQDIS", "KpHTTP started pid=$pid")
-
-        val monitorPid = pid
-        serviceScope.launch(Dispatchers.IO) {
-            try {
-                while (File("/proc/$pid").exists()) delay(500)
-                android.util.Log.w("KEQDIS", "[kphttp] pid=$pid exited")
-                if ((status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) &&
-                    monitorPid == xrayPid) {
-                    android.util.Log.w("KEQDIS", "[kphttp] triggering full cleanup after unexpected exit")
-                    xrayPid = -1
-                    cleanup()
-                    setStatus(VpnRunStatus.ERROR, "KpHTTP exited unexpectedly")
                     stopForeground(true)
                     stopSelf()
                 }
