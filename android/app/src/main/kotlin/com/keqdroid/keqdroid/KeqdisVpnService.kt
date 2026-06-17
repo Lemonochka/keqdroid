@@ -603,6 +603,7 @@ class KeqdisVpnService : VpnService() {
     private fun startXray(binary: String, config: String): Int {
         // NativeHelper.startXray: fork+execv из nativeLibraryDir, читает вывод в logcat (KEQDIS/xray)
         // Возвращает: pid > 0 — успех, -1 binary not found, -2 config not found, -4 crashed immediately
+        XrayGeoAssets.ensure(this, filesDir)
         val pid = NativeHelper.startXray(binary, config, filesDir.absolutePath)
         when {
             pid == -1 -> throw IllegalStateException("Xray binary not found: $binary")
