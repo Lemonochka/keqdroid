@@ -114,20 +114,6 @@ class MainActivity : FlutterFragmentActivity() {
                             val includePackages = call.argument<List<*>>("includePackages")
                                 ?.filterIsInstance<String>() ?: emptyList()
                             when (backend) {
-                                KeqdisVpnService.VPN_BACKEND_KPHTTP -> {
-                                    val kphttpToml = call.argument<String>("kphttpTomlConfig") ?: run {
-                                        result.error("INVALID_ARGS", "Missing kphttpTomlConfig", null)
-                                        return@setMethodCallHandler
-                                    }
-                                    startVpnWithKphttp(
-                                        kphttpToml,
-                                        socksPort,
-                                        excludePackages,
-                                        includePackages,
-                                        serverName,
-                                        result,
-                                    )
-                                }
                                 KeqdisVpnService.VPN_BACKEND_XRAY -> {
                                     val xrayConfig = call.argument<String>("xrayConfig") ?: run {
                                         result.error("INVALID_ARGS", "Missing xrayConfig", null)
@@ -136,6 +122,30 @@ class MainActivity : FlutterFragmentActivity() {
                                     startVpnWithXray(
                                         xrayConfig,
                                         socksPort,
+                                        excludePackages,
+                                        includePackages,
+                                        serverName,
+                                        result,
+                                    )
+                                }
+                                KeqdisVpnService.VPN_BACKEND_AWG -> {
+                                    val uapi = call.argument<String>("awgUapi") ?: run {
+                                        result.error("INVALID_ARGS", "Missing awgUapi", null)
+                                        return@setMethodCallHandler
+                                    }
+                                    val addresses = call.argument<List<*>>("awgAddresses")
+                                        ?.filterIsInstance<String>() ?: emptyList()
+                                    val dns = call.argument<List<*>>("awgDns")
+                                        ?.filterIsInstance<String>() ?: emptyList()
+                                    val allowedIps = call.argument<List<*>>("awgAllowedIps")
+                                        ?.filterIsInstance<String>() ?: emptyList()
+                                    val mtu = call.argument<Int>("awgMtu") ?: 0
+                                    startVpnWithAwg(
+                                        uapi,
+                                        addresses,
+                                        dns,
+                                        allowedIps,
+                                        mtu,
                                         excludePackages,
                                         includePackages,
                                         serverName,
@@ -393,9 +403,12 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    private fun startVpnWithKphttp(
-        kphttpToml: String,
-        socksPort: Int,
+    private fun startVpnWithAwg(
+        uapi: String,
+        addresses: List<String>,
+        dns: List<String>,
+        allowedIps: List<String>,
+        mtu: Int,
         excludePackages: List<String>,
         includePackages: List<String>,
         serverName: String?,
@@ -406,33 +419,23 @@ class MainActivity : FlutterFragmentActivity() {
             return
         }
 
-        mainScope.launch {
-            val configPath = try {
-                withContext(Dispatchers.IO) { writeConfig(kphttpToml, "kphttp_client.toml") }
-            } catch (e: IOException) {
-                result.error("IO_ERROR", "Failed to write config: ${e.message}", null)
-                return@launch
+        // AmneziaWG не нуждается в SOCKS-credentials — ядро само владеет TUN.
+        startService(Intent(this@MainActivity, KeqdisVpnService::class.java).apply {
+            action = KeqdisVpnService.ACTION_START
+            putExtra(KeqdisVpnService.EXTRA_VPN_BACKEND, KeqdisVpnService.VPN_BACKEND_AWG)
+            putExtra(KeqdisVpnService.EXTRA_AWG_UAPI, uapi)
+            putStringArrayListExtra(KeqdisVpnService.EXTRA_AWG_ADDRESSES, ArrayList(addresses))
+            putStringArrayListExtra(KeqdisVpnService.EXTRA_AWG_DNS, ArrayList(dns))
+            putStringArrayListExtra(KeqdisVpnService.EXTRA_AWG_ALLOWED_IPS, ArrayList(allowedIps))
+            if (mtu > 0) putExtra(KeqdisVpnService.EXTRA_AWG_MTU, mtu)
+            putStringArrayListExtra("exclude_packages", ArrayList(excludePackages))
+            putStringArrayListExtra("include_packages", ArrayList(includePackages))
+            if (!serverName.isNullOrBlank()) {
+                putExtra(KeqdisVpnService.EXTRA_SERVER_NAME, serverName)
             }
+        })
 
-            getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-                .edit()
-                .putInt("flutter.keqdis_socks_port", socksPort)
-                .apply()
-
-            startService(Intent(this@MainActivity, KeqdisVpnService::class.java).apply {
-                action = KeqdisVpnService.ACTION_START
-                putExtra(KeqdisVpnService.EXTRA_VPN_BACKEND, KeqdisVpnService.VPN_BACKEND_KPHTTP)
-                putExtra(KeqdisVpnService.EXTRA_KPHTTP_CONFIG, configPath)
-                putExtra("socks_port", socksPort)
-                putStringArrayListExtra("exclude_packages", ArrayList(excludePackages))
-                putStringArrayListExtra("include_packages", ArrayList(includePackages))
-                if (!serverName.isNullOrBlank()) {
-                    putExtra(KeqdisVpnService.EXTRA_SERVER_NAME, serverName)
-                }
-            })
-
-            result.success(null)
-        }
+        result.success(null)
     }
 
     private fun stopVpn(result: MethodChannel.Result) {

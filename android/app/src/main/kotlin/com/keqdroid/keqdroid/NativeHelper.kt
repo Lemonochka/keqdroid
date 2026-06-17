@@ -8,7 +8,4 @@ object NativeHelper {
 
     @JvmStatic
     external fun startXray(binPath: String, configPath: String, assetDir: String): Int
-
-    @JvmStatic
-    external fun startKphttp(binPath: String, configPath: String, assetDir: String): Int
 }
