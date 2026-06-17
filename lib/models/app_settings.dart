@@ -185,12 +185,13 @@ class AppSettings {
     return merged.join(', ');
   }
 
-  static const pingTypes = ['tcp', 'url', 'speed'];
+  static const pingTypes = ['tcp', 'url', 'speed', 'icmp'];
 
   static String _normalizePingType(String? raw) {
     final v = raw?.trim().toLowerCase();
     if (v == 'url' || v == 'http' || v == 'proxy') return 'url';
     if (v == 'speed' || v == 'download' || v == 'throughput') return 'speed';
+    if (v == 'icmp' || v == 'ping') return 'icmp';
     return 'tcp';
   }
 

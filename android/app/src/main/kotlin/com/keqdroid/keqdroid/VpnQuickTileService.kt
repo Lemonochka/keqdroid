@@ -104,6 +104,12 @@ class VpnQuickTileService : TileService() {
 
         val backend = prefs.getString(KeqdisVpnService.KEY_QS_LAST_BACKEND, KeqdisVpnService.VPN_BACKEND_XRAY)
             ?: KeqdisVpnService.VPN_BACKEND_XRAY
+
+        // AmneziaWG не хранит snapshot для быстрого реконнекта из плитки — открываем приложение.
+        if (backend == KeqdisVpnService.VPN_BACKEND_AWG) {
+            openAppForConnect()
+            return
+        }
         val xrayPath = prefs.getString(KeqdisVpnService.KEY_QS_LAST_XRAY_CONFIG, null)
         val user = prefs.getString(KeqdisVpnService.KEY_QS_LAST_SOCKS_USERNAME, null)
         val pass = prefs.getString(KeqdisVpnService.KEY_QS_LAST_SOCKS_PASSWORD, null)

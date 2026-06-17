@@ -9,13 +9,13 @@ class WindowsCorePaths {
 
   static const assetXray = 'assets/bin/windows/xray.exe';
   static const assetSingbox = 'assets/bin/windows/sing-box.exe';
-  static const assetKphttp = 'assets/bin/windows/kphttp-client.exe';
+  static const assetWireproxy = 'assets/bin/windows/wireproxy.exe';
   static const assetGeoip = 'assets/bin/windows/geoip.dat';
   static const assetGeosite = 'assets/bin/windows/geosite.dat';
   static const geoFileNames = ['geoip.dat', 'geosite.dat'];
 
   static const binariesHint =
-      'Положите xray.exe, sing-box.exe и kphttp-client.exe в assets/bin/windows/ '
+      'Положите xray.exe и sing-box.exe в assets/bin/windows/ '
       '(см. README) и пересоберите приложение, '
       'или рядом с keqdroid.exe.';
 
@@ -29,8 +29,11 @@ class WindowsCorePaths {
   static Future<String?> singboxExecutable() =>
       _resolveExecutable(assetSingbox, 'sing-box.exe');
 
-  static Future<String?> kphttpExecutable() =>
-      _resolveExecutable(assetKphttp, 'kphttp-client.exe');
+  /// wireproxy.exe (wireproxy-awg) — userspace AmneziaWG (embeds amneziawg-go),
+  /// отдаёт локальный SOCKS5/HTTP. Используется и для proxy-, и для TUN-режима
+  /// (TUN: wireproxy SOCKS → sing-box TUN). wintun.dll нужен для sing-box TUN.
+  static Future<String?> wireproxyExecutable() =>
+      _resolveExecutable(assetWireproxy, 'wireproxy.exe');
 
   /// Directory holding geoip.dat / geosite.dat for xray's asset lookup
   /// (passed to xray via XRAY_LOCATION_ASSET so `geoip:`/`geosite:` rules

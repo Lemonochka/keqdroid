@@ -6,7 +6,9 @@ class TunnelSessionRequest {
   final ConnectionMode mode;
   final VpnBackend vpnBackend;
   final String xrayConfig;
-  final String? kphttpTomlConfig;
+
+  /// Сырой AmneziaWG `.conf` (когда [vpnBackend] == awg).
+  final String? awgConfig;
   final int socksPort;
   final int httpPort;
   final String? singboxConfig;
@@ -22,7 +24,7 @@ class TunnelSessionRequest {
     required this.mode,
     this.vpnBackend = VpnBackend.xray,
     required this.xrayConfig,
-    this.kphttpTomlConfig,
+    this.awgConfig,
     this.socksPort = 2080,
     this.httpPort = 2081,
     this.singboxConfig,
@@ -43,8 +45,7 @@ class TunnelSessionRequest {
         'connectionMode': mode.storageValue,
         'vpnBackend': vpnBackend.wireValue,
         'xrayConfig': xrayConfig,
-        if (kphttpTomlConfig != null && kphttpTomlConfig!.isNotEmpty)
-          'kphttpTomlConfig': kphttpTomlConfig,
+        if (awgConfig != null && awgConfig!.isNotEmpty) 'awgConfig': awgConfig,
         'socksPort': socksPort,
         if (singboxConfig != null && singboxConfig!.isNotEmpty)
           'singboxConfig': singboxConfig,

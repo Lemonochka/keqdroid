@@ -1674,6 +1674,7 @@ String _pingSettingsSubtitle(AppLocalizations l10n, AppSettings? settings) {
   final mode = switch (s.pingType) {
     'url' => l10n.settingsPingMethodUrl,
     'speed' => l10n.settingsPingMethodSpeed,
+    'icmp' => l10n.settingsPingMethodIcmp,
     _ => l10n.settingsPingMethodTcp,
   };
   if (s.pingType != 'url') return mode;
@@ -1769,6 +1770,16 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
                 },
                 title: Text(l10n.settingsPingMethodTcp),
                 subtitle: Text(l10n.settingsPingMethodTcpHint),
+              ),
+              RadioListTile<String>(
+                value: 'icmp',
+                groupValue: settings.pingType,
+                activeColor: accent,
+                onChanged: (v) {
+                  if (v != null) _save(settings.copyWith(pingType: v));
+                },
+                title: Text(l10n.settingsPingMethodIcmp),
+                subtitle: Text(l10n.settingsPingMethodIcmpHint),
               ),
               RadioListTile<String>(
                 value: 'url',
@@ -3162,7 +3173,8 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                 ],
               ),
             ),
-            Container(
+            Flexible(
+              child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: statusColor.withValues(alpha: 0.15),
@@ -3184,21 +3196,26 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                   else
                     Icon(statusIcon, size: 14, color: statusColor),
                   const SizedBox(width: 6),
-                  Text(
-                    checking
-                        ? l10n.settingsChecking
-                        : error
-                            ? l10n.settingsCheckFailed
-                            : updateAvailable
-                                ? l10n.settingsUpdateAvailable
-                                : l10n.settingsUpToDate,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: statusColor,
+                  Flexible(
+                    child: Text(
+                      checking
+                          ? l10n.settingsChecking
+                          : error
+                              ? l10n.settingsCheckFailed
+                              : updateAvailable
+                                  ? l10n.settingsUpdateAvailable
+                                  : l10n.settingsUpToDate,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: statusColor,
+                      ),
                     ),
                   ),
                 ],
+              ),
               ),
             ),
             const SizedBox(width: 8),

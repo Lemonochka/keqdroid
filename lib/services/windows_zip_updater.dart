@@ -160,7 +160,7 @@ for ($i = 0; $i -lt 120; $i++) {
 Start-Sleep -Milliseconds 1500
 
 # 2) stop leftover core processes that may lock files.
-foreach ($name in @('xray', 'sing-box', 'kphttp-client')) {
+foreach ($name in @('xray', 'sing-box', 'wireproxy')) {
   Get-Process -Name $name -ErrorAction SilentlyContinue |
     Stop-Process -Force -ErrorAction SilentlyContinue
 }

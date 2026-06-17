@@ -325,9 +325,19 @@ class UpdateService {
     return Platform.isWindows ? '.zip' : '.apk';
   }
 
+  /// Только https и без shell-метасимволов — защита от инъекции в `cmd /c start`,
+  /// если имя релизного ассета вдруг содержит `&`, `^`, `"` и т.п.
+  static bool _isSafeHttpsUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) return false;
+    return !RegExp(r'''[\s&|<>^"'`%]''').hasMatch(url);
+  }
+
   static Future<void> _openUrlInBrowser(String url) async {
+    if (!_isSafeHttpsUrl(url)) return;
     if (Platform.isWindows) {
-      await Process.start('cmd', ['/c', 'start', '', url], runInShell: true);
+      // без runInShell; url уже провалидирован (нет метасимволов cmd)
+      await Process.start('cmd', ['/c', 'start', '', url]);
       return;
     }
     if (Platform.isMacOS) {
