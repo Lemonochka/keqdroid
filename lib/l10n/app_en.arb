@@ -237,6 +237,8 @@
   "settingsPingMethodTitle": "Ping method",
   "settingsPingMethodTcp": "TCP ping",
   "settingsPingMethodTcpHint": "Fast reachability check",
+  "settingsPingMethodIcmp": "ICMP ping",
+  "settingsPingMethodIcmpHint": "Echo to server IP (some servers block it)",
   "settingsPingMethodUrl": "HTTP via proxy",
   "settingsPingMethodUrlHint": "Measures GET latency through the server",
   "settingsPingMethodSpeed": "Speed test",
@@ -386,9 +388,9 @@
   "settingsDebugMode": "Debug mode",
   "settingsDebugModeOn": "Extended diagnostics enabled",
   "settingsDebugModeOff": "Off",
-  "settingsDebugModeHint": "Shows live VPN metrics in server cards and allows viewing Xray core logs.",
-  "settingsOpenXrayLogs": "Open Xray logs",
-  "settingsXrayCoreLogs": "Xray core logs",
+  "settingsDebugModeHint": "Shows live VPN metrics in server cards and allows viewing core logs.",
+  "settingsOpenXrayLogs": "Open core logs",
+  "settingsXrayCoreLogs": "Core logs",
   "settingsRefresh": "Refresh",
   "settingsAppVersion": "App version",
   "settingsChecking": "Checking...",
@@ -463,7 +465,7 @@
       "error": {}
     }
   },
-  "settingsNoXrayLogsYet": "No Xray logs yet",
+  "settingsNoXrayLogsYet": "No core logs yet",
   "settingsLanguageTitle": "Language",
   "settingsLanguageSubtitle": "{language}",
   "@settingsLanguageSubtitle": {
@@ -504,8 +506,8 @@
   "serversConfigCopied": "Configuration copied",
   "serversDeleteServer": "Delete server",
   "serversHealthCheckDesc": "DNS, TCP and config validation",
-  "settingsDebugHintDesktop": "Shows Xray session logs. Live VPN metrics are shown under the connect button.",
-  "settingsDebugHintMobile": "Shows live VPN metrics in server cards and Xray logs.",
+  "settingsDebugHintDesktop": "Shows core session logs. Live VPN metrics are shown under the connect button.",
+  "settingsDebugHintMobile": "Shows live VPN metrics in server cards and core logs.",
   "serversErrorLoadingApps": "Error loading apps: {error}",
   "@serversErrorLoadingApps": {
     "placeholders": {

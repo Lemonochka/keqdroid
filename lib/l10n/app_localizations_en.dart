@@ -541,6 +541,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPingMethodTcpHint => 'Fast reachability check';
 
   @override
+  String get settingsPingMethodIcmp => 'ICMP ping';
+
+  @override
+  String get settingsPingMethodIcmpHint =>
+      'Echo to server IP (some servers block it)';
+
+  @override
   String get settingsPingMethodUrl => 'HTTP via proxy';
 
   @override
@@ -816,13 +823,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDebugModeHint =>
-      'Shows live VPN metrics in server cards and allows viewing Xray core logs.';
+      'Shows live VPN metrics in server cards and allows viewing core logs.';
 
   @override
-  String get settingsOpenXrayLogs => 'Open Xray logs';
+  String get settingsOpenXrayLogs => 'Open core logs';
 
   @override
-  String get settingsXrayCoreLogs => 'Xray core logs';
+  String get settingsXrayCoreLogs => 'Core logs';
 
   @override
   String get settingsRefresh => 'Refresh';
@@ -987,7 +994,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsNoXrayLogsYet => 'No Xray logs yet';
+  String get settingsNoXrayLogsYet => 'No core logs yet';
 
   @override
   String get settingsLanguageTitle => 'Language';
@@ -1080,11 +1087,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDebugHintDesktop =>
-      'Shows Xray session logs. Live VPN metrics are shown under the connect button.';
+      'Shows core session logs. Live VPN metrics are shown under the connect button.';
 
   @override
   String get settingsDebugHintMobile =>
-      'Shows live VPN metrics in server cards and Xray logs.';
+      'Shows live VPN metrics in server cards and core logs.';
 
   @override
   String serversErrorLoadingApps(Object error) {

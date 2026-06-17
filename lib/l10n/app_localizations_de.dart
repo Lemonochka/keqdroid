@@ -559,6 +559,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsPingMethodTcpHint => 'Schnelle Erreichbarkeitsprüfung';
 
   @override
+  String get settingsPingMethodIcmp => 'ICMP-Ping';
+
+  @override
+  String get settingsPingMethodIcmpHint =>
+      'Echo an Server-IP (manche Server blockieren es)';
+
+  @override
   String get settingsPingMethodUrl => 'HTTP über Proxy';
 
   @override

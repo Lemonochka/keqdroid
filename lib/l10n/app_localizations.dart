@@ -1032,6 +1032,18 @@ abstract class AppLocalizations {
   /// **'Fast reachability check'**
   String get settingsPingMethodTcpHint;
 
+  /// No description provided for @settingsPingMethodIcmp.
+  ///
+  /// In en, this message translates to:
+  /// **'ICMP ping'**
+  String get settingsPingMethodIcmp;
+
+  /// No description provided for @settingsPingMethodIcmpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Echo to server IP (some servers block it)'**
+  String get settingsPingMethodIcmpHint;
+
   /// No description provided for @settingsPingMethodUrl.
   ///
   /// In en, this message translates to:
@@ -1521,19 +1533,19 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDebugModeHint.
   ///
   /// In en, this message translates to:
-  /// **'Shows live VPN metrics in server cards and allows viewing Xray core logs.'**
+  /// **'Shows live VPN metrics in server cards and allows viewing core logs.'**
   String get settingsDebugModeHint;
 
   /// No description provided for @settingsOpenXrayLogs.
   ///
   /// In en, this message translates to:
-  /// **'Open Xray logs'**
+  /// **'Open core logs'**
   String get settingsOpenXrayLogs;
 
   /// No description provided for @settingsXrayCoreLogs.
   ///
   /// In en, this message translates to:
-  /// **'Xray core logs'**
+  /// **'Core logs'**
   String get settingsXrayCoreLogs;
 
   /// No description provided for @settingsRefresh.
@@ -1833,7 +1845,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNoXrayLogsYet.
   ///
   /// In en, this message translates to:
-  /// **'No Xray logs yet'**
+  /// **'No core logs yet'**
   String get settingsNoXrayLogsYet;
 
   /// No description provided for @settingsLanguageTitle.
@@ -2007,13 +2019,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDebugHintDesktop.
   ///
   /// In en, this message translates to:
-  /// **'Shows Xray session logs. Live VPN metrics are shown under the connect button.'**
+  /// **'Shows core session logs. Live VPN metrics are shown under the connect button.'**
   String get settingsDebugHintDesktop;
 
   /// No description provided for @settingsDebugHintMobile.
   ///
   /// In en, this message translates to:
-  /// **'Shows live VPN metrics in server cards and Xray logs.'**
+  /// **'Shows live VPN metrics in server cards and core logs.'**
   String get settingsDebugHintMobile;
 
   /// No description provided for @serversErrorLoadingApps.
