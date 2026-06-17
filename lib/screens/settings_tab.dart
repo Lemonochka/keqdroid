@@ -3157,6 +3157,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
     return Column(
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Column(
@@ -3173,66 +3174,70 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                 ],
               ),
             ),
-            Flexible(
-              child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (checking)
-                    SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: statusColor,
-                      ),
-                    )
-                  else
-                    Icon(statusIcon, size: 14, color: statusColor),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      checking
-                          ? l10n.settingsChecking
-                          : error
-                              ? l10n.settingsCheckFailed
-                              : updateAvailable
-                                  ? l10n.settingsUpdateAvailable
-                                  : l10n.settingsUpToDate,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: statusColor,
-                      ),
-                    ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                   ),
-                ],
-              ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: checking ? null : _forceCheck,
-              icon: checking
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: accent),
-                    )
-                  : const Icon(Icons.refresh),
-              tooltip: l10n.settingsCheckForUpdates,
-              style: IconButton.styleFrom(
-                backgroundColor: AppTheme.inset(context),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (checking)
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: statusColor,
+                          ),
+                        )
+                      else
+                        Icon(statusIcon, size: 14, color: statusColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        checking
+                            ? l10n.settingsChecking
+                            : error
+                                ? l10n.settingsCheckFailed
+                                : updateAvailable
+                                    ? l10n.settingsUpdateAvailable
+                                    : l10n.settingsUpToDate,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: statusColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: checking ? null : _forceCheck,
+                  icon: checking
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+                        )
+                      : const Icon(Icons.refresh),
+                  tooltip: l10n.settingsCheckForUpdates,
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppTheme.inset(context),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

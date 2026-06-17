@@ -73,29 +73,25 @@ class WindowsZipUpdater {
         flush: true,
       );
 
-      await Process.start(
-        'powershell.exe',
-        [
-          '-NoProfile',
-          '-ExecutionPolicy',
-          'Bypass',
-          '-WindowStyle',
-          'Hidden',
-          '-File',
-          scriptPath,
-          '-SourceDir',
-          payloadRoot,
-          '-TargetDir',
-          appDir,
-          '-ExePath',
-          exePath,
-          '-AppPid',
-          '$pid',
-          '-CleanupDir',
-          stagingRoot.path,
-        ],
-        mode: ProcessStartMode.detached,
-      );
+      await _launchDetachedUpdater([
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-WindowStyle',
+        'Hidden',
+        '-File',
+        scriptPath,
+        '-SourceDir',
+        payloadRoot,
+        '-TargetDir',
+        appDir,
+        '-ExePath',
+        exePath,
+        '-AppPid',
+        '$pid',
+        '-CleanupDir',
+        stagingRoot.path,
+      ]);
 
       await beforeRestart?.call();
       await WindowsDesktopService.clearSessionCoreProcesses();
@@ -132,6 +128,16 @@ class WindowsZipUpdater {
 
   static String _escapePsSingleQuoted(String value) =>
       value.replaceAll("'", "''");
+
+  /// Spawns the updater outside this process tree (`cmd /c start`) so it keeps
+  /// running after the app calls [exit].
+  static Future<void> _launchDetachedUpdater(List<String> psArgs) {
+    return Process.start(
+      'cmd.exe',
+      ['/c', 'start', '""', '/min', 'powershell.exe', ...psArgs],
+      mode: ProcessStartMode.detached,
+    );
+  }
 
   static String _updaterScript() => r'''
 param(

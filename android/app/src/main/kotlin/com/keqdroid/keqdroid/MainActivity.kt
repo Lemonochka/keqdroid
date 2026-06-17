@@ -90,6 +90,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        XrayGeoAssets.ensure(this, filesDir)
         // [FIX-UNBIND-CRASH] Сохраняем результат bindService.
         serviceBound = bindService(
             Intent(this, KeqdisVpnService::class.java),
