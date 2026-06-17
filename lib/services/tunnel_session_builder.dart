@@ -7,7 +7,6 @@ import '../tunnel/app_routing_mode.dart';
 import '../tunnel/connection_mode.dart';
 import '../tunnel/tunnel_session_request.dart';
 import '../tunnel/vpn_backend.dart';
-import '../utils/singbox_kphttp_proxy_config.dart';
 import '../utils/singbox_tun_config.dart';
 
 /// собирает TunnelSessionRequest под платформу и режим proxy/tun
@@ -20,8 +19,8 @@ class TunnelSessionBuilder {
   static TunnelSessionRequest build({
     required AppSettings settings,
     required String xrayConfig,
-    String? kphttpTomlConfig,
     VpnBackend vpnBackend = VpnBackend.xray,
+    String? awgConfig,
     required String resolvedServerIp,
     required String socksUsername,
     required String socksPassword,
@@ -34,40 +33,37 @@ class TunnelSessionBuilder {
     ConnectionMode? modeOverride,
   }) {
     final mode = modeOverride ?? resolveMode(settings);
-    final isKphttp = vpnBackend == VpnBackend.kphttp;
+    final isAwg = vpnBackend == VpnBackend.awg;
 
+    // TUN на Windows: sing-box оборачивает tun→локальный SOCKS.
+    //  - xray: SOCKS с auth от xray.
+    //  - AmneziaWG: SOCKS от wireproxy-awg (без auth).
+    // В proxy-режиме sing-box не нужен (системный прокси).
     String? singboxConfig;
-    if (Platform.isWindows) {
-      if (mode == ConnectionMode.tun) {
-        final managed = switch (routingMode) {
-          AppRoutingMode.onlySelected => includeProcesses,
-          AppRoutingMode.allExceptSelected => excludeProcesses,
-          AppRoutingMode.allProxy => const <String>[],
-        };
-        singboxConfig = SingBoxTunConfigGen.generate(
-          localSocksPort: settings.localPort,
-          socksUsername: socksUsername,
-          socksPassword: socksPassword,
-          serverIpToExclude: resolvedServerIp,
-          settings: settings,
-          managedProcessNames: managed,
-          routingMode: routingMode,
-          localSocksNoAuth: isKphttp,
-          appProcessName: p.basename(Platform.resolvedExecutable),
-        );
-      } else if (isKphttp) {
-        singboxConfig = SingBoxKphttpProxyConfigGen.generate(
-          kphttpSocksPort: settings.localPort,
-          httpPort: settings.httpPort,
-        );
-      }
+    if (Platform.isWindows && mode == ConnectionMode.tun) {
+      final managed = switch (routingMode) {
+        AppRoutingMode.onlySelected => includeProcesses,
+        AppRoutingMode.allExceptSelected => excludeProcesses,
+        AppRoutingMode.allProxy => const <String>[],
+      };
+      singboxConfig = SingBoxTunConfigGen.generate(
+        localSocksPort: settings.localPort,
+        socksUsername: socksUsername,
+        socksPassword: socksPassword,
+        serverIpToExclude: resolvedServerIp,
+        settings: settings,
+        managedProcessNames: managed,
+        routingMode: routingMode,
+        localSocksNoAuth: isAwg,
+        appProcessName: p.basename(Platform.resolvedExecutable),
+      );
     }
 
     return TunnelSessionRequest(
       mode: mode,
       vpnBackend: vpnBackend,
       xrayConfig: xrayConfig,
-      kphttpTomlConfig: kphttpTomlConfig,
+      awgConfig: awgConfig,
       socksPort: settings.localPort,
       httpPort: settings.httpPort,
       singboxConfig: singboxConfig,

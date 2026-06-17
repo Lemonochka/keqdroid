@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,39 +17,34 @@ import 'desktop_connection_mode.dart';
 class TrayMenuScreen extends ConsumerStatefulWidget {
   const TrayMenuScreen({super.key});
 
-  static const width = 268.0;
+  static const width = 288.0;
   static const borderRadius = 10.0;
   static const itemHeight = 34.0;
-  static const maxServerListHeight = 132.0;
+  static const groupHeaderHeight = 24.0;
+  static const maxServerListHeight = 200.0;
 
   static double estimateHeight({
     required int serverCount,
     required bool serversExpanded,
+    int groupCount = 0,
   }) {
-    const header = 42.0;
-    const status = 28.0;
+    const status = 36.0;
     const connect = itemHeight;
     const modes = itemHeight * 2;
     const footer = itemHeight * 2;
-    const dividers = 3.0 * 3;
-    const padding = 8.0;
+    const dividers = 4.0; // 4 разделителя между секциями
+    const bottomPad = 6.0;
 
-    var serverBlock = itemHeight;
+    var serverBlock = itemHeight; // селектор активного сервера
     if (serversExpanded && serverCount > 0) {
+      final headers = groupCount > 1 ? groupCount * groupHeaderHeight : 0.0;
       serverBlock += math.min(
-        serverCount * itemHeight,
+        serverCount * itemHeight + headers,
         maxServerListHeight,
       );
     }
 
-    return header +
-        status +
-        connect +
-        modes +
-        serverBlock +
-        footer +
-        dividers +
-        padding;
+    return status + connect + modes + serverBlock + footer + dividers + bottomPad;
   }
 
   @override
@@ -66,15 +62,32 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
     }
   }
 
-  Future<void> _syncPopupSize(int serverCount) async {
+  Future<void> _syncPopupSize() async {
     if (!Platform.isWindows) return;
+    final servers = ref.read(serversProvider).servers;
     await WindowsDesktopService.resizeTrayMenu(
       width: TrayMenuScreen.width,
       height: TrayMenuScreen.estimateHeight(
-        serverCount: serverCount,
+        serverCount: servers.length,
         serversExpanded: _serversExpanded,
+        groupCount: _groupCount(servers),
       ),
     );
+  }
+
+  /// Кол-во групп: ручные (если есть) + по числу разных подписок.
+  int _groupCount(List<ServerItem> servers) {
+    final subs = <String>{};
+    var hasManual = false;
+    for (final s in servers) {
+      final id = s.subscriptionId;
+      if (id == null) {
+        hasManual = true;
+      } else {
+        subs.add(id);
+      }
+    }
+    return (hasManual ? 1 : 0) + subs.length;
   }
 
   Future<void> _openFullApp() async {
@@ -91,9 +104,9 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
     }
   }
 
-  Future<void> _toggleServersExpanded(int serverCount) async {
+  Future<void> _toggleServersExpanded() async {
     setState(() => _serversExpanded = !_serversExpanded);
-    await _syncPopupSize(serverCount);
+    await _syncPopupSize();
   }
 
   Future<void> _toggleVpn(VpnStatus status) async {
@@ -112,7 +125,7 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
     }
   }
 
-  Future<void> _selectServer(ServerItem server, int serverCount) async {
+  Future<void> _selectServer(ServerItem server) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
@@ -124,7 +137,7 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
       }
       if (_serversExpanded && mounted) {
         setState(() => _serversExpanded = false);
-        await _syncPopupSize(serverCount);
+        await _syncPopupSize();
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -168,6 +181,116 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
     await applyDesktopConnectionMode(context, ref, settings, next);
   }
 
+  Widget _flagCircle(ServerItem server, ColorScheme cs) {
+    final code = server.countryCode;
+    const size = 20.0;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: ClipOval(
+        clipBehavior: Clip.antiAlias,
+        child: code != null
+            ? FittedBox(
+                fit: BoxFit.cover,
+                child: CountryFlag.fromCountryCode(
+                  code,
+                  theme: const ImageTheme(width: 30, height: 20),
+                ),
+              )
+            : ColoredBox(
+                color: cs.primary,
+                child: Center(
+                  child: Text(
+                    server.protocol.isNotEmpty
+                        ? server.protocol[0].toUpperCase()
+                        : '?',
+                    style: TextStyle(
+                      color: cs.onPrimary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+
+  /// Серверы, сгруппированные по подпискам (ручные — отдельной группой).
+  List<Widget> _buildGroupedServers({
+    required List<ServerItem> servers,
+    required ServerItem? active,
+    required bool isVpnBusy,
+    required Color itemFg,
+    required Color mutedFg,
+    required Color accent,
+    required AppLocalizations l10n,
+    required Map<String, String> subNames,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final manual = <ServerItem>[];
+    final subOrder = <String>[];
+    final bySub = <String, List<ServerItem>>{};
+    for (final s in servers) {
+      final id = s.subscriptionId;
+      if (id == null) {
+        manual.add(s);
+      } else {
+        (bySub[id] ??= (() {
+          subOrder.add(id);
+          return <ServerItem>[];
+        })())
+            .add(s);
+      }
+    }
+    final groupCount = (manual.isNotEmpty ? 1 : 0) + subOrder.length;
+    final showHeaders = groupCount > 1;
+
+    int byName(ServerItem a, ServerItem b) =>
+        a.cleanName.toLowerCase().compareTo(b.cleanName.toLowerCase());
+
+    final widgets = <Widget>[];
+    void addGroup(String? title, List<ServerItem> list) {
+      if (list.isEmpty) return;
+      if (showHeaders && title != null && title.isNotEmpty) {
+        widgets.add(_TrayGroupHeader(title: title, color: mutedFg));
+      }
+      final sorted = [...list]..sort(byName);
+      for (final s in sorted) {
+        widgets.add(_TrayItem(
+          label: s.cleanName,
+          leading: _flagCircle(s, cs),
+          enabled: !isVpnBusy,
+          selected: s.id == active?.id,
+          indent: showHeaders ? 8 : 0,
+          onTap: () => _selectServer(s),
+          foregroundColor: itemFg,
+          accentColor: accent,
+          maxLines: 1,
+        ));
+      }
+    }
+
+    // Имя подписки: из subscriptionsProvider (надёжно), иначе из самого сервера,
+    // иначе общий ярлык. У ServerItem.subscriptionName часто пусто.
+    String subTitle(String id) {
+      final fromProvider = subNames[id]?.trim() ?? '';
+      if (fromProvider.isNotEmpty) return fromProvider;
+      final fromServer = (bySub[id]!.first.subscriptionName ?? '').trim();
+      if (fromServer.isNotEmpty) return fromServer;
+      return l10n.subscriptionsTitle;
+    }
+
+    addGroup(l10n.serversManualServers, manual);
+    // подписки — по алфавиту названия, для предсказуемого порядка
+    final sortedSubs = [...subOrder]
+      ..sort((a, b) => subTitle(a).toLowerCase().compareTo(subTitle(b).toLowerCase()));
+    for (final id in sortedSubs) {
+      addGroup(subTitle(id), bySub[id]!);
+    }
+    return widgets;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -179,6 +302,9 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
     final serversState = ref.watch(serversProvider);
     final servers = serversState.servers;
     final active = serversState.activeServer;
+    // Надёжные имена подписок (у ServerItem.subscriptionName часто пусто).
+    final subs = ref.watch(subscriptionsProvider).value ?? const [];
+    final subNames = {for (final s in subs) s.id: s.name};
     final vpn = ref.watch(vpnStateProvider).value;
     final status = vpn?.status ?? VpnStatus.disconnected;
     final isVpnBusy = _busy ||
@@ -210,25 +336,37 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-              child: Text(
-                l10n.trayMenuTitle,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: mutedFg,
-                  fontSize: 13,
-                ),
-              ),
-            ),
+              // Заголовок убран (название приложения не нужно) — сразу компактный
+              // статус с цветным индикатором.
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
-                child: Text(
-                  statusLabel,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: mutedFg,
-                    fontSize: 12,
-                  ),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: switch (status) {
+                          VpnStatus.connected => Colors.green,
+                          VpnStatus.connecting ||
+                          VpnStatus.disconnecting =>
+                            Colors.orange,
+                          VpnStatus.error => colorScheme.error,
+                          _ => mutedFg,
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      statusLabel,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: itemFg,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const _TrayDivider(),
@@ -257,7 +395,8 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
               ),
               const _TrayDivider(),
               _TrayItem(
-                label: active?.displayName ?? l10n.trayPickServer,
+                label: active?.cleanName ?? l10n.trayPickServer,
+                leading: active != null ? _flagCircle(active, colorScheme) : null,
                 enabled: !isVpnBusy && servers.isNotEmpty,
                 trailing: servers.length > 1
                     ? Icon(
@@ -269,7 +408,7 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
                       )
                     : null,
                 onTap: servers.length > 1
-                    ? () => _toggleServersExpanded(servers.length)
+                    ? () => _toggleServersExpanded()
                     : null,
                 foregroundColor: itemFg,
                 maxLines: 1,
@@ -279,24 +418,22 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
                   constraints: const BoxConstraints(
                     maxHeight: TrayMenuScreen.maxServerListHeight,
                   ),
-                  child: ListView.builder(
-                    shrinkWrap: true,
+                  child: SingleChildScrollView(
                     padding: EdgeInsets.zero,
-                    itemCount: servers.length,
-                    itemBuilder: (context, index) {
-                      final server = servers[index];
-                      final selected = server.id == active?.id;
-                      return _TrayItem(
-                        label: server.displayName,
-                        enabled: !isVpnBusy,
-                        selected: selected,
-                        indent: 12,
-                        onTap: () => _selectServer(server, servers.length),
-                        foregroundColor: itemFg,
-                        accentColor: colorScheme.primary,
-                        maxLines: 1,
-                      );
-                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: _buildGroupedServers(
+                        servers: servers,
+                        active: active,
+                        isVpnBusy: isVpnBusy,
+                        itemFg: itemFg,
+                        mutedFg: mutedFg,
+                        accent: colorScheme.primary,
+                        l10n: l10n,
+                        subNames: subNames,
+                      ),
+                    ),
                   ),
                 ),
               const _TrayDivider(),
@@ -332,12 +469,37 @@ class _TrayDivider extends StatelessWidget {
   }
 }
 
+class _TrayGroupHeader extends StatelessWidget {
+  final String title;
+  final Color color;
+  const _TrayGroupHeader({required this.title, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 6, 12, 2),
+      child: Text(
+        title.toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+}
+
 class _TrayItem extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
   final bool enabled;
   final bool selected;
   final double indent;
+  final Widget? leading;
   final Widget? trailing;
   final Color foregroundColor;
   final Color? accentColor;
@@ -350,6 +512,7 @@ class _TrayItem extends StatelessWidget {
     this.enabled = true,
     this.selected = false,
     this.indent = 0,
+    this.leading,
     this.trailing,
     this.accentColor,
     this.maxLines = 2,
@@ -369,6 +532,10 @@ class _TrayItem extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(14 + indent, 0, 12, 0),
             child: Row(
               children: [
+                if (leading != null) ...[
+                  Opacity(opacity: enabled ? 1 : 0.4, child: leading!),
+                  const SizedBox(width: 10),
+                ],
                 Expanded(
                   child: Text(
                     label,

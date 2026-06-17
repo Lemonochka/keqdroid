@@ -60,6 +60,63 @@ HHOOK g_popup_mouse_hook = nullptr;
 bool g_window_hidden_in_tray = false;
 DWORD g_popup_ignore_clicks_until_tick = 0;
 
+// Baseline нормального (не-popup) окна — для аварийного восстановления, если
+// предыдущий tray-popup не вернул стиль/размер (баг «мелкое окно без рамки»).
+bool g_have_normal_placement = false;
+LONG g_normal_style = 0;
+LONG g_normal_ex_style = 0;
+RECT g_normal_bounds = {};
+
+void RememberNormalPlacement(LONG style, LONG ex_style, const RECT& bounds) {
+  // запоминаем только настоящее окно (с заголовком), не popup-состояние
+  if ((style & WS_CAPTION) == 0) {
+    return;
+  }
+  g_normal_style = style;
+  g_normal_ex_style = ex_style;
+  g_normal_bounds = bounds;
+  g_have_normal_placement = true;
+}
+
+// Если окно осталось в popup-стиле (без заголовка) — значит прошлый tray-popup
+// не восстановился. Возвращаем нормальный стиль/размер, иначе пользователь
+// видит крошечное окно без рамки.
+void EnsureNormalWindowStyle(HWND hwnd) {
+  if (hwnd == nullptr || !g_have_normal_placement) {
+    return;
+  }
+  const LONG style = ::GetWindowLongW(hwnd, GWL_STYLE);
+  if ((style & WS_CAPTION) != 0) {
+    return;  // нормальное окно — ничего не делаем
+  }
+  ::SetWindowLongW(hwnd, GWL_STYLE, g_normal_style);
+  ::SetWindowLongW(hwnd, GWL_EXSTYLE, g_normal_ex_style);
+  const int w = g_normal_bounds.right - g_normal_bounds.left;
+  const int h = g_normal_bounds.bottom - g_normal_bounds.top;
+  if (w > 0 && h > 0) {
+    ::SetWindowPos(hwnd, nullptr, g_normal_bounds.left, g_normal_bounds.top, w, h,
+                   SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+  } else {
+    ::SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                       SWP_FRAMECHANGED);
+  }
+}
+
+// Рабочая область монитора под точкой (исключает таскбар) — чтобы попап трея
+// (и его нижняя кнопка «Выход») не уезжал под панель задач.
+RECT WorkAreaForPoint(int x, int y) {
+  POINT pt = {x, y};
+  HMONITOR mon = ::MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+  MONITORINFO mi = {sizeof(MONITORINFO)};
+  if (mon != nullptr && ::GetMonitorInfoW(mon, &mi)) {
+    return mi.rcWork;
+  }
+  RECT fallback = {0, 0, ::GetSystemMetrics(SM_CXSCREEN),
+                   ::GetSystemMetrics(SM_CYSCREEN)};
+  return fallback;
+}
+
 int PopupCornerRadiusPx(HWND hwnd) {
   const UINT dpi = ::GetDpiForWindow(hwnd);
   if (dpi == 0) {
@@ -202,6 +259,12 @@ void HideWindowToTray(HWND hwnd) {
 
 void WindowsTrayInit(HWND hwnd) {
   g_tray_hwnd = hwnd;
+  if (hwnd != nullptr) {
+    RECT bounds = {};
+    ::GetWindowRect(hwnd, &bounds);
+    RememberNormalPlacement(::GetWindowLongW(hwnd, GWL_STYLE),
+                            ::GetWindowLongW(hwnd, GWL_EXSTYLE), bounds);
+  }
 }
 
 void WindowsTraySetMinimizeToTray(bool enabled) {
@@ -227,6 +290,9 @@ bool WindowsTrayActivateMainWindow() {
     ::SetForegroundWindow(g_tray_hwnd);
     return true;
   }
+  // Страховка от «мелкого окна без рамки»: если окно осталось в popup-стиле
+  // (прошлый tray-popup не восстановился), вернуть нормальный стиль/размер.
+  EnsureNormalWindowStyle(g_tray_hwnd);
   if (::IsIconic(g_tray_hwnd)) {
     ::ShowWindow(g_tray_hwnd, SW_RESTORE);
   } else if (!::IsWindowVisible(g_tray_hwnd)) {
@@ -262,6 +328,9 @@ void WindowsTrayShowMenuPopup(HWND hwnd,
     ::GetWindowRect(hwnd, &g_popup.restored_bounds);
     g_popup.style = ::GetWindowLongW(hwnd, GWL_STYLE);
     g_popup.ex_style = ::GetWindowLongW(hwnd, GWL_EXSTYLE);
+    // обновляем baseline нормального окна для аварийного восстановления
+    RememberNormalPlacement(g_popup.style, g_popup.ex_style,
+                            g_popup.restored_bounds);
   }
 
   const LONG popup_style = WS_POPUP;
@@ -272,12 +341,14 @@ void WindowsTrayShowMenuPopup(HWND hwnd,
 
   int x = anchor_x - width;
   int y = anchor_y - height;
-  if (x < 0) {
-    x = 0;
-  }
-  if (y < 0) {
-    y = 0;
-  }
+
+  // Клампим в рабочую область монитора под якорем (без таскбара), иначе низ
+  // попапа (кнопка «Выход») оказывается за панелью задач и недоступен.
+  const RECT wa = WorkAreaForPoint(anchor_x, anchor_y);
+  if (x + width > wa.right) x = wa.right - width;
+  if (x < wa.left) x = wa.left;
+  if (y + height > wa.bottom) y = wa.bottom - height;
+  if (y < wa.top) y = wa.top;
 
   ApplyWindowDarkMode(hwnd, dark_theme);
   g_popup.active = true;
@@ -295,12 +366,17 @@ void WindowsTrayResizeMenuPopup(HWND hwnd, int width, int height) {
   }
   RECT rect = {};
   ::GetWindowRect(hwnd, &rect);
-  const int x = rect.left;
-  const int bottom = rect.bottom;
+  int x = rect.left;
+
+  // Меню растёт вверх от своего низа; держим и низ, и верх в рабочей области,
+  // чтобы «Выход» не уехал за таскбар, а верх — за край экрана.
+  const RECT wa = WorkAreaForPoint(rect.left, rect.bottom);
+  int bottom = rect.bottom;
+  if (bottom > wa.bottom) bottom = wa.bottom;
   int top = bottom - height;
-  if (top < 0) {
-    top = 0;
-  }
+  if (top < wa.top) top = wa.top;
+  if (x + width > wa.right) x = wa.right - width;
+  if (x < wa.left) x = wa.left;
   ::SetWindowPos(hwnd, HWND_TOPMOST, x, top, width, height,
                  SWP_NOACTIVATE | SWP_FRAMECHANGED);
   ApplyPopupRoundedCorners(hwnd, width, height);

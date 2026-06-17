@@ -11,7 +11,6 @@ import '../models/server_item.dart';
 import '../models/subscription.dart';
 import '../services/storage_service.dart';
 import '../core/exceptions.dart';
-import '../utils/kphttp_profile.dart';
 
 class UpdateResult {
   final bool success;
@@ -886,7 +885,7 @@ class SubscriptionService {
       throw FormatException(unsupported);
     }
     throw const FormatException(
-      'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, kphttp:// or KpHTTP JSON',
+      'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2:// or hy2://',
     );
   }
 
@@ -1571,9 +1570,7 @@ class SubscriptionService {
         lower.startsWith('ssr://') ||
         lower.startsWith('hysteria://') ||
         lower.startsWith('hysteria2://') ||
-        lower.startsWith('hy2://') ||
-        lower.startsWith('kphttp://') ||
-        KphttpProfile.isKphttpConfig(s);
+        lower.startsWith('hy2://');
   }
 
   static bool _isMetadataConfig(String raw) {

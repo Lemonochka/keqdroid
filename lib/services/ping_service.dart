@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -11,7 +12,7 @@ import '../utils/hysteria_uri.dart';
 
 /// tcp = raw connect latency, url = GET via ephemeral xray,
 /// speed = download throughput in kbps (not ms).
-enum PingType { tcp, url, speed }
+enum PingType { tcp, url, speed, icmp }
 
 /// latency bands for ui coloring
 enum PingLatencyQuality { good, fair, poor }
@@ -50,9 +51,13 @@ class PingService {
     int timeoutSeconds = 5,
   }) async {
     final protocol = server.protocol;
+    // AmneziaWG (WireGuard/UDP) не отвечает ни на tcp-коннект, ни на произвольный
+    // udp-пакет — меряем доступность сервера обычным ICMP-эхо к endpoint.
+    if (protocol == 'awg') {
+      return _pingIcmp(server, timeoutSeconds: timeoutSeconds);
+    }
     // udp-протоколы пингуем через udp сокет
-    if (protocol == 'awg' ||
-        protocol == 'hysteria' ||
+    if (protocol == 'hysteria' ||
         protocol == 'hysteria2' ||
         protocol == 'hy2') {
       return _pingHysteria(server, timeoutSeconds: timeoutSeconds);
@@ -115,6 +120,89 @@ class PingService {
   }
 
   /// hysteria/hy2: пробуем udp quic, при obfs или таймауте — фоллбэк на tcp
+  /// ICMP-эхо к endpoint через системный `ping` (для AmneziaWG/WireGuard).
+  /// Если сервер блокирует ICMP — вернёт неуспех (это ограничение, не баг).
+  static Future<PingResult> _pingIcmp(
+    ServerItem server, {
+    required int timeoutSeconds,
+  }) async {
+    final host = server.address;
+    // host не должен начинаться с '-' — иначе ping примет его за флаг (напр. -t).
+    if (host.isEmpty || host.startsWith('-')) {
+      return PingResult(
+        serverId: server.id,
+        serverName: server.displayName,
+        success: false,
+        error: 'Invalid server address',
+        pingType: PingType.icmp,
+      );
+    }
+    try {
+      final timeoutMs = timeoutSeconds * 1000;
+      // Только латиница/цифры/.-:_ — чтобы безопасно подставить host в cmd.
+      final safeHost = RegExp(r'^[A-Za-z0-9._:\-]+$').hasMatch(host);
+      final sw = Stopwatch()..start();
+      final ProcessResult result;
+      if (Platform.isWindows && safeHost) {
+        // chcp 65001 → ping выводит UTF-8 (иначе на локализованной Windows вывод
+        // в OEM-кодировке бьётся и единица "мс" не парсится → ложный 0 мс).
+        result = await Process.run(
+          'cmd',
+          ['/c', 'chcp 65001>nul & ping -n 1 -w $timeoutMs $host'],
+          stdoutEncoding: utf8,
+        ).timeout(Duration(seconds: timeoutSeconds + 3));
+      } else {
+        final args = Platform.isWindows
+            ? ['-n', '1', '-w', '$timeoutMs', host]
+            : ['-c', '1', '-W', '$timeoutSeconds', host];
+        result = await Process.run('ping', args)
+            .timeout(Duration(seconds: timeoutSeconds + 3));
+      }
+      sw.stop();
+      final out = '${result.stdout}\n${result.stderr}';
+
+      // Вывод ping локализован: en "time=23ms", ru "время=23мс", linux "time=23.4 ms".
+      // Берём число перед единицей ms/мс (с `=` или `<`, запятой или точкой).
+      final timeMatch = RegExp(
+        r'[=<]\s*([\d]+(?:[.,]\d+)?)\s*(?:ms|мс)',
+        caseSensitive: false,
+      ).firstMatch(out);
+      // TTL в выводе латиницей во всех локалях; либо распарсенное время = был ответ.
+      final hasTtl = RegExp(r'ttl[=:]\s*\d+', caseSensitive: false).hasMatch(out);
+
+      if (timeMatch != null || hasTtl) {
+        final int ms;
+        if (timeMatch != null) {
+          ms = double.parse(timeMatch.group(1)!.replaceAll(',', '.')).round();
+        } else {
+          // экзотическая локаль без ms/мс — грубая оценка по wall-clock
+          ms = sw.elapsedMilliseconds;
+        }
+        return PingResult(
+          serverId: server.id,
+          serverName: server.displayName,
+          latencyMs: ms,
+          success: true,
+          pingType: PingType.icmp,
+        );
+      }
+      return PingResult(
+        serverId: server.id,
+        serverName: server.displayName,
+        success: false,
+        error: 'ICMP: no reply (server may block ping)',
+        pingType: PingType.icmp,
+      );
+    } catch (e) {
+      return PingResult(
+        serverId: server.id,
+        serverName: server.displayName,
+        success: false,
+        error: e.toString(),
+      );
+    }
+  }
+
   static Future<PingResult> _pingHysteria(
     ServerItem server, {
     required int timeoutSeconds,
@@ -551,6 +639,8 @@ class PingService {
         return PingType.url;
       case 'speed':
         return PingType.speed;
+      case 'icmp':
+        return PingType.icmp;
       default:
         return PingType.tcp;
     }
@@ -572,6 +662,10 @@ class PingService {
   }
 
   static PingType effectivePingType(ServerItem server, PingType type) {
+    // AmneziaWG (.conf) нельзя пинговать через xray (url/speed парсят config как URI
+    // → "Invalid URI format: [Interface]") и бессмысленно через tcp/udp к WG-порту.
+    // Всегда ICMP, независимо от выбранного в настройках типа.
+    if (server.protocol == 'awg') return PingType.icmp;
     if (type == PingType.speed) return PingType.speed;
     return shouldUseUrlPingForServer(server, type) ? PingType.url : type;
   }
@@ -585,8 +679,13 @@ class PingService {
     required bool vpnConnected,
     required bool tunMode,
   }) {
-    // через tun неизмерим только raw tcp; url и speed идут через временный core
-    if (vpnConnected && tunMode && base == PingType.tcp) return PingType.url;
+    // через tun неизмеримы raw tcp/icmp (закрывает локальный tun-стек / не проходит
+    // tun2socks); url и speed идут через временный core в обход туннеля
+    if (vpnConnected &&
+        tunMode &&
+        (base == PingType.tcp || base == PingType.icmp)) {
+      return PingType.url;
+    }
     return base;
   }
 
@@ -598,6 +697,8 @@ class PingService {
         return PingType.url;
       case 'speed':
         return PingType.speed;
+      case 'icmp':
+        return PingType.icmp;
       case 'tcp':
         return PingType.tcp;
       default:
@@ -666,6 +767,9 @@ class PingService {
     if (effectiveType == PingType.tcp) {
       return pingTcp(server, timeoutSeconds: timeoutSeconds);
     }
+    if (effectiveType == PingType.icmp) {
+      return _pingIcmp(server, timeoutSeconds: timeoutSeconds);
+    }
     if (effectiveType == PingType.speed) {
       final results = await pingSpeedBatch(
         [server],
@@ -713,6 +817,9 @@ class PingService {
         .toList();
     final tcpServers = servers
         .where((s) => effectivePingType(s, type) == PingType.tcp)
+        .toList();
+    final icmpServers = servers
+        .where((s) => effectivePingType(s, type) == PingType.icmp)
         .toList();
 
     if (speedServers.isNotEmpty) {
@@ -766,6 +873,17 @@ class PingService {
       final batch = tcpServers.skip(i).take(batchSize).toList();
       final batchResults = await Future.wait(
         batch.map((s) => pingTcp(s, timeoutSeconds: timeoutSeconds)),
+      );
+      for (final r in batchResults) {
+        resultById[r.serverId] = r;
+        onResult?.call(r);
+      }
+    }
+
+    for (var i = 0; i < icmpServers.length; i += batchSize) {
+      final batch = icmpServers.skip(i).take(batchSize).toList();
+      final batchResults = await Future.wait(
+        batch.map((s) => _pingIcmp(s, timeoutSeconds: timeoutSeconds)),
       );
       for (final r in batchResults) {
         resultById[r.serverId] = r;

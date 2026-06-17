@@ -21,10 +21,9 @@ import '../services/tunnel_session_builder.dart';
 import '../services/vpn_engine.dart';
 import '../tunnel/app_routing_mode.dart';
 import '../tunnel/vpn_backend.dart';
+import '../utils/awg_profile.dart';
 import '../utils/config_gen.dart';
 import '../utils/error_messages.dart';
-import '../utils/kphttp_config_gen.dart';
-import '../utils/kphttp_profile.dart';
 import '../utils/process_name_utils.dart';
 import '../utils/socks5_credentials.dart';
 import '../utils/split_tunnel_routing.dart';
@@ -413,12 +412,9 @@ class ServersNotifier extends Notifier<ServersState> {
   }
 
   Future<void> addManual(String rawConfig) async {
-    var config = rawConfig.trim();
+    final config = rawConfig.trim();
     final validationError = _validateManualConfig(config);
     if (validationError != null) throw Exception(validationError);
-    if (KphttpProfile.isKphttpConfig(config)) {
-      config = KphttpProfile.parse(config).toStorageUri();
-    }
     if (state.servers.any((s) => s.config == config)) {
       throw Exception('This server is already added');
     }
@@ -429,6 +425,16 @@ class ServersNotifier extends Notifier<ServersState> {
 
   String? _validateManualConfig(String rawConfig) {
     if (rawConfig.isEmpty) return 'Configuration is empty';
+
+    if (AwgProfile.isAwgConfig(rawConfig)) {
+      try {
+        AwgProfile.parse(rawConfig);
+      } catch (e) {
+        return 'Invalid AmneziaWG config: $e';
+      }
+      return null;
+    }
+
     final lower = rawConfig.toLowerCase();
     if (!(lower.startsWith('vless://') ||
         lower.startsWith('vmess://') ||
@@ -437,19 +443,8 @@ class ServersNotifier extends Notifier<ServersState> {
         lower.startsWith('ssr://') ||
         lower.startsWith('hysteria://') ||
         lower.startsWith('hysteria2://') ||
-        lower.startsWith('hy2://') ||
-        lower.startsWith('kphttp://') ||
-        KphttpProfile.isKphttpConfig(rawConfig))) {
-      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, kphttp:// or KpHTTP JSON profile';
-    }
-
-    if (KphttpProfile.isKphttpConfig(rawConfig)) {
-      try {
-        KphttpProfile.parse(rawConfig);
-      } catch (e) {
-        return 'Invalid KpHTTP profile: $e';
-      }
-      return null;
+        lower.startsWith('hy2://'))) {
+      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2:// or AmneziaWG .conf';
     }
 
     if (lower.startsWith('vmess://')) {
@@ -756,6 +751,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     _connectInFlight = true;
 
     try {
+      final isAwg = AwgProfile.isAwgConfig(server.config);
+
       await ref.read(serversProvider.notifier).setActive(server);
       state = const AsyncData(VpnState(status: VpnStatus.connecting));
 
@@ -789,7 +786,17 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           'Switch to TUN mode to apply per-process rules.',
         );
       }
-      if (Platform.isWindows && connectionMode == ConnectionMode.tun) {
+      if (Platform.isWindows && isAwg && connectionMode == ConnectionMode.tun) {
+        // AmneziaWG TUN использует sing-box (wintun) → нужны права администратора.
+        // Proxy-режим (wireproxy-awg) работает без админ-прав.
+        final elevated = await engine.requestVpnPermission();
+        if (!elevated) {
+          AppLogger.instance.warn(
+            'AmneziaWG TUN requires admin rights for the sing-box wintun adapter.',
+          );
+        }
+      }
+      if (Platform.isWindows && !isAwg && connectionMode == ConnectionMode.tun) {
         final elevated = await engine.requestVpnPermission();
         if (!elevated) {
           if (autostartTunFallback) {
@@ -830,30 +837,24 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
       final windowsProxyNoAuth = Platform.isWindows &&
           connectionMode == ConnectionMode.proxy;
-      final isKphttp = KphttpProfile.isKphttpConfig(server.config);
-      final vpnBackend = isKphttp ? VpnBackend.kphttp : VpnBackend.xray;
 
-      String xrayConfig = '';
-      String? kphttpToml;
-      if (isKphttp) {
-        kphttpToml = KphttpConfigGen.generateToml(
-          server.config,
-          localSocksPort: settings.localPort,
-        );
-      } else {
-        xrayConfig = ConfigGeneratorV2.generateConfig(
-          server.config,
-          settings,
-          resolvedServerIp: serverIp,
-          localInboundsNoAuth: windowsProxyNoAuth,
-        );
-      }
+      final vpnBackend = isAwg ? VpnBackend.awg : VpnBackend.xray;
+
+      // AmneziaWG поднимается из сырого .conf своим ядром — xray-конфиг не нужен.
+      final xrayConfig = isAwg
+          ? ''
+          : ConfigGeneratorV2.generateConfig(
+              server.config,
+              settings,
+              resolvedServerIp: serverIp,
+              localInboundsNoAuth: windowsProxyNoAuth,
+            );
 
       final session = TunnelSessionBuilder.build(
         settings: settings,
         xrayConfig: xrayConfig,
-        kphttpTomlConfig: kphttpToml,
         vpnBackend: vpnBackend,
+        awgConfig: isAwg ? server.config : null,
         resolvedServerIp: serverIp,
         socksUsername: creds.username,
         socksPassword: creds.password,

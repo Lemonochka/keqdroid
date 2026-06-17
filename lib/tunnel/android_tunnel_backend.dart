@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
+import '../utils/awg_profile.dart';
 import 'tunnel_backend.dart';
 import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
@@ -65,18 +66,31 @@ class AndroidTunnelBackend implements TunnelBackend {
   @override
   Future<void> startSession(TunnelSessionRequest request) async {
     try {
-      await _method.invokeMethod<void>('startVpn', {
+      final args = <String, dynamic>{
         'vpnBackend': request.vpnBackend.wireValue,
         'xrayConfig': request.xrayConfig,
-        if (request.kphttpTomlConfig != null &&
-            request.kphttpTomlConfig!.isNotEmpty)
-          'kphttpTomlConfig': request.kphttpTomlConfig,
         'socksPort': request.socksPort,
         'excludePackages': request.excludePackages,
         'includePackages': request.includePackages,
         if (request.serverName != null && request.serverName!.isNotEmpty)
           'serverName': request.serverName,
-      });
+      };
+
+      // AmneziaWG: парсим .conf в Dart и отдаём ядру UAPI + сетевые параметры TUN.
+      if (request.vpnBackend == VpnBackend.awg && request.awgConfig != null) {
+        final profile = AwgProfile.parse(request.awgConfig!);
+        final allowed = <String>{};
+        for (final p in profile.peers) {
+          allowed.addAll(p.allowedIps);
+        }
+        args['awgUapi'] = profile.toUapi();
+        args['awgAddresses'] = profile.iface.addresses;
+        args['awgDns'] = profile.iface.dns;
+        args['awgAllowedIps'] = allowed.toList();
+        if (profile.iface.mtu != null) args['awgMtu'] = profile.iface.mtu;
+      }
+
+      await _method.invokeMethod<void>('startVpn', args);
     } on PlatformException catch (e) {
       throw _wrap(e, 'startVpn');
     }

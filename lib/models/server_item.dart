@@ -1,6 +1,6 @@
 import 'package:uuid/uuid.dart';
 
-import '../utils/kphttp_profile.dart';
+import '../utils/awg_profile.dart';
 import 'server_name_utils.dart';
 
 enum ServerItemType { manual, subscription }
@@ -123,12 +123,13 @@ class ServerItem {
   String get displayName {
     if (_cachedDisplayName != null) return _cachedDisplayName!;
     try {
-      if (protocol == 'kphttp') {
-        final profile = KphttpProfile.parse(config);
-        if (profile.remark.isNotEmpty) {
-          _cachedDisplayName = _sanitizeUtf16(profile.remark);
-          return _cachedDisplayName!;
-        }
+      if (protocol == 'awg') {
+        final profile = AwgProfile.parse(config);
+        final remark = profile.remark;
+        _cachedDisplayName = _sanitizeUtf16(
+          (remark != null && remark.isNotEmpty) ? remark : profile.endpointHost,
+        );
+        return _cachedDisplayName!;
       }
       final uri = Uri.parse(config);
       String raw;
@@ -164,8 +165,8 @@ class ServerItem {
   /// Адрес сервера
   String get address {
     try {
-      if (protocol == 'kphttp') {
-        return KphttpProfile.parse(config).server;
+      if (protocol == 'awg') {
+        return AwgProfile.parse(config).endpointHost;
       }
       return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).host;
     } catch (_) {
@@ -176,8 +177,8 @@ class ServerItem {
   /// Порт сервера
   int get port {
     try {
-      if (protocol == 'kphttp') {
-        return KphttpProfile.parse(config).port;
+      if (protocol == 'awg') {
+        return AwgProfile.parse(config).endpointPort;
       }
       return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).port;
     } catch (_) {
@@ -196,15 +197,8 @@ class ServerItem {
     if (lower.startsWith('hy2://')) return 'hy2';
     if (lower.startsWith('hysteria2://')) return 'hysteria2';
     if (lower.startsWith('hysteria://')) return 'hysteria';
-    if (lower.startsWith('kphttp://') || _looksLikeKphttpJson(lower)) {
-      return 'kphttp';
-    }
+    if (AwgProfile.isAwgConfig(config)) return 'awg';
     return 'unknown';
-  }
-
-  static bool _looksLikeKphttpJson(String lower) {
-    if (!lower.trimLeft().startsWith('{')) return false;
-    return lower.contains('"protocol"') && lower.contains('kphttp');
   }
 
   // выкидываем одиночные surrogate'ы (на них падает flutter text engine),

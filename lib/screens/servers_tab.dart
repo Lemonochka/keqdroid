@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:country_flags/country_flags.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,8 +23,8 @@ import '../services/vpn_engine.dart';
 import '../platform/platform_bootstrap.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../ui/responsive/desktop_page_layout.dart';
+import '../utils/awg_profile.dart';
 import '../utils/error_messages.dart';
-import '../utils/kphttp_profile.dart';
 
 class ServersTab extends ConsumerStatefulWidget {
   const ServersTab({super.key});
@@ -131,7 +133,10 @@ class _ServersTabState extends ConsumerState<ServersTab>
     final vpnActive = status == VpnStatus.connecting ||
         status == VpnStatus.disconnecting ||
         status == VpnStatus.connected;
-    final run = (_serversTabVisible && _appInForeground) || vpnActive;
+    // Крутим бесконечные анимации (60fps) только когда окно на переднем плане.
+    // Раньше при vpnActive они продолжались и в свёрнутом окне → движок рендерил
+    // в фоне и жёг 3-4% CPU. При возврате из трея (resumed) анимация перезапустится.
+    final run = _appInForeground && (_serversTabVisible || vpnActive);
     if (run) {
       if (!_waveCtrl.isAnimating) _waveCtrl.repeat();
       if (!_breathCtrl.isAnimating) _breathCtrl.repeat(reverse: true);
@@ -491,7 +496,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
             ListTile(
               leading: Icon(Icons.link, color: AppTheme.accent(ctx)),
               title: Text(l10n.serversPasteLinks, style: TextStyle(color: AppTheme.text(ctx))),
-              subtitle: Text('vless, vmess, trojan, ss, hysteria2, hy2, kphttp?', style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx))),
+              subtitle: Text('vless, vmess, trojan, ss, hysteria2, hy2', style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx))),
               onTap: () {
                 Navigator.pop(ctx2);
                 _showPasteLinksSheet(ctx);
@@ -500,11 +505,59 @@ class _ServersTabState extends ConsumerState<ServersTab>
             ListTile(
               leading: Icon(Icons.description_outlined, color: AppTheme.accent(ctx)),
               title: Text(l10n.serversImportFile, style: TextStyle(color: AppTheme.text(ctx))),
-              subtitle: Text(l10n.serversNotSupported, style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx))),
-              onTap: null,
+              subtitle: Text('AmneziaWG (.conf)', style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx))),
+              onTap: () {
+                Navigator.pop(ctx2);
+                _importConfigFile(ctx);
+              },
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Импорт серверного конфига из файла (AmneziaWG `.conf` или список ссылок).
+  Future<void> _importConfigFile(BuildContext ctx) async {
+    String? content;
+    try {
+      final file = await FilePicker.pickFile(type: FileType.any);
+      if (file == null) return;
+      if (file.path != null && file.path!.isNotEmpty) {
+        content = await File(file.path!).readAsString();
+      } else {
+        content = utf8.decode(await file.readAsBytes(), allowMalformed: true);
+      }
+    } catch (e) {
+      if (ctx.mounted) _showImportError(ctx, e);
+      return;
+    }
+
+    final raw = content.trim();
+    if (raw.isEmpty) return;
+
+    // AmneziaWG .conf — единый многострочный блок; иначе список ссылок построчно.
+    final configs = AwgProfile.isAwgConfig(raw)
+        ? [raw]
+        : raw.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+
+    try {
+      for (final c in configs) {
+        await ref.read(serversProvider.notifier).addManual(c);
+      }
+    } catch (e) {
+      if (ctx.mounted) _showImportError(ctx, e);
+    }
+  }
+
+  void _showImportError(BuildContext ctx, Object e) {
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(
+        content: Text(_friendlyError(e)),
+        backgroundColor: AppTheme.red(ctx),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 5),
       ),
     );
   }
@@ -551,7 +604,13 @@ class _ServersTabState extends ConsumerState<ServersTab>
                     if (raw.isEmpty) return;
                     setModalState(() => loading = true);
                     try {
-                      final configs = KphttpProfile.splitPastedConfigs(raw);
+                      final configs = AwgProfile.isAwgConfig(raw)
+                          ? [raw]
+                          : raw
+                              .split('\n')
+                              .map((line) => line.trim())
+                              .where((line) => line.isNotEmpty)
+                              .toList();
                       for (final c in configs) {
                         await ref.read(serversProvider.notifier).addManual(c);
                       }
@@ -1627,18 +1686,22 @@ class _ServerTile extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: protocolColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        server.protocol.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: protocolColor,
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: protocolColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          server.protocol.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: protocolColor,
+                          ),
                         ),
                       ),
                     ),
@@ -2043,7 +2106,7 @@ class _ServerTile extends ConsumerWidget {
 
   Color _protocolColor(String p, BuildContext ctx) => switch (p) {
     'vless'     => const Color(0xFF4A90D9),
-    'kphttp'    => const Color(0xFF7B61FF),
+    'awg'       => const Color(0xFF2E7D32),
     'vmess'     => const Color(0xFF7B68EE),
     'trojan'    => const Color(0xFFE53935),
     'ss'        => const Color(0xFF43A047),

@@ -18,7 +18,7 @@ class SingBoxTunConfigGen {
     required AppSettings settings,
     List<String> managedProcessNames = const [],
     AppRoutingMode routingMode = AppRoutingMode.allProxy,
-    /// KpHTTP local SOCKS5 has no auth — omit username/password in outbound.
+    /// AmneziaWG: wireproxy SOCKS5 без auth — не шлём username/password в outbound.
     bool localSocksNoAuth = false,
     /// this app's own exe (e.g. keqdroid.exe). routed direct so our tcp/url ping
     /// sockets measure latency from the local pc, not through the active server.
@@ -198,6 +198,8 @@ class SingBoxTunConfigGen {
     final bypassProcessNames = <String>{
       'xray.exe',
       'sing-box.exe',
+      // wireproxy.exe (AmneziaWG): его WG-UDP к серверу должен идти мимо туннеля
+      'wireproxy.exe',
       if (appProcessName.trim().isNotEmpty) appProcessName.trim().toLowerCase(),
     }.toList();
     rules.add({
@@ -341,7 +343,10 @@ class SingBoxTunConfigGen {
           buildProxyDnsServer(),
         ],
         'strategy': 'ipv4_only',
-        'final': 'local-dns',
+        // Клиентский DNS идёт через туннель (proxy-dns), а не через системный
+        // резолвер: иначе на машинах с Tailscale его перехватывает MagicDNS
+        // (100.100.100.100) и резолв ломается, плюс это утечка DNS мимо VPN.
+        'final': 'proxy-dns',
       },
       'inbounds': [tunInbound],
       'outbounds': [
