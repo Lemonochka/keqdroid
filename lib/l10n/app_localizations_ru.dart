@@ -551,6 +551,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPingMethodTcpHint => 'Быстрая проверка доступности';
 
   @override
+  String get settingsPingMethodIcmp => 'ICMP пинг';
+
+  @override
+  String get settingsPingMethodIcmpHint =>
+      'Эхо до IP сервера (некоторые серверы его блокируют)';
+
+  @override
   String get settingsPingMethodUrl => 'HTTP пинг через прокси';
 
   @override
@@ -827,13 +834,13 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsDebugModeHint =>
-      'Показывает живые метрики VPN на карточках серверов и позволяет просматривать логи ядра Xray.';
+      'Показывает живые метрики VPN на карточках серверов и позволяет просматривать логи ядра.';
 
   @override
-  String get settingsOpenXrayLogs => 'Открыть логи Xray';
+  String get settingsOpenXrayLogs => 'Открыть логи ядра';
 
   @override
-  String get settingsXrayCoreLogs => 'Логи ядра Xray';
+  String get settingsXrayCoreLogs => 'Логи ядра';
 
   @override
   String get settingsRefresh => 'Обновить';
@@ -998,7 +1005,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get settingsNoXrayLogsYet => 'Логов Xray пока нет';
+  String get settingsNoXrayLogsYet => 'Логов ядра пока нет';
 
   @override
   String get settingsLanguageTitle => 'Язык';

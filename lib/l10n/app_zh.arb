@@ -237,6 +237,8 @@
   "settingsPingMethodTitle": "Ping 方式",
   "settingsPingMethodTcp": "TCP Ping",
   "settingsPingMethodTcpHint": "快速可达性检查",
+  "settingsPingMethodIcmp": "ICMP Ping",
+  "settingsPingMethodIcmpHint": "向服务器 IP 发送回显（部分服务器会屏蔽）",
   "settingsPingMethodUrl": "通过代理的 HTTP",
   "settingsPingMethodUrlHint": "测量通过服务器的 GET 延迟",
   "settingsPingMethodSpeed": "速度测试",

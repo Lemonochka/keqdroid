@@ -517,6 +517,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPingMethodTcpHint => '快速可达性检查';
 
   @override
+  String get settingsPingMethodIcmp => 'ICMP Ping';
+
+  @override
+  String get settingsPingMethodIcmpHint => '向服务器 IP 发送回显（部分服务器会屏蔽）';
+
+  @override
   String get settingsPingMethodUrl => '通过代理的 HTTP';
 
   @override

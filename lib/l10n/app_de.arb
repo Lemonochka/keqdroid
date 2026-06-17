@@ -237,6 +237,8 @@
   "settingsPingMethodTitle": "Ping-Methode",
   "settingsPingMethodTcp": "TCP-Ping",
   "settingsPingMethodTcpHint": "Schnelle Erreichbarkeitsprüfung",
+  "settingsPingMethodIcmp": "ICMP-Ping",
+  "settingsPingMethodIcmpHint": "Echo an Server-IP (manche Server blockieren es)",
   "settingsPingMethodUrl": "HTTP über Proxy",
   "settingsPingMethodUrlHint": "Misst die GET-Latenz über den Server",
   "settingsPingMethodSpeed": "Geschwindigkeitstest",

@@ -237,6 +237,8 @@
   "settingsPingMethodTitle": "Метод пинга",
   "settingsPingMethodTcp": "TCP пинг",
   "settingsPingMethodTcpHint": "Быстрая проверка доступности",
+  "settingsPingMethodIcmp": "ICMP пинг",
+  "settingsPingMethodIcmpHint": "Эхо до IP сервера (некоторые серверы его блокируют)",
   "settingsPingMethodUrl": "HTTP пинг через прокси",
   "settingsPingMethodUrlHint": "Замеряет пинг через GET запрос к серверу",
   "settingsPingMethodSpeed": "Тест скорости",
@@ -386,9 +388,9 @@
   "settingsDebugMode": "Режим отладки",
   "settingsDebugModeOn": "Расширенная диагностика включена",
   "settingsDebugModeOff": "Выключен",
-  "settingsDebugModeHint": "Показывает живые метрики VPN на карточках серверов и позволяет просматривать логи ядра Xray.",
-  "settingsOpenXrayLogs": "Открыть логи Xray",
-  "settingsXrayCoreLogs": "Логи ядра Xray",
+  "settingsDebugModeHint": "Показывает живые метрики VPN на карточках серверов и позволяет просматривать логи ядра.",
+  "settingsOpenXrayLogs": "Открыть логи ядра",
+  "settingsXrayCoreLogs": "Логи ядра",
   "settingsRefresh": "Обновить",
   "settingsAppVersion": "Версия приложения",
   "settingsChecking": "Проверка...",
@@ -463,7 +465,7 @@
       "error": {}
     }
   },
-  "settingsNoXrayLogsYet": "Логов Xray пока нет",
+  "settingsNoXrayLogsYet": "Логов ядра пока нет",
   "settingsLanguageTitle": "Язык",
   "settingsLanguageSubtitle": "{language}",
   "@settingsLanguageSubtitle": {
