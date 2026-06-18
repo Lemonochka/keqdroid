@@ -2,28 +2,27 @@
 
 ## Cores
 
-| Mode | Processes | Purpose |
-|------|-----------|---------|
-| **Proxy** | `xray.exe` only | All subscription protocols via Xray; Chrome/Edge use Windows system proxy; Firefox gets `user.js` HTTP proxy (restart Firefox after connect) |
-| **TUN** | `xray.exe` → `sing-box.exe` | sing-box owns TUN; upstream is Xray SOCKS5 |
+| Mode | Processes | What happens |
+|------|-----------|--------------|
+| Proxy | `xray.exe` | Everything goes through Xray. Chrome and Edge follow the Windows system proxy; Firefox gets an HTTP proxy through `user.js` (restart it after connecting). |
+| TUN | `xray.exe` → `sing-box.exe` | sing-box owns the TUN device and uses Xray's SOCKS5 as its upstream. |
 
-sing-box outbound `proxy` points to `127.0.0.1:<localPort>` with the same SOCKS5 username/password as in the generated Xray inbound.
+In TUN mode the sing-box `proxy` outbound points at `127.0.0.1:<localPort>` and
+reuses the SOCKS5 username and password from the generated Xray inbound.
 
-## Dart layout
+## Where the code lives
 
-- `lib/tunnel/` — `TunnelBackend`, Android/Windows implementations
-- `lib/utils/singbox_tun_config.dart` — TUN JSON for sing-box
+- `lib/tunnel/` — `TunnelBackend` and the Android/Windows implementations
+- `lib/utils/singbox_tun_config.dart` — builds the sing-box TUN JSON
 - `lib/services/tunnel_session_builder.dart` — builds `TunnelSessionRequest`
-- `lib/services/vpn_engine.dart` — facade used by UI
+- `lib/services/vpn_engine.dart` — the facade the UI talks to
 
 ## Native (Windows)
 
-- `windows/runner/tunnel_channel_handler.cpp` — system proxy via `INTERNET_OPTION_PER_CONNECTION_OPTION` (fills `DefaultConnectionSettings` for the Settings UI) plus `ProxyServer` `http=;https=;socks=` for Chromium; WinHTTP import; elevation check for TUN
+`windows/runner/tunnel_channel_handler.cpp` sets the system proxy via
+`INTERNET_OPTION_PER_CONNECTION_OPTION`. It fills `DefaultConnectionSettings` so
+the Windows Settings page shows the proxy, sets `ProxyServer`
+(`http=;https=;socks=`) for Chromium, imports the WinHTTP config, and checks for
+elevation before starting TUN.
 
-## Next milestones
-
-1. Tray icon, autostart, MSI updates
-2. Background subscription refresh (Task Scheduler or in-app timer)
-3. Live VPN telemetry on Windows (optional stats channel)
-
-See [WINDOWS_ANDROID_PARITY.md](WINDOWS_ANDROID_PARITY.md) for the full matrix.
+For how this lines up with the Android side, see WINDOWS_ANDROID_PARITY.md.

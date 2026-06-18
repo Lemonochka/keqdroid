@@ -1,52 +1,57 @@
-# Android ↔ Windows feature parity
+# Android vs Windows
 
-## Parity matrix (user-facing)
+How the two platforms compare, feature by feature.
 
 | Feature | Android | Windows |
 |---------|---------|---------|
-| VPN connect | TUN (VpnService + Xray + tun2socks) | Proxy (default): Xray + system proxy; TUN: Xray → sing-box |
-| Split tunneling | Per-app (packages) | Per-process (TUN only) |
-| TCP / UDP ping | Yes | Yes |
-| URL ping | Native ephemeral Xray | Dart `EphemeralXrayPing` (xray.exe) |
-| Xray debug logs | Native buffer | Session stdout/stderr export |
-| Proxy debug logs | — | Yes |
-| Subscriptions | Foreground + WorkManager | Foreground + periodic timer while app runs |
-| Live speed / session stats | EventChannel from VpnService | TUN: virtual adapter counters; Proxy: Xray StatsService API |
-| App updates | GitHub `v*` release (`.apk` asset) | Same `v*` release; portable `.zip` is applied in-place (extract + replace + restart) |
-| Notifications / background VPN | Yes | Not implemented (desktop has no VpnService) |
-| System proxy | — | Yes (+ Firefox user.js) |
+| VPN connect | TUN (VpnService + Xray + tun2socks) | Proxy by default (Xray + system proxy); TUN is Xray → sing-box |
+| Split tunneling | per app (packages) | per process (TUN only) |
+| TCP / UDP ping | yes | yes |
+| URL ping | native ephemeral Xray | Dart `EphemeralXrayPing` (xray.exe) |
+| Xray debug logs | native buffer | session stdout/stderr export |
+| Proxy debug logs | — | yes |
+| Subscriptions | foreground + WorkManager | foreground + a timer while the app is open |
+| Live speed / session stats | EventChannel from VpnService | TUN: adapter counters; Proxy: Xray StatsService API |
+| App updates | GitHub `v*` release (`.apk`) | same release; the portable `.zip` is applied in place (extract, replace, restart) |
+| Background VPN / notifications | yes | no — the desktop has no VpnService |
+| System proxy | — | yes, plus the Firefox `user.js` helper |
 
-## Windows-only
+## Only on Windows
 
-- Connection mode Proxy / TUN UI
-- System proxy + Firefox helper
-- Process list for split tunnel
-- Proxy debug logs
-- Side-by-side servers layout on wide windows
+- the Proxy / TUN connection mode UI
+- system proxy and the Firefox helper
+- the process list for split tunneling
+- proxy debug logs
+- a side-by-side server layout on wide windows
 
-## Android-only
+## Only on Android
 
-- VpnService permission flow
-- Package-based split tunnel
-- Notification launch → connect
-- Foreground VPN notification in service
-- Quick Settings tile
-- WorkManager when app is killed
+- the VpnService permission flow
+- package-based split tunneling
+- tapping the notification to connect
+- the foreground VPN notification
+- the Quick Settings tile
+- WorkManager refresh when the app is killed
 
-## Intentional limitations
+## Where the platforms differ on purpose
 
-- **Split tunnel in Proxy mode (Windows):** not equivalent to Android per-app VPN; use **TUN** mode.
-- **Background refresh on Windows:** runs on a timer and on app resume, not when the app is fully closed.
-- **Traffic stats in Proxy mode:** Xray inbound counters via StatsService (`127.0.0.1:10985`).
+- Split tunneling in Proxy mode on Windows isn't the same as Android's per-app
+  VPN. Use TUN mode if you need that.
+- Background refresh on Windows runs on a timer and when the app resumes, not
+  while it's fully closed.
+- Proxy-mode traffic stats come from Xray's StatsService on `127.0.0.1:10985`.
 
-## Windows desktop shell
+## The Windows desktop shell
 
-- **System tray:** closing the window hides to tray; left-click (or double-click) restores the main window; right-click opens a themed Flutter menu (connect/disconnect, server list, Proxy/TUN, open app, exit).
-- Tray icon appears after the first minimize-to-tray (close button).
-- TUN from tray without admin rights opens the full app with the same restart-as-administrator dialog as the sidebar.
+- Closing the window hides it to the tray. Left-click (or double-click) the tray
+  icon to bring it back; right-click opens a small themed menu — connect/
+  disconnect, the server list, Proxy/TUN, open the app, exit.
+- The tray icon shows up the first time you close to tray.
+- Switching to TUN from the tray without admin rights opens the full app and
+  shows the same "restart as administrator" dialog as the sidebar.
 
-## Planned (not in code yet)
+## Not done yet
 
-- Autostart, MSI/MSIX in-app installer
-- Windows toast for subscription refresh results
-- Tray tooltip reflects VPN connected state
+- an MSI/MSIX installer instead of the in-place zip update
+- a Windows toast with subscription-refresh results
+- a tray tooltip that reflects the connected state

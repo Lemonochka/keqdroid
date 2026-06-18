@@ -27,7 +27,7 @@ function Filter-FirebaseRegistrant([string]$text) {
 
 # --- app_plugins.cmake ---
 $cmakeHeader = @(
-    '# Windows plugins for keqdroid (firebase_core excluded — Crashlytics is Android-only).',
+    '# Windows plugins for keqdroid (firebase_core excluded - Crashlytics is Android-only).',
     '# Regenerate after adding plugins: powershell -File tool/sync_windows_plugins.ps1',
     ''
 )
@@ -38,7 +38,7 @@ Write-Host "Wrote $appCmake"
 
 # --- app_plugin_registrant.cc ---
 $regHeader = @(
-    '// Windows plugin registration (firebase_core excluded — Crashlytics is Android-only).',
+    '// Windows plugin registration (firebase_core excluded - Crashlytics is Android-only).',
     '// Regenerate after adding plugins: powershell -File tool/sync_windows_plugins.ps1',
     ''
 )

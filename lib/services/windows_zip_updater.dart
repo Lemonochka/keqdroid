@@ -163,13 +163,14 @@ for ($i = 0; $i -lt 120; $i++) {
   if (-not (Get-Process -Id $AppPid -ErrorAction SilentlyContinue)) { break }
   Start-Sleep -Seconds 1
 }
-Start-Sleep -Milliseconds 1500
+Start-Sleep -Seconds 3
 
-# 2) stop leftover core processes that may lock files.
-foreach ($name in @('xray', 'sing-box', 'wireproxy')) {
+# 2) stop leftover processes that may lock binaries in the install dir.
+foreach ($name in @('keqdroid', 'xray', 'sing-box', 'wireproxy')) {
   Get-Process -Name $name -ErrorAction SilentlyContinue |
     Stop-Process -Force -ErrorAction SilentlyContinue
 }
+Start-Sleep -Seconds 1
 
 # 3) if the target isn't writable (e.g. installed under Program Files),
 #    relaunch this script elevated once to perform the copy.
@@ -200,15 +201,67 @@ if (-not $writable -and -not $isAdmin) {
 }
 
 # 4) copy the new files in, retrying transient sharing violations.
+#    /IS /IT /IM force overwrite even when timestamps differ (zip entries are
+#    often older than installed files, which made robocopy skip app.so).
 $copied = $false
-for ($attempt = 1; $attempt -le 5; $attempt++) {
-  $out = & robocopy $SourceDir $TargetDir /E /R:3 /W:2 /NFL /NDL /NJH /NJS /NP
+for ($attempt = 1; $attempt -le 8; $attempt++) {
+  $null = & robocopy $SourceDir $TargetDir /E /IS /IT /IM /R:5 /W:3 /NFL /NDL /NJH /NJS /NP 2>&1
   $code = $LASTEXITCODE
   Log "robocopy attempt $attempt exit=$code"
-  if ($code -lt 8) { $copied = $true; break }
+
+  $critical = @(
+    (Join-Path $SourceDir 'keqdroid.exe'),
+    (Join-Path $SourceDir 'data\app.so')
+  )
+  $allMatch = $true
+  foreach ($srcFile in $critical) {
+    if (-not (Test-Path -LiteralPath $srcFile)) { continue }
+    $rel = $srcFile.Substring($SourceDir.Length).TrimStart('\')
+    $dstFile = Join-Path $TargetDir $rel
+    if (-not (Test-Path -LiteralPath $dstFile)) {
+      Log "missing after robocopy: $rel"
+      $allMatch = $false
+      continue
+    }
+    $srcHash = (Get-FileHash -LiteralPath $srcFile -Algorithm SHA256).Hash
+    $dstHash = (Get-FileHash -LiteralPath $dstFile -Algorithm SHA256).Hash
+    if ($srcHash -eq $dstHash) { continue }
+
+    Log "hash mismatch $rel — retrying direct copy"
+    $allMatch = $false
+    try {
+      $dstParent = Split-Path -Parent $dstFile
+      if (-not (Test-Path -LiteralPath $dstParent)) {
+        New-Item -ItemType Directory -Path $dstParent -Force | Out-Null
+      }
+      Copy-Item -LiteralPath $srcFile -Destination $dstFile -Force
+      $dstHash = (Get-FileHash -LiteralPath $dstFile -Algorithm SHA256).Hash
+      if ($srcHash -eq $dstHash) {
+        Log "direct copy ok: $rel"
+      } else {
+        Log "direct copy still mismatched: $rel"
+      }
+    } catch {
+      Log "direct copy failed $rel : $_"
+    }
+  }
+
+  # Re-check after direct-copy attempts.
+  $allMatch = $true
+  foreach ($srcFile in $critical) {
+    if (-not (Test-Path -LiteralPath $srcFile)) { continue }
+    $rel = $srcFile.Substring($SourceDir.Length).TrimStart('\')
+    $dstFile = Join-Path $TargetDir $rel
+    if (-not (Test-Path -LiteralPath $dstFile)) { $allMatch = $false; continue }
+    $srcHash = (Get-FileHash -LiteralPath $srcFile -Algorithm SHA256).Hash
+    $dstHash = (Get-FileHash -LiteralPath $dstFile -Algorithm SHA256).Hash
+    if ($srcHash -ne $dstHash) { $allMatch = $false }
+  }
+
+  if ($code -lt 8 -and $allMatch) { $copied = $true; break }
   Start-Sleep -Seconds 2
 }
-if (-not $copied) { Log "robocopy FAILED after retries; relaunching previous version" }
+if (-not $copied) { Log "update copy FAILED after retries; relaunching previous version" }
 
 # 5) always relaunch so the app reopens, with the app dir as working directory
 #    so it can load its DLLs regardless of where this script runs from.

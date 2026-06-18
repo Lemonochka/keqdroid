@@ -481,8 +481,14 @@ bool WindowsTrayHandleMessage(HWND hwnd,
       return false;
     }
 
-    if (g_window_hidden_in_tray || ::IsIconic(hwnd) ||
-        !::IsWindowVisible(hwnd)) {
+    // Only take over activation when the window is fully hidden in the tray —
+    // in that state there is no taskbar button, so this can't be a taskbar
+    // click. A normally minimized window (iconic but still shown in the taskbar)
+    // must keep the OS-native taskbar toggle: swallowing its restore here left
+    // Windows 10 unable to minimize on the second taskbar click (Win11 tolerated
+    // it). IsWindowVisible() is FALSE only for SW_HIDE'd (tray) windows; iconic
+    // windows keep WS_VISIBLE, so they now fall through to the default handler.
+    if (g_window_hidden_in_tray || !::IsWindowVisible(hwnd)) {
       WindowsTrayActivateMainWindow();
       if (result != nullptr) {
         *result = 0;
@@ -495,7 +501,10 @@ bool WindowsTrayHandleMessage(HWND hwnd,
   if (message == WM_SYSCOMMAND) {
     const WPARAM command = wparam & 0xFFF0;
     if (command == SC_RESTORE || command == SC_MAXIMIZE) {
-      if (g_popup.active || g_window_hidden_in_tray || ::IsIconic(hwnd) ||
+      // Same rule as WM_ACTIVATE: only intervene for a tray-hidden window.
+      // Leave a taskbar-minimized (iconic) window to DefWindowProc so the
+      // native restore/minimize taskbar toggle keeps working on Windows 10.
+      if (g_popup.active || g_window_hidden_in_tray ||
           !::IsWindowVisible(hwnd)) {
         WindowsTrayActivateMainWindow();
         if (result != nullptr) {

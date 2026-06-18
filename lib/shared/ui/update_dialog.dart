@@ -118,7 +118,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'v${widget.info.displayCurrentVersion} ? v${widget.info.displayLatestVersion}',
+              'v${widget.info.displayCurrentVersion} → v${widget.info.displayLatestVersion}',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: textColor,
