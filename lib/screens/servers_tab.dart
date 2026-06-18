@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/extensions/build_context_l10n.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
 import '../core/app_logger.dart';
 import '../models/app_settings.dart';
@@ -822,26 +823,29 @@ class _ServersListPanel extends ConsumerWidget {
       ));
     }
 
-    return ListView.builder(
-      physics: const ClampingScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(16, topPadding, 16, 80),
-      addAutomaticKeepAlives: false,
-      addRepaintBoundaries: true,
-      itemCount: groups.length,
-      itemBuilder: (context, index) {
-        final entry = groups[index];
-        return Padding(
-          padding: EdgeInsets.only(bottom: index < groups.length - 1 ? 20 : 0),
-          child: _SubCard(
-            key: entry.key,
-            subscription: entry.subscription,
-            servers: entry.servers,
-            onSelectServer: onSelectServer,
-            onRefresh: entry.onRefresh,
-            onPingAll: entry.onPingAll,
-          ),
-        );
-      },
+    return SmoothScroll(
+      builder: (context, controller) => ListView.builder(
+        controller: controller,
+        physics: const ClampingScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(16, topPadding, 16, 80),
+        addAutomaticKeepAlives: false,
+        addRepaintBoundaries: true,
+        itemCount: groups.length,
+        itemBuilder: (context, index) {
+          final entry = groups[index];
+          return Padding(
+            padding: EdgeInsets.only(bottom: index < groups.length - 1 ? 20 : 0),
+            child: _SubCard(
+              key: entry.key,
+              subscription: entry.subscription,
+              servers: entry.servers,
+              onSelectServer: onSelectServer,
+              onRefresh: entry.onRefresh,
+              onPingAll: entry.onPingAll,
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -1033,42 +1037,48 @@ class _SubCardState extends ConsumerState<_SubCard> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                    SizedBox(
-                      width: 40,
-                      height: _subCardHeaderIconSize,
-                      child: Center(
-                        child: GestureDetector(
-                          onTap: () => ref
-                              .read(collapsedServerGroupsProvider.notifier)
-                              .update((m) => {...m, collapseKey: !collapsed}),
-                          child: AnimatedRotation(
-                            turns: collapsed ? -0.25 : 0,
-                            duration: const Duration(milliseconds: 200),
-                            child: Icon(
-                              Icons.expand_more,
-                              size: 22,
-                              color: textLightColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
+                    // Шеврон и заголовок в общем Expanded: при узкой ширине
+                    // (напр. кадр во время сворачивания окна в трей) они
+                    // сжимаются вместе, а ряд иконок справа не вызывает overflow.
                     Expanded(
                       child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: () => ref
                             .read(collapsedServerGroupsProvider.notifier)
                             .update((m) => {...m, collapseKey: !collapsed}),
-                        child: Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: textLightColor,
-                            letterSpacing: 0.2,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 32,
+                              height: _subCardHeaderIconSize,
+                              child: Center(
+                                child: AnimatedRotation(
+                                  turns: collapsed ? -0.25 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Icon(
+                                    Icons.expand_more,
+                                    size: 22,
+                                    color: textLightColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: textLightColor,
+                                  letterSpacing: 0.2,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -1776,6 +1786,21 @@ class _ServerTile extends ConsumerWidget {
   }
 
   Widget _buildTrailing(BuildContext context, bool isConnected, bool isConnecting, bool isActive, bool isPinging, Color accentColor, Color textLightColor) {
+    // Пинг имеет приоритет над статусом подключения: иначе у активного/
+    // подключённого сервера крутилка пинга была бы перекрыта значком паузы.
+    if (isPinging) {
+      return SizedBox(
+        width: 34,
+        height: 34,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: accentColor,
+          ),
+        ),
+      );
+    }
     if (isConnected) {
       return Container(
         padding: const EdgeInsets.all(8),
@@ -1806,19 +1831,6 @@ class _ServerTile extends ConsumerWidget {
           shape: BoxShape.circle,
         ),
         child: Icon(Icons.play_arrow, size: 18, color: accentColor),
-      );
-    }
-    if (isPinging) {
-      return SizedBox(
-        width: 34,
-        height: 34,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: accentColor,
-          ),
-        ),
       );
     }
     return Icon(Icons.chevron_right, color: textLightColor);
