@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
 import '../models/subscription.dart';
 import '../platform/platform_bootstrap.dart';
@@ -60,8 +61,11 @@ class SubscriptionsTab extends ConsumerWidget {
                 ),
                 data: (subs) => subs.isEmpty
                     ? _emptySubsState(context)
-                    : ReorderableListView.builder(
-                        physics: const ClampingScrollPhysics(),
+                    : SmoothScroll(
+                        builder: (context, controller) =>
+                            ReorderableListView.builder(
+                          scrollController: controller,
+                          physics: const ClampingScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                         buildDefaultDragHandles: false,
                         onReorderStart: (_) {
@@ -128,6 +132,7 @@ class SubscriptionsTab extends ConsumerWidget {
                                   ),
                           );
                         },
+                      ),
                       ),
               ),
             ),

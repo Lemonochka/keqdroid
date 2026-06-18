@@ -56,6 +56,11 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
   bool _serversExpanded = false;
 
   Future<void> _closeMenu() async {
+    // Флаг снимаем синхронно, пока виджет точно смонтирован: иначе после
+    // `await` он может деактивироваться и `ref` бросит "ref after unmount"
+    // (а исключение прервёт вызывающий код — кнопки трея перестают работать).
+    // Переходный overflow вкладок при узком окне отсекается порогом ширины
+    // в DesktopHomeScreen, поэтому порядок здесь безопасен.
     ref.read(trayMenuVisibleProvider.notifier).set(false);
     if (Platform.isWindows) {
       await WindowsDesktopService.hideTrayMenu();

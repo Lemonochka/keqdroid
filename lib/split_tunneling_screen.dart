@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
 import '../models/app_info.dart';
 import '../providers/providers.dart';
@@ -713,24 +714,27 @@ class _AppList extends StatelessWidget {
     }
 
 
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      itemCount: apps.length,
-      addAutomaticKeepAlives: false,
-      addRepaintBoundaries: true,
-      separatorBuilder: (context, index) => const SizedBox(height: 10),
-      itemBuilder: (_, i) {
-        final app = apps[i];
-        final checked = _isChecked(app.packageName);
+    return SmoothScroll(
+      builder: (context, controller) => ListView.separated(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        itemCount: apps.length,
+        addAutomaticKeepAlives: false,
+        addRepaintBoundaries: true,
+        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        itemBuilder: (_, i) {
+          final app = apps[i];
+          final checked = _isChecked(app.packageName);
 
-        return _AppTile(
-          key: ValueKey(app.packageName),
-          app: app,
-          checked: checked,
-          mode: mode,
-          onTap: mode == TunnelMode.all ? null : () => onToggle(app.packageName),
-        );
-      },
+          return _AppTile(
+            key: ValueKey(app.packageName),
+            app: app,
+            checked: checked,
+            mode: mode,
+            onTap: mode == TunnelMode.all ? null : () => onToggle(app.packageName),
+          );
+        },
+      ),
     );
   }
 }

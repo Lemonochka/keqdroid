@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -17,6 +17,7 @@ import 'package:keqdroid/services/vpn_engine.dart';
 import 'package:keqdroid/services/windows_desktop_service.dart';
 import 'package:keqdroid/app/app.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:keqdroid/services/update_service.dart';
 import 'package:keqdroid/shared/ui/update_dialog.dart';
 import 'package:keqdroid/utils/app_locale.dart';
@@ -42,15 +43,17 @@ class SettingsTab extends ConsumerWidget {
           child: Column(
           children: [
             Expanded(
-              child: ListView(
-                physics: const ClampingScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(
-                  tabContentHorizontalInset(),
-                  24,
-                  tabContentHorizontalInset(),
-                  24,
-                ),
-                children: [
+              child: SmoothScroll(
+                builder: (context, controller) => ListView(
+                  controller: controller,
+                  physics: const ClampingScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    tabContentHorizontalInset(),
+                    24,
+                    tabContentHorizontalInset(),
+                    24,
+                  ),
+                  children: [
                   Text(
                     l10n.settingsTitle,
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.text(context)),
@@ -99,6 +102,7 @@ class SettingsTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                 ],
+                ),
               ),
             ),
             Padding(
@@ -502,7 +506,9 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
         elevation: 0,
         title: Text(l10n.settingsBackupRestore),
       ),
-      body: ListView(
+      body: SmoothScroll(
+        builder: (context, controller) => ListView(
+          controller: controller,
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
           Container(
@@ -621,6 +627,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -640,7 +647,9 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
         elevation: 0,
         title: Text(l10n.settingsAdvanced),
       ),
-      body: ListView(
+      body: SmoothScroll(
+        builder: (context, controller) => ListView(
+          controller: controller,
         physics: const ClampingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
@@ -714,6 +723,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           _ShareHwidCard(settingsAsync: settingsAsync),
         ],
+      ),
       ),
     );
   }
@@ -842,7 +852,9 @@ class _LocalProxyPortsScreenState
         elevation: 0,
         title: Text(l10n.settingsLocalPortsTitle),
       ),
-      body: ListView(
+      body: SmoothScroll(
+        builder: (context, controller) => ListView(
+          controller: controller,
         physics: const ClampingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
@@ -911,6 +923,7 @@ class _LocalProxyPortsScreenState
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -985,7 +998,9 @@ class _WindowsDesktopSettingsScreen extends ConsumerWidget {
         elevation: 0,
         title: Text(l10n.settingsDesktopTitle),
       ),
-      body: ListView(
+      body: SmoothScroll(
+        builder: (context, controller) => ListView(
+          controller: controller,
         physics: const ClampingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
@@ -1026,6 +1041,7 @@ class _WindowsDesktopSettingsScreen extends ConsumerWidget {
               ),
             ),
         ],
+      ),
       ),
     );
   }
@@ -1182,7 +1198,9 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
           ),
         ],
       ),
-      body: ListView(
+      body: SmoothScroll(
+        builder: (context, controller) => ListView(
+          controller: controller,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           Container(
@@ -1582,6 +1600,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -1755,7 +1774,9 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
         elevation: 0,
         title: Text(l10n.settingsPingTitle),
       ),
-      body: ListView(
+      body: SmoothScroll(
+        builder: (context, controller) => ListView(
+          controller: controller,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           sectionTitle(l10n.settingsPingMethodTitle),
@@ -1883,6 +1904,7 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
             ),
           ],
         ],
+      ),
       ),
     );
   }
@@ -2465,7 +2487,9 @@ class _ThemeCustomizationScreen extends ConsumerWidget {
         elevation: 0,
         title: Text(l10n.themeCustomizationTitle),
       ),
-      body: ListView(
+      body: SmoothScroll(
+        builder: (context, controller) => ListView(
+          controller: controller,
         padding: const EdgeInsets.all(16),
         children: [
           SwitchListTile(
@@ -2543,6 +2567,7 @@ class _ThemeCustomizationScreen extends ConsumerWidget {
             },
           ),
         ],
+      ),
       ),
     );
   }
@@ -3513,7 +3538,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           ),
         ],
       ),
-      body: ListView(
+      body: SmoothScroll(
+        builder: (context, controller) => ListView(
+          controller: controller,
         physics: const ClampingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
@@ -3556,6 +3583,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           const SizedBox(height: 16),
           _syntaxLegend(context, l10n),
         ],
+      ),
       ),
     );
   }

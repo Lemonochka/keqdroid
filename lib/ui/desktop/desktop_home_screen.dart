@@ -181,6 +181,16 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       return const TrayMenuScreen();
     }
 
+    // Окно трея использует то же самое окно приложения и сужает его до ширины
+    // попапа (~288px). При показе/скрытии трея есть переходные кадры, где флаг
+    // меню уже снят, а окно ещё узкое (или наоборот). Чтобы обычные вкладки не
+    // раскладывались на ширине попапа и не ловили RenderFlex overflow, не строим
+    // их, пока окно сужено. Как только окно вернётся к нормальному размеру —
+    // MediaQuery вызовет rebuild и вкладки появятся.
+    if (MediaQuery.sizeOf(context).width < 480) {
+      return ColoredBox(color: AppTheme.bg(context));
+    }
+
     final l10n = AppLocalizations.of(context)!;
     ref.listen<AsyncValue<UpdateInfo?>>(updateInfoProvider, (prev, next) {
       if (!shouldAutoPromptForUpdate(prev, next)) return;
