@@ -38,7 +38,7 @@ VLESS, VMess, Trojan, Shadowsocks, Hysteria 2, **AmneziaWG** (1.0 / 1.5 / 2.0).
 Форматы ссылок: `vless://`, `vmess://`, `trojan://`, `ss://`, `hysteria2://`, `hy2://`.
 
 AmneziaWG добавляется файлом `.conf` (кнопка «+» → импорт файла) или вставкой текста `.conf`.
-Ядро: на Android — `amneziawg-go` (libwg-go.so); на Windows — `wireproxy-awg` (wireproxy.exe,
+Ядро: на Android — `amneziawg-go` (libwg-go.so); на Windows — `wireproxy-awg` (`wireproxy.exe`,
 встраивает amneziawg-go) для обоих режимов: Proxy (системный прокси, без админ-прав) и
 TUN (wireproxy → sing-box). Сборка ядра: `powershell -File tool/build_amneziawg.ps1`.
 
@@ -106,7 +106,7 @@ powershell -File tool/sync_windows_plugins.ps1  # Windows: exclude Firebase (And
 flutter build windows --release  # Windows
 ```
 
-Для Windows: `xray.exe` (и при необходимости `sing-box.exe`) в `assets/bin/windows/` до сборки. Подробнее — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
+Для Windows положите `xray.exe` (и при необходимости `sing-box.exe`, `wireproxy.exe`) в `assets/bin/windows/` до сборки. AmneziaWG-ядро собирается через `tool/build_amneziawg.ps1`. Подробнее — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
 
 ---
 

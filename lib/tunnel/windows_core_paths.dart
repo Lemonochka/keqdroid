@@ -9,10 +9,10 @@ class WindowsCorePaths {
 
   static const assetXray = 'assets/bin/windows/xray.exe';
   static const assetSingbox = 'assets/bin/windows/sing-box.exe';
-  static const assetWireproxy = 'assets/bin/windows/wireproxy.exe';
   static const assetGeoip = 'assets/bin/windows/geoip.dat';
   static const assetGeosite = 'assets/bin/windows/geosite.dat';
   static const geoFileNames = ['geoip.dat', 'geosite.dat'];
+  static const assetWireproxy = 'assets/bin/windows/wireproxy.exe';
 
   static const binariesHint =
       'Положите xray.exe и sing-box.exe в assets/bin/windows/ '
@@ -29,9 +29,10 @@ class WindowsCorePaths {
   static Future<String?> singboxExecutable() =>
       _resolveExecutable(assetSingbox, 'sing-box.exe');
 
-  /// wireproxy.exe (wireproxy-awg) — userspace AmneziaWG (embeds amneziawg-go),
-  /// отдаёт локальный SOCKS5/HTTP. Используется и для proxy-, и для TUN-режима
-  /// (TUN: wireproxy SOCKS → sing-box TUN). wintun.dll нужен для sing-box TUN.
+  /// wireproxy-awg — userspace AmneziaWG (embeds amneziawg-go), exposes a local
+  /// SOCKS5/HTTP proxy. Used for both Proxy and TUN mode (TUN: wireproxy SOCKS →
+  /// sing-box). Bundled in flutter_assets like xray/sing-box and resolved from
+  /// there; wintun.dll is what sing-box needs for the TUN adapter.
   static Future<String?> wireproxyExecutable() =>
       _resolveExecutable(assetWireproxy, 'wireproxy.exe');
 

@@ -1,4 +1,4 @@
-# Windows plugins for keqdroid (firebase_core excluded — Crashlytics is Android-only).
+# Windows plugins for keqdroid (firebase_core excluded - Crashlytics is Android-only).
 # Regenerate after adding plugins: powershell -File tool/sync_windows_plugins.ps1
 
 list(APPEND FLUTTER_PLUGIN_LIST

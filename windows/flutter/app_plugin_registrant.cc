@@ -1,4 +1,4 @@
-// Windows plugin registration (firebase_core excluded — Crashlytics is Android-only).
+// Windows plugin registration (firebase_core excluded - Crashlytics is Android-only).
 // Regenerate after adding plugins: powershell -File tool/sync_windows_plugins.ps1
 
 #include "generated_plugin_registrant.h"
