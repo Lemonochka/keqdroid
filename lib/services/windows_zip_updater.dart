@@ -68,8 +68,12 @@ class WindowsZipUpdater {
       }
 
       final scriptPath = p.join(stagingRoot.path, 'apply_update.ps1');
+      // Prefix a UTF-8 BOM: Windows PowerShell 5.1 otherwise reads .ps1 files in
+      // the system ANSI codepage, which mangles any non-ASCII byte (an em-dash
+      // once turned into a curly quote and broke parsing, so the script never
+      // ran). The BOM forces UTF-8 and keeps the script ASCII-safe regardless.
       await File(scriptPath).writeAsString(
-        _updaterScript(),
+        '\u{FEFF}${_updaterScript()}',
         flush: true,
       );
 
@@ -227,7 +231,7 @@ for ($attempt = 1; $attempt -le 8; $attempt++) {
     $dstHash = (Get-FileHash -LiteralPath $dstFile -Algorithm SHA256).Hash
     if ($srcHash -eq $dstHash) { continue }
 
-    Log "hash mismatch $rel — retrying direct copy"
+    Log "hash mismatch $rel - retrying direct copy"
     $allMatch = $false
     try {
       $dstParent = Split-Path -Parent $dstFile
