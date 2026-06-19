@@ -18,8 +18,10 @@ import 'package:keqdroid/screens/servers_tab.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
 import 'package:keqdroid/screens/subscriptions_tab.dart';
 import 'package:keqdroid/screens/settings_tab.dart';
+import 'package:keqdroid/services/linux_background_service.dart';
 import 'package:keqdroid/services/storage_service.dart';
 import 'package:keqdroid/services/update_service.dart';
+import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/bottom_nav.dart';
 import 'package:keqdroid/shared/ui/update_dialog.dart';
@@ -48,6 +50,19 @@ Future<void> main() async {
       await PlatformBootstrap.initialize();
     } else if (Platform.isLinux || Platform.isMacOS) {
       await DesktopBackgroundService.init();
+      if (Platform.isLinux) {
+        // Single instance: a second launch just restores the running window.
+        final primary =
+            await LinuxBackgroundService.instance.ensureSingleInstance();
+        if (!primary) {
+          exit(0);
+        }
+        // Recover from an unclean previous exit: drop any stale system/Firefox
+        // proxy so the desktop isn't stuck routing to a dead local proxy.
+        await LinuxTunnelBackend.cleanupStaleState();
+        // Close-to-tray + background; the tunnel keeps running when hidden.
+        await LinuxBackgroundService.instance.initWindowAndTray();
+      }
     }
 
     AppLogger.instance.setCrashlyticsEnabled(crashlyticsReady && !kDebugMode);
@@ -71,7 +86,7 @@ Future<void> main() async {
 
     final storage = await StorageService.init();
 
-    final home = Platform.isWindows
+    final home = Platform.isWindows || Platform.isLinux
         ? const DesktopHomeScreen()
         : const VpnHomeScreen();
 

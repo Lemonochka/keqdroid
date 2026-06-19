@@ -835,7 +835,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         // не вышло — оставляем адрес как есть
       }
 
-      final windowsProxyNoAuth = Platform.isWindows &&
+      // Desktop system/Firefox proxy config — Windows wininet, GNOME gsettings,
+      // Firefox user.js — has no field for SOCKS/HTTP credentials, so password
+      // auth on the localhost inbounds makes browsers prompt endlessly. Use
+      // noauth on the loopback inbounds in desktop proxy mode (safe: they bind
+      // to 127.0.0.1 only). AmneziaWG proxy is already noauth via wireproxy.
+      final desktopProxyNoAuth = (Platform.isWindows || Platform.isLinux) &&
           connectionMode == ConnectionMode.proxy;
 
       final vpnBackend = isAwg ? VpnBackend.awg : VpnBackend.xray;
@@ -847,7 +852,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
               server.config,
               settings,
               resolvedServerIp: serverIp,
-              localInboundsNoAuth: windowsProxyNoAuth,
+              localInboundsNoAuth: desktopProxyNoAuth,
             );
 
       final session = TunnelSessionBuilder.build(

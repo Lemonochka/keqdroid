@@ -40,7 +40,7 @@ class TunnelSessionBuilder {
     //  - AmneziaWG: SOCKS от wireproxy-awg (без auth).
     // В proxy-режиме sing-box не нужен (системный прокси).
     String? singboxConfig;
-    if (Platform.isWindows && mode == ConnectionMode.tun) {
+    if ((Platform.isWindows || Platform.isLinux) && mode == ConnectionMode.tun) {
       final managed = switch (routingMode) {
         AppRoutingMode.onlySelected => includeProcesses,
         AppRoutingMode.allExceptSelected => excludeProcesses,

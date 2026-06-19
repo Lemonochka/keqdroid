@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,7 +34,9 @@ Future<void> applyDesktopConnectionMode(
     return;
   }
 
-  if (next == ConnectionMode.tun) {
+  // Linux elevates per-connect via pkexec (sing-box), so only Windows needs
+  // the relaunch-as-admin flow before switching to TUN.
+  if (next == ConnectionMode.tun && Platform.isWindows) {
     final elevated = await WindowsDesktopService.isProcessElevated();
     if (!elevated) {
       if (!context.mounted) return;

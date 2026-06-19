@@ -195,11 +195,15 @@ class SingBoxTunConfigGen {
     //  - sing-box.exe: don't route its own direct egress back into itself
     //  - <app>.exe: our dart tcp-ping sockets, so latency reflects the local pc
     // placed before split-tunnel rules so it wins regardless of routing mode.
+    // Windows process names carry `.exe`; on Linux they are the bare binary
+    // basename (sing-box's find_process matches the comm name). Keep Windows
+    // output byte-identical by only appending the suffix there.
+    final exe = Platform.isWindows ? '.exe' : '';
     final bypassProcessNames = <String>{
-      'xray.exe',
-      'sing-box.exe',
-      // wireproxy.exe (AmneziaWG): его WG-UDP к серверу должен идти мимо туннеля
-      'wireproxy.exe',
+      'xray$exe',
+      'sing-box$exe',
+      // wireproxy (AmneziaWG): его WG-UDP к серверу должен идти мимо туннеля
+      'wireproxy$exe',
       if (appProcessName.trim().isNotEmpty) appProcessName.trim().toLowerCase(),
     }.toList();
     rules.add({
@@ -210,10 +214,10 @@ class SingBoxTunConfigGen {
     if (routingMode == AppRoutingMode.allProxy) {
       rules.add({
         'process_name': [
-          'tailscaled.exe',
-          'wireguard.exe',
-          'openvpn.exe',
-          'openvpn-gui.exe',
+          'tailscaled$exe',
+          'wireguard$exe',
+          'openvpn$exe',
+          if (Platform.isWindows) 'openvpn-gui.exe',
         ],
         'outbound': 'direct',
       });

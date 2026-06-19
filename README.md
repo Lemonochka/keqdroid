@@ -106,7 +106,40 @@ powershell -File tool/sync_windows_plugins.ps1  # Windows: exclude Firebase (And
 flutter build windows --release  # Windows
 ```
 
+**Linux** (Debian/Arch, x86_64). Соберите на Linux-машине или в WSL — Windows
+SDK для Linux не годится. Готовый скрипт ставит тулчейн + нативный Flutter SDK
+и собирает:
+
+```bash
+wsl -e bash /mnt/c/.../keqdroid/tool/build_linux_wsl.sh
+# бинарь: build/linux/x64/release/bundle/keqdroid
+```
+
+Linux-ядра (`xray`, `wireproxy`, `sing-box`, geo) лежат в `assets/bin/linux/`.
+Proxy-режим работает без прав root; TUN запрашивает root через `pkexec` (polkit)
+при подключении.
+
 Для Windows положите `xray.exe` (и при необходимости `sing-box.exe`, `wireproxy.exe`) в `assets/bin/windows/` до сборки. AmneziaWG-ядро собирается через `tool/build_amneziawg.ps1`. Подробнее — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
+
+---
+
+## Релизы
+
+```powershell
+# собрать APK + Windows-zip, посчитать SHA-256, разложить в release\<версия>\
+powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
+
+# то же + сразу опубликовать GitHub-релиз (нужен gh CLI)
+powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
+```
+
+Версия и тег (`vX.Y.Z`) берутся из `pubspec.yaml`. Скрипт кладёт рядом с каждым
+ассетом `<имя>.sha256` (ASCII без BOM).
+
+> ⚠️ **Каждый** релиз обязан нести `.sha256` к каждому ассету: встроенный
+> апдейтер (`UpdateService`) проверяет хеш и **отклоняет** установку, если файл
+> хеша отсутствует или не совпадает. `make_release.ps1` генерирует их сам;
+> при ручной заливке не забудьте приложить `.sha256`.
 
 ---
 
