@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 import '../core/app_logger.dart';
 
 /// firefox не берёт системный прокси windows сам — пишем блок в user.js каждого профиля
@@ -22,7 +24,7 @@ class FirefoxProxyHelper {
 
     for (final dir in profiles) {
       try {
-        final userJs = File('${dir.path}\\user.js');
+        final userJs = File(p.join(dir.path, 'user.js'));
         var content = userJs.existsSync() ? await userJs.readAsString() : '';
         content = _stripBlock(content);
         if (content.isNotEmpty && !content.endsWith('\n')) {
@@ -54,7 +56,7 @@ class FirefoxProxyHelper {
 
     for (final dir in profiles) {
       try {
-        final userJs = File('${dir.path}\\user.js');
+        final userJs = File(p.join(dir.path, 'user.js'));
         if (!userJs.existsSync()) continue;
         final content = _stripBlock(await userJs.readAsString());
         if (content.trim().isEmpty) {
@@ -96,14 +98,27 @@ $_markerEnd''';
     return '${content.substring(0, start)}${content.substring(after)}'.trim();
   }
 
+  /// Firefox profile root per OS: `%APPDATA%\Mozilla\Firefox` on Windows,
+  /// `~/.mozilla/firefox` on Linux. Other platforms are unsupported.
+  static Directory? _firefoxBaseDir() {
+    if (Platform.isWindows) {
+      final appData = Platform.environment['APPDATA'];
+      if (appData == null || appData.isEmpty) return null;
+      return Directory(p.join(appData, 'Mozilla', 'Firefox'));
+    }
+    if (Platform.isLinux) {
+      final home = Platform.environment['HOME'];
+      if (home == null || home.isEmpty) return null;
+      return Directory(p.join(home, '.mozilla', 'firefox'));
+    }
+    return null;
+  }
+
   static Future<List<Directory>> _discoverProfileDirs() async {
-    if (!Platform.isWindows) return [];
+    final base = _firefoxBaseDir();
+    if (base == null) return [];
 
-    final appData = Platform.environment['APPDATA'];
-    if (appData == null || appData.isEmpty) return [];
-
-    final base = Directory('$appData\\Mozilla\\Firefox');
-    final iniFile = File('${base.path}\\profiles.ini');
+    final iniFile = File(p.join(base.path, 'profiles.ini'));
     if (!iniFile.existsSync()) return [];
 
     final lines = await iniFile.readAsLines();
@@ -114,8 +129,10 @@ $_markerEnd''';
 
     void flush() {
       if (path == null || path!.isEmpty) return;
-      final fullPath =
-          isRelative ? '${base.path}\\$path' : path!.replaceAll('/', '\\');
+      // profiles.ini stores relative paths with `/`; join in OS separators.
+      final fullPath = isRelative
+          ? p.join(base.path, p.joinAll(path!.split('/')))
+          : p.normalize(path!);
       final dir = Directory(fullPath);
       if (dir.existsSync()) profiles.add(dir);
       path = null;

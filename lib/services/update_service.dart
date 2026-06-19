@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -17,6 +19,14 @@ class UpdateInfo {
   final int apkSize;
   final bool openInBrowser;
 
+  /// File name of the release asset being downloaded (e.g. `keqdroid-0.5.0.apk`).
+  /// Used to locate its SHA-256 line inside a multi-asset checksums file.
+  final String assetName;
+
+  /// `browser_download_url` of the SHA-256 sidecar for [assetName], if the
+  /// release published one. `null` means no checksum is available.
+  final String? checksumUrl;
+
   UpdateInfo({
     required this.currentVersion,
     required this.latestVersion,
@@ -24,6 +34,8 @@ class UpdateInfo {
     this.releaseNotes,
     required this.apkSize,
     this.openInBrowser = false,
+    this.assetName = '',
+    this.checksumUrl,
   });
 
   String get formattedSize {
@@ -106,6 +118,9 @@ class UpdateService {
           : _findApkAsset(assets);
       if (asset == null) return null;
 
+      final assetName = (asset['name'] ?? '').toString();
+      final checksumAsset = _findChecksumAsset(assets, assetName);
+
       return UpdateInfo(
         currentVersion: currentVersion,
         latestVersion: latestTag,
@@ -113,6 +128,8 @@ class UpdateService {
         releaseNotes: latestRelease['body'],
         apkSize: asset['size'] ?? 0,
         openInBrowser: Platform.isWindows && _shouldOpenDesktopAssetInBrowser(asset),
+        assetName: assetName,
+        checksumUrl: checksumAsset?['browser_download_url'] as String?,
       );
     } catch (e) {
       return null;
@@ -197,6 +214,32 @@ class UpdateService {
         if (name.endsWith(ext)) return asset;
       }
     }
+    return null;
+  }
+
+  /// Locates the SHA-256 checksum asset for [assetName]. Supports either a
+  /// per-asset sidecar (`<assetName>.sha256`) or a shared checksums file
+  /// (`SHA256SUMS` / `checksums.txt`) listing `<hash>  <filename>` lines.
+  static Map<String, dynamic>? _findChecksumAsset(
+    List? assets,
+    String assetName,
+  ) {
+    if (assets == null || assetName.isEmpty) return null;
+    final target = '${assetName.toLowerCase()}.sha256';
+
+    // 1) dedicated sidecar next to the asset.
+    for (final asset in assets) {
+      final name = (asset['name'] ?? '').toString().toLowerCase();
+      if (name == target) return asset as Map<String, dynamic>;
+    }
+
+    // 2) shared checksums manifest.
+    const shared = {'sha256sums', 'sha256sums.txt', 'checksums.txt', 'checksums.sha256'};
+    for (final asset in assets) {
+      final name = (asset['name'] ?? '').toString().toLowerCase();
+      if (shared.contains(name)) return asset as Map<String, dynamic>;
+    }
+
     return null;
   }
 
@@ -306,6 +349,16 @@ class UpdateService {
       },
     );
 
+    // Never hand an unverified binary to the OS installer / portable updater.
+    try {
+      await _verifyDownloadedFile(file, info);
+    } catch (_) {
+      if (await file.exists()) {
+        await file.delete();
+      }
+      rethrow;
+    }
+
     if (Platform.isWindows && ext == '.zip') {
       return WindowsZipUpdater.applyPortableZipUpdate(
         zipPath: file.path,
@@ -323,6 +376,85 @@ class UpdateService {
       if (path.endsWith(ext)) return ext;
     }
     return Platform.isWindows ? '.zip' : '.apk';
+  }
+
+  /// Fail closed: refuse to install an update whose SHA-256 can't be verified.
+  /// Set to `false` only if you must support releases published without a
+  /// checksum sidecar (weakens the integrity guarantee).
+  static const bool _requireChecksum = true;
+
+  /// Throws if the downloaded [file] doesn't match the release's published
+  /// SHA-256. A `null`/missing checksum is treated as a failure when
+  /// [_requireChecksum] is set.
+  static Future<void> _verifyDownloadedFile(File file, UpdateInfo info) async {
+    final checksumUrl = info.checksumUrl;
+    if (checksumUrl == null || checksumUrl.isEmpty) {
+      if (_requireChecksum) {
+        throw StateError(
+          'No SHA-256 checksum published for ${info.assetName.isEmpty ? 'this update' : info.assetName}; '
+          'refusing to install an unverified build.',
+        );
+      }
+      return;
+    }
+
+    final expected = await _fetchExpectedSha256(checksumUrl, info.assetName);
+    if (expected == null) {
+      throw StateError(
+        'Could not read the SHA-256 checksum for ${info.assetName}; aborting update.',
+      );
+    }
+
+    final actual = await _sha256OfFile(file);
+    if (actual.toLowerCase() != expected.toLowerCase()) {
+      throw StateError(
+        'Update integrity check failed for ${info.assetName} '
+        '(expected $expected, got $actual). The download was discarded.',
+      );
+    }
+  }
+
+  /// Streams [file] through SHA-256 so large updates aren't loaded into memory.
+  static Future<String> _sha256OfFile(File file) async {
+    final digest = await sha256.bind(file.openRead()).first;
+    return digest.toString(); // lowercase hex
+  }
+
+  static Future<String?> _fetchExpectedSha256(
+    String url,
+    String assetName,
+  ) async {
+    try {
+      final response = await _dio.get<String>(url);
+      if (response.statusCode != 200) return null;
+      return _parseSha256(response.data ?? '', assetName);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Test hook for [_parseSha256] (kept public like the other version helpers).
+  static String? extractSha256(String manifest, String assetName) =>
+      _parseSha256(manifest, assetName);
+
+  /// Extracts the 64-hex-char SHA-256 for [assetName]. Handles a bare hash, a
+  /// `sha256sum`-style `<hash>  <file>` line, and multi-asset manifests.
+  static String? _parseSha256(String text, String assetName) {
+    final hexPattern = RegExp(r'\b[a-fA-F0-9]{64}\b');
+    final lowerAsset = assetName.toLowerCase();
+
+    if (lowerAsset.isNotEmpty) {
+      for (final line in const LineSplitter().convert(text)) {
+        if (line.toLowerCase().contains(lowerAsset)) {
+          final m = hexPattern.firstMatch(line);
+          if (m != null) return m.group(0)!.toLowerCase();
+        }
+      }
+    }
+
+    // Dedicated sidecar usually contains exactly one hash and no filename.
+    final m = hexPattern.firstMatch(text);
+    return m?.group(0)?.toLowerCase();
   }
 
   /// Только https и без shell-метасимволов — защита от инъекции в `cmd /c start`,

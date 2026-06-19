@@ -71,4 +71,47 @@ void main() {
       expect(UpdateService.displayVersion('Android0.2.9'), '0.2.9');
     });
   });
+
+  group('UpdateService.extractSha256', () {
+    const hash =
+        '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
+
+    test('reads a bare hash sidecar', () {
+      expect(UpdateService.extractSha256(hash, 'keqdroid-0.5.0.apk'), hash);
+    });
+
+    test('trims trailing whitespace/newline from a sidecar', () {
+      expect(
+        UpdateService.extractSha256('$hash\n', 'keqdroid-0.5.0.apk'),
+        hash,
+      );
+    });
+
+    test('normalizes uppercase hex to lowercase', () {
+      expect(
+        UpdateService.extractSha256(hash.toUpperCase(), 'keqdroid-0.5.0.apk'),
+        hash,
+      );
+    });
+
+    test('picks the matching line from a sha256sum-style manifest', () {
+      const other =
+          '0000000000000000000000000000000000000000000000000000000000000000';
+      final manifest =
+          '$other  keqdroid-windows-x64-0.5.0.zip\n'
+          '$hash  keqdroid-0.5.0.apk\n';
+      expect(
+        UpdateService.extractSha256(manifest, 'keqdroid-0.5.0.apk'),
+        hash,
+      );
+      expect(
+        UpdateService.extractSha256(manifest, 'keqdroid-windows-x64-0.5.0.zip'),
+        other,
+      );
+    });
+
+    test('returns null when no 64-hex hash is present', () {
+      expect(UpdateService.extractSha256('not a hash', 'x.apk'), isNull);
+    });
+  });
 }

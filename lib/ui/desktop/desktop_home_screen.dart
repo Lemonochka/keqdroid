@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_logger.dart';
 import '../../platform/vpn_native_bridge.dart';
 import '../../services/desktop_background_service.dart';
+import '../../services/linux_background_service.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/app_settings.dart';
@@ -40,6 +41,11 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Linux: window close hides to tray (handled in main via window_manager).
+    // The tray "Quit" tears the tunnel down first via this callback.
+    if (Platform.isLinux) {
+      LinuxBackgroundService.instance.onQuit = _disconnectForQuit;
+    }
     VpnNativeBridge.registerAutostartHandler(
       () => _maybeAutostartConnect(force: true),
     );
@@ -113,8 +119,19 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     }
   }
 
+  /// Tray "Quit" on Linux: disconnect (kills cores + clears system proxy)
+  /// before the process exits.
+  Future<void> _disconnectForQuit() async {
+    try {
+      await ref.read(vpnStateProvider.notifier).disconnect();
+    } catch (e, st) {
+      AppLogger.instance.warn('Exit cleanup failed', error: e, stackTrace: st);
+    }
+  }
+
   @override
   void dispose() {
+    if (Platform.isLinux) LinuxBackgroundService.instance.onQuit = null;
     VpnNativeBridge.registerAutostartHandler(null);
     VpnNativeBridge.registerTrayMenuHandler(null);
     VpnNativeBridge.registerTrayMenuCloseHandler(null);
@@ -221,7 +238,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 16),
-                  if (Platform.isWindows) ...[
+                  if (Platform.isWindows || Platform.isLinux) ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: MediaQuery.sizeOf(context).width >= 900
@@ -447,7 +464,10 @@ Future<void> _applyMode(
     return;
   }
 
-  if (next == ConnectionMode.tun) {
+  // Linux gets root for the tun device via pkexec at connect time, so no
+  // elevation/restart dance — just persist the mode. Windows must relaunch
+  // elevated before sing-box can create the TUN adapter.
+  if (next == ConnectionMode.tun && Platform.isWindows) {
     final elevated = await WindowsDesktopService.isProcessElevated();
     if (!elevated) {
       if (!context.mounted) return;

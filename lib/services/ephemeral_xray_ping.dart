@@ -4,12 +4,36 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../core/app_logger.dart';
+import '../tunnel/linux_core_paths.dart';
 import '../tunnel/windows_core_paths.dart';
 import 'windows_desktop_service.dart';
 
 /// короткоживущий xray для url-пинга, как на android
 class EphemeralXrayPing {
   EphemeralXrayPing._();
+
+  // Desktop core resolution is platform-specific; the rest (config, socks probe)
+  // is platform-neutral so url/speed ping work on Windows and Linux alike.
+  static Future<String?> _resolveXray() {
+    if (Platform.isWindows) return WindowsCorePaths.xrayExecutable();
+    if (Platform.isLinux) return LinuxCorePaths.xrayExecutable();
+    return Future<String?>.value(null);
+  }
+
+  static Future<Directory> _sessionDir() {
+    if (Platform.isLinux) return LinuxCorePaths.sessionDir();
+    return WindowsCorePaths.sessionDir();
+  }
+
+  static String get _binariesHint =>
+      Platform.isLinux ? LinuxCorePaths.binariesHint : WindowsCorePaths.binariesHint;
+
+  /// Windows registers cores for taskkill cleanup; no-op elsewhere.
+  static Future<void> _attachCoreProcess(int pid) async {
+    if (Platform.isWindows) {
+      await WindowsDesktopService.attachCoreProcess(pid);
+    }
+  }
 
   static Future<void>? _serialGate;
 
@@ -133,26 +157,26 @@ class EphemeralXrayPing {
     required String testUrl,
     required int timeoutMs,
   }) async {
-    if (!Platform.isWindows) {
+    if (!Platform.isWindows && !Platform.isLinux) {
       return (
         success: false,
         latencyMs: null,
-        error: 'Ephemeral Xray ping is only implemented on Windows in Dart',
+        error: 'Ephemeral Xray ping is only implemented on desktop in Dart',
         httpStatus: null,
       );
     }
 
-    final xrayBin = await WindowsCorePaths.xrayExecutable();
+    final xrayBin = await _resolveXray();
     if (xrayBin == null) {
       return (
         success: false,
         latencyMs: null,
-        error: 'xray.exe not found. ${WindowsCorePaths.binariesHint}',
+        error: 'xray not found. $_binariesHint',
         httpStatus: null,
       );
     }
 
-    final sessionDir = await WindowsCorePaths.sessionDir();
+    final sessionDir = await _sessionDir();
     final configFile = File(
       p.join(sessionDir.path, 'xray_ping_${DateTime.now().microsecondsSinceEpoch}.json'),
     );
@@ -166,7 +190,7 @@ class EphemeralXrayPing {
         workingDirectory: sessionDir.path,
         mode: ProcessStartMode.normal,
       );
-      unawaited(WindowsDesktopService.attachCoreProcess(process.pid));
+      unawaited(_attachCoreProcess(process.pid));
 
       final portReady = await _waitForPort(
         '127.0.0.1',
@@ -210,20 +234,20 @@ class EphemeralXrayPing {
     required String downloadUrl,
     required int timeoutMs,
   }) async {
-    if (!Platform.isWindows) {
-      return (success: false, kbps: null, error: 'Speed test runs on Windows only');
+    if (!Platform.isWindows && !Platform.isLinux) {
+      return (success: false, kbps: null, error: 'Speed test runs on desktop only');
     }
 
-    final xrayBin = await WindowsCorePaths.xrayExecutable();
+    final xrayBin = await _resolveXray();
     if (xrayBin == null) {
       return (
         success: false,
         kbps: null,
-        error: 'xray.exe not found. ${WindowsCorePaths.binariesHint}',
+        error: 'xray not found. $_binariesHint',
       );
     }
 
-    final sessionDir = await WindowsCorePaths.sessionDir();
+    final sessionDir = await _sessionDir();
     final configFile = File(
       p.join(sessionDir.path,
           'xray_speed_${DateTime.now().microsecondsSinceEpoch}.json'),
@@ -238,7 +262,7 @@ class EphemeralXrayPing {
         workingDirectory: sessionDir.path,
         mode: ProcessStartMode.normal,
       );
-      unawaited(WindowsDesktopService.attachCoreProcess(process.pid));
+      unawaited(_attachCoreProcess(process.pid));
 
       final portReady = await _waitForPort(
         '127.0.0.1',

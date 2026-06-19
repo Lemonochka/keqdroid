@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import '../tunnel/linux_tunnel_backend.dart';
 import '../tunnel/windows_tunnel_backend.dart';
 
 class DebugLogService {
@@ -17,6 +18,15 @@ class DebugLogService {
         if (text.trim().isNotEmpty) return text;
       }
       return 'No Xray session logs yet. Connect VPN first.';
+    }
+    if (Platform.isLinux) {
+      final backend = LinuxTunnelBackend.activeInstance;
+      if (backend != null) {
+        final text = backend.exportSessionLogs(maxLines: maxLines);
+        if (text.trim().isNotEmpty) return text;
+      }
+      return 'No core session logs yet. Connect first. '
+          '(Also dumped to \$TMPDIR/keqdroid_cores.log on disconnect.)';
     }
     final text = await _channel.invokeMethod<String>('getXrayLogs', {
       'maxLines': maxLines,
