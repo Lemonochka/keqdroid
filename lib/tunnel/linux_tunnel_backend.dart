@@ -1,0 +1,927 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
+
+import '../core/app_logger.dart';
+import '../core/exceptions.dart';
+import '../services/ephemeral_xray_ping.dart';
+import '../services/firefox_proxy_helper.dart';
+import '../utils/wireproxy_config.dart';
+import 'connection_mode.dart';
+import 'linux_core_paths.dart';
+import 'socks_credential_generator.dart';
+import 'tunnel_backend.dart';
+import 'tunnel_session_request.dart';
+import 'tunnel_state.dart';
+import 'vpn_backend.dart';
+import 'xray_session_stats.dart';
+
+/// Linux desktop backend (proxy + TUN).
+///
+/// Mirrors the proven pure-Dart pipeline of [WindowsTunnelBackend] — spawning
+/// xray / sing-box / wireproxy and waiting on their local ports — without any
+/// native MethodChannel.
+///
+/// * **Proxy mode**: xray (or wireproxy-awg) exposes a local SOCKS5/HTTP proxy,
+///   applied to the desktop via GNOME `gsettings` (best effort; degrades on
+///   non-GNOME — the local proxy still works and can be set manually).
+/// * **TUN mode**: xray/wireproxy provide the local SOCKS5, then sing-box runs
+///   a `tun` inbound that captures all traffic. Creating the TUN device and
+///   editing routes needs root, so sing-box is launched via `pkexec` (a polkit
+///   GUI prompt). Traffic counters are read from the tun interface sysfs stats.
+class LinuxTunnelBackend implements TunnelBackend {
+  static const tunInterfaceName = 'tun-keqdis';
+
+  /// Active session — lets DebugLogService surface core logs on Linux.
+  static LinuxTunnelBackend? activeInstance;
+
+  final _stateCtrl = StreamController<VpnState>.broadcast();
+
+  Process? _xrayProcess;
+  Process? _wireproxyProcess;
+  Process? _singboxProcess;
+  Directory? _sessionDir;
+  ({String username, String password})? _pendingCreds;
+  ConnectionMode? _activeMode;
+  final StringBuffer _xrayLog = StringBuffer();
+  final StringBuffer _singboxLog = StringBuffer();
+
+  int? _awgInfoPort;
+  String? _xrayBinPath;
+
+  Timer? _statsTimer;
+  DateTime? _sessionStartedAt;
+  int _prevInOctets = 0;
+  int _prevOutOctets = 0;
+  int _totalDownload = 0;
+  int _totalUpload = 0;
+
+  @override
+  Stream<VpnState> get stateStream => _stateCtrl.stream;
+
+  @override
+  void init() {}
+
+  @override
+  void dispose() {
+    if (identical(activeInstance, this)) activeInstance = null;
+    unawaited(stopSession());
+    _stateCtrl.close();
+  }
+
+  /// Tail of xray + sing-box stdout/stderr for the debug screen.
+  String exportSessionLogs({int maxLines = 400}) {
+    final combined = StringBuffer()
+      ..writeln('=== xray / wireproxy ===')
+      ..writeln(_xrayLog)
+      ..writeln('=== sing-box ===')
+      ..writeln(_singboxLog);
+    return _tail(combined, maxLines: maxLines);
+  }
+
+  /// Also persist the combined core logs to a stable file so they can be read
+  /// after disconnect (the session dir is wiped on stop). Path is logged.
+  Future<void> _dumpLogsToFile() async {
+    try {
+      final path = p.join(Directory.systemTemp.path, 'keqdroid_cores.log');
+      await File(path).writeAsString(exportSessionLogs(maxLines: 2000));
+      AppLogger.instance.info('Core logs written to $path');
+    } catch (_) {}
+  }
+
+  @override
+  Future<({String username, String password})> fetchSocksCredentials() async {
+    _pendingCreds = SocksCredentialGenerator.generatePair();
+    return _pendingCreds!;
+  }
+
+  @override
+  Future<void> startSession(TunnelSessionRequest request) async {
+    _emit(VpnState(status: VpnStatus.connecting, activeMode: request.mode));
+    _activeMode = request.mode;
+    _xrayLog.clear();
+    _singboxLog.clear();
+
+    try {
+      await stopSession();
+      activeInstance = this;
+      _sessionDir = await LinuxCorePaths.sessionDir();
+
+      final isAwg = request.vpnBackend == VpnBackend.awg;
+      if (request.mode == ConnectionMode.tun) {
+        if (isAwg) {
+          await _startAwgTunSession(request);
+        } else {
+          await _startXrayTunSession(request);
+        }
+      } else {
+        if (isAwg) {
+          await _startAwgProxySession(request);
+        } else {
+          await _startXrayProxySession(request);
+        }
+      }
+
+      _startStatsLoop(request.mode);
+      _emitConnectedTelemetry(request.mode);
+    } catch (e, st) {
+      AppLogger.instance.error('Linux tunnel start failed', error: e, stackTrace: st);
+      await _dumpLogsToFile();
+      await stopSession();
+      _emit(
+        VpnState(
+          status: VpnStatus.error,
+          errorMessage: e.toString(),
+          activeMode: request.mode,
+        ),
+      );
+      if (e is AppException) rethrow;
+      throw VpnStartException(e.toString(), cause: e);
+    }
+  }
+
+  // ---- xray ---------------------------------------------------------------
+
+  /// Starts xray and waits for its local SOCKS port. [augmentStats] wires the
+  /// StatsService api (proxy mode reads counters from it; TUN reads the tun
+  /// interface instead, so it is skipped there).
+  Future<String> _startXray(
+    TunnelSessionRequest request, {
+    required bool augmentStats,
+    required bool waitHttp,
+  }) async {
+    final xrayBin = await LinuxCorePaths.xrayExecutable();
+    if (xrayBin == null) {
+      throw VpnStartException('xray not found. ${LinuxCorePaths.binariesHint}');
+    }
+    _xrayBinPath = xrayBin;
+
+    var body = request.xrayConfig;
+    if (augmentStats) {
+      final decoded = jsonDecode(request.xrayConfig) as Map<String, dynamic>;
+      body = jsonEncode(
+        XraySessionStats.augmentConfig(
+          decoded,
+          apiPort: XraySessionStats.defaultApiPort,
+        ),
+      );
+    }
+    final xrayConfigFile = File(p.join(_sessionDir!.path, 'xray.json'));
+    await xrayConfigFile.writeAsString(body);
+
+    await _ensurePortsAvailable(request, needsHttp: waitHttp);
+
+    final geoDir = await LinuxCorePaths.geoAssetDir();
+    _xrayProcess = await Process.start(
+      xrayBin,
+      ['run', '-c', xrayConfigFile.path],
+      workingDirectory: _sessionDir!.path,
+      environment: geoDir != null ? {'XRAY_LOCATION_ASSET': geoDir} : null,
+      mode: ProcessStartMode.normal,
+    );
+    _pipeProcessOutput(_xrayProcess!, _xrayLog);
+
+    final socksReady = await _waitForPort(
+      '127.0.0.1',
+      request.socksPort,
+      process: _xrayProcess,
+      log: _xrayLog,
+      processLabel: 'Xray',
+    );
+    if (!socksReady) {
+      throw VpnStartException(
+        'Xray SOCKS port ${request.socksPort} did not open.\n${_tail(_xrayLog)}',
+      );
+    }
+
+    if (waitHttp) {
+      final httpReady = await _waitForPort(
+        '127.0.0.1',
+        request.httpPort,
+        process: _xrayProcess,
+        log: _xrayLog,
+        processLabel: 'Xray HTTP',
+      );
+      if (!httpReady) {
+        throw VpnStartException(
+          'Xray HTTP port ${request.httpPort} did not open. '
+          'System proxy needs the HTTP inbound.\n${_tail(_xrayLog)}',
+        );
+      }
+    }
+    return xrayBin;
+  }
+
+  Future<void> _startXrayProxySession(TunnelSessionRequest request) async {
+    await _startXray(
+      request,
+      augmentStats: true,
+      waitHttp: request.systemProxy,
+    );
+    if (request.systemProxy) {
+      await _applySystemProxy(request);
+    }
+  }
+
+  Future<void> _startXrayTunSession(TunnelSessionRequest request) async {
+    await _startXray(request, augmentStats: false, waitHttp: false);
+    await _startSingbox(request);
+  }
+
+  // ---- wireproxy (AmneziaWG) ----------------------------------------------
+
+  Future<void> _startWireproxy(
+    TunnelSessionRequest request, {
+    required bool withHttp,
+  }) async {
+    final wpBin = await LinuxCorePaths.wireproxyExecutable();
+    if (wpBin == null) {
+      throw VpnStartException(
+        'wireproxy not found. ${LinuxCorePaths.binariesHint}',
+      );
+    }
+    final conf = request.awgConfig;
+    if (conf == null || conf.isEmpty) {
+      throw const VpnStartException('awgConfig is required for AmneziaWG');
+    }
+
+    final wpConf = WireproxyConfigGen.generate(
+      conf,
+      socksPort: request.socksPort,
+      httpPort: request.httpPort,
+      withHttp: withHttp,
+    );
+    final confFile = File(p.join(_sessionDir!.path, 'wireproxy.conf'));
+    await confFile.writeAsString(wpConf);
+
+    final infoPort = await _freePort();
+    _awgInfoPort = infoPort;
+
+    _wireproxyProcess = await Process.start(
+      wpBin,
+      ['-i', '127.0.0.1:$infoPort', '-c', confFile.path],
+      workingDirectory: _sessionDir!.path,
+      mode: ProcessStartMode.normal,
+    );
+    _pipeProcessOutput(_wireproxyProcess!, _xrayLog);
+
+    final socksReady = await _waitForPort(
+      '127.0.0.1',
+      request.socksPort,
+      process: _wireproxyProcess,
+      log: _xrayLog,
+      processLabel: 'wireproxy',
+    );
+    if (!socksReady) {
+      throw VpnStartException(
+        'wireproxy SOCKS port ${request.socksPort} did not open.\n${_tail(_xrayLog)}',
+      );
+    }
+  }
+
+  Future<void> _startAwgProxySession(TunnelSessionRequest request) async {
+    await _startWireproxy(request, withHttp: true);
+    if (request.systemProxy) {
+      final httpReady = await _waitForPort(
+        '127.0.0.1',
+        request.httpPort,
+        process: _wireproxyProcess,
+        log: _xrayLog,
+        processLabel: 'wireproxy HTTP',
+      );
+      if (!httpReady) {
+        throw VpnStartException(
+          'wireproxy HTTP port ${request.httpPort} did not open.\n${_tail(_xrayLog)}',
+        );
+      }
+      await _applySystemProxy(request);
+    }
+  }
+
+  Future<void> _startAwgTunSession(TunnelSessionRequest request) async {
+    await _startWireproxy(request, withHttp: false);
+    await _startSingbox(request);
+  }
+
+  // ---- sing-box TUN (root via pkexec) -------------------------------------
+
+  Future<void> _startSingbox(TunnelSessionRequest request) async {
+    final singBin = await LinuxCorePaths.singboxExecutable();
+    if (singBin == null) {
+      throw VpnStartException(
+        'sing-box not found (required for TUN mode). ${LinuxCorePaths.binariesHint}',
+      );
+    }
+    final singConfig = request.singboxConfig;
+    if (singConfig == null || singConfig.isEmpty) {
+      throw const VpnStartException('singboxConfig is required for TUN mode');
+    }
+
+    final singConfigFile = File(p.join(_sessionDir!.path, 'sing-box.json'));
+    await singConfigFile.writeAsString(singConfig);
+
+    // sing-box runs as root via pkexec. When the app ships as an AppImage the
+    // bundled binary lives on a per-user FUSE mount (/tmp/.mount_*) that root
+    // CANNOT read — pkexec then dies with "Permission denied" / code 127. Copy
+    // it into the session dir (real /tmp) where root has access, and exec that.
+    final rootSingBin = p.join(_sessionDir!.path, 'sing-box');
+    try {
+      await File(singBin).copy(rootSingBin);
+      await Process.run('chmod', ['0755', rootSingBin]);
+    } catch (e) {
+      throw VpnStartException('Could not stage sing-box for elevation: $e');
+    }
+
+    // pkexec shows a graphical polkit prompt and runs it as root. Modern
+    // polkit forwards SIGTERM to the child, so stopSession can tear it down.
+    try {
+      _singboxProcess = await Process.start(
+        'pkexec',
+        [rootSingBin, 'run', '-c', singConfigFile.path],
+        workingDirectory: _sessionDir!.path,
+        mode: ProcessStartMode.normal,
+      );
+    } on ProcessException catch (e) {
+      throw VpnStartException(
+        'Could not launch sing-box with elevated privileges. TUN mode needs '
+        'pkexec (polkit). Install it, or use Proxy mode. ($e)',
+      );
+    }
+    _pipeProcessOutput(_singboxProcess!, _singboxLog);
+
+    final ready = await _waitForSingbox(process: _singboxProcess!, log: _singboxLog);
+    if (!ready) {
+      throw VpnStartException(
+        'sing-box TUN did not start. Make sure pkexec/polkit is available and '
+        'the authorization was granted.\n${_tail(_singboxLog)}',
+      );
+    }
+  }
+
+  Future<bool> _waitForSingbox({
+    required Process process,
+    required StringBuffer log,
+  }) async {
+    var waited = 0;
+    while (waited < 20000) {
+      final code = await process.exitCode.timeout(
+        const Duration(milliseconds: 1),
+        onTimeout: () => -1,
+      );
+      if (code >= 0) {
+        throw VpnStartException(
+          'sing-box exited with code $code (TUN/elevation failed?).\n${_tail(log)}',
+        );
+      }
+      final text = log.toString().toLowerCase();
+      if (text.contains('started') && text.contains('tun')) return true;
+      if (text.contains('tun-in') &&
+          (text.contains('started') || text.contains('listening'))) {
+        return true;
+      }
+      // tun interface up is the most reliable signal across versions.
+      if (await _tunInterfaceExists()) return true;
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      waited += 300;
+    }
+    final stillRunning = await process.exitCode.timeout(
+      const Duration(milliseconds: 1),
+      onTimeout: () => -1,
+    );
+    return stillRunning < 0;
+  }
+
+  Future<bool> _tunInterfaceExists() async {
+    return Directory('/sys/class/net/$tunInterfaceName').exists();
+  }
+
+  // ---- system proxy (GNOME gsettings, best effort) ------------------------
+
+  Future<void> _applySystemProxy(TunnelSessionRequest request) async {
+    final ok = await _gsettingsProxy(
+      enabled: true,
+      socksPort: request.socksPort,
+      httpPort: request.httpPort,
+    );
+    if (!ok) {
+      AppLogger.instance.warn(
+        'Could not set the GNOME system proxy (gsettings unavailable or '
+        'non-GNOME desktop). The local proxy is up on 127.0.0.1: '
+        'SOCKS ${request.socksPort} / HTTP ${request.httpPort} — configure '
+        'it manually if your desktop does not honour gsettings.',
+      );
+    }
+    // Deliberately NOT writing Firefox user.js on Linux: it forced a *manual*
+    // proxy (network.proxy.type=1) that survived disconnect and our cleanup —
+    // causing endless auth prompts and traffic to a dead 127.0.0.1 proxy after
+    // quit. gsettings is enough; Firefox users can pick "Use system proxy
+    // settings" once. We still CLEAR any stale block left by older builds.
+  }
+
+  Future<bool> _gsettingsProxy({
+    required bool enabled,
+    int socksPort = 0,
+    int httpPort = 0,
+  }) async {
+    Future<bool> set(List<String> args) async {
+      try {
+        final r = await Process.run('gsettings', args);
+        return r.exitCode == 0;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    if (!enabled) {
+      return set(['set', 'org.gnome.system.proxy', 'mode', 'none']);
+    }
+
+    await set(['set', 'org.gnome.system.proxy.http', 'host', '127.0.0.1']);
+    await set(['set', 'org.gnome.system.proxy.http', 'port', '$httpPort']);
+    await set(['set', 'org.gnome.system.proxy.https', 'host', '127.0.0.1']);
+    await set(['set', 'org.gnome.system.proxy.https', 'port', '$httpPort']);
+    await set(['set', 'org.gnome.system.proxy.socks', 'host', '127.0.0.1']);
+    await set(['set', 'org.gnome.system.proxy.socks', 'port', '$socksPort']);
+    await set([
+      'set',
+      'org.gnome.system.proxy',
+      'ignore-hosts',
+      "['localhost', '127.0.0.0/8', '::1']",
+    ]);
+    // The mode switch landing is our success signal; if gsettings is missing
+    // every call returns false.
+    return set(['set', 'org.gnome.system.proxy', 'mode', 'manual']);
+  }
+
+  /// Best-effort cleanup of state a previous (possibly crashed) run may have
+  /// left behind: a system proxy still pointing at a dead local port and a
+  /// stale Firefox proxy block. Called on Linux app startup. Does not touch
+  /// core processes (avoid killing unrelated xray/sing-box the user may run).
+  static Future<void> cleanupStaleState() async {
+    try {
+      await Process.run(
+        'gsettings',
+        ['set', 'org.gnome.system.proxy', 'mode', 'none'],
+      );
+    } catch (_) {}
+    try {
+      await FirefoxProxyHelper.clearManualHttpProxy();
+    } catch (_) {}
+  }
+
+  // ---- lifecycle ----------------------------------------------------------
+
+  @override
+  Future<void> stopSession() async {
+    _stopStatsLoop();
+    _emit(const VpnState(status: VpnStatus.disconnecting));
+
+    if (_singboxProcess != null || _xrayProcess != null || _wireproxyProcess != null) {
+      await _dumpLogsToFile();
+    }
+
+    // Always reset the system proxy on stop — even if this instance did not set
+    // it (left over from a previous run/crash) — otherwise the desktop keeps
+    // routing to a dead 127.0.0.1 proxy.
+    await _gsettingsProxy(enabled: false);
+    try {
+      await FirefoxProxyHelper.clearManualHttpProxy();
+    } catch (_) {}
+
+    // sing-box first: it owns the tun device + routes, tear it down before the
+    // upstream SOCKS provider so traffic fails closed, not into a dead socks.
+    await _killProcess(_singboxProcess);
+    await _killProcess(_wireproxyProcess);
+    await _killProcess(_xrayProcess);
+    _singboxProcess = null;
+    _wireproxyProcess = null;
+    _awgInfoPort = null;
+    _xrayProcess = null;
+    _xrayBinPath = null;
+
+    final dir = _sessionDir;
+    _sessionDir = null;
+    if (dir != null && dir.existsSync()) {
+      try {
+        await dir.delete(recursive: true);
+      } catch (_) {}
+    }
+
+    _activeMode = null;
+    if (identical(activeInstance, this)) activeInstance = null;
+    _emit(VpnState.disconnected);
+  }
+
+  @override
+  Future<bool> requestTunnelPermission() async => true;
+
+  @override
+  Future<VpnState> getCurrentState() async {
+    if (_xrayProcess != null || _wireproxyProcess != null) {
+      return _buildConnectedState(_activeMode);
+    }
+    return VpnState.disconnected;
+  }
+
+  @override
+  Future<int?> getPing(String address, int port) async {
+    final sw = Stopwatch()..start();
+    try {
+      final s = await Socket.connect(
+        address,
+        port,
+        timeout: const Duration(seconds: 5),
+      );
+      sw.stop();
+      await s.close();
+      return sw.elapsedMilliseconds;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getInstalledApps({
+    bool includeSystem = false,
+  }) async {
+    // Split tunneling matches sing-box `process_name`, which on Linux is the
+    // executable basename. Enumerate running processes from /proc, de-duped by
+    // that name. Kernel threads (no /exe) are skipped unless includeSystem.
+    final seen = <String>{};
+    final apps = <Map<String, dynamic>>[];
+    try {
+      await for (final entry in Directory('/proc').list(followLinks: false)) {
+        final pid = p.basename(entry.path);
+        if (int.tryParse(pid) == null) continue;
+
+        String? exePath;
+        try {
+          exePath = await Link('${entry.path}/exe').target();
+        } catch (_) {
+          exePath = null; // permission denied or kernel thread
+        }
+
+        String name;
+        if (exePath != null && exePath.isNotEmpty) {
+          name = p.basename(exePath);
+        } else {
+          if (!includeSystem) continue;
+          try {
+            name = (await File('${entry.path}/comm').readAsString()).trim();
+          } catch (_) {
+            continue;
+          }
+        }
+        if (name.isEmpty || !seen.add(name.toLowerCase())) continue;
+
+        apps.add({
+          'packageName': name,
+          'appName': name,
+          'isRunning': true,
+          'isSystem': exePath == null,
+          if (exePath != null) 'installPath': exePath,
+        });
+      }
+    } catch (e, st) {
+      AppLogger.instance.warn('listProcesses (/proc) failed', error: e, stackTrace: st);
+    }
+    apps.sort((a, b) => (a['appName'] as String)
+        .toLowerCase()
+        .compareTo((b['appName'] as String).toLowerCase()));
+    return apps;
+  }
+
+  @override
+  Future<String?> getAppIcon(String path) async => null;
+
+  @override
+  Future<
+      List<({
+        String id,
+        bool success,
+        int? latencyMs,
+        String error,
+        int? httpStatus,
+      })>> xrayUrlTestBatch({
+    required List<(String id, String xrayConfig)> items,
+    required int socksPort,
+    String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
+    int timeoutMs = 15000,
+  }) async {
+    if (items.isEmpty) return [];
+    // EphemeralXrayPing is Windows-only for now; on Linux this degrades to a
+    // clear per-item error (TCP ping still works via getPing). Phase 1.5.
+    final raw = await EphemeralXrayPing.urlTestBatch(
+      items: items.map((e) => (id: e.$1, xrayConfigJson: e.$2)).toList(),
+      socksPort: socksPort,
+      testUrl: testUrl,
+      timeoutMs: timeoutMs,
+    );
+    return raw
+        .map((r) => (
+              id: r.id,
+              success: r.success,
+              latencyMs: r.latencyMs,
+              error: r.error,
+              httpStatus: r.httpStatus,
+            ))
+        .toList();
+  }
+
+  @override
+  Future<
+      List<({
+        String id,
+        bool success,
+        int? kbps,
+        String error,
+      })>> xraySpeedTestBatch({
+    required List<(String id, String xrayConfig)> items,
+    required int socksPort,
+    String downloadUrl = kDefaultSpeedTestUrl,
+    int timeoutMs = 20000,
+  }) async {
+    if (items.isEmpty) return [];
+    return EphemeralXrayPing.speedTestBatch(
+      items: items.map((e) => (id: e.$1, xrayConfigJson: e.$2)).toList(),
+      socksPort: socksPort,
+      downloadUrl: downloadUrl,
+      timeoutMs: timeoutMs,
+    );
+  }
+
+  // ---- internals ----------------------------------------------------------
+
+  void _pipeProcessOutput(Process process, StringBuffer buffer) {
+    void append(String line) {
+      buffer.writeln(line);
+      if (buffer.length > 64 * 1024) {
+        final trimmed = _tail(buffer, maxLines: 200);
+        buffer
+          ..clear()
+          ..writeln(trimmed);
+      }
+    }
+
+    void handle(String chunk) {
+      for (final line in const LineSplitter().convert(chunk)) {
+        append(line);
+      }
+    }
+
+    process.stderr.transform(utf8.decoder).listen(handle);
+    process.stdout.transform(utf8.decoder).listen(handle);
+  }
+
+  Future<void> _killProcess(Process? process) async {
+    if (process == null) return;
+    try {
+      process.kill(ProcessSignal.sigterm);
+      await process.exitCode.timeout(
+        const Duration(seconds: 3),
+        onTimeout: () {
+          process.kill(ProcessSignal.sigkill);
+          return -1;
+        },
+      );
+    } catch (_) {}
+  }
+
+  Future<bool> _waitForPort(
+    String host,
+    int port, {
+    Process? process,
+    StringBuffer? log,
+    String processLabel = 'Process',
+  }) async {
+    var waited = 0;
+    while (waited < 20000) {
+      if (process != null) {
+        final code = await process.exitCode.timeout(
+          const Duration(milliseconds: 1),
+          onTimeout: () => -1,
+        );
+        if (code >= 0) {
+          if (code != 0) {
+            throw VpnStartException(
+              '$processLabel exited with code $code.\n${_tail(log ?? StringBuffer())}',
+            );
+          }
+          return false;
+        }
+      }
+      try {
+        final s = await Socket.connect(
+          host,
+          port,
+          timeout: const Duration(milliseconds: 400),
+        );
+        await s.close();
+        return true;
+      } catch (_) {
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        waited += 300;
+      }
+    }
+    return false;
+  }
+
+  Future<int> _freePort() async {
+    final s = await ServerSocket.bind('127.0.0.1', 0);
+    final port = s.port;
+    await s.close();
+    return port;
+  }
+
+  Future<void> _ensurePortsAvailable(
+    TunnelSessionRequest request, {
+    required bool needsHttp,
+  }) async {
+    if (!await _isPortAvailable('127.0.0.1', request.socksPort)) {
+      throw VpnStartException(
+        'SOCKS port ${request.socksPort} is already in use.',
+      );
+    }
+    if (needsHttp && !await _isPortAvailable('127.0.0.1', request.httpPort)) {
+      throw VpnStartException(
+        'HTTP port ${request.httpPort} is already in use.',
+      );
+    }
+  }
+
+  Future<bool> _isPortAvailable(String host, int port) async {
+    try {
+      final serverSocket = await ServerSocket.bind(host, port);
+      await serverSocket.close();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  String _tail(StringBuffer buffer, {int maxLines = 12}) {
+    final lines = buffer.toString().split('\n').where((l) => l.trim().isNotEmpty);
+    final tail =
+        lines.length > maxLines ? lines.skip(lines.length - maxLines) : lines;
+    final text = tail.join('\n');
+    return text.isEmpty ? '(no process output)' : text;
+  }
+
+  void _emit(VpnState state) {
+    if (!_stateCtrl.isClosed) _stateCtrl.add(state);
+  }
+
+  void _startStatsLoop(ConnectionMode mode) {
+    _stopStatsLoop();
+    _sessionStartedAt = DateTime.now();
+    _prevInOctets = 0;
+    _prevOutOctets = 0;
+    _totalDownload = 0;
+    _totalUpload = 0;
+    _statsTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      unawaited(_pollTrafficStats(mode));
+    });
+    unawaited(_pollTrafficStats(mode));
+  }
+
+  void _stopStatsLoop() {
+    _statsTimer?.cancel();
+    _statsTimer = null;
+    _sessionStartedAt = null;
+    _prevInOctets = 0;
+    _prevOutOctets = 0;
+    _totalDownload = 0;
+    _totalUpload = 0;
+  }
+
+  Future<void> _pollTrafficStats(ConnectionMode mode) async {
+    if (_xrayProcess == null && _wireproxyProcess == null) return;
+    try {
+      final int inOctets;
+      final int outOctets;
+
+      if (mode == ConnectionMode.tun) {
+        // tun interface stats: kernel writes the app's egress to the device
+        // (tx) and reads sing-box's downloaded replies from it (rx).
+        final c = await _queryTunCounters();
+        if (c == null) {
+          _emitConnectedTelemetry(mode);
+          return;
+        }
+        inOctets = c.rx;
+        outOctets = c.tx;
+      } else if (_wireproxyProcess != null && _awgInfoPort != null) {
+        final m = await _queryWireproxyMetrics(_awgInfoPort!);
+        if (m == null) {
+          _emitConnectedTelemetry(mode);
+          return;
+        }
+        inOctets = m.rx;
+        outOctets = m.tx;
+      } else if (_xrayProcess != null) {
+        final xrayBin = _xrayBinPath;
+        if (xrayBin == null) return;
+        final counters = await XraySessionStats.queryInboundCounters(
+          xrayExecutable: xrayBin,
+        );
+        if (counters == null) return;
+        inOctets = counters.download;
+        outOctets = counters.upload;
+      } else {
+        return;
+      }
+
+      if (_prevInOctets == 0 && _prevOutOctets == 0) {
+        _prevInOctets = inOctets;
+        _prevOutOctets = outOctets;
+        _emitConnectedTelemetry(mode);
+        return;
+      }
+
+      final deltaIn = inOctets >= _prevInOctets ? inOctets - _prevInOctets : 0;
+      final deltaOut = outOctets >= _prevOutOctets ? outOctets - _prevOutOctets : 0;
+      _prevInOctets = inOctets;
+      _prevOutOctets = outOctets;
+      _totalDownload += deltaIn;
+      _totalUpload += deltaOut;
+
+      _emitConnectedTelemetry(mode, downloadSpeed: deltaIn, uploadSpeed: deltaOut);
+    } catch (e) {
+      AppLogger.instance.debug('Linux getTrafficStats failed: $e');
+    }
+  }
+
+  /// Cumulative tun interface counters from sysfs (download = rx, upload = tx).
+  Future<({int rx, int tx})?> _queryTunCounters() async {
+    try {
+      final base = '/sys/class/net/$tunInterfaceName/statistics';
+      final rx = int.parse((await File('$base/rx_bytes').readAsString()).trim());
+      final tx = int.parse((await File('$base/tx_bytes').readAsString()).trim());
+      return (rx: rx, tx: tx);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<({int rx, int tx})?> _queryWireproxyMetrics(int port) async {
+    final client = HttpClient();
+    try {
+      final req = await client
+          .get('127.0.0.1', port, '/metrics')
+          .timeout(const Duration(seconds: 2));
+      final resp = await req.close().timeout(const Duration(seconds: 2));
+      if (resp.statusCode != 200) return null;
+      final body = await resp.transform(utf8.decoder).join();
+      var rx = 0;
+      var tx = 0;
+      for (final line in const LineSplitter().convert(body)) {
+        final i = line.indexOf('=');
+        if (i < 0) continue;
+        final key = line.substring(0, i).trim();
+        final value = int.tryParse(line.substring(i + 1).trim());
+        if (value == null) continue;
+        if (key == 'rx_bytes') {
+          rx += value;
+        } else if (key == 'tx_bytes') {
+          tx += value;
+        }
+      }
+      return (rx: rx, tx: tx);
+    } catch (_) {
+      return null;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  void _emitConnectedTelemetry(
+    ConnectionMode? mode, {
+    int? downloadSpeed,
+    int? uploadSpeed,
+  }) {
+    _emit(_buildConnectedState(
+      mode,
+      downloadSpeed: downloadSpeed,
+      uploadSpeed: uploadSpeed,
+    ));
+  }
+
+  VpnState _buildConnectedState(
+    ConnectionMode? mode, {
+    int? downloadSpeed,
+    int? uploadSpeed,
+  }) {
+    final started = _sessionStartedAt;
+    return VpnState(
+      status: VpnStatus.connected,
+      activeMode: mode,
+      downloadSpeed: downloadSpeed,
+      uploadSpeed: uploadSpeed,
+      totalDownload: _totalDownload > 0 ? _totalDownload : null,
+      totalUpload: _totalUpload > 0 ? _totalUpload : null,
+      duration: started != null ? DateTime.now().difference(started) : null,
+    );
+  }
+}
