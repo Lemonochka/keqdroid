@@ -4,24 +4,15 @@ import 'package:keqdroid/services/update_service.dart';
 void main() {
   group('UpdateService.compareVersions', () {
     test('v0.2.10 is newer than v0.2.9', () {
-      expect(
-        UpdateService.compareVersions('v0.2.10', 'v0.2.9'),
-        1,
-      );
+      expect(UpdateService.compareVersions('v0.2.10', 'v0.2.9'), 1);
     });
 
     test('0.2.9 is numerically older than 0.2.81', () {
-      expect(
-        UpdateService.compareVersions('v0.2.9', '0.2.81'),
-        -1,
-      );
+      expect(UpdateService.compareVersions('v0.2.9', '0.2.81'), -1);
     });
 
     test('legacy Android tags still compare correctly', () {
-      expect(
-        UpdateService.compareVersions('Android0.2.10', 'Android0.2.9'),
-        1,
-      );
+      expect(UpdateService.compareVersions('Android0.2.10', 'Android0.2.9'), 1);
     });
   });
 
@@ -55,10 +46,7 @@ void main() {
     });
 
     test('v0.2.10 is newer without needing dates', () {
-      expect(
-        UpdateService.isNewerRelease('v0.2.10', '0.2.9'),
-        isTrue,
-      );
+      expect(UpdateService.isNewerRelease('v0.2.10', '0.2.9'), isTrue);
     });
   });
 
@@ -69,6 +57,37 @@ void main() {
 
     test('strips legacy Android prefix', () {
       expect(UpdateService.displayVersion('Android0.2.9'), '0.2.9');
+    });
+  });
+
+  group('UpdateService asset selection', () {
+    final assets = [
+      {'name': 'keqdroid-0.5.1.apk'},
+      {'name': 'keqdroid-windows-x64-0.5.1.zip'},
+      {'name': 'keqdroid-0.5.1-linux-x64.tar.gz'},
+      {'name': 'keqdroid-0.5.1-x86_64.AppImage'},
+      {'name': 'keqdroid_0.5.1_amd64.deb'},
+    ];
+
+    test('selects APK for Android', () {
+      expect(
+        UpdateService.findAssetNameForPlatform(assets, 'android'),
+        'keqdroid-0.5.1.apk',
+      );
+    });
+
+    test('selects Windows archive for Windows', () {
+      expect(
+        UpdateService.findAssetNameForPlatform(assets, 'windows'),
+        'keqdroid-windows-x64-0.5.1.zip',
+      );
+    });
+
+    test('selects AppImage before tarball/deb for Linux', () {
+      expect(
+        UpdateService.findAssetNameForPlatform(assets, 'linux'),
+        'keqdroid-0.5.1-x86_64.AppImage',
+      );
     });
   });
 
@@ -100,10 +119,7 @@ void main() {
       final manifest =
           '$other  keqdroid-windows-x64-0.5.0.zip\n'
           '$hash  keqdroid-0.5.0.apk\n';
-      expect(
-        UpdateService.extractSha256(manifest, 'keqdroid-0.5.0.apk'),
-        hash,
-      );
+      expect(UpdateService.extractSha256(manifest, 'keqdroid-0.5.0.apk'), hash);
       expect(
         UpdateService.extractSha256(manifest, 'keqdroid-windows-x64-0.5.0.zip'),
         other,

@@ -40,12 +40,16 @@ class UpdateInfo {
 
   String get formattedSize {
     if (apkSize < 1024) return '$apkSize B';
-    if (apkSize < 1024 * 1024) return '${(apkSize / 1024).toStringAsFixed(1)} KB';
+    if (apkSize < 1024 * 1024) {
+      return '${(apkSize / 1024).toStringAsFixed(1)} KB';
+    }
     return '${(apkSize / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  String get displayCurrentVersion => UpdateService.displayVersion(currentVersion);
-  String get displayLatestVersion => UpdateService.displayVersion(latestVersion);
+  String get displayCurrentVersion =>
+      UpdateService.displayVersion(currentVersion);
+  String get displayLatestVersion =>
+      UpdateService.displayVersion(latestVersion);
 
   bool get hasNewVersion {
     return UpdateService.isNewerRelease(latestVersion, currentVersion);
@@ -62,10 +66,12 @@ class UpdateService {
     caseSensitive: false,
   );
 
-  static final _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 30),
-  ));
+  static final _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   static const _prefSkipVersion = 'skip_update_version';
   static const _prefUpdateCheckCount = 'update_check_count';
@@ -100,8 +106,9 @@ class UpdateService {
       final latestTag = (latestRelease['tag_name'] ?? '').toString();
       final currentRelease = _findReleaseForVersion(releases, currentVersion);
       final latestPublished = _releaseDate(latestRelease);
-      final currentPublished =
-          currentRelease != null ? _releaseDate(currentRelease) : null;
+      final currentPublished = currentRelease != null
+          ? _releaseDate(currentRelease)
+          : null;
 
       if (!isNewerRelease(
         latestTag,
@@ -113,9 +120,7 @@ class UpdateService {
       }
 
       final assets = latestRelease['assets'] as List?;
-      final asset = Platform.isWindows
-          ? _findDesktopAsset(assets)
-          : _findApkAsset(assets);
+      final asset = _findAssetForCurrentPlatform(assets);
       if (asset == null) return null;
 
       final assetName = (asset['name'] ?? '').toString();
@@ -127,7 +132,8 @@ class UpdateService {
         downloadUrl: asset['browser_download_url'],
         releaseNotes: latestRelease['body'],
         apkSize: asset['size'] ?? 0,
-        openInBrowser: Platform.isWindows && _shouldOpenDesktopAssetInBrowser(asset),
+        openInBrowser:
+            Platform.isWindows && _shouldOpenDesktopAssetInBrowser(asset),
         assetName: assetName,
         checksumUrl: checksumAsset?['browser_download_url'] as String?,
       );
@@ -144,11 +150,7 @@ class UpdateService {
   static Future<List<Map<String, dynamic>>> _fetchReleases() async {
     final response = await _dio.get(
       'https://api.github.com/repos/$_owner/$_repo/releases',
-      options: Options(
-        headers: {
-          'Accept': 'application/vnd.github+json',
-        },
-      ),
+      options: Options(headers: {'Accept': 'application/vnd.github+json'}),
     );
 
     if (response.statusCode != 200) return [];
@@ -205,13 +207,48 @@ class UpdateService {
     return null;
   }
 
-  static Map<String, dynamic>? _findDesktopAsset(List? assets) {
+  static Map<String, dynamic>? _findAssetForCurrentPlatform(List? assets) {
+    if (Platform.isWindows) return _findWindowsAsset(assets);
+    if (Platform.isLinux) return _findLinuxAsset(assets);
+    return _findApkAsset(assets);
+  }
+
+  static String? findAssetNameForPlatform(List? assets, String platform) {
+    final asset = switch (platform) {
+      'windows' => _findWindowsAsset(assets),
+      'linux' => _findLinuxAsset(assets),
+      'android' => _findApkAsset(assets),
+      _ => null,
+    };
+    return asset?['name']?.toString();
+  }
+
+  static Map<String, dynamic>? _findWindowsAsset(List? assets) {
     if (assets == null) return null;
     const preferred = ['.zip', '.msix', '.msi', '.exe'];
     for (final ext in preferred) {
       for (final asset in assets) {
         final name = (asset['name'] ?? '').toString().toLowerCase();
         if (name.endsWith(ext)) return asset;
+      }
+    }
+    return null;
+  }
+
+  static Map<String, dynamic>? _findLinuxAsset(List? assets) {
+    if (assets == null) return null;
+    const preferredSuffixes = [
+      '-x86_64.appimage',
+      '.appimage',
+      '-linux-x64.tar.gz',
+      'linux-x64.tar.gz',
+      '_amd64.deb',
+      '.deb',
+    ];
+    for (final suffix in preferredSuffixes) {
+      for (final asset in assets) {
+        final name = (asset['name'] ?? '').toString().toLowerCase();
+        if (name.endsWith(suffix)) return asset;
       }
     }
     return null;
@@ -234,7 +271,12 @@ class UpdateService {
     }
 
     // 2) shared checksums manifest.
-    const shared = {'sha256sums', 'sha256sums.txt', 'checksums.txt', 'checksums.sha256'};
+    const shared = {
+      'sha256sums',
+      'sha256sums.txt',
+      'checksums.txt',
+      'checksums.sha256',
+    };
     for (final asset in assets) {
       final name = (asset['name'] ?? '').toString().toLowerCase();
       if (shared.contains(name)) return asset as Map<String, dynamic>;
@@ -274,10 +316,14 @@ class UpdateService {
     final latestVersion = _extractVersion(latest);
     final currentVersion = _extractVersion(current);
 
-    final latestParts =
-        latestVersion.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    final currentParts =
-        currentVersion.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final latestParts = latestVersion
+        .split('.')
+        .map((e) => int.tryParse(e) ?? 0)
+        .toList();
+    final currentParts = currentVersion
+        .split('.')
+        .map((e) => int.tryParse(e) ?? 0)
+        .toList();
 
     final maxLen = latestParts.length > currentParts.length
         ? latestParts.length
@@ -372,10 +418,21 @@ class UpdateService {
 
   static String _extensionFromUrl(String url) {
     final path = Uri.parse(url).path.toLowerCase();
-    for (final ext in ['.zip', '.msix', '.msi', '.exe', '.apk']) {
+    for (final ext in [
+      '.tar.gz',
+      '.appimage',
+      '.deb',
+      '.zip',
+      '.msix',
+      '.msi',
+      '.exe',
+      '.apk',
+    ]) {
       if (path.endsWith(ext)) return ext;
     }
-    return Platform.isWindows ? '.zip' : '.apk';
+    if (Platform.isWindows) return '.zip';
+    if (Platform.isLinux) return '.AppImage';
+    return '.apk';
   }
 
   /// Fail closed: refuse to install an update whose SHA-256 can't be verified.

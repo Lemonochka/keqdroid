@@ -61,13 +61,60 @@ class KeqrnelConfig {
   ///  - desktop proxy-режим: системный прокси Windows поверх socks/http keqrnel.
   static String wrapXray(String xrayConfig) {
     final xray = jsonDecode(xrayConfig) as Map<String, dynamic>;
+    final inbounds = _singboxInboundsFromXray(xray);
+    xray.remove('inbounds');
     final box = <String, dynamic>{
       'log': {'level': 'warn'},
+      if (inbounds.isNotEmpty) 'inbounds': inbounds,
       'outbounds': [
         {'type': 'xray', 'tag': 'proxy', 'xray': xray},
       ],
+      'route': {'final': 'proxy'},
     };
     return const JsonEncoder.withIndent('  ').convert(box);
+  }
+
+  static List<Map<String, dynamic>> _singboxInboundsFromXray(
+    Map<String, dynamic> xray,
+  ) {
+    final rawInbounds = xray['inbounds'];
+    if (rawInbounds is! List) return const [];
+
+    final result = <Map<String, dynamic>>[];
+    for (final raw in rawInbounds) {
+      if (raw is! Map) continue;
+      final protocol = raw['protocol']?.toString().toLowerCase();
+      if (protocol != 'socks' && protocol != 'http') continue;
+
+      final port = (raw['port'] as num?)?.toInt();
+      if (port == null || port <= 0) continue;
+
+      final inbound = <String, dynamic>{
+        'type': protocol,
+        'tag': raw['tag']?.toString() ?? '$protocol-in',
+        'listen': raw['listen']?.toString() ?? '127.0.0.1',
+        'listen_port': port,
+      };
+
+      final settings = raw['settings'];
+      if (settings is Map) {
+        final accounts = settings['accounts'];
+        if (accounts is List && accounts.isNotEmpty) {
+          final users = <Map<String, dynamic>>[];
+          for (final account in accounts) {
+            if (account is! Map) continue;
+            final username = account['user']?.toString() ?? '';
+            final password = account['pass']?.toString() ?? '';
+            if (username.isEmpty || password.isEmpty) continue;
+            users.add({'username': username, 'password': password});
+          }
+          if (users.isNotEmpty) inbound['users'] = users;
+        }
+      }
+
+      result.add(inbound);
+    }
+    return result;
   }
 
   /// Desktop proxy-режим с подсчётом трафика. В отличие от [wrapXray], локальные
