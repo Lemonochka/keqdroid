@@ -46,15 +46,19 @@ class WindowsCorePaths {
   /// (passed to xray via XRAY_LOCATION_ASSET so `geoip:`/`geosite:` rules
   /// resolve regardless of the process working directory). Null if not found.
   static Future<String?> geoAssetDir() async {
+    // Prefer the directory next to keqdroid.exe — CMake installs *.dat there on
+    // Windows release builds (same folder as keqrnel.exe / wintun.dll).
+    final exeDir = p.dirname(Platform.resolvedExecutable);
+    if (_dirHasGeoFiles(exeDir)) return exeDir;
+
     final besideAssets = _geoDirBesideFlutterAssets();
     if (besideAssets != null) return besideAssets;
 
-    final exeDir = p.dirname(Platform.resolvedExecutable);
-    if (geoFileNames.any((f) => File(p.join(exeDir, f)).existsSync())) {
-      return exeDir;
-    }
-
     return _extractGeoFilesToTemp();
+  }
+
+  static bool _dirHasGeoFiles(String dir) {
+    return geoFileNames.every((f) => File(p.join(dir, f)).existsSync());
   }
 
   static String? _geoDirBesideFlutterAssets() {
@@ -66,8 +70,7 @@ class WindowsCorePaths {
       'bin',
       'windows',
     );
-    final hasGeo = geoFileNames.any((f) => File(p.join(dir, f)).existsSync());
-    return hasGeo ? dir : null;
+    return _dirHasGeoFiles(dir) ? dir : null;
   }
 
   /// Extracts whatever geo files are bundled into a temp dir; returns the dir

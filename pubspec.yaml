@@ -79,6 +79,9 @@ flutter:
     - assets/icon.png
     - assets/icon_foreground.png
     - assets/icon_windows_launcher.png
+    # GeoIP/Geosite DBs for xray routing (geoip:/geosite: rules on Android).
+    - assets/bin/windows/geoip.dat
+    - assets/bin/windows/geosite.dat
   # NOTE: core binaries (assets/bin/windows, assets/bin/linux) are deliberately
   # NOT Flutter assets. Flutter bundles assets into every platform, which dragged
   # the Windows .exe + Linux ELF + geo data into the Android APK (~150 MB of dead

@@ -52,19 +52,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get errorSubscriptionTitle => 'Abonnement-Fehler';
 
   @override
-  String get errorConnectionPermission =>
-      'Verbindung fehlgeschlagen: Berechtigung';
+  String get errorConnectionPermission => 'Verbindung fehlgeschlagen: Berechtigung';
 
   @override
   String get errorConnectionNetwork => 'Verbindung fehlgeschlagen: Netzwerk';
 
   @override
-  String get errorConnectionConfig =>
-      'Verbindung fehlgeschlagen: Konfiguration';
+  String get errorConnectionConfig => 'Verbindung fehlgeschlagen: Konfiguration';
 
   @override
-  String get errorConnectionAuth =>
-      'Verbindung fehlgeschlagen: Authentifizierung';
+  String get errorConnectionAuth => 'Verbindung fehlgeschlagen: Authentifizierung';
 
   @override
   String get errorConnectionGeneric => 'Verbindungsfehler';
@@ -73,12 +70,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get errorProviderConfigTitle => 'Provider-Konfiguration erforderlich';
 
   @override
-  String get errorProviderNoHostsMessage =>
-      'Dem Provider sind für dieses Abonnement keine Hosts zugewiesen.';
+  String get errorProviderNoHostsMessage => 'Dem Provider sind für dieses Abonnement keine Hosts zugewiesen.';
 
   @override
-  String get errorProviderNoHostsAction =>
-      'Öffne das Provider-Panel, füge Hosts hinzu oder weise sie zu und aktualisiere dann das Abonnement.';
+  String get errorProviderNoHostsAction => 'Öffne das Provider-Panel, füge Hosts hinzu oder weise sie zu und aktualisiere dann das Abonnement.';
 
   @override
   String errorActionLabel(Object action) {
@@ -120,19 +115,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get splitShowSystemApps => 'System-Apps anzeigen';
 
   @override
-  String get splitAddRussianAppsBypass =>
-      'Russische Apps zum Umgehen hinzufügen';
+  String get splitAddRussianAppsBypass => 'Russische Apps zum Umgehen hinzufügen';
 
   @override
   String get splitClear => 'Löschen';
 
   @override
-  String get splitNoRussianAppsFound =>
-      'Keine russischen Apps in der Liste der installierten Apps gefunden';
+  String get splitNoRussianAppsFound => 'Keine russischen Apps in der Liste der installierten Apps gefunden';
 
   @override
-  String get splitRussianAppsAlreadyAdded =>
-      'Alle russischen Apps sind bereits in der Umgehungsliste';
+  String get splitRussianAppsAlreadyAdded => 'Alle russischen Apps sind bereits in der Umgehungsliste';
 
   @override
   String splitAddedRussianApps(int count) {
@@ -164,8 +156,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get subscriptionsEmptyTitle => 'Keine Abonnements';
 
   @override
-  String get subscriptionsEmptyHint =>
-      'Tippe auf +, um eine Abonnement-URL hinzuzufügen';
+  String get subscriptionsEmptyHint => 'Tippe auf +, um eine Abonnement-URL hinzuzufügen';
 
   @override
   String get settingsTitle => 'Einstellungen';
@@ -185,29 +176,25 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get settingsRoutingSubtitle =>
-      'Direct- / Proxy- / Block-Regeln und Presets';
+  String get settingsRoutingSubtitle => 'Direct- / Proxy- / Block-Regeln und Presets';
 
   @override
   String get settingsResetRoutingTitle => 'Routing auf Standard zurücksetzen';
 
   @override
-  String get settingsResetRoutingSubtitle =>
-      'Integrierte Routing-Regeln wiederherstellen';
+  String get settingsResetRoutingSubtitle => 'Integrierte Routing-Regeln wiederherstellen';
 
   @override
   String get settingsRoutingResetDone => 'Routing-Regeln zurückgesetzt';
 
   @override
-  String get settingsRoutingHeaderDesc =>
-      'Lege fest, welche Seiten direkt am VPN vorbei gehen, welche zwingend hindurch geleitet und welche blockiert werden. Beginne mit einem Preset und passe dann jede Liste unten an.';
+  String get settingsRoutingHeaderDesc => 'Lege fest, welche Seiten direkt am VPN vorbei gehen, welche zwingend hindurch geleitet und welche blockiert werden. Beginne mit einem Preset und passe dann jede Liste unten an.';
 
   @override
   String get settingsRoutingPresetsTitle => 'Schnelle Presets';
 
   @override
-  String get settingsRoutingPresetsHint =>
-      'Wähle eine kuratierte Liste und füge sie zur passenden Liste unten hinzu. Einträge können danach bearbeitet oder entfernt werden.';
+  String get settingsRoutingPresetsHint => 'Wähle eine kuratierte Liste und füge sie zur passenden Liste unten hinzu. Einträge können danach bearbeitet oder entfernt werden.';
 
   @override
   String get settingsRoutingPresetChoose => 'Preset wählen…';
@@ -219,51 +206,43 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsRoutingPresetRuTitle => 'Russische Seiten — Direkt';
 
   @override
-  String get settingsRoutingPresetRuDesc =>
-      'Alle .ru / .рф Domains und großen RU-Dienste umgehen das VPN (fügt Domains zu Direkt hinzu)';
+  String get settingsRoutingPresetRuDesc => 'Alle .ru / .рф Domains und großen RU-Dienste umgehen das VPN (fügt Domains zu Direkt hinzu)';
 
   @override
-  String get settingsRoutingPresetRuGeoipTitle =>
-      'Russland-IPs (GeoIP) — Direkt';
+  String get settingsRoutingPresetRuGeoipTitle => 'Russland-IPs (GeoIP) — Direkt';
 
   @override
-  String get settingsRoutingPresetRuGeoipDesc =>
-      'Alle russischen IP-Bereiche umgehen das VPN per GeoIP — funktioniert im Proxy-Modus';
+  String get settingsRoutingPresetRuGeoipDesc => 'Alle russischen IP-Bereiche umgehen das VPN per GeoIP — funktioniert im Proxy-Modus';
 
   @override
   String get settingsRoutingPresetBanksTitle => 'Banken & Behörden — Direkt';
 
   @override
-  String get settingsRoutingPresetBanksDesc =>
-      'Banken, Zahlungen und Behördenportale umgehen das VPN';
+  String get settingsRoutingPresetBanksDesc => 'Banken, Zahlungen und Behördenportale umgehen das VPN';
 
   @override
   String get settingsRoutingPresetLanIpsTitle => 'Lokales Netzwerk — Direkt';
 
   @override
-  String get settingsRoutingPresetLanIpsDesc =>
-      'Private LAN-IP-Bereiche (192.168.x, 10.x, …) umgehen das VPN';
+  String get settingsRoutingPresetLanIpsDesc => 'Private LAN-IP-Bereiche (192.168.x, 10.x, …) umgehen das VPN';
 
   @override
   String get settingsRoutingPresetAdsTitle => 'Werbung & Tracker — Blockieren';
 
   @override
-  String get settingsRoutingPresetAdsDesc =>
-      'Gängige Werbe-/Analyse-Hosts verwerfen';
+  String get settingsRoutingPresetAdsDesc => 'Gängige Werbe-/Analyse-Hosts verwerfen';
 
   @override
   String get settingsRoutingPresetStreamingTitle => 'Streaming — Proxy';
 
   @override
-  String get settingsRoutingPresetStreamingDesc =>
-      'YouTube, Netflix, Twitch zwingend über das VPN';
+  String get settingsRoutingPresetStreamingDesc => 'YouTube, Netflix, Twitch zwingend über das VPN';
 
   @override
   String get settingsRoutingPresetMessengersTitle => 'Messenger — Proxy';
 
   @override
-  String get settingsRoutingPresetMessengersDesc =>
-      'Telegram, Discord, WhatsApp zwingend über das VPN';
+  String get settingsRoutingPresetMessengersDesc => 'Telegram, Discord, WhatsApp zwingend über das VPN';
 
   @override
   String settingsRoutingPresetApplied(String name) {
@@ -274,30 +253,25 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsRoutingDirectTitle => 'Direkt (VPN umgehen)';
 
   @override
-  String get settingsRoutingDirectDesc =>
-      'Domains und IPs hier verbinden sich direkt, ohne VPN.';
+  String get settingsRoutingDirectDesc => 'Domains und IPs hier verbinden sich direkt, ohne VPN.';
 
   @override
   String get settingsRoutingProxyTitle => 'Proxy (VPN erzwingen)';
 
   @override
-  String get settingsRoutingProxyDesc =>
-      'Domains und IPs hier gehen immer über das VPN.';
+  String get settingsRoutingProxyDesc => 'Domains und IPs hier gehen immer über das VPN.';
 
   @override
   String get settingsRoutingBlockTitle => 'Blockiert';
 
   @override
-  String get settingsRoutingBlockDesc =>
-      'Domains und IPs hier werden verworfen und verbinden nie.';
+  String get settingsRoutingBlockDesc => 'Domains und IPs hier werden verworfen und verbinden nie.';
 
   @override
-  String get settingsRoutingSyntaxHint =>
-      'Jede Liste akzeptiert Domains und IPs zusammen, durch Komma oder Zeilenumbruch getrennt:\n• ru — jeder *.ru-Host (ein Wort ohne Punkt = Domain-Suffix)\n• vk.com — diese Domain und ihre Subdomains\n• .example.com — nur Subdomains\n• 10.0.0.0/8 oder 1.2.3.4 — IP-Adresse oder CIDR-Bereich\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite (nur Proxy-Modus)\nPrivate/LAN-IPs und dein Server bleiben automatisch direkt.';
+  String get settingsRoutingSyntaxHint => 'Jede Liste akzeptiert Domains und IPs zusammen, durch Komma oder Zeilenumbruch getrennt:\n• ru — jeder *.ru-Host (ein Wort ohne Punkt = Domain-Suffix)\n• vk.com — diese Domain und ihre Subdomains\n• .example.com — nur Subdomains\n• 10.0.0.0/8 oder 1.2.3.4 — IP-Adresse oder CIDR-Bereich\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite (nur Proxy-Modus)\nPrivate/LAN-IPs und dein Server bleiben automatisch direkt.';
 
   @override
-  String get settingsRoutingValuesHint =>
-      'Eine pro Zeile oder durch Komma getrennt';
+  String get settingsRoutingValuesHint => 'Eine pro Zeile oder durch Komma getrennt';
 
   @override
   String get settingsRoutingSavedToast => 'Routing aktualisiert';
@@ -337,27 +311,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get themeUseDynamicColors => 'Dynamische Android-Farben verwenden';
 
   @override
-  String get themeUseDynamicColorsSubtitle =>
-      'Dynamische Android-Farben verwenden, wenn verfügbar';
+  String get themeUseDynamicColorsSubtitle => 'Dynamische Android-Farben verwenden, wenn verfügbar';
 
   @override
-  String get themeDynamicPaletteHint =>
-      'Die dynamische Android-Palette ist aktiv. Hell/Dunkel funktioniert unabhängig.';
+  String get themeDynamicPaletteHint => 'Die dynamische Android-Palette ist aktiv. Hell/Dunkel funktioniert unabhängig.';
 
   @override
-  String get themeSystemPaletteHint =>
-      'Die System-Akzentpalette ist aktiv. Hell/Dunkel funktioniert unabhängig.';
+  String get themeSystemPaletteHint => 'Die System-Akzentpalette ist aktiv. Hell/Dunkel funktioniert unabhängig.';
 
   @override
   String get themeUseSystemColors => 'System-Akzentfarben verwenden';
 
   @override
-  String get themeUseSystemColorsSubtitle =>
-      'Akzentfarben von Windows oder Linux übernehmen, wenn verfügbar';
+  String get themeUseSystemColorsSubtitle => 'Akzentfarben von Windows oder Linux übernehmen, wenn verfügbar';
 
   @override
-  String get themeCustomPaletteHint =>
-      'Die benutzerdefinierte Palette ist aktiv. Hell/Dunkel funktioniert unabhängig.';
+  String get themeCustomPaletteHint => 'Die benutzerdefinierte Palette ist aktiv. Hell/Dunkel funktioniert unabhängig.';
 
   @override
   String get themeColorThemesTitle => 'Farbthemen';
@@ -383,12 +352,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsHwidDisabled => 'Deaktiviert';
 
   @override
-  String get settingsHwidEnabledHint =>
-      'Einige Provider benötigen die HWID für Abonnement-Updates und Gerätelimits.';
+  String get settingsHwidEnabledHint => 'Einige Provider benötigen die HWID für Abonnement-Updates und Gerätelimits.';
 
   @override
-  String get settingsHwidDisabledHint =>
-      'HWID-Header werden nicht gesendet. Manche Abonnements schlagen fehl, wenn der Provider eine Gerätebindung verlangt.';
+  String get settingsHwidDisabledHint => 'HWID-Header werden nicht gesendet. Manche Abonnements schlagen fehl, wenn der Provider eine Gerätebindung verlangt.';
 
   @override
   String get settingsDeviceIpListTitle => 'IP-Adressen des Geräts im Netzwerk:';
@@ -397,8 +364,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsIpCopied => 'IP kopiert';
 
   @override
-  String get settingsSetupAnotherDeviceTitle =>
-      'Einrichtung auf einem anderen Gerät:';
+  String get settingsSetupAnotherDeviceTitle => 'Einrichtung auf einem anderen Gerät:';
 
   @override
   String get settingsSocks5PortLabel => 'SOCKS5-Port';
@@ -415,23 +381,19 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get settingsLocalPortsHint =>
-      'Listen-Ports der lokalen SOCKS5- und HTTP-Proxys (Standard 2080 / 2081). Werden bei der nächsten Verbindung angewendet. Die beiden Ports müssen sich unterscheiden.';
+  String get settingsLocalPortsHint => 'Listen-Ports der lokalen SOCKS5- und HTTP-Proxys (Standard 2080 / 2081). Werden bei der nächsten Verbindung angewendet. Die beiden Ports müssen sich unterscheiden.';
 
   @override
   String get settingsLocalPortsResetTitle => 'Auf Standard zurücksetzen';
 
   @override
-  String get settingsPortInvalid =>
-      'Geben Sie einen Port zwischen 1 und 65535 ein';
+  String get settingsPortInvalid => 'Geben Sie einen Port zwischen 1 und 65535 ein';
 
   @override
-  String get settingsPortsMustDiffer =>
-      'SOCKS- und HTTP-Port müssen sich unterscheiden';
+  String get settingsPortsMustDiffer => 'SOCKS- und HTTP-Port müssen sich unterscheiden';
 
   @override
-  String get settingsTurnOffToChange =>
-      'Zum Ändern der Einstellung ausschalten';
+  String get settingsTurnOffToChange => 'Zum Ändern der Einstellung ausschalten';
 
   @override
   String settingsProxyCopied(Object label, Object address) {
@@ -451,19 +413,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayDnsCustom => 'Eigene DNS-Server';
 
   @override
-  String get settingsXrayDnsCustomHint =>
-      'Eine Adresse pro Zeile (DoH, DoT oder einfach)';
+  String get settingsXrayDnsCustomHint => 'Eine Adresse pro Zeile (DoH, DoT oder einfach)';
 
   @override
   String get settingsXrayDnsServers => 'DNS-Server';
 
   @override
-  String get settingsXrayDnsSplitDirect =>
-      'Getrennter Resolver für Direct-Domains';
+  String get settingsXrayDnsSplitDirect => 'Getrennter Resolver für Direct-Domains';
 
   @override
-  String get settingsXrayDnsSplitDirectHint =>
-      'Verwendet den ersten Server für Domains aus der Direct-Liste';
+  String get settingsXrayDnsSplitDirectHint => 'Verwendet den ersten Server für Domains aus der Direct-Liste';
 
   @override
   String get settingsXrayDnsQueryStrategy => 'Abfragestrategie';
@@ -478,8 +437,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayXmuxEnable => 'XMUX aktivieren';
 
   @override
-  String get settingsXrayXmuxEnableHint =>
-      'Multiplexing für den XHTTP-Transport (clientseitig)';
+  String get settingsXrayXmuxEnableHint => 'Multiplexing für den XHTTP-Transport (clientseitig)';
 
   @override
   String get settingsXrayGeneralSection => 'Allgemein';
@@ -497,34 +455,28 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXraySniffingRouteOnly => 'Sniffing nur für Routing';
 
   @override
-  String get settingsXrayCoreIntro =>
-      'Diese Optionen werden in die generierte Xray-Konfiguration eingefügt. Ändere sie nur, wenn du weißt, was sie bewirken.';
+  String get settingsXrayCoreIntro => 'Diese Optionen werden in die generierte Xray-Konfiguration eingefügt. Ändere sie nur, wenn du weißt, was sie bewirken.';
 
   @override
-  String get settingsXrayDnsDefaultNote =>
-      'Standard: Cloudflare und Google DoH';
+  String get settingsXrayDnsDefaultNote => 'Standard: Cloudflare und Google DoH';
 
   @override
   String get settingsXrayXmuxParamsTitle => 'Feineinstellung';
 
   @override
-  String get settingsXrayXmuxParamsHint =>
-      'Leer lassen, um die Xray-Standardwerte zu verwenden. Werte können eine Zahl oder ein Bereich sein (z. B. 16-32).';
+  String get settingsXrayXmuxParamsHint => 'Leer lassen, um die Xray-Standardwerte zu verwenden. Werte können eine Zahl oder ein Bereich sein (z. B. 16-32).';
 
   @override
-  String get settingsXraySniffingHint =>
-      'Zielprotokoll und Domain aus dem eingehenden Verkehr erkennen';
+  String get settingsXraySniffingHint => 'Zielprotokoll und Domain aus dem eingehenden Verkehr erkennen';
 
   @override
-  String get settingsXraySniffingRouteOnlyHint =>
-      'Sniffing nur für das Routing nutzen, ohne das Ziel zu überschreiben';
+  String get settingsXraySniffingRouteOnlyHint => 'Sniffing nur für das Routing nutzen, ohne das Ziel zu überschreiben';
 
   @override
   String get settingsXrayResetDefaults => 'Auf Standard zurücksetzen';
 
   @override
-  String get settingsXrayResetDone =>
-      'Xray-Kerneinstellungen wiederhergestellt';
+  String get settingsXrayResetDone => 'Xray-Kerneinstellungen wiederhergestellt';
 
   @override
   String get settingsXrayXmuxMaxConcurrency => 'Max. Parallelität';
@@ -533,15 +485,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayXmuxMaxConnections => 'Max. Verbindungen';
 
   @override
-  String get settingsXrayXmuxCMaxReuseTimes =>
-      'Limit für Verbindungs-Wiederverwendung';
+  String get settingsXrayXmuxCMaxReuseTimes => 'Limit für Verbindungs-Wiederverwendung';
 
   @override
   String get settingsXrayXmuxHMaxRequestTimes => 'Max. Anfragen pro Stream';
 
   @override
-  String get settingsXrayXmuxHMaxReusableSecs =>
-      'Stream-Wiederverwendungszeit (Sek.)';
+  String get settingsXrayXmuxHMaxReusableSecs => 'Stream-Wiederverwendungszeit (Sek.)';
 
   @override
   String get settingsXrayXmuxHKeepAlivePeriod => 'Keep-Alive-Intervall (Sek.)';
@@ -562,22 +512,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsPingMethodIcmp => 'ICMP-Ping';
 
   @override
-  String get settingsPingMethodIcmpHint =>
-      'Echo an Server-IP (manche Server blockieren es)';
+  String get settingsPingMethodIcmpHint => 'Echo an Server-IP (manche Server blockieren es)';
 
   @override
   String get settingsPingMethodUrl => 'HTTP über Proxy';
 
   @override
-  String get settingsPingMethodUrlHint =>
-      'Misst die GET-Latenz über den Server';
+  String get settingsPingMethodUrlHint => 'Misst die GET-Latenz über den Server';
 
   @override
   String get settingsPingMethodSpeed => 'Geschwindigkeitstest';
 
   @override
-  String get settingsPingMethodSpeedHint =>
-      'Lädt eine feste Datenmenge über den Server herunter und zeigt den Durchsatz in Mbit/s an (funktioniert ohne VPN)';
+  String get settingsPingMethodSpeedHint => 'Lädt eine feste Datenmenge über den Server herunter und zeigt den Durchsatz in Mbit/s an (funktioniert ohne VPN)';
 
   @override
   String get settingsPingTargetTitle => 'HTTP-Test-URL';
@@ -598,12 +545,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsPingCustomUrl => 'URL';
 
   @override
-  String get settingsPingCustomUrlHint =>
-      'https:// oder http:// Adresse für die GET-Anfrage';
+  String get settingsPingCustomUrlHint => 'https:// oder http:// Adresse für die GET-Anfrage';
 
   @override
-  String get settingsPingCustomUrlInvalid =>
-      'Ungültige oder unsichere URL (kein localhost oder private Netzwerke)';
+  String get settingsPingCustomUrlInvalid => 'Ungültige oder unsichere URL (kein localhost oder private Netzwerke)';
 
   @override
   String get subscriptionNameLabel => 'Name';
@@ -631,6 +576,17 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get subscriptionsUrlCopied => 'URL kopiert';
+
+  @override
+  String get subscriptionsShareButton => 'Teilen (QR + Link)';
+
+  @override
+  String get subscriptionsShareAction => 'Teilen';
+
+  @override
+  String subscriptionsShareFailed(Object error) {
+    return 'Teilen fehlgeschlagen: $error';
+  }
 
   @override
   String get subscriptionsDeleteSubscription => 'Abonnement löschen';
@@ -744,8 +700,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serversAddServerTitle => 'Server hinzufügen';
 
   @override
-  String get serversPasteVlessHint =>
-      'Füge vless://, vmess://, trojan://, ss://, hysteria2:// oder hy2:// ein (eine pro Zeile)';
+  String get serversPasteVlessHint => 'Füge vless://, vmess://, trojan://, ss://, hysteria2:// oder hy2:// ein (eine pro Zeile)';
 
   @override
   String get serversPasteHint => 'vless://… oder hy2://host:port?auth=…';
@@ -766,19 +721,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAdvanced => 'Erweitert';
 
   @override
-  String get settingsAdvancedSubtitle =>
-      'Kerneinstellungen, Ping, Routing, HWID und Debug';
+  String get settingsAdvancedSubtitle => 'Kerneinstellungen, Ping, Routing, HWID und Debug';
 
   @override
   String get settingsBackupRestore => 'Sichern & wiederherstellen';
 
   @override
-  String get settingsBackupRestoreSubtitle =>
-      'Split-Tunneling, Abonnements und Server exportieren/importieren';
+  String get settingsBackupRestoreSubtitle => 'Split-Tunneling, Abonnements und Server exportieren/importieren';
 
   @override
-  String get settingsSelectAtLeastOne =>
-      'Wähle mindestens einen Abschnitt zum Exportieren';
+  String get settingsSelectAtLeastOne => 'Wähle mindestens einen Abschnitt zum Exportieren';
 
   @override
   String get settingsBackupSaved => 'Sicherung erfolgreich gespeichert';
@@ -796,8 +748,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsImportBackup => 'Sicherung importieren';
 
   @override
-  String get settingsChooseWhatToImport =>
-      'Wähle, was importiert werden soll (ausgewählte Abschnitte ersetzen deine aktuellen Daten).';
+  String get settingsChooseWhatToImport => 'Wähle, was importiert werden soll (ausgewählte Abschnitte ersetzen deine aktuellen Daten).';
 
   @override
   String get settingsSplitTunnelingApps => 'Split-Tunneling-Apps';
@@ -815,12 +766,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsExport => 'Exportieren';
 
   @override
-  String get settingsCreateFileToSave =>
-      'Erstelle eine Datei, die du speichern und auf einem anderen Gerät importieren kannst.';
+  String get settingsCreateFileToSave => 'Erstelle eine Datei, die du speichern und auf einem anderen Gerät importieren kannst.';
 
   @override
-  String get settingsPickExportedFile =>
-      'Wähle eine zuvor exportierte Datei und stelle ausgewählte Abschnitte wieder her.';
+  String get settingsPickExportedFile => 'Wähle eine zuvor exportierte Datei und stelle ausgewählte Abschnitte wieder her.';
 
   @override
   String get settingsWorking => 'Wird ausgeführt...';
@@ -840,8 +789,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsDebugModeOff => 'Aus';
 
   @override
-  String get settingsDebugModeHint =>
-      'Zeigt Live-VPN-Metriken in Serverkarten an und ermöglicht das Anzeigen der Xray-Kern-Logs.';
+  String get settingsDebugModeHint => 'Zeigt Live-VPN-Metriken in Serverkarten an und ermöglicht das Anzeigen der Xray-Kern-Logs.';
 
   @override
   String get settingsOpenXrayLogs => 'Xray-Logs öffnen';
@@ -885,15 +833,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsShareDeviceHwid => 'Geräte-HWID teilen';
 
   @override
-  String get settingsHwidWillBeSent =>
-      'Die HWID wird mit Abonnement-Anfragen gesendet';
+  String get settingsHwidWillBeSent => 'Die HWID wird mit Abonnement-Anfragen gesendet';
 
   @override
   String get settingsHwidNotShared => 'HWID wird nicht geteilt';
 
   @override
-  String get settingsHwidHint =>
-      'Wenn aktiviert, wird die eindeutige ID deines Geräts (HWID) an Abonnement-Server gesendet. Von manchen Providern für die HWID-Bindung erforderlich. Deaktivieren, um die Privatsphäre zu erhöhen.';
+  String get settingsHwidHint => 'Wenn aktiviert, wird die eindeutige ID deines Geräts (HWID) an Abonnement-Server gesendet. Von manchen Providern für die HWID-Bindung erforderlich. Deaktivieren, um die Privatsphäre zu erhöhen.';
 
   @override
   String get settingsRoutingRules => 'Routing-Regeln';
@@ -929,20 +875,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsEnabled => 'Aktiviert';
 
   @override
-  String get settingsNameAndValuesRequired =>
-      'Name und Werte sind erforderlich';
+  String get settingsNameAndValuesRequired => 'Name und Werte sind erforderlich';
 
   @override
-  String get settingsUseOnePerLine =>
-      'Verwende einen Wert pro Zeile oder trenne sie durch Kommas.';
+  String get settingsUseOnePerLine => 'Verwende einen Wert pro Zeile oder trenne sie durch Kommas.';
 
   @override
-  String get settingsSmallerOrderFirst =>
-      'Kleinere Zahl = früher geprüft (z. B. 1 vor 50)';
+  String get settingsSmallerOrderFirst => 'Kleinere Zahl = früher geprüft (z. B. 1 vor 50)';
 
   @override
-  String get settingsSmallerOrderWins =>
-      'Wenn zwei Regeln denselben Verkehr betreffen, gewinnt die Regel mit der kleineren Reihenfolge.';
+  String get settingsSmallerOrderWins => 'Wenn zwei Regeln denselben Verkehr betreffen, gewinnt die Regel mit der kleineren Reihenfolge.';
 
   @override
   String get settingsSaveChanges => 'Änderungen speichern';
@@ -1054,8 +996,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get splitAddAppPickFile => 'Durchsuchen…';
 
   @override
-  String get splitAddAppInvalid =>
-      'Gib einen gültigen .exe-Namen oder Pfad ein';
+  String get splitAddAppInvalid => 'Gib einen gültigen .exe-Namen oder Pfad ein';
 
   @override
   String splitAddAppAdded(Object name) {
@@ -1075,8 +1016,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get splitClearAll => 'Alle löschen';
 
   @override
-  String get splitProxyModeWarning =>
-      'Im Proxy-Modus wird Split-Tunneling nicht angewendet — der gesamte Verkehr läuft über den System-Proxy. Wechsle den Verbindungsmodus auf TUN (im Seitenpanel), damit die Regeln pro Prozess wirken.';
+  String get splitProxyModeWarning => 'Im Proxy-Modus wird Split-Tunneling nicht angewendet — der gesamte Verkehr läuft über den System-Proxy. Wechsle den Verbindungsmodus auf TUN (im Seitenpanel), damit die Regeln pro Prozess wirken.';
 
   @override
   String get settingsLatestVersionInstalled => 'Du hast die neueste Version';
@@ -1106,12 +1046,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serversHealthCheckDesc => 'DNS-, TCP- und Konfigurationsprüfung';
 
   @override
-  String get settingsDebugHintDesktop =>
-      'Zeigt Xray-Sitzungslogs an. Live-VPN-Metriken werden unter der Verbindungstaste angezeigt.';
+  String get settingsDebugHintDesktop => 'Zeigt Xray-Sitzungslogs an. Live-VPN-Metriken werden unter der Verbindungstaste angezeigt.';
 
   @override
-  String get settingsDebugHintMobile =>
-      'Zeigt Live-VPN-Metriken in Serverkarten und Xray-Logs an.';
+  String get settingsDebugHintMobile => 'Zeigt Live-VPN-Metriken in Serverkarten und Xray-Logs an.';
 
   @override
   String serversErrorLoadingApps(Object error) {
@@ -1125,8 +1063,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get desktopModeShort => 'Modus';
 
   @override
-  String get desktopDisconnectBeforeModeChange =>
-      'Trenne die Verbindung, bevor du den Verbindungsmodus änderst';
+  String get desktopDisconnectBeforeModeChange => 'Trenne die Verbindung, bevor du den Verbindungsmodus änderst';
 
   @override
   String get settingsDesktopTitle => 'Windows';
@@ -1138,8 +1075,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsMinimizeToTray => 'Beim Schließen in Tray minimieren';
 
   @override
-  String get settingsMinimizeToTrayHint =>
-      'Wenn aus, beendet Schließen die App';
+  String get settingsMinimizeToTrayHint => 'Wenn aus, beendet Schließen die App';
 
   @override
   String get settingsLaunchAtStartup => 'Mit Windows starten';
@@ -1151,19 +1087,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAutoConnectOnAutostart => 'Bei Autostart verbinden';
 
   @override
-  String get settingsAutoConnectOnAutostartHint =>
-      'Verbindet mit dem zuletzt gewählten Server im Modus der Seitenleiste. Ohne Admin-Rechte für TUN wird Proxy verwendet';
+  String get settingsAutoConnectOnAutostartHint => 'Verbindet mit dem zuletzt gewählten Server im Modus der Seitenleiste. Ohne Admin-Rechte für TUN wird Proxy verwendet';
 
   @override
-  String get settingsAutoConnectRequiresAutostart =>
-      'Zuerst „Mit Windows starten“ aktivieren';
+  String get settingsAutoConnectRequiresAutostart => 'Zuerst „Mit Windows starten“ aktivieren';
 
   @override
   String get desktopTunAdminTitle => 'Administratorrechte erforderlich';
 
   @override
-  String get desktopTunAdminMessage =>
-      'Der TUN-Modus benötigt Administratorrechte. Starten Sie die App als Administrator neu — der Modus in der Seitenleiste bleibt erhalten.';
+  String get desktopTunAdminMessage => 'Der TUN-Modus benötigt Administratorrechte. Starten Sie die App als Administrator neu — der Modus in der Seitenleiste bleibt erhalten.';
 
   @override
   String get desktopTunAdminRestart => 'Als Administrator neu starten';
@@ -1172,8 +1105,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get desktopTunAdminCancel => 'Abbrechen';
 
   @override
-  String get desktopTunAdminRestartFailed =>
-      'Neustart als Administrator fehlgeschlagen';
+  String get desktopTunAdminRestartFailed => 'Neustart als Administrator fehlgeschlagen';
 
   @override
   String get trayMenuTitle => 'KeqDroid';

@@ -260,6 +260,14 @@
   "subscriptionsEditSubscription": "Редактировать подписку",
   "subscriptionsCopyUrl": "Копировать URL",
   "subscriptionsUrlCopied": "URL скопирован",
+  "subscriptionsShareButton": "Поделиться (QR + ссылка)",
+  "subscriptionsShareAction": "Поделиться",
+  "subscriptionsShareFailed": "Не удалось поделиться: {error}",
+  "@subscriptionsShareFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "subscriptionsDeleteSubscription": "Удалить подписку",
   "subscriptionsDeleteConfirm": "Вы уверены, что хотите удалить \"{name}\"?\n\nЭто также удалит все связанные серверы.",
   "@subscriptionsDeleteConfirm": {

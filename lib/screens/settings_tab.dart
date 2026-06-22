@@ -1144,25 +1144,21 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
     );
   }
 
+  /// One radio row. Selection is driven by an enclosing [RadioGroup] ancestor,
+  /// so the tile itself only declares its [value].
   Widget _choiceTile({
     required BuildContext context,
     required String value,
-    required String groupValue,
     required Color accent,
     required String title,
     String? subtitle,
-    required ValueChanged<String> onSelect,
   }) {
     return RadioListTile<String>(
       value: value,
-      groupValue: groupValue,
       activeColor: accent,
       dense: true,
       visualDensity: VisualDensity.compact,
       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-      onChanged: (v) {
-        if (v != null) onSelect(v);
-      },
       title: Text(title, style: TextStyle(fontSize: 14, color: AppTheme.text(context))),
       subtitle: subtitle != null
           ? Text(subtitle, style: _xrayTileSubtitleStyle(context))
@@ -1318,15 +1314,23 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   ),
                 ),
               ),
-              for (final strategy in XrayCoreSettings.dnsQueryStrategies)
-                _choiceTile(
-                  context: context,
-                  value: strategy,
-                  groupValue: core.dnsQueryStrategy,
-                  accent: accent,
-                  title: strategy,
-                  onSelect: (v) => _save(settings, core.copyWith(dnsQueryStrategy: v)),
+              RadioGroup<String>(
+                groupValue: core.dnsQueryStrategy,
+                onChanged: (v) {
+                  if (v != null) _save(settings, core.copyWith(dnsQueryStrategy: v));
+                },
+                child: Column(
+                  children: [
+                    for (final strategy in XrayCoreSettings.dnsQueryStrategies)
+                      _choiceTile(
+                        context: context,
+                        value: strategy,
+                        accent: accent,
+                        title: strategy,
+                      ),
+                  ],
                 ),
+              ),
               _xraySettingsDivider(context),
               SwitchListTile(
                 value: core.dnsDisableCache,
@@ -1516,15 +1520,23 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   ),
                 ),
               ),
-              for (final level in XrayCoreSettings.logLevels)
-                _choiceTile(
-                  context: context,
-                  value: level,
-                  groupValue: core.logLevel,
-                  accent: accent,
-                  title: level,
-                  onSelect: (v) => _save(settings, core.copyWith(logLevel: v)),
+              RadioGroup<String>(
+                groupValue: core.logLevel,
+                onChanged: (v) {
+                  if (v != null) _save(settings, core.copyWith(logLevel: v));
+                },
+                child: Column(
+                  children: [
+                    for (final level in XrayCoreSettings.logLevels)
+                      _choiceTile(
+                        context: context,
+                        value: level,
+                        accent: accent,
+                        title: level,
+                      ),
+                  ],
                 ),
+              ),
               _xraySettingsDivider(context),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -1537,16 +1549,25 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   ),
                 ),
               ),
-              for (final strategy in XrayCoreSettings.routingDomainStrategies)
-                _choiceTile(
-                  context: context,
-                  value: strategy,
-                  groupValue: core.routingDomainStrategy,
-                  accent: accent,
-                  title: strategy,
-                  onSelect: (v) =>
-                      _save(settings, core.copyWith(routingDomainStrategy: v)),
+              RadioGroup<String>(
+                groupValue: core.routingDomainStrategy,
+                onChanged: (v) {
+                  if (v != null) {
+                    _save(settings, core.copyWith(routingDomainStrategy: v));
+                  }
+                },
+                child: Column(
+                  children: [
+                    for (final strategy in XrayCoreSettings.routingDomainStrategies)
+                      _choiceTile(
+                        context: context,
+                        value: strategy,
+                        accent: accent,
+                        title: strategy,
+                      ),
+                  ],
                 ),
+              ),
               _xraySettingsDivider(context),
               SwitchListTile(
                 value: core.sniffingEnabled,
@@ -1782,45 +1803,39 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
           sectionTitle(l10n.settingsPingMethodTitle),
           card(
             children: [
-              RadioListTile<String>(
-                value: 'tcp',
+              RadioGroup<String>(
                 groupValue: settings.pingType,
-                activeColor: accent,
                 onChanged: (v) {
                   if (v != null) _save(settings.copyWith(pingType: v));
                 },
-                title: Text(l10n.settingsPingMethodTcp),
-                subtitle: Text(l10n.settingsPingMethodTcpHint),
-              ),
-              RadioListTile<String>(
-                value: 'icmp',
-                groupValue: settings.pingType,
-                activeColor: accent,
-                onChanged: (v) {
-                  if (v != null) _save(settings.copyWith(pingType: v));
-                },
-                title: Text(l10n.settingsPingMethodIcmp),
-                subtitle: Text(l10n.settingsPingMethodIcmpHint),
-              ),
-              RadioListTile<String>(
-                value: 'url',
-                groupValue: settings.pingType,
-                activeColor: accent,
-                onChanged: (v) {
-                  if (v != null) _save(settings.copyWith(pingType: v));
-                },
-                title: Text(l10n.settingsPingMethodUrl),
-                subtitle: Text(l10n.settingsPingMethodUrlHint),
-              ),
-              RadioListTile<String>(
-                value: 'speed',
-                groupValue: settings.pingType,
-                activeColor: accent,
-                onChanged: (v) {
-                  if (v != null) _save(settings.copyWith(pingType: v));
-                },
-                title: Text(l10n.settingsPingMethodSpeed),
-                subtitle: Text(l10n.settingsPingMethodSpeedHint),
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      value: 'tcp',
+                      activeColor: accent,
+                      title: Text(l10n.settingsPingMethodTcp),
+                      subtitle: Text(l10n.settingsPingMethodTcpHint),
+                    ),
+                    RadioListTile<String>(
+                      value: 'icmp',
+                      activeColor: accent,
+                      title: Text(l10n.settingsPingMethodIcmp),
+                      subtitle: Text(l10n.settingsPingMethodIcmpHint),
+                    ),
+                    RadioListTile<String>(
+                      value: 'url',
+                      activeColor: accent,
+                      title: Text(l10n.settingsPingMethodUrl),
+                      subtitle: Text(l10n.settingsPingMethodUrlHint),
+                    ),
+                    RadioListTile<String>(
+                      value: 'speed',
+                      activeColor: accent,
+                      title: Text(l10n.settingsPingMethodSpeed),
+                      subtitle: Text(l10n.settingsPingMethodSpeedHint),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -1828,38 +1843,37 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
             sectionTitle(l10n.settingsPingTargetTitle),
             card(
               children: [
-                for (final target in PingTestConfig.targets) ...[
-                  if (target != PingTestConfig.targetCustom)
-                    RadioListTile<String>(
-                      value: target,
-                      groupValue: settings.pingTestTarget,
-                      activeColor: accent,
-                      onChanged: (v) {
-                        if (v != null) {
-                          _save(settings.copyWith(pingTestTarget: v));
-                        }
-                      },
-                      title: Text(_pingTargetLabel(l10n, target)),
-                      subtitle: Text(
-                        PingTestConfig.presetUrls[target] ?? '',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textLight(context),
-                        ),
-                      ),
-                    ),
-                ],
-                RadioListTile<String>(
-                  value: PingTestConfig.targetCustom,
+                RadioGroup<String>(
                   groupValue: settings.pingTestTarget,
-                  activeColor: accent,
                   onChanged: (v) {
                     if (v != null) {
                       _save(settings.copyWith(pingTestTarget: v));
                     }
                   },
-                  title: Text(l10n.settingsPingTargetCustom),
-                  subtitle: Text(l10n.settingsPingCustomUrlHint),
+                  child: Column(
+                    children: [
+                      for (final target in PingTestConfig.targets)
+                        if (target != PingTestConfig.targetCustom)
+                          RadioListTile<String>(
+                            value: target,
+                            activeColor: accent,
+                            title: Text(_pingTargetLabel(l10n, target)),
+                            subtitle: Text(
+                              PingTestConfig.presetUrls[target] ?? '',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.textLight(context),
+                              ),
+                            ),
+                          ),
+                      RadioListTile<String>(
+                        value: PingTestConfig.targetCustom,
+                        activeColor: accent,
+                        title: Text(l10n.settingsPingTargetCustom),
+                        subtitle: Text(l10n.settingsPingCustomUrlHint),
+                      ),
+                    ],
+                  ),
                 ),
                 if (isCustom)
                   Padding(
@@ -3104,7 +3118,13 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
 
     setState(() => _forceChecking = true);
     try {
-      final info = await UpdateService.checkForUpdate(force: true);
+      final vpn = ref.read(vpnStateProvider).value;
+      final settings = await ref.read(storageProvider).getSettings();
+      final info = await UpdateService.checkForUpdate(
+        force: true,
+        vpnConnected: vpn?.status == VpnStatus.connected,
+        httpPort: settings.httpPort,
+      );
       if (!mounted) return;
 
       if (info != null) {

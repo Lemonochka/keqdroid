@@ -362,6 +362,32 @@ void main() {
       expect(grpcSettings['multiMode'], true);
     });
 
+    test('geoip:ru preset emits ip rule with geoip token, no bare geoip field', () {
+      Socks5Credentials().init('u', 'p');
+      final geoSettings = const AppSettings(directRules: 'geoip:ru');
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@example.com:443?type=tcp',
+        geoSettings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final rules = (map['routing'] as Map)['rules'] as List;
+      // xray matches geoip via the `ip` field (`geoip:ru`), never a top-level
+      // `geoip` key — a bare `geoip` rule trips "this rule has no effective fields".
+      final geoRule = rules.cast<Map<String, dynamic>>().firstWhere(
+        (r) =>
+            r['outboundTag'] == 'direct' &&
+            (r['ip'] as List?)?.contains('geoip:ru') == true,
+        orElse: () => <String, dynamic>{},
+      );
+      expect(geoRule['ip'], contains('geoip:ru'));
+      expect(geoRule['outboundTag'], 'direct');
+      // No rule may carry a bare `geoip` field — xray ignores it.
+      final badGeoRule = rules.cast<Map<String, dynamic>>().where(
+        (r) => r['geoip'] != null,
+      );
+      expect(badGeoRule, isEmpty);
+    });
+
     test('throws on unsupported protocol', () {
       Socks5Credentials().init('u', 'p');
       expect(

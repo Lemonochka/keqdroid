@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../models/app_settings.dart';
 import '../models/routing_rule.dart';
@@ -21,6 +22,37 @@ class StorageService {
   final SharedPreferences _prefs;
   StorageService(this._prefs);
 
+  /// Decodes a stored JSON array, parsing each element with [parse] and
+  /// **skipping** entries that fail instead of discarding the whole list.
+  ///
+  /// A single corrupt record (interrupted write, schema change across an
+  /// upgrade, manual edit) must not wipe every server/subscription/rule the
+  /// user has. Total corruption (not a JSON array at all) still throws so the
+  /// caller can surface it.
+  static List<T> _decodeListResilient<T>(
+    String raw,
+    T Function(Map<String, dynamic>) parse,
+    String label,
+  ) {
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) {
+      throw FormatException('$label store is not a JSON array');
+    }
+    final out = <T>[];
+    for (final e in decoded) {
+      try {
+        out.add(parse(e as Map<String, dynamic>));
+      } catch (err, st) {
+        AppLogger.instance.warn(
+          'Skipping unreadable $label entry while loading storage',
+          error: err,
+          stackTrace: st,
+        );
+      }
+    }
+    return out;
+  }
+
   /// сбросить кэш prefs и подтянуть с диска (после workmanager)
   Future<void> reloadFromDisk() async {
     await _prefs.reload();
@@ -37,10 +69,7 @@ class StorageService {
     try {
       final raw = _prefs.getString(_kServers);
       if (raw == null) return [];
-      final list = jsonDecode(raw) as List<dynamic>;
-      return list
-          .map((e) => ServerItem.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return _decodeListResilient(raw, ServerItem.fromJson, 'server');
     } catch (e) {
       throw StorageException('Failed to load servers', cause: e);
     }
@@ -131,10 +160,7 @@ class StorageService {
     try {
       final raw = _prefs.getString(_kSubscriptions);
       if (raw == null) return [];
-      final list = jsonDecode(raw) as List<dynamic>;
-      return list
-          .map((e) => Subscription.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return _decodeListResilient(raw, Subscription.fromJson, 'subscription');
     } catch (e) {
       throw StorageException('Failed to load subscriptions', cause: e);
     }
@@ -176,10 +202,7 @@ class StorageService {
     try {
       final raw = _prefs.getString(_kRules);
       if (raw == null) return RoutingRule.defaults;
-      final list = jsonDecode(raw) as List<dynamic>;
-      return list
-          .map((e) => RoutingRule.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return _decodeListResilient(raw, RoutingRule.fromJson, 'routing rule');
     } catch (e) {
       throw StorageException('Failed to load routing rules', cause: e);
     }

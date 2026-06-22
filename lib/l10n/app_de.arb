@@ -260,6 +260,14 @@
   "subscriptionsEditSubscription": "Abonnement bearbeiten",
   "subscriptionsCopyUrl": "URL kopieren",
   "subscriptionsUrlCopied": "URL kopiert",
+  "subscriptionsShareButton": "Teilen (QR + Link)",
+  "subscriptionsShareAction": "Teilen",
+  "subscriptionsShareFailed": "Teilen fehlgeschlagen: {error}",
+  "@subscriptionsShareFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "subscriptionsDeleteSubscription": "Abonnement löschen",
   "subscriptionsDeleteConfirm": "Möchtest du \"{name}\" wirklich löschen?\n\nDadurch werden auch alle zugehörigen Server entfernt.",
   "@subscriptionsDeleteConfirm": {

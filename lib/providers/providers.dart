@@ -47,7 +47,13 @@ final vpnEngineProvider = Provider<VpnEngine>((ref) {
 });
 
 final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
-  return UpdateService.checkForUpdate(force: false);
+  final vpn = ref.watch(vpnStateProvider).value;
+  final settings = await ref.read(storageProvider).getSettings();
+  return UpdateService.checkForUpdate(
+    force: false,
+    vpnConnected: vpn?.status == VpnStatus.connected,
+    httpPort: settings.httpPort,
+  );
 });
 
 class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {

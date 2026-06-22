@@ -42,3 +42,24 @@ bool looksLikeIpOrCidr(String value) {
   }
   return (domains: domains, ips: ips);
 }
+
+/// Pulls `geoip:XX` tokens out of [ips] for proper xray `geoip` rules.
+/// Plain IPv4/IPv6/CIDR entries stay in [plainIps].
+({List<String> plainIps, List<String> geoipCodes}) splitGeoipTokens(
+  List<String> ips,
+) {
+  final plainIps = <String>[];
+  final geoipCodes = <String>[];
+  for (final raw in ips) {
+    final v = raw.trim();
+    if (v.isEmpty) continue;
+    final lower = v.toLowerCase();
+    if (lower.startsWith('geoip:')) {
+      final code = v.substring('geoip:'.length).trim();
+      if (code.isNotEmpty) geoipCodes.add(code);
+      continue;
+    }
+    plainIps.add(v);
+  }
+  return (plainIps: plainIps, geoipCodes: geoipCodes);
+}

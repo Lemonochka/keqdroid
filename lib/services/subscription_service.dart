@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
+
+import '../utils/local_vpn_proxy.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
@@ -36,18 +37,18 @@ class SubscriptionService {
   /// слать ли hwid-заголовки при запросе подписки (см. updateShareDeviceHwid)
   bool _shareDeviceHwid = true;
 
-  SubscriptionService(this._storage, {Dio? dio, int? proxyPort})
-      : _dio = dio ?? _buildDio(proxyPort);
+  SubscriptionService(this._storage, {Dio? dio, int? proxyHttpPort})
+      : _dio = dio ?? _buildDio(proxyHttpPort: proxyHttpPort);
 
   /// вызывать после загрузки AppSettings
   void updateShareDeviceHwid(bool value) {
     _shareDeviceHwid = value;
   }
 
-  /// dio с опциональным socks5-прокси на 127.0.0.1:proxyPort.
+  /// dio с опциональным локальным HTTP-прокси (порт keqrnel/xray HTTP inbound).
   /// нужно в фоновом workmanager-изоляте, чтобы апдейт подписок шёл через туннель.
-  /// без proxyPort работает напрямую.
-  static Dio _buildDio(int? proxyPort) {
+  /// без [proxyHttpPort] работает напрямую.
+  static Dio _buildDio({int? proxyHttpPort}) {
     final dio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 30),
@@ -59,12 +60,11 @@ class SubscriptionService {
       },
     ));
 
-    if (proxyPort != null) {
-      // findProxy отдаёт PAC-строку SOCKS5 <host>:<port>.
-      // работает и в изоляте: это обычный tcp на localhost, не завязан на VpnService/TUN.
-      dio.httpClientAdapter = IOHttpClientAdapter(
-        createHttpClient: () => HttpClient()
-          ..findProxy = (_) => 'SOCKS5 127.0.0.1:$proxyPort',
+    if (proxyHttpPort != null) {
+      configureDioForActiveVpn(
+        dio,
+        vpnConnected: true,
+        httpPort: proxyHttpPort,
       );
     }
 
