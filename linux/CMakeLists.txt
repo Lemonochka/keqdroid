@@ -121,6 +121,21 @@ install(CODE "
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
 
+# Core binaries next to the keqdroid executable. NOT Flutter assets (that bundled
+# them into every platform, incl. a ~150 MB Android APK). Installing them here
+# keeps the Linux build self-contained while the APK and Windows build skip them.
+# Linux ELF cores have no extension: keqrnel (unified), xray, sing-box, wireproxy.
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/../assets/bin/linux/"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}"
+  COMPONENT Runtime
+  USE_SOURCE_PERMISSIONS
+  FILES_MATCHING
+    PATTERN "keqrnel"
+    PATTERN "xray"
+    PATTERN "sing-box"
+    PATTERN "wireproxy"
+    PATTERN "*.dat")
+
 # Install the AOT library on non-Debug builds only.
 if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"

@@ -346,10 +346,17 @@ class LinuxTunnelBackend implements TunnelBackend {
     // Instead run a tiny root wrapper that ties sing-box's lifetime to OUR
     // stdin: when we close stdin (on stop) it SIGTERMs sing-box AS ROOT, letting
     // it revert auto_route/nftables; it also exits if sing-box dies on its own.
+    // pkexec runs keqrnel as root in the background; its stdout/stderr don't
+    // reliably reach our captured pipe (the process can exit before the async
+    // stream drains), which left core errors invisible — only a generic "code 1"
+    // surfaced. Redirect them to a stable, root-readable file so the REAL reason
+    // a TUN start failed is always available. Readiness is detected via the tun
+    // interface appearing, so this doesn't depend on the live pipe.
+    const coreLogPath = '/tmp/keqdroid_keqrnel.log';
     const wrapper = r'''
-SB="$1"; CFG="$2"; GEO="$3"
+SB="$1"; CFG="$2"; GEO="$3"; LOGF="$4"
 if [ -n "$GEO" ]; then export XRAY_LOCATION_ASSET="$GEO"; fi
-"$SB" run -c "$CFG" &
+"$SB" run -c "$CFG" >"$LOGF" 2>&1 &
 sb=$!
 ( cat >/dev/null 2>&1; kill -TERM "$sb" 2>/dev/null ) &
 watcher=$!
@@ -367,6 +374,7 @@ kill -TERM "$watcher" 2>/dev/null
           rootSingBin,
           singConfigFile.path,
           rootGeoDir ?? '',
+          coreLogPath,
         ],
         workingDirectory: _sessionDir!.path,
         mode: ProcessStartMode.normal,
@@ -383,11 +391,24 @@ kill -TERM "$watcher" 2>/dev/null
       process: _singboxProcess!,
       log: _singboxLog,
     );
+
+    // Pull the core's own output (the file above) into the session log so the
+    // debug screen and the error below show the real sing-box/xray message.
+    String coreLog = '';
+    try {
+      coreLog = await File(coreLogPath).readAsString();
+    } catch (_) {}
+    if (coreLog.trim().isNotEmpty) {
+      _singboxLog
+        ..writeln('=== keqrnel (core) ===')
+        ..writeln(coreLog);
+    }
+
     if (!ready) {
-      throw VpnStartException(
-        'keqrnel TUN did not start. Make sure pkexec/polkit is available and '
-        'the authorization was granted.\n${_tail(_singboxLog)}',
-      );
+      final tail = coreLog.trim().isEmpty
+          ? _tail(_singboxLog)
+          : _tail(StringBuffer(coreLog));
+      throw VpnStartException('keqrnel TUN did not start.\n$tail');
     }
   }
 
@@ -746,7 +767,7 @@ kill -TERM "$watcher" 2>/dev/null
       // Wrapper didn't exit in time — last resort so we never leave a root
       // sing-box holding the TUN. The elevated pkill may show a polkit prompt.
       try {
-        await Process.run('pkexec', ['pkill', '-TERM', '-x', 'sing-box']);
+        await Process.run('pkexec', ['pkill', '-TERM', '-x', 'keqrnel']);
       } catch (_) {}
       try {
         proc.kill(ProcessSignal.sigkill);
