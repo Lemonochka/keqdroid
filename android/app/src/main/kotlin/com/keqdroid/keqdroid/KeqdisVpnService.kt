@@ -39,6 +39,11 @@ class KeqdisVpnService : VpnService() {
         const val EXTRA_VPN_BACKEND    = "vpn_backend"
         const val VPN_BACKEND_XRAY     = "xray"
         const val VPN_BACKEND_AWG      = "awg"
+        // Ядро (только для backend xray): chain — libxray.so; keqrnel — единое
+        // ядро libkeqrnel.so (sing-box host + встроенный xray) как drop-in.
+        const val EXTRA_CORE_ENGINE    = "core_engine"
+        const val CORE_ENGINE_CHAIN    = "chain"
+        const val CORE_ENGINE_KEQRNEL  = "keqrnel"
         // AmneziaWG: ядро amneziawg-go само владеет TUN, конфиг приходит из .conf.
         const val EXTRA_AWG_UAPI        = "awg_uapi"
         const val EXTRA_AWG_ADDRESSES   = "awg_addresses"
@@ -216,8 +221,12 @@ class KeqdisVpnService : VpnService() {
                     buildControlNotification("Connecting…", isConnected = false, isTransitioning = true)
                 )
 
+                val coreEngine = intent.getStringExtra(EXTRA_CORE_ENGINE) ?: CORE_ENGINE_CHAIN
                 serviceScope.launch {
-                    startVpnWithXray(configPath, socksPort, excludePkgs, includePkgs, socksNoAuth = false)
+                    startVpnWithXray(
+                        configPath, socksPort, excludePkgs, includePkgs,
+                        socksNoAuth = false, coreEngine = coreEngine,
+                    )
                 }
             }
             ACTION_STOP -> serviceScope.launch { stopVpn() }
@@ -257,6 +266,7 @@ class KeqdisVpnService : VpnService() {
         excludePkgs: List<String>,
         includePkgs: List<String>,
         socksNoAuth: Boolean = false,
+        coreEngine: String = CORE_ENGINE_CHAIN,
     ) {
         if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) return
         setStatus(VpnRunStatus.STARTING)
@@ -265,7 +275,11 @@ class KeqdisVpnService : VpnService() {
                 throw IllegalStateException("SOCKS5 credentials are empty — Intent was malformed")
             }
 
-            xrayPid = startXray(getBinaryPath("libxray.so"), xrayConfigPath)
+            // keqrnel — единое ядро (libkeqrnel.so) как drop-in замена xray;
+            // запускается тем же fork+execv и так же поднимает SOCKS5 для tun2socks.
+            val coreBinary =
+                if (coreEngine == CORE_ENGINE_KEQRNEL) "libkeqrnel.so" else "libxray.so"
+            xrayPid = startXray(getBinaryPath(coreBinary), xrayConfigPath)
 
             // 2. Ждём пока Xray поднимет SOCKS5 порт
             var waited = 0

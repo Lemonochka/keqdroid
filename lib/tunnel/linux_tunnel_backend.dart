@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../services/ephemeral_xray_ping.dart';
+import '../utils/keqrnel_config.dart';
 import '../services/firefox_proxy_helper.dart';
 import '../utils/wireproxy_config.dart';
 import 'connection_mode.dart';
@@ -50,6 +51,8 @@ class LinuxTunnelBackend implements TunnelBackend {
 
   int? _awgInfoPort;
   String? _xrayBinPath;
+  // Порт clash_api keqrnel в proxy-режиме — из него читаем кумулятивный трафик.
+  int? _keqrnelClashPort;
 
   Timer? _statsTimer;
   DateTime? _sessionStartedAt;
@@ -114,13 +117,13 @@ class LinuxTunnelBackend implements TunnelBackend {
         if (isAwg) {
           await _startAwgTunSession(request);
         } else {
-          await _startXrayTunSession(request);
+          await _startKeqrnelTunSession(request);
         }
       } else {
         if (isAwg) {
           await _startAwgProxySession(request);
         } else {
-          await _startXrayProxySession(request);
+          await _startKeqrnelProxySession(request);
         }
       }
 
@@ -144,39 +147,32 @@ class LinuxTunnelBackend implements TunnelBackend {
 
   // ---- xray ---------------------------------------------------------------
 
-  /// Starts xray and waits for its local SOCKS port. [augmentStats] wires the
-  /// StatsService api (proxy mode reads counters from it; TUN reads the tun
-  /// interface instead, so it is skipped there).
-  Future<String> _startXray(
-    TunnelSessionRequest request, {
-    required bool augmentStats,
-    required bool waitHttp,
-  }) async {
-    final xrayBin = await LinuxCorePaths.xrayExecutable();
-    if (xrayBin == null) {
-      throw VpnStartException('xray not found. ${LinuxCorePaths.binariesHint}');
+  /// proxy-режим на keqrnel: sing-box держит локальные SOCKS/HTTP и считает
+  /// трафик (clash_api), внутри — встроенный xray. Root не нужен.
+  Future<void> _startKeqrnelProxySession(TunnelSessionRequest request) async {
+    final bin = await LinuxCorePaths.keqrnelExecutable();
+    if (bin == null) {
+      throw VpnStartException('keqrnel not found. ${LinuxCorePaths.binariesHint}');
     }
-    _xrayBinPath = xrayBin;
+    _xrayBinPath = bin;
 
-    var body = request.xrayConfig;
-    if (augmentStats) {
-      final decoded = jsonDecode(request.xrayConfig) as Map<String, dynamic>;
-      body = jsonEncode(
-        XraySessionStats.augmentConfig(
-          decoded,
-          apiPort: XraySessionStats.defaultApiPort,
-        ),
-      );
-    }
-    final xrayConfigFile = File(p.join(_sessionDir!.path, 'xray.json'));
-    await xrayConfigFile.writeAsString(body);
+    final clashPort = await _freePort();
+    final merged = KeqrnelConfig.proxyWithStats(
+      xrayConfig: request.xrayConfig,
+      socksPort: request.socksPort,
+      httpPort: request.httpPort,
+      clashPort: clashPort,
+    );
+    _keqrnelClashPort = clashPort;
+    final configFile = File(p.join(_sessionDir!.path, 'keqrnel.json'));
+    await configFile.writeAsString(merged);
 
-    await _ensurePortsAvailable(request, needsHttp: waitHttp);
+    await _ensurePortsAvailable(request, needsHttp: request.systemProxy);
 
     final geoDir = await LinuxCorePaths.geoAssetDir();
     _xrayProcess = await Process.start(
-      xrayBin,
-      ['run', '-c', xrayConfigFile.path],
+      bin,
+      ['run', '-c', configFile.path],
       workingDirectory: _sessionDir!.path,
       environment: geoDir != null ? {'XRAY_LOCATION_ASSET': geoDir} : null,
       mode: ProcessStartMode.normal,
@@ -188,46 +184,44 @@ class LinuxTunnelBackend implements TunnelBackend {
       request.socksPort,
       process: _xrayProcess,
       log: _xrayLog,
-      processLabel: 'Xray',
+      processLabel: 'keqrnel',
     );
     if (!socksReady) {
       throw VpnStartException(
-        'Xray SOCKS port ${request.socksPort} did not open.\n${_tail(_xrayLog)}',
+        'keqrnel SOCKS port ${request.socksPort} did not open.\n${_tail(_xrayLog)}',
       );
     }
 
-    if (waitHttp) {
+    if (request.systemProxy) {
       final httpReady = await _waitForPort(
         '127.0.0.1',
         request.httpPort,
         process: _xrayProcess,
         log: _xrayLog,
-        processLabel: 'Xray HTTP',
+        processLabel: 'keqrnel HTTP',
       );
       if (!httpReady) {
         throw VpnStartException(
-          'Xray HTTP port ${request.httpPort} did not open. '
+          'keqrnel HTTP port ${request.httpPort} did not open. '
           'System proxy needs the HTTP inbound.\n${_tail(_xrayLog)}',
         );
       }
-    }
-    return xrayBin;
-  }
-
-  Future<void> _startXrayProxySession(TunnelSessionRequest request) async {
-    await _startXray(
-      request,
-      augmentStats: true,
-      waitHttp: request.systemProxy,
-    );
-    if (request.systemProxy) {
       await _applySystemProxy(request);
     }
   }
 
-  Future<void> _startXrayTunSession(TunnelSessionRequest request) async {
-    await _startXray(request, augmentStats: false, waitHttp: false);
-    await _startSingbox(request);
+  /// TUN-режим на keqrnel: один процесс (sing-box TUN + встроенный xray) под root.
+  Future<void> _startKeqrnelTunSession(TunnelSessionRequest request) async {
+    final singConfig = request.singboxConfig;
+    if (singConfig == null || singConfig.isEmpty) {
+      throw const VpnStartException('singboxConfig is required for TUN mode');
+    }
+    final merged = KeqrnelConfig.fromChain(
+      singboxConfig: singConfig,
+      xrayConfig: request.xrayConfig,
+      windows: false,
+    );
+    await _runKeqrnelAsRoot(merged);
   }
 
   // ---- wireproxy (AmneziaWG) ----------------------------------------------
@@ -302,50 +296,68 @@ class LinuxTunnelBackend implements TunnelBackend {
 
   Future<void> _startAwgTunSession(TunnelSessionRequest request) async {
     await _startWireproxy(request, withHttp: false);
-    await _startSingbox(request);
-  }
-
-  // ---- sing-box TUN (root via pkexec) -------------------------------------
-
-  Future<void> _startSingbox(TunnelSessionRequest request) async {
-    final singBin = await LinuxCorePaths.singboxExecutable();
-    if (singBin == null) {
-      throw VpnStartException(
-        'sing-box not found (required for TUN mode). ${LinuxCorePaths.binariesHint}',
-      );
-    }
     final singConfig = request.singboxConfig;
     if (singConfig == null || singConfig.isEmpty) {
       throw const VpnStartException('singboxConfig is required for TUN mode');
     }
+    await _runKeqrnelAsRoot(singConfig);
+  }
 
-    final singConfigFile = File(p.join(_sessionDir!.path, 'sing-box.json'));
-    await singConfigFile.writeAsString(singConfig);
+  // ---- sing-box TUN (root via pkexec) -------------------------------------
 
-    // sing-box runs as root via pkexec. When the app ships as an AppImage the
+  /// Запускает keqrnel под root через pkexec (TUN нужен root). keqrnel — это
+  /// sing-box host, поднимает переданный sing-box-конфиг. Заменяет прежний
+  /// отдельный sing-box.exe и для xray-протоколов, и для AmneziaWG-TUN.
+  Future<void> _runKeqrnelAsRoot(String config) async {
+    final singBin = await LinuxCorePaths.keqrnelExecutable();
+    if (singBin == null) {
+      throw VpnStartException(
+        'keqrnel not found (required for TUN mode). ${LinuxCorePaths.binariesHint}',
+      );
+    }
+
+    final singConfigFile = File(p.join(_sessionDir!.path, 'keqrnel-tun.json'));
+    await singConfigFile.writeAsString(config);
+
+    // keqrnel runs as root via pkexec. When the app ships as an AppImage the
     // bundled binary lives on a per-user FUSE mount (/tmp/.mount_*) that root
     // CANNOT read — pkexec then dies with "Permission denied" / code 127. Copy
     // it into the session dir (real /tmp) where root has access, and exec that.
-    final rootSingBin = p.join(_sessionDir!.path, 'sing-box');
+    final rootSingBin = p.join(_sessionDir!.path, 'keqrnel');
     try {
       await File(singBin).copy(rootSingBin);
       await Process.run('chmod', ['0755', rootSingBin]);
     } catch (e) {
-      throw VpnStartException('Could not stage sing-box for elevation: $e');
+      throw VpnStartException('Could not stage keqrnel for elevation: $e');
     }
 
-    // pkexec shows a graphical polkit prompt and runs it as root. Modern
-    // polkit forwards SIGTERM to the child, so stopSession can tear it down.
+    // sing-box runs as root via pkexec. pkexec does NOT reliably forward signals
+    // to its root child, and a normal user cannot signal a root process — so we
+    // can't stop sing-box by killing the pkexec wrapper. Doing that orphans
+    // sing-box with the TUN + routes + nftables rules still installed, which
+    // breaks the network even after disconnect (and in Proxy mode afterwards).
+    // Instead run a tiny root wrapper that ties sing-box's lifetime to OUR
+    // stdin: when we close stdin (on stop) it SIGTERMs sing-box AS ROOT, letting
+    // it revert auto_route/nftables; it also exits if sing-box dies on its own.
+    const wrapper = r'''
+SB="$1"; CFG="$2"
+"$SB" run -c "$CFG" &
+sb=$!
+( cat >/dev/null 2>&1; kill -TERM "$sb" 2>/dev/null ) &
+watcher=$!
+wait "$sb"
+kill -TERM "$watcher" 2>/dev/null
+''';
     try {
       _singboxProcess = await Process.start(
         'pkexec',
-        [rootSingBin, 'run', '-c', singConfigFile.path],
+        ['sh', '-c', wrapper, 'sh', rootSingBin, singConfigFile.path],
         workingDirectory: _sessionDir!.path,
         mode: ProcessStartMode.normal,
       );
     } on ProcessException catch (e) {
       throw VpnStartException(
-        'Could not launch sing-box with elevated privileges. TUN mode needs '
+        'Could not launch keqrnel with elevated privileges. TUN mode needs '
         'pkexec (polkit). Install it, or use Proxy mode. ($e)',
       );
     }
@@ -354,7 +366,7 @@ class LinuxTunnelBackend implements TunnelBackend {
     final ready = await _waitForSingbox(process: _singboxProcess!, log: _singboxLog);
     if (!ready) {
       throw VpnStartException(
-        'sing-box TUN did not start. Make sure pkexec/polkit is available and '
+        'keqrnel TUN did not start. Make sure pkexec/polkit is available and '
         'the authorization was granted.\n${_tail(_singboxLog)}',
       );
     }
@@ -372,7 +384,7 @@ class LinuxTunnelBackend implements TunnelBackend {
       );
       if (code >= 0) {
         throw VpnStartException(
-          'sing-box exited with code $code (TUN/elevation failed?).\n${_tail(log)}',
+          'keqrnel exited with code $code (TUN/elevation failed?).\n${_tail(log)}',
         );
       }
       final text = log.toString().toLowerCase();
@@ -492,7 +504,7 @@ class LinuxTunnelBackend implements TunnelBackend {
 
     // sing-box first: it owns the tun device + routes, tear it down before the
     // upstream SOCKS provider so traffic fails closed, not into a dead socks.
-    await _killProcess(_singboxProcess);
+    await _stopSingbox();
     await _killProcess(_wireproxyProcess);
     await _killProcess(_xrayProcess);
     _singboxProcess = null;
@@ -500,6 +512,7 @@ class LinuxTunnelBackend implements TunnelBackend {
     _awgInfoPort = null;
     _xrayProcess = null;
     _xrayBinPath = null;
+    _keqrnelClashPort = null;
 
     final dir = _sessionDir;
     _sessionDir = null;
@@ -519,7 +532,9 @@ class LinuxTunnelBackend implements TunnelBackend {
 
   @override
   Future<VpnState> getCurrentState() async {
-    if (_xrayProcess != null || _wireproxyProcess != null) {
+    if (_xrayProcess != null ||
+        _wireproxyProcess != null ||
+        _singboxProcess != null) {
       return _buildConnectedState(_activeMode);
     }
     return VpnState.disconnected;
@@ -675,6 +690,29 @@ class LinuxTunnelBackend implements TunnelBackend {
     process.stdout.transform(utf8.decoder).listen(handle);
   }
 
+  /// Stops the elevated sing-box gracefully. We cannot signal the root process
+  /// directly, so we close the wrapper's stdin — that makes the root wrapper
+  /// SIGTERM sing-box, which reverts auto_route/nftables before exiting.
+  Future<void> _stopSingbox() async {
+    final proc = _singboxProcess;
+    if (proc == null) return;
+    try {
+      await proc.stdin.close();
+    } catch (_) {}
+    try {
+      await proc.exitCode.timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Wrapper didn't exit in time — last resort so we never leave a root
+      // sing-box holding the TUN. The elevated pkill may show a polkit prompt.
+      try {
+        await Process.run('pkexec', ['pkill', '-TERM', '-x', 'sing-box']);
+      } catch (_) {}
+      try {
+        proc.kill(ProcessSignal.sigkill);
+      } catch (_) {}
+    }
+  }
+
   Future<void> _killProcess(Process? process) async {
     if (process == null) return;
     try {
@@ -797,7 +835,11 @@ class LinuxTunnelBackend implements TunnelBackend {
   }
 
   Future<void> _pollTrafficStats(ConnectionMode mode) async {
-    if (_xrayProcess == null && _wireproxyProcess == null) return;
+    if (_xrayProcess == null &&
+        _wireproxyProcess == null &&
+        _singboxProcess == null) {
+      return;
+    }
     try {
       final int inOctets;
       final int outOctets;
@@ -820,6 +862,15 @@ class LinuxTunnelBackend implements TunnelBackend {
         }
         inOctets = m.rx;
         outOctets = m.tx;
+      } else if (_keqrnelClashPort != null) {
+        // keqrnel proxy: кумулятивный трафик из clash_api sing-box.
+        final t = await _queryClashTraffic(_keqrnelClashPort!);
+        if (t == null) {
+          _emitConnectedTelemetry(mode);
+          return;
+        }
+        inOctets = t.down;
+        outOctets = t.up;
       } else if (_xrayProcess != null) {
         final xrayBin = _xrayBinPath;
         if (xrayBin == null) return;
@@ -850,6 +901,28 @@ class LinuxTunnelBackend implements TunnelBackend {
       _emitConnectedTelemetry(mode, downloadSpeed: deltaIn, uploadSpeed: deltaOut);
     } catch (e) {
       AppLogger.instance.debug('Linux getTrafficStats failed: $e');
+    }
+  }
+
+  /// Кумулятивный трафик из clash_api keqrnel (proxy-режим): GET /connections →
+  /// downloadTotal/uploadTotal. down = принято, up = отправлено.
+  Future<({int down, int up})?> _queryClashTraffic(int port) async {
+    final client = HttpClient();
+    try {
+      final req = await client
+          .get('127.0.0.1', port, '/connections')
+          .timeout(const Duration(seconds: 2));
+      final resp = await req.close().timeout(const Duration(seconds: 2));
+      if (resp.statusCode != 200) return null;
+      final body = await resp.transform(utf8.decoder).join();
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      final down = (json['downloadTotal'] as num?)?.toInt() ?? 0;
+      final up = (json['uploadTotal'] as num?)?.toInt() ?? 0;
+      return (down: down, up: up);
+    } catch (_) {
+      return null;
+    } finally {
+      client.close(force: true);
     }
   }
 

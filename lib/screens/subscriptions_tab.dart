@@ -26,7 +26,16 @@ class SubscriptionsTab extends ConsumerWidget {
     final accentContainerColor = AppTheme.accentContainer(context);
     final onAccentContainerColor = AppTheme.onAccentContainer(context);
 
-    return Scaffold(
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyV, control: true):
+            () => _addSubscriptionFromClipboard(context, ref),
+        const SingleActivator(LogicalKeyboardKey.keyV, meta: true):
+            () => _addSubscriptionFromClipboard(context, ref),
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
         child: DesktopPageLayout(
@@ -147,6 +156,46 @@ class SubscriptionsTab extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: Text(l10n.subscriptionsAddButton),
         onPressed: () => _showAddSubDialog(context, ref),
+      ),
+        ),
+      ),
+    );
+  }
+
+  /// Ctrl/Cmd+V на странице подписок: берёт ссылку из буфера и добавляет подписку.
+  Future<void> _addSubscriptionFromClipboard(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim() ?? '';
+    if (text.isEmpty) return;
+    final uri = Uri.tryParse(text);
+    final isUrl =
+        uri != null && (uri.isScheme('http') || uri.isScheme('https'));
+    if (!context.mounted) return;
+    if (!isUrl) {
+      _pasteToast(context, 'В буфере нет ссылки подписки (http/https)');
+      return;
+    }
+    try {
+      final sub = Subscription.create(
+        name: uri.host.isNotEmpty ? uri.host : text,
+        url: text,
+      );
+      await ref.read(subscriptionsProvider.notifier).add(sub);
+      if (context.mounted) _pasteToast(context, 'Подписка добавлена: ${uri.host}');
+    } catch (e) {
+      if (context.mounted) _pasteToast(context, friendlyError(e, context));
+    }
+  }
+
+  void _pasteToast(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

@@ -120,6 +120,8 @@ class MainActivity : FlutterFragmentActivity() {
                                         result.error("INVALID_ARGS", "Missing xrayConfig", null)
                                         return@setMethodCallHandler
                                     }
+                                    val coreEngine = call.argument<String>("coreEngine")
+                                        ?: KeqdisVpnService.CORE_ENGINE_CHAIN
                                     startVpnWithXray(
                                         xrayConfig,
                                         socksPort,
@@ -127,6 +129,7 @@ class MainActivity : FlutterFragmentActivity() {
                                         includePackages,
                                         serverName,
                                         result,
+                                        coreEngine,
                                     )
                                 }
                                 KeqdisVpnService.VPN_BACKEND_AWG -> {
@@ -339,6 +342,7 @@ class MainActivity : FlutterFragmentActivity() {
         includePackages: List<String>,
         serverName: String?,
         result: MethodChannel.Result,
+        coreEngine: String = KeqdisVpnService.CORE_ENGINE_CHAIN,
     ) {
         if (VpnService.prepare(this) != null) {
             result.error("PERMISSION_DENIED", "VPN permission not granted", null)
@@ -380,6 +384,7 @@ class MainActivity : FlutterFragmentActivity() {
                 action = KeqdisVpnService.ACTION_START
                 putExtra(KeqdisVpnService.EXTRA_VPN_BACKEND, KeqdisVpnService.VPN_BACKEND_XRAY)
                 putExtra(KeqdisVpnService.EXTRA_XRAY_CONFIG, xrayPath)
+                putExtra(KeqdisVpnService.EXTRA_CORE_ENGINE, coreEngine)
                 putExtra("socks_port", socksPort)
                 putStringArrayListExtra("exclude_packages", ArrayList(excludePackages))
                 putStringArrayListExtra("include_packages", ArrayList(includePackages))

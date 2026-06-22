@@ -20,6 +20,9 @@ class TunnelSessionRequest {
   final bool systemProxy;
   final bool killSwitch;
 
+  /// Ядро: `chain` (xray → sing-box) или `keqrnel` (единое ядро). Дефолт `chain`.
+  final String coreEngine;
+
   const TunnelSessionRequest({
     required this.mode,
     this.vpnBackend = VpnBackend.xray,
@@ -35,6 +38,7 @@ class TunnelSessionRequest {
     this.serverName,
     this.systemProxy = true,
     this.killSwitch = false,
+    this.coreEngine = 'chain',
   });
 
   Map<String, dynamic> toMethodChannelArgs({
@@ -57,6 +61,7 @@ class TunnelSessionRequest {
         'includeProcesses': includeProcesses,
         'systemProxy': systemProxy,
         'killSwitch': killSwitch,
+        'coreEngine': coreEngine,
         if (serverName != null && serverName!.isNotEmpty) 'serverName': serverName,
       };
 }

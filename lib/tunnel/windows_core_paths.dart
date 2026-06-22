@@ -9,6 +9,7 @@ class WindowsCorePaths {
 
   static const assetXray = 'assets/bin/windows/xray.exe';
   static const assetSingbox = 'assets/bin/windows/sing-box.exe';
+  static const assetKeqrnel = 'assets/bin/windows/keqrnel.exe';
   static const assetGeoip = 'assets/bin/windows/geoip.dat';
   static const assetGeosite = 'assets/bin/windows/geosite.dat';
   static const geoFileNames = ['geoip.dat', 'geosite.dat'];
@@ -28,6 +29,11 @@ class WindowsCorePaths {
 
   static Future<String?> singboxExecutable() =>
       _resolveExecutable(assetSingbox, 'sing-box.exe');
+
+  /// keqrnel — единое ядро (sing-box host + встроенный xray). Заменяет связку
+  /// xray + sing-box, когда выбран coreEngine == keqrnel.
+  static Future<String?> keqrnelExecutable() =>
+      _resolveExecutable(assetKeqrnel, 'keqrnel.exe');
 
   /// wireproxy-awg — userspace AmneziaWG (embeds amneziawg-go), exposes a local
   /// SOCKS5/HTTP proxy. Used for both Proxy and TUN mode (TUN: wireproxy SOCKS →

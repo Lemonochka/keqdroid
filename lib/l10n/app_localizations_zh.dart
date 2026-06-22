@@ -409,10 +409,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get settingsXrayCoreTitle => 'Xray 内核';
+  String get settingsXrayCoreTitle => '内核与协议';
 
   @override
-  String get settingsXrayCoreSubtitle => 'DNS、XMUX、日志与路由';
+  String get settingsXrayCoreSubtitle => '引擎、DNS、XMUX、日志与路由';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
