@@ -260,6 +260,14 @@
   "subscriptionsEditSubscription": "编辑订阅",
   "subscriptionsCopyUrl": "复制 URL",
   "subscriptionsUrlCopied": "URL 已复制",
+  "subscriptionsShareButton": "分享（二维码 + 链接）",
+  "subscriptionsShareAction": "分享",
+  "subscriptionsShareFailed": "分享失败：{error}",
+  "@subscriptionsShareFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "subscriptionsDeleteSubscription": "删除订阅",
   "subscriptionsDeleteConfirm": "确定要删除“{name}”吗？\n\n这还会移除所有关联的服务器。",
   "@subscriptionsDeleteConfirm": {

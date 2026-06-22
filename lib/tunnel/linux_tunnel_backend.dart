@@ -180,7 +180,7 @@ class LinuxTunnelBackend implements TunnelBackend {
       bin,
       ['run', '-c', configFile.path],
       workingDirectory: _sessionDir!.path,
-      environment: geoDir != null ? {'XRAY_LOCATION_ASSET': geoDir} : null,
+      environment: _coreProcessEnvironment(geoDir),
       mode: ProcessStartMode.normal,
     );
     _pipeProcessOutput(_xrayProcess!, _xrayLog);
@@ -440,9 +440,7 @@ kill -TERM "$watcher" 2>/dev/null
         onTimeout: () => -1,
       );
       if (code >= 0) {
-        throw VpnStartException(
-          'keqrnel exited with code $code (TUN/elevation failed?).\n${_tail(log)}',
-        );
+        throw VpnStartException(_elevationError(code, log));
       }
       final text = log.toString().toLowerCase();
       if (text.contains('started') && text.contains('tun')) return true;
@@ -455,11 +453,50 @@ kill -TERM "$watcher" 2>/dev/null
       await Future<void>.delayed(const Duration(milliseconds: 300));
       waited += 300;
     }
+    // Timed out — only treat as ready if the tun device actually appeared.
+    if (await _tunInterfaceExists()) return true;
+
+    // Pull core log one last time for the error message below.
+    try {
+      const coreLogPath = '/tmp/keqdroid_keqrnel.log';
+      final coreLog = await File(coreLogPath).readAsString();
+      if (coreLog.trim().isNotEmpty) {
+        log
+          ..writeln('=== keqrnel (core, timeout) ===')
+          ..writeln(coreLog);
+      }
+    } catch (_) {}
+
     final stillRunning = await process.exitCode.timeout(
       const Duration(milliseconds: 1),
       onTimeout: () => -1,
     );
-    return stillRunning < 0;
+    if (stillRunning >= 0) {
+      throw VpnStartException(_elevationError(stillRunning, log));
+    }
+    return false;
+  }
+
+  /// User-facing message for an elevated keqrnel exit. pkexec uses distinct
+  /// codes for the two "no root granted" cases — surface them with a clear hint
+  /// (and the Proxy-mode fallback) instead of a raw exit code:
+  ///  * 126 — the user dismissed the polkit password dialog (cancelled).
+  ///  * 127 — not authorized / no polkit agent available to prompt (common on
+  ///    minimal tiling WMs that don't run polkit-gnome / lxpolkit / kde agent).
+  /// Any other code is a real core failure — keep the code + log tail.
+  String _elevationError(int code, StringBuffer log) {
+    switch (code) {
+      case 126:
+        return 'Authorization cancelled. TUN mode needs root via pkexec '
+            '(polkit) — approve the password prompt, or use Proxy mode.';
+      case 127:
+        return 'Could not get root for TUN mode: no polkit agent answered '
+            '(pkexec). Install/start a polkit authentication agent, or use '
+            'Proxy mode.';
+      default:
+        return 'keqrnel exited with code $code (TUN/elevation failed?).\n'
+            '${_tail(log)}';
+    }
   }
 
   Future<bool> _tunInterfaceExists() async {
@@ -657,7 +694,7 @@ kill -TERM "$watcher" 2>/dev/null
           'appName': name,
           'isRunning': true,
           'isSystem': exePath == null,
-          if (exePath != null) 'installPath': exePath,
+          'installPath': ?exePath,
         });
       }
     } catch (e, st) {
@@ -730,6 +767,11 @@ kill -TERM "$watcher" 2>/dev/null
   }
 
   // ---- internals ----------------------------------------------------------
+
+  static Map<String, String>? _coreProcessEnvironment(String? geoDir) {
+    if (geoDir == null) return null;
+    return {...Platform.environment, 'XRAY_LOCATION_ASSET': geoDir};
+  }
 
   void _pipeProcessOutput(Process process, StringBuffer buffer) {
     void append(String line) {

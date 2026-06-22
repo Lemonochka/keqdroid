@@ -260,6 +260,14 @@
   "subscriptionsEditSubscription": "Edit subscription",
   "subscriptionsCopyUrl": "Copy URL",
   "subscriptionsUrlCopied": "URL copied",
+  "subscriptionsShareButton": "Share (QR + link)",
+  "subscriptionsShareAction": "Share",
+  "subscriptionsShareFailed": "Could not share: {error}",
+  "@subscriptionsShareFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
   "subscriptionsDeleteSubscription": "Delete subscription",
   "subscriptionsDeleteConfirm": "Are you sure you want to delete \"{name}\"?\n\nThis will also remove all associated servers.",
   "@subscriptionsDeleteConfirm": {

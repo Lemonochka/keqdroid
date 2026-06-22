@@ -604,12 +604,25 @@ class ConfigGeneratorV2 {
     final proxySplit   = splitDomainsAndIps(parseList(settings.proxyRules));
     final blockedSplit = splitDomainsAndIps(parseList(settings.blockedRules));
 
+    final directGeo    = splitGeoipTokens(directSplit.ips);
+    final proxyGeo     = splitGeoipTokens(proxySplit.ips);
+    final blockedGeo   = splitGeoipTokens(blockedSplit.ips);
+
     final directDomains  = normalizeDomains(directSplit.domains);
     final blockedDomains = normalizeDomains(blockedSplit.domains);
     final proxyDomains   = normalizeDomains(proxySplit.domains);
-    final directIps      = directSplit.ips;
-    final proxyIps       = proxySplit.ips;
-    final blockedIps     = blockedSplit.ips;
+    final directIps      = directGeo.plainIps
+        .where((e) => !e.trim().toLowerCase().startsWith('geoip:'))
+        .toList();
+    final proxyIps       = proxyGeo.plainIps
+        .where((e) => !e.trim().toLowerCase().startsWith('geoip:'))
+        .toList();
+    final blockedIps     = blockedGeo.plainIps
+        .where((e) => !e.trim().toLowerCase().startsWith('geoip:'))
+        .toList();
+    final directGeoip    = directGeo.geoipCodes;
+    final proxyGeoip     = proxyGeo.geoipCodes;
+    final blockedGeoip   = blockedGeo.geoipCodes;
 
     final core = settings.xrayCore;
     final dns = isPingMode
@@ -657,11 +670,18 @@ class ConfigGeneratorV2 {
       rules.add({
         'type': 'field',
         'inboundTag': ['socks-lan', 'http-lan'],
+        'network': 'tcp,udp',
         'outboundTag': 'block',
       });
     }
     if (blockedDomains.isNotEmpty) {
       rules.add({'type': 'field', 'domain': blockedDomains, 'outboundTag': 'block'});
+    }
+    if (blockedGeoip.isNotEmpty) {
+      // xray has no top-level `geoip` rule field; geoip codes ride the `ip`
+      // field as `geoip:xx` tokens. A bare `geoip` key is silently dropped and
+      // the core aborts with "this rule has no effective fields".
+      rules.add({'type': 'field', 'ip': blockedGeoip.map((c) => 'geoip:$c').toList(), 'outboundTag': 'block'});
     }
     if (blockedIps.isNotEmpty) {
       rules.add({'type': 'field', 'ip': blockedIps, 'outboundTag': 'block'});
@@ -677,6 +697,9 @@ class ConfigGeneratorV2 {
     }
     if (directDomains.isNotEmpty) {
       rules.add({'type': 'field', 'domain': directDomains, 'outboundTag': 'direct'});
+    }
+    if (directGeoip.isNotEmpty) {
+      rules.add({'type': 'field', 'ip': directGeoip.map((c) => 'geoip:$c').toList(), 'outboundTag': 'direct'});
     }
     const basePrivateIps = {
       '0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '127.0.0.0/8',
@@ -704,6 +727,9 @@ class ConfigGeneratorV2 {
     ], 'outboundTag': 'direct'});
     if (proxyDomains.isNotEmpty) {
       rules.add({'type': 'field', 'domain': proxyDomains, 'outboundTag': 'proxy'});
+    }
+    if (proxyGeoip.isNotEmpty) {
+      rules.add({'type': 'field', 'ip': proxyGeoip.map((c) => 'geoip:$c').toList(), 'outboundTag': 'proxy'});
     }
     if (proxyIps.isNotEmpty) {
       rules.add({'type': 'field', 'ip': proxyIps, 'outboundTag': 'proxy'});

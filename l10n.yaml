@@ -2,3 +2,6 @@ arb-dir: lib/l10n
 template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 output-class: AppLocalizations
+# dart format reads analysis_options → package:flutter_lints from PUB_CACHE.
+# A broken PUB_CACHE (e.g. C:\root\.pub-cache from WSL) crashes release builds.
+format: false

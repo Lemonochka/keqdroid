@@ -976,10 +976,11 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         final subs =
                             ref.read(subscriptionsProvider).value ?? [];
                         final idx = subs.indexWhere((s) => s.id == sub.id);
-                        if (idx > 0)
+                        if (idx > 0) {
                           ref
                               .read(subscriptionsProvider.notifier)
                               .reorder(idx, idx - 1);
+                        }
                       },
                     ),
                     const SizedBox(width: 6),
@@ -1012,9 +1013,9 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     icon: const Icon(Icons.qr_code_2, size: 18),
-                    label: const Text(
-                      'Поделиться (QR + ссылка)',
-                      style: TextStyle(fontSize: 13),
+                    label: Text(
+                      l10n.subscriptionsShareButton,
+                      style: const TextStyle(fontSize: 13),
                     ),
                     onPressed: () => _showShareSheet(context),
                   ),
@@ -1066,6 +1067,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
   /// системный share (QR как PNG-файл + текст ссылки) — можно кинуть другу.
   void _showShareSheet(BuildContext context) {
     final sub = widget.sub;
+    final l10n = AppLocalizations.of(context)!;
     final qrKey = GlobalKey();
     showModalBottomSheet(
       context: context,
@@ -1139,9 +1141,9 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   ),
                 ),
                 icon: const Icon(Icons.share, size: 18),
-                label: const Text(
-                  'Поделиться',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                label: Text(
+                  l10n.subscriptionsShareAction,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 onPressed: () => _shareQr(ctx, qrKey),
               ),
@@ -1154,6 +1156,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
 
   Future<void> _shareQr(BuildContext ctx, GlobalKey qrKey) async {
     final sub = widget.sub;
+    final l10n = AppLocalizations.of(context)!;
     try {
       final boundary =
           qrKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
@@ -1174,7 +1177,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
       if (ctx.mounted) {
         ScaffoldMessenger.of(
           ctx,
-        ).showSnackBar(SnackBar(content: Text('Не удалось поделиться: $e')));
+        ).showSnackBar(SnackBar(content: Text(l10n.subscriptionsShareFailed('$e'))));
       }
     }
   }

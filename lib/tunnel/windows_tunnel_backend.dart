@@ -171,7 +171,7 @@ class WindowsTunnelBackend implements TunnelBackend {
       bin,
       [configFile.path],
       workingDirectory: workDir,
-      environment: geoDir != null ? {'XRAY_LOCATION_ASSET': geoDir} : null,
+      environment: _coreProcessEnvironment(geoDir),
       mode: ProcessStartMode.normal,
     );
     _pipeProcessOutput(_keqrnelProcess!, _xrayLog, 'keqrnel');
@@ -245,7 +245,7 @@ class WindowsTunnelBackend implements TunnelBackend {
       bin,
       [configFile.path],
       workingDirectory: workDir,
-      environment: geoDir != null ? {'XRAY_LOCATION_ASSET': geoDir} : null,
+      environment: _coreProcessEnvironment(geoDir),
       mode: ProcessStartMode.normal,
     );
     _pipeProcessOutput(_keqrnelProcess!, _singboxLog, 'keqrnel');
@@ -667,6 +667,13 @@ class WindowsTunnelBackend implements TunnelBackend {
       downloadUrl: downloadUrl,
       timeoutMs: timeoutMs,
     );
+  }
+
+  /// Dart [Process.start] replaces the whole environment when `environment` is
+  /// set — merge with the parent so keqrnel keeps PATH, SystemRoot, etc.
+  static Map<String, String>? _coreProcessEnvironment(String? geoDir) {
+    if (geoDir == null) return null;
+    return {...Platform.environment, 'XRAY_LOCATION_ASSET': geoDir};
   }
 
   void _pipeProcessOutput(Process process, StringBuffer buffer, String tag) {

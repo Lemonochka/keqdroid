@@ -1,4 +1,6 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+﻿import 'dart:convert';
+
+import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/models/subscription.dart';
@@ -57,6 +59,34 @@ void main() {
       );
       final settings = await storage.getSettings();
       expect(settings, const AppSettings());
+    });
+
+    test('getServers skips a corrupt entry instead of losing the whole list',
+        () async {
+      // One valid record, one missing the required `config` field, one with a
+      // malformed `addedAt`. The two bad ones must be dropped, the good one kept.
+      final raw = jsonEncode([
+        {
+          'id': 'good',
+          'config': 'vless://id@good.com:443',
+          'type': 'manual',
+          'addedAt': DateTime.now().toIso8601String(),
+        },
+        {'id': 'no-config', 'type': 'manual'},
+        {
+          'id': 'bad-date',
+          'config': 'vless://id@bad.com:443',
+          'type': 'manual',
+          'addedAt': 'not-a-date',
+        },
+      ]);
+      final storage =
+          await buildStorageService(initialValues: {'keqdis_servers_v2': raw});
+
+      final servers = await storage.getServers();
+
+      expect(servers.length, 1);
+      expect(servers.single.id, 'good');
     });
 
     test('setActiveServerId(null) clears active id', () async {

@@ -188,8 +188,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingResetDone => '路由规则已重置';
 
   @override
-  String get settingsRoutingHeaderDesc =>
-      '决定哪些站点直接绕过 VPN、哪些强制经过 VPN、哪些被阻止。可先使用预设快速开始，然后再微调下方的每个列表。';
+  String get settingsRoutingHeaderDesc => '决定哪些站点直接绕过 VPN、哪些强制经过 VPN、哪些被阻止。可先使用预设快速开始，然后再微调下方的每个列表。';
 
   @override
   String get settingsRoutingPresetsTitle => '快速预设';
@@ -207,15 +206,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingPresetRuTitle => '俄罗斯站点 — 直连';
 
   @override
-  String get settingsRoutingPresetRuDesc =>
-      '所有 .ru / .рф 域名及主要俄罗斯服务绕过 VPN（向“直连”添加域名）';
+  String get settingsRoutingPresetRuDesc => '所有 .ru / .рф 域名及主要俄罗斯服务绕过 VPN（向“直连”添加域名）';
 
   @override
   String get settingsRoutingPresetRuGeoipTitle => '俄罗斯 IP（GeoIP）— 直连';
 
   @override
-  String get settingsRoutingPresetRuGeoipDesc =>
-      '通过 GeoIP 让所有俄罗斯 IP 段绕过 VPN — 仅代理模式有效';
+  String get settingsRoutingPresetRuGeoipDesc => '通过 GeoIP 让所有俄罗斯 IP 段绕过 VPN — 仅代理模式有效';
 
   @override
   String get settingsRoutingPresetBanksTitle => '银行和政务 — 直连';
@@ -227,8 +224,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingPresetLanIpsTitle => '本地网络 — 直连';
 
   @override
-  String get settingsRoutingPresetLanIpsDesc =>
-      '私有局域网 IP 段（192.168.x、10.x …）绕过 VPN';
+  String get settingsRoutingPresetLanIpsDesc => '私有局域网 IP 段（192.168.x、10.x …）绕过 VPN';
 
   @override
   String get settingsRoutingPresetAdsTitle => '广告和跟踪器 — 阻止';
@@ -240,15 +236,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingPresetStreamingTitle => '流媒体 — 代理';
 
   @override
-  String get settingsRoutingPresetStreamingDesc =>
-      '强制 YouTube、Netflix、Twitch 经过 VPN';
+  String get settingsRoutingPresetStreamingDesc => '强制 YouTube、Netflix、Twitch 经过 VPN';
 
   @override
   String get settingsRoutingPresetMessengersTitle => '即时通讯 — 代理';
 
   @override
-  String get settingsRoutingPresetMessengersDesc =>
-      '强制 Telegram、Discord、WhatsApp 经过 VPN';
+  String get settingsRoutingPresetMessengersDesc => '强制 Telegram、Discord、WhatsApp 经过 VPN';
 
   @override
   String settingsRoutingPresetApplied(String name) {
@@ -274,8 +268,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingBlockDesc => '此列表中的域名和 IP 将被丢弃且永不连接。';
 
   @override
-  String get settingsRoutingSyntaxHint =>
-      '每个列表可同时填写域名和 IP，用逗号或换行分隔：\n• ru — 所有 *.ru 主机（不带点的词 = 域名后缀）\n• vk.com — 该域名及其子域名\n• .example.com — 仅子域名\n• 10.0.0.0/8 或 1.2.3.4 — IP 地址或 CIDR 范围\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite（仅代理模式）\n私有/局域网 IP 和你的服务器始终自动直连。';
+  String get settingsRoutingSyntaxHint => '每个列表可同时填写域名和 IP，用逗号或换行分隔：\n• ru — 所有 *.ru 主机（不带点的词 = 域名后缀）\n• vk.com — 该域名及其子域名\n• .example.com — 仅子域名\n• 10.0.0.0/8 或 1.2.3.4 — IP 地址或 CIDR 范围\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite（仅代理模式）\n私有/局域网 IP 和你的服务器始终自动直连。';
 
   @override
   String get settingsRoutingValuesHint => '每行一个，或用逗号分隔';
@@ -388,8 +381,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get settingsLocalPortsHint =>
-      '本地 SOCKS5 和 HTTP 代理的监听端口（默认 2080 / 2081）。将在下次连接时生效。两个端口必须不同。';
+  String get settingsLocalPortsHint => '本地 SOCKS5 和 HTTP 代理的监听端口（默认 2080 / 2081）。将在下次连接时生效。两个端口必须不同。';
 
   @override
   String get settingsLocalPortsResetTitle => '恢复默认';
@@ -532,8 +524,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPingMethodSpeed => '速度测试';
 
   @override
-  String get settingsPingMethodSpeedHint =>
-      '通过服务器下载固定大小的数据并以 Mbps 显示吞吐量（无需 VPN 即可工作）';
+  String get settingsPingMethodSpeedHint => '通过服务器下载固定大小的数据并以 Mbps 显示吞吐量（无需 VPN 即可工作）';
 
   @override
   String get settingsPingTargetTitle => 'HTTP 测试 URL';
@@ -585,6 +576,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get subscriptionsUrlCopied => 'URL 已复制';
+
+  @override
+  String get subscriptionsShareButton => '分享（二维码 + 链接）';
+
+  @override
+  String get subscriptionsShareAction => '分享';
+
+  @override
+  String subscriptionsShareFailed(Object error) {
+    return '分享失败：$error';
+  }
 
   @override
   String get subscriptionsDeleteSubscription => '删除订阅';
@@ -698,8 +700,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversAddServerTitle => '添加服务器';
 
   @override
-  String get serversPasteVlessHint =>
-      '粘贴 vless://、vmess://、trojan://、ss://、hysteria2:// 或 hy2://（每行一个）';
+  String get serversPasteVlessHint => '粘贴 vless://、vmess://、trojan://、ss://、hysteria2:// 或 hy2://（每行一个）';
 
   @override
   String get serversPasteHint => 'vless://… 或 hy2://host:port?auth=…';
@@ -838,8 +839,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsHwidNotShared => '不共享 HWID';
 
   @override
-  String get settingsHwidHint =>
-      '启用后，你设备的唯一 ID（HWID）会被发送到订阅服务器。部分提供商需要它进行 HWID 绑定。禁用可提升隐私。';
+  String get settingsHwidHint => '启用后，你设备的唯一 ID（HWID）会被发送到订阅服务器。部分提供商需要它进行 HWID 绑定。禁用可提升隐私。';
 
   @override
   String get settingsRoutingRules => '路由规则';
@@ -1016,8 +1016,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get splitClearAll => '全部清除';
 
   @override
-  String get splitProxyModeWarning =>
-      '在 Proxy 模式下不会应用分应用代理 — 所有流量都经过系统代理。请将连接模式切换为 TUN（在侧边栏中），这样按进程的规则才会生效。';
+  String get splitProxyModeWarning => '在 Proxy 模式下不会应用分应用代理 — 所有流量都经过系统代理。请将连接模式切换为 TUN（在侧边栏中），这样按进程的规则才会生效。';
 
   @override
   String get settingsLatestVersionInstalled => '你已是最新版本';
@@ -1088,8 +1087,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAutoConnectOnAutostart => '启动时自动连接';
 
   @override
-  String get settingsAutoConnectOnAutostartHint =>
-      '连接上次选择的服务器，使用侧栏中的模式。TUN 需要管理员权限，否则使用 Proxy';
+  String get settingsAutoConnectOnAutostartHint => '连接上次选择的服务器，使用侧栏中的模式。TUN 需要管理员权限，否则使用 Proxy';
 
   @override
   String get settingsAutoConnectRequiresAutostart => '请先启用「随 Windows 启动」';
@@ -1098,8 +1096,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get desktopTunAdminTitle => '需要管理员权限';
 
   @override
-  String get desktopTunAdminMessage =>
-      'TUN 模式需要以管理员身份运行。请以管理员身份重启应用，侧栏中选择的模式会保留。';
+  String get desktopTunAdminMessage => 'TUN 模式需要以管理员身份运行。请以管理员身份重启应用，侧栏中选择的模式会保留。';
 
   @override
   String get desktopTunAdminRestart => '以管理员身份重启';

@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'windows_zip_updater.dart';
+import '../utils/local_vpn_proxy.dart';
 
 /// инфа о доступном обновлении
 class UpdateInfo {
@@ -69,18 +70,36 @@ class UpdateService {
     caseSensitive: false,
   );
 
-  static final _dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 30),
-    ),
-  );
-
   static const _prefSkipVersion = 'skip_update_version';
   static const _prefUpdateCheckCount = 'update_check_count';
   static const _checkInterval = 3;
 
-  static Future<UpdateInfo?> checkForUpdate({bool force = false}) async {
+  /// When the VPN is connected on desktop, GitHub traffic uses the local HTTP
+  /// proxy (Dart IO does not support SOCKS in [HttpClient.findProxy]).
+  static Dio _buildDio({bool vpnConnected = false, int httpPort = 2081}) {
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 60),
+        // GitHub's REST API rejects requests without a User-Agent with HTTP 403;
+        // the default `Dart/x.y` UA is also flagged. Send the app name as the docs require.
+        headers: {'User-Agent': '$_repo-updater'},
+      ),
+    );
+    configureDioForActiveVpn(
+      dio,
+      vpnConnected: vpnConnected,
+      httpPort: httpPort,
+    );
+    return dio;
+  }
+
+  static Future<UpdateInfo?> checkForUpdate({
+    bool force = false,
+    bool vpnConnected = false,
+    int httpPort = 2081,
+  }) async {
+    final dio = _buildDio(vpnConnected: vpnConnected, httpPort: httpPort);
     try {
       if (!force) {
         final prefs = await SharedPreferences.getInstance();
@@ -93,8 +112,13 @@ class UpdateService {
       }
 
       final currentVersion = await _getCurrentVersion();
-      final releases = await _fetchReleases();
-      if (releases.isEmpty) return null;
+      final releases = await _fetchReleases(dio);
+      if (releases.isEmpty) {
+        if (force) {
+          throw StateError('Could not fetch releases from GitHub');
+        }
+        return null;
+      }
 
       final latestRelease = releases.first;
 
@@ -141,6 +165,7 @@ class UpdateService {
         checksumUrl: checksumAsset?['browser_download_url'] as String?,
       );
     } catch (e) {
+      if (force) rethrow;
       return null;
     }
   }
@@ -150,26 +175,49 @@ class UpdateService {
     return info.version;
   }
 
-  static Future<List<Map<String, dynamic>>> _fetchReleases() async {
-    final response = await _dio.get(
-      'https://api.github.com/repos/$_owner/$_repo/releases',
-      options: Options(headers: {'Accept': 'application/vnd.github+json'}),
-    );
-
-    if (response.statusCode != 200) return [];
-
-    final releases = response.data as List;
+  static Future<List<Map<String, dynamic>>> _fetchReleases(Dio dio) async {
     final filtered = <Map<String, dynamic>>[];
 
-    for (final release in releases) {
-      final tagName = (release['tag_name'] ?? '').toString();
-      if (!_isValidReleaseTag(tagName)) {
-        continue;
+    // Two pages (200 releases) is plenty; the endpoint returns newest-first.
+    // Fetching more just burns the unauthenticated 60-req/hour rate limit.
+    for (var page = 1; page <= 2; page++) {
+      final Response response;
+      try {
+        response = await dio.get(
+          'https://api.github.com/repos/$_owner/$_repo/releases',
+          queryParameters: {'per_page': 100, 'page': page},
+          options: Options(headers: {'Accept': 'application/vnd.github+json'}),
+        );
+      } on DioException catch (e) {
+        final status = e.response?.statusCode;
+        if (status == 403 || status == 429) {
+          // Unauthenticated GitHub API: 60 requests/hour per IP. When the VPN is
+          // up the proxy exit IP may already be throttled by other users.
+          throw StateError(
+            'GitHub rate limit reached (HTTP $status). Try again in a few minutes'
+            '${page == 1 ? '' : ', or check without the VPN connected'}.',
+          );
+        }
+        rethrow;
       }
-      if (release['prerelease'] == true) continue;
-      if (release['draft'] == true) continue;
-      if (_releaseDate(release) == null) continue;
-      filtered.add(Map<String, dynamic>.from(release as Map));
+
+      if (response.statusCode != 200) break;
+
+      final releases = response.data as List;
+      if (releases.isEmpty) break;
+
+      for (final release in releases) {
+        final tagName = (release['tag_name'] ?? '').toString();
+        if (!_isValidReleaseTag(tagName)) {
+          continue;
+        }
+        if (release['prerelease'] == true) continue;
+        if (release['draft'] == true) continue;
+        if (_releaseDate(release) == null) continue;
+        filtered.add(Map<String, dynamic>.from(release as Map));
+      }
+
+      if (releases.length < 100) break;
     }
 
     filtered.sort((a, b) {
@@ -372,9 +420,12 @@ class UpdateService {
   /// Returns `true` when the app is exiting to apply a Windows portable update.
   static Future<bool> downloadAndInstall(
     UpdateInfo info, {
+    bool vpnConnected = false,
+    int httpPort = 2081,
     void Function(int received, int total)? onProgress,
     Future<void> Function()? beforeRestart,
   }) async {
+    final dio = _buildDio(vpnConnected: vpnConnected, httpPort: httpPort);
     if (info.openInBrowser) {
       await _openUrlInBrowser(info.downloadUrl);
       return false;
@@ -388,7 +439,7 @@ class UpdateService {
       await file.delete();
     }
 
-    await _dio.download(
+    await dio.download(
       info.downloadUrl,
       file.path,
       onReceiveProgress: (received, total) {
@@ -400,7 +451,7 @@ class UpdateService {
 
     // Never hand an unverified binary to the OS installer / portable updater.
     try {
-      await _verifyDownloadedFile(file, info);
+      await _verifyDownloadedFile(file, info, dio);
     } catch (_) {
       if (await file.exists()) {
         await file.delete();
@@ -446,7 +497,11 @@ class UpdateService {
   /// Throws if the downloaded [file] doesn't match the release's published
   /// SHA-256. A `null`/missing checksum is treated as a failure when
   /// [_requireChecksum] is set.
-  static Future<void> _verifyDownloadedFile(File file, UpdateInfo info) async {
+  static Future<void> _verifyDownloadedFile(
+    File file,
+    UpdateInfo info,
+    Dio dio,
+  ) async {
     final checksumUrl = info.checksumUrl;
     if (checksumUrl == null || checksumUrl.isEmpty) {
       if (_requireChecksum) {
@@ -458,7 +513,11 @@ class UpdateService {
       return;
     }
 
-    final expected = await _fetchExpectedSha256(checksumUrl, info.assetName);
+    final expected = await _fetchExpectedSha256(
+      checksumUrl,
+      info.assetName,
+      dio,
+    );
     if (expected == null) {
       throw StateError(
         'Could not read the SHA-256 checksum for ${info.assetName}; aborting update.',
@@ -483,9 +542,10 @@ class UpdateService {
   static Future<String?> _fetchExpectedSha256(
     String url,
     String assetName,
+    Dio dio,
   ) async {
     try {
-      final response = await _dio.get<String>(url);
+      final response = await dio.get<String>(url);
       if (response.statusCode != 200) return null;
       return _parseSha256(response.data ?? '', assetName);
     } catch (_) {
