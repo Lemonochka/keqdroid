@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../utils/awg_profile.dart';
+import '../utils/keqrnel_config.dart';
 import 'tunnel_backend.dart';
 import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
@@ -66,9 +67,19 @@ class AndroidTunnelBackend implements TunnelBackend {
   @override
   Future<void> startSession(TunnelSessionRequest request) async {
     try {
+      // keqrnel: оборачиваем xray-конфиг во встроенный движок и просим нативный
+      // сервис запускать libkeqrnel.so вместо libxray.so. Для backend.awg и
+      // дефолтного coreEngine == chain поведение не меняется.
+      final useKeqrnel = request.coreEngine == 'keqrnel' &&
+          request.vpnBackend == VpnBackend.xray;
+      final coreConfig = useKeqrnel
+          ? KeqrnelConfig.wrapXray(request.xrayConfig)
+          : request.xrayConfig;
+
       final args = <String, dynamic>{
         'vpnBackend': request.vpnBackend.wireValue,
-        'xrayConfig': request.xrayConfig,
+        'xrayConfig': coreConfig,
+        'coreEngine': useKeqrnel ? 'keqrnel' : 'chain',
         'socksPort': request.socksPort,
         'excludePackages': request.excludePackages,
         'includePackages': request.includePackages,

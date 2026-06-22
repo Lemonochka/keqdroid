@@ -37,6 +37,9 @@ class AppSettings {
   final bool minimizeToTray;
   /// Windows: запуск вместе с системой.
   final bool launchAtStartup;
+  /// Ядро: `chain` (xray → sing-box, как было) или `keqrnel` (единое ядро со
+  /// встроенным xray). Дефолт `chain` — существующее поведение не меняется.
+  final String coreEngine;
 
   const AppSettings({
     this.localPort = 2080,
@@ -63,6 +66,7 @@ class AppSettings {
     this.appLanguageCode = 'system',
     this.minimizeToTray = true,
     this.launchAtStartup = false,
+    this.coreEngine = coreEngineKeqrnel,
   });
 
   Map<String, dynamic> toJson() => {
@@ -90,6 +94,7 @@ class AppSettings {
     'appLanguageCode': appLanguageCode,
     'minimizeToTray': minimizeToTray,
     'launchAtStartup': launchAtStartup,
+    'coreEngine': coreEngine,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -145,7 +150,19 @@ class AppSettings {
       ),
       minimizeToTray: json['minimizeToTray'] as bool? ?? true,
       launchAtStartup: json['launchAtStartup'] as bool? ?? false,
+      coreEngine: normalizeCoreEngine(json['coreEngine'] as String?),
     );
+  }
+
+  /// Допустимые значения [coreEngine].
+  static const coreEngineChain = 'chain';
+  static const coreEngineKeqrnel = 'keqrnel';
+  static const coreEngines = [coreEngineChain, coreEngineKeqrnel];
+
+  static String normalizeCoreEngine(String? raw) {
+    final v = raw?.trim().toLowerCase();
+    // keqrnel is the default; only an explicitly saved "chain" keeps the old path.
+    return v == coreEngineChain ? coreEngineChain : coreEngineKeqrnel;
   }
 
   static String _normalizeLanguageCode(String? raw) {
@@ -220,6 +237,7 @@ class AppSettings {
     String? appLanguageCode,
     bool? minimizeToTray,
     bool? launchAtStartup,
+    String? coreEngine,
   }) =>
       AppSettings(
         localPort: localPort ?? this.localPort,
@@ -246,6 +264,7 @@ class AppSettings {
         appLanguageCode: appLanguageCode ?? this.appLanguageCode,
         minimizeToTray: minimizeToTray ?? this.minimizeToTray,
         launchAtStartup: launchAtStartup ?? this.launchAtStartup,
+        coreEngine: coreEngine ?? this.coreEngine,
       );
 
   @override
@@ -276,7 +295,8 @@ class AppSettings {
               systemProxyEnabled == other.systemProxyEnabled &&
               appLanguageCode == other.appLanguageCode &&
               minimizeToTray == other.minimizeToTray &&
-              launchAtStartup == other.launchAtStartup;
+              launchAtStartup == other.launchAtStartup &&
+              coreEngine == other.coreEngine;
 
   @override
   int get hashCode => Object.hashAll([
@@ -304,6 +324,7 @@ class AppSettings {
     appLanguageCode,
     minimizeToTray,
     launchAtStartup,
+    coreEngine,
   ]);
 
   ConnectionMode get connectionModeEnum =>

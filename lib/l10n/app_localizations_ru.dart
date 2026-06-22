@@ -434,10 +434,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get settingsXrayCoreTitle => 'Ядро Xray';
+  String get settingsXrayCoreTitle => 'Ядро и протоколы';
 
   @override
-  String get settingsXrayCoreSubtitle => 'DNS, XMUX, лог и маршрутизация';
+  String get settingsXrayCoreSubtitle =>
+      'Движок, DNS, XMUX, лог и маршрутизация';
 
   @override
   String get settingsXrayDnsSection => 'DNS';

@@ -439,10 +439,10 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get settingsXrayCoreTitle => 'Xray-Kern';
+  String get settingsXrayCoreTitle => 'Kern & Protokolle';
 
   @override
-  String get settingsXrayCoreSubtitle => 'DNS, XMUX, Log und Routing';
+  String get settingsXrayCoreSubtitle => 'Engine, DNS, XMUX, Log und Routing';
 
   @override
   String get settingsXrayDnsSection => 'DNS';

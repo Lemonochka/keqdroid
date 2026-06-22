@@ -15,6 +15,7 @@ class LinuxCorePaths {
 
   static const assetXray = 'assets/bin/linux/xray';
   static const assetSingbox = 'assets/bin/linux/sing-box';
+  static const assetKeqrnel = 'assets/bin/linux/keqrnel';
   static const assetWireproxy = 'assets/bin/linux/wireproxy';
   static const assetGeoip = 'assets/bin/linux/geoip.dat';
   static const assetGeosite = 'assets/bin/linux/geosite.dat';
@@ -34,6 +35,10 @@ class LinuxCorePaths {
 
   static Future<String?> singboxExecutable() =>
       _resolveExecutable(assetSingbox, 'sing-box');
+
+  /// keqrnel — единое ядро (sing-box host + встроенный xray), заменяет xray+sing-box.
+  static Future<String?> keqrnelExecutable() =>
+      _resolveExecutable(assetKeqrnel, 'keqrnel');
 
   static Future<String?> wireproxyExecutable() =>
       _resolveExecutable(assetWireproxy, 'wireproxy');
@@ -101,16 +106,19 @@ class LinuxCorePaths {
     String assetKey,
     String fileName,
   ) async {
+    // The bundled binary lives where we CANNOT make it executable: a read-only
+    // AppImage FUSE mount, or a root-owned /opt (deb). Flutter assets also drop
+    // the +x bit. So copy the binary into a user-writable cache dir and chmod
+    // it there, then run that copy. Without this, Process.start fails with
+    // "Permission denied" (which the UI mis-reported as "VPN permission").
     final fromFlutterBundle = _pathBesideFlutterAssets(fileName);
     if (fromFlutterBundle != null) {
-      await _ensureExecutable(fromFlutterBundle);
-      return fromFlutterBundle;
+      return _stageExecutable(fromFlutterBundle, fileName);
     }
 
     final besideExe = p.join(p.dirname(Platform.resolvedExecutable), fileName);
     if (File(besideExe).existsSync()) {
-      await _ensureExecutable(besideExe);
-      return besideExe;
+      return _stageExecutable(besideExe, fileName);
     }
 
     final fromAsset = await _extractAssetToTemp(assetKey, fileName);
@@ -119,7 +127,40 @@ class LinuxCorePaths {
       return fromAsset;
     }
 
-    return _which(fileName);
+    return _which(fileName); // system PATH copy is already executable
+  }
+
+  /// User-writable cache for runnable core binaries (`~/.cache/keqdroid/cores`).
+  static Future<String> _coresCacheDir() async {
+    final base = Platform.environment['XDG_CACHE_HOME'] ??
+        p.join(
+          Platform.environment['HOME'] ?? Directory.systemTemp.path,
+          '.cache',
+        );
+    final dir = Directory(p.join(base, 'keqdroid', 'cores'));
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+    return dir.path;
+  }
+
+  /// Copies [src] into the writable cache (only when missing or a different
+  /// size) and marks it executable; returns the runnable path.
+  static Future<String> _stageExecutable(String src, String fileName) async {
+    try {
+      final dstPath = p.join(await _coresCacheDir(), fileName);
+      final dst = File(dstPath);
+      final srcFile = File(src);
+      if (!dst.existsSync() ||
+          dst.lengthSync() != srcFile.lengthSync()) {
+        await srcFile.copy(dstPath);
+      }
+      await _ensureExecutable(dstPath);
+      return dstPath;
+    } catch (_) {
+      // Staging failed (e.g. no HOME) — fall back to the source path and at
+      // least try to chmod it; better than nothing.
+      await _ensureExecutable(src);
+      return src;
+    }
   }
 
   /// `build/linux/x64/release/bundle/data/flutter_assets/...`

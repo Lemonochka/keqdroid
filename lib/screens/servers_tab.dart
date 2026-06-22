@@ -410,7 +410,16 @@ class _ServersTabState extends ConsumerState<ServersTab>
       );
     }
 
-    return SizedBox.expand(
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyV, control: true):
+            () => _addServersFromClipboard(),
+        const SingleActivator(LogicalKeyboardKey.keyV, meta: true):
+            () => _addServersFromClipboard(),
+      },
+      child: Focus(
+        autofocus: true,
+        child: SizedBox.expand(
       child: Stack(
       fit: StackFit.expand,
       children:[
@@ -475,6 +484,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
           ),
         ),
       ],
+      ),
+        ),
       ),
     );
   }
@@ -559,6 +570,45 @@ class _ServersTabState extends ConsumerState<ServersTab>
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  /// Ctrl/Cmd+V на странице серверов: добавляет конфиг-ссылки из буфера
+  /// (vless/vmess/trojan/ss/hysteria2, по одной в строке). AmneziaWG сюда не
+  /// идёт — его добавляют через «Импорт файла».
+  Future<void> _addServersFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final raw = data?.text?.trim() ?? '';
+    if (raw.isEmpty || !mounted) return;
+    if (AwgProfile.isAwgConfig(raw)) {
+      _pasteToast('AmneziaWG добавляйте через «Импорт файла»');
+      return;
+    }
+    final configs = raw
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+    if (configs.isEmpty) return;
+    var added = 0;
+    try {
+      for (final c in configs) {
+        await ref.read(serversProvider.notifier).addManual(c);
+        added++;
+      }
+      if (mounted) _pasteToast('Добавлено серверов: $added');
+    } catch (e) {
+      if (mounted) _showImportError(context, e);
+    }
+  }
+
+  void _pasteToast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }

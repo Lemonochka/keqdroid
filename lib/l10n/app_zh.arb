@@ -201,8 +201,8 @@
       "address": {}
     }
   },
-  "settingsXrayCoreTitle": "Xray 内核",
-  "settingsXrayCoreSubtitle": "DNS、XMUX、日志与路由",
+  "settingsXrayCoreTitle": "内核与协议",
+  "settingsXrayCoreSubtitle": "引擎、DNS、XMUX、日志与路由",
   "settingsXrayDnsSection": "DNS",
   "settingsXrayDnsCustom": "自定义 DNS 服务器",
   "settingsXrayDnsCustomHint": "每行一个地址（DoH、DoT 或普通）",

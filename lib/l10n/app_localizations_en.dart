@@ -426,10 +426,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsXrayCoreTitle => 'Xray core';
+  String get settingsXrayCoreTitle => 'Core & protocols';
 
   @override
-  String get settingsXrayCoreSubtitle => 'DNS, XMUX, log and routing';
+  String get settingsXrayCoreSubtitle => 'Engine, DNS, XMUX, log and routing';
 
   @override
   String get settingsXrayDnsSection => 'DNS';

@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import '../core/app_logger.dart';
 import '../tunnel/linux_core_paths.dart';
 import '../tunnel/windows_core_paths.dart';
+import '../utils/keqrnel_config.dart';
 import 'windows_desktop_service.dart';
 
 /// короткоживущий xray для url-пинга, как на android
@@ -15,10 +16,19 @@ class EphemeralXrayPing {
   // Desktop core resolution is platform-specific; the rest (config, socks probe)
   // is platform-neutral so url/speed ping work on Windows and Linux alike.
   static Future<String?> _resolveXray() {
-    if (Platform.isWindows) return WindowsCorePaths.xrayExecutable();
-    if (Platform.isLinux) return LinuxCorePaths.xrayExecutable();
+    // Desktop runs the unified keqrnel core (standalone xray is gone).
+    if (Platform.isWindows) return WindowsCorePaths.keqrnelExecutable();
+    if (Platform.isLinux) return LinuxCorePaths.keqrnelExecutable();
     return Future<String?>.value(null);
   }
+
+  /// The ephemeral test runs through keqrnel, so the xray config is wrapped into
+  /// keqrnel's embedded-xray outbound (its own socks inbound binds the test port
+  /// exactly like standalone xray).
+  static String _coreConfig(String xrayConfigJson) =>
+      (Platform.isWindows || Platform.isLinux)
+          ? KeqrnelConfig.wrapXray(xrayConfigJson)
+          : xrayConfigJson;
 
   static Future<Directory> _sessionDir() {
     if (Platform.isLinux) return LinuxCorePaths.sessionDir();
@@ -183,7 +193,7 @@ class EphemeralXrayPing {
     Process? process;
 
     try {
-      await configFile.writeAsString(xrayConfigJson);
+      await configFile.writeAsString(_coreConfig(xrayConfigJson));
       process = await Process.start(
         xrayBin,
         ['run', '-c', configFile.path],
@@ -255,7 +265,7 @@ class EphemeralXrayPing {
     Process? process;
 
     try {
-      await configFile.writeAsString(xrayConfigJson);
+      await configFile.writeAsString(_coreConfig(xrayConfigJson));
       process = await Process.start(
         xrayBin,
         ['run', '-c', configFile.path],

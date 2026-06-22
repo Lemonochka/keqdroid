@@ -201,8 +201,8 @@
       "address": {}
     }
   },
-  "settingsXrayCoreTitle": "Xray core",
-  "settingsXrayCoreSubtitle": "DNS, XMUX, log and routing",
+  "settingsXrayCoreTitle": "Core & protocols",
+  "settingsXrayCoreSubtitle": "Engine, DNS, XMUX, log and routing",
   "settingsXrayDnsSection": "DNS",
   "settingsXrayDnsCustom": "Custom DNS servers",
   "settingsXrayDnsCustomHint": "One address per line (DoH, DoT, or plain)",

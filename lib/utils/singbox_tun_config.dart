@@ -64,7 +64,11 @@ class SingBoxTunConfigGen {
 
       return {
         'tag': 'proxy-dns',
-        'type': 'udp',
+        // DNS over the SOCKS proxy: UDP needs SOCKS UDP-ASSOCIATE, which often
+        // doesn't survive the TUN on Linux (Arch/CachyOS) — queries silently
+        // drop and nothing resolves. TCP rides the reliable SOCKS TCP path that
+        // already carries app traffic. Windows TUN works on UDP, keep it there.
+        'type': Platform.isLinux ? 'tcp' : 'udp',
         'server': host,
         'server_port': ?port,
         'detour': 'proxy',

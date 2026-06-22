@@ -11,6 +11,7 @@ import '../services/debug_log_service.dart';
 import '../services/ephemeral_xray_ping.dart';
 import '../services/firefox_proxy_helper.dart';
 import '../services/windows_desktop_service.dart';
+import '../utils/keqrnel_config.dart';
 import '../utils/wireproxy_config.dart';
 import 'connection_mode.dart';
 import 'socks_credential_generator.dart';
@@ -31,6 +32,11 @@ class WindowsTunnelBackend implements TunnelBackend {
   final _stateCtrl = StreamController<VpnState>.broadcast();
   Process? _xrayProcess;
   Process? _singboxProcess;
+  // keqrnel: единое ядро (sing-box host + встроенный xray) — заменяет связку
+  // _xrayProcess + _singboxProcess. null когда неактивно.
+  Process? _keqrnelProcess;
+  // Порт clash_api keqrnel в proxy-режиме — из него читаем кумулятивный трафик.
+  int? _keqrnelClashPort;
   Directory? _sessionDir;
   ({String username, String password})? _pendingCreds;
   ConnectionMode? _activeMode;
@@ -101,11 +107,9 @@ class WindowsTunnelBackend implements TunnelBackend {
       if (request.vpnBackend == VpnBackend.awg) {
         await _startAwgSession(request);
       } else {
-        await _startXraySession(request);
-        await WindowsDesktopService.registerSessionCoreProcesses(
-          xrayPid: _xrayProcess?.pid ?? 0,
-          singboxPid: _singboxProcess?.pid ?? 0,
-        );
+        // keqrnel — единственное ядро для xray-протоколов (proxy и TUN).
+        // Отдельные xray.exe/sing-box.exe больше не используются и не поставляются.
+        await _startKeqrnelSession(request);
       }
 
       _startStatsLoop(request.mode);
@@ -125,80 +129,142 @@ class WindowsTunnelBackend implements TunnelBackend {
     }
   }
 
-  Future<void> _startXraySession(TunnelSessionRequest request) async {
-    final xrayBin = await WindowsCorePaths.xrayExecutable();
-    if (xrayBin == null) {
+  /// keqrnel (единое ядро) — один процесс вместо цепочки. Диспетчер по режиму.
+  Future<void> _startKeqrnelSession(TunnelSessionRequest request) async {
+    if (request.mode == ConnectionMode.tun) {
+      await _startKeqrnelTunSession(request);
+    } else {
+      await _startKeqrnelProxySession(request);
+    }
+  }
+
+  /// proxy-режим: keqrnel = чистый socks/http-провайдер (встроенный xray
+  /// поднимает inbounds из xray-конфига), системный прокси Windows — поверх.
+  /// sing-box TUN здесь не задействован, админ не нужен.
+  Future<void> _startKeqrnelProxySession(TunnelSessionRequest request) async {
+    final bin = await WindowsCorePaths.keqrnelExecutable();
+    if (bin == null) {
       throw VpnStartException(
-        'xray.exe not found. ${WindowsCorePaths.binariesHint}',
+        'keqrnel.exe not found. ${WindowsCorePaths.binariesHint}',
       );
     }
 
-    final xrayConfigFile = File('${_sessionDir!.path}/xray.json');
-    _xrayBinPath = xrayBin;
-
-    var xrayConfigBody = request.xrayConfig;
-    if (request.mode == ConnectionMode.proxy) {
-      final decoded = jsonDecode(request.xrayConfig) as Map<String, dynamic>;
-      xrayConfigBody = jsonEncode(
-        XraySessionStats.augmentConfig(
-          decoded,
-          apiPort: XraySessionStats.defaultApiPort,
-        ),
-      );
-    }
-    await xrayConfigFile.writeAsString(xrayConfigBody);
+    // sing-box owns the local SOCKS/HTTP listeners and forwards through the
+    // xray bridge, so it counts traffic and exposes it via clash_api.
+    final clashPort = await _freePort();
+    final merged = KeqrnelConfig.proxyWithStats(
+      xrayConfig: request.xrayConfig,
+      socksPort: request.socksPort,
+      httpPort: request.httpPort,
+      clashPort: clashPort,
+    );
+    _keqrnelClashPort = clashPort;
+    final configFile = File('${_sessionDir!.path}/keqrnel.json');
+    await configFile.writeAsString(merged);
 
     await _ensurePortsAvailable(request, needsHttpFromXray: true);
 
-    // point xray at geoip.dat / geosite.dat so geoip:/geosite: rules resolve
-    // even though the working dir is a temp session dir.
+    final workDir = p.dirname(bin);
     final geoDir = await WindowsCorePaths.geoAssetDir();
 
-    _xrayProcess = await Process.start(
-      xrayBin,
-      ['run', '-c', xrayConfigFile.path],
-      workingDirectory: _sessionDir!.path,
+    _keqrnelProcess = await Process.start(
+      bin,
+      [configFile.path],
+      workingDirectory: workDir,
       environment: geoDir != null ? {'XRAY_LOCATION_ASSET': geoDir} : null,
       mode: ProcessStartMode.normal,
     );
-    _pipeProcessOutput(_xrayProcess!, _xrayLog, 'xray');
+    _pipeProcessOutput(_keqrnelProcess!, _xrayLog, 'keqrnel');
 
     final socksReady = await _waitForPort(
       '127.0.0.1',
       request.socksPort,
-      process: _xrayProcess,
+      process: _keqrnelProcess,
       log: _xrayLog,
-      processLabel: 'Xray',
+      processLabel: 'keqrnel',
     );
     if (!socksReady) {
       throw VpnStartException(
-        'Xray SOCKS port ${request.socksPort} did not open.\n${_tail(_xrayLog)}',
+        'keqrnel SOCKS port ${request.socksPort} did not open.\n${_tail(_xrayLog)}',
       );
     }
 
-    if (request.mode == ConnectionMode.proxy && request.systemProxy) {
+    if (request.systemProxy) {
       final httpReady = await _waitForPort(
         '127.0.0.1',
         request.httpPort,
-        process: _xrayProcess,
+        process: _keqrnelProcess,
         log: _xrayLog,
-        processLabel: 'Xray HTTP',
+        processLabel: 'keqrnel HTTP',
       );
       if (!httpReady) {
         throw VpnStartException(
-          'Xray HTTP port ${request.httpPort} did not open. '
+          'keqrnel HTTP port ${request.httpPort} did not open. '
           'System proxy needs the HTTP inbound.\n${_tail(_xrayLog)}',
         );
       }
-    }
-
-    if (request.mode == ConnectionMode.tun) {
-      await _startSingboxSession(request);
-    }
-
-    if (request.mode == ConnectionMode.proxy && request.systemProxy) {
       await _applySystemProxy(request);
     }
+
+    await WindowsDesktopService.registerSessionCoreProcesses(
+      xrayPid: _keqrnelProcess?.pid ?? 0,
+      singboxPid: 0,
+    );
+  }
+
+  /// TUN-режим: один процесс вместо xray + sing-box. Берём тот же sing-box
+  /// TUN-конфиг, но его socks-`proxy` заменён на встроенный xray
+  /// (см. [KeqrnelConfig.fromChain]). Запускается из каталога с wintun.dll.
+  Future<void> _startKeqrnelTunSession(TunnelSessionRequest request) async {
+    final bin = await WindowsCorePaths.keqrnelExecutable();
+    if (bin == null) {
+      throw VpnStartException(
+        'keqrnel.exe not found. ${WindowsCorePaths.binariesHint}',
+      );
+    }
+    final singConfig = request.singboxConfig;
+    if (singConfig == null || singConfig.isEmpty) {
+      throw const VpnStartException(
+        'singboxConfig is required for keqrnel TUN',
+      );
+    }
+
+    final merged = KeqrnelConfig.fromChain(
+      singboxConfig: singConfig,
+      xrayConfig: request.xrayConfig,
+      windows: true,
+    );
+    final configFile = File('${_sessionDir!.path}/keqrnel.json');
+    await configFile.writeAsString(merged);
+
+    // Запускаем рядом с wintun.dll (как sing-box); xray-ассеты — через env.
+    final workDir = p.dirname(bin);
+    final geoDir = await WindowsCorePaths.geoAssetDir();
+
+    _keqrnelProcess = await Process.start(
+      bin,
+      [configFile.path],
+      workingDirectory: workDir,
+      environment: geoDir != null ? {'XRAY_LOCATION_ASSET': geoDir} : null,
+      mode: ProcessStartMode.normal,
+    );
+    _pipeProcessOutput(_keqrnelProcess!, _singboxLog, 'keqrnel');
+
+    final ready = await _waitForSingbox(
+      process: _keqrnelProcess!,
+      log: _singboxLog,
+    );
+    if (!ready) {
+      throw VpnStartException(
+        'keqrnel TUN did not start. Run as Administrator and ensure '
+        'wintun.dll is next to keqrnel.exe if required.\n${_tail(_singboxLog)}',
+      );
+    }
+
+    await WindowsDesktopService.registerSessionCoreProcesses(
+      xrayPid: _keqrnelProcess?.pid ?? 0,
+      singboxPid: 0,
+    );
   }
 
   /// AmneziaWG (оба режима на базе wireproxy-awg, который встраивает amneziawg-go):
@@ -308,11 +374,14 @@ class WindowsTunnelBackend implements TunnelBackend {
     return port;
   }
 
+  /// TUN-обёртка для AmneziaWG: keqrnel (как sing-box host) заворачивает локальный
+  /// SOCKS5 wireproxy в TUN. Раньше это делал отдельный sing-box.exe — теперь его
+  /// роль выполняет единое ядро keqrnel, поэтому sing-box.exe больше не нужен.
   Future<void> _startSingboxSession(TunnelSessionRequest request) async {
-    final singBin = await WindowsCorePaths.singboxExecutable();
-    if (singBin == null) {
+    final bin = await WindowsCorePaths.keqrnelExecutable();
+    if (bin == null) {
       throw VpnStartException(
-        'sing-box.exe not found. ${WindowsCorePaths.binariesHint}',
+        'keqrnel.exe not found. ${WindowsCorePaths.binariesHint}',
       );
     }
     final singConfig = request.singboxConfig;
@@ -320,17 +389,17 @@ class WindowsTunnelBackend implements TunnelBackend {
       throw const VpnStartException('singboxConfig is required');
     }
 
-    final singConfigFile = File('${_sessionDir!.path}/sing-box.json');
+    final singConfigFile = File('${_sessionDir!.path}/keqrnel-tun.json');
     await singConfigFile.writeAsString(singConfig);
 
-    final singWorkDir = p.dirname(singBin);
+    final workDir = p.dirname(bin);
     _singboxProcess = await Process.start(
-      singBin,
+      bin,
       ['run', '-c', singConfigFile.path],
-      workingDirectory: singWorkDir,
+      workingDirectory: workDir,
       mode: ProcessStartMode.normal,
     );
-    _pipeProcessOutput(_singboxProcess!, _singboxLog, 'sing-box');
+    _pipeProcessOutput(_singboxProcess!, _singboxLog, 'keqrnel-tun');
 
     if (request.mode == ConnectionMode.tun) {
       final singReady = await _waitForSingbox(
@@ -339,8 +408,8 @@ class WindowsTunnelBackend implements TunnelBackend {
       );
       if (!singReady) {
         throw VpnStartException(
-          'sing-box TUN did not start. Run as Administrator and ensure '
-          'wintun.dll is next to sing-box.exe if required.\n${_tail(_singboxLog)}',
+          'keqrnel TUN did not start. Run as Administrator and ensure '
+          'wintun.dll is next to keqrnel.exe if required.\n${_tail(_singboxLog)}',
         );
       }
     }
@@ -436,13 +505,18 @@ class WindowsTunnelBackend implements TunnelBackend {
       );
     }
 
+    // TUN owners first (gracefully, so the embedded sing-box reverts the TUN
+    // adapter / routes / DNS), then the upstream socks providers.
+    await _killProcess(_keqrnelProcess, graceful: true);
+    await _killProcess(_singboxProcess, graceful: true);
     await _killProcess(_wireproxyProcess);
-    await _killProcess(_singboxProcess);
     await _killProcess(_xrayProcess);
     _wireproxyProcess = null;
     _awgInfoPort = null;
     _singboxProcess = null;
     _xrayProcess = null;
+    _keqrnelProcess = null;
+    _keqrnelClashPort = null;
     _xrayBinPath = null;
 
     await WindowsDesktopService.clearSessionCoreProcesses();
@@ -472,7 +546,9 @@ class WindowsTunnelBackend implements TunnelBackend {
 
   @override
   Future<VpnState> getCurrentState() async {
-    if (_xrayProcess != null || _wireproxyProcess != null) {
+    if (_xrayProcess != null ||
+        _wireproxyProcess != null ||
+        _keqrnelProcess != null) {
       return _buildConnectedState(_activeMode);
     }
     return VpnState.disconnected;
@@ -617,9 +693,23 @@ class WindowsTunnelBackend implements TunnelBackend {
     process.stdout.transform(utf8.decoder).listen(handle);
   }
 
-  Future<void> _killProcess(Process? process) async {
+  Future<void> _killProcess(Process? process, {bool graceful = false}) async {
     if (process == null) return;
     try {
+      if (graceful) {
+        // On Windows kill() is a hard TerminateProcess — sing-box then never
+        // reverts the TUN adapter, routes and DNS, which can leave the network
+        // broken after disconnect. keqrnel shuts down cleanly on stdin EOF, so
+        // close stdin and give it time to revert; hard-kill only as a fallback.
+        try {
+          await process.stdin.close();
+        } catch (_) {}
+        final code = await process.exitCode.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => -2,
+        );
+        if (code != -2) return;
+      }
       process.kill(ProcessSignal.sigterm);
       await process.exitCode.timeout(
         const Duration(seconds: 3),
@@ -755,7 +845,11 @@ class WindowsTunnelBackend implements TunnelBackend {
   }
 
   Future<void> _pollTrafficStats(ConnectionMode mode) async {
-    if (_xrayProcess == null && _wireproxyProcess == null) return;
+    if (_xrayProcess == null &&
+        _wireproxyProcess == null &&
+        _keqrnelProcess == null) {
+      return;
+    }
     try {
       final int inOctets;
       final int outOctets;
@@ -784,10 +878,25 @@ class WindowsTunnelBackend implements TunnelBackend {
           'getTrafficStats',
           {'mode': 'tun'},
         );
-        if (result == null || result['ok'] != true) return;
+        if (result == null || result['ok'] != true) {
+          // Counters unavailable — still keep the session timer ticking.
+          _emitConnectedTelemetry(mode);
+          return;
+        }
         inOctets = (result['inOctets'] as num?)?.toInt() ?? 0;
         outOctets = (result['outOctets'] as num?)?.toInt() ?? 0;
+      } else if (mode == ConnectionMode.proxy && _keqrnelClashPort != null) {
+        // keqrnel proxy: кумулятивный трафик из clash_api sing-box.
+        final t = await _queryClashTraffic(_keqrnelClashPort!);
+        if (t == null) {
+          _emitConnectedTelemetry(mode);
+          return;
+        }
+        inOctets = t.down;
+        outOctets = t.up;
       } else {
+        // нет источника счётчика — хотя бы тикаем длительность сессии.
+        _emitConnectedTelemetry(mode);
         return;
       }
 
@@ -843,6 +952,28 @@ class WindowsTunnelBackend implements TunnelBackend {
         }
       }
       return (rx: rx, tx: tx);
+    } catch (_) {
+      return null;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  /// Кумулятивный трафик из clash_api keqrnel: GET /connections →
+  /// downloadTotal/uploadTotal (байты за сессию). down = принято, up = отправлено.
+  Future<({int down, int up})?> _queryClashTraffic(int port) async {
+    final client = HttpClient();
+    try {
+      final req = await client
+          .get('127.0.0.1', port, '/connections')
+          .timeout(const Duration(seconds: 2));
+      final resp = await req.close().timeout(const Duration(seconds: 2));
+      if (resp.statusCode != 200) return null;
+      final body = await resp.transform(utf8.decoder).join();
+      final json = jsonDecode(body) as Map<String, dynamic>;
+      final down = (json['downloadTotal'] as num?)?.toInt() ?? 0;
+      final up = (json['uploadTotal'] as num?)?.toInt() ?? 0;
+      return (down: down, up: up);
     } catch (_) {
       return null;
     } finally {

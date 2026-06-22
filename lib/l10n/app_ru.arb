@@ -201,8 +201,8 @@
       "address": {}
     }
   },
-  "settingsXrayCoreTitle": "Ядро Xray",
-  "settingsXrayCoreSubtitle": "DNS, XMUX, лог и маршрутизация",
+  "settingsXrayCoreTitle": "Ядро и протоколы",
+  "settingsXrayCoreSubtitle": "Движок, DNS, XMUX, лог и маршрутизация",
   "settingsXrayDnsSection": "DNS",
   "settingsXrayDnsCustom": "Свои DNS-серверы",
   "settingsXrayDnsCustomHint": "Один адрес на строку (DoH, DoT или обычный)",

@@ -76,6 +76,7 @@ class TunnelSessionBuilder {
           ? true
           : settings.systemProxyEnabled,
       killSwitch: settings.killSwitch,
+      coreEngine: settings.coreEngine,
     );
   }
 }

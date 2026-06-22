@@ -819,13 +819,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXrayCoreTitle.
   ///
   /// In en, this message translates to:
-  /// **'Xray core'**
+  /// **'Core & protocols'**
   String get settingsXrayCoreTitle;
 
   /// No description provided for @settingsXrayCoreSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'DNS, XMUX, log and routing'**
+  /// **'Engine, DNS, XMUX, log and routing'**
   String get settingsXrayCoreSubtitle;
 
   /// No description provided for @settingsXrayDnsSection.
