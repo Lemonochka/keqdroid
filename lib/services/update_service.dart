@@ -61,8 +61,11 @@ class UpdateService {
   static const _repo = 'keqdroid';
 
   /// Единый semver-тег релиза: v0.1.0, v0.4.1 (Android + Windows в одном release).
+  // Tags may or may not carry a leading "v" (e.g. both `v0.5.1` and `0.5.1`).
+  // Requiring the "v" silently dropped releases tagged without it, so the app
+  // never offered them as updates.
   static final _releaseTagPattern = RegExp(
-    r'^v\d+\.\d+(\.\d+)?(-[\w.]+)?$',
+    r'^v?\d+\.\d+(\.\d+)?(-[\w.]+)?$',
     caseSensitive: false,
   );
 
