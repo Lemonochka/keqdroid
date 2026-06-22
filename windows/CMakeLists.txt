@@ -102,6 +102,22 @@ install(CODE "
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
 
+# Core binaries next to keqdroid.exe. They are deliberately NOT Flutter assets:
+# Flutter bundles assets into every platform, which dragged these into the
+# Android APK (~150 MB dead weight). Installing them here keeps the Windows
+# build self-contained while the APK and the Linux build don't get them.
+#   keqrnel.exe   - unified core (xray protocols + sing-box TUN)
+#   wireproxy.exe - AmneziaWG core
+#   wintun.dll    - Windows TUN adapter (loaded by sing-box at runtime)
+#   *.dat         - geoip/geosite for xray geo routing
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/../assets/bin/windows/"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}"
+  COMPONENT Runtime
+  FILES_MATCHING
+    PATTERN "*.exe"
+    PATTERN "*.dll"
+    PATTERN "*.dat")
+
 # Install the AOT library on non-Debug builds only.
 install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   CONFIGURATIONS Profile;Release

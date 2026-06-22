@@ -16,8 +16,8 @@ class WindowsCorePaths {
   static const assetWireproxy = 'assets/bin/windows/wireproxy.exe';
 
   static const binariesHint =
-      'Положите xray.exe и sing-box.exe в assets/bin/windows/ '
-      '(см. README) и пересоберите приложение, '
+      'Положите wireproxy.exe (для AmneziaWG) и wintun.dll (нужен для TUN) в '
+      'assets/bin/windows/ (см. README) и пересоберите приложение, '
       'или рядом с keqdroid.exe.';
 
   static Future<Directory> sessionDir() async {

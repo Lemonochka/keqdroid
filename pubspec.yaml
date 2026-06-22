@@ -2,7 +2,7 @@ name: keqdroid
 description: "KEQDIS proxy/VPN client for Android and Windows."
 publish_to: 'none'
 
-version: 0.5.2+1
+version: 0.5.3+1
 
 environment:
   sdk: ^3.11.3
@@ -21,6 +21,7 @@ dependencies:
   path_provider: ^2.1.5
   path: ^1.9.1
   share_plus: ^13.1.0
+  qr_flutter: ^4.1.0
   cupertino_icons: ^1.0.9
   workmanager: ^0.9.0+3
   flutter_local_notifications: ^22.0.0
@@ -78,5 +79,9 @@ flutter:
     - assets/icon.png
     - assets/icon_foreground.png
     - assets/icon_windows_launcher.png
-    - assets/bin/windows/
-    - assets/bin/linux/
+  # NOTE: core binaries (assets/bin/windows, assets/bin/linux) are deliberately
+  # NOT Flutter assets. Flutter bundles assets into every platform, which dragged
+  # the Windows .exe + Linux ELF + geo data into the Android APK (~150 MB of dead
+  # weight; Android uses jniLibs instead). They're now installed next to the
+  # executable per-platform by windows/ and linux/ CMakeLists.txt, so each
+  # desktop build ships only its own and the APK ships none.

@@ -1,9 +1,16 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/subscription.dart';
 import '../platform/platform_bootstrap.dart';
@@ -26,32 +33,7 @@ class SubscriptionsTab extends ConsumerWidget {
     final accentContainerColor = AppTheme.accentContainer(context);
     final onAccentContainerColor = AppTheme.onAccentContainer(context);
 
-    return CallbackShortcuts(
-      bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.keyV, control: true): () =>
-            _addSubscriptionFromClipboard(context, ref),
-        const SingleActivator(LogicalKeyboardKey.keyV, meta: true): () =>
-            _addSubscriptionFromClipboard(context, ref),
-        const CharacterActivator('v', control: true): () =>
-            _addSubscriptionFromClipboard(context, ref),
-        const CharacterActivator('V', control: true): () =>
-            _addSubscriptionFromClipboard(context, ref),
-        const CharacterActivator('м', control: true): () =>
-            _addSubscriptionFromClipboard(context, ref),
-        const CharacterActivator('М', control: true): () =>
-            _addSubscriptionFromClipboard(context, ref),
-        const CharacterActivator('v', meta: true): () =>
-            _addSubscriptionFromClipboard(context, ref),
-        const CharacterActivator('V', meta: true): () =>
-            _addSubscriptionFromClipboard(context, ref),
-        const CharacterActivator('м', meta: true): () =>
-            _addSubscriptionFromClipboard(context, ref),
-        const CharacterActivator('М', meta: true): () =>
-            _addSubscriptionFromClipboard(context, ref),
-      },
-      child: Focus(
-        autofocus: true,
-        child: Scaffold(
+    return Scaffold(
           backgroundColor: bgColor,
           body: SafeArea(
             child: DesktopPageLayout(
@@ -201,47 +183,6 @@ class SubscriptionsTab extends ConsumerWidget {
             label: Text(l10n.subscriptionsAddButton),
             onPressed: () => _showAddSubDialog(context, ref),
           ),
-        ),
-      ),
-    );
-  }
-
-  /// Ctrl/Cmd+V на странице подписок: берёт ссылку из буфера и добавляет подписку.
-  Future<void> _addSubscriptionFromClipboard(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    final text = data?.text?.trim() ?? '';
-    if (text.isEmpty) return;
-    final uri = Uri.tryParse(text);
-    final isUrl =
-        uri != null && (uri.isScheme('http') || uri.isScheme('https'));
-    if (!context.mounted) return;
-    if (!isUrl) {
-      _pasteToast(context, 'В буфере нет ссылки подписки (http/https)');
-      return;
-    }
-    try {
-      final sub = Subscription.create(
-        name: uri.host.isNotEmpty ? uri.host : text,
-        url: text,
-      );
-      await ref.read(subscriptionsProvider.notifier).add(sub);
-      if (context.mounted)
-        _pasteToast(context, 'Подписка добавлена: ${uri.host}');
-    } catch (e) {
-      if (context.mounted) _pasteToast(context, friendlyError(e, context));
-    }
-  }
-
-  void _pasteToast(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
     );
   }
 
@@ -1058,6 +999,26 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: textColor,
+                      side: BorderSide(color: dividerColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.qr_code_2, size: 18),
+                    label: const Text(
+                      'Поделиться (QR + ссылка)',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    onPressed: () => _showShareSheet(context),
+                  ),
+                ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -1099,6 +1060,123 @@ class _SubItemState extends ConsumerState<_SubItem> {
         },
       ),
     );
+  }
+
+  /// Лист «Поделиться»: показывает QR подписки + ссылку и шарит их через
+  /// системный share (QR как PNG-файл + текст ссылки) — можно кинуть другу.
+  void _showShareSheet(BuildContext context) {
+    final sub = widget.sub;
+    final qrKey = GlobalKey();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.bg(context),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          20,
+          24,
+          MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.textLight(ctx).withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              sub.name,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.text(ctx),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 16),
+            RepaintBoundary(
+              key: qrKey,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                color: Colors.white,
+                child: QrImageView(
+                  data: sub.url,
+                  version: QrVersions.auto,
+                  size: 220,
+                  backgroundColor: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SelectableText(
+              sub.url,
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              style: TextStyle(fontSize: 11, color: AppTheme.textLight(ctx)),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentContainer(ctx),
+                  foregroundColor: AppTheme.onAccentContainer(ctx),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                icon: const Icon(Icons.share, size: 18),
+                label: const Text(
+                  'Поделиться',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                onPressed: () => _shareQr(ctx, qrKey),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _shareQr(BuildContext ctx, GlobalKey qrKey) async {
+    final sub = widget.sub;
+    try {
+      final boundary =
+          qrKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final dir = await getTemporaryDirectory();
+      final safe = sub.name.replaceAll(RegExp(r'[^\w\-]+'), '_');
+      final file = File(
+        '${dir.path}/keqdis_sub_${safe.isEmpty ? 'qr' : safe}.png',
+      );
+      await file.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
+      await SharePlus.instance.share(
+        ShareParams(text: sub.url, files: [XFile(file.path)]),
+      );
+    } catch (e) {
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(
+          ctx,
+        ).showSnackBar(SnackBar(content: Text('Не удалось поделиться: $e')));
+      }
+    }
   }
 
   void _showIntervalPicker(BuildContext context, Subscription sub) {

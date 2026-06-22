@@ -21,6 +21,7 @@ import '../../services/vpn_engine.dart';
 import '../../services/windows_desktop_service.dart';
 import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/update_dialog.dart';
+import '../../utils/clipboard_import.dart';
 import 'tray_menu_screen.dart';
 
 /// desktop shell: фиксированный sidebar + вкладки (без NavigationRail — на windows ломается layout)
@@ -41,6 +42,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    HardwareKeyboard.instance.addHandler(_onGlobalKey);
     // Linux: window close hides to tray (handled in main via window_manager).
     // The tray "Quit" tears the tunnel down first via this callback.
     if (Platform.isLinux) {
@@ -131,6 +133,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onGlobalKey);
     if (Platform.isLinux) LinuxBackgroundService.instance.onQuit = null;
     VpnNativeBridge.registerAutostartHandler(null);
     VpnNativeBridge.registerTrayMenuHandler(null);
@@ -277,6 +280,31 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
         ],
       ),
     );
+  }
+
+  /// Ctrl/Cmd+V on the active tab → paste-add (subscriptions/servers). Registered
+  /// as a GLOBAL keyboard handler (not a Focus.onKeyEvent) so it fires regardless
+  /// of which widget holds focus — the Focus-based version never received events
+  /// on Linux/GTK. Matches the PHYSICAL V key, so it works on any layout (on
+  /// ЙЦУКЕН the logical key is "м"). A focused text field keeps its own paste.
+  bool _onGlobalKey(KeyEvent event) {
+    if (event is! KeyDownEvent || !mounted) return false;
+    final mod = HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isMetaPressed;
+    if (!mod || event.physicalKey != PhysicalKeyboardKey.keyV) return false;
+    // Don't hijack paste while the user is typing in a text field.
+    if (FocusManager.instance.primaryFocus?.context?.widget is EditableText) {
+      return false;
+    }
+    switch (_index) {
+      case 0:
+        pasteServersFromClipboard(context, ref);
+        return true;
+      case 1:
+        pasteSubscriptionFromClipboard(context, ref);
+        return true;
+    }
+    return false;
   }
 }
 
