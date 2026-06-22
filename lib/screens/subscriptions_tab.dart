@@ -28,135 +28,179 @@ class SubscriptionsTab extends ConsumerWidget {
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.keyV, control: true):
-            () => _addSubscriptionFromClipboard(context, ref),
-        const SingleActivator(LogicalKeyboardKey.keyV, meta: true):
-            () => _addSubscriptionFromClipboard(context, ref),
+        const SingleActivator(LogicalKeyboardKey.keyV, control: true): () =>
+            _addSubscriptionFromClipboard(context, ref),
+        const SingleActivator(LogicalKeyboardKey.keyV, meta: true): () =>
+            _addSubscriptionFromClipboard(context, ref),
+        const CharacterActivator('v', control: true): () =>
+            _addSubscriptionFromClipboard(context, ref),
+        const CharacterActivator('V', control: true): () =>
+            _addSubscriptionFromClipboard(context, ref),
+        const CharacterActivator('м', control: true): () =>
+            _addSubscriptionFromClipboard(context, ref),
+        const CharacterActivator('М', control: true): () =>
+            _addSubscriptionFromClipboard(context, ref),
+        const CharacterActivator('v', meta: true): () =>
+            _addSubscriptionFromClipboard(context, ref),
+        const CharacterActivator('V', meta: true): () =>
+            _addSubscriptionFromClipboard(context, ref),
+        const CharacterActivator('м', meta: true): () =>
+            _addSubscriptionFromClipboard(context, ref),
+        const CharacterActivator('М', meta: true): () =>
+            _addSubscriptionFromClipboard(context, ref),
       },
       child: Focus(
         autofocus: true,
         child: Scaffold(
-      backgroundColor: bgColor,
-      body: SafeArea(
-        child: DesktopPageLayout(
-          maxWidth: 920,
-          child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                tabContentHorizontalInset(),
-                24,
-                tabContentHorizontalInset(),
-                8,
-              ),
-              child: Text(
-                l10n.subscriptionsTitle,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-            ),
-            Expanded(
-              child: subsAsync.when(
-                skipLoadingOnReload: true,
-                loading: () =>
-                    Center(child: CircularProgressIndicator(color: accentColor)),
-                error: (e, _) => _SubsErrorView(
-                  error: e,
-                  onRetry: () => ref.invalidate(subscriptionsProvider),
-                ),
-                data: (subs) => subs.isEmpty
-                    ? _emptySubsState(context)
-                    : SmoothScroll(
-                        builder: (context, controller) =>
-                            ReorderableListView.builder(
-                          scrollController: controller,
-                          physics: const ClampingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                        buildDefaultDragHandles: false,
-                        onReorderStart: (_) {
-                          ref.read(subscriptionReorderInProgressProvider.notifier).set(true);
-                        },
-                        onReorderEnd: (_) {
-                          ref.read(subscriptionReorderInProgressProvider.notifier).set(false);
-                        },
-                        onReorder: (oldIndex, newIndex) {
-                          ref.read(subscriptionsProvider.notifier).reorder(
-                                oldIndex,
-                                newIndex,
-                                fromReorderableList: true,
-                              );
-                        },
-                        proxyDecorator: (child, index, animation) {
-                          return AnimatedBuilder(
-                            animation: animation,
-                            builder: (context, child) {
-                              final scale = Tween<double>(begin: 1.0, end: 1.02).evaluate(
-                                CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeOut,
-                                ),
-                              );
-                              return Transform.scale(
-                                scale: scale,
-                                child: Material(
-                                  color: Colors.transparent,
-                                  elevation: 8,
-                                  shadowColor: Colors.black26,
-                                  borderRadius: BorderRadius.circular(18),
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: child,
-                          );
-                        },
-                        itemCount: subs.length,
-                        itemBuilder: (_, i) {
-                          final sub = subs[i];
-                          final isDesktop = PlatformBootstrap.isDesktop;
-                          final item = _SubItem(
-                            sub: sub,
-                            listIndex: i,
-                            onDelete: () => ref
-                                .read(subscriptionsProvider.notifier)
-                                .remove(sub.id),
-                            onRefresh: () => ref
-                                .read(subscriptionsProvider.notifier)
-                                .refreshTracked(sub),
-                          );
-                          return Padding(
-                            key: ValueKey(sub.id),
-                            padding: EdgeInsets.only(
-                              bottom: i < subs.length - 1 ? 12 : 0,
-                            ),
-                            child: isDesktop
-                                ? item
-                                : ReorderableDelayedDragStartListener(
-                                    index: i,
-                                    child: item,
+          backgroundColor: bgColor,
+          body: SafeArea(
+            child: DesktopPageLayout(
+              maxWidth: 920,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      tabContentHorizontalInset(),
+                      24,
+                      tabContentHorizontalInset(),
+                      8,
+                    ),
+                    child: Text(
+                      l10n.subscriptionsTitle,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: subsAsync.when(
+                      skipLoadingOnReload: true,
+                      loading: () => Center(
+                        child: CircularProgressIndicator(color: accentColor),
+                      ),
+                      error: (e, _) => _SubsErrorView(
+                        error: e,
+                        onRetry: () => ref.invalidate(subscriptionsProvider),
+                      ),
+                      data: (subs) => subs.isEmpty
+                          ? _emptySubsState(context)
+                          : SmoothScroll(
+                              builder: (context, controller) =>
+                                  ReorderableListView.builder(
+                                    scrollController: controller,
+                                    physics: const ClampingScrollPhysics(),
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      8,
+                                      16,
+                                      100,
+                                    ),
+                                    buildDefaultDragHandles: false,
+                                    onReorderStart: (_) {
+                                      ref
+                                          .read(
+                                            subscriptionReorderInProgressProvider
+                                                .notifier,
+                                          )
+                                          .set(true);
+                                    },
+                                    onReorderEnd: (_) {
+                                      ref
+                                          .read(
+                                            subscriptionReorderInProgressProvider
+                                                .notifier,
+                                          )
+                                          .set(false);
+                                    },
+                                    onReorder: (oldIndex, newIndex) {
+                                      ref
+                                          .read(subscriptionsProvider.notifier)
+                                          .reorder(
+                                            oldIndex,
+                                            newIndex,
+                                            fromReorderableList: true,
+                                          );
+                                    },
+                                    proxyDecorator: (child, index, animation) {
+                                      return AnimatedBuilder(
+                                        animation: animation,
+                                        builder: (context, child) {
+                                          final scale =
+                                              Tween<double>(
+                                                begin: 1.0,
+                                                end: 1.02,
+                                              ).evaluate(
+                                                CurvedAnimation(
+                                                  parent: animation,
+                                                  curve: Curves.easeOut,
+                                                ),
+                                              );
+                                          return Transform.scale(
+                                            scale: scale,
+                                            child: Material(
+                                              color: Colors.transparent,
+                                              elevation: 8,
+                                              shadowColor: Colors.black26,
+                                              borderRadius:
+                                                  BorderRadius.circular(18),
+                                              child: child,
+                                            ),
+                                          );
+                                        },
+                                        child: child,
+                                      );
+                                    },
+                                    itemCount: subs.length,
+                                    itemBuilder: (_, i) {
+                                      final sub = subs[i];
+                                      final isDesktop =
+                                          PlatformBootstrap.isDesktop;
+                                      final item = _SubItem(
+                                        sub: sub,
+                                        listIndex: i,
+                                        onDelete: () => ref
+                                            .read(
+                                              subscriptionsProvider.notifier,
+                                            )
+                                            .remove(sub.id),
+                                        onRefresh: () => ref
+                                            .read(
+                                              subscriptionsProvider.notifier,
+                                            )
+                                            .refreshTracked(sub),
+                                      );
+                                      return Padding(
+                                        key: ValueKey(sub.id),
+                                        padding: EdgeInsets.only(
+                                          bottom: i < subs.length - 1 ? 12 : 0,
+                                        ),
+                                        child: isDesktop
+                                            ? item
+                                            : ReorderableDelayedDragStartListener(
+                                                index: i,
+                                                child: item,
+                                              ),
+                                      );
+                                    },
                                   ),
-                          );
-                        },
-                      ),
-                      ),
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'subscriptions_add_fab',
-        backgroundColor: accentContainerColor,
-        foregroundColor: onAccentContainerColor,
-        icon: const Icon(Icons.add),
-        label: Text(l10n.subscriptionsAddButton),
-        onPressed: () => _showAddSubDialog(context, ref),
-      ),
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            heroTag: 'subscriptions_add_fab',
+            backgroundColor: accentContainerColor,
+            foregroundColor: onAccentContainerColor,
+            icon: const Icon(Icons.add),
+            label: Text(l10n.subscriptionsAddButton),
+            onPressed: () => _showAddSubDialog(context, ref),
+          ),
         ),
       ),
     );
@@ -184,7 +228,8 @@ class SubscriptionsTab extends ConsumerWidget {
         url: text,
       );
       await ref.read(subscriptionsProvider.notifier).add(sub);
-      if (context.mounted) _pasteToast(context, 'Подписка добавлена: ${uri.host}');
+      if (context.mounted)
+        _pasteToast(context, 'Подписка добавлена: ${uri.host}');
     } catch (e) {
       if (context.mounted) _pasteToast(context, friendlyError(e, context));
     }
@@ -215,7 +260,10 @@ class SubscriptionsTab extends ConsumerWidget {
             color: accentColor.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 12),
-          Text(l10n.subscriptionsEmptyTitle, style: TextStyle(color: textLightColor)),
+          Text(
+            l10n.subscriptionsEmptyTitle,
+            style: TextStyle(color: textLightColor),
+          ),
           const SizedBox(height: 8),
           Text(
             l10n.subscriptionsEmptyHint,
@@ -265,9 +313,19 @@ class SubscriptionsTab extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              _inputField(context, nameCtrl, l10n.subscriptionNameLabel, l10n.subscriptionNameHint),
+              _inputField(
+                context,
+                nameCtrl,
+                l10n.subscriptionNameLabel,
+                l10n.subscriptionNameHint,
+              ),
               const SizedBox(height: 12),
-              _inputField(context, urlCtrl, l10n.subscriptionUrlLabel, l10n.subscriptionUrlHint),
+              _inputField(
+                context,
+                urlCtrl,
+                l10n.subscriptionUrlLabel,
+                l10n.subscriptionUrlHint,
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -292,7 +350,9 @@ class SubscriptionsTab extends ConsumerWidget {
                                   : nameCtrl.text.trim(),
                               url: urlCtrl.text.trim(),
                             );
-                            await ref.read(subscriptionsProvider.notifier).add(sub);
+                            await ref
+                                .read(subscriptionsProvider.notifier)
+                                .add(sub);
                             if (ctx.mounted) Navigator.pop(ctx);
                           } catch (e) {
                             setModalState(() => loading = false);
@@ -398,7 +458,11 @@ class _SubsErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off_outlined, size: 48, color: redColor.withValues(alpha: 0.7)),
+            Icon(
+              Icons.cloud_off_outlined,
+              size: 48,
+              color: redColor.withValues(alpha: 0.7),
+            ),
             const SizedBox(height: 16),
             Text(
               AppLocalizations.of(context)!.errorSubscriptionTitle,
@@ -412,13 +476,20 @@ class _SubsErrorView extends StatelessWidget {
             Text(
               _humanMessage(context, error),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: textLightColor, height: 1.4),
+              style: TextStyle(
+                fontSize: 13,
+                color: textLightColor,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 24),
             TextButton.icon(
               onPressed: onRetry,
               icon: Icon(Icons.refresh, size: 18, color: accentColor),
-              label: Text(l10n.subscriptionsRetry, style: TextStyle(color: accentColor)),
+              label: Text(
+                l10n.subscriptionsRetry,
+                style: TextStyle(color: accentColor),
+              ),
             ),
           ],
         ),
@@ -517,15 +588,20 @@ class _SubItemState extends ConsumerState<_SubItem> {
                           child: AnimatedRotation(
                             turns: collapsed ? -0.25 : 0,
                             duration: const Duration(milliseconds: 200),
-                            child: Icon(Icons.expand_more,
-                                size: 20, color: textLightColor),
+                            child: Icon(
+                              Icons.expand_more,
+                              size: 20,
+                              color: textLightColor,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: GestureDetector(
                             onTap: () => ref
-                                .read(collapsedSubscriptionCardsProvider.notifier)
+                                .read(
+                                  collapsedSubscriptionCardsProvider.notifier,
+                                )
                                 .update((m) => {...m, sub.id: !collapsed}),
                             child: Text(
                               sub.name,
@@ -547,7 +623,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     onPressed: () => _showEditDialog(context),
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
                   ),
                   SizedBox(width: isDesktop ? 10 : 4),
                   IconButton(
@@ -582,7 +661,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
                           },
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
                   ),
                   SizedBox(width: isDesktop ? 10 : 8),
                   IconButton(
@@ -591,14 +673,19 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     onPressed: () => _showDeleteConfirmation(context),
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
                   ),
                 ],
               ),
             ),
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 220),
-              crossFadeState: collapsed ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+              crossFadeState: collapsed
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
               firstChild: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
                 child: Column(
@@ -623,7 +710,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
                           const Spacer(),
                           Text(
                             _formatDate(sub.lastUpdatedAt!),
-                            style: TextStyle(fontSize: 11, color: textLightColor),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: textLightColor,
+                            ),
                           ),
                         ],
                       ],
@@ -640,8 +730,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
                             pct > 0.9
                                 ? redColor
                                 : pct > 0.7
-                                    ? orangeColor
-                                    : accentColor,
+                                ? orangeColor
+                                : accentColor,
                           ),
                         ),
                       ),
@@ -649,15 +739,24 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     if (hasRefreshError) ...[
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
                         decoration: BoxDecoration(
                           color: redColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: redColor.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: redColor.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline, size: 14, color: redColor),
+                            Icon(
+                              Icons.error_outline,
+                              size: 14,
+                              color: redColor,
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
@@ -682,10 +781,15 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         ),
                         const SizedBox(width: 8),
                         GestureDetector(
-                          onTap: () => ref.read(subscriptionsProvider.notifier).toggleAutoUpdate(sub.id),
+                          onTap: () => ref
+                              .read(subscriptionsProvider.notifier)
+                              .toggleAutoUpdate(sub.id),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: sub.autoUpdate
                                   ? greenColor.withValues(alpha: 0.2)
@@ -693,11 +797,15 @@ class _SubItemState extends ConsumerState<_SubItem> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              sub.autoUpdate ? l10n.subscriptionsOn : l10n.subscriptionsOff,
+                              sub.autoUpdate
+                                  ? l10n.subscriptionsOn
+                                  : l10n.subscriptionsOff,
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: sub.autoUpdate ? greenColor : textLightColor,
+                                color: sub.autoUpdate
+                                    ? greenColor
+                                    : textLightColor,
                               ),
                             ),
                           ),
@@ -707,7 +815,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
                           GestureDetector(
                             onTap: () => _showIntervalPicker(context, sub),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: accentColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8),
@@ -716,7 +827,9 @@ class _SubItemState extends ConsumerState<_SubItem> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    l10n.subscriptionsCurrentInterval(sub.updateIntervalHours),
+                                    l10n.subscriptionsCurrentInterval(
+                                      sub.updateIntervalHours,
+                                    ),
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
@@ -724,7 +837,11 @@ class _SubItemState extends ConsumerState<_SubItem> {
                                     ),
                                   ),
                                   const SizedBox(width: 3),
-                                  Icon(Icons.edit, size: 11, color: accentColor),
+                                  Icon(
+                                    Icons.edit,
+                                    size: 11,
+                                    color: accentColor,
+                                  ),
                                 ],
                               ),
                             ),
@@ -739,7 +856,9 @@ class _SubItemState extends ConsumerState<_SubItem> {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            sub.isExpired ? l10n.subscriptionsExpired : _formatExpiry(sub.expiresAt!),
+                            sub.isExpired
+                                ? l10n.subscriptionsExpired
+                                : _formatExpiry(sub.expiresAt!),
                             style: TextStyle(
                               fontSize: 11,
                               color: sub.isExpired ? redColor : textLightColor,
@@ -814,11 +933,16 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 labelText: label,
                 hintText: hint,
                 labelStyle: TextStyle(color: textLightColor),
-                hintStyle:
-                    TextStyle(color: textLightColor.withValues(alpha: 0.5), fontSize: 12),
+                hintStyle: TextStyle(
+                  color: textLightColor.withValues(alpha: 0.5),
+                  fontSize: 12,
+                ),
                 filled: true,
                 fillColor: cardColor,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide(color: dividerColor, width: 1.5),
@@ -836,7 +960,12 @@ class _SubItemState extends ConsumerState<_SubItem> {
           }
 
           return Padding(
-            padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+            padding: EdgeInsets.fromLTRB(
+              24,
+              20,
+              24,
+              MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -854,7 +983,11 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 const SizedBox(height: 16),
                 Text(
                   l10n.subscriptionsEditSubscription,
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: textColor),
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 inputField(nameCtrl, 'Name', sub.name),
@@ -868,11 +1001,16 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: textColor,
                           side: BorderSide(color: dividerColor),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 10),
                         ),
                         icon: const Icon(Icons.copy, size: 16),
-                        label: Text(l10n.subscriptionsCopyUrl, style: const TextStyle(fontSize: 13)),
+                        label: Text(
+                          l10n.subscriptionsCopyUrl,
+                          style: const TextStyle(fontSize: 13),
+                        ),
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: sub.url));
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -880,7 +1018,9 @@ class _SubItemState extends ConsumerState<_SubItem> {
                               content: Text(l10n.subscriptionsUrlCopied),
                               backgroundColor: textColor,
                               behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               duration: const Duration(seconds: 2),
                             ),
                           );
@@ -892,9 +1032,13 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       icon: Icons.keyboard_arrow_up,
                       tooltip: l10n.subscriptionsMoveUp,
                       onTap: () {
-                        final subs = ref.read(subscriptionsProvider).value ?? [];
+                        final subs =
+                            ref.read(subscriptionsProvider).value ?? [];
                         final idx = subs.indexWhere((s) => s.id == sub.id);
-                        if (idx > 0) ref.read(subscriptionsProvider.notifier).reorder(idx, idx - 1);
+                        if (idx > 0)
+                          ref
+                              .read(subscriptionsProvider.notifier)
+                              .reorder(idx, idx - 1);
                       },
                     ),
                     const SizedBox(width: 6),
@@ -902,10 +1046,13 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       icon: Icons.keyboard_arrow_down,
                       tooltip: l10n.subscriptionsMoveDown,
                       onTap: () {
-                        final subs = ref.read(subscriptionsProvider).value ?? [];
+                        final subs =
+                            ref.read(subscriptionsProvider).value ?? [];
                         final idx = subs.indexWhere((s) => s.id == sub.id);
                         if (idx < subs.length - 1) {
-                          ref.read(subscriptionsProvider.notifier).reorder(idx, idx + 1);
+                          ref
+                              .read(subscriptionsProvider.notifier)
+                              .reorder(idx, idx + 1);
                         }
                       },
                     ),
@@ -919,14 +1066,18 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: accentContainerColor,
                       foregroundColor: onAccentContainerColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       elevation: 0,
                     ),
                     onPressed: () async {
                       final newName = nameCtrl.text.trim();
                       final newUrl = urlCtrl.text.trim();
                       if (newUrl.isEmpty) return;
-                      await ref.read(subscriptionsProvider.notifier).editMeta(
+                      await ref
+                          .read(subscriptionsProvider.notifier)
+                          .editMeta(
                             sub.id,
                             name: newName.isNotEmpty ? newName : null,
                             url: newUrl,
@@ -935,7 +1086,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     },
                     child: Text(
                       l10n.subscriptionsSave,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ),
@@ -985,7 +1139,11 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 Text(
                   l10n.subscriptionsAutoUpdateInterval,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1000,18 +1158,24 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       h == 1
                           ? l10n.subscriptionsEveryHour
                           : h < 24
-                              ? l10n.subscriptionsEveryHours(h)
-                              : h == 24
-                                  ? l10n.subscriptionsEveryDay
-                                  : l10n.subscriptionsEveryDays(h ~/ 24),
+                          ? l10n.subscriptionsEveryHours(h)
+                          : h == 24
+                          ? l10n.subscriptionsEveryDay
+                          : l10n.subscriptionsEveryDays(h ~/ 24),
                       style: TextStyle(
                         color: textColor,
-                        fontWeight: h == sub.updateIntervalHours ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: h == sub.updateIntervalHours
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
-                    trailing: h == sub.updateIntervalHours ? Icon(Icons.check, color: accentColor) : null,
+                    trailing: h == sub.updateIntervalHours
+                        ? Icon(Icons.check, color: accentColor)
+                        : null,
                     onTap: () {
-                      ref.read(subscriptionsProvider.notifier).updateInterval(sub.id, h);
+                      ref
+                          .read(subscriptionsProvider.notifier)
+                          .updateInterval(sub.id, h);
                       Navigator.pop(ctx);
                     },
                   ),
@@ -1062,14 +1226,19 @@ class _SubItemState extends ConsumerState<_SubItem> {
             style: ElevatedButton.styleFrom(
               backgroundColor: redColor,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
             onPressed: () {
               Navigator.pop(ctx);
               widget.onDelete();
             },
-            child: Text(l10n.subscriptionsDelete, style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(
+              l10n.subscriptionsDelete,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -1101,7 +1270,11 @@ class _ReorderButton extends StatelessWidget {
   final String tooltip;
   final VoidCallback onTap;
 
-  const _ReorderButton({required this.icon, required this.tooltip, required this.onTap});
+  const _ReorderButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {

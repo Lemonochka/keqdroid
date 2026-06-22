@@ -130,7 +130,11 @@ class LinuxTunnelBackend implements TunnelBackend {
       _startStatsLoop(request.mode);
       _emitConnectedTelemetry(request.mode);
     } catch (e, st) {
-      AppLogger.instance.error('Linux tunnel start failed', error: e, stackTrace: st);
+      AppLogger.instance.error(
+        'Linux tunnel start failed',
+        error: e,
+        stackTrace: st,
+      );
       await _dumpLogsToFile();
       await stopSession();
       _emit(
@@ -152,7 +156,9 @@ class LinuxTunnelBackend implements TunnelBackend {
   Future<void> _startKeqrnelProxySession(TunnelSessionRequest request) async {
     final bin = await LinuxCorePaths.keqrnelExecutable();
     if (bin == null) {
-      throw VpnStartException('keqrnel not found. ${LinuxCorePaths.binariesHint}');
+      throw VpnStartException(
+        'keqrnel not found. ${LinuxCorePaths.binariesHint}',
+      );
     }
     _xrayBinPath = bin;
 
@@ -318,6 +324,7 @@ class LinuxTunnelBackend implements TunnelBackend {
 
     final singConfigFile = File(p.join(_sessionDir!.path, 'keqrnel-tun.json'));
     await singConfigFile.writeAsString(config);
+    final rootGeoDir = await _stageGeoAssetsForRoot();
 
     // keqrnel runs as root via pkexec. When the app ships as an AppImage the
     // bundled binary lives on a per-user FUSE mount (/tmp/.mount_*) that root
@@ -340,7 +347,8 @@ class LinuxTunnelBackend implements TunnelBackend {
     // stdin: when we close stdin (on stop) it SIGTERMs sing-box AS ROOT, letting
     // it revert auto_route/nftables; it also exits if sing-box dies on its own.
     const wrapper = r'''
-SB="$1"; CFG="$2"
+SB="$1"; CFG="$2"; GEO="$3"
+if [ -n "$GEO" ]; then export XRAY_LOCATION_ASSET="$GEO"; fi
 "$SB" run -c "$CFG" &
 sb=$!
 ( cat >/dev/null 2>&1; kill -TERM "$sb" 2>/dev/null ) &
@@ -351,7 +359,15 @@ kill -TERM "$watcher" 2>/dev/null
     try {
       _singboxProcess = await Process.start(
         'pkexec',
-        ['sh', '-c', wrapper, 'sh', rootSingBin, singConfigFile.path],
+        [
+          'sh',
+          '-c',
+          wrapper,
+          'sh',
+          rootSingBin,
+          singConfigFile.path,
+          rootGeoDir ?? '',
+        ],
         workingDirectory: _sessionDir!.path,
         mode: ProcessStartMode.normal,
       );
@@ -363,13 +379,33 @@ kill -TERM "$watcher" 2>/dev/null
     }
     _pipeProcessOutput(_singboxProcess!, _singboxLog);
 
-    final ready = await _waitForSingbox(process: _singboxProcess!, log: _singboxLog);
+    final ready = await _waitForSingbox(
+      process: _singboxProcess!,
+      log: _singboxLog,
+    );
     if (!ready) {
       throw VpnStartException(
         'keqrnel TUN did not start. Make sure pkexec/polkit is available and '
         'the authorization was granted.\n${_tail(_singboxLog)}',
       );
     }
+  }
+
+  Future<String?> _stageGeoAssetsForRoot() async {
+    final geoDir = await LinuxCorePaths.geoAssetDir();
+    if (geoDir == null) return null;
+
+    final rootGeoDir = Directory(p.join(_sessionDir!.path, 'geo'));
+    if (!rootGeoDir.existsSync()) rootGeoDir.createSync(recursive: true);
+
+    var copied = false;
+    for (final name in LinuxCorePaths.geoFileNames) {
+      final src = File(p.join(geoDir, name));
+      if (!src.existsSync()) continue;
+      await src.copy(p.join(rootGeoDir.path, name));
+      copied = true;
+    }
+    return copied ? rootGeoDir.path : null;
   }
 
   Future<bool> _waitForSingbox({
@@ -473,10 +509,12 @@ kill -TERM "$watcher" 2>/dev/null
   /// core processes (avoid killing unrelated xray/sing-box the user may run).
   static Future<void> cleanupStaleState() async {
     try {
-      await Process.run(
-        'gsettings',
-        ['set', 'org.gnome.system.proxy', 'mode', 'none'],
-      );
+      await Process.run('gsettings', [
+        'set',
+        'org.gnome.system.proxy',
+        'mode',
+        'none',
+      ]);
     } catch (_) {}
     try {
       await FirefoxProxyHelper.clearManualHttpProxy();
@@ -490,7 +528,9 @@ kill -TERM "$watcher" 2>/dev/null
     _stopStatsLoop();
     _emit(const VpnState(status: VpnStatus.disconnecting));
 
-    if (_singboxProcess != null || _xrayProcess != null || _wireproxyProcess != null) {
+    if (_singboxProcess != null ||
+        _xrayProcess != null ||
+        _wireproxyProcess != null) {
       await _dumpLogsToFile();
     }
 
@@ -600,11 +640,17 @@ kill -TERM "$watcher" 2>/dev/null
         });
       }
     } catch (e, st) {
-      AppLogger.instance.warn('listProcesses (/proc) failed', error: e, stackTrace: st);
+      AppLogger.instance.warn(
+        'listProcesses (/proc) failed',
+        error: e,
+        stackTrace: st,
+      );
     }
-    apps.sort((a, b) => (a['appName'] as String)
-        .toLowerCase()
-        .compareTo((b['appName'] as String).toLowerCase()));
+    apps.sort(
+      (a, b) => (a['appName'] as String).toLowerCase().compareTo(
+        (b['appName'] as String).toLowerCase(),
+      ),
+    );
     return apps;
   }
 
@@ -613,13 +659,11 @@ kill -TERM "$watcher" 2>/dev/null
 
   @override
   Future<
-      List<({
-        String id,
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })>> xrayUrlTestBatch({
+    List<
+      ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+    >
+  >
+  xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
@@ -635,24 +679,21 @@ kill -TERM "$watcher" 2>/dev/null
       timeoutMs: timeoutMs,
     );
     return raw
-        .map((r) => (
-              id: r.id,
-              success: r.success,
-              latencyMs: r.latencyMs,
-              error: r.error,
-              httpStatus: r.httpStatus,
-            ))
+        .map(
+          (r) => (
+            id: r.id,
+            success: r.success,
+            latencyMs: r.latencyMs,
+            error: r.error,
+            httpStatus: r.httpStatus,
+          ),
+        )
         .toList();
   }
 
   @override
-  Future<
-      List<({
-        String id,
-        bool success,
-        int? kbps,
-        String error,
-      })>> xraySpeedTestBatch({
+  Future<List<({String id, bool success, int? kbps, String error})>>
+  xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     String downloadUrl = kDefaultSpeedTestUrl,
@@ -800,9 +841,13 @@ kill -TERM "$watcher" 2>/dev/null
   }
 
   String _tail(StringBuffer buffer, {int maxLines = 12}) {
-    final lines = buffer.toString().split('\n').where((l) => l.trim().isNotEmpty);
-    final tail =
-        lines.length > maxLines ? lines.skip(lines.length - maxLines) : lines;
+    final lines = buffer
+        .toString()
+        .split('\n')
+        .where((l) => l.trim().isNotEmpty);
+    final tail = lines.length > maxLines
+        ? lines.skip(lines.length - maxLines)
+        : lines;
     final text = tail.join('\n');
     return text.isEmpty ? '(no process output)' : text;
   }
@@ -892,13 +937,19 @@ kill -TERM "$watcher" 2>/dev/null
       }
 
       final deltaIn = inOctets >= _prevInOctets ? inOctets - _prevInOctets : 0;
-      final deltaOut = outOctets >= _prevOutOctets ? outOctets - _prevOutOctets : 0;
+      final deltaOut = outOctets >= _prevOutOctets
+          ? outOctets - _prevOutOctets
+          : 0;
       _prevInOctets = inOctets;
       _prevOutOctets = outOctets;
       _totalDownload += deltaIn;
       _totalUpload += deltaOut;
 
-      _emitConnectedTelemetry(mode, downloadSpeed: deltaIn, uploadSpeed: deltaOut);
+      _emitConnectedTelemetry(
+        mode,
+        downloadSpeed: deltaIn,
+        uploadSpeed: deltaOut,
+      );
     } catch (e) {
       AppLogger.instance.debug('Linux getTrafficStats failed: $e');
     }
@@ -930,8 +981,12 @@ kill -TERM "$watcher" 2>/dev/null
   Future<({int rx, int tx})?> _queryTunCounters() async {
     try {
       final base = '/sys/class/net/$tunInterfaceName/statistics';
-      final rx = int.parse((await File('$base/rx_bytes').readAsString()).trim());
-      final tx = int.parse((await File('$base/tx_bytes').readAsString()).trim());
+      final rx = int.parse(
+        (await File('$base/rx_bytes').readAsString()).trim(),
+      );
+      final tx = int.parse(
+        (await File('$base/tx_bytes').readAsString()).trim(),
+      );
       return (rx: rx, tx: tx);
     } catch (_) {
       return null;
@@ -974,11 +1029,13 @@ kill -TERM "$watcher" 2>/dev/null
     int? downloadSpeed,
     int? uploadSpeed,
   }) {
-    _emit(_buildConnectedState(
-      mode,
-      downloadSpeed: downloadSpeed,
-      uploadSpeed: uploadSpeed,
-    ));
+    _emit(
+      _buildConnectedState(
+        mode,
+        downloadSpeed: downloadSpeed,
+        uploadSpeed: uploadSpeed,
+      ),
+    );
   }
 
   VpnState _buildConnectedState(
