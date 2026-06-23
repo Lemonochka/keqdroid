@@ -353,12 +353,25 @@ class LinuxTunnelBackend implements TunnelBackend {
     // a TUN start failed is always available. Readiness is detected via the tun
     // interface appearing, so this doesn't depend on the live pipe.
     const coreLogPath = '/tmp/keqdroid_keqrnel.log';
+    // CRITICAL: the stdin watchdog MUST read the wrapper's real stdin (the pipe
+    // from this Dart process), not /dev/null. In a POSIX shell (`sh -c`, no job
+    // control) a backgrounded command — `( … ) &` — has its stdin implicitly
+    // redirected to /dev/null. So the old `( cat >/dev/null …; kill ) &` read
+    // /dev/null, hit EOF in microseconds and SIGTERM'd keqrnel the instant it
+    // launched — TUN mode "died right after the root prompt" with an empty core
+    // log (a clean SIGTERM logs no error). Verified in WSL: dash & bash both do
+    // this, independent of pkexec. Fix: save real stdin to fd 3 (`exec 3<&0`)
+    // and feed the watchdog from it (`cat <&3`); an explicit redirection
+    // overrides the implicit /dev/null, so the watchdog now blocks until WE
+    // close stdin (clean stop) or the parent dies. keqrnel itself is fine on
+    // /dev/null — its own stdin-EOF watcher ignores a non-pipe stdin.
     const wrapper = r'''
 SB="$1"; CFG="$2"; GEO="$3"; LOGF="$4"
 if [ -n "$GEO" ]; then export XRAY_LOCATION_ASSET="$GEO"; fi
 "$SB" run -c "$CFG" >"$LOGF" 2>&1 &
 sb=$!
-( cat >/dev/null 2>&1; kill -TERM "$sb" 2>/dev/null ) &
+exec 3<&0
+( cat <&3 >/dev/null 2>&1; kill -TERM "$sb" 2>/dev/null ) &
 watcher=$!
 wait "$sb"
 kill -TERM "$watcher" 2>/dev/null
