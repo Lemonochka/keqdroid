@@ -464,6 +464,9 @@ class PingService {
         settings,
         socksPort: socksPort,
         resolvedServerIp: ips[s.id],
+        // Desktop probes over HTTP (dart:io HttpClient can't do SOCKS); Android's
+        // Java probe uses Proxy.Type.SOCKS, so it keeps the SOCKS inbound.
+        httpInbound: !Platform.isAndroid,
       );
       PingResult result;
       try {
@@ -519,6 +522,9 @@ class PingService {
         settings,
         socksPort: socksPort,
         resolvedServerIp: ips[s.id],
+        // Desktop probes over HTTP (dart:io HttpClient can't do SOCKS); Android's
+        // Java probe uses Proxy.Type.SOCKS, so it keeps the SOCKS inbound.
+        httpInbound: !Platform.isAndroid,
       );
       PingResult result;
       try {
@@ -576,7 +582,11 @@ class PingService {
     HttpClient? client;
     try {
       client = HttpClient();
-      client.findProxy = (_) => 'SOCKS5 127.0.0.1:$socksPort';
+      // Deprecated path. dart:io HttpClient.findProxy supports only 'PROXY host:port'
+      // (HTTP CONNECT) and 'DIRECT' — never SOCKS. This method targets the VPN's
+      // SOCKS port, which Dart cannot reach, so it stays non-functional (see the
+      // @Deprecated note on pingViaLocalProxy); use pingUrl/EphemeralXrayPing instead.
+      client.findProxy = (_) => 'PROXY 127.0.0.1:$socksPort';
       client.connectionTimeout = Duration(seconds: timeoutSeconds);
       client.badCertificateCallback = (_, _, _) => true;
 

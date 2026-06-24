@@ -26,12 +26,17 @@ class ConfigGeneratorV2 {
     );
   }
 
-  /// minimal xray config for ephemeral url ping (local socks5, no auth).
+  /// minimal xray config for ephemeral url ping (local proxy, no auth).
+  ///
+  /// [httpInbound] picks the local probe transport: HTTP (`PROXY` directive) on
+  /// desktop, where dart:io HttpClient cannot speak SOCKS; SOCKS on Android, where
+  /// the Java probe uses Proxy.Type.SOCKS. The caller passes this per-platform.
   static String generatePingConfig(
     String input,
     AppSettings settings, {
     required int socksPort,
     String? resolvedServerIp,
+    bool httpInbound = false,
   }) {
     return jsonEncode(
       _buildXrayConfig(
@@ -39,6 +44,7 @@ class ConfigGeneratorV2 {
         settings,
         resolvedServerIp: resolvedServerIp,
         pingSocksPort: socksPort,
+        pingHttpInbound: httpInbound,
       ),
     );
   }
@@ -113,6 +119,7 @@ class ConfigGeneratorV2 {
     AppSettings settings, {
     String? resolvedServerIp,
     int? pingSocksPort,
+    bool pingHttpInbound = false,
     bool localInboundsNoAuth = false,
   }) {
     final trimmed = input.trim();
@@ -183,6 +190,7 @@ class ConfigGeneratorV2 {
       port,
       originalServerAddress: address,
       pingSocksPort: pingSocksPort,
+      pingHttpInbound: pingHttpInbound,
       localInboundsNoAuth: localInboundsNoAuth,
     );
   }
@@ -584,7 +592,7 @@ class ConfigGeneratorV2 {
   // обёртка конфига
   static Map<String, dynamic> _wrapConfig(
       Map<String, dynamic> outbound, AppSettings settings, String serverAddress, int serverPort,
-      {String? originalServerAddress, int? pingSocksPort, bool localInboundsNoAuth = false}) {
+      {String? originalServerAddress, int? pingSocksPort, bool pingHttpInbound = false, bool localInboundsNoAuth = false}) {
 
     originalServerAddress ??= serverAddress;
     final isPingMode = pingSocksPort != null;
@@ -750,6 +758,29 @@ class ConfigGeneratorV2 {
     final socksPort = pingSocksPort ?? settings.localPort;
     final useNoAuthInbound = isPingMode || localInboundsNoAuth;
     final inbounds = <Map<String, dynamic>>[
+      if (isPingMode && pingHttpInbound)
+        // Desktop ping listens over HTTP, not SOCKS: the Dart probe uses dart:io
+        // HttpClient, whose findProxy supports only 'PROXY host:port' (HTTP CONNECT)
+        // and 'DIRECT' — it cannot speak SOCKS at all. A SOCKS inbound here is what
+        // made every desktop url/proxy ping fail with "Invalid proxy configuration
+        // SOCKS ...". Android keeps the SOCKS inbound below (its Java probe uses
+        // Proxy.Type.SOCKS). See EphemeralXrayPing (Dart + Kotlin).
+        {
+          'tag': 'http-in',
+          'port': socksPort,
+          'listen': '127.0.0.1',
+          'protocol': 'http',
+          'settings': {'allowTransparent': false},
+        }
+      else if (isPingMode)
+        {
+          'tag': 'socks-in',
+          'port': socksPort,
+          'listen': '127.0.0.1',
+          'protocol': 'socks',
+          'settings': {'auth': 'noauth', 'udp': true},
+        }
+      else ...[
       {
         'tag': 'socks-in',
         'port': socksPort,
@@ -767,9 +798,8 @@ class ConfigGeneratorV2 {
                   }
                 ],
               },
-        if (!isPingMode) 'sniffing': core.buildSniffing(),
+        'sniffing': core.buildSniffing(),
       },
-      if (!isPingMode) ...[
       {
         'tag': 'http-in',
         'port': settings.httpPort,
