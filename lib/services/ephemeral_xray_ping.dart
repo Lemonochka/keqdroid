@@ -313,6 +313,11 @@ class EphemeralXrayPing {
   }) async {
     final client = HttpClient();
     try {
+      // HTTP proxy ('PROXY host:port'), not SOCKS: dart:io HttpClient.findProxy
+      // supports only PROXY (HTTP CONNECT) and DIRECT — never SOCKS/SOCKS5. The
+      // ephemeral ping config exposes an HTTP inbound on this port for exactly this
+      // reason (see ConfigGeneratorV2 ping mode). The port arg is still named
+      // socksPort for historical reasons.
       client.findProxy = (_) => 'PROXY 127.0.0.1:$socksPort';
       client.connectionTimeout = Duration(milliseconds: timeoutMs.clamp(1000, 8000));
       client.badCertificateCallback = (_, _, _) => true;
@@ -370,6 +375,10 @@ class EphemeralXrayPing {
 
     final client = HttpClient();
     try {
+      // The ephemeral core exposes an HTTP inbound on this port (see
+      // ConfigGeneratorV2 ping mode). dart:io HttpClient.findProxy can only do
+      // 'PROXY host:port' (HTTP CONNECT) or 'DIRECT' — it has no SOCKS support,
+      // so a 'SOCKS'/'SOCKS5' directive throws "Invalid proxy configuration ...".
       client.findProxy = (_) => 'PROXY 127.0.0.1:$socksPort';
       client.connectionTimeout = Duration(milliseconds: timeoutMs.clamp(1000, 6000));
       client.badCertificateCallback = (_, _, _) => true;

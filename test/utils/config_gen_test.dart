@@ -442,7 +442,33 @@ void main() {
       expect((map['routing'] as Map)['domainStrategy'], 'IPIfNonMatch');
     });
 
-    test('generatePingConfig uses noauth local SOCKS on ephemeral port', () {
+    test('generatePingConfig uses local HTTP inbound on ephemeral port', () {
+      // HTTP, not SOCKS: the Dart probe uses dart:io HttpClient, whose findProxy
+      // can only speak 'PROXY host:port' (HTTP CONNECT), never SOCKS.
+      Socks5Credentials().init('u', 'p');
+      const port = 28999;
+      final config = ConfigGeneratorV2.generatePingConfig(
+        'vless://uuid@example.com:443?type=tcp',
+        settings,
+        socksPort: port,
+        httpInbound: true,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final inbound = (map['inbounds'] as List).first as Map<String, dynamic>;
+      expect(inbound['port'], port);
+      expect(inbound['protocol'], 'http');
+      final httpSettings = inbound['settings'] as Map<String, dynamic>;
+      expect(httpSettings['allowTransparent'], false);
+      expect(map['inbounds'].length, 1);
+      expect((map['log'] as Map)['loglevel'], 'none');
+      final dns = map['dns'] as Map<String, dynamic>;
+      expect(dns['queryStrategy'], 'UseIPv4');
+      expect((map['routing'] as Map)['domainStrategy'], 'AsIs');
+    });
+
+    test('generatePingConfig defaults to noauth SOCKS inbound (Android probe)', () {
+      // Android's Java probe uses Proxy.Type.SOCKS, so without httpInbound the
+      // ephemeral ping must expose a noauth SOCKS inbound.
       Socks5Credentials().init('u', 'p');
       const port = 28999;
       final config = ConfigGeneratorV2.generatePingConfig(
@@ -453,13 +479,9 @@ void main() {
       final map = jsonDecode(config) as Map<String, dynamic>;
       final inbound = (map['inbounds'] as List).first as Map<String, dynamic>;
       expect(inbound['port'], port);
-      final socksSettings = inbound['settings'] as Map<String, dynamic>;
-      expect(socksSettings['auth'], 'noauth');
+      expect(inbound['protocol'], 'socks');
+      expect((inbound['settings'] as Map)['auth'], 'noauth');
       expect(map['inbounds'].length, 1);
-      expect((map['log'] as Map)['loglevel'], 'none');
-      final dns = map['dns'] as Map<String, dynamic>;
-      expect(dns['queryStrategy'], 'UseIPv4');
-      expect((map['routing'] as Map)['domainStrategy'], 'AsIs');
     });
 
     test('injects xmux into xhttp extra when enabled', () {
