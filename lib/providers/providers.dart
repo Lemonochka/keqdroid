@@ -46,12 +46,20 @@ final vpnEngineProvider = Provider<VpnEngine>((ref) {
   return engine;
 });
 
+// ВАЖНО: подписываемся ТОЛЬКО на факт «подключён ли VPN» через select, а не на
+// весь VpnState. Раньше тут был `ref.watch(vpnStateProvider).value`, из-за чего
+// провайдер перезапускался на КАЖДЫЙ эмит состояния — телеметрия (скорость/время)
+// обновляется раз в секунду — и checkForUpdate долбил GitHub примерно раз в 3 c,
+// исчерпывая анонимный лимит в 60 запросов/час (после чего обновление вообще не
+// скачать). select даёт ре-ран только при реальной смене connected↔disconnected.
 final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
-  final vpn = ref.watch(vpnStateProvider).value;
+  final vpnConnected = ref.watch(
+    vpnStateProvider.select((s) => s.value?.status == VpnStatus.connected),
+  );
   final settings = await ref.read(storageProvider).getSettings();
   return UpdateService.checkForUpdate(
     force: false,
-    vpnConnected: vpn?.status == VpnStatus.connected,
+    vpnConnected: vpnConnected,
     httpPort: settings.httpPort,
   );
 });
