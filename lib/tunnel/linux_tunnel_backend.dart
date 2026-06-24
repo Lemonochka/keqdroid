@@ -43,6 +43,9 @@ class LinuxTunnelBackend implements TunnelBackend {
   Process? _xrayProcess;
   Process? _wireproxyProcess;
   Process? _singboxProcess;
+  // Sentinel the elevated TUN wrapper polls: deleting it asks the root keqrnel
+  // to stop (reverts auto_route/nftables) without re-elevation. See _runKeqrnelAsRoot.
+  File? _rootSentinel;
   Directory? _sessionDir;
   ({String username, String password})? _pendingCreds;
   ConnectionMode? _activeMode;
@@ -343,9 +346,21 @@ class LinuxTunnelBackend implements TunnelBackend {
     // can't stop sing-box by killing the pkexec wrapper. Doing that orphans
     // sing-box with the TUN + routes + nftables rules still installed, which
     // breaks the network even after disconnect (and in Proxy mode afterwards).
-    // Instead run a tiny root wrapper that ties sing-box's lifetime to OUR
-    // stdin: when we close stdin (on stop) it SIGTERMs sing-box AS ROOT, letting
-    // it revert auto_route/nftables; it also exits if sing-box dies on its own.
+    // Instead run a tiny root wrapper that ties sing-box's lifetime to a sentinel
+    // file: while the file exists AND the app is alive it keeps running; when we
+    // delete the file (on stop) — or the app dies — it SIGTERMs sing-box AS ROOT,
+    // letting it revert auto_route/nftables.
+    //
+    // Why a sentinel file and PID poll instead of stdin: an earlier design closed
+    // our stdin pipe to ask for a stop. That is fundamentally broken through
+    // pkexec — once a polkit agent AUTHENTICATES, pkexec does NOT keep the
+    // caller's stdin attached to the elevated child, so the child's stdin is at
+    // EOF from the start. A `cat`-on-stdin watchdog then fired instantly and
+    // killed keqrnel the moment it launched (symptom: "keqrnel exited with code 0
+    // (TUN/elevation failed?)" with the TUN already up and the core log showing
+    // `keqrnel started` immediately followed by `keqrnel shutting down`). The
+    // sentinel + `kill -0` PID poll needs no stdin and no re-elevation.
+    //
     // pkexec runs keqrnel as root in the background; its stdout/stderr don't
     // reliably reach our captured pipe (the process can exit before the async
     // stream drains), which left core errors invisible — only a generic "code 1"
@@ -353,28 +368,23 @@ class LinuxTunnelBackend implements TunnelBackend {
     // a TUN start failed is always available. Readiness is detected via the tun
     // interface appearing, so this doesn't depend on the live pipe.
     const coreLogPath = '/tmp/keqdroid_keqrnel.log';
-    // CRITICAL: the stdin watchdog MUST read the wrapper's real stdin (the pipe
-    // from this Dart process), not /dev/null. In a POSIX shell (`sh -c`, no job
-    // control) a backgrounded command — `( … ) &` — has its stdin implicitly
-    // redirected to /dev/null. So the old `( cat >/dev/null …; kill ) &` read
-    // /dev/null, hit EOF in microseconds and SIGTERM'd keqrnel the instant it
-    // launched — TUN mode "died right after the root prompt" with an empty core
-    // log (a clean SIGTERM logs no error). Verified in WSL: dash & bash both do
-    // this, independent of pkexec. Fix: save real stdin to fd 3 (`exec 3<&0`)
-    // and feed the watchdog from it (`cat <&3`); an explicit redirection
-    // overrides the implicit /dev/null, so the watchdog now blocks until WE
-    // close stdin (clean stop) or the parent dies. keqrnel itself is fine on
-    // /dev/null — its own stdin-EOF watcher ignores a non-pipe stdin.
+    final sentinelFile = File(p.join(_sessionDir!.path, 'keqrnel.run'));
+    await sentinelFile.writeAsString('1');
+    _rootSentinel = sentinelFile;
     const wrapper = r'''
-SB="$1"; CFG="$2"; GEO="$3"; LOGF="$4"
+SB="$1"; CFG="$2"; GEO="$3"; LOGF="$4"; SENT="$5"; APPPID="$6"
+: >"$LOGF"
+echo "[wrap v2 sentinel] start SENT=$SENT exists=$([ -e "$SENT" ] && echo y || echo n) APPPID=$APPPID app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
 if [ -n "$GEO" ]; then export XRAY_LOCATION_ASSET="$GEO"; fi
-"$SB" run -c "$CFG" >"$LOGF" 2>&1 &
+"$SB" run -c "$CFG" >>"$LOGF" 2>&1 &
 sb=$!
-exec 3<&0
-( cat <&3 >/dev/null 2>&1; kill -TERM "$sb" 2>/dev/null ) &
-watcher=$!
+while [ -e "$SENT" ] && kill -0 "$APPPID" 2>/dev/null; do
+  kill -0 "$sb" 2>/dev/null || break
+  sleep 1
+done
+echo "[wrap v2 sentinel] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) sb=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+kill -TERM "$sb" 2>/dev/null
 wait "$sb"
-kill -TERM "$watcher" 2>/dev/null
 ''';
     try {
       _singboxProcess = await Process.start(
@@ -388,6 +398,8 @@ kill -TERM "$watcher" 2>/dev/null
           singConfigFile.path,
           rootGeoDir ?? '',
           coreLogPath,
+          sentinelFile.path,
+          '$pid',
         ],
         workingDirectory: _sessionDir!.path,
         mode: ProcessStartMode.normal,
@@ -808,14 +820,16 @@ kill -TERM "$watcher" 2>/dev/null
   }
 
   /// Stops the elevated sing-box gracefully. We cannot signal the root process
-  /// directly, so we close the wrapper's stdin — that makes the root wrapper
-  /// SIGTERM sing-box, which reverts auto_route/nftables before exiting.
+  /// directly, so we delete the sentinel file the root wrapper polls — it then
+  /// SIGTERMs sing-box AS ROOT, which reverts auto_route/nftables before exiting.
   Future<void> _stopSingbox() async {
     final proc = _singboxProcess;
     if (proc == null) return;
     try {
-      await proc.stdin.close();
+      final sentinel = _rootSentinel;
+      if (sentinel != null && sentinel.existsSync()) sentinel.deleteSync();
     } catch (_) {}
+    _rootSentinel = null;
     try {
       await proc.exitCode.timeout(const Duration(seconds: 8));
     } catch (_) {
