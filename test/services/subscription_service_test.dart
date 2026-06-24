@@ -126,6 +126,39 @@ void main() {
       );
     });
   });
+
+  group('SubscriptionService._parseBody name extraction', () {
+    test('keeps fragment names that contain spaces (and an inner #)', () {
+      // Regression: a plain subscription where the #name has raw spaces, an emoji
+      // flag and a second '#'. The old extractor regex stopped at the first space,
+      // truncating the name to just the flag emoji, which cleanDisplayName then
+      // stripped to an empty string. The full name must survive to displayName.
+      const body =
+          'vless://2289a6ad-c4b9-42b3-903e-082d77f4b0d2@176.108.245.184:25565'
+          '?encryption=none&type=tcp&security=reality&sni=gp.x5.ru&fp=chrome'
+          '#🇷🇺 Белый интернет #1 | Все операторы';
+
+      final configs = SubscriptionService.parseBodyForTest(body);
+      expect(configs.length, 1);
+
+      final server = ServerItem.fromRaw(configs.first);
+      expect(server.displayName, '🇷🇺 Белый интернет #1 | Все операторы');
+      // cleanName drops the flag emoji but must NOT be empty.
+      expect(server.cleanName, 'Белый интернет #1 | Все операторы');
+      expect(server.countryCode, 'RU');
+    });
+
+    test('splits two URIs that share one line instead of merging them', () {
+      const body =
+          'vless://aaaaaaaa-1111-2222-3333-444444444444@1.2.3.4:443?type=tcp#name one '
+          'vmess://bbbbbbbb-1111-2222-3333-444444444444@5.6.7.8:80#name two';
+
+      final configs = SubscriptionService.parseBodyForTest(body);
+      expect(configs.length, 2);
+      final names = configs.map((c) => ServerItem.fromRaw(c).displayName).toSet();
+      expect(names, containsAll(<String>['name one', 'name two']));
+    });
+  });
 }
 
 class _FakeAdapter implements HttpClientAdapter {

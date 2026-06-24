@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 
 import '../utils/local_vpn_proxy.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
@@ -836,6 +837,10 @@ class SubscriptionService {
 
   // парсинг тела
 
+  /// Test-only hook over the private body parser (extraction → raw config list).
+  @visibleForTesting
+  static List<String> parseBodyForTest(String content) => _parseBody(content);
+
   static List<String> _parseBody(String content) {
     final original = content.trim();
     final candidates = _collectTextVariants(original);
@@ -1542,8 +1547,15 @@ class SubscriptionService {
   }
 
   static List<String> _extractUriLinks(String text) {
+    // Allow spaces inside a link: a URI fragment (the #name) legitimately contains
+    // spaces, e.g. "#🇷🇺 Белый интернет #1 | Все операторы". The old `[^\s...]`
+    // stopped at the first space, truncating such names to just the flag emoji —
+    // which cleanDisplayName then strips, leaving an empty server name. We instead
+    // stop only at line breaks / html-quote delimiters, and use a negative lookahead
+    // so two URIs sharing one line still split instead of merging. Dart's Uri.parse
+    // percent-encodes the raw spaces and keeps the inner '#' as fragment text.
     final matches = RegExp(
-      r'''(?:vless|vmess|trojan|ss|ssr|hysteria2?|hy2)://[^\s<>"']+''',
+      r'''(?:vless|vmess|trojan|ss|ssr|hysteria2?|hy2)://(?:(?!(?:vless|vmess|trojan|ssr|ss|hysteria2?|hy2)://)[^\r\n<>"'])+''',
       caseSensitive: false,
     ).allMatches(text);
     final links = <String>[];
