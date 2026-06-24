@@ -77,10 +77,16 @@ geo тянулись в Android APK (~150 МБ мусора). Ядра раск�
 - **Фон на десктопе ≠ фон на Android.** На Windows/Linux подписки обновляются по таймеру, пока
   приложение открыто (свёрнутое в трей — считается открытым). Полностью закрытое десктоп-
   приложение фоном не обновляется. На Android — WorkManager обновляет даже после убийства.
-- **Обновления через прокси идут по HTTP-порту, не SOCKS.** Dart `HttpClient` не умеет SOCKS,
-  поэтому при активном VPN на десктопе апдейт-трафик заворачивается в локальный **HTTP**-прокси
-  (`PROXY host:httpPort`), а строка вида `SOCKS5 ...` в `findProxy` уронит запрос с
-  `HttpException: Invalid proxy configuration`.
+- **Dart `HttpClient.findProxy` НЕ умеет SOCKS вообще.** Поддерживаются только `DIRECT` и
+  `PROXY host:port` (HTTP CONNECT). Любая строка `SOCKS ...` / `SOCKS5 ...` роняет запрос с
+  `HttpException: Invalid proxy configuration SOCKS[5] ...`. Поэтому:
+  - апдейт-трафик при активном VPN на десктопе идёт через локальный **HTTP**-прокси
+    (`PROXY host:httpPort`);
+  - **эфемерный url/proxy-пинг и спидтест** (`ephemeral_xray_ping.dart`) тоже ходят через
+    **HTTP**-инбаунд: `ConfigGeneratorV2.generatePingConfig` в ping-режиме поднимает inbound
+    `protocol: 'http'` (а не socks) на `ephemeralPingPort`, а проба ставит
+    `findProxy => 'PROXY 127.0.0.1:$port'`. Если вернуть socks-инбаунд — каждый пинг упадёт с
+    `Invalid proxy configuration`.
 - **GeoIP в xray — это поле `ip`.** Правило `{"geoip": [...]}` xray молча игнорирует и падает
   с `app/router: this rule has no effective fields`. Правильно: `{"ip": ["geoip:ru"], ...}`.
 
