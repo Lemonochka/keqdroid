@@ -725,6 +725,19 @@ class MainActivity : FlutterFragmentActivity() {
     private fun getXrayLogs(maxLines: Int, result: MethodChannel.Result) {
         mainScope.launch {
             val logs = withContext(Dispatchers.IO) {
+                val capped = maxLines.coerceIn(50, 2000)
+
+                // Основной источник — файл логов ядра в filesDir. logcat на Android 13+
+                // для untrusted_app недоступен (SELinux), поэтому файл надёжнее.
+                val fromFile = runCatching {
+                    val f = File(filesDir, KeqdisVpnService.CORE_LOG_FILE)
+                    if (f.exists() && f.length() > 0L)
+                        f.readLines().takeLast(capped).joinToString("\n")
+                    else ""
+                }.getOrDefault("")
+                if (fromFile.isNotBlank()) return@withContext fromFile
+
+                // Fallback: logcat (работает не на всех устройствах).
                 runCatching {
                     val process = ProcessBuilder("logcat", "-d", "-v", "time", "-s", "KEQDIS", "KEQDIS_XRAY")
                         .redirectErrorStream(true)
@@ -733,9 +746,9 @@ class MainActivity : FlutterFragmentActivity() {
                         reader.readLines()
                     }
                     process.waitFor()
-                    all.takeLast(maxLines.coerceIn(50, 2000)).joinToString("\n")
+                    all.takeLast(capped).joinToString("\n")
                 }.getOrElse { e ->
-                    "Unable to read logcat: ${e.message}"
+                    "Unable to read core logs: ${e.message}"
                 }
             }
             result.success(logs)

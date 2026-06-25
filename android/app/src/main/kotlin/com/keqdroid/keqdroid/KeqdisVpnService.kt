@@ -44,6 +44,8 @@ class KeqdisVpnService : VpnService() {
         const val EXTRA_CORE_ENGINE    = "core_engine"
         const val CORE_ENGINE_CHAIN    = "chain"
         const val CORE_ENGINE_KEQRNEL  = "keqrnel"
+        // Файл логов ядра в filesDir; читается getXrayLogs (надёжнее logcat на Android 13+).
+        const val CORE_LOG_FILE        = "core_logs.txt"
         // AmneziaWG: ядро amneziawg-go само владеет TUN, конфиг приходит из .conf.
         const val EXTRA_AWG_UAPI        = "awg_uapi"
         const val EXTRA_AWG_ADDRESSES   = "awg_addresses"
@@ -615,10 +617,13 @@ class KeqdisVpnService : VpnService() {
     // ── Xray ─────────────────────────────────────────────────────────────────
 
     private fun startXray(binary: String, config: String): Int {
-        // NativeHelper.startXray: fork+execv из nativeLibraryDir, читает вывод в logcat (KEQDIS/xray)
+        // NativeHelper.startXray: fork+execv из nativeLibraryDir, дублирует вывод ядра
+        // в logcat (KEQDIS_XRAY) и в файл CORE_LOG_FILE (его читает getXrayLogs).
         // Возвращает: pid > 0 — успех, -1 binary not found, -2 config not found, -4 crashed immediately
         XrayGeoAssets.ensure(this, filesDir)
-        val pid = NativeHelper.startXray(binary, config, filesDir.absolutePath)
+        // Свежий лог ядра на каждую сессию (ping пишет в свой файл/никуда — не мешает).
+        runCatching { File(filesDir, CORE_LOG_FILE).writeText("") }
+        val pid = NativeHelper.startXray(binary, config, filesDir.absolutePath, CORE_LOG_FILE)
         when {
             pid == -1 -> throw IllegalStateException("Xray binary not found: $binary")
             pid == -2 -> throw IllegalStateException("Xray config not found: $config")

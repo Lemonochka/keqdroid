@@ -346,7 +346,8 @@ object EphemeralXrayPing {
 
 
 
-            pid = NativeHelper.startXray(xrayBin.absolutePath, configFile.absolutePath, assetDir)
+            // logName="" — ping/спидтест не пишут в файл логов соединения.
+            pid = NativeHelper.startXray(xrayBin.absolutePath, configFile.absolutePath, assetDir, "")
 
             when {
 
@@ -446,7 +447,8 @@ object EphemeralXrayPing {
 
 
 
-            pid = NativeHelper.startXray(xrayBin.absolutePath, configFile.absolutePath, assetDir)
+            // logName="" — ping/спидтест не пишут в файл логов соединения.
+            pid = NativeHelper.startXray(xrayBin.absolutePath, configFile.absolutePath, assetDir, "")
 
             when {
 
