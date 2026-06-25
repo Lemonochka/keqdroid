@@ -16,12 +16,47 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <sys/stat.h>
+#include <time.h>
 
 #define TAG "KEQDIS"
+#define XTAG "KEQDIS_XRAY"
+
+/* Кольцевой файл логов ядра: при превышении усекаем в ноль. */
+#define CORE_LOG_MAX (512 * 1024)
+
+/* Аргумент фонового читателя: fd пайпа + путь к файлу логов (может быть пустым). */
+typedef struct { int fd; char logpath[1024]; } xray_log_arg;
 
 /* Forward declaration — определение в конце файла */
 static void *xray_log_reader(void *arg);
-#define XTAG "KEQDIS_XRAY"
+
+/*
+ * Пишет строку ядра в logcat (XTAG) и, если задан logpath, дублирует её в файл.
+ * Дублирование в файл нужно потому, что на Android 13+ untrusted_app не может
+ * читать logcat (SELinux), поэтому in-app экран логов опирается на этот файл.
+ * Файл кольцуется по размеру (CORE_LOG_MAX). logpath == "" → только logcat.
+ */
+static void core_log_line(const char *logpath, const char *line) {
+    if (!line || !*line) return;
+    __android_log_print(ANDROID_LOG_DEBUG, XTAG, "%s", line);
+    if (!logpath || !*logpath) return;
+    int lf = open(logpath, O_WRONLY | O_CREAT | O_APPEND, 0600);
+    if (lf < 0) return;
+    struct stat st;
+    if (fstat(lf, &st) == 0 && st.st_size > CORE_LOG_MAX) {
+        if (ftruncate(lf, 0) == 0) lseek(lf, 0, SEEK_SET);
+    }
+    char ts[24];
+    time_t now = time(NULL);
+    struct tm tmv;
+    localtime_r(&now, &tmv);
+    size_t tn = strftime(ts, sizeof(ts), "%m-%d %H:%M:%S ", &tmv);
+    if (tn > 0) (void)write(lf, ts, tn);
+    (void)write(lf, line, strlen(line));
+    (void)write(lf, "\n", 1);
+    close(lf);
+}
 
 /*
  * double_fork_exec — запускает бинарник через двойной fork.
@@ -285,11 +320,20 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
 JNIEXPORT jint JNICALL
 Java_com_keqdroid_keqdroid_NativeHelper_startXray(
         JNIEnv *env, jclass clazz,
-        jstring jBinPath, jstring jConfigPath, jstring jAssetDir) {
+        jstring jBinPath, jstring jConfigPath, jstring jAssetDir, jstring jLogName) {
 
     const char *binPath    = (*env)->GetStringUTFChars(env, jBinPath,    NULL);
     const char *configPath = (*env)->GetStringUTFChars(env, jConfigPath, NULL);
     const char *assetDir   = (*env)->GetStringUTFChars(env, jAssetDir,   NULL);
+    const char *logName    = jLogName ? (*env)->GetStringUTFChars(env, jLogName, NULL) : NULL;
+
+    /* Путь к файлу логов ядра: <assetDir>/<logName>. Пустое имя → файл выключен
+     * (ping/спидтест им пользоваться не должны, чтобы не засорять лог соединения). */
+    char logpath[1024];
+    logpath[0] = '\0';
+    if (logName && logName[0])
+        snprintf(logpath, sizeof(logpath), "%s/%s", assetDir, logName);
+    if (logName) (*env)->ReleaseStringUTFChars(env, jLogName, logName);
 
     if (access(binPath, F_OK) != 0) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "startXray: binary not found: %s", binPath);
@@ -416,7 +460,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
                     if (c == '\n' || linepos >= (int)sizeof(line) - 1) {
                         line[linepos] = '\0';
                         if (linepos > 0)
-                            __android_log_print(ANDROID_LOG_DEBUG, XTAG, "%s", line);
+                            core_log_line(logpath, line);
                         linepos = 0;
                     } else {
                         line[linepos++] = c;
@@ -431,7 +475,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
         }
         if (linepos > 0) {
             line[linepos] = '\0';
-            __android_log_print(ANDROID_LOG_DEBUG, XTAG, "%s", line);
+            core_log_line(logpath, line);
         }
 
         int wstatus = 0;
@@ -448,22 +492,23 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
 
         fcntl(pipefd[0], F_SETFL, fcntl(pipefd[0], F_GETFL, 0) & ~O_NONBLOCK);
 
-        int *fdptr = malloc(sizeof(int));
-        if (fdptr) {
-            *fdptr = pipefd[0];
+        xray_log_arg *targ = malloc(sizeof(xray_log_arg));
+        if (targ) {
+            targ->fd = pipefd[0];
+            snprintf(targ->logpath, sizeof(targ->logpath), "%s", logpath);
 
             pthread_t thr;
             pthread_attr_t attr;
             pthread_attr_init(&attr);
             pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-            int rc = pthread_create(&thr, &attr, xray_log_reader, fdptr);
+            int rc = pthread_create(&thr, &attr, xray_log_reader, targ);
             pthread_attr_destroy(&attr);
 
             if (rc != 0) {
                 __android_log_print(ANDROID_LOG_WARN, TAG,
                                     "startXray: failed to start log reader thread rc=%d", rc);
-                free(fdptr);
+                free(targ);
                 close(pipefd[0]);
             }
         } else {
@@ -605,8 +650,11 @@ static int uw_flush(UW *w) {
  * fd закрывает сам перед выходом.
  */
 static void *xray_log_reader(void *arg) {
-    int fd = *(int *)arg;
-    free(arg);
+    xray_log_arg *a = (xray_log_arg *)arg;
+    int fd = a->fd;
+    char logpath[1024];
+    snprintf(logpath, sizeof(logpath), "%s", a->logpath);
+    free(a);
 
     char buf[4096], line[1024];
     int linepos = 0;
@@ -619,7 +667,7 @@ static void *xray_log_reader(void *arg) {
             if (c == '\n' || linepos >= (int)sizeof(line) - 1) {
                 line[linepos] = '\0';
                 if (linepos > 0)
-                    __android_log_print(ANDROID_LOG_DEBUG, XTAG, "%s", line);
+                    core_log_line(logpath, line);
                 linepos = 0;
             } else {
                 line[linepos++] = c;
@@ -628,7 +676,7 @@ static void *xray_log_reader(void *arg) {
     }
     if (linepos > 0) {
         line[linepos] = '\0';
-        __android_log_print(ANDROID_LOG_DEBUG, XTAG, "%s", line);
+        core_log_line(logpath, line);
     }
 
     __android_log_print(ANDROID_LOG_INFO, TAG, "xray_log_reader: pipe closed (xray exited)");
