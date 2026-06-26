@@ -16,7 +16,11 @@ import android.service.quicksettings.TileService
 class VpnQuickTileService : TileService() {
 
     companion object {
-        private val TILE_ICON_RES = R.drawable.ic_launcher_foreground
+        // Монохромный вектор (силуэт на прозрачном фоне): QS-плитки тинтуют иконку,
+        // поэтому полноцветный ic_launcher_foreground превращался в белый кружок.
+        // Тот же ресурс стоит в android:icon сервиса в манифесте, чтобы и в редакторе
+        // плиток (где берётся манифестная иконка) показывался логотип, а не пустой круг.
+        private val TILE_ICON_RES = R.drawable.ic_launcher_monochrome
     }
 
     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -104,6 +108,9 @@ class VpnQuickTileService : TileService() {
 
         val backend = prefs.getString(KeqdisVpnService.KEY_QS_LAST_BACKEND, KeqdisVpnService.VPN_BACKEND_XRAY)
             ?: KeqdisVpnService.VPN_BACKEND_XRAY
+        // На Android движок всегда chain (libxray) — keqrnel вырезан. Передаём
+        // его явно, чтобы и сохранённый из старых версий engine=keqrnel не всплыл.
+        val coreEngine = KeqdisVpnService.CORE_ENGINE_CHAIN
 
         // AmneziaWG не хранит snapshot для быстрого реконнекта из плитки — открываем приложение.
         if (backend == KeqdisVpnService.VPN_BACKEND_AWG) {
@@ -127,6 +134,7 @@ class VpnQuickTileService : TileService() {
         val intent = Intent(this, KeqdisVpnService::class.java).apply {
             action = KeqdisVpnService.ACTION_START
             putExtra(KeqdisVpnService.EXTRA_VPN_BACKEND, backend)
+            putExtra(KeqdisVpnService.EXTRA_CORE_ENGINE, coreEngine)
             putExtra(KeqdisVpnService.EXTRA_XRAY_CONFIG, xrayPath)
             putExtra("socks_port", port)
             putStringArrayListExtra("exclude_packages", ArrayList(exc))
