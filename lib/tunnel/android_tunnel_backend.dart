@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../utils/awg_profile.dart';
-import '../utils/keqrnel_config.dart';
 import 'tunnel_backend.dart';
 import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
@@ -67,19 +66,23 @@ class AndroidTunnelBackend implements TunnelBackend {
   @override
   Future<void> startSession(TunnelSessionRequest request) async {
     try {
-      // keqrnel: оборачиваем xray-конфиг во встроенный движок и просим нативный
-      // сервис запускать libkeqrnel.so вместо libxray.so. Для backend.awg и
-      // дефолтного coreEngine == chain поведение не меняется.
-      final useKeqrnel = request.coreEngine == 'keqrnel' &&
-          request.vpnBackend == VpnBackend.xray;
-      final coreConfig = useKeqrnel
-          ? KeqrnelConfig.wrapXray(request.xrayConfig)
-          : request.xrayConfig;
+      // На Android ВСЕГДА используем chain (чистый libxray), не keqrnel.
+      //
+      // keqrnel-обёртка (KeqrnelConfig.wrapXray) строит sing-box с `route:
+      // {final: proxy}` и гонит весь трафик во встроенный xray как в прокси-
+      // аутбаунд. При этом внутренние direct/proxy/block-правила xray НЕ
+      // применяются → сплит-роутинг (geoip/geosite/домены, обход .ru мимо VPN)
+      // на Android молча не работает: весь трафик идёт через сервер. К тому же
+      // tun2socks отдаёт ядру только IP, а sing-box-инбаунд в обёртке не снифит
+      // домен. Чистый libxray исполняет конфиг целиком — со своим роутингом и
+      // снифинг-инбаундом, как любой xray-клиент на Android. sing-box-слой на
+      // Android ничего полезного не добавляет (TUN держит VpnService+tun2socks).
+      final coreConfig = request.xrayConfig;
 
       final args = <String, dynamic>{
         'vpnBackend': request.vpnBackend.wireValue,
         'xrayConfig': coreConfig,
-        'coreEngine': useKeqrnel ? 'keqrnel' : 'chain',
+        'coreEngine': 'chain',
         'socksPort': request.socksPort,
         'excludePackages': request.excludePackages,
         'includePackages': request.includePackages,
