@@ -17,6 +17,8 @@ import android.os.ParcelFileDescriptor
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.amnezia.awg.GoBackend
 import java.io.File
 import java.net.InetSocketAddress
@@ -75,6 +77,9 @@ class KeqdisVpnService : VpnService() {
         const val KEY_QS_LAST_SOCKS_PASSWORD = "qs_last_socks_password"
         const val KEY_QS_LAST_SOCKS_PORT = "qs_last_socks_port"
         const val KEY_QS_LAST_BACKEND = "qs_last_backend"
+        // Движок ядра последнего старта (chain/keqrnel) — плитка должна
+        // переподключаться тем же движком, что и записанный configPath.
+        const val KEY_QS_LAST_CORE_ENGINE = "qs_last_core_engine"
         const val KEY_QS_LAST_SERVER_NAME = "qs_last_server_name"
         const val KEY_QS_LAST_EXCLUDE_PACKAGES = "qs_last_exclude_packages"
         const val KEY_QS_LAST_INCLUDE_PACKAGES = "qs_last_include_packages"
@@ -90,6 +95,7 @@ class KeqdisVpnService : VpnService() {
     @Volatile private var currentServerName: String? = null
     @Volatile private var lastXrayConfigPath: String? = null
     @Volatile private var lastSocksPort: Int = 2080
+    @Volatile private var lastCoreEngine: String = CORE_ENGINE_KEQRNEL
     @Volatile private var lastExcludePackages: List<String> = emptyList()
     @Volatile private var lastIncludePackages: List<String> = emptyList()
     @Volatile private var xrayPid:            Int                   = -1
@@ -99,6 +105,16 @@ class KeqdisVpnService : VpnService() {
     @Volatile private var tunInterface:       ParcelFileDescriptor? = null
     @Volatile private var cleanupDone:       Boolean              = false
     @Volatile private var activeSocksPort:   Int                  = 2080
+
+    // Сериализует start/stop/teardown: без этого быстрое перещёлкивание плитки в
+    // шторке запускало новый старт поверх ещё идущего cleanup() предыдущего стопа —
+    // они дрались за xrayPid/tun2socksPid/tunInterface и SOCKS-порт, старт падал в
+    // ERROR и приложение приходилось перезапускать. Под мьютексом операции идут
+    // строго по очереди, и стоп дожидается cleanup() ДО того, как стартует следующий.
+    private val opMutex = Mutex()
+    // startId последней команды (для stopSelf(startId): сервис не убьётся, если уже
+    // прилетела более новая команда — например, старт в очереди за стопом).
+    @Volatile private var latestStartId = 0
 
     private val serviceScope = CoroutineScope(
         Dispatchers.IO + SupervisorJob() + CoroutineExceptionHandler { _, e ->
@@ -134,12 +150,13 @@ class KeqdisVpnService : VpnService() {
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        latestStartId = startId
         when (intent?.action) {
             ACTION_TOGGLE -> {
                 // Переключение состояния VPN.
                 // Если VPN уже запущен или находится в процессе запуска, прекращаем его.
                 if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) {
-                    serviceScope.launch { stopVpn() }
+                    serviceScope.launch { stopVpn(startId) }
                 } else if (status == VpnRunStatus.STOPPED || status == VpnRunStatus.ERROR) {
                     // Запросим Flutter обработать подключение через launchPendingIntent
                     val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
@@ -182,7 +199,7 @@ class KeqdisVpnService : VpnService() {
                         buildControlNotification("Connecting…", isConnected = false, isTransitioning = true)
                     )
                     serviceScope.launch {
-                        startVpnWithAwg(uapi, addresses, dns, allowedIps, mtu, excludePkgs, includePkgs)
+                        startVpnWithAwg(startId, uapi, addresses, dns, allowedIps, mtu, excludePkgs, includePkgs)
                     }
                     return START_NOT_STICKY
                 }
@@ -200,13 +217,22 @@ class KeqdisVpnService : VpnService() {
                 socksUsername = user
                 socksPassword = pass
 
-                android.util.Log.d("KEQDIS", "onStartCommand: backend=$backend config=$configPath")
+                // Движок ядра. Сохраняем его в QS-prefs вместе с configPath: файл
+                // конфига привязан к движку (keqrnel пишет sing-box-формат, chain —
+                // сырой xray). Плитка переподключается по этому же файлу, поэтому
+                // обязана использовать ТОТ ЖЕ движок — иначе libxray не распарсит
+                // sing-box-конфиг ("Listen on specific ip without port") и порт не поднимется.
+                val coreEngine = intent.getStringExtra(EXTRA_CORE_ENGINE) ?: CORE_ENGINE_CHAIN
+                lastCoreEngine = coreEngine
+
+                android.util.Log.d("KEQDIS", "onStartCommand: backend=$backend engine=$coreEngine config=$configPath")
                 lastXrayConfigPath = configPath
 
                 runCatching {
                     getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE)
                         .edit()
                         .putString(KEY_QS_LAST_BACKEND, backend)
+                        .putString(KEY_QS_LAST_CORE_ENGINE, coreEngine)
                         .putString(KEY_QS_LAST_XRAY_CONFIG, configPath)
                         .putInt(KEY_QS_LAST_SOCKS_PORT, socksPort)
                         .putString(KEY_QS_LAST_SOCKS_USERNAME, socksUsername)
@@ -223,15 +249,14 @@ class KeqdisVpnService : VpnService() {
                     buildControlNotification("Connecting…", isConnected = false, isTransitioning = true)
                 )
 
-                val coreEngine = intent.getStringExtra(EXTRA_CORE_ENGINE) ?: CORE_ENGINE_CHAIN
                 serviceScope.launch {
                     startVpnWithXray(
-                        configPath, socksPort, excludePkgs, includePkgs,
+                        startId, configPath, socksPort, excludePkgs, includePkgs,
                         socksNoAuth = false, coreEngine = coreEngine,
                     )
                 }
             }
-            ACTION_STOP -> serviceScope.launch { stopVpn() }
+            ACTION_STOP -> serviceScope.launch { stopVpn(startId) }
         }
         return START_NOT_STICKY
     }
@@ -263,25 +288,27 @@ class KeqdisVpnService : VpnService() {
     // ── Start / Stop ─────────────────────────────────────────────────────────
 
     private suspend fun startVpnWithXray(
+        startId: Int,
         xrayConfigPath: String,
         socksPort: Int,
         excludePkgs: List<String>,
         includePkgs: List<String>,
         socksNoAuth: Boolean = false,
         coreEngine: String = CORE_ENGINE_CHAIN,
-    ) {
-        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) return
+    ) = opMutex.withLock {
+        // Под opMutex: предыдущий стоп уже завершил cleanup(), порт/процессы свободны.
+        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) return@withLock
         setStatus(VpnRunStatus.STARTING)
         try {
             if (!socksNoAuth && (socksUsername.isEmpty() || socksPassword.isEmpty())) {
                 throw IllegalStateException("SOCKS5 credentials are empty — Intent was malformed")
             }
 
-            // keqrnel — единое ядро (libkeqrnel.so) как drop-in замена xray;
-            // запускается тем же fork+execv и так же поднимает SOCKS5 для tun2socks.
-            val coreBinary =
-                if (coreEngine == CORE_ENGINE_KEQRNEL) "libkeqrnel.so" else "libxray.so"
-            xrayPid = startXray(getBinaryPath(coreBinary), xrayConfigPath)
+            // На Android всегда libxray.so (chain): keqrnel-обёртка ломала сплит-
+            // роутинг (см. AndroidTunnelBackend), а libkeqrnel.so удалён из jniLibs.
+            // coreEngine оставлен в сигнатурах для совместимости, но игнорируется —
+            // даже старый сохранённый engine=keqrnel не должен искать удалённый бинарь.
+            xrayPid = startXray(getBinaryPath("libxray.so"), xrayConfigPath)
 
             // 2. Ждём пока Xray поднимет SOCKS5 порт
             var waited = 0
@@ -312,15 +339,20 @@ class KeqdisVpnService : VpnService() {
             showControlNotification(e.message ?: "Error", isConnected = false, isTransitioning = false)
             stopForeground(true)
             unregisterNotificationReceiver()
-            stopSelf()
+            // stopSelf(startId): не убьём сервис, если уже пришёл более новый старт.
+            stopSelf(startId)
         }
     }
 
-    private suspend fun stopVpn() {
-        if (status == VpnRunStatus.STOPPED) return
+    private suspend fun stopVpn(startId: Int? = null) = opMutex.withLock {
+        if (status == VpnRunStatus.STOPPED) {
+            // Уже остановлен — но всё равно даём сервису шанс завершиться, если
+            // это была отдельная stop-команда и более новой не прилетело.
+            if (startId != null) stopSelf(startId) else stopSelf()
+            return@withLock
+        }
 
-        // [FIX-TILE-DELAY] Меняем статус ДО cleanup, чтобы tile обновился сразу.
-        // cleanup() может быть долгой (wait for process exit), поэтому запускаем её в фоне.
+        // [FIX-TILE-DELAY] Статус → STOPPED сразу, чтобы плитка обновилась мгновенно.
         setStatus(VpnRunStatus.STOPPED)
         showControlNotification("Disconnected", isConnected = false, isTransitioning = false)
         withContext(Dispatchers.Main) {
@@ -328,17 +360,16 @@ class KeqdisVpnService : VpnService() {
         }
         unregisterNotificationReceiver()
 
-        // Запускаем очистку в background, чтобы не блокировать обновление UI
-        serviceScope.launch(Dispatchers.IO) {
-            try {
-                cleanup()
-            } catch (e: Exception) {
-                android.util.Log.w("KEQDIS", "cleanup failed: ${e.message}")
-            } finally {
-                cleanupDone = true
-                // После очистки завершаем сервис
-                stopSelf()
-            }
+        // cleanup() ВНУТРИ мьютекса (await), чтобы следующий старт не начался, пока
+        // не убиты старые xray/tun2socks и не закрыт TUN. Раньше cleanup уезжал в
+        // отдельную корутину и гонялся с новым стартом — отсюда и зависания.
+        try {
+            cleanup()
+        } catch (e: Exception) {
+            android.util.Log.w("KEQDIS", "cleanup failed: ${e.message}")
+        } finally {
+            cleanupDone = true
+            if (startId != null) stopSelf(startId) else stopSelf()
         }
     }
 
@@ -464,6 +495,7 @@ class KeqdisVpnService : VpnService() {
     // ── AmneziaWG ─────────────────────────────────────────────────────────────
 
     private suspend fun startVpnWithAwg(
+        startId: Int,
         uapi: String,
         addresses: List<String>,
         dns: List<String>,
@@ -471,8 +503,8 @@ class KeqdisVpnService : VpnService() {
         mtu: Int,
         excludePkgs: List<String>,
         includePkgs: List<String>,
-    ) {
-        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) return
+    ) = opMutex.withLock {
+        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) return@withLock
         setStatus(VpnRunStatus.STARTING)
         try {
             val tun = buildAwgTunInterface(addresses, dns, allowedIps, mtu, excludePkgs, includePkgs)
@@ -500,7 +532,7 @@ class KeqdisVpnService : VpnService() {
             showControlNotification(e.message ?: "Error", isConnected = false, isTransitioning = false)
             stopForeground(true)
             unregisterNotificationReceiver()
-            stopSelf()
+            stopSelf(startId)
         }
     }
 
@@ -598,17 +630,22 @@ class KeqdisVpnService : VpnService() {
             try {
                 while (java.io.File("/proc/$pid").exists()) delay(500)
                 android.util.Log.w("KEQDIS", "[tun2socks] pid=$pid exited")
-                // Игнорируем выход старого процесса при переподключении (новый pid уже в tun2socksPid).
-                if ((status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) &&
-                    pid == tun2socksPid) {
-                    // [FIX-STALE-TUN2SOCKS] Полный cleanup — убиваем Xray тоже,
-                    // чтобы не оставлять осиротевший процесс.
-                    android.util.Log.w("KEQDIS", "[tun2socks] triggering full cleanup after unexpected exit")
-                    tun2socksPid = -1  // уже мёртв
-                    cleanup()
-                    setStatus(VpnRunStatus.ERROR, "tun2socks exited")
-                    stopForeground(true)
-                    stopSelf()
+                // Реакцию на смерть процесса гоним через opMutex и перепроверяем под
+                // ним: при переподключении старый pid уже не равен tun2socksPid, а
+                // статус мог уйти в STOPPED — тогда это плановое завершение, не ошибка.
+                opMutex.withLock {
+                    if ((status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) &&
+                        pid == tun2socksPid) {
+                        android.util.Log.w("KEQDIS", "[tun2socks] triggering full cleanup after unexpected exit")
+                        tun2socksPid = -1  // уже мёртв
+                        setStatus(VpnRunStatus.ERROR, "tun2socks exited")
+                        cleanup()
+                        cleanupDone = true
+                        withContext(Dispatchers.Main) { stopForeground(STOP_FOREGROUND_REMOVE) }
+                        unregisterNotificationReceiver()
+                        // Без stopSelf(): сервис остаётся в ERROR и переиспользуется
+                        // следующим стартом из плитки, не убивая поставленную в очередь команду.
+                    }
                 }
             } catch (_: Exception) {}
         }
@@ -639,17 +676,21 @@ class KeqdisVpnService : VpnService() {
             try {
                 while (File("/proc/$pid").exists()) delay(500)
                 android.util.Log.w("KEQDIS", "[xray] pid=$pid exited")
-                if ((status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) &&
-                    monitorPid == xrayPid) {
-                    // [FIX-STALE-TUN2SOCKS] Убиваем tun2socks немедленно при падении Xray.
-                    // Без этого старый tun2socks продолжает жить и при следующем запуске
-                    // подключается к новому Xray со старыми credentials → invalid password.
-                    android.util.Log.w("KEQDIS", "[xray] triggering full cleanup after unexpected exit")
-                    xrayPid = -1  // уже мёртв — не пытаемся убить повторно в cleanup()
-                    cleanup()
-                    setStatus(VpnRunStatus.ERROR, "Xray exited unexpectedly")
-                    stopForeground(true)
-                    stopSelf()
+                opMutex.withLock {
+                    if ((status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) &&
+                        monitorPid == xrayPid) {
+                        // [FIX-STALE-TUN2SOCKS] Убиваем tun2socks немедленно при падении Xray.
+                        // Без этого старый tun2socks продолжает жить и при следующем запуске
+                        // подключается к новому Xray со старыми credentials → invalid password.
+                        android.util.Log.w("KEQDIS", "[xray] triggering full cleanup after unexpected exit")
+                        xrayPid = -1  // уже мёртв — не пытаемся убить повторно в cleanup()
+                        setStatus(VpnRunStatus.ERROR, "Xray exited unexpectedly")
+                        cleanup()
+                        cleanupDone = true
+                        withContext(Dispatchers.Main) { stopForeground(STOP_FOREGROUND_REMOVE) }
+                        unregisterNotificationReceiver()
+                        // Без stopSelf(): см. монитор tun2socks.
+                    }
                 }
             } catch (_: Exception) {}
         }
@@ -849,6 +890,7 @@ class KeqdisVpnService : VpnService() {
                     Intent(this, KeqdisVpnService::class.java).apply {
                         action = ACTION_START
                         putExtra(EXTRA_VPN_BACKEND, VPN_BACKEND_XRAY)
+                        putExtra(EXTRA_CORE_ENGINE, lastCoreEngine)
                         putExtra(EXTRA_XRAY_CONFIG, lastXrayConfigPath)
                         putExtra("socks_port", lastSocksPort)
                         putStringArrayListExtra("exclude_packages", ArrayList(lastExcludePackages))
