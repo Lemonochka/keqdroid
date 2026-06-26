@@ -215,6 +215,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsRoutingPresetRuGeoipDesc => 'Alle russischen IP-Bereiche umgehen das VPN per GeoIP — funktioniert im Proxy-Modus';
 
   @override
+  String get settingsRoutingPresetRuGeositeTitle => 'Russische Seiten (GeoSite) — Direkt';
+
+  @override
+  String get settingsRoutingPresetRuGeositeDesc => 'Russische Domains aus der GeoSite-Datenbank umgehen das VPN';
+
+  @override
   String get settingsRoutingPresetBanksTitle => 'Banken & Behörden — Direkt';
 
   @override
@@ -231,6 +237,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsRoutingPresetAdsDesc => 'Gängige Werbe-/Analyse-Hosts verwerfen';
+
+  @override
+  String get settingsRoutingPresetAdsGeositeTitle => 'Werbung (GeoSite) — Blockieren';
+
+  @override
+  String get settingsRoutingPresetAdsGeositeDesc => 'Breite Werbe-/Tracker-Liste aus der GeoSite-Datenbank blockieren';
 
   @override
   String get settingsRoutingPresetStreamingTitle => 'Streaming — Proxy';
@@ -1145,4 +1157,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trayStatusError => 'Fehler';
+
+  @override
+  String get serversSortTitle => 'Server sortieren';
+
+  @override
+  String get serversSortDefault => 'Standardreihenfolge';
+
+  @override
+  String get serversSortPing => 'Ping (aufsteigend)';
+
+  @override
+  String get serversSortSpeed => 'Geschwindigkeit (absteigend)';
+
+  @override
+  String get serversSortName => 'Name (A → Z)';
 }

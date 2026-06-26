@@ -215,6 +215,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingPresetRuGeoipDesc => '通过 GeoIP 让所有俄罗斯 IP 段绕过 VPN — 仅代理模式有效';
 
   @override
+  String get settingsRoutingPresetRuGeositeTitle => '俄罗斯网站 (GeoSite) — 直连';
+
+  @override
+  String get settingsRoutingPresetRuGeositeDesc => 'GeoSite 数据库中的俄罗斯域名绕过 VPN';
+
+  @override
   String get settingsRoutingPresetBanksTitle => '银行和政务 — 直连';
 
   @override
@@ -231,6 +237,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsRoutingPresetAdsDesc => '丢弃常见的广告 / 分析主机';
+
+  @override
+  String get settingsRoutingPresetAdsGeositeTitle => '广告 (GeoSite) — 拦截';
+
+  @override
+  String get settingsRoutingPresetAdsGeositeDesc => '拦截 GeoSite 数据库中的大量广告 / 跟踪器';
 
   @override
   String get settingsRoutingPresetStreamingTitle => '流媒体 — 代理';
@@ -1145,4 +1157,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get trayStatusError => '错误';
+
+  @override
+  String get serversSortTitle => '服务器排序';
+
+  @override
+  String get serversSortDefault => '默认顺序';
+
+  @override
+  String get serversSortPing => 'Ping（从低到高）';
+
+  @override
+  String get serversSortSpeed => '速度（从高到低）';
+
+  @override
+  String get serversSortName => '名称（A → Z）';
 }

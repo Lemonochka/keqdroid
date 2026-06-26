@@ -105,12 +105,16 @@
   "settingsRoutingPresetRuDesc": "Все домены .ru / .рф и крупные сервисы РФ идут мимо VPN (добавляет домены в «Напрямую»)",
   "settingsRoutingPresetRuGeoipTitle": "IP России (GeoIP) — напрямую",
   "settingsRoutingPresetRuGeoipDesc": "Все российские диапазоны IP идут мимо VPN через GeoIP — работает в режиме Proxy",
+  "settingsRoutingPresetRuGeositeTitle": "Сайты РФ (GeoSite) — Direct",
+  "settingsRoutingPresetRuGeositeDesc": "Российские домены из базы GeoSite идут мимо VPN",
   "settingsRoutingPresetBanksTitle": "Банки и госуслуги — напрямую",
   "settingsRoutingPresetBanksDesc": "Банки, платежи и госпорталы идут мимо VPN",
   "settingsRoutingPresetLanIpsTitle": "Локальная сеть — напрямую",
   "settingsRoutingPresetLanIpsDesc": "Приватные диапазоны IP локальной сети (192.168.x, 10.x, …) идут мимо VPN",
   "settingsRoutingPresetAdsTitle": "Реклама и трекеры — блок",
   "settingsRoutingPresetAdsDesc": "Блокировать частые рекламные и аналитические домены",
+  "settingsRoutingPresetAdsGeositeTitle": "Реклама (GeoSite) — Block",
+  "settingsRoutingPresetAdsGeositeDesc": "Блокировать широкий список рекламы/трекеров из базы GeoSite",
   "settingsRoutingPresetStreamingTitle": "Стриминг — через VPN",
   "settingsRoutingPresetStreamingDesc": "YouTube, Netflix, Twitch принудительно через VPN",
   "settingsRoutingPresetMessengersTitle": "Мессенджеры — через VPN",
@@ -551,5 +555,10 @@
   "trayModeTun": "TUN",
   "trayStatusConnected": "Подключено",
   "trayStatusDisconnected": "Отключено",
-  "trayStatusError": "Ошибка"
+  "trayStatusError": "Ошибка",
+  "serversSortTitle": "Сортировка серверов",
+  "serversSortDefault": "По умолчанию",
+  "serversSortPing": "Пинг (по возрастанию)",
+  "serversSortSpeed": "Скорость (по убыванию)",
+  "serversSortName": "Название (А → Я)"
 }
