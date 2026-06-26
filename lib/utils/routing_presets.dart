@@ -172,6 +172,13 @@ class RoutingPresets {
       values: ['geoip:ru'],
     ),
     RoutingPreset(
+      id: 'ru_geosite',
+      field: RoutingField.direct,
+      // geosite:category-ru is resolved by xray from geosite.dat — RU sites by
+      // domain category, the geosite analog of the geoip:ru preset.
+      values: ['geosite:category-ru'],
+    ),
+    RoutingPreset(
       id: 'banks',
       field: RoutingField.direct,
       values: banksAndGov,
@@ -185,6 +192,13 @@ class RoutingPresets {
       id: 'ads',
       field: RoutingField.blocked,
       values: adsAndTrackers,
+    ),
+    RoutingPreset(
+      id: 'ads_geosite',
+      field: RoutingField.blocked,
+      // geosite:category-ads-all from geosite.dat — broad ad/tracker list,
+      // wider coverage than the curated adsAndTrackers domains above.
+      values: ['geosite:category-ads-all'],
     ),
     RoutingPreset(
       id: 'streaming',

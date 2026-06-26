@@ -337,6 +337,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     final subs = state.value ?? [];
     final idx = subs.indexWhere((s) => s.id == id);
     if (idx == -1) return;
+    var urlChanged = false;
     if (url != null) {
       final newUrl = _normalizeSubscriptionUrl(url);
       final duplicate = subs.any(
@@ -345,6 +346,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       if (duplicate) {
         throw Exception('Subscription with this URL is already added');
       }
+      urlChanged = newUrl != _normalizeSubscriptionUrl(subs[idx].url);
     }
     final updated = subs[idx].copyWith(
       name: name ?? subs[idx].name,
@@ -353,6 +355,14 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     await ref.read(storageProvider).upsertSubscription(updated);
     final newList = [...subs]..[idx] = updated;
     state = AsyncData(newList);
+
+    // Сменили ссылку → перетягиваем серверы с нового URL. Иначе подписка
+    // молча оставалась со старыми серверами. Делаем в фоне (как ручной
+    // refresh): на карточке крутится спиннер, ошибка нового URL ложится в
+    // subscriptionRefreshErrorsProvider, а не роняет диалог редактирования.
+    if (urlChanged) {
+      unawaited(refreshTracked(updated).catchError((_) {}));
+    }
   }
 }
 
@@ -367,17 +377,19 @@ class ServersState {
   final bool isLoading;
   final String? error;
 
-  const ServersState({
+  /// Индекс серверов по id — считается один раз на состояние. Раньше каждый
+  /// `_ServerTile` линейно искал себя в `servers` (O(N) на тайл → O(N²) на
+  /// список), что заметно тормозило построение/обновление длинных списков.
+  final Map<String, ServerItem> byId;
+
+  ServersState({
     this.servers = const [],
     this.activeServerId,
     this.isLoading = false,
     this.error,
-  });
+  }) : byId = {for (final s in servers) s.id: s};
 
-  ServerItem? get activeServer => servers.cast<ServerItem?>().firstWhere(
-        (s) => s?.id == activeServerId,
-    orElse: () => null,
-  );
+  ServerItem? get activeServer => byId[activeServerId];
 
   // sentinel чтобы отличить "не передали" от явного null (сброс activeServerId):
   // через обычный nullable + ?? занулить поле в copyWith не получится
@@ -403,7 +415,7 @@ class ServersNotifier extends Notifier<ServersState> {
   @override
   ServersState build() {
     _load();
-    return const ServersState(isLoading: true);
+    return ServersState(isLoading: true);
   }
 
   Future<void> _load() async {

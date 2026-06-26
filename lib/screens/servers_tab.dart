@@ -976,6 +976,68 @@ class _ServerGroupEntry {
   });
 }
 
+/// Режим сортировки серверов внутри группы (по долгому нажатию на шапку).
+enum ServerSortMode {
+  defaultOrder,
+  ping,
+  speed,
+  name;
+
+  static ServerSortMode fromName(String? n) {
+    for (final m in values) {
+      if (m.name == n) return m;
+    }
+    return ServerSortMode.defaultOrder;
+  }
+
+  String label(AppLocalizations l10n) => switch (this) {
+        ServerSortMode.defaultOrder => l10n.serversSortDefault,
+        ServerSortMode.ping => l10n.serversSortPing,
+        ServerSortMode.speed => l10n.serversSortSpeed,
+        ServerSortMode.name => l10n.serversSortName,
+      };
+
+  IconData get icon => switch (this) {
+        ServerSortMode.defaultOrder => Icons.format_list_bulleted,
+        ServerSortMode.ping => Icons.network_check,
+        ServerSortMode.speed => Icons.speed,
+        ServerSortMode.name => Icons.sort_by_alpha,
+      };
+}
+
+/// Возвращает копию [servers], отсортированную по [mode] (для defaultOrder —
+/// исходный порядок без копии). Серверы без нужной метрики уходят в конец.
+List<ServerItem> _sortServersBy(List<ServerItem> servers, ServerSortMode mode) {
+  if (mode == ServerSortMode.defaultOrder) return servers;
+  final list = [...servers];
+  switch (mode) {
+    case ServerSortMode.name:
+      list.sort((a, b) =>
+          a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+    case ServerSortMode.ping:
+      list.sort((a, b) => _pingSortKey(a).compareTo(_pingSortKey(b)));
+    case ServerSortMode.speed:
+      list.sort((a, b) => _speedSortKey(b).compareTo(_speedSortKey(a)));
+    case ServerSortMode.defaultOrder:
+      break;
+  }
+  return list;
+}
+
+// Латентность (url/tcp/icmp), меньше — лучше. Нет данных или это speed-результат
+// (pingMs хранит kbps) → максимум, чтобы уйти в конец.
+int _pingSortKey(ServerItem s) {
+  if (s.pingMs == null || s.lastPingType == 'speed') return 1 << 30;
+  return s.pingMs!;
+}
+
+// Скорость (kbps; lastPingType=='speed'), больше — лучше. Иначе -1 → в конец
+// (при сортировке по убыванию).
+int _speedSortKey(ServerItem s) {
+  if (s.pingMs == null || s.lastPingType != 'speed') return -1;
+  return s.pingMs!;
+}
+
 /// ?????? ???????? ????? ??????
 const _listTopFadeHeight = 56.0;
 
@@ -1089,6 +1151,10 @@ class _SubCardState extends ConsumerState<_SubCard> {
     final collapsed = ref.watch(
       collapsedServerGroupsProvider.select((m) => m[collapseKey] ?? false),
     );
+    final sortMode = ServerSortMode.fromName(
+      ref.watch(serverSortModesProvider.select((m) => m[collapseKey])),
+    );
+    final sortedServers = _sortServersBy(widget.servers, sortMode);
     final isRefreshing =
         sub != null &&
         ref.watch(
@@ -1158,6 +1224,10 @@ class _SubCardState extends ConsumerState<_SubCard> {
                             onTap: () => ref
                                 .read(collapsedServerGroupsProvider.notifier)
                                 .update((m) => {...m, collapseKey: !collapsed}),
+                            onLongPress: () {
+                              HapticFeedback.mediumImpact();
+                              _showSortMenu(context, collapseKey, sortMode);
+                            },
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
@@ -1333,6 +1403,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                         width: double.infinity,
                       )
                     : _buildExpandedServerList(
+                        servers: sortedServers,
                         activeServerId: activeServerId,
                         textLightColor: textLightColor,
                       ),
@@ -1346,10 +1417,11 @@ class _SubCardState extends ConsumerState<_SubCard> {
 
   // column ?????? ?????????? listview: ??? ???????????? ?? ???? viewport ? ????? ????? ??????
   Widget _buildExpandedServerList({
+    required List<ServerItem> servers,
     required String? activeServerId,
     required Color textLightColor,
   }) {
-    if (widget.servers.isEmpty) {
+    if (servers.isEmpty) {
       return Padding(
         key: const ValueKey('servers-expanded-empty'),
         padding: const EdgeInsets.all(16),
@@ -1365,22 +1437,101 @@ class _SubCardState extends ConsumerState<_SubCard> {
       key: const ValueKey('servers-expanded'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (var index = 0; index < widget.servers.length; index++)
+        for (var index = 0; index < servers.length; index++)
           _ServerTile(
-            key: ValueKey(widget.servers[index].id),
-            server: widget.servers[index],
-            isActive: widget.servers[index].id == activeServerId,
+            key: ValueKey(servers[index].id),
+            server: servers[index],
+            isActive: servers[index].id == activeServerId,
             isFirst: index == 0,
-            isLast: index == widget.servers.length - 1,
-            onTap: () => widget.onSelectServer(widget.servers[index]),
+            isLast: index == servers.length - 1,
+            onTap: () => widget.onSelectServer(servers[index]),
             onDelete: () => ref
                 .read(serversProvider.notifier)
-                .delete(widget.servers[index].id),
+                .delete(servers[index].id),
             onPing: () => ref
                 .read(serversProvider.notifier)
-                .pingSingle(widget.servers[index].id),
+                .pingSingle(servers[index].id),
           ),
       ],
+    );
+  }
+
+  /// Долгое нажатие на шапку группы → выбор сортировки серверов.
+  void _showSortMenu(
+    BuildContext context,
+    String collapseKey,
+    ServerSortMode current,
+  ) {
+    final accent = AppTheme.accent(context);
+    final textColor = AppTheme.text(context);
+    final textLight = AppTheme.textLight(context);
+    final l10n = context.l10n;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.bg(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: textLight.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l10n.serversSortTitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: textLight,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ),
+              ),
+              for (final mode in ServerSortMode.values)
+                ListTile(
+                  leading: Icon(
+                    mode.icon,
+                    color: mode == current ? accent : textLight,
+                  ),
+                  title: Text(
+                    mode.label(l10n),
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: textColor,
+                      fontWeight:
+                          mode == current ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                  trailing: mode == current
+                      ? Icon(Icons.check, color: accent, size: 20)
+                      : null,
+                  onTap: () {
+                    ref.read(serverSortModesProvider.notifier).update(
+                          (m) => {...m, collapseKey: mode.name},
+                        );
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1749,10 +1900,9 @@ class _ServerTile extends ConsumerWidget {
     );
     final (pingMs, lastTestedAt, lastPingType) = ref.watch(
       serversProvider.select((s) {
-        for (final item in s.servers) {
-          if (item.id == server.id) {
-            return (item.pingMs, item.lastTestedAt, item.lastPingType);
-          }
+        final item = s.byId[server.id];
+        if (item != null) {
+          return (item.pingMs, item.lastTestedAt, item.lastPingType);
         }
         return (server.pingMs, server.lastTestedAt, server.lastPingType);
       }),
