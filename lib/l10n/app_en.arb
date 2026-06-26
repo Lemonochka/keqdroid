@@ -105,12 +105,16 @@
   "settingsRoutingPresetRuDesc": "All .ru / .рф domains and major RU services bypass the VPN (adds domains to Direct)",
   "settingsRoutingPresetRuGeoipTitle": "Russia IPs (GeoIP) — Direct",
   "settingsRoutingPresetRuGeoipDesc": "All Russian IP ranges bypass the VPN via GeoIP — works in Proxy mode",
+  "settingsRoutingPresetRuGeositeTitle": "Russia sites (GeoSite) — Direct",
+  "settingsRoutingPresetRuGeositeDesc": "Russian domains from the GeoSite database bypass the VPN",
   "settingsRoutingPresetBanksTitle": "Banks & gov — Direct",
   "settingsRoutingPresetBanksDesc": "Banking, payments and state portals bypass the VPN",
   "settingsRoutingPresetLanIpsTitle": "Local network — Direct",
   "settingsRoutingPresetLanIpsDesc": "Private LAN IP ranges (192.168.x, 10.x, …) bypass the VPN",
   "settingsRoutingPresetAdsTitle": "Ads & trackers — Block",
   "settingsRoutingPresetAdsDesc": "Drop common ad / analytics hosts",
+  "settingsRoutingPresetAdsGeositeTitle": "Ads (GeoSite) — Block",
+  "settingsRoutingPresetAdsGeositeDesc": "Block a broad ad / tracker list from the GeoSite database",
   "settingsRoutingPresetStreamingTitle": "Streaming — Proxy",
   "settingsRoutingPresetStreamingDesc": "Force YouTube, Netflix, Twitch through the VPN",
   "settingsRoutingPresetMessengersTitle": "Messengers — Proxy",
@@ -551,5 +555,10 @@
   "trayModeTun": "TUN",
   "trayStatusConnected": "Connected",
   "trayStatusDisconnected": "Disconnected",
-  "trayStatusError": "Error"
+  "trayStatusError": "Error",
+  "serversSortTitle": "Sort servers",
+  "serversSortDefault": "Default order",
+  "serversSortPing": "Ping (low → high)",
+  "serversSortSpeed": "Speed (high → low)",
+  "serversSortName": "Name (A → Z)"
 }

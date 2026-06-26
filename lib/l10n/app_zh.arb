@@ -105,12 +105,16 @@
   "settingsRoutingPresetRuDesc": "所有 .ru / .рф 域名及主要俄罗斯服务绕过 VPN（向“直连”添加域名）",
   "settingsRoutingPresetRuGeoipTitle": "俄罗斯 IP（GeoIP）— 直连",
   "settingsRoutingPresetRuGeoipDesc": "通过 GeoIP 让所有俄罗斯 IP 段绕过 VPN — 仅代理模式有效",
+  "settingsRoutingPresetRuGeositeTitle": "俄罗斯网站 (GeoSite) — 直连",
+  "settingsRoutingPresetRuGeositeDesc": "GeoSite 数据库中的俄罗斯域名绕过 VPN",
   "settingsRoutingPresetBanksTitle": "银行和政务 — 直连",
   "settingsRoutingPresetBanksDesc": "银行、支付和政务门户绕过 VPN",
   "settingsRoutingPresetLanIpsTitle": "本地网络 — 直连",
   "settingsRoutingPresetLanIpsDesc": "私有局域网 IP 段（192.168.x、10.x …）绕过 VPN",
   "settingsRoutingPresetAdsTitle": "广告和跟踪器 — 阻止",
   "settingsRoutingPresetAdsDesc": "丢弃常见的广告 / 分析主机",
+  "settingsRoutingPresetAdsGeositeTitle": "广告 (GeoSite) — 拦截",
+  "settingsRoutingPresetAdsGeositeDesc": "拦截 GeoSite 数据库中的大量广告 / 跟踪器",
   "settingsRoutingPresetStreamingTitle": "流媒体 — 代理",
   "settingsRoutingPresetStreamingDesc": "强制 YouTube、Netflix、Twitch 经过 VPN",
   "settingsRoutingPresetMessengersTitle": "即时通讯 — 代理",
@@ -551,5 +555,10 @@
   "trayModeTun": "TUN",
   "trayStatusConnected": "已连接",
   "trayStatusDisconnected": "未连接",
-  "trayStatusError": "错误"
+  "trayStatusError": "错误",
+  "serversSortTitle": "服务器排序",
+  "serversSortDefault": "默认顺序",
+  "serversSortPing": "Ping（从低到高）",
+  "serversSortSpeed": "速度（从高到低）",
+  "serversSortName": "名称（A → Z）"
 }

@@ -483,6 +483,18 @@ abstract class AppLocalizations {
   /// **'All Russian IP ranges bypass the VPN via GeoIP — works in Proxy mode'**
   String get settingsRoutingPresetRuGeoipDesc;
 
+  /// No description provided for @settingsRoutingPresetRuGeositeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Russia sites (GeoSite) — Direct'**
+  String get settingsRoutingPresetRuGeositeTitle;
+
+  /// No description provided for @settingsRoutingPresetRuGeositeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Russian domains from the GeoSite database bypass the VPN'**
+  String get settingsRoutingPresetRuGeositeDesc;
+
   /// No description provided for @settingsRoutingPresetBanksTitle.
   ///
   /// In en, this message translates to:
@@ -518,6 +530,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Drop common ad / analytics hosts'**
   String get settingsRoutingPresetAdsDesc;
+
+  /// No description provided for @settingsRoutingPresetAdsGeositeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ads (GeoSite) — Block'**
+  String get settingsRoutingPresetAdsGeositeTitle;
+
+  /// No description provided for @settingsRoutingPresetAdsGeositeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Block a broad ad / tracker list from the GeoSite database'**
+  String get settingsRoutingPresetAdsGeositeDesc;
 
   /// No description provided for @settingsRoutingPresetStreamingTitle.
   ///
@@ -2228,6 +2252,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error'**
   String get trayStatusError;
+
+  /// No description provided for @serversSortTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort servers'**
+  String get serversSortTitle;
+
+  /// No description provided for @serversSortDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default order'**
+  String get serversSortDefault;
+
+  /// No description provided for @serversSortPing.
+  ///
+  /// In en, this message translates to:
+  /// **'Ping (low → high)'**
+  String get serversSortPing;
+
+  /// No description provided for @serversSortSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed (high → low)'**
+  String get serversSortSpeed;
+
+  /// No description provided for @serversSortName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (A → Z)'**
+  String get serversSortName;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

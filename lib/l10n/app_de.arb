@@ -105,12 +105,16 @@
   "settingsRoutingPresetRuDesc": "Alle .ru / .рф Domains und großen RU-Dienste umgehen das VPN (fügt Domains zu Direkt hinzu)",
   "settingsRoutingPresetRuGeoipTitle": "Russland-IPs (GeoIP) — Direkt",
   "settingsRoutingPresetRuGeoipDesc": "Alle russischen IP-Bereiche umgehen das VPN per GeoIP — funktioniert im Proxy-Modus",
+  "settingsRoutingPresetRuGeositeTitle": "Russische Seiten (GeoSite) — Direkt",
+  "settingsRoutingPresetRuGeositeDesc": "Russische Domains aus der GeoSite-Datenbank umgehen das VPN",
   "settingsRoutingPresetBanksTitle": "Banken & Behörden — Direkt",
   "settingsRoutingPresetBanksDesc": "Banken, Zahlungen und Behördenportale umgehen das VPN",
   "settingsRoutingPresetLanIpsTitle": "Lokales Netzwerk — Direkt",
   "settingsRoutingPresetLanIpsDesc": "Private LAN-IP-Bereiche (192.168.x, 10.x, …) umgehen das VPN",
   "settingsRoutingPresetAdsTitle": "Werbung & Tracker — Blockieren",
   "settingsRoutingPresetAdsDesc": "Gängige Werbe-/Analyse-Hosts verwerfen",
+  "settingsRoutingPresetAdsGeositeTitle": "Werbung (GeoSite) — Blockieren",
+  "settingsRoutingPresetAdsGeositeDesc": "Breite Werbe-/Tracker-Liste aus der GeoSite-Datenbank blockieren",
   "settingsRoutingPresetStreamingTitle": "Streaming — Proxy",
   "settingsRoutingPresetStreamingDesc": "YouTube, Netflix, Twitch zwingend über das VPN",
   "settingsRoutingPresetMessengersTitle": "Messenger — Proxy",
@@ -551,5 +555,10 @@
   "trayModeTun": "TUN",
   "trayStatusConnected": "Verbunden",
   "trayStatusDisconnected": "Getrennt",
-  "trayStatusError": "Fehler"
+  "trayStatusError": "Fehler",
+  "serversSortTitle": "Server sortieren",
+  "serversSortDefault": "Standardreihenfolge",
+  "serversSortPing": "Ping (aufsteigend)",
+  "serversSortSpeed": "Geschwindigkeit (absteigend)",
+  "serversSortName": "Name (A → Z)"
 }
