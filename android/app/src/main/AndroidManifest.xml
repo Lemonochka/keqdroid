@@ -60,7 +60,7 @@
         <service
             android:name=".VpnQuickTileService"
             android:label="Keqdis"
-            android:icon="@mipmap/ic_launcher"
+            android:icon="@drawable/ic_launcher_monochrome"
             android:exported="true"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
