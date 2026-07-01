@@ -4,22 +4,27 @@ import 'package:path/path.dart' as p;
 
 import '../core/app_logger.dart';
 
-/// firefox не берёт системный прокси windows сам — пишем блок в user.js каждого профиля
+/// Firefox по умолчанию не переключается на системный прокси автоматически при
+/// его смене, поэтому мы лишь ВКЛЮЧАЕМ ему режим «использовать системный прокси»
+/// (`network.proxy.type = 5`) через user.js. Дальше Firefox едет по тому же
+/// системному `127.0.0.1:httpPort`, что и Chrome/Edge, и сам отпускает его при
+/// отключении VPN. Никакой ручной адрес/порт не прописываем.
 class FirefoxProxyHelper {
   FirefoxProxyHelper._();
 
   static const _markerStart = '// keqdis-proxy-start';
   static const _markerEnd = '// keqdis-proxy-end';
 
+  /// Включает в каждом профиле режим «использовать системный прокси».
   /// Returns profile directories that were updated.
-  static Future<List<String>> applyManualHttpProxy(int httpPort) async {
+  static Future<List<String>> applySystemProxyPref() async {
     final profiles = await _discoverProfileDirs();
     if (profiles.isEmpty) {
       AppLogger.instance.debug('Firefox: no profiles found under APPDATA');
       return [];
     }
 
-    final block = _buildBlock(httpPort);
+    final block = _buildBlock();
     final updated = <String>[];
 
     for (final dir in profiles) {
@@ -43,14 +48,14 @@ class FirefoxProxyHelper {
 
     if (updated.isNotEmpty) {
       AppLogger.instance.info(
-        'Firefox: wrote HTTP proxy 127.0.0.1:$httpPort to ${updated.length} '
-        'profile(s). Restart Firefox completely.',
+        'Firefox: enabled "use system proxy" (network.proxy.type=5) in '
+        '${updated.length} profile(s). Restart Firefox completely.',
       );
     }
     return updated;
   }
 
-  static Future<List<String>> clearManualHttpProxy() async {
+  static Future<List<String>> clearProxyPref() async {
     final profiles = await _discoverProfileDirs();
     final cleared = <String>[];
 
@@ -76,15 +81,12 @@ class FirefoxProxyHelper {
     return cleared;
   }
 
-  static String _buildBlock(int httpPort) => '''
+  // network.proxy.type = 5 → «использовать системный прокси». Firefox сам
+  // подхватывает системный HTTP-прокси Windows (тот же, что читает Chrome) и
+  // освобождает его при отключении VPN — ручной адрес/порт не пишем.
+  static String _buildBlock() => '''
 $_markerStart — KeqDroid; restart Firefox after connect/disconnect
-user_pref("network.proxy.type", 1);
-user_pref("network.proxy.http", "127.0.0.1");
-user_pref("network.proxy.http_port", $httpPort);
-user_pref("network.proxy.ssl", "127.0.0.1");
-user_pref("network.proxy.ssl_port", $httpPort);
-user_pref("network.proxy.share_proxy_settings", true);
-user_pref("network.proxy.no_proxies_on", "localhost,127.0.0.1,::1");
+user_pref("network.proxy.type", 5);
 $_markerEnd''';
 
   static String _stripBlock(String content) {

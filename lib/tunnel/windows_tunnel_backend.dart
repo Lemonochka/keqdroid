@@ -485,7 +485,7 @@ class WindowsTunnelBackend implements TunnelBackend {
       throw VpnStartException(buffer.toString(), cause: e);
     }
 
-    unawaited(_applyFirefoxProxyAfterConnect(request.httpPort));
+    unawaited(_applyFirefoxProxyAfterConnect());
   }
 
   @override
@@ -497,7 +497,7 @@ class WindowsTunnelBackend implements TunnelBackend {
       await _method.invokeMethod<void>('setSystemProxy', {'enabled': false});
     } catch (_) {}
 
-    final cleared = await FirefoxProxyHelper.clearManualHttpProxy();
+    final cleared = await FirefoxProxyHelper.clearProxyPref();
     if (cleared.isNotEmpty) {
       AppLogger.instance.info(
         'Firefox: removed KeqDroid proxy block from ${cleared.length} profile(s). '
@@ -1044,13 +1044,13 @@ class WindowsTunnelBackend implements TunnelBackend {
     }
   }
 
-  Future<void> _applyFirefoxProxyAfterConnect(int httpPort) async {
+  Future<void> _applyFirefoxProxyAfterConnect() async {
     try {
-      final profiles = await FirefoxProxyHelper.applyManualHttpProxy(httpPort);
+      final profiles = await FirefoxProxyHelper.applySystemProxyPref();
       if (profiles.isNotEmpty) {
         await _proxyDebugLogViaChannel(
           'Firefox user.js updated (${profiles.length} profile(s)): '
-          'HTTP 127.0.0.1:$httpPort. Restart Firefox.',
+          'enabled "use system proxy". Restart Firefox.',
         );
       }
     } catch (e, st) {

@@ -600,7 +600,7 @@ wait "$sb"
       ]);
     } catch (_) {}
     try {
-      await FirefoxProxyHelper.clearManualHttpProxy();
+      await FirefoxProxyHelper.clearProxyPref();
     } catch (_) {}
   }
 
@@ -622,7 +622,7 @@ wait "$sb"
     // routing to a dead 127.0.0.1 proxy.
     await _gsettingsProxy(enabled: false);
     try {
-      await FirefoxProxyHelper.clearManualHttpProxy();
+      await FirefoxProxyHelper.clearProxyPref();
     } catch (_) {}
 
     // sing-box first: it owns the tun device + routes, tear it down before the
