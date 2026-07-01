@@ -125,6 +125,19 @@ int PopupCornerRadiusPx(HWND hwnd) {
   return ::MulDiv(kPopupCornerRadiusLogical, static_cast<int>(dpi), 96);
 }
 
+// Flutter передаёт размеры попапа в логических пикселях, а Win32-координаты
+// (курсор, рабочая область, SetWindowPos) — в физических. На мониторе с
+// масштабом >100% (часто ноутбуки) логические < физических, поэтому окно
+// получалось заниженным и его низ («Выход») уезжал под панель задач. Приводим
+// логический размер к физическим пикселям по DPI окна.
+int LogicalToPhysical(HWND hwnd, int logical) {
+  const UINT dpi = ::GetDpiForWindow(hwnd);
+  if (dpi == 0 || dpi == 96) {
+    return logical;
+  }
+  return ::MulDiv(logical, static_cast<int>(dpi), 96);
+}
+
 void ApplyPopupRoundedCorners(HWND hwnd, int width, int height) {
   if (hwnd == nullptr || width <= 0 || height <= 0) {
     return;
@@ -318,6 +331,10 @@ void WindowsTrayShowMenuPopup(HWND hwnd,
     return;
   }
 
+  // Логические размеры из Flutter → физические пиксели монитора.
+  width = LogicalToPhysical(hwnd, width);
+  height = LogicalToPhysical(hwnd, height);
+
   if (!g_popup.active) {
     g_popup = {};
     g_popup.was_visible = ::IsWindowVisible(hwnd) != FALSE;
@@ -364,6 +381,11 @@ void WindowsTrayResizeMenuPopup(HWND hwnd, int width, int height) {
   if (!g_popup.active || hwnd == nullptr || width <= 0 || height <= 0) {
     return;
   }
+
+  // Логические размеры из Flutter → физические пиксели монитора.
+  width = LogicalToPhysical(hwnd, width);
+  height = LogicalToPhysical(hwnd, height);
+
   RECT rect = {};
   ::GetWindowRect(hwnd, &rect);
   int x = rect.left;

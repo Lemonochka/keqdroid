@@ -32,6 +32,13 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+# flutter_local_notifications_windows compiles its native code as C++17 and uses
+# C++/WinRT. On C++17, <winrt/base.h> pulls in the deprecated
+# <experimental/coroutine> header, which MSVC 14.51+ (Visual Studio 18) turns
+# into a hard error (STL1011). Suppress it for all plugin/runner targets built
+# below so the build succeeds with the current toolchain.
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
