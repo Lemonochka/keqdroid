@@ -22,6 +22,12 @@ class StorageService {
   final SharedPreferences _prefs;
   StorageService(this._prefs);
 
+  /// Кэш распарсенного AppSettings. getSettings() зовётся на горячих путях
+  /// (connect, каждый pingBatch/pingSingle), а fromJsonString делает jsonDecode
+  /// на каждый вызов. Кэшируем объект; инвалидируем в saveSettings (наш write)
+  /// и reloadFromDisk (write из фонового изолята WorkManager).
+  AppSettings? _settingsCache;
+
   /// Decodes a stored JSON array, parsing each element with [parse] and
   /// **skipping** entries that fail instead of discarding the whole list.
   ///
@@ -56,6 +62,7 @@ class StorageService {
   /// сбросить кэш prefs и подтянуть с диска (после workmanager)
   Future<void> reloadFromDisk() async {
     await _prefs.reload();
+    _settingsCache = null;
   }
 
   static Future<StorageService> init() async {
@@ -248,10 +255,14 @@ class StorageService {
   // настройки
 
   Future<AppSettings> getSettings() async {
+    final cached = _settingsCache;
+    if (cached != null) return cached;
     try {
       final raw = _prefs.getString(_kSettings);
-      if (raw == null) return const AppSettings();
-      return AppSettings.fromJsonString(raw);
+      final settings =
+          raw == null ? const AppSettings() : AppSettings.fromJsonString(raw);
+      _settingsCache = settings;
+      return settings;
     } catch (_) {
       return const AppSettings();
     }
@@ -259,6 +270,7 @@ class StorageService {
 
   Future<void> saveSettings(AppSettings settings) async {
     await _prefs.setString(_kSettings, settings.toJsonString());
+    _settingsCache = settings;
   }
 
   // socks порт

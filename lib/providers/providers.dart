@@ -27,9 +27,23 @@ import '../utils/error_messages.dart';
 import '../utils/process_name_utils.dart';
 import '../utils/socks5_credentials.dart';
 import '../utils/split_tunnel_routing.dart';
+import '../utils/subscription_diff.dart';
+import '../utils/subscription_url.dart';
 import 'ui_state_providers.dart';
 
 export 'ui_state_providers.dart';
+
+/// Резолвит первый IP-адрес хоста (таймаут 5с), либо null если не вышло.
+/// direct-правило роутинга и URL/speed-пинг хотят идти по IP, а не по домену,
+/// когда DNS сам уходит через прокси.
+Future<String?> _resolveFirstAddress(String host) async {
+  try {
+    final addresses =
+        await InternetAddress.lookup(host).timeout(const Duration(seconds: 5));
+    if (addresses.isNotEmpty) return addresses.first.address;
+  } catch (_) {}
+  return null;
+}
 
 final storageProvider = Provider<StorageService>((ref) {
   throw UnimplementedError('Override storageProvider before runApp');
@@ -147,30 +161,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     }
   }
 
-  bool _hasSubscriptionsChanged(List<Subscription> a, List<Subscription> b) {
-    if (identical(a, b)) return false;
-    if (a.length != b.length) return true;
-    final byIdA = {for (final s in a) s.id: s};
-    final byIdB = {for (final s in b) s.id: s};
-    if (byIdA.length != byIdB.length) return true;
-    for (final entry in byIdA.entries) {
-      final x = entry.value;
-      final y = byIdB[entry.key];
-      if (y == null) return true;
-      if (x.name != y.name ||
-          x.url != y.url ||
-          x.lastUpdatedAt != y.lastUpdatedAt ||
-          x.usedBytes != y.usedBytes ||
-          x.totalBytes != y.totalBytes ||
-          x.expiresAt != y.expiresAt ||
-          x.autoUpdate != y.autoUpdate ||
-          x.serverCount != y.serverCount ||
-          x.updateIntervalHours != y.updateIntervalHours) {
-        return true;
-      }
-    }
-    return false;
-  }
+  bool _hasSubscriptionsChanged(List<Subscription> a, List<Subscription> b) =>
+      subscriptionsDiffer(a, b);
 
   Future<void> add(Subscription sub) async {
     final existing = state.value ?? await ref.read(storageProvider).getSubscriptions();
@@ -197,24 +189,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     }
   }
 
-  static String _normalizeSubscriptionUrl(String url) {
-    final trimmed = url.trim();
-    try {
-      final uri = Uri.parse(trimmed);
-      final normalizedPath = uri.path.length > 1 && uri.path.endsWith('/')
-          ? uri.path.substring(0, uri.path.length - 1)
-          : uri.path;
-      return uri
-          .replace(
-            scheme: uri.scheme.toLowerCase(),
-            host: uri.host.toLowerCase(),
-            path: normalizedPath,
-          )
-          .toString();
-    } catch (_) {
-      return trimmed;
-    }
-  }
+  static String _normalizeSubscriptionUrl(String url) =>
+      normalizeSubscriptionUrl(url);
 
   Future<void> remove(String id) async {
     await ref.read(storageProvider).deleteSubscription(id);
@@ -556,7 +532,9 @@ class ServersNotifier extends Notifier<ServersState> {
           return item;
         })
         .toList();
-    await ref.read(storageProvider).updatePingResults(updates);
+    // newList уже посчитан из state — пишем его напрямую, без повторного
+    // getServers()+декода всего списка внутри storage.updatePingResults.
+    await ref.read(storageProvider).saveServers(newList);
     state = state.copyWith(servers: newList);
   }
 
@@ -598,14 +576,8 @@ class ServersNotifier extends Notifier<ServersState> {
     );
     final testUrl = PingTestConfig.resolveTestUrl(settings);
 
-    Future<String?> resolveServerIp(ServerItem server) async {
-      try {
-        final addresses = await InternetAddress.lookup(server.address)
-            .timeout(const Duration(seconds: 5));
-        if (addresses.isNotEmpty) return addresses.first.address;
-      } catch (_) {}
-      return null;
-    }
+    Future<String?> resolveServerIp(ServerItem server) =>
+        _resolveFirstAddress(server.address);
 
     final anySpeed = servers.any(
       (s) => PingService.effectivePingType(s, pingType) == PingType.speed,
@@ -635,7 +607,9 @@ class ServersNotifier extends Notifier<ServersState> {
     );
 
     if (pending.isNotEmpty) {
-      await ref.read(storageProvider).updatePingResults(pending);
+      // state.servers уже содержит все апдейты (применены в _applyPingResultToState
+      // по мере прихода) — сохраняем готовый список без повторного декода в storage.
+      await ref.read(storageProvider).saveServers(state.servers);
     }
     return results;
   }
@@ -689,11 +663,7 @@ class ServersNotifier extends Notifier<ServersState> {
       String? serverIp;
       final effectiveType = PingService.effectivePingType(server, pingType);
       if (effectiveType == PingType.url || effectiveType == PingType.speed) {
-        try {
-          final addresses = await InternetAddress.lookup(server.address)
-              .timeout(const Duration(seconds: 5));
-          if (addresses.isNotEmpty) serverIp = addresses.first.address;
-        } catch (_) {}
+        serverIp = await _resolveFirstAddress(server.address);
       }
       final result = await PingService.ping(
         server,
@@ -731,12 +701,19 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   StreamSubscription<VpnState>? _sub;
   bool _connectInFlight = false;
   bool _serverSwitchInProgress = false;
+  // Сигналит _waitForDisconnected при приходе события disconnected из стрима —
+  // вместо опроса state с фиксированными задержками.
+  Completer<void>? _disconnectWaiter;
 
   @override
   Future<VpnState> build() async {
     final engine = ref.read(vpnEngineProvider);
-    _sub?.cancel();
+    unawaited(_sub?.cancel());
     _sub = engine.stateStream.listen((s) {
+      if (s.status == VpnStatus.disconnected) {
+        final waiter = _disconnectWaiter;
+        if (waiter != null && !waiter.isCompleted) waiter.complete();
+      }
       if (_serverSwitchInProgress && s.status == VpnStatus.error) {
         return;
       }
@@ -852,14 +829,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
       // 2. резолвим домен сервера заранее, чтобы direct-правило роутинга
       //    шло по IP, а не по домену (важно когда DNS сам идёт через прокси)
-      String serverIp = server.address;
-      try {
-        final addresses = await InternetAddress.lookup(server.address)
-            .timeout(const Duration(seconds: 5));
-        if (addresses.isNotEmpty) serverIp = addresses.first.address;
-      } catch (_) {
-        // не вышло — оставляем адрес как есть
-      }
+      final serverIp =
+          await _resolveFirstAddress(server.address) ?? server.address;
 
       // Desktop system/Firefox proxy config — Windows wininet, GNOME gsettings,
       // Firefox user.js — has no field for SOCKS/HTTP credentials, so password
@@ -970,16 +941,21 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   }
 
   Future<void> _waitForDisconnected() async {
-    const timeout = Duration(seconds: 4);
-    final deadline = DateTime.now().add(timeout);
-    while (DateTime.now().isBefore(deadline)) {
-      final status = state.value?.status;
-      if (status == VpnStatus.disconnected || status == null) {
-        await Future.delayed(const Duration(milliseconds: 350));
-        return;
+    final status = state.value?.status;
+    // Ждём только если ещё не disconnected. Чтение state и регистрация
+    // _disconnectWaiter синхронны (между ними нет await), поэтому событие из
+    // стрима не может проскользнуть в зазоре — гонки нет (Dart однопоточен).
+    if (status != null && status != VpnStatus.disconnected) {
+      final waiter = _disconnectWaiter = Completer<void>();
+      try {
+        await waiter.future.timeout(const Duration(seconds: 4));
+      } on TimeoutException {
+        // движок не прислал disconnected за таймаут — продолжаем как раньше
+      } finally {
+        if (identical(_disconnectWaiter, waiter)) _disconnectWaiter = null;
       }
-      await Future.delayed(const Duration(milliseconds: 80));
     }
+    // даём ядру/туннелю осесть перед повторным connect (как было)
     await Future.delayed(const Duration(milliseconds: 350));
   }
 
