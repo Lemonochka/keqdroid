@@ -116,6 +116,7 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
   static const _tabCount = 3;
 
   int _navIndex = 0;
+  bool _lastServersVisible = true;
   late final PageController _pageCtrl;
 
   @override
@@ -141,7 +142,16 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
     final page = _pageCtrl.page;
     if (page == null) return;
 
-    ref.read(homeTabPageProvider.notifier).set(page);
+    // Push provider updates only when a *meaningful* value changes. Writing the
+    // raw fractional page on every scroll frame forced every listener's selector
+    // and every ref.listen callback to run on each swipe frame. Consumers only
+    // care whether the servers tab is visible (page < 0.05), so we notify just
+    // on that threshold crossing.
+    final serversVisible = page < 0.05;
+    if (serversVisible != _lastServersVisible) {
+      _lastServersVisible = serversVisible;
+      ref.read(homeTabPageProvider.notifier).set(serversVisible ? 0.0 : 1.0);
+    }
 
     final rounded = page.round().clamp(0, _tabCount - 1);
     if (rounded != _navIndex) {
@@ -151,7 +161,8 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
 
   void _onPageSettled(int index) {
     ref.read(homeTabIndexProvider.notifier).set(index);
-    ref.read(homeTabPageProvider.notifier).set(index.toDouble());
+    _lastServersVisible = index == 0;
+    ref.read(homeTabPageProvider.notifier).set(_lastServersVisible ? 0.0 : 1.0);
     if (_navIndex != index) {
       setState(() => _navIndex = index);
     }
@@ -163,7 +174,8 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
 
     if ((index - _navIndex).abs() > 1) {
       _pageCtrl.jumpToPage(index);
-      ref.read(homeTabPageProvider.notifier).set(index.toDouble());
+      _lastServersVisible = index == 0;
+      ref.read(homeTabPageProvider.notifier).set(_lastServersVisible ? 0.0 : 1.0);
       setState(() => _navIndex = index);
       return;
     }
@@ -230,6 +242,8 @@ class _HomeTabPageState extends State<_HomeTabPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return widget.child;
+    // Isolate each page into its own layer so that during a swipe the two
+    // visible pages don't repaint each other.
+    return RepaintBoundary(child: widget.child);
   }
 }
