@@ -30,7 +30,8 @@ class RoutingPreset {
 class RoutingPresets {
   RoutingPresets._();
 
-  // mirror AppSettings constructor defaults so reset gives a working baseline.
+  // single source of truth for the routing baseline: AppSettings' constructor
+  // defaults reference these, and the routing screen's reset writes them back.
   static const String defaultDirectRules = 'ru, yandex.ru, vk.com';
   static const String defaultProxyRules = '';
   static const String defaultBlockedRules = '';
@@ -60,14 +61,22 @@ class RoutingPresets {
     'ya.cc',
     // vk / mail.ru
     'vk.com',
+    'vk.me',
     'vk-cdn.net',
     'vk-portal.net',
     'userapi.com',
     'mycdn.me',
     'mradio.com',
-    // marketplaces on non-.ru tlds
+    // maps / search / other services on non-.ru tlds
+    '2gis.com',
+    'kaspersky.com',
+    'kaspersky-labs.com',
+    // marketplaces on non-.ru tlds. note: *.ru hosts (ozon.ru, wildberries.ru,
+    // avito.ru, …) are already covered by the `ru` suffix above — only non-.ru
+    // hosts need listing explicitly here.
     'ozon.travel',
     'wildberries.am',
+    'wildberries.eu',
     'aliexpress.ru',
     // telecom / banking on non-.ru tlds
     'sberbank.com',

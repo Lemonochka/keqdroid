@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../tunnel/connection_mode.dart';
+import '../utils/routing_presets.dart';
 import 'ping_test_config.dart';
 import 'xray_core_settings.dart';
 
@@ -44,9 +45,9 @@ class AppSettings {
   const AppSettings({
     this.localPort = 2080,
     this.httpPort = 2081,
-    this.directRules = 'ru, yandex.ru, vk.com',
-    this.proxyRules = '',
-    this.blockedRules = '',
+    this.directRules = RoutingPresets.defaultDirectRules,
+    this.proxyRules = RoutingPresets.defaultProxyRules,
+    this.blockedRules = RoutingPresets.defaultBlockedRules,
     this.autoConnectLastServer = false,
     this.pingType = 'tcp',
     this.pingTestTarget = PingTestConfig.targetGstatic,
