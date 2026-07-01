@@ -24,5 +24,14 @@ linter:
     # avoid_print: false  # Uncomment to disable the `avoid_print` rule
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
 
+    # Ловит забытые fire-and-forget Future (потерянные ошибки, гонки). В коде уже
+    # используется ручной unawaited() — это правило делает требование явным.
+    # Намеренный fire-and-forget оборачивай в unawaited(...) из dart:async.
+    unawaited_futures: true
+    # Лишний await на возвращаемом Future в return — убирает ненужный микротик.
+    unnecessary_await_in_return: true
+    # else с пустым телом почти всегда баг.
+    avoid_empty_else: true
+
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
