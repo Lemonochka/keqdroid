@@ -112,15 +112,26 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden) {
+    // На десктопе `inactive` = окно ВИДИМО, но не в фокусе (клик по другому окну,
+    // разворот из трея через таскбар). Раньше `inactive` считался «фоном» и глушил
+    // анимацию линии подключения. При возврате через таскбар Windows нередко
+    // доставляет только `inactive` (а `resumed` — лишь при получении фокуса), так
+    // что линия оставалась замороженной. Поэтому фоном на десктопе считаем только
+    // `hidden`/`paused` (реально свёрнуто/скрыто в трей); `inactive` = передний план.
+    final isDesktop =
+        Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+    final background = state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        (!isDesktop && state == AppLifecycleState.inactive);
+
+    if (background) {
       _appInForeground = false;
       _syncHeaderAnimations();
-    } else if (state == AppLifecycleState.resumed) {
+    } else {
+      // resumed, либо (на десктопе) inactive — окно на переднем плане
       _appInForeground = true;
       _syncHeaderAnimations();
-      if (Platform.isAndroid) {
+      if (Platform.isAndroid && state == AppLifecycleState.resumed) {
         unawaited(_checkLaunchAction());
       }
     }
@@ -263,8 +274,15 @@ class _ServersTabState extends ConsumerState<ServersTab>
       serversProvider.select((s) => s.activeServer),
     );
 
-    final isConnected = vpnStatus == VpnStatus.connected;
+    // При смене сервера на активном VPN движок на миг проходит через
+    // `disconnected` (старый сервер отключается перед подключением нового).
+    // Без учёта serverSwitchInProgress круг проваливался в серый «неактивный»
+    // вид (spinner → серый → spinner). Пока идёт переключение — держим круг в
+    // состоянии «подключается», чтобы переход был одной плавной дугой.
+    final isConnected =
+        vpnStatus == VpnStatus.connected && !serverSwitchInProgress;
     final isConnecting =
+        serverSwitchInProgress ||
         vpnStatus == VpnStatus.connecting ||
         vpnStatus == VpnStatus.disconnecting;
 
@@ -330,21 +348,38 @@ class _ServersTabState extends ConsumerState<ServersTab>
                           ),
                         ],
                       ),
-                      child: isConnecting
-                          ? Padding(
-                              padding: const EdgeInsets.all(36),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 3,
-                                color: AppTheme.accent(context),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, animation) => FadeTransition(
+                          opacity: animation,
+                          child: ScaleTransition(
+                            scale: Tween<double>(
+                              begin: 0.7,
+                              end: 1.0,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        ),
+                        child: isConnecting
+                            ? Padding(
+                                key: const ValueKey('spinner'),
+                                padding: const EdgeInsets.all(36),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  color: AppTheme.accent(context),
+                                ),
+                              )
+                            : Icon(
+                                isConnected ? Icons.pause : Icons.play_arrow,
+                                key: ValueKey(isConnected ? 'pause' : 'play'),
+                                size: 52,
+                                color: isConnected
+                                    ? AppTheme.onAccentContainer(context)
+                                    : AppTheme.text(context),
                               ),
-                            )
-                          : Icon(
-                              isConnected ? Icons.pause : Icons.play_arrow,
-                              size: 52,
-                              color: isConnected
-                                  ? AppTheme.onAccentContainer(context)
-                                  : AppTheme.text(context),
-                            ),
+                      ),
                     ),
                   ),
                 ),
@@ -1934,10 +1969,16 @@ class _ServerTile extends ConsumerWidget {
           settingsNotifierProvider.select((a) => a.value?.debugMode ?? false),
         );
 
-    final isConnected = isActive && vpnStatus == VpnStatus.connected;
+    // Во время смены сервера движок на миг проходит через `disconnected`;
+    // для активного (целевого) тайла держим «подключается», чтобы кружок не
+    // мелькал spinner → play → spinner, а плавно дошёл до паузы.
+    final switching = ref.watch(vpnServerSwitchInProgressProvider);
+    final isConnected =
+        isActive && vpnStatus == VpnStatus.connected && !switching;
     final isConnecting =
         isActive &&
-        (vpnStatus == VpnStatus.connecting ||
+        (switching ||
+            vpnStatus == VpnStatus.connecting ||
             vpnStatus == VpnStatus.disconnecting);
 
     final radius = BorderRadius.vertical(
@@ -2088,49 +2129,60 @@ class _ServerTile extends ConsumerWidget {
     Color accentColor,
     Color textLightColor,
   ) {
-    // Пинг имеет приоритет над статусом подключения: иначе у активного/
-    // подключённого сервера крутилка пинга была бы перекрыта значком паузы.
-    if (isPinging) {
-      return SizedBox(
-        width: 34,
-        height: 34,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
-        ),
+    // «Морфинг-кружок»: сам кружок стоит на месте и плавно перетекает цветом
+    // (прозрачный → accent → зелёный) через AnimatedContainer, а внутри мягко
+    // (fade + scale) сменяется только центр — иконка/спиннер — через
+    // AnimatedSwitcher. Это заметно плавнее, чем кросс-фейд двух разных кружков.
+    // Особенно на смене активного сервера при подключённом VPN: у старого тайла
+    // зелёная пауза утекает в шеврон, у нового — шеврон → спиннер → пауза.
+    final green = AppTheme.green(context);
+
+    // Пинг/подключение имеют приоритет над паузой: иначе у активного сервера
+    // крутилка была бы перекрыта значком паузы.
+    final Color bgColor;
+    final Widget center;
+    if (isPinging || isConnecting) {
+      bgColor = accentColor.withValues(alpha: 0.18);
+      center = SizedBox(
+        // один ключ для обоих спиннеров — крутилка не мигает при ping↔connect.
+        key: const ValueKey('spinner'),
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
       );
+    } else if (isConnected) {
+      bgColor = green.withValues(alpha: 0.25);
+      center = Icon(Icons.pause, key: const ValueKey('pause'), size: 18, color: green);
+    } else if (isActive) {
+      bgColor = accentColor.withValues(alpha: 0.18);
+      center =
+          Icon(Icons.play_arrow, key: const ValueKey('play'), size: 18, color: accentColor);
+    } else {
+      bgColor = Colors.transparent;
+      center = Icon(Icons.chevron_right, key: const ValueKey('idle'), color: textLightColor);
     }
-    if (isConnected) {
-      return Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppTheme.green(context).withValues(alpha: 0.25),
-          shape: BoxShape.circle,
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 360),
+      curve: Curves.easeInOutCubic,
+      width: 34,
+      height: 34,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.7, end: 1.0).animate(animation),
+            child: child,
+          ),
         ),
-        child: Icon(Icons.pause, size: 18, color: AppTheme.green(context)),
-      );
-    }
-    if (isConnecting) {
-      return SizedBox(
-        width: 34,
-        height: 34,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
-        ),
-      );
-    }
-    if (isActive) {
-      return Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: accentColor.withValues(alpha: 0.18),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(Icons.play_arrow, size: 18, color: accentColor),
-      );
-    }
-    return Icon(Icons.chevron_right, color: textLightColor);
+        child: center,
+      ),
+    );
   }
 
   void _showOptions(BuildContext context) {
@@ -2278,8 +2330,8 @@ class _ServerTile extends ConsumerWidget {
     );
   }
 
-  Future<void> _showHealthCheckSheet(BuildContext context) async {
-    showModalBottomSheet(
+  Future<void> _showHealthCheckSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppTheme.bg(context),
       isScrollControlled: true,
