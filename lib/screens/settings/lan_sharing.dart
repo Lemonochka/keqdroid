@@ -1,0 +1,269 @@
+part of '../settings_tab.dart';
+
+class _LanSharingCard extends ConsumerStatefulWidget {
+  final AsyncValue<AppSettings> settingsAsync;
+  const _LanSharingCard({required this.settingsAsync});
+
+  @override
+  ConsumerState<_LanSharingCard> createState() => _LanSharingCardState();
+}
+
+class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
+  String? _localIp;
+  late TextEditingController _socksCtrl;
+  late TextEditingController _httpCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    final s = widget.settingsAsync.value ?? const AppSettings();
+    _socksCtrl = TextEditingController(text: s.lanSocksPort.toString());
+    _httpCtrl = TextEditingController(text: s.lanHttpPort.toString());
+    _fetchLocalIp();
+  }
+
+  @override
+  void dispose() {
+    _socksCtrl.dispose();
+    _httpCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchLocalIp() async {
+    try {
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLoopback: false,
+      );
+      for (final iface in interfaces) {
+        for (final addr in iface.addresses) {
+          if (!addr.isLoopback &&
+              (addr.address.startsWith('192.168') ||
+                  addr.address.startsWith('10.') ||
+                  addr.address.startsWith('172.'))) {
+            if (mounted) setState(() => _localIp = addr.address);
+            return;
+          }
+        }
+      }
+      for (final iface in interfaces) {
+        for (final addr in iface.addresses) {
+          if (!addr.isLoopback) {
+            if (mounted) setState(() => _localIp = addr.address);
+            return;
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveSettings(AppSettings current, {bool? lanSharing, int? socksPort, int? httpPort}) async {
+    await ref.read(settingsNotifierProvider.notifier).save(current.copyWith(
+      lanSharing: lanSharing,
+      lanSocksPort: socksPort,
+      lanHttpPort: httpPort,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = widget.settingsAsync.value ?? const AppSettings();
+    final isLan = settings.lanSharing;
+    final isConnected = ref.watch(
+      vpnStateProvider.select((a) {
+        final status = a.value?.status;
+        return status == VpnStatus.connected ||
+            status == VpnStatus.connecting;
+      }),
+    );
+    final ip = _localIp ?? '...';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.card(context),
+        borderRadius: BorderRadius.circular(18),
+        border: isLan
+            ? Border.all(color: AppTheme.accent(context).withValues(alpha: 0.5), width: 1.5)
+            : Border.all(color: AppTheme.divider(context), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.accent(context).withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.lan_outlined,
+                  size: 20,
+                  color: isLan ? AppTheme.accent(context) : AppTheme.text(context),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.settingsLanProxyTitle,
+                        style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.text(context))),
+                    Text(
+                      isLan ? l10n.settingsLanSharingOnIp(ip) : l10n.settingsOff,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isLan ? AppTheme.accent(context) : AppTheme.textLight(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: isLan,
+                activeThumbColor: AppTheme.accent(context),
+                onChanged: isConnected ? null : (_) => _saveSettings(settings, lanSharing: !isLan),
+              ),
+            ],
+          ),
+          if (isLan) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.inset(context),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.settingsDeviceIpListTitle,
+                      style: TextStyle(fontSize: 12, color: AppTheme.textLight(context))),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        ip,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'monospace',
+                          color: AppTheme.text(context),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: ip));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.settingsIpCopied), duration: const Duration(seconds: 1)),
+                          );
+                        },
+                        child: Icon(Icons.copy, size: 16, color: AppTheme.textLight(context)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(l10n.settingsSetupAnotherDeviceTitle,
+                      style: TextStyle(fontSize: 12, color: AppTheme.textLight(context))),
+                  const SizedBox(height: 4),
+                  _proxyLine(context, 'SOCKS5', ip, settings.lanSocksPort),
+                  const SizedBox(height: 2),
+                  _proxyLine(context, 'HTTP', ip, settings.lanHttpPort),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _portField(context, l10n.settingsSocks5PortLabel, _socksCtrl, (v) {
+                    final port = int.tryParse(v);
+                    if (port != null && port > 0 && port < 65536) {
+                      _saveSettings(settings, socksPort: port);
+                    }
+                  }),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _portField(context, l10n.settingsHttpPortLabel, _httpCtrl, (v) {
+                    final port = int.tryParse(v);
+                    if (port != null && port > 0 && port < 65536) {
+                      _saveSettings(settings, httpPort: port);
+                    }
+                  }),
+                ),
+              ],
+            ),
+          ],
+          if (isConnected && isLan)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(l10n.settingsTurnOffToChange,
+                  style: TextStyle(fontSize: 11, color: AppTheme.orange(context))),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _proxyLine(BuildContext context, String label, String ip, int port) {
+    final l10n = AppLocalizations.of(context)!;
+    final text = '$ip:$port';
+    return Row(
+      children: [
+        SizedBox(width: 52, child: Text(label, style: TextStyle(fontSize: 11, color: AppTheme.textLight(context)))),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              fontFamily: 'monospace',
+              fontWeight: FontWeight.w500,
+              color: AppTheme.text(context),
+            ),
+          ),
+        ),
+        InkWell(
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: text));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.settingsProxyCopied(label, text)), duration: const Duration(seconds: 1)),
+            );
+          },
+          child: Icon(Icons.copy, size: 14, color: AppTheme.textLight(context)),
+        ),
+      ],
+    );
+  }
+
+  Widget _portField(BuildContext context, String label, TextEditingController ctrl, ValueChanged<String> onSubmit) {
+    return TextField(
+      controller: ctrl,
+      keyboardType: TextInputType.number,
+      style: TextStyle(fontSize: 14, color: AppTheme.text(context)),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.textLight(context).withValues(alpha: 0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.accent(context)),
+        ),
+        isDense: true,
+      ),
+      onSubmitted: onSubmit,
+      onEditingComplete: () => onSubmit(ctrl.text),
+    );
+  }
+}
+
