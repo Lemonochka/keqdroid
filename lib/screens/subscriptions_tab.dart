@@ -97,13 +97,16 @@ class SubscriptionsTab extends ConsumerWidget {
                                           )
                                           .set(false);
                                     },
-                                    onReorder: (oldIndex, newIndex) {
+                                    // onReorderItem уже корректирует newIndex за
+                                    // удалённый элемент (движение вниз), поэтому
+                                    // fromReorderableList: false — иначе вычтем -1 дважды.
+                                    onReorderItem: (oldIndex, newIndex) {
                                       ref
                                           .read(subscriptionsProvider.notifier)
                                           .reorder(
                                             oldIndex,
                                             newIndex,
-                                            fromReorderableList: true,
+                                            fromReorderableList: false,
                                           );
                                     },
                                     proxyDecorator: (child, index, animation) {
