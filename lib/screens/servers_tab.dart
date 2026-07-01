@@ -2670,7 +2670,9 @@ class _M3WavePainter extends CustomPainter {
 
     const wl = 56.0;
     final path = Path();
-    for (double x = 0; x <= w; x += 1.0) {
+    // 2px шаг: на синусоиде визуально неотличим от 1px, но вдвое меньше точек в
+    // пути — дешевле, т.к. волна перерисовывается непрерывно на 60fps.
+    for (double x = 0; x <= w; x += 2.0) {
       final y = mid + amplitude * sin(2 * pi * (x / wl - progress));
       if (x == 0) {
         path.moveTo(x, y);
