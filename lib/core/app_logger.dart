@@ -44,13 +44,53 @@ class AppLogger {
   }) async {
     _log('ERROR', reason, error: error, stackTrace: stackTrace);
     if (_crashlyticsEnabled) {
+      // Крашрепорт уходит на внешний сервис — маскируем секреты (uuid/пароли
+      // в URI серверов, токены подписок). Локальный лог выше остаётся полным.
+      final rawText = error.toString();
+      final redactedText = redactSensitive(rawText);
+      final Object sanitized =
+          redactedText == rawText ? error : _RedactedError(redactedText);
       await _crashlytics.recordError(
-        error,
+        sanitized,
         stackTrace,
-        reason: reason,
+        reason: redactSensitive(reason),
         fatal: fatal,
       );
     }
+  }
+
+  /// Маскирует чувствительные фрагменты в строке перед отправкой наружу:
+  /// userinfo в URI (uuid/пароль до @), значения секретных query-параметров,
+  /// UUID и длинные токены в path-сегментах URL (секрет подписки).
+  static String redactSensitive(String input) {
+    var s = input;
+    // scheme://userinfo@host — userinfo это uuid/пароль/base64(method:pass)
+    s = s.replaceAllMapped(
+      RegExp(r'([a-zA-Z][a-zA-Z0-9+.-]*://)[^/@\s]+@'),
+      (m) => '${m.group(1)}***@',
+    );
+    // секретные query-параметры
+    s = s.replaceAllMapped(
+      RegExp(
+        r'''([?&](?:token|key|secret|password|pass|auth|hwid|device_id|deviceid)=)[^&\s"']+''',
+        caseSensitive: false,
+      ),
+      (m) => '${m.group(1)}***',
+    );
+    // UUID где угодно (id серверов vless/vmess)
+    s = s.replaceAll(
+      RegExp(
+        r'\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-'
+        r'[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b',
+      ),
+      '***',
+    );
+    // длинный токен последним path-сегментом URL (типичный секрет подписки)
+    s = s.replaceAllMapped(
+      RegExp(r'''(https?://[^\s"']*/)([A-Za-z0-9_-]{16,})(?![\w-])'''),
+      (m) => '${m.group(1)}***',
+    );
+    return s;
   }
 
   void _log(
@@ -70,4 +110,15 @@ class AppLogger {
       debugPrint('$text | error: $error');
     }
   }
+}
+
+/// Обёртка для Crashlytics: несёт уже замаскированный toString() исходной
+/// ошибки (тип обычно входит в него, см. [AppLogger.redactSensitive]).
+class _RedactedError implements Exception {
+  final String message;
+
+  const _RedactedError(this.message);
+
+  @override
+  String toString() => message;
 }

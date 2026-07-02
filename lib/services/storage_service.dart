@@ -125,42 +125,6 @@ class StorageService {
     await saveServers(all.where((s) => s.subscriptionId != subscriptionId).toList());
   }
 
-  Future<void> updatePing(String serverId, int? pingMs) async {
-    await updatePings({serverId: pingMs});
-  }
-
-  /// пинг пачкой, один read/write
-  Future<void> updatePingResults(
-    Map<String, ({int? pingMs, String? lastPingType})> updates,
-  ) async {
-    if (updates.isEmpty) return;
-    final servers = await getServers();
-    final now = DateTime.now();
-    var changed = false;
-    for (var i = 0; i < servers.length; i++) {
-      final update = updates[servers[i].id];
-      if (update == null) continue;
-      var item = servers[i].copyWith(
-        pingMs: update.pingMs,
-        lastTestedAt: now,
-      );
-      if (update.lastPingType != null) {
-        item = item.copyWith(lastPingType: update.lastPingType);
-      }
-      servers[i] = item;
-      changed = true;
-    }
-    if (!changed) return;
-    await saveServers(servers);
-  }
-
-  /// @deprecated Use [updatePingResults] when ping type is known.
-  Future<void> updatePings(Map<String, int?> pings) async {
-    await updatePingResults({
-      for (final e in pings.entries) e.key: (pingMs: e.value, lastPingType: null),
-    });
-  }
-
   // подписки
 
   Future<List<Subscription>> getSubscriptions() async {

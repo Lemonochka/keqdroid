@@ -573,10 +573,9 @@ class SubscriptionService {
       out.add(uri.replace(path: p.isEmpty ? '/' : p).toString());
     }
 
-    // часть edge-конфигов отдаёт payload только по http
-    if (uri.scheme == 'https') {
-      out.add(uri.replace(scheme: 'http').toString());
-    }
+    // НЕ добавляем http-вариант для https-подписок: URL содержит секретный
+    // токен, а к запросу идут hwid-заголовки — открытый HTTP отдал бы их
+    // любому наблюдателю сети (для VPN-клиента это недопустимо).
     // query-вариант только для проблемного домена, чтобы не ломать обычные подписки
     final host = uri.host.toLowerCase();
     if (hwid != null && host.contains('warriorofblacksun.run')) {
@@ -603,10 +602,14 @@ class SubscriptionService {
   }
 
   String? _detectHwidGateMessage(String body) {
+    // Только специфичные фразы: голое вхождение "hwid" ловило случайный
+    // HTML/JS страниц-заглушек и подменяло реальную ошибку ложным диагнозом.
     final lower = body.toLowerCase();
     if (lower.contains('turn on hwid') ||
         lower.contains('enable hwid') ||
-        lower.contains('hwid')) {
+        lower.contains('bind hwid') ||
+        lower.contains('hwid required') ||
+        lower.contains('hwid is required')) {
       return 'Provider requires HWID binding for this client. '
           'Enable/bind HWID in provider panel and try updating subscription again.';
     }
@@ -1897,8 +1900,10 @@ class SubscriptionService {
         subscription: updated,
       );
     } catch (e, st) {
+      // Только хост: полный URL подписки содержит секретный токен.
+      final host = Uri.tryParse(sub.url)?.host ?? '<unparsable url>';
       AppLogger.instance.error(
-        'Subscription update failed for ${sub.url}',
+        'Subscription update failed for $host',
         error: e,
         stackTrace: st,
       );

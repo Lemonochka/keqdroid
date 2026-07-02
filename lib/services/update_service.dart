@@ -484,9 +484,12 @@ class UpdateService {
     ]) {
       if (path.endsWith(ext)) return ext;
     }
-    if (Platform.isWindows) return '.zip';
-    if (Platform.isLinux) return '.AppImage';
-    return '.apk';
+    // Не угадываем: fallback ".zip" на Windows отправил бы произвольный файл
+    // в портейбл-апдейтер (распаковка + подмена файлов приложения).
+    throw StateError(
+      'Unsupported update file type: ${path.split('/').last}. '
+      'Download the release manually.',
+    );
   }
 
   /// Fail closed: refuse to install an update whose SHA-256 can't be verified.

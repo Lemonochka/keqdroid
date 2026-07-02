@@ -246,13 +246,18 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
 
     final errors = <String>[];
 
-    await Future.wait(subs.map((sub) async {
-      try {
-        await refresh(sub);
-      } catch (e) {
-        errors.add('${sub.name}: ${_shortError(e)}');
-      }
-    }));
+    // батчами по 3 (как updateAll в сервисе): на десятках подписок залп
+    // одновременных запросов упирается в сеть и rate-limit панелей
+    for (var i = 0; i < subs.length; i += 3) {
+      final batch = subs.skip(i).take(3).toList();
+      await Future.wait(batch.map((sub) async {
+        try {
+          await refresh(sub);
+        } catch (e) {
+          errors.add('${sub.name}: ${_shortError(e)}');
+        }
+      }));
+    }
 
     if (errors.isNotEmpty) {
       throw Exception(errors.join('\n'));
@@ -506,12 +511,6 @@ class ServersNotifier extends Notifier<ServersState> {
     state = state.copyWith(servers: newList);
   }
 
-  Future<void> updatePing(String serverId, int? pingMs) async {
-    await updatePingResults({
-      serverId: (pingMs: pingMs, lastPingType: null),
-    });
-  }
-
   /// батч-обновление ping + типа теста: один write в storage и один rebuild
   Future<void> updatePingResults(
     Map<String, ({int? pingMs, String? lastPingType})> updates,
@@ -533,16 +532,9 @@ class ServersNotifier extends Notifier<ServersState> {
         })
         .toList();
     // newList уже посчитан из state — пишем его напрямую, без повторного
-    // getServers()+декода всего списка внутри storage.updatePingResults.
+    // getServers()+декода всего списка в storage.
     await ref.read(storageProvider).saveServers(newList);
     state = state.copyWith(servers: newList);
-  }
-
-  /// deprecated: используй updatePingResults когда известен тип пинга
-  Future<void> updatePings(Map<String, int?> pings) async {
-    await updatePingResults({
-      for (final e in pings.entries) e.key: (pingMs: e.value, lastPingType: null),
-    });
   }
 
   /// пингует серверы: UI обновляем по мере результатов, в storage пишем разом в конце
