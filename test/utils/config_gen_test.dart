@@ -175,6 +175,32 @@ void main() {
       expect(hasKillSwitch, false);
     });
 
+    test('custom direct CIDR bumps domainStrategy to IPIfNonMatch', () {
+      Socks5Credentials().init('u', 'p');
+      // корпоративный диапазон в Direct: должен ловиться и по имени хоста,
+      // а не только по голому IP — для этого нужен IPIfNonMatch.
+      final s = AppSettings(directRules: 'ru, 10.130.0.0/16');
+      final config =
+          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', s);
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      expect((map['routing'] as Map)['domainStrategy'], 'IPIfNonMatch');
+      // и сам CIDR присутствует как direct-правило
+      final rules = (map['routing'] as Map)['rules'] as List;
+      final hasCidr = rules.any((r) =>
+          (r['ip'] as List?)?.contains('10.130.0.0/16') == true &&
+          r['outboundTag'] == 'direct');
+      expect(hasCidr, true);
+    });
+
+    test('domainStrategy stays AsIs without custom IP rules', () {
+      Socks5Credentials().init('u', 'p');
+      // дефолтные правила = только доменные суффиксы + приватные LAN → AsIs
+      final config =
+          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', settings);
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      expect((map['routing'] as Map)['domainStrategy'], 'AsIs');
+    });
+
     test('builds Trojan outbound with TLS', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(
