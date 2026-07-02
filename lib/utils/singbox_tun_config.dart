@@ -28,13 +28,28 @@ class SingBoxTunConfigGen {
         s.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
 
     Map<String, dynamic> buildProxyDnsServer() {
-      final customDns = settings.xrayCore.dnsServers
-          .split(RegExp(r'[\n,]+'))
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList();
-      final first = customDns.isNotEmpty ? customDns.first : '1.1.1.1';
-      final raw = first.trim();
+      // Кастомный DNS уважаем только когда он включён в настройках xray-ядра.
+      final customDns = !settings.xrayCore.dnsUseCustom
+          ? const <String>[]
+          : settings.xrayCore.dnsServers
+              .split(RegExp(r'[\n,]+'))
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
+
+      // Дефолт — DNS-over-HTTPS через туннель. Многие VPS-хостеры/серверы режут
+      // исходящий порт 53 (анти-abuse), из-за чего и UDP-, и TCP-DNS через
+      // прокси умирали с "read response: EOF" — браузер получал "server not
+      // found" при живом туннеле. DoH на 443 неотличим от обычного HTTPS.
+      if (customDns.isEmpty) {
+        return {
+          'tag': 'proxy-dns',
+          'type': 'https',
+          'server': '1.1.1.1',
+          'detour': 'proxy',
+        };
+      }
+      final raw = customDns.first.trim();
       final lower = raw.toLowerCase();
 
       if (lower.startsWith('https://') || lower.startsWith('http://')) {
@@ -64,11 +79,13 @@ class SingBoxTunConfigGen {
 
       return {
         'tag': 'proxy-dns',
-        // DNS over the SOCKS proxy: UDP needs SOCKS UDP-ASSOCIATE, which often
-        // doesn't survive the TUN on Linux (Arch/CachyOS) — queries silently
-        // drop and nothing resolves. TCP rides the reliable SOCKS TCP path that
-        // already carries app traffic. Windows TUN works on UDP, keep it there.
-        'type': Platform.isLinux ? 'tcp' : 'udp',
+        // DNS over the SOCKS proxy строго по TCP на ВСЕХ платформах. UDP требует
+        // SOCKS UDP-ASSOCIATE, который хрупок и на Linux (запросы молча тонут),
+        // и на Windows: в TUN-режиме все DNS-обмены падали с "exchange failed:
+        // EOF" → браузер ничего не резолвил, «сайты не грузятся» при живом
+        // туннеле. TCP:53 едет тем же надёжным SOCKS-TCP-путём, что и весь
+        // остальной трафик, и поддерживается 1.1.1.1/8.8.8.8/типовыми DNS.
+        'type': 'tcp',
         'server': host,
         'server_port': ?port,
         'detour': 'proxy',
