@@ -49,6 +49,10 @@ class WindowsTunnelBackend implements TunnelBackend {
   // Порт info/metrics эндпоинта wireproxy (`-i`) для подсчёта трафика в proxy-режиме.
   int? _awgInfoPort;
 
+  // true пока идёт штатный stopSession — чтобы вотчдог не принял наш же
+  // kill за внезапную смерть ядра.
+  bool _stoppingSession = false;
+
   Timer? _statsTimer;
   DateTime? _sessionStartedAt;
   int _prevInOctets = 0;
@@ -114,6 +118,13 @@ class WindowsTunnelBackend implements TunnelBackend {
 
       _startStatsLoop(request.mode);
       _emitConnectedTelemetry(request.mode);
+
+      // Смерть ядра посреди сессии без вотчдога оставляла UI в «Connected»,
+      // а системный прокси — направленным на мёртвый порт.
+      _watchProcessExit(_keqrnelProcess, 'keqrnel');
+      _watchProcessExit(_singboxProcess, 'keqrnel TUN');
+      _watchProcessExit(_wireproxyProcess, 'wireproxy');
+      _watchProcessExit(_xrayProcess, 'xray');
     } catch (e, st) {
       AppLogger.instance.error('Windows tunnel start failed', error: e, stackTrace: st);
       await stopSession();
@@ -488,8 +499,45 @@ class WindowsTunnelBackend implements TunnelBackend {
     unawaited(_applyFirefoxProxyAfterConnect());
   }
 
+  /// Вотчдог: ядро завершилось само (не через [stopSession]) → снимаем
+  /// системный прокси, чистим состояние и эмитим error вместо вечного
+  /// «Connected» поверх мёртвого туннеля.
+  void _watchProcessExit(Process? process, String label) {
+    if (process == null) return;
+    unawaited(process.exitCode.then((code) async {
+      if (_stoppingSession) return;
+      // Процесс уже не из активной сессии (штатный stop занулил поля).
+      if (!identical(process, _keqrnelProcess) &&
+          !identical(process, _singboxProcess) &&
+          !identical(process, _wireproxyProcess) &&
+          !identical(process, _xrayProcess)) {
+        return;
+      }
+      AppLogger.instance.error(
+        '$label exited unexpectedly with code $code; tearing the session down',
+      );
+      try {
+        await stopSession();
+      } catch (_) {}
+      _emit(VpnState(
+        status: VpnStatus.error,
+        errorMessage:
+            '$label stopped unexpectedly (exit code $code). Disconnected.',
+      ));
+    }));
+  }
+
   @override
   Future<void> stopSession() async {
+    _stoppingSession = true;
+    try {
+      await _stopSessionInner();
+    } finally {
+      _stoppingSession = false;
+    }
+  }
+
+  Future<void> _stopSessionInner() async {
     _stopStatsLoop();
     _emit(const VpnState(status: VpnStatus.disconnecting));
 

@@ -57,6 +57,10 @@ class LinuxTunnelBackend implements TunnelBackend {
   // Порт clash_api keqrnel в proxy-режиме — из него читаем кумулятивный трафик.
   int? _keqrnelClashPort;
 
+  // true пока идёт штатный stopSession — чтобы вотчдог не принял наш же
+  // kill за внезапную смерть ядра.
+  bool _stoppingSession = false;
+
   Timer? _statsTimer;
   DateTime? _sessionStartedAt;
   int _prevInOctets = 0;
@@ -132,6 +136,12 @@ class LinuxTunnelBackend implements TunnelBackend {
 
       _startStatsLoop(request.mode);
       _emitConnectedTelemetry(request.mode);
+
+      // Смерть ядра посреди сессии без вотчдога оставляла UI в «Connected»,
+      // а системный прокси (gsettings) — направленным на мёртвый порт.
+      _watchProcessExit(_xrayProcess, 'keqrnel');
+      _watchProcessExit(_singboxProcess, 'keqrnel TUN');
+      _watchProcessExit(_wireproxyProcess, 'wireproxy');
     } catch (e, st) {
       AppLogger.instance.error(
         'Linux tunnel start failed',
@@ -371,10 +381,16 @@ class LinuxTunnelBackend implements TunnelBackend {
     final sentinelFile = File(p.join(_sessionDir!.path, 'keqrnel.run'));
     await sentinelFile.writeAsString('1');
     _rootSentinel = sentinelFile;
+    // Auth-маркер: root-обёртка создаёт его сразу после успешной polkit-
+    // аутентификации. По нему отличаем «пользователь ещё вводит пароль» от
+    // «ядро стартовало и должно поднять TUN» (см. _waitForElevation). Session
+    // dir свежий на каждую сессию — застарелый маркер исключён.
+    final authMarker = File(p.join(_sessionDir!.path, 'keqrnel.auth'));
     const wrapper = r'''
-SB="$1"; CFG="$2"; GEO="$3"; LOGF="$4"; SENT="$5"; APPPID="$6"
+SB="$1"; CFG="$2"; GEO="$3"; LOGF="$4"; SENT="$5"; APPPID="$6"; AUTHF="$7"
 : >"$LOGF"
-echo "[wrap v2 sentinel] start SENT=$SENT exists=$([ -e "$SENT" ] && echo y || echo n) APPPID=$APPPID app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+: >"$AUTHF"
+echo "[wrap v3 sentinel] start SENT=$SENT exists=$([ -e "$SENT" ] && echo y || echo n) APPPID=$APPPID app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
 if [ -n "$GEO" ]; then export XRAY_LOCATION_ASSET="$GEO"; fi
 "$SB" run -c "$CFG" >>"$LOGF" 2>&1 &
 sb=$!
@@ -382,7 +398,7 @@ while [ -e "$SENT" ] && kill -0 "$APPPID" 2>/dev/null; do
   kill -0 "$sb" 2>/dev/null || break
   sleep 1
 done
-echo "[wrap v2 sentinel] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) sb=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+echo "[wrap v3 sentinel] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) sb=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
 kill -TERM "$sb" 2>/dev/null
 wait "$sb"
 ''';
@@ -400,6 +416,7 @@ wait "$sb"
           coreLogPath,
           sentinelFile.path,
           '$pid',
+          authMarker.path,
         ],
         workingDirectory: _sessionDir!.path,
         mode: ProcessStartMode.normal,
@@ -411,6 +428,15 @@ wait "$sb"
       );
     }
     _pipeProcessOutput(_singboxProcess!, _singboxLog);
+
+    // Сначала дожидаемся polkit-аутентификации, и только потом меряем
+    // готовность TUN — иначе 20с бюджета _waitForSingbox тикали, пока
+    // пользователь вводил пароль, и коннект падал «после запроса прав».
+    await _waitForElevation(
+      process: _singboxProcess!,
+      authMarker: authMarker,
+      log: _singboxLog,
+    );
 
     final ready = await _waitForSingbox(
       process: _singboxProcess!,
@@ -452,6 +478,50 @@ wait "$sb"
       copied = true;
     }
     return copied ? rootGeoDir.path : null;
+  }
+
+  /// Ждёт завершения polkit-аутентификации перед отсчётом готовности TUN.
+  ///
+  /// [Process.start] для pkexec возвращается сразу — ещё ДО того, как
+  /// пользователь ввёл пароль в окне polkit. Раньше 20-секундный бюджет
+  /// [_waitForSingbox] стартовал в этот же момент: медленный ввод пароля (или
+  /// просто его хвост) съедал бюджет, tun-интерфейс не успевал появиться и
+  /// коннект падал «keqrnel TUN did not start» сразу после запроса прав —
+  /// гонка между скоростью набора пароля и таймаутом ядра.
+  ///
+  /// Root-обёртка первым действием создаёт [authMarker] — это сигнал «пароль
+  /// принят, ядро запускается». До маркера ждём без TUN-бюджета (до 2 минут на
+  /// ввод пароля); выход pkexec до маркера — отмена/нет агента (126/127) или
+  /// реальная ошибка, обе ветки объясняет [_elevationError].
+  Future<void> _waitForElevation({
+    required Process process,
+    required File authMarker,
+    required StringBuffer log,
+  }) async {
+    const maxWait = Duration(minutes: 2);
+    final sw = Stopwatch()..start();
+    while (sw.elapsed < maxWait) {
+      final code = await process.exitCode.timeout(
+        const Duration(milliseconds: 1),
+        onTimeout: () => -1,
+      );
+      if (code >= 0) {
+        throw VpnStartException(_elevationError(code, log));
+      }
+      if (authMarker.existsSync()) return;
+      // Подстраховка: ядро уже подняло TUN, а маркер не виден (экзотика ФС).
+      if (await _tunInterfaceExists()) return;
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    }
+    // Диалог так и висит без ответа — сворачиваем pkexec. Это безопасно:
+    // auth не выдана, root-потомка ещё нет, осиротевшего TUN не будет.
+    try {
+      process.kill(ProcessSignal.sigterm);
+    } catch (_) {}
+    throw const VpnStartException(
+      'Polkit authorization timed out (2 min). Approve the password prompt '
+      'to start TUN mode, or use Proxy mode.',
+    );
   }
 
   Future<bool> _waitForSingbox({
@@ -606,8 +676,43 @@ wait "$sb"
 
   // ---- lifecycle ----------------------------------------------------------
 
+  /// Вотчдог: ядро завершилось само (не через [stopSession]) → чистим
+  /// системный прокси/состояние и эмитим error вместо вечного «Connected».
+  void _watchProcessExit(Process? process, String label) {
+    if (process == null) return;
+    unawaited(process.exitCode.then((code) async {
+      if (_stoppingSession) return;
+      // Процесс уже не из активной сессии (штатный stop занулил поля).
+      if (!identical(process, _xrayProcess) &&
+          !identical(process, _singboxProcess) &&
+          !identical(process, _wireproxyProcess)) {
+        return;
+      }
+      AppLogger.instance.error(
+        '$label exited unexpectedly with code $code; tearing the session down',
+      );
+      try {
+        await stopSession();
+      } catch (_) {}
+      _emit(VpnState(
+        status: VpnStatus.error,
+        errorMessage:
+            '$label stopped unexpectedly (exit code $code). Disconnected.',
+      ));
+    }));
+  }
+
   @override
   Future<void> stopSession() async {
+    _stoppingSession = true;
+    try {
+      await _stopSessionInner();
+    } finally {
+      _stoppingSession = false;
+    }
+  }
+
+  Future<void> _stopSessionInner() async {
     _stopStatsLoop();
     _emit(const VpnState(status: VpnStatus.disconnecting));
 

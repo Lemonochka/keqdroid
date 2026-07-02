@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io' show InternetAddress;
+
 import '../models/app_settings.dart';
 import '../models/xray_core_settings.dart';
 import '../utils/hysteria_uri.dart';
@@ -51,6 +53,23 @@ class ConfigGeneratorV2 {
 
   /// shared localhost port for ephemeral ping (sequential batch tests).
   static const int ephemeralPingPort = 28150;
+
+  /// IP-литерал (IPv4 или IPv6). Regex только под IPv4 пропускал IPv6-адреса,
+  /// из-за чего direct-правило для сервера с IPv6 строилось как нерабочее
+  /// domain-правило и трафик к серверу мог закольцеваться через туннель.
+  static bool _isIpLiteral(String value) =>
+      InternetAddress.tryParse(value.trim()) != null;
+
+  /// Приватные/LAN/спец-диапазоны — всегда direct. Единый список, чтобы
+  /// проверка «есть ли пользовательские IP-правила» и итоговое direct-правило
+  /// не разъезжались при правках.
+  static const Set<String> _basePrivateRanges = {
+    '0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '127.0.0.0/8',
+    '169.254.0.0/16', '172.16.0.0/12', '172.19.0.0/30',
+    '192.0.0.0/24', '192.168.0.0/16',
+    '198.51.100.0/24', '203.0.113.0/24',
+    '::1/128', 'fc00::/7', 'fe80::/10',
+  };
 
   /// ephemeral socks port for url ping (fixed, one xray at a time).
   static int ephemeralPingPortFor(String serverId) => ephemeralPingPort;
@@ -140,7 +159,12 @@ class ConfigGeneratorV2 {
         uri = Uri.parse(trimmed);
       }
     } catch (e) {
-      throw ArgumentError('Invalid URI format: $trimmed');
+      // Без самого конфига: он содержит UUID/пароль и уходил бы в логи/Crashlytics.
+      final scheme = RegExp(r'^([a-zA-Z][a-zA-Z0-9+.-]*):').firstMatch(trimmed)?.group(1);
+      throw ArgumentError(
+        'Invalid URI format in server config'
+        '${scheme != null ? ' (scheme: $scheme)' : ''}',
+      );
     }
 
     final scheme = isVmess ? 'vmess' : uri.scheme.toLowerCase();
@@ -495,7 +519,7 @@ class ConfigGeneratorV2 {
       'version': version,
       'auth': auth,
       'udpIdleTimeout': udpIdleTimeout,
-      if (buildMasquerade() != null) 'masquerade': buildMasquerade(),
+      'masquerade': ?buildMasquerade(),
     };
 
     final up = HysteriaLinkParams.formatBandwidth(
@@ -634,15 +658,9 @@ class ConfigGeneratorV2 {
 
     // Базовые приватные/LAN диапазоны — всегда direct, не считаются
     // «пользовательскими» IP-правилами (иначе стратегию поднимало бы всегда).
-    const basePrivateIps = {
-      '0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '127.0.0.0/8',
-      '169.254.0.0/16', '172.16.0.0/12', '172.19.0.0/30',
-      '192.0.0.0/24', '192.168.0.0/16',
-      '198.51.100.0/24', '203.0.113.0/24',
-      '::1/128', 'fc00::/7', 'fe80::/10',
-    };
-    final extraDirectIps =
-        directIps.where((ip) => !basePrivateIps.contains(ip.trim())).toList();
+    final extraDirectIps = directIps
+        .where((ip) => !_basePrivateRanges.contains(ip.trim()))
+        .toList();
 
     final core = settings.xrayCore;
 
@@ -671,11 +689,11 @@ class ConfigGeneratorV2 {
     rules.add({'type': 'field', 'ip': ['169.254.0.0/16', '224.0.0.0/4', '255.255.255.255/32'], 'outboundTag': 'block'});
 
     if (isPingMode) {
-      final isServerIp = RegExp(r'^(\d{1,3}\.){3}\d{1,3}$').hasMatch(serverAddress);
+      final isServerIp = _isIpLiteral(serverAddress);
       if (isServerIp) {
         rules.add({'type': 'field', 'ip': [serverAddress], 'outboundTag': 'direct'});
       }
-      if (!RegExp(r'^(\d{1,3}\.){3}\d{1,3}$').hasMatch(originalServerAddress)) {
+      if (!_isIpLiteral(originalServerAddress)) {
         rules.add({'type': 'field', 'domain': ['full:$originalServerAddress'], 'outboundTag': 'direct'});
       } else if (!isServerIp) {
         rules.add({'type': 'field', 'ip': [originalServerAddress], 'outboundTag': 'direct'});
@@ -721,11 +739,11 @@ class ConfigGeneratorV2 {
     if (blockedIps.isNotEmpty) {
       rules.add({'type': 'field', 'ip': blockedIps, 'outboundTag': 'block'});
     }
-    final isServerIp = RegExp(r'^(\d{1,3}\.){3}\d{1,3}$').hasMatch(serverAddress);
+    final isServerIp = _isIpLiteral(serverAddress);
     if (isServerIp) {
       rules.add({'type': 'field', 'ip': [serverAddress], 'outboundTag': 'direct'});
     }
-    if (!RegExp(r'^(\d{1,3}\.){3}\d{1,3}$').hasMatch(originalServerAddress)) {
+    if (!_isIpLiteral(originalServerAddress)) {
       rules.add({'type': 'field', 'domain': ['full:$originalServerAddress'], 'outboundTag': 'direct'});
     } else if (!isServerIp) {
       rules.add({'type': 'field', 'ip': [originalServerAddress], 'outboundTag': 'direct'});
@@ -738,18 +756,7 @@ class ConfigGeneratorV2 {
     }
     rules.add({'type': 'field', 'ip': [
       ...extraDirectIps,
-      '0.0.0.0/8',
-      '10.0.0.0/8',
-      '100.64.0.0/10',
-      '127.0.0.0/8',
-      '169.254.0.0/16',
-      '172.16.0.0/12',
-      '172.19.0.0/30',
-      '192.0.0.0/24',
-      '192.168.0.0/16',
-      '198.51.100.0/24',
-      '203.0.113.0/24',
-      '::1/128', 'fc00::/7', 'fe80::/10',
+      ..._basePrivateRanges,
     ], 'outboundTag': 'direct'});
     if (proxyDomains.isNotEmpty) {
       rules.add({'type': 'field', 'domain': proxyDomains, 'outboundTag': 'proxy'});

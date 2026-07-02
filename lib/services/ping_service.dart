@@ -406,22 +406,6 @@ class PingService {
     }
   }
 
-  /// http get через локальный socks5. не работает: vpn socks требует auth,
-  /// а HttpClient не умеет слать креды. используй pingUrl.
-  @Deprecated('Use pingUrl; VPN SOCKS requires auth that HttpClient cannot provide')
-  static Future<PingResult> pingViaLocalProxy(
-    ServerItem server,
-    int proxyPort, {
-    String testUrl = kDefaultPingTestUrl,
-    int timeoutSeconds = 15,
-  }) =>
-      _httpGetViaSocks(
-        server: server,
-        socksPort: proxyPort,
-        testUrl: testUrl,
-        timeoutSeconds: timeoutSeconds,
-      );
-
   /// реальный пинг: поднимает временный xray на outbound сервера и делает get
   static Future<PingResult> pingUrl(
     ServerItem server,
@@ -571,76 +555,6 @@ class PingService {
       }),
     );
     return out;
-  }
-
-  static Future<PingResult> _httpGetViaSocks({
-    required ServerItem server,
-    required int socksPort,
-    required String testUrl,
-    required int timeoutSeconds,
-  }) async {
-    HttpClient? client;
-    try {
-      client = HttpClient();
-      // Deprecated path. dart:io HttpClient.findProxy supports only 'PROXY host:port'
-      // (HTTP CONNECT) and 'DIRECT' — never SOCKS. This method targets the VPN's
-      // SOCKS port, which Dart cannot reach, so it stays non-functional (see the
-      // @Deprecated note on pingViaLocalProxy); use pingUrl/EphemeralXrayPing instead.
-      client.findProxy = (_) => 'PROXY 127.0.0.1:$socksPort';
-      client.connectionTimeout = Duration(seconds: timeoutSeconds);
-      client.badCertificateCallback = (_, _, _) => true;
-
-      final sw = Stopwatch()..start();
-      final req = await client.getUrl(Uri.parse(testUrl));
-      req.headers.set('User-Agent', 'KEQDIS/3.1');
-      req.headers.set('Connection', 'close');
-      final res = await req.close();
-      await res.drain<void>();
-      sw.stop();
-
-      final ok = res.statusCode == 204 ||
-          res.statusCode == 200 ||
-          (res.statusCode >= 200 && res.statusCode < 400);
-      return PingResult(
-        serverId: server.id,
-        serverName: server.displayName,
-        latencyMs: sw.elapsedMilliseconds,
-        success: ok,
-        error: ok ? '' : 'HTTP ${res.statusCode}',
-      );
-    } on SocketException catch (e) {
-      return PingResult(
-        serverId: server.id,
-        serverName: server.displayName,
-        success: false,
-        error: 'Socket: ${e.message}',
-      );
-    } on TimeoutException {
-      return PingResult(
-        serverId: server.id,
-        serverName: server.displayName,
-        success: false,
-        error: 'Timeout',
-      );
-    } on HandshakeException catch (e) {
-      return PingResult(
-        serverId: server.id,
-        serverName: server.displayName,
-        success: false,
-        error: 'TLS: ${e.message}',
-      );
-    } catch (e) {
-      return PingResult(
-        serverId: server.id,
-        serverName: server.displayName,
-        success: false,
-        error: e.toString(),
-      );
-    } finally {
-      try {
-        client?.close(force: true);
-      } catch (_) {}
-    }
   }
 
   static PingType pingTypeFromSettings(AppSettings settings) {
