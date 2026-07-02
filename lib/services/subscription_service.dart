@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 
 import '../utils/local_vpn_proxy.dart';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
@@ -307,7 +307,7 @@ class SubscriptionService {
           );
         }
       } else {
-        configs = _parseBody(effectiveBody);
+        configs = await _parseBodyOffThread(effectiveBody);
       }
       // fallback для панелей, которые суют дату/трафик в служебные ноды
       if (usedBytes == null || totalBytes == null || expiresAt == null) {
@@ -327,7 +327,7 @@ class SubscriptionService {
     } on DioException catch (e) {
       // некоторые бэкенды отдают не-200 (502 и т.п.), но в body уже валидный payload.
       // пробуем достать конфиги из тела до общей обработки ошибки
-      final parsedFromError = _tryParseFromErrorResponse(e);
+      final parsedFromError = await _tryParseFromErrorResponse(e);
       if (parsedFromError != null) {
         return parsedFromError;
       }
@@ -380,8 +380,8 @@ class SubscriptionService {
     }
   }
 
-  ({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent})?
-  _tryParseFromErrorResponse(DioException e) {
+  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent})?>
+  _tryParseFromErrorResponse(DioException e) async {
     final response = e.response;
     if (response == null) {
       return null;
@@ -501,7 +501,7 @@ class SubscriptionService {
           }
         } else {
           try {
-            configs = _parseBody(body);
+            configs = await _parseBodyOffThread(body);
           } on FormatException {
             // бывает payload внутри html/js даже при text/plain
             configs = _extractConfigsFromHtml(body) ?? const [];
@@ -840,6 +840,13 @@ class SubscriptionService {
   /// Test-only hook over the private body parser (extraction → raw config list).
   @visibleForTesting
   static List<String> parseBodyForTest(String content) => _parseBody(content);
+
+  /// [_parseBody] в отдельном изоляте. Тело подписки бывает большим (сотни
+  /// URI, несколько base64-вариантов, regex-проходы), а auto-update дёргается
+  /// на onResume — на главном изоляте это давало хитч кадров ровно в момент
+  /// разворачивания приложения. Функция статическая и чистая → compute-safe.
+  static Future<List<String>> _parseBodyOffThread(String content) =>
+      compute(_parseBody, content);
 
   static List<String> _parseBody(String content) {
     final original = content.trim();
@@ -1490,7 +1497,7 @@ class SubscriptionService {
               body.startsWith('<html');
           if (!looksHtml) {
             try {
-              final parsed = _parseBody(body);
+              final parsed = await _parseBodyOffThread(body);
               if (parsed.isNotEmpty) return parsed;
             } on Object {
               // как сырую подписку не зашло — пробуем html-экстрактор

@@ -545,25 +545,37 @@ class ServersNotifier extends Notifier<ServersState> {
     });
   }
 
-  void _applyPingResultToState(PingResult result) {
-    final pingMs = result.success ? result.latencyMs : null;
-    final idx = state.servers.indexWhere((s) => s.id == result.serverId);
-    if (idx == -1) return;
-    final newList = [...state.servers];
-    newList[idx] = newList[idx].copyWith(
-      pingMs: pingMs,
-      lastTestedAt: DateTime.now(),
-      lastPingType: PingService.pingTypeToStored(result.pingType),
-    );
-    state = state.copyWith(servers: newList);
-  }
-
   /// пингует серверы: UI обновляем по мере результатов, в storage пишем разом в конце
   Future<List<PingResult>> _pingServersWithBatchedUpdates(
     List<ServerItem> servers,
   ) async {
     final results = <PingResult>[];
     final pending = <String, ({int? pingMs, String? lastPingType})>{};
+
+    // Троттлинг UI: результаты приходят по одному, а каждый эмит state
+    // перестраивает всю панель серверов (перегруппировка, пересортировка групп,
+    // все раскрытые тайлы). Копим результаты и применяем пачкой ~5 раз/сек —
+    // прогресс в UI живой, но ребилдов на порядок меньше на больших списках.
+    final buffered = <PingResult>[];
+    void flushBufferedToState() {
+      if (buffered.isEmpty) return;
+      final newList = [...state.servers];
+      final indexById = <String, int>{
+        for (var i = 0; i < newList.length; i++) newList[i].id: i,
+      };
+      final now = DateTime.now();
+      for (final r in buffered) {
+        final idx = indexById[r.serverId];
+        if (idx == null) continue;
+        newList[idx] = newList[idx].copyWith(
+          pingMs: r.success ? r.latencyMs : null,
+          lastTestedAt: now,
+          lastPingType: PingService.pingTypeToStored(r.pingType),
+        );
+      }
+      buffered.clear();
+      state = state.copyWith(servers: newList);
+    }
     final settings = await ref.read(storageProvider).getSettings();
     final vpnState = ref.read(vpnStateProvider).value;
     final vpnConnected = vpnState?.status == VpnStatus.connected;
@@ -586,25 +598,34 @@ class ServersNotifier extends Notifier<ServersState> {
       (s) => PingService.effectivePingType(s, pingType) == PingType.url,
     );
 
-    await PingService.pingBatch(
-      servers,
-      pingType,
-      settings: settings,
-      proxyPort: settings.localPort,
-      timeoutSeconds: anySpeed ? 20 : (anyUrl ? 8 : 5),
-      batchSize: 5,
-      vpnConnected: vpnConnected,
-      testUrl: testUrl,
-      resolveServerIp: (anyUrl || anySpeed) ? resolveServerIp : null,
-      onResult: (result) {
-        results.add(result);
-        pending[result.serverId] = (
-          pingMs: result.success ? result.latencyMs : null,
-          lastPingType: PingService.pingTypeToStored(result.pingType),
-        );
-        _applyPingResultToState(result);
-      },
+    final flushTimer = Timer.periodic(
+      const Duration(milliseconds: 200),
+      (_) => flushBufferedToState(),
     );
+    try {
+      await PingService.pingBatch(
+        servers,
+        pingType,
+        settings: settings,
+        proxyPort: settings.localPort,
+        timeoutSeconds: anySpeed ? 20 : (anyUrl ? 8 : 5),
+        batchSize: 5,
+        vpnConnected: vpnConnected,
+        testUrl: testUrl,
+        resolveServerIp: (anyUrl || anySpeed) ? resolveServerIp : null,
+        onResult: (result) {
+          results.add(result);
+          pending[result.serverId] = (
+            pingMs: result.success ? result.latencyMs : null,
+            lastPingType: PingService.pingTypeToStored(result.pingType),
+          );
+          buffered.add(result);
+        },
+      );
+    } finally {
+      flushTimer.cancel();
+      flushBufferedToState();
+    }
 
     if (pending.isNotEmpty) {
       // state.servers уже содержит все апдейты (применены в _applyPingResultToState
