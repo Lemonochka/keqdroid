@@ -632,7 +632,34 @@ class ConfigGeneratorV2 {
     final proxyGeoip     = proxyGeo.geoipCodes;
     final blockedGeoip   = blockedGeo.geoipCodes;
 
+    // Базовые приватные/LAN диапазоны — всегда direct, не считаются
+    // «пользовательскими» IP-правилами (иначе стратегию поднимало бы всегда).
+    const basePrivateIps = {
+      '0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '127.0.0.0/8',
+      '169.254.0.0/16', '172.16.0.0/12', '172.19.0.0/30',
+      '192.0.0.0/24', '192.168.0.0/16',
+      '198.51.100.0/24', '203.0.113.0/24',
+      '::1/128', 'fc00::/7', 'fe80::/10',
+    };
+    final extraDirectIps =
+        directIps.where((ip) => !basePrivateIps.contains(ip.trim())).toList();
+
     final core = settings.xrayCore;
+
+    // Если пользователь задал собственные IP/CIDR-правила (напр. корпоративный
+    // 10.130.0.0/16 в Direct), они должны срабатывать и для соединений по
+    // ДОМЕНУ: браузер через прокси шлёт `CONNECT host:443`, и под `AsIs` xray
+    // не резолвит домен → IP-правило игнорируется, трафик уходит в proxy (баг
+    // «CIDR direct не работает»). `IPIfNonMatch` резолвит не совпавший с
+    // доменными правилами домен и проверяет IP-правила — корп-CIDR начинает
+    // работать. Без пользовательских IP-правил остаёмся на `AsIs` (не резолвим
+    // проксируемые домены — приватнее и быстрее). Явный выбор ≠ AsIs уважаем.
+    final hasUserIpRules =
+        extraDirectIps.isNotEmpty || proxyIps.isNotEmpty || blockedIps.isNotEmpty;
+    final effectiveDomainStrategy =
+        (!isPingMode && hasUserIpRules && core.routingDomainStrategy == 'AsIs')
+            ? 'IPIfNonMatch'
+            : core.routingDomainStrategy;
     final dns = isPingMode
         ? {
             'servers': ['8.8.8.8', '1.1.1.1'],
@@ -709,15 +736,6 @@ class ConfigGeneratorV2 {
     if (directGeoip.isNotEmpty) {
       rules.add({'type': 'field', 'ip': directGeoip.map((c) => 'geoip:$c').toList(), 'outboundTag': 'direct'});
     }
-    const basePrivateIps = {
-      '0.0.0.0/8', '10.0.0.0/8', '100.64.0.0/10', '127.0.0.0/8',
-      '169.254.0.0/16', '172.16.0.0/12', '172.19.0.0/30',
-      '192.0.0.0/24', '192.168.0.0/16',
-      '198.51.100.0/24', '203.0.113.0/24',
-      '::1/128', 'fc00::/7', 'fe80::/10',
-    };
-    final extraDirectIps = directIps.where((ip) => !basePrivateIps.contains(ip)).toList();
-
     rules.add({'type': 'field', 'ip': [
       ...extraDirectIps,
       '0.0.0.0/8',
@@ -850,7 +868,7 @@ class ConfigGeneratorV2 {
         {'protocol': 'blackhole', 'tag': 'block'},
       ],
       'routing': {
-        'domainStrategy': isPingMode ? 'AsIs' : core.routingDomainStrategy,
+        'domainStrategy': isPingMode ? 'AsIs' : effectiveDomainStrategy,
         'rules': rules,
       },
     };
