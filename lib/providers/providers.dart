@@ -717,6 +717,52 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   // Сигналит _waitForDisconnected при приходе события disconnected из стрима —
   // вместо опроса state с фиксированными задержками.
   Completer<void>? _disconnectWaiter;
+  Timer? _androidPollTimer;
+  AppLifecycleListener? _androidLifecycle;
+
+  void _applyNativeState(VpnState s) {
+    if (_serverSwitchInProgress && s.status == VpnStatus.error) return;
+    if (_connectInFlight) {
+      if (s.status == VpnStatus.error ||
+          s.status == VpnStatus.connected ||
+          s.status == VpnStatus.disconnected) {
+        state = AsyncData(s);
+        if (s.status == VpnStatus.connected ||
+            s.status == VpnStatus.disconnected) {
+          _connectInFlight = false;
+        }
+      }
+      return;
+    }
+    final current = state.value;
+    if (current != null &&
+        current.status == s.status &&
+        current.telemetryEquals(s)) {
+      return;
+    }
+    state = AsyncData(s);
+  }
+
+  void _startAndroidPolling() {
+    if (!Platform.isAndroid) return;
+    _androidPollTimer?.cancel();
+    _androidPollTimer = Timer.periodic(
+      const Duration(milliseconds: 1500),
+      (_) => unawaited(syncFromNative()),
+    );
+  }
+
+  void _stopAndroidPolling() {
+    _androidPollTimer?.cancel();
+    _androidPollTimer = null;
+  }
+
+  void _onAndroidResumed() {
+    if (!Platform.isAndroid) return;
+    ref.read(vpnEngineProvider).refreshStateStream();
+    unawaited(syncFromNative());
+    _startAndroidPolling();
+  }
 
   @override
   Future<VpnState> build() async {
@@ -727,26 +773,58 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         final waiter = _disconnectWaiter;
         if (waiter != null && !waiter.isCompleted) waiter.complete();
       }
-      if (_serverSwitchInProgress && s.status == VpnStatus.error) {
-        return;
-      }
-      // пока идёт connect() держим UI на "connecting" до его завершения
-      if (_connectInFlight) {
-        if (s.status == VpnStatus.error || s.status == VpnStatus.connected) {
-          state = AsyncData(s);
-        }
-        return;
-      }
-      final current = state.value;
-      if (current != null && current.telemetryEquals(s)) return;
-      state = AsyncData(s);
+      _applyNativeState(s);
     });
-    ref.onDispose(() => _sub?.cancel());
+    ref.onDispose(() {
+      _sub?.cancel();
+      _stopAndroidPolling();
+      _androidLifecycle?.dispose();
+      _androidLifecycle = null;
+    });
+
+    if (Platform.isAndroid) {
+      _androidLifecycle?.dispose();
+      _androidLifecycle = AppLifecycleListener(
+        onResume: _onAndroidResumed,
+        onPause: _stopAndroidPolling,
+        onHide: _stopAndroidPolling,
+      );
+      _onAndroidResumed();
+    }
+
     try {
       return await engine.getCurrentState();
     } catch (_) {
       return VpnState.disconnected;
     }
+  }
+
+  /// Подтягивает фактическое состояние из нативного сервиса (Android VpnService).
+  /// Нужно при возврате в приложение и когда VPN переключали из шторки/плитки QS.
+  Future<void> syncFromNative() async {
+    try {
+      final s = await ref.read(vpnEngineProvider).getCurrentState();
+      _applyNativeState(s);
+    } catch (e, st) {
+      AppLogger.instance.debug(
+        'syncFromNative failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  Future<VpnState> _awaitNativeConnectOutcome(VpnEngine engine) async {
+    for (var i = 0; i < 150; i++) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      final s = await engine.getCurrentState();
+      if (s.status == VpnStatus.connected ||
+          s.status == VpnStatus.error ||
+          s.status == VpnStatus.disconnected) {
+        return s;
+      }
+    }
+    return engine.getCurrentState();
   }
 
   Future<void> connect({bool autostartTunFallback = false}) async {
@@ -770,9 +848,26 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       final isAwg = AwgProfile.isAwgConfig(server.config);
 
       await ref.read(serversProvider.notifier).setActive(server);
-      state = const AsyncData(VpnState(status: VpnStatus.connecting));
 
       final engine = ref.read(vpnEngineProvider);
+
+      // Плитка QS / уведомление могли уже поднять VPN, пока Flutter готовил конфиг.
+      final native = await engine.getCurrentState();
+      if (native.status == VpnStatus.connected) {
+        state = AsyncData(native);
+        return;
+      }
+      if (native.status == VpnStatus.connecting) {
+        state = AsyncData(native);
+        final settled = await _awaitNativeConnectOutcome(engine);
+        state = AsyncData(settled);
+        if (settled.status == VpnStatus.connected ||
+            settled.status == VpnStatus.error) {
+          return;
+        }
+      } else {
+        state = const AsyncData(VpnState(status: VpnStatus.connecting));
+      }
       final settings = await ref.read(storageProvider).getSettings();
       final split = ref.read(splitTunnelingProvider);
       final excludePkgs = split.excludePackages.toList();
@@ -887,7 +982,10 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       );
       await engine.startSession(session);
 
-      final sessionState = await engine.getCurrentState();
+      var sessionState = await engine.getCurrentState();
+      if (sessionState.status == VpnStatus.connecting) {
+        sessionState = await _awaitNativeConnectOutcome(engine);
+      }
       if (sessionState.status == VpnStatus.connected) {
         state = AsyncData(sessionState);
       } else if (sessionState.status != VpnStatus.error) {
@@ -1078,12 +1176,18 @@ class SplitTunnelingNotifier extends Notifier<SplitTunnelingState> {
   }
 
   /// добавляет пачку пакетов в excludePackages одним обновлением state
-  /// (вместо цикла toggleExclude, иначе ловим race condition)
-  Future<void> addAllExcludes(List<String> packages) async {
+  /// (вместо цикла toggleExclude, иначе ловим race condition).
+  /// Возвращает, сколько пакетов реально добавилось (без дублей); при пустом
+  /// результате не трогает storage вообще (иначе зря стирали includePackages).
+  Future<int> addAllExcludes(List<String> packages) async {
+    if (packages.isEmpty) return 0;
     final set = {...state.excludePackages, ...packages};
+    final added = set.length - state.excludePackages.length;
+    if (added == 0) return 0;
     await ref.read(storageProvider).setExcludePackages(set.toList());
     await ref.read(storageProvider).setIncludePackages([]);
     state = state.copyWith(excludePackages: set, includePackages: const {});
+    return added;
   }
 
   Future<void> clearExcludes() async {

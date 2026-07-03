@@ -222,7 +222,10 @@ class NotificationService {
 
   static Future<void> _handleConnect() async {
     try {
-      // само подключение идёт через провайдер VPN, тут только сигнал
+      // Request native side to toggle/start VPN. MainActivity handles this
+      // via MethodChannel and will forward as an Intent to KeqdisVpnService.
+      const channel = MethodChannel('keqdis_vpn_channel');
+      await channel.invokeMethod('toggleVpn');
       AppLogger.instance.debug('VPN connect action from notification');
     } catch (e, st) {
       AppLogger.instance.error('Failed to handle connect action', error: e, stackTrace: st);

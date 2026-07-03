@@ -29,7 +29,7 @@ import '../utils/error_messages.dart';
 
 part 'servers/server_groups.dart';
 part 'servers/server_tile.dart';
-part 'servers/vpn_stats_debug.dart';
+part 'servers/connection_stats.dart';
 part 'servers/wave_header.dart';
 
 class ServersTab extends ConsumerStatefulWidget {
@@ -137,6 +137,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
       _appInForeground = true;
       _syncHeaderAnimations();
       if (Platform.isAndroid && state == AppLifecycleState.resumed) {
+        unawaited(_syncVpnStateFromNative());
         unawaited(_checkLaunchAction());
       }
     }
@@ -150,6 +151,22 @@ class _ServersTabState extends ConsumerState<ServersTab>
   }
 
   bool get _serversTabVisible => _isServersHomeTab();
+
+  void _syncConnectButtonAnimation() {
+    final status = ref.read(vpnStateProvider).value?.status;
+    final active =
+        status == VpnStatus.connected ||
+        status == VpnStatus.connecting ||
+        status == VpnStatus.disconnecting;
+    _stateCtrl.value = active ? 1.0 : 0.0;
+    _syncHeaderAnimations();
+  }
+
+  Future<void> _syncVpnStateFromNative() async {
+    await ref.read(vpnStateProvider.notifier).syncFromNative();
+    if (!mounted) return;
+    _syncConnectButtonAnimation();
+  }
 
   void _syncHeaderAnimations() {
     final status = ref.read(vpnStateProvider).value?.status;
@@ -173,6 +190,19 @@ class _ServersTabState extends ConsumerState<ServersTab>
   Future<void> _onNativeMethodCall(MethodCall call) async {
     if (call.method == 'onLaunchAction') {
       await _checkLaunchAction();
+      return;
+    }
+    // Notification / QS tile may send a quick status snapshot via native
+    // method channel when EventChannel stream isn't connected. In that case
+    // trigger an explicit sync from native to update VPN state in Riverpod.
+    if (call.method == 'onVpnStatusSnapshot') {
+      try {
+        await ref.read(vpnStateProvider.notifier).syncFromNative();
+        if (!mounted) return;
+        _syncConnectButtonAnimation();
+      } catch (e, st) {
+        AppLogger.instance.debug('Failed to sync VPN state from native', error: e, stackTrace: st);
+      }
     }
   }
 
@@ -184,10 +214,19 @@ class _ServersTabState extends ConsumerState<ServersTab>
       final action = await VpnNativeBridge.getLaunchAction();
       if (action != 'connect_from_notification') return;
 
-      // ?????????? ???? ?? connect(), ????? resume ????? ????????? ?????? connect()
       await VpnNativeBridge.clearLaunchAction();
 
       if (!mounted) return;
+
+      // VPN мог уже подняться из уведомления/плитки — не запускаем второй connect().
+      await ref.read(vpnStateProvider.notifier).syncFromNative();
+      if (!mounted) return;
+      final currentStatus = ref.read(vpnStateProvider).value?.status;
+      if (currentStatus == VpnStatus.connected ||
+          currentStatus == VpnStatus.connecting) {
+        _syncConnectButtonAnimation();
+        return;
+      }
 
       final active = ref.read(serversProvider).activeServer;
       if (active == null) {
@@ -420,8 +459,37 @@ class _ServersTabState extends ConsumerState<ServersTab>
                     ),
                   ),
                 ),
-              if (PlatformBootstrap.isDesktop && isConnected)
-                const _DesktopConnectionStats(),
+              // Скорость/трафик/время — на всех платформах (issue: на Android
+              // цифры были только в уведомлении, теперь и на главном экране).
+              // Появление плавное: AnimatedSize раздвигает место (контент ниже
+              // не прыгает), а чипы всплывают снизу с фейдом; дефолтный клип
+              // AnimatedSize обрезает их на входе — эффект «из тумана снизу».
+              AnimatedSize(
+                duration: const Duration(milliseconds: 380),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 420),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.45),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: isConnected
+                      ? const _ConnectionStats(key: ValueKey('stats'))
+                      : const SizedBox(
+                          key: ValueKey('stats-hidden'),
+                          width: double.infinity,
+                        ),
+                ),
+              ),
               SizedBox(height: isActive ? 12 : 20),
               TickerMode(
                 enabled: headerAnimationsEnabled || isConnecting || isConnected,

@@ -2,12 +2,15 @@
 
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.ServiceConnection
 import android.database.ContentObserver
 import android.os.Build
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
 import android.net.VpnService
 import android.service.quicksettings.Tile
@@ -45,6 +48,42 @@ class VpnQuickTileService : TileService() {
         }
     }
 
+    // Короткая привязка к KeqdisVpnService, пока пользователь смотрит шторку.
+    // Если процесс убили с активным VPN, в prefs остаётся connecting/connected,
+    // и тайл висел бы так вечно (connecting → STATE_UNAVAILABLE даже не нажать).
+    // BIND_AUTO_CREATE создаёт свежий инстанс сервиса, его onCreate() сверяет
+    // prefs с реальным статусом и чинит их → ContentObserver обновит тайл.
+    private var healConnection: ServiceConnection? = null
+
+    private fun healStaleStatusViaBind() {
+        if (healConnection != null) return
+        val status = getSharedPreferences(KeqdisVpnService.PREFS_QS, MODE_PRIVATE)
+            .getString(KeqdisVpnService.KEY_QS_STATUS, "disconnected")
+            ?.lowercase()
+            ?: "disconnected"
+        if (status == "disconnected" || status == "error") return
+        val conn = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {}
+            override fun onServiceDisconnected(name: ComponentName?) {}
+        }
+        healConnection = try {
+            if (bindService(
+                    Intent(this, KeqdisVpnService::class.java),
+                    conn,
+                    Context.BIND_AUTO_CREATE,
+                )
+            ) conn else null
+        } catch (e: Exception) {
+            android.util.Log.w("KEQDIS_QS", "heal bind failed: ${e.message}")
+            null
+        }
+    }
+
+    private fun releaseHealBind() {
+        healConnection?.let { runCatching { unbindService(it) } }
+        healConnection = null
+    }
+
     override fun onStartListening() {
         super.onStartListening()
         try {
@@ -70,6 +109,7 @@ class VpnQuickTileService : TileService() {
         }
 
         retryCount = 0
+        healStaleStatusViaBind()
         updateTileFromPrefs()
     }
 
@@ -78,6 +118,7 @@ class VpnQuickTileService : TileService() {
         retryHandler?.removeCallbacks(retryRunnable)
         retryHandler = null
         retryCount = 0
+        releaseHealBind()
         try {
             contentResolver.unregisterContentObserver(observer)
         } catch (_: Exception) {}

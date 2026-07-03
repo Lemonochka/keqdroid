@@ -293,42 +293,76 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
   Future<void> _addRussianApps() async {
     if (_isDesktop) return;
 
-    final allApps = ref.read(installedAppsProvider(true)).value ?? [];
-    final russianPkgs = allApps
-        .where((a) => _isRussianApp(a))
-        .map((a) => a.packageName)
-        .toList();
-
-    if (russianPkgs.isEmpty) {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(l10n.splitNoRussianAppsFound),
-          behavior: SnackBarBehavior.floating,
-        ));
-      }
-      return;
-    }
+    // Всё, что нужно после await, захватываем заранее: экран могут закрыть,
+    // пока идёт долгий скан, и ref/context станут недоступны.
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final notifier = ref.read(splitTunnelingProvider.notifier);
 
     if (_mode != TunnelMode.excludeOnly) {
       setState(() => _mode = TunnelMode.excludeOnly);
     }
 
-    final notifier = ref.read(splitTunnelingProvider.notifier);
-    final current = ref.read(splitTunnelingProvider).excludePackages;
-    final toAdd = russianPkgs.where((p) => !current.contains(p)).toList();
+    // 1) Мгновенный проход по уже загруженному списку — галочки и снекбар
+    //    появляются сразу. Полный список (includeSystem=true, с иконками
+    //    каждого пакета) телефон собирает 5–30 секунд; раньше всё это время
+    //    не было никакой реакции, а уход с экрана молча отменял добавление.
+    final visibleApps =
+        ref.read(installedAppsProvider(_showSystem)).value ?? const <AppInfo>[];
+    final quickRussian = visibleApps
+        .where(_isRussianApp)
+        .map((a) => a.packageName)
+        .toList();
+    var addedTotal = await notifier.addAllExcludes(quickRussian);
 
-    await notifier.addAllExcludes(toAdd);
+    // Полный скан запускаем до проверки mounted: провайдер keepAlive, а
+    // добавляет notifier уровня приложения — доскан доживёт и без экрана.
+    final fullScan = ref.read(installedAppsProvider(true).future);
 
     if (mounted) {
-      final l10n = AppLocalizations.of(context)!;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          toAdd.isEmpty
-              ? l10n.splitRussianAppsAlreadyAdded
-              : l10n.splitAddedRussianApps(toAdd.length),
-        ),
+      setState(() {
+        if (_allApps.isNotEmpty) _applyInitialSort(_allApps);
+      });
+      if (addedTotal > 0) {
+        messenger.showSnackBar(SnackBar(
+          content: Text(l10n.splitAddedRussianApps(addedTotal)),
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ));
+      } else if (quickRussian.isNotEmpty) {
+        messenger.showSnackBar(SnackBar(
+          content: Text(l10n.splitRussianAppsAlreadyAdded),
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    }
+
+    // 2) Доскан по полному списку (включая системные/предустановленные).
+    List<AppInfo> allApps;
+    try {
+      allApps = await fullScan;
+    } catch (_) {
+      allApps = const [];
+    }
+    final extraAdded = await notifier.addAllExcludes(
+      allApps.where(_isRussianApp).map((a) => a.packageName).toList(),
+    );
+    addedTotal += extraAdded;
+
+    if (!mounted) return;
+    if (extraAdded > 0) {
+      setState(() {
+        if (_allApps.isNotEmpty) _applyInitialSort(_allApps);
+      });
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.splitAddedRussianApps(addedTotal)),
         duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ));
+    } else if (addedTotal == 0 && quickRussian.isEmpty) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.splitNoRussianAppsFound),
         behavior: SnackBarBehavior.floating,
       ));
     }
@@ -380,14 +414,29 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     final excludePackages = ref.watch(
       splitTunnelingProvider.select((s) => s.excludePackages),
     );
+    ref.listen<Set<String>>(
+      splitTunnelingProvider.select((s) => s.excludePackages),
+      (prev, next) {
+        if (!mounted || _allApps.isEmpty || prev == next) return;
+        setState(() => _applyInitialSort(_allApps));
+      },
+    );
+    ref.listen<Set<String>>(
+      splitTunnelingProvider.select((s) => s.includePackages),
+      (prev, next) {
+        if (!mounted || _allApps.isEmpty || prev == next) return;
+        setState(() => _applyInitialSort(_allApps));
+      },
+    );
     final settings = ref.watch(settingsNotifierProvider).value;
     final checked = _checkedCount(includePackages, excludePackages);
     final proxyModeOnDesktop = _isDesktop &&
         settings?.connectionModeEnum == ConnectionMode.proxy;
+    final appsLoaded = appsAsync.hasValue;
 
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
-      appBar: _buildAppBar(checked),
+      appBar: _buildAppBar(checked, appsLoaded: appsLoaded),
       floatingActionButton: _isDesktop && _mode != TunnelMode.all
           ? FloatingActionButton.extended(
               onPressed: _showAddAppDialog,
@@ -457,7 +506,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     );
   }
 
-  AppBar _buildAppBar(int checked) {
+  AppBar _buildAppBar(int checked, {required bool appsLoaded}) {
     final l10n = AppLocalizations.of(context)!;
     return AppBar(
       backgroundColor: AppTheme.bg(context),
@@ -495,7 +544,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
           IconButton(
             tooltip: l10n.splitAddRussianAppsBypass,
             icon: const _RuFlagIcon(),
-            onPressed: _allApps.isEmpty ? null : _addRussianApps,
+            onPressed: appsLoaded ? _addRussianApps : null,
           ),
         if (_mode != TunnelMode.all && checked > 0)
           TextButton(
