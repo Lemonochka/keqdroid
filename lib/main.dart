@@ -210,10 +210,15 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
         controller: _pageCtrl,
         physics: const ClampingScrollPhysics(),
         dragStartBehavior: DragStartBehavior.down,
+        // Сосед пребилдится в спокойный кадр после settle, а не в первый кадр
+        // драга при самом первом свайпе.
+        allowImplicitScrolling: true,
         onPageChanged: _onPageSettled,
-        children: [
+        // const-список обязателен: с ним shouldRebuild делегата = false, и
+        // setState(_navIndex) на середине свайпа не перестраивает сами вкладки.
+        children: const [
           _HomeTabPage(child: ServersTab()),
-          _HomeTabPage(child: const SubscriptionsTab()),
+          _HomeTabPage(child: SubscriptionsTab()),
           _HomeTabPage(child: SettingsTab()),
         ],
       ),
