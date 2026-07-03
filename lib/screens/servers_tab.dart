@@ -287,6 +287,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
       });
     });
 
+    // Видимость вкладки — только listen, НЕ watch: она влияет лишь на явные
+    // контроллеры (wave/breath) через _syncHeaderAnimations, а watch
+    // перестраивал бы весь таб (хедер + список) прямо в кадре свайпа.
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       ref.listen<int>(homeTabIndexProvider, (prev, next) {
         final wasVisible = (prev ?? 0) == 0;
@@ -300,12 +303,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
         if (wasVisible != isVisible) _syncHeaderAnimations();
       });
     }
-
-    final onServersTab =
-        Platform.isWindows || Platform.isLinux || Platform.isMacOS
-        ? ref.watch(homeTabIndexProvider.select((i) => i == 0))
-        : ref.watch(homeTabPageProvider.select((p) => p < 0.05));
-    final headerAnimationsEnabled = onServersTab && _appInForeground;
 
     final vpnStatus = ref.watch(
       vpnStateProvider.select((a) => a.value?.status ?? VpnStatus.disconnected),
@@ -350,8 +347,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
           padding: EdgeInsets.fromLTRB(24, topPad, 24, 8),
           child: Column(
             children: [
-              TickerMode(
-                enabled: headerAnimationsEnabled || isConnecting,
+              // При connected «дыхание» и blur-тень перерисовываются каждый
+              // кадр — boundary не даёт им тянуть перерисовку всего хедера.
+              RepaintBoundary(
                 child: ScaleTransition(
                   scale: (isConnected || isConnecting)
                       ? _breathAnim
@@ -491,14 +489,11 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 ),
               ),
               SizedBox(height: isActive ? 12 : 20),
-              TickerMode(
-                enabled: headerAnimationsEnabled || isConnecting || isConnected,
-                child: _WavePaintWidget(
-                  waveCtrl: _waveCtrl,
-                  stateCtrl: _stateCtrl,
-                  context: context,
-                  height: waveHeight,
-                ),
+              _WavePaintWidget(
+                waveCtrl: _waveCtrl,
+                stateCtrl: _stateCtrl,
+                context: context,
+                height: waveHeight,
               ),
             ],
           ),
