@@ -158,7 +158,22 @@ class _ServersTabState extends ConsumerState<ServersTab>
         status == VpnStatus.connected ||
         status == VpnStatus.connecting ||
         status == VpnStatus.disconnecting;
-    _stateCtrl.value = active ? 1.0 : 0.0;
+    // Снапшоты из натива (onVpnStatusSnapshot, resumed) приходят и при обычном
+    // подключении из приложения — жёсткое `_stateCtrl.value =` здесь обрывало
+    // 600мс морф волны, уже запущенный listener'ом vpnStateProvider. Поэтому
+    // доводим плавно, и только если контроллер не в цели и не едет к ней.
+    final target = active ? 1.0 : 0.0;
+    final atTarget = _stateCtrl.value == target && !_stateCtrl.isAnimating;
+    final movingToTarget = active
+        ? _stateCtrl.status == AnimationStatus.forward
+        : _stateCtrl.status == AnimationStatus.reverse;
+    if (!atTarget && !movingToTarget) {
+      if (active) {
+        _stateCtrl.forward();
+      } else {
+        _stateCtrl.reverse();
+      }
+    }
     _syncHeaderAnimations();
   }
 
