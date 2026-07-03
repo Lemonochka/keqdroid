@@ -28,6 +28,19 @@ class StorageService {
   /// и reloadFromDisk (write из фонового изолята WorkManager).
   AppSettings? _settingsCache;
 
+  /// Все записи и reload() выполняются строго по очереди.
+  /// SharedPreferences.reload() подменяет ВЕСЬ Dart-кэш снапшотом платформы;
+  /// если снапшот снят до завершения параллельного set*, кэш откатывается к
+  /// старым значениям (так «воскресали» удалённые пакеты split tunneling —
+  /// reload идёт по 60-сек таймеру синка подписок и на каждый resume).
+  Future<void> _opChain = Future.value();
+
+  Future<T> _serial<T>(Future<T> Function() op) {
+    final run = _opChain.then((_) => op());
+    _opChain = run.then<void>((_) {}, onError: (_) {});
+    return run;
+  }
+
   /// Decodes a stored JSON array, parsing each element with [parse] and
   /// **skipping** entries that fail instead of discarding the whole list.
   ///
@@ -60,10 +73,10 @@ class StorageService {
   }
 
   /// сбросить кэш prefs и подтянуть с диска (после workmanager)
-  Future<void> reloadFromDisk() async {
-    await _prefs.reload();
-    _settingsCache = null;
-  }
+  Future<void> reloadFromDisk() => _serial(() async {
+        await _prefs.reload();
+        _settingsCache = null;
+      });
 
   static Future<StorageService> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -84,10 +97,8 @@ class StorageService {
 
   Future<void> saveServers(List<ServerItem> servers) async {
     try {
-      await _prefs.setString(
-        _kServers,
-        jsonEncode(servers.map((s) => s.toJson()).toList()),
-      );
+      final raw = jsonEncode(servers.map((s) => s.toJson()).toList());
+      await _serial(() => _prefs.setString(_kServers, raw));
     } catch (e) {
       throw StorageException('Failed to save servers', cause: e);
     }
@@ -139,10 +150,8 @@ class StorageService {
 
   Future<void> saveSubscriptions(List<Subscription> subs) async {
     try {
-      await _prefs.setString(
-        _kSubscriptions,
-        jsonEncode(subs.map((s) => s.toJson()).toList()),
-      );
+      final raw = jsonEncode(subs.map((s) => s.toJson()).toList());
+      await _serial(() => _prefs.setString(_kSubscriptions, raw));
     } catch (e) {
       throw StorageException('Failed to save subscriptions', cause: e);
     }
@@ -181,10 +190,8 @@ class StorageService {
 
   Future<void> saveRules(List<RoutingRule> rules) async {
     try {
-      await _prefs.setString(
-        _kRules,
-        jsonEncode(rules.map((r) => r.toJson()).toList()),
-      );
+      final raw = jsonEncode(rules.map((r) => r.toJson()).toList());
+      await _serial(() => _prefs.setString(_kRules, raw));
     } catch (e) {
       throw StorageException('Failed to save routing rules', cause: e);
     }
@@ -194,13 +201,13 @@ class StorageService {
 
   String? getActiveServerId() => _prefs.getString(_kActiveId);
 
-  Future<void> setActiveServerId(String? id) async {
-    if (id == null) {
-      await _prefs.remove(_kActiveId);
-    } else {
-      await _prefs.setString(_kActiveId, id);
-    }
-  }
+  Future<void> setActiveServerId(String? id) => _serial(() async {
+        if (id == null) {
+          await _prefs.remove(_kActiveId);
+        } else {
+          await _prefs.setString(_kActiveId, id);
+        }
+      });
 
   // split tunneling
 
@@ -208,13 +215,13 @@ class StorageService {
       _prefs.getStringList(_kExcludePkgs) ?? [];
 
   Future<void> setExcludePackages(List<String> packages) =>
-      _prefs.setStringList(_kExcludePkgs, packages);
+      _serial(() => _prefs.setStringList(_kExcludePkgs, packages));
 
   List<String> getIncludePackages() =>
       _prefs.getStringList(_kIncludePkgs) ?? [];
 
   Future<void> setIncludePackages(List<String> packages) =>
-      _prefs.setStringList(_kIncludePkgs, packages);
+      _serial(() => _prefs.setStringList(_kIncludePkgs, packages));
 
   // настройки
 
@@ -232,10 +239,10 @@ class StorageService {
     }
   }
 
-  Future<void> saveSettings(AppSettings settings) async {
-    await _prefs.setString(_kSettings, settings.toJsonString());
-    _settingsCache = settings;
-  }
+  Future<void> saveSettings(AppSettings settings) => _serial(() async {
+        await _prefs.setString(_kSettings, settings.toJsonString());
+        _settingsCache = settings;
+      });
 
   // socks порт
 
@@ -244,14 +251,13 @@ class StorageService {
       : null;
 
   Future<void> setSocksPort(int port) =>
-      _prefs.setInt(_kSocksPort, port);
+      _serial(() => _prefs.setInt(_kSocksPort, port));
 
   // hwid
 
   /// Сохранённый HWID (идентификатор устройства для подписок).
   String? getHwid() => _prefs.getString(_kHwid);
 
-  Future<void> setHwid(String hwid) async {
-    await _prefs.setString(_kHwid, hwid);
-  }
+  Future<void> setHwid(String hwid) =>
+      _serial(() => _prefs.setString(_kHwid, hwid));
 }

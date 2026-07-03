@@ -3,6 +3,7 @@
 import '../tunnel/connection_mode.dart';
 import '../tunnel/tunnel_backend.dart';
 import '../tunnel/tunnel_backend_factory.dart';
+import '../tunnel/android_tunnel_backend.dart';
 import '../tunnel/tunnel_session_request.dart';
 import '../tunnel/tunnel_state.dart';
 
@@ -28,6 +29,14 @@ class VpnEngine {
   void init() => _backend.init();
 
   void dispose() => _backend.dispose();
+
+  /// Android: переподписаться на EventChannel после onResume / сбоя стрима.
+  void refreshStateStream() {
+    final backend = _backend;
+    if (backend is AndroidTunnelBackend) {
+      backend.reconnectEventStream();
+    }
+  }
 
   Future<({String username, String password})> fetchSocksCredentials() =>
       _backend.fetchSocksCredentials();

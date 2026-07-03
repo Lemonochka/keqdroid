@@ -1,11 +1,13 @@
 ﻿package com.keqdroid.keqdroid
 
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -13,6 +15,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.net.VpnService
+import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
 import android.util.Base64
@@ -68,6 +71,27 @@ class MainActivity : FlutterFragmentActivity() {
     // [FIX-UNBIND-CRASH] Отслеживаем, был ли bindService успешен,
     // чтобы не вызывать unbindService без привязки → IllegalArgumentException.
     private var serviceBound = false
+    private var vpnStatusReceiverRegistered = false
+
+    // Мгновенные обновления статуса из KeqdisVpnService (плитка QS / уведомление),
+    // когда binder ещё не переподключился после рестарта foreground-сервиса.
+    private val vpnStatusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != KeqdisVpnService.BROADCAST_VPN_STATUS_CHANGED) return
+            val status = intent.getStringExtra("status")
+            mainScope.launch {
+                // Emit over EventChannel if Flutter is listening.
+                emitVpnSnapshot(statusOverride = status)
+                // Additionally notify Flutter via MethodChannel so the Dart side
+                // can react even when EventChannel stream isn't active yet.
+                try {
+                    methodChannel?.invokeMethod("onVpnStatusSnapshot", mapOf("status" to status))
+                } catch (_: Exception) {
+                    // ignore
+                }
+            }
+        }
+    }
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
@@ -80,11 +104,14 @@ class MainActivity : FlutterFragmentActivity() {
                     emitVpnSnapshot(statusOverride = status, errorOverride = extra)
                 }
             }
+            mainScope.launch { emitVpnSnapshot() }
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
             vpnServiceBinder?.setStatusListener(null)
             vpnServiceBinder = null
+            serviceBound = false
+            ensureVpnServiceBound()
         }
     }
 
@@ -92,14 +119,44 @@ class MainActivity : FlutterFragmentActivity() {
         super.configureFlutterEngine(flutterEngine)
         XrayGeoAssets.ensure(this, filesDir)
         // [FIX-UNBIND-CRASH] Сохраняем результат bindService.
+        ensureVpnServiceBound()
+        setupMethodChannel(flutterEngine)
+        setupEventChannel(flutterEngine)
+        registerVpnStatusReceiver()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ensureVpnServiceBound()
+        mainScope.launch { emitVpnSnapshot() }
+    }
+
+    private fun ensureVpnServiceBound() {
+        if (serviceBound && vpnServiceBinder != null) return
         serviceBound = bindService(
             Intent(this, KeqdisVpnService::class.java),
             serviceConnection,
             Context.BIND_AUTO_CREATE,
         )
-        setupMethodChannel(flutterEngine)
-        setupEventChannel(flutterEngine)
     }
+
+    private fun registerVpnStatusReceiver() {
+        if (vpnStatusReceiverRegistered) return
+        val filter = IntentFilter(KeqdisVpnService.BROADCAST_VPN_STATUS_CHANGED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(vpnStatusReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(vpnStatusReceiver, filter)
+        }
+        vpnStatusReceiverRegistered = true
+    }
+
+    /** Статус из QS-prefs, если binder ещё не готов (плитка/уведомление стартуют сервис сами). */
+    private fun readQsVpnStatus(): String =
+        getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
+            .getString(KeqdisVpnService.KEY_QS_STATUS, "disconnected")
+            ?.lowercase()
+            ?: "disconnected"
 
     private fun setupMethodChannel(flutterEngine: FlutterEngine) {
         methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
@@ -205,6 +262,16 @@ class MainActivity : FlutterFragmentActivity() {
                             val maxLines = call.argument<Int>("maxLines") ?: 300
                             getXrayLogs(maxLines, result)
                         }
+                        "toggleVpn" -> {
+                            try {
+                                val intent = Intent(this@MainActivity, KeqdisVpnService::class.java)
+                                intent.action = KeqdisVpnService.ACTION_TOGGLE
+                                startService(intent)
+                                result.success(true)
+                            } catch (e: Exception) {
+                                result.error("TOGGLE_FAILED", e.message, null)
+                            }
+                        }
                         "xrayUrlTest" -> {
                             val xrayConfig = call.argument<String>("xrayConfig")
                             val socksPort = call.argument<Int>("socksPort")
@@ -292,10 +359,10 @@ class MainActivity : FlutterFragmentActivity() {
                             while (isActive) {
                                 emitVpnSnapshot()
                                 val status = vpnServiceBinder?.getStatus()
-                                val delayMs = if (status == VpnRunStatus.RUNNING) {
-                                    2_000L
-                                } else {
-                                    5_000L
+                                val delayMs = when (status) {
+                                    VpnRunStatus.RUNNING -> 2_000L
+                                    VpnRunStatus.STARTING -> 500L
+                                    else -> 1_500L
                                 }
                                 delay(delayMs)
                             }
@@ -318,13 +385,25 @@ class MainActivity : FlutterFragmentActivity() {
         val sink = eventSink ?: return
         val b = vpnServiceBinder
         if (b == null) {
-            sink.success(mapOf("status" to "disconnected", "error" to errorOverride))
+            val prefsStatus = statusOverride ?: readQsVpnStatus()
+            sink.success(
+                mapOf(
+                    "status" to prefsStatus,
+                    "error" to errorOverride,
+                    "uploadSpeed" to 0L,
+                    "downloadSpeed" to 0L,
+                    "totalUpload" to 0L,
+                    "totalDownload" to 0L,
+                    "durationSeconds" to 0L,
+                ),
+            )
             return
         }
         val error = errorOverride ?: lastStatusError
+        val rawStatus = statusOverride ?: b.getStatus().name.lowercase()
         sink.success(
             mapOf(
-                "status" to (statusOverride ?: b.getStatus().name.lowercase()),
+                "status" to rawStatus,
                 "error" to error,
                 "uploadSpeed" to b.getUploadSpeed(),
                 "downloadSpeed" to b.getDownloadSpeed(),
@@ -706,19 +785,24 @@ class MainActivity : FlutterFragmentActivity() {
 
     private fun getStatus(result: MethodChannel.Result) {
         val b = vpnServiceBinder
+        if (b == null) {
+            // Binder ещё/уже не привязан — пробуем восстановить привязку, чтобы
+            // следующий опрос отдал живой статус, а не снапшот из prefs.
+            // BIND_AUTO_CREATE заодно создаёт сервис, чей onCreate() чинит
+            // фантомные connecting/connected, пережившие убийство процесса.
+            ensureVpnServiceBound()
+            result.success(mapOf("status" to readQsVpnStatus()))
+            return
+        }
         result.success(
-            if (b == null) {
-                mapOf("status" to "disconnected")
-            } else {
-                mapOf(
-                    "status"          to b.getStatus().name.lowercase(),
-                    "uploadSpeed"     to b.getUploadSpeed(),
-                    "downloadSpeed"   to b.getDownloadSpeed(),
-                    "totalUpload"     to b.getTotalUpload(),
-                    "totalDownload"   to b.getTotalDownload(),
-                    "durationSeconds" to b.getDurationSeconds(),
-                )
-            }
+            mapOf(
+                "status"          to b.getStatus().name.lowercase(),
+                "uploadSpeed"     to b.getUploadSpeed(),
+                "downloadSpeed"   to b.getDownloadSpeed(),
+                "totalUpload"     to b.getTotalUpload(),
+                "totalDownload"   to b.getTotalDownload(),
+                "durationSeconds" to b.getDurationSeconds(),
+            )
         )
     }
 
@@ -766,6 +850,13 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onDestroy() {
         vpnServiceBinder?.setStatusListener(null)
+
+        if (vpnStatusReceiverRegistered) {
+            try {
+                unregisterReceiver(vpnStatusReceiver)
+            } catch (_: Exception) {}
+            vpnStatusReceiverRegistered = false
+        }
 
         // [FIX-UNBIND-CRASH] Вызываем unbindService только если привязка была успешна.
         if (serviceBound) {

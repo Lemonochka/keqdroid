@@ -145,9 +145,36 @@ class KeqdisVpnService : VpnService() {
         fun getDurationSeconds() = if (startTime > 0) (System.currentTimeMillis() - startTime) / 1000L else 0L
     }
     private val binder = LocalBinder()
-    override fun onBind(intent: Intent?): IBinder = binder
+
+    override fun onBind(intent: Intent?): IBinder? {
+        // Системный биндинг VPN (action android.net.VpnService) обязан получить
+        // внутренний binder из super.onBind() — раньше сюда всегда отдавался
+        // LocalBinder, из-за чего onRevoke() никогда не доставлялся: если VPN
+        // перехватывало другое приложение или систему, сервис навсегда оставался
+        // в RUNNING, а приложение/тайл показывали «подключено» при мёртвом туннеле.
+        return if (intent?.action == VpnService.SERVICE_INTERFACE) super.onBind(intent) else binder
+    }
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
+
+    override fun onCreate() {
+        super.onCreate()
+        // Самолечение фантомного статуса: процесс могли убить (force stop, OEM,
+        // свайп из recents), не дав сервису записать финальный статус — в prefs
+        // остаётся connecting/connected. Тайл от этого виснет (STATE_UNAVAILABLE
+        // не нажимается), а приложение на холодном старте до привязки binder'а
+        // показывает призрачное «подключается/подключено» без телеметрии.
+        // Новый инстанс сервиса всегда стартует STOPPED — приводим prefs и
+        // рассылку в соответствие. Реальному старту не мешает: ACTION_START
+        // придёт в onStartCommand сразу после и выставит connecting.
+        val stale = getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE)
+            .getString(KEY_QS_STATUS, "disconnected")
+            ?.lowercase()
+        if (stale != "disconnected" && stale != "error") {
+            android.util.Log.w("KEQDIS", "onCreate: healing stale persisted status '$stale' → disconnected")
+            setStatus(VpnRunStatus.STOPPED)
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         latestStartId = startId
@@ -199,7 +226,9 @@ class KeqdisVpnService : VpnService() {
                         buildControlNotification("Connecting…", isConnected = false, isTransitioning = true)
                     )
                     serviceScope.launch {
-                        startVpnWithAwg(startId, uapi, addresses, dns, allowedIps, mtu, excludePkgs, includePkgs)
+                        startGuarded(startId) {
+                            startVpnWithAwg(startId, uapi, addresses, dns, allowedIps, mtu, excludePkgs, includePkgs)
+                        }
                     }
                     return START_NOT_STICKY
                 }
@@ -250,10 +279,12 @@ class KeqdisVpnService : VpnService() {
                 )
 
                 serviceScope.launch {
-                    startVpnWithXray(
-                        startId, configPath, socksPort, excludePkgs, includePkgs,
-                        socksNoAuth = false, coreEngine = coreEngine,
-                    )
+                    startGuarded(startId) {
+                        startVpnWithXray(
+                            startId, configPath, socksPort, excludePkgs, includePkgs,
+                            socksNoAuth = false, coreEngine = coreEngine,
+                        )
+                    }
                 }
             }
             ACTION_STOP -> serviceScope.launch { stopVpn(startId) }
@@ -287,6 +318,29 @@ class KeqdisVpnService : VpnService() {
 
     // ── Start / Stop ─────────────────────────────────────────────────────────
 
+    // Вотчдог старта: onStartCommand уже показал «Connecting…», а сам коннект может
+    // зависнуть навсегда (застрявший стоп держит opMutex, establish() не вернулся,
+    // форк ядра повис) — у пользователя оставался «вечный Connecting…» в уведомлении
+    // без какого-либо исхода. По таймауту честно показываем ошибку и глушим сервис.
+    private suspend fun startGuarded(startId: Int, block: suspend () -> Unit) {
+        try {
+            kotlinx.coroutines.withTimeout(45_000L) { block() }
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            android.util.Log.e("KEQDIS", "start watchdog fired: connect attempt hung")
+            setStatus(VpnRunStatus.ERROR, "Connection attempt timed out")
+            // best-effort вне мьютекса: возможно, завис именно его владелец
+            runCatching { cleanup() }
+            showControlNotification(
+                "Connection timed out",
+                isConnected = false,
+                isTransitioning = false,
+            )
+            stopForeground(true)
+            unregisterNotificationReceiver()
+            stopSelf(startId)
+        }
+    }
+
     private suspend fun startVpnWithXray(
         startId: Int,
         xrayConfigPath: String,
@@ -297,7 +351,14 @@ class KeqdisVpnService : VpnService() {
         coreEngine: String = CORE_ENGINE_CHAIN,
     ) = opMutex.withLock {
         // Под opMutex: предыдущий стоп уже завершил cleanup(), порт/процессы свободны.
-        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) return@withLock
+        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) {
+            // Дубль-старт: не оставляем уведомление застрявшим на «Connecting…» —
+            // если сессия уже жива, вернём ему актуальное «Connected».
+            if (status == VpnRunStatus.RUNNING) {
+                showControlNotification("Connected", isConnected = true, isTransitioning = false)
+            }
+            return@withLock
+        }
         setStatus(VpnRunStatus.STARTING)
         try {
             if (!socksNoAuth && (socksUsername.isEmpty() || socksPassword.isEmpty())) {
@@ -333,6 +394,12 @@ class KeqdisVpnService : VpnService() {
             startStatsLoop()
 
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) {
+                // отмена вотчдогом (или скоупом): чистим под мьютексом и пробрасываем —
+                // уведомление об исходе выставит startGuarded
+                runCatching { cleanup() }
+                throw e
+            }
             android.util.Log.e("KEQDIS", "startVpn failed: ${e.message}", e)
             setStatus(VpnRunStatus.ERROR, e.message)
             cleanup()
@@ -346,8 +413,12 @@ class KeqdisVpnService : VpnService() {
 
     private suspend fun stopVpn(startId: Int? = null) = opMutex.withLock {
         if (status == VpnRunStatus.STOPPED) {
-            // Уже остановлен — но всё равно даём сервису шанс завершиться, если
-            // это была отдельная stop-команда и более новой не прилетело.
+            // Уже остановлен — но prefs могли пережить убийство процесса со
+            // старым connected/connecting: пересинхронизируем статус (prefs +
+            // broadcast + ContentObserver), чтобы тайл и приложение отлипли.
+            setStatus(VpnRunStatus.STOPPED)
+            // Даём сервису шанс завершиться, если это была отдельная
+            // stop-команда и более новой не прилетело.
             if (startId != null) stopSelf(startId) else stopSelf()
             return@withLock
         }
@@ -504,7 +575,12 @@ class KeqdisVpnService : VpnService() {
         excludePkgs: List<String>,
         includePkgs: List<String>,
     ) = opMutex.withLock {
-        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) return@withLock
+        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) {
+            if (status == VpnRunStatus.RUNNING) {
+                showControlNotification("Connected", isConnected = true, isTransitioning = false)
+            }
+            return@withLock
+        }
         setStatus(VpnRunStatus.STARTING)
         try {
             val tun = buildAwgTunInterface(addresses, dns, allowedIps, mtu, excludePkgs, includePkgs)
@@ -526,6 +602,10 @@ class KeqdisVpnService : VpnService() {
             showControlNotification("Connected", isConnected = true, isTransitioning = false)
             startStatsLoop()
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) {
+                runCatching { cleanup() }
+                throw e
+            }
             android.util.Log.e("KEQDIS", "startVpnWithAwg failed: ${e.message}", e)
             setStatus(VpnRunStatus.ERROR, e.message)
             cleanup()
@@ -704,6 +784,7 @@ class KeqdisVpnService : VpnService() {
             val uid = android.os.Process.myUid()
             var prevRx = android.net.TrafficStats.getUidRxBytes(uid).coerceAtLeast(0)
             var prevTx = android.net.TrafficStats.getUidTxBytes(uid).coerceAtLeast(0)
+            var tick = 0
 
             while (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) {
                 delay(1000)
@@ -719,7 +800,46 @@ class KeqdisVpnService : VpnService() {
                 uploadSpeed.set(deltaTx)
 
                 prevRx = rx; prevTx = tx
+
+                // Живая активность в нативном уведомлении: Dart-уведомление со
+                // скоростями живёт только пока жив Flutter, а этот foreground —
+                // всегда. Без обновлений оно застывало на «Connected», и было «не
+                // понятно, отвалился серв или нет». notify() вместо startForeground:
+                // сервис уже foreground с этим ID, апдейт текста так дешевле.
+                tick++
+                if (status == VpnRunStatus.RUNNING && tick % 2 == 0) {
+                    val body =
+                        "${formatUptime(System.currentTimeMillis() - startTime)}  ·  " +
+                        "↓ ${formatSpeed(downloadSpeed.get())}  ·  " +
+                        "↑ ${formatSpeed(uploadSpeed.get())}"
+                    runCatching {
+                        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(
+                            NOTIFICATION_ID,
+                            buildControlNotification(body, isConnected = true, isTransitioning = false),
+                        )
+                    }
+                }
             }
+        }
+    }
+
+    private fun formatSpeed(bytesPerSec: Long): String = when {
+        bytesPerSec >= 1024 * 1024 ->
+            String.format(java.util.Locale.US, "%.1f MB/s", bytesPerSec / (1024.0 * 1024.0))
+        bytesPerSec >= 1024 ->
+            String.format(java.util.Locale.US, "%.1f KB/s", bytesPerSec / 1024.0)
+        else -> "$bytesPerSec B/s"
+    }
+
+    private fun formatUptime(ms: Long): String {
+        val s = ms / 1000
+        val h = s / 3600
+        val m = (s % 3600) / 60
+        val sec = s % 60
+        return when {
+            h > 0 -> "${h}h ${m}m"
+            m > 0 -> "${m}m ${sec}s"
+            else -> "${sec}s"
         }
     }
 
@@ -850,7 +970,14 @@ class KeqdisVpnService : VpnService() {
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID_CONTROL)
             .setContentTitle(
-                if (isConnected) "VPN Connected$serverSuffix" else "VPN Disconnected$serverSuffix"
+                when {
+                    isConnected -> "VPN Connected$serverSuffix"
+                    // Во время подключения/отключения не пишем «Disconnected»:
+                    // сочетание «VPN Disconnected · сервер» + «Connecting…» читалось
+                    // как противоречие/зависание.
+                    isTransitioning -> "VPN$serverSuffix"
+                    else -> "VPN Disconnected$serverSuffix"
+                }
             )
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_launcher_foreground)

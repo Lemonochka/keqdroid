@@ -23,6 +23,11 @@ class AndroidTunnelBackend implements TunnelBackend {
 
   @override
   void init() {
+    reconnectEventStream();
+  }
+
+  /// Переподписка на EventChannel — после onResume нативный eventSink мог обнулиться.
+  void reconnectEventStream() {
     _eventSub?.cancel();
     _eventSub = _event.receiveBroadcastStream().listen(
       (e) {
