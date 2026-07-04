@@ -103,7 +103,7 @@ class WindowsTunnelBackend implements TunnelBackend {
     _singboxLog.clear();
 
     try {
-      await stopSession();
+      await _cleanupForRestart();
       activeInstance = this;
 
       _sessionDir = await WindowsCorePaths.sessionDir();
@@ -127,7 +127,7 @@ class WindowsTunnelBackend implements TunnelBackend {
       _watchProcessExit(_xrayProcess, 'xray');
     } catch (e, st) {
       AppLogger.instance.error('Windows tunnel start failed', error: e, stackTrace: st);
-      await stopSession();
+      await _cleanupForRestart();
       _emit(
         VpnState(
           status: VpnStatus.error,
@@ -537,9 +537,22 @@ class WindowsTunnelBackend implements TunnelBackend {
     }
   }
 
-  Future<void> _stopSessionInner() async {
+  /// Зачистка перед стартом новой сессии — БЕЗ эмитов disconnecting/disconnected.
+  /// Нотифаер пропускает disconnected из стрима в UI даже при connect-in-flight
+  /// (так нужно Android'у: отмена диалога разрешения), поэтому эмит отсюда
+  /// проваливал кнопку в серый «отключён» на пару секунд, пока поднимались ядра.
+  Future<void> _cleanupForRestart() async {
+    _stoppingSession = true;
+    try {
+      await _stopSessionInner(emitStates: false);
+    } finally {
+      _stoppingSession = false;
+    }
+  }
+
+  Future<void> _stopSessionInner({bool emitStates = true}) async {
     _stopStatsLoop();
-    _emit(const VpnState(status: VpnStatus.disconnecting));
+    if (emitStates) _emit(const VpnState(status: VpnStatus.disconnecting));
 
     try {
       await _method.invokeMethod<void>('setSystemProxy', {'enabled': false});
@@ -579,7 +592,7 @@ class WindowsTunnelBackend implements TunnelBackend {
 
     _activeMode = null;
     if (identical(activeInstance, this)) activeInstance = null;
-    _emit(VpnState.disconnected);
+    if (emitStates) _emit(VpnState.disconnected);
   }
 
   @override
