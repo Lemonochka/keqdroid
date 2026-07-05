@@ -146,33 +146,22 @@ void main() {
       expect(stream['security'], 'tls');
     });
 
-    test('kill switch adds 0.0.0.0/1 and 128.0.0.0/1 rules', () {
+    test('killSwitch does not add split rules to xray routing', () {
+      // Правило 0.0.0.0/1+128.0.0.0/1 → proxy было no-op (catch-all ниже и так
+      // шлёт всё в proxy); настоящий kill switch — final: block в sing-box
+      // TUN-конфиге (см. singbox_tun_config_test.dart).
       Socks5Credentials().init('u', 'p');
-      final killSwitchSettings = AppSettings(killSwitch: true);
-      final config = ConfigGeneratorV2.generateConfig(
-        'vless://uuid@example.com:443',
-        killSwitchSettings,
-      );
-      final map = jsonDecode(config) as Map<String, dynamic>;
-      final rules = (map['routing'] as Map)['rules'] as List;
-      final killSwitchRule = rules.firstWhere(
-        (r) => (r['ip'] as List?)?.contains('0.0.0.0/1') == true,
-      ) as Map<String, dynamic>;
-      expect(killSwitchRule['outboundTag'], 'proxy');
-      expect((killSwitchRule['ip'] as List), contains('128.0.0.0/1'));
-    });
-
-    test('no kill switch rule when killSwitch is false', () {
-      Socks5Credentials().init('u', 'p');
-      final config = ConfigGeneratorV2.generateConfig(
-        'vless://uuid@example.com:443',
-        settings, // killSwitch: false by default
-      );
-      final map = jsonDecode(config) as Map<String, dynamic>;
-      final rules = (map['routing'] as Map)['rules'] as List;
-      final hasKillSwitch = rules.any((r) =>
-        (r['ip'] as List?)?.contains('0.0.0.0/1') == true);
-      expect(hasKillSwitch, false);
+      for (final s in [settings, AppSettings(killSwitch: true)]) {
+        final config = ConfigGeneratorV2.generateConfig(
+          'vless://uuid@example.com:443',
+          s,
+        );
+        final map = jsonDecode(config) as Map<String, dynamic>;
+        final rules = (map['routing'] as Map)['rules'] as List;
+        final hasKillSwitch = rules.any((r) =>
+          (r['ip'] as List?)?.contains('0.0.0.0/1') == true);
+        expect(hasKillSwitch, false);
+      }
     });
 
     test('custom direct CIDR bumps domainStrategy to IPIfNonMatch', () {

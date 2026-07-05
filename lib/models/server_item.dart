@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:uuid/uuid.dart';
 
 import '../utils/awg_profile.dart';
@@ -24,6 +26,10 @@ class ServerItem {
   // кэш чтобы не парсить uri каждый раз
   String? _cachedDisplayName;
   String? _cachedCountryCode;
+  String? _cachedAddress;
+  int? _cachedPort;
+  Map<String, dynamic>? _cachedVmessPayload;
+  bool _vmessPayloadParsed = false;
 
   ServerItem({
     required this.id,
@@ -162,11 +168,42 @@ class ServerItem {
     return _cachedCountryCode;
   }
 
+  /// vmess://BASE64(JSON) — реальные host/port лежат внутри payload, а не в
+  /// authority URI. Декодируем из СЫРОЙ строки конфига: Uri.parse лоуэркейсит
+  /// host, что ломает base64 (регистрозависимый) — раньше address для vmess
+  /// возвращал обрезанный base64-блоб, а port — 443 (дефолт https).
+  Map<String, dynamic>? _vmessPayload() {
+    if (_vmessPayloadParsed) return _cachedVmessPayload;
+    _vmessPayloadParsed = true;
+    try {
+      final payload = config
+          .substring('vmess://'.length)
+          .replaceAll(RegExp(r'\s+'), '')
+          .replaceAll('-', '+')
+          .replaceAll('_', '/');
+      final decoded = utf8.decode(base64.decode(base64.normalize(payload)));
+      final json = jsonDecode(decoded);
+      if (json is Map<String, dynamic>) _cachedVmessPayload = json;
+    } catch (_) {
+      // битый payload — address/port уйдут в пустые значения
+    }
+    return _cachedVmessPayload;
+  }
+
   /// Адрес сервера
   String get address {
+    final cached = _cachedAddress;
+    if (cached != null) return cached;
+    return _cachedAddress = _computeAddress();
+  }
+
+  String _computeAddress() {
     try {
       if (protocol == 'awg') {
         return AwgProfile.parse(config).endpointHost;
+      }
+      if (protocol == 'vmess') {
+        return (_vmessPayload()?['add'] ?? '').toString().trim();
       }
       return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).host;
     } catch (_) {
@@ -176,9 +213,18 @@ class ServerItem {
 
   /// Порт сервера
   int get port {
+    final cached = _cachedPort;
+    if (cached != null) return cached;
+    return _cachedPort = _computePort();
+  }
+
+  int _computePort() {
     try {
       if (protocol == 'awg') {
         return AwgProfile.parse(config).endpointPort;
+      }
+      if (protocol == 'vmess') {
+        return int.tryParse((_vmessPayload()?['port'] ?? '').toString()) ?? 0;
       }
       return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).port;
     } catch (_) {

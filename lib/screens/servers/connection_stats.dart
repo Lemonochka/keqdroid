@@ -61,11 +61,15 @@ class _ConnectionStats extends ConsumerWidget {
               value: _formatVpnRate(stats.$2),
             ),
             const SizedBox(width: 8),
-            _statChip(context, label: 'In', value: _formatVpnBytes(stats.$3)),
+            _statChip(
+              context,
+              label: context.l10n.statsInLabel,
+              value: _formatVpnBytes(stats.$3),
+            ),
             const SizedBox(width: 8),
             _statChip(
               context,
-              label: 'Time',
+              label: context.l10n.statsTimeLabel,
               value: _formatVpnDuration(stats.$4),
             ),
           ],

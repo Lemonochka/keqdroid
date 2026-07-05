@@ -21,7 +21,49 @@ class WindowsCorePaths {
       'или рядом с keqdroid.exe.';
 
   static Future<Directory> sessionDir() async {
+    _sweepLegacyTempDirs();
     return Directory.systemTemp.createTemp('keqdis_session_');
+  }
+
+  /// Стабильный пользовательский каталог для извлечённых из ассетов файлов.
+  /// НЕ %TEMP%: Defender агрессивнее к exe, запускаемым из Temp (правило
+  /// «never run from %TEMP%»), а случайные keqdis_bin_*/keqdis_geo_* папки
+  /// копились там без подчистки.
+  static String _stableExtractRoot() {
+    final localAppData = Platform.environment['LOCALAPPDATA'];
+    final base = (localAppData != null && localAppData.isNotEmpty)
+        ? localAppData
+        : Directory.systemTemp.path; // крайний фоллбэк
+    return p.join(base, 'keqdroid');
+  }
+
+  static bool _legacySweepStarted = false;
+
+  /// Одноразовая (на процесс) подчистка keqdis_bin_*/keqdis_geo_* из %TEMP%:
+  /// старые версии создавали их через createTemp на каждое извлечение и
+  /// никогда не удаляли. Новые извлечения идут в LOCALAPPDATA.
+  static void _sweepLegacyTempDirs() {
+    if (_legacySweepStarted) return;
+    _legacySweepStarted = true;
+    Future(() async {
+      try {
+        await for (final e in Directory.systemTemp.list(followLinks: false)) {
+          if (e is! Directory) continue;
+          final name = p.basename(e.path);
+          if (!name.startsWith('keqdis_bin_') &&
+              !name.startsWith('keqdis_geo_')) {
+            continue;
+          }
+          try {
+            await e.delete(recursive: true);
+          } catch (_) {
+            // занято (например, ядром старого экземпляра) — заберём позже
+          }
+        }
+      } catch (_) {
+        // недоступный Temp — не мешаем подключению
+      }
+    });
   }
 
   static Future<String?> xrayExecutable() =>
@@ -54,7 +96,7 @@ class WindowsCorePaths {
     final besideAssets = _geoDirBesideFlutterAssets();
     if (besideAssets != null) return besideAssets;
 
-    return _extractGeoFilesToTemp();
+    return _extractGeoFiles();
   }
 
   static bool _dirHasGeoFiles(String dir) {
@@ -73,16 +115,11 @@ class WindowsCorePaths {
     return _dirHasGeoFiles(dir) ? dir : null;
   }
 
-  /// Extracts whatever geo files are bundled into a temp dir; returns the dir
-  /// when at least one extracted, else null.
-  static Future<String?> _extractGeoFilesToTemp() async {
+  /// Extracts whatever geo files are bundled into a stable user dir; returns
+  /// the dir when at least one is available there, else null.
+  static Future<String?> _extractGeoFiles() async {
     try {
-      final outDir = Directory(
-        p.join(
-          (await Directory.systemTemp.createTemp('keqdis_geo_')).path,
-          'geo',
-        ),
-      );
+      final outDir = Directory(p.join(_stableExtractRoot(), 'geo'));
       if (!outDir.existsSync()) outDir.createSync(recursive: true);
 
       var extracted = false;
@@ -92,10 +129,13 @@ class WindowsCorePaths {
       }.entries) {
         try {
           final data = await rootBundle.load(entry.key);
-          await File(p.join(outDir.path, entry.value)).writeAsBytes(
-            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-            flush: true,
-          );
+          final bytes = data.buffer
+              .asUint8List(data.offsetInBytes, data.lengthInBytes);
+          final outFile = File(p.join(outDir.path, entry.value));
+          // размер совпадает — уже извлечено этой же сборкой, не перезаписываем
+          if (!outFile.existsSync() || outFile.lengthSync() != bytes.length) {
+            await outFile.writeAsBytes(bytes, flush: true);
+          }
           extracted = true;
         } catch (_) {
           // file not bundled — skip
@@ -114,7 +154,7 @@ class WindowsCorePaths {
     final besideExe = p.join(p.dirname(Platform.resolvedExecutable), fileName);
     if (File(besideExe).existsSync()) return besideExe;
 
-    final fromAsset = await _extractAssetToTemp(assetKey, fileName);
+    final fromAsset = await _extractAssetToStableDir(assetKey, fileName);
     if (fromAsset != null) return fromAsset;
 
     return _which(fileName);
@@ -134,24 +174,28 @@ class WindowsCorePaths {
     return File(path).existsSync() ? path : null;
   }
 
-  static Future<String?> _extractAssetToTemp(
+  static Future<String?> _extractAssetToStableDir(
     String assetKey,
     String fileName,
   ) async {
     try {
       final data = await rootBundle.load(assetKey.replaceAll('\\', '/'));
-      final outDir = Directory(
-        p.join(
-          (await Directory.systemTemp.createTemp('keqdis_bin_')).path,
-          'cores',
-        ),
-      );
+      final bytes =
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      final outDir = Directory(p.join(_stableExtractRoot(), 'cores'));
       if (!outDir.existsSync()) outDir.createSync(recursive: true);
       final outFile = File(p.join(outDir.path, fileName));
-      await outFile.writeAsBytes(
-        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-        flush: true,
-      );
+      // размер совпадает — уже извлечён этой же сборкой
+      if (outFile.existsSync() && outFile.lengthSync() == bytes.length) {
+        return outFile.path;
+      }
+      try {
+        await outFile.writeAsBytes(bytes, flush: true);
+      } on FileSystemException {
+        // exe занят запущенным ядром — пользуемся существующей копией
+        if (outFile.existsSync()) return outFile.path;
+        rethrow;
+      }
       return outFile.path;
     } catch (_) {
       return null;

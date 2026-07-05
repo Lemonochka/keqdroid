@@ -28,11 +28,19 @@ class StorageService {
   /// и reloadFromDisk (write из фонового изолята WorkManager).
   AppSettings? _settingsCache;
 
-  /// Все записи и reload() выполняются строго по очереди.
-  /// SharedPreferences.reload() подменяет ВЕСЬ Dart-кэш снапшотом платформы;
-  /// если снапшот снят до завершения параллельного set*, кэш откатывается к
-  /// старым значениям (так «воскресали» удалённые пакеты split tunneling —
-  /// reload идёт по 60-сек таймеру синка подписок и на каждый resume).
+  /// Все записи, reload() и read-modify-write циклы выполняются строго по
+  /// очереди.
+  /// 1) SharedPreferences.reload() подменяет ВЕСЬ Dart-кэш снапшотом
+  ///    платформы; если снапшот снят до завершения параллельного set*, кэш
+  ///    откатывается к старым значениям (так «воскресали» удалённые пакеты
+  ///    split tunneling).
+  /// 2) upsert/replace/delete читают список, правят и пишут целиком — два
+  ///    параллельных цикла (например, батч обновления подписок) читали одну
+  ///    базу и последняя запись затирала изменения первой (lost update).
+  ///    Поэтому в _serial оборачивается ВЕСЬ цикл, а не только setString.
+  ///
+  /// ВАЖНО: _serial не реентерабелен — изнутри _serial-блока зовите только
+  /// сырые _write*-хелперы и get*-чтения, не публичные save*-методы.
   Future<void> _opChain = Future.value();
 
   Future<T> _serial<T>(Future<T> Function() op) {
@@ -78,9 +86,18 @@ class StorageService {
         _settingsCache = null;
       });
 
+  /// Один экземпляр на изолят: serial-очередь (_opChain) защищает от гонок
+  /// только внутри одного экземпляра. Desktop-фон (runDueUpdates) звал init()
+  /// повторно и получал отдельную очередь поверх тех же SharedPreferences —
+  /// RMW-циклы снова гонялись с основными. Конструктор остаётся публичным
+  /// для тестов.
+  static StorageService? _instance;
+
   static Future<StorageService> init() async {
+    final existing = _instance;
+    if (existing != null) return existing;
     final prefs = await SharedPreferences.getInstance();
-    return StorageService(prefs);
+    return _instance = StorageService(prefs);
   }
 
   // серверы
@@ -95,46 +112,80 @@ class StorageService {
     }
   }
 
-  Future<void> saveServers(List<ServerItem> servers) async {
+  /// Сырая запись серверов — только изнутри _serial-блоков.
+  Future<void> _writeServers(List<ServerItem> servers) async {
     try {
       final raw = jsonEncode(servers.map((s) => s.toJson()).toList());
-      await _serial(() => _prefs.setString(_kServers, raw));
+      await _prefs.setString(_kServers, raw);
     } catch (e) {
       throw StorageException('Failed to save servers', cause: e);
     }
   }
 
-  Future<void> upsertServer(ServerItem server) async {
-    final servers = await getServers();
-    final idx = servers.indexWhere((s) => s.id == server.id);
-    if (idx == -1) {
-      servers.add(server);
-    } else {
-      servers[idx] = server;
-    }
-    await saveServers(servers);
-  }
+  Future<void> saveServers(List<ServerItem> servers) =>
+      _serial(() => _writeServers(servers));
 
-  Future<void> deleteServer(String id) async {
-    final servers = await getServers();
-    servers.removeWhere((s) => s.id == id);
-    await saveServers(servers);
-  }
+  Future<void> upsertServer(ServerItem server) => _serial(() async {
+        final servers = await getServers();
+        final idx = servers.indexWhere((s) => s.id == server.id);
+        if (idx == -1) {
+          servers.add(server);
+        } else {
+          servers[idx] = server;
+        }
+        await _writeServers(servers);
+      });
+
+  Future<void> deleteServer(String id) => _serial(() async {
+        final servers = await getServers();
+        servers.removeWhere((s) => s.id == id);
+        await _writeServers(servers);
+      });
 
   /// подменяет серверы подписки одним списком
   Future<void> replaceServersBySubscription(
-      String subscriptionId,
-      List<ServerItem> newServers,
-      ) async {
-    final all = await getServers();
-    final kept = all.where((s) => s.subscriptionId != subscriptionId).toList();
-    await saveServers([...kept, ...newServers]);
-  }
+    String subscriptionId,
+    List<ServerItem> newServers,
+  ) =>
+      _serial(() async {
+        final all = await getServers();
+        final kept =
+            all.where((s) => s.subscriptionId != subscriptionId).toList();
+        await _writeServers([...kept, ...newServers]);
+      });
 
-  Future<void> deleteServersBySubscription(String subscriptionId) async {
-    final all = await getServers();
-    await saveServers(all.where((s) => s.subscriptionId != subscriptionId).toList());
-  }
+  Future<void> deleteServersBySubscription(String subscriptionId) =>
+      _serial(() async {
+        final all = await getServers();
+        await _writeServers(
+          all.where((s) => s.subscriptionId != subscriptionId).toList(),
+        );
+      });
+
+  /// Точечно применяет результаты пинга к АКТУАЛЬНОМУ списку в storage и
+  /// возвращает записанный список. Провайдер раньше сохранял свой снапшот
+  /// целиком (saveServers) — если параллельно обновилась подписка, её новые
+  /// серверы затирались устаревшим списком из памяти.
+  Future<List<ServerItem>> applyPingUpdates(
+    Map<String, ({int? pingMs, String? lastPingType})> updates,
+    DateTime testedAt,
+  ) =>
+      _serial(() async {
+        final servers = await getServers();
+        var changed = false;
+        final out = servers.map((s) {
+          final u = updates[s.id];
+          if (u == null) return s;
+          changed = true;
+          var item = s.copyWith(pingMs: u.pingMs, lastTestedAt: testedAt);
+          if (u.lastPingType != null) {
+            item = item.copyWith(lastPingType: u.lastPingType);
+          }
+          return item;
+        }).toList();
+        if (changed) await _writeServers(out);
+        return out;
+      });
 
   // подписки
 
@@ -148,33 +199,41 @@ class StorageService {
     }
   }
 
-  Future<void> saveSubscriptions(List<Subscription> subs) async {
+  /// Сырая запись подписок — только изнутри _serial-блоков.
+  Future<void> _writeSubscriptions(List<Subscription> subs) async {
     try {
       final raw = jsonEncode(subs.map((s) => s.toJson()).toList());
-      await _serial(() => _prefs.setString(_kSubscriptions, raw));
+      await _prefs.setString(_kSubscriptions, raw);
     } catch (e) {
       throw StorageException('Failed to save subscriptions', cause: e);
     }
   }
 
-  Future<void> upsertSubscription(Subscription sub) async {
-    final subs = await getSubscriptions();
-    final idx = subs.indexWhere((s) => s.id == sub.id);
-    if (idx == -1) {
-      subs.add(sub);
-    } else {
-      subs[idx] = sub;
-    }
-    await saveSubscriptions(subs);
-  }
+  Future<void> saveSubscriptions(List<Subscription> subs) =>
+      _serial(() => _writeSubscriptions(subs));
 
-  Future<void> deleteSubscription(String id) async {
-    final subs = await getSubscriptions();
-    subs.removeWhere((s) => s.id == id);
-    await saveSubscriptions(subs);
-    // Каскадно удаляем серверы
-    await deleteServersBySubscription(id);
-  }
+  Future<void> upsertSubscription(Subscription sub) => _serial(() async {
+        final subs = await getSubscriptions();
+        final idx = subs.indexWhere((s) => s.id == sub.id);
+        if (idx == -1) {
+          subs.add(sub);
+        } else {
+          subs[idx] = sub;
+        }
+        await _writeSubscriptions(subs);
+      });
+
+  Future<void> deleteSubscription(String id) => _serial(() async {
+        final subs = await getSubscriptions();
+        subs.removeWhere((s) => s.id == id);
+        await _writeSubscriptions(subs);
+        // Каскадно удаляем серверы — в том же serial-блоке, чтобы между
+        // двумя записями не вклинился параллельный RMW-цикл.
+        final all = await getServers();
+        await _writeServers(
+          all.where((s) => s.subscriptionId != id).toList(),
+        );
+      });
 
   // правила роутинга
 

@@ -1,22 +1,21 @@
 part of '../servers_tab.dart';
 
-// ????? ? RepaintBoundary, ????? ??????????? ???????????
+// волна в собственном RepaintBoundary: её непрерывная перерисовка не тянет
+// за собой остальной хедер
 class _WavePaintWidget extends StatelessWidget {
   final AnimationController waveCtrl;
   final AnimationController stateCtrl;
-  final BuildContext context;
   final double height;
 
   const _WavePaintWidget({
     required this.waveCtrl,
     required this.stateCtrl,
-    required this.context,
     this.height = 36,
   });
 
   @override
   Widget build(BuildContext context) {
-    // ???????? ?????, ????? ?? ??????? Theme.of() ?? ?????? ??????
+    // кэшируем цвета, чтобы не дёргать Theme.of() внутри AnimatedBuilder
     final accentColor = AppTheme.accent(context);
     final greenColor = AppTheme.green(context);
 

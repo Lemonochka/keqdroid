@@ -560,5 +560,57 @@
   "serversSortDefault": "По умолчанию",
   "serversSortPing": "Пинг (по возрастанию)",
   "serversSortSpeed": "Скорость (по убыванию)",
-  "serversSortName": "Название (А → Я)"
+  "serversSortName": "Название (А → Я)",
+  "updateActionSkip": "Пропустить версию",
+  "updateSizeLabel": "Размер: {size}",
+  "@updateSizeLabel": {
+    "placeholders": {
+      "size": {}
+    }
+  },
+  "updateOpenDownload": "Открыть загрузку",
+  "vpnConnectedGeneric": "VPN подключён",
+  "serversImportedSummary": "Добавлено серверов: {added} из {total}",
+  "@serversImportedSummary": {
+    "placeholders": {
+      "added": {},
+      "total": {}
+    }
+  },
+  "serversManualGroup": "Ручные серверы",
+  "serversEmptyGroupHint": "В этой подписке нет серверов",
+  "healthCheckChecksPassed": "Проверок пройдено: {passed}/{total}",
+  "@healthCheckChecksPassed": {
+    "placeholders": {
+      "passed": {},
+      "total": {}
+    }
+  },
+  "healthCheckServerFields": "Поля сервера",
+  "healthCheckDnsResolve": "DNS-резолв",
+  "healthCheckTcpHandshake": "TCP-соединение",
+  "healthCheckConfigFormat": "Формат конфига",
+  "healthCheckNoIpResolved": "IP не получен",
+  "healthCheckDnsFailed": "Ошибка: {error}",
+  "@healthCheckDnsFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "healthCheckUriFormat": "Формат URI распознан",
+  "healthCheckMissingScheme": "Нет схемы URI",
+  "healthCheckConfigEmpty": "Конфиг пуст",
+  "statsInLabel": "Вх",
+  "statsTimeLabel": "Время",
+  "qrScanTitle": "Сканировать QR-код",
+  "qrScanHint": "Наведите камеру на QR-код",
+  "qrScanCameraError": "Камера недоступна",
+  "serversScanQrHint": "Ссылка на сервер или подписку",
+  "qrSubscriptionAdded": "Подписка добавлена: {name}",
+  "@qrSubscriptionAdded": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "qrNotSubscriptionLink": "В QR-коде нет ссылки на подписку"
 }

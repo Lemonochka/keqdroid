@@ -560,5 +560,57 @@
   "serversSortDefault": "Standardreihenfolge",
   "serversSortPing": "Ping (aufsteigend)",
   "serversSortSpeed": "Geschwindigkeit (absteigend)",
-  "serversSortName": "Name (A → Z)"
+  "serversSortName": "Name (A → Z)",
+  "updateActionSkip": "Diese Version überspringen",
+  "updateSizeLabel": "Größe: {size}",
+  "@updateSizeLabel": {
+    "placeholders": {
+      "size": {}
+    }
+  },
+  "updateOpenDownload": "Download öffnen",
+  "vpnConnectedGeneric": "VPN verbunden",
+  "serversImportedSummary": "Server hinzugefügt: {added} von {total}",
+  "@serversImportedSummary": {
+    "placeholders": {
+      "added": {},
+      "total": {}
+    }
+  },
+  "serversManualGroup": "Manuelle Server",
+  "serversEmptyGroupHint": "Keine Server in diesem Abo",
+  "healthCheckChecksPassed": "Bestanden: {passed}/{total}",
+  "@healthCheckChecksPassed": {
+    "placeholders": {
+      "passed": {},
+      "total": {}
+    }
+  },
+  "healthCheckServerFields": "Serverfelder",
+  "healthCheckDnsResolve": "DNS-Auflösung",
+  "healthCheckTcpHandshake": "TCP-Handshake",
+  "healthCheckConfigFormat": "Konfigurationsformat",
+  "healthCheckNoIpResolved": "Keine IP aufgelöst",
+  "healthCheckDnsFailed": "Fehler: {error}",
+  "@healthCheckDnsFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "healthCheckUriFormat": "URI-Format erkannt",
+  "healthCheckMissingScheme": "URI-Schema fehlt",
+  "healthCheckConfigEmpty": "Konfiguration ist leer",
+  "statsInLabel": "In",
+  "statsTimeLabel": "Zeit",
+  "qrScanTitle": "QR-Code scannen",
+  "qrScanHint": "Richten Sie die Kamera auf einen QR-Code",
+  "qrScanCameraError": "Kamera nicht verfügbar",
+  "serversScanQrHint": "Server- oder Abo-Link",
+  "qrSubscriptionAdded": "Abo hinzugefügt: {name}",
+  "@qrSubscriptionAdded": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "qrNotSubscriptionLink": "QR-Code enthält keinen Abo-Link"
 }

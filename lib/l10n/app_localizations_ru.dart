@@ -1174,4 +1174,89 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get serversSortName => 'Название (А → Я)';
+
+  @override
+  String get updateActionSkip => 'Пропустить версию';
+
+  @override
+  String updateSizeLabel(Object size) {
+    return 'Размер: $size';
+  }
+
+  @override
+  String get updateOpenDownload => 'Открыть загрузку';
+
+  @override
+  String get vpnConnectedGeneric => 'VPN подключён';
+
+  @override
+  String serversImportedSummary(Object added, Object total) {
+    return 'Добавлено серверов: $added из $total';
+  }
+
+  @override
+  String get serversManualGroup => 'Ручные серверы';
+
+  @override
+  String get serversEmptyGroupHint => 'В этой подписке нет серверов';
+
+  @override
+  String healthCheckChecksPassed(Object passed, Object total) {
+    return 'Проверок пройдено: $passed/$total';
+  }
+
+  @override
+  String get healthCheckServerFields => 'Поля сервера';
+
+  @override
+  String get healthCheckDnsResolve => 'DNS-резолв';
+
+  @override
+  String get healthCheckTcpHandshake => 'TCP-соединение';
+
+  @override
+  String get healthCheckConfigFormat => 'Формат конфига';
+
+  @override
+  String get healthCheckNoIpResolved => 'IP не получен';
+
+  @override
+  String healthCheckDnsFailed(Object error) {
+    return 'Ошибка: $error';
+  }
+
+  @override
+  String get healthCheckUriFormat => 'Формат URI распознан';
+
+  @override
+  String get healthCheckMissingScheme => 'Нет схемы URI';
+
+  @override
+  String get healthCheckConfigEmpty => 'Конфиг пуст';
+
+  @override
+  String get statsInLabel => 'Вх';
+
+  @override
+  String get statsTimeLabel => 'Время';
+
+  @override
+  String get qrScanTitle => 'Сканировать QR-код';
+
+  @override
+  String get qrScanHint => 'Наведите камеру на QR-код';
+
+  @override
+  String get qrScanCameraError => 'Камера недоступна';
+
+  @override
+  String get serversScanQrHint => 'Ссылка на сервер или подписку';
+
+  @override
+  String qrSubscriptionAdded(Object name) {
+    return 'Подписка добавлена: $name';
+  }
+
+  @override
+  String get qrNotSubscriptionLink => 'В QR-коде нет ссылки на подписку';
 }

@@ -1172,4 +1172,89 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serversSortName => 'Name (A → Z)';
+
+  @override
+  String get updateActionSkip => 'Skip this version';
+
+  @override
+  String updateSizeLabel(Object size) {
+    return 'Size: $size';
+  }
+
+  @override
+  String get updateOpenDownload => 'Open download';
+
+  @override
+  String get vpnConnectedGeneric => 'VPN connected';
+
+  @override
+  String serversImportedSummary(Object added, Object total) {
+    return 'Servers added: $added of $total';
+  }
+
+  @override
+  String get serversManualGroup => 'Manual servers';
+
+  @override
+  String get serversEmptyGroupHint => 'No servers in this subscription';
+
+  @override
+  String healthCheckChecksPassed(Object passed, Object total) {
+    return 'Checks passed: $passed/$total';
+  }
+
+  @override
+  String get healthCheckServerFields => 'Server fields';
+
+  @override
+  String get healthCheckDnsResolve => 'DNS resolve';
+
+  @override
+  String get healthCheckTcpHandshake => 'TCP handshake';
+
+  @override
+  String get healthCheckConfigFormat => 'Config format';
+
+  @override
+  String get healthCheckNoIpResolved => 'No IP resolved';
+
+  @override
+  String healthCheckDnsFailed(Object error) {
+    return 'Failed: $error';
+  }
+
+  @override
+  String get healthCheckUriFormat => 'URI format detected';
+
+  @override
+  String get healthCheckMissingScheme => 'Missing URI scheme';
+
+  @override
+  String get healthCheckConfigEmpty => 'Config is empty';
+
+  @override
+  String get statsInLabel => 'In';
+
+  @override
+  String get statsTimeLabel => 'Time';
+
+  @override
+  String get qrScanTitle => 'Scan QR code';
+
+  @override
+  String get qrScanHint => 'Point the camera at a QR code';
+
+  @override
+  String get qrScanCameraError => 'Camera unavailable';
+
+  @override
+  String get serversScanQrHint => 'Server link or subscription link';
+
+  @override
+  String qrSubscriptionAdded(Object name) {
+    return 'Subscription added: $name';
+  }
+
+  @override
+  String get qrNotSubscriptionLink => 'QR code doesn\'t contain a subscription link';
 }

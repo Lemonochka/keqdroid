@@ -1172,4 +1172,89 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get serversSortName => '名称（A → Z）';
+
+  @override
+  String get updateActionSkip => '跳过此版本';
+
+  @override
+  String updateSizeLabel(Object size) {
+    return '大小：$size';
+  }
+
+  @override
+  String get updateOpenDownload => '打开下载';
+
+  @override
+  String get vpnConnectedGeneric => 'VPN 已连接';
+
+  @override
+  String serversImportedSummary(Object added, Object total) {
+    return '已添加服务器：$added/$total';
+  }
+
+  @override
+  String get serversManualGroup => '手动添加的服务器';
+
+  @override
+  String get serversEmptyGroupHint => '此订阅中没有服务器';
+
+  @override
+  String healthCheckChecksPassed(Object passed, Object total) {
+    return '通过检查：$passed/$total';
+  }
+
+  @override
+  String get healthCheckServerFields => '服务器字段';
+
+  @override
+  String get healthCheckDnsResolve => 'DNS 解析';
+
+  @override
+  String get healthCheckTcpHandshake => 'TCP 握手';
+
+  @override
+  String get healthCheckConfigFormat => '配置格式';
+
+  @override
+  String get healthCheckNoIpResolved => '未解析到 IP';
+
+  @override
+  String healthCheckDnsFailed(Object error) {
+    return '失败：$error';
+  }
+
+  @override
+  String get healthCheckUriFormat => '已识别 URI 格式';
+
+  @override
+  String get healthCheckMissingScheme => '缺少 URI 协议头';
+
+  @override
+  String get healthCheckConfigEmpty => '配置为空';
+
+  @override
+  String get statsInLabel => '下载';
+
+  @override
+  String get statsTimeLabel => '时长';
+
+  @override
+  String get qrScanTitle => '扫描二维码';
+
+  @override
+  String get qrScanHint => '将相机对准二维码';
+
+  @override
+  String get qrScanCameraError => '相机不可用';
+
+  @override
+  String get serversScanQrHint => '服务器或订阅链接';
+
+  @override
+  String qrSubscriptionAdded(Object name) {
+    return '已添加订阅：$name';
+  }
+
+  @override
+  String get qrNotSubscriptionLink => '二维码不包含订阅链接';
 }

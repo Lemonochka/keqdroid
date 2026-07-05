@@ -72,9 +72,10 @@ class TunnelSessionBuilder {
       excludeProcesses: excludeProcesses,
       includeProcesses: includeProcesses,
       serverName: serverName,
-      systemProxy: Platform.isWindows && mode == ConnectionMode.proxy
-          ? true
-          : settings.systemProxyEnabled,
+      // Уважаем настройку пользователя (по умолчанию true) — раньше на
+      // Windows в proxy-режиме системный прокси форсился всегда, и выключить
+      // его было невозможно.
+      systemProxy: settings.systemProxyEnabled,
       killSwitch: settings.killSwitch,
       coreEngine: settings.coreEngine,
     );

@@ -68,15 +68,24 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
           ),
         );
 
-    Widget card({required List<Widget> children}) => Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          decoration: BoxDecoration(
+    // Цвет и рамка на Material, а не на BoxDecoration: ListTile рисует
+    // ink-сплэши на ближайшем Material-предке, и цветной DecoratedBox между
+    // ними прятал рипл (debug-спам «ListTile background color or ink
+    // splashes may be invisible» при каждом билде тайла).
+    Widget card({required List<Widget> children}) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Material(
             color: AppTheme.card(context),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppTheme.divider(context)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(color: AppTheme.divider(context)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Column(children: children),
+            ),
           ),
-          child: Column(children: children),
         );
 
     return Scaffold(

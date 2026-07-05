@@ -560,5 +560,57 @@
   "serversSortDefault": "Default order",
   "serversSortPing": "Ping (low → high)",
   "serversSortSpeed": "Speed (high → low)",
-  "serversSortName": "Name (A → Z)"
+  "serversSortName": "Name (A → Z)",
+  "updateActionSkip": "Skip this version",
+  "updateSizeLabel": "Size: {size}",
+  "@updateSizeLabel": {
+    "placeholders": {
+      "size": {}
+    }
+  },
+  "updateOpenDownload": "Open download",
+  "vpnConnectedGeneric": "VPN connected",
+  "serversImportedSummary": "Servers added: {added} of {total}",
+  "@serversImportedSummary": {
+    "placeholders": {
+      "added": {},
+      "total": {}
+    }
+  },
+  "serversManualGroup": "Manual servers",
+  "serversEmptyGroupHint": "No servers in this subscription",
+  "healthCheckChecksPassed": "Checks passed: {passed}/{total}",
+  "@healthCheckChecksPassed": {
+    "placeholders": {
+      "passed": {},
+      "total": {}
+    }
+  },
+  "healthCheckServerFields": "Server fields",
+  "healthCheckDnsResolve": "DNS resolve",
+  "healthCheckTcpHandshake": "TCP handshake",
+  "healthCheckConfigFormat": "Config format",
+  "healthCheckNoIpResolved": "No IP resolved",
+  "healthCheckDnsFailed": "Failed: {error}",
+  "@healthCheckDnsFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "healthCheckUriFormat": "URI format detected",
+  "healthCheckMissingScheme": "Missing URI scheme",
+  "healthCheckConfigEmpty": "Config is empty",
+  "statsInLabel": "In",
+  "statsTimeLabel": "Time",
+  "qrScanTitle": "Scan QR code",
+  "qrScanHint": "Point the camera at a QR code",
+  "qrScanCameraError": "Camera unavailable",
+  "serversScanQrHint": "Server link or subscription link",
+  "qrSubscriptionAdded": "Subscription added: {name}",
+  "@qrSubscriptionAdded": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "qrNotSubscriptionLink": "QR code doesn't contain a subscription link"
 }
