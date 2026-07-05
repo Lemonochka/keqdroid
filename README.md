@@ -79,11 +79,9 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 | Trojan | `trojan://` |
 | Shadowsocks | `ss://` |
 | Hysteria 2 | `hysteria2://`, `hy2://` |
-| **AmneziaWG** 1.0 / 1.5 / 2.0 | `.conf` file or pasted config («+» → import) |
+| AmneziaWG | `.conf` |
 
 Hysteria v1 is not supported.
-
-**AmneziaWG cores:** Android — `amneziawg-go` (`libwg-go.so`); Windows — `wireproxy-awg` (`wireproxy.exe`) in Proxy mode (system proxy, no admin rights) and TUN (`wireproxy` → sing-box). Build: `powershell -File tool/build_amneziawg.ps1`.
 
 ---
 
@@ -102,7 +100,6 @@ Hysteria v1 is not supported.
 | **Proxy** | System proxy — browsers and most apps. No administrator rights. |
 | **TUN** | All traffic through a VPN adapter. Run as administrator. |
 
-TUN requires `sing-box.exe` and `wintun.dll` (if not bundled — place next to `keqdroid.exe`).  
 Firefox may ignore the system proxy; the app has a separate setting for it.
 
 The window minimizes to the tray. Subscriptions refresh while the app is open.
@@ -117,8 +114,6 @@ Debian/Arch, x86_64. Releases ship tar.gz, AppImage, deb; Arch users get a `PKGB
 |------|-------------|
 | **Proxy** | No root |
 | **TUN** | Root via `pkexec` (polkit) on connect |
-
-Cores (`xray`, `wireproxy`, `sing-box`, geo) live in `assets/bin/linux/`.
 
 ---
 
@@ -151,7 +146,7 @@ wsl -e bash /mnt/c/.../keqdroid/tool/build_linux_wsl.sh
 # binary: build/linux/x64/release/bundle/keqdroid
 ```
 
-Place `xray.exe` (and `sing-box.exe`, `wireproxy.exe` if needed) in `assets/bin/windows/` before a Windows build. Details — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
+Place required core binaries in `assets/bin/windows/` before a Windows build. Details — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
 
 ### Releases
 
@@ -238,11 +233,9 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 | Trojan | `trojan://` |
 | Shadowsocks | `ss://` |
 | Hysteria 2 | `hysteria2://`, `hy2://` |
-| **AmneziaWG** 1.0 / 1.5 / 2.0 | файл `.conf` или вставка текста («+» → импорт) |
+| AmneziaWG | `.conf` |
 
 Hysteria v1 не поддерживается.
-
-**AmneziaWG — ядра:** на Android — `amneziawg-go` (`libwg-go.so`); на Windows — `wireproxy-awg` (`wireproxy.exe`) в режимах Proxy (системный прокси, без админ-прав) и TUN (`wireproxy` → sing-box). Сборка: `powershell -File tool/build_amneziawg.ps1`.
 
 ---
 
@@ -261,7 +254,6 @@ Hysteria v1 не поддерживается.
 | **Proxy** | Системный прокси — браузеры и большинство программ. Без прав администратора. |
 | **TUN** | Весь трафик через VPN-адаптер. Запуск от имени администратора. |
 
-Для TUN нужны `sing-box.exe` и `wintun.dll` (если нет в сборке — рядом с `keqdroid.exe`).  
 Firefox может не брать системный прокси — в настройках приложения есть отдельный пункт.
 
 Окно сворачивается в трей. Подписки обновляются, пока приложение открыто.
@@ -276,8 +268,6 @@ Debian/Arch, x86_64. В релизе — tar.gz, AppImage, deb; для Arch в �
 |-------|----------|
 | **Proxy** | Без root |
 | **TUN** | Root через `pkexec` (polkit) при подключении |
-
-Ядра (`xray`, `wireproxy`, `sing-box`, geo) — в `assets/bin/linux/`.
 
 ---
 
@@ -310,7 +300,7 @@ wsl -e bash /mnt/c/.../keqdroid/tool/build_linux_wsl.sh
 # бинарь: build/linux/x64/release/bundle/keqdroid
 ```
 
-Для Windows перед сборкой положите `xray.exe` (и при необходимости `sing-box.exe`, `wireproxy.exe`) в `assets/bin/windows/`. Подробнее — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
+Для Windows перед сборкой положите нужные бинарники ядра в `assets/bin/windows/`. Подробнее — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
 
 ### Релизы
 
