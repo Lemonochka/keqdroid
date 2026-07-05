@@ -1257,4 +1257,63 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qrNotSubscriptionLink => 'QR code doesn\'t contain a subscription link';
+
+  @override
+  String get settingsHotkeysTitle => 'Hotkeys';
+
+  @override
+  String get settingsHotkeysSubtitle => 'Shortcuts for connection, mode and servers';
+
+  @override
+  String get hotkeysHintGlobal => 'Hotkeys work system-wide, even when the window is hidden in the tray. All hotkeys are disabled until you assign them.';
+
+  @override
+  String get hotkeysHintInApp => 'On Linux hotkeys work while the app window is focused. All hotkeys are disabled until you assign them.';
+
+  @override
+  String get hotkeyActionToggleConnection => 'Connect / disconnect';
+
+  @override
+  String get hotkeyActionToggleConnectionDesc => 'Toggle the tunnel for the active server';
+
+  @override
+  String get hotkeyActionToggleTun => 'Toggle TUN mode';
+
+  @override
+  String get hotkeyActionToggleTunDesc => 'Switch between Proxy and TUN, reconnecting if needed';
+
+  @override
+  String get hotkeyActionBestPing => 'Best-ping server';
+
+  @override
+  String get hotkeyActionBestPingDesc => 'Switch to the server with the lowest ping';
+
+  @override
+  String get hotkeyActionToggleWindow => 'Show / hide window';
+
+  @override
+  String get hotkeyActionToggleWindowDesc => 'Restore the window from the tray or hide it';
+
+  @override
+  String get hotkeyNotSet => 'Not set';
+
+  @override
+  String get hotkeyPressKeys => 'Press a shortcut…';
+
+  @override
+  String get hotkeyRecordingHint => 'Esc — cancel, Backspace — clear';
+
+  @override
+  String get hotkeyNeedsModifier => 'Use a modifier (Ctrl/Alt/Shift/Win) or an F-key';
+
+  @override
+  String hotkeyConflictTaken(Object combo) {
+    return 'Shortcut $combo is already taken by another app';
+  }
+
+  @override
+  String get hotkeyClearTooltip => 'Clear shortcut';
+
+  @override
+  String get hotkeyNoPingData => 'No ping results yet — run a ping test first';
 }

@@ -2,6 +2,7 @@
 
 #include "resource.h"
 #include "tunnel_channel_handler.h"
+#include "window_placement.h"
 
 #include <dwmapi.h>
 #include <shellapi.h>
@@ -321,6 +322,19 @@ bool WindowsTrayRestoreMainWindow() {
   return WindowsTrayActivateMainWindow();
 }
 
+bool WindowsTrayToggleMainWindow() {
+  if (g_tray_hwnd == nullptr || !::IsWindow(g_tray_hwnd)) {
+    return false;
+  }
+  if (!g_popup.active && ::IsWindowVisible(g_tray_hwnd) &&
+      !::IsIconic(g_tray_hwnd)) {
+    KeqdroidSaveWindowPlacement(g_tray_hwnd);
+    HideWindowToTray(g_tray_hwnd);
+    return true;
+  }
+  return WindowsTrayActivateMainWindow();
+}
+
 void WindowsTrayShowMenuPopup(HWND hwnd,
                               int anchor_x,
                               int anchor_y,
@@ -455,6 +469,10 @@ void WindowsTrayExitApplication(HWND hwnd) {
   if (g_popup.active) {
     WindowsTrayHideMenuPopup(hwnd, false);
   }
+  // Last chance to persist the bounds (covers un-maximize via titlebar button
+  // followed by tray exit). Save runs after the popup restore above, so it
+  // always sees the real window, never the popup.
+  KeqdroidSaveWindowPlacement(hwnd);
   RemoveTrayIcon();
   if (hwnd != nullptr && ::IsWindow(hwnd)) {
     ::DestroyWindow(hwnd);
@@ -579,6 +597,7 @@ bool WindowsTrayHandleMessage(HWND hwnd,
       }
       return true;
     }
+    KeqdroidSaveWindowPlacement(hwnd);
     if (g_minimize_to_tray) {
       HideWindowToTray(hwnd);
     } else {

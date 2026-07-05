@@ -461,6 +461,28 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                   width: _subCardHeaderIntervalGap,
                                 ),
                               ],
+                              // Явная кнопка сортировки: long-press по шапке
+                              // остаётся, но на десктопе он неоткрываем мышью
+                              // интуитивно — иконка делает функцию видимой.
+                              _subCardHeaderIconButton(
+                                tooltip:
+                                    AppLocalizations.of(context)!.serversSortTitle,
+                                onPressed: () => _showSortMenu(
+                                  context,
+                                  collapseKey,
+                                  sortMode,
+                                ),
+                                icon: Icon(
+                                  sortMode == ServerSortMode.defaultOrder
+                                      ? Icons.sort
+                                      : sortMode.icon,
+                                  size: 18,
+                                  color: sortMode == ServerSortMode.defaultOrder
+                                      ? textLightColor
+                                      : accentColor,
+                                ),
+                              ),
+                              const SizedBox(width: _subCardHeaderActionGap),
                               if (widget.onRefresh != null) ...[
                                 _subCardHeaderIconButton(
                                   tooltip: AppLocalizations.of(

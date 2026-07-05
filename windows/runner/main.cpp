@@ -5,6 +5,7 @@
 #include "flutter_window.h"
 #include "single_instance.h"
 #include "utils.h"
+#include "window_placement.h"
 #include "windows_tray.h"
 
 namespace {
@@ -136,6 +137,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   const Win32Window::Point origin = Win32Window::ComputeCenteredOrigin(size);
   if (!window.Create(L"keqdroid", origin, size)) {
     return EXIT_FAILURE;
+  }
+  // Reopen with the bounds of the previous session (saved on move/resize and
+  // on exit). Falls back to the default centered window when nothing valid
+  // is stored (first run, monitor unplugged, corrupt record).
+  bool restore_maximized = false;
+  if (KeqdroidRestoreWindowPlacement(window.GetHandle(), &restore_maximized) &&
+      restore_maximized) {
+    window.SetPreferredShowCommand(SW_SHOWMAXIMIZED);
   }
   // WM_CLOSE hides to tray; exit via tray menu calls PostQuitMessage.
   window.SetQuitOnClose(true);

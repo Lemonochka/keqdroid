@@ -612,5 +612,29 @@
       "name": {}
     }
   },
-  "qrNotSubscriptionLink": "QR code doesn't contain a subscription link"
+  "qrNotSubscriptionLink": "QR code doesn't contain a subscription link",
+  "settingsHotkeysTitle": "Hotkeys",
+  "settingsHotkeysSubtitle": "Shortcuts for connection, mode and servers",
+  "hotkeysHintGlobal": "Hotkeys work system-wide, even when the window is hidden in the tray. All hotkeys are disabled until you assign them.",
+  "hotkeysHintInApp": "On Linux hotkeys work while the app window is focused. All hotkeys are disabled until you assign them.",
+  "hotkeyActionToggleConnection": "Connect / disconnect",
+  "hotkeyActionToggleConnectionDesc": "Toggle the tunnel for the active server",
+  "hotkeyActionToggleTun": "Toggle TUN mode",
+  "hotkeyActionToggleTunDesc": "Switch between Proxy and TUN, reconnecting if needed",
+  "hotkeyActionBestPing": "Best-ping server",
+  "hotkeyActionBestPingDesc": "Switch to the server with the lowest ping",
+  "hotkeyActionToggleWindow": "Show / hide window",
+  "hotkeyActionToggleWindowDesc": "Restore the window from the tray or hide it",
+  "hotkeyNotSet": "Not set",
+  "hotkeyPressKeys": "Press a shortcut…",
+  "hotkeyRecordingHint": "Esc — cancel, Backspace — clear",
+  "hotkeyNeedsModifier": "Use a modifier (Ctrl/Alt/Shift/Win) or an F-key",
+  "hotkeyConflictTaken": "Shortcut {combo} is already taken by another app",
+  "@hotkeyConflictTaken": {
+    "placeholders": {
+      "combo": {}
+    }
+  },
+  "hotkeyClearTooltip": "Clear shortcut",
+  "hotkeyNoPingData": "No ping results yet — run a ping test first"
 }

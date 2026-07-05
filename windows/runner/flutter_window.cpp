@@ -5,6 +5,7 @@
 #include "flutter/generated_plugin_registrant.h"
 
 #include "tunnel_channel_handler.h"
+#include "windows_hotkeys.h"
 #include "windows_tray.h"
 
 namespace {
@@ -50,6 +51,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  KeqdroidUnregisterAllHotkeys(GetHandle());
   WindowsTrayDispose(GetHandle());
 
   if (flutter_controller_) {
@@ -84,6 +86,15 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     case kAutostartConnectMsg:
       KeqdisRequestAutostartConnect();
       return 0;
+    case WM_HOTKEY: {
+      const std::string action =
+          KeqdroidHotkeyActionForId(static_cast<int>(wparam));
+      if (!action.empty()) {
+        KeqdisNotifyHotkeyPressed(action);
+        return 0;
+      }
+      break;
+    }
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;

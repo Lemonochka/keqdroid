@@ -11,6 +11,8 @@ bool WindowsTrayGetMinimizeToTray();
 HWND WindowsTrayGetMainHwnd();
 bool WindowsTrayActivateMainWindow();
 bool WindowsTrayRestoreMainWindow();
+// Hotkey "show/hide window": visible window hides to tray, hidden restores.
+bool WindowsTrayToggleMainWindow();
 void WindowsTrayShowMenuPopup(HWND hwnd,
                               int anchor_x,
                               int anchor_y,

@@ -4,6 +4,7 @@
 #include <flutter_windows.h>
 
 #include "resource.h"
+#include "window_placement.h"
 
 namespace {
 
@@ -178,7 +179,11 @@ bool Win32Window::Create(const std::wstring& title,
 }
 
 bool Win32Window::Show() {
-  return ShowWindow(window_handle_, SW_SHOWNORMAL);
+  return ShowWindow(window_handle_, preferred_show_command_);
+}
+
+void Win32Window::SetPreferredShowCommand(int show_command) {
+  preferred_show_command_ = show_command;
 }
 
 // static
@@ -232,8 +237,20 @@ Win32Window::MessageHandler(HWND hwnd,
         MoveWindow(child_content_, rect.left, rect.top, rect.right - rect.left,
                    rect.bottom - rect.top, TRUE);
       }
+      // Maximize via titlebar button/double-click has no WM_EXITSIZEMOVE, so
+      // persist the placement here. (Interactive resize is covered below.)
+      if (wparam == SIZE_MAXIMIZED) {
+        KeqdroidSaveWindowPlacement(hwnd);
+      }
       return 0;
     }
+
+    case WM_EXITSIZEMOVE:
+      // User finished dragging/resizing. Programmatic SetWindowPos (e.g. the
+      // tray popup reshaping this window) never enters a size-move loop, so
+      // this only ever captures real user-chosen bounds.
+      KeqdroidSaveWindowPlacement(hwnd);
+      break;
 
     case WM_ACTIVATE:
       if (LOWORD(wparam) != WA_INACTIVE && child_content_ != nullptr) {

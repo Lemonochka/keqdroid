@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-/// android: действия из уведомления; windows: автоподключение и меню трея
+import '../services/hotkey_service.dart';
+
+/// android: действия из уведомления; windows: автоподключение, меню трея и хоткеи
 class VpnNativeBridge {
   VpnNativeBridge._();
 
@@ -11,6 +13,7 @@ class VpnNativeBridge {
   static bool get supportsNotificationLaunch => Platform.isAndroid;
   static bool get supportsAutostartNotification => Platform.isWindows;
   static bool get supportsTrayMenu => Platform.isWindows;
+  static bool get supportsGlobalHotkeys => Platform.isWindows;
 
   static Future<void> Function(MethodCall call)? _launchHandler;
   static Future<void> Function()? _autostartHandler;
@@ -74,6 +77,13 @@ class VpnNativeBridge {
       }
       if (call.method == 'onTrayMenuClose' && supportsTrayMenu) {
         await _trayMenuCloseHandler?.call();
+        return;
+      }
+      if (call.method == 'onHotkeyPressed' && supportsGlobalHotkeys) {
+        final args = call.arguments;
+        HotkeyService.dispatchAction(
+          args is Map ? args['action'] as String? : null,
+        );
         return;
       }
       await _launchHandler?.call(call);

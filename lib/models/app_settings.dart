@@ -41,6 +41,9 @@ class AppSettings {
   /// Ядро: `chain` (xray → sing-box, как было) или `keqrnel` (единое ядро со
   /// встроенным xray). Дефолт `chain` — существующее поведение не меняется.
   final String coreEngine;
+  /// Desktop: хоткеи (HotkeyAction.id → токен сочетания, напр. `ctrl+shift+keyT`).
+  /// Пустая карта = все хоткеи выключены (дефолт).
+  final Map<String, String> hotkeys;
 
   const AppSettings({
     this.localPort = 2080,
@@ -68,6 +71,7 @@ class AppSettings {
     this.minimizeToTray = true,
     this.launchAtStartup = false,
     this.coreEngine = coreEngineKeqrnel,
+    this.hotkeys = const {},
   });
 
   Map<String, dynamic> toJson() => {
@@ -96,6 +100,7 @@ class AppSettings {
     'minimizeToTray': minimizeToTray,
     'launchAtStartup': launchAtStartup,
     'coreEngine': coreEngine,
+    'hotkeys': hotkeys,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -152,7 +157,17 @@ class AppSettings {
       minimizeToTray: json['minimizeToTray'] as bool? ?? true,
       launchAtStartup: json['launchAtStartup'] as bool? ?? false,
       coreEngine: normalizeCoreEngine(json['coreEngine'] as String?),
+      hotkeys: _readHotkeys(json['hotkeys']),
     );
+  }
+
+  static Map<String, String> _readHotkeys(Object? raw) {
+    if (raw is! Map) return const {};
+    final out = <String, String>{};
+    raw.forEach((k, v) {
+      if (k is String && v is String && v.isNotEmpty) out[k] = v;
+    });
+    return out;
   }
 
   /// Допустимые значения [coreEngine].
@@ -239,6 +254,7 @@ class AppSettings {
     bool? minimizeToTray,
     bool? launchAtStartup,
     String? coreEngine,
+    Map<String, String>? hotkeys,
   }) =>
       AppSettings(
         localPort: localPort ?? this.localPort,
@@ -266,6 +282,7 @@ class AppSettings {
         minimizeToTray: minimizeToTray ?? this.minimizeToTray,
         launchAtStartup: launchAtStartup ?? this.launchAtStartup,
         coreEngine: coreEngine ?? this.coreEngine,
+        hotkeys: hotkeys ?? this.hotkeys,
       );
 
   @override
@@ -297,7 +314,17 @@ class AppSettings {
               appLanguageCode == other.appLanguageCode &&
               minimizeToTray == other.minimizeToTray &&
               launchAtStartup == other.launchAtStartup &&
-              coreEngine == other.coreEngine;
+              coreEngine == other.coreEngine &&
+              _hotkeysEqual(hotkeys, other.hotkeys);
+
+  static bool _hotkeysEqual(Map<String, String> a, Map<String, String> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (final e in a.entries) {
+      if (b[e.key] != e.value) return false;
+    }
+    return true;
+  }
 
   @override
   int get hashCode => Object.hashAll([
@@ -326,6 +353,12 @@ class AppSettings {
     minimizeToTray,
     launchAtStartup,
     coreEngine,
+    // порядок ключей в Map не влияет: хэшируем отсортированные записи
+    Object.hashAll(
+      (hotkeys.entries.toList()
+            ..sort((a, b) => a.key.compareTo(b.key)))
+          .map((e) => Object.hash(e.key, e.value)),
+    ),
   ]);
 
   ConnectionMode get connectionModeEnum =>

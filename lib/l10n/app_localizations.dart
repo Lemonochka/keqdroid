@@ -2432,6 +2432,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'QR code doesn\'t contain a subscription link'**
   String get qrNotSubscriptionLink;
+
+  /// No description provided for @settingsHotkeysTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hotkeys'**
+  String get settingsHotkeysTitle;
+
+  /// No description provided for @settingsHotkeysSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortcuts for connection, mode and servers'**
+  String get settingsHotkeysSubtitle;
+
+  /// No description provided for @hotkeysHintGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Hotkeys work system-wide, even when the window is hidden in the tray. All hotkeys are disabled until you assign them.'**
+  String get hotkeysHintGlobal;
+
+  /// No description provided for @hotkeysHintInApp.
+  ///
+  /// In en, this message translates to:
+  /// **'On Linux hotkeys work while the app window is focused. All hotkeys are disabled until you assign them.'**
+  String get hotkeysHintInApp;
+
+  /// No description provided for @hotkeyActionToggleConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect / disconnect'**
+  String get hotkeyActionToggleConnection;
+
+  /// No description provided for @hotkeyActionToggleConnectionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle the tunnel for the active server'**
+  String get hotkeyActionToggleConnectionDesc;
+
+  /// No description provided for @hotkeyActionToggleTun.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle TUN mode'**
+  String get hotkeyActionToggleTun;
+
+  /// No description provided for @hotkeyActionToggleTunDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch between Proxy and TUN, reconnecting if needed'**
+  String get hotkeyActionToggleTunDesc;
+
+  /// No description provided for @hotkeyActionBestPing.
+  ///
+  /// In en, this message translates to:
+  /// **'Best-ping server'**
+  String get hotkeyActionBestPing;
+
+  /// No description provided for @hotkeyActionBestPingDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to the server with the lowest ping'**
+  String get hotkeyActionBestPingDesc;
+
+  /// No description provided for @hotkeyActionToggleWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Show / hide window'**
+  String get hotkeyActionToggleWindow;
+
+  /// No description provided for @hotkeyActionToggleWindowDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore the window from the tray or hide it'**
+  String get hotkeyActionToggleWindowDesc;
+
+  /// No description provided for @hotkeyNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get hotkeyNotSet;
+
+  /// No description provided for @hotkeyPressKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'Press a shortcut…'**
+  String get hotkeyPressKeys;
+
+  /// No description provided for @hotkeyRecordingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Esc — cancel, Backspace — clear'**
+  String get hotkeyRecordingHint;
+
+  /// No description provided for @hotkeyNeedsModifier.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a modifier (Ctrl/Alt/Shift/Win) or an F-key'**
+  String get hotkeyNeedsModifier;
+
+  /// No description provided for @hotkeyConflictTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'Shortcut {combo} is already taken by another app'**
+  String hotkeyConflictTaken(Object combo);
+
+  /// No description provided for @hotkeyClearTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear shortcut'**
+  String get hotkeyClearTooltip;
+
+  /// No description provided for @hotkeyNoPingData.
+  ///
+  /// In en, this message translates to:
+  /// **'No ping results yet — run a ping test first'**
+  String get hotkeyNoPingData;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

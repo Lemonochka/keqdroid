@@ -35,10 +35,6 @@ class SubscriptionRefreshErrorsNotifier extends StringStringMapNotifier {}
 
 class CollapsedServerGroupsNotifier extends StringBoolMapNotifier {}
 
-/// Режим сортировки серверов внутри группы (ключ = id подписки / '__manual__',
-/// значение = ServerSortMode.name). Как и сворачивание — в памяти, без персиста.
-class ServerSortModesNotifier extends StringStringMapNotifier {}
-
 class CollapsedSubscriptionCardsNotifier extends StringBoolMapNotifier {}
 
 class SubscriptionReorderInProgressNotifier extends Notifier<bool> {
@@ -99,11 +95,6 @@ final pingingServerIdsProvider =
 final collapsedServerGroupsProvider =
     NotifierProvider<CollapsedServerGroupsNotifier, Map<String, bool>>(
   CollapsedServerGroupsNotifier.new,
-);
-
-final serverSortModesProvider =
-    NotifierProvider<ServerSortModesNotifier, Map<String, String>>(
-  ServerSortModesNotifier.new,
 );
 
 final collapsedSubscriptionCardsProvider =

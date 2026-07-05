@@ -612,5 +612,29 @@
       "name": {}
     }
   },
-  "qrNotSubscriptionLink": "В QR-коде нет ссылки на подписку"
+  "qrNotSubscriptionLink": "В QR-коде нет ссылки на подписку",
+  "settingsHotkeysTitle": "Горячие клавиши",
+  "settingsHotkeysSubtitle": "Сочетания для подключения, режима и серверов",
+  "hotkeysHintGlobal": "Хоткеи работают глобально — даже когда окно свёрнуто в трей. Все хоткеи выключены, пока вы их не назначите.",
+  "hotkeysHintInApp": "На Linux хоткеи работают, пока окно приложения в фокусе. Все хоткеи выключены, пока вы их не назначите.",
+  "hotkeyActionToggleConnection": "Подключить / отключить",
+  "hotkeyActionToggleConnectionDesc": "Переключить туннель для активного сервера",
+  "hotkeyActionToggleTun": "Переключить режим TUN",
+  "hotkeyActionToggleTunDesc": "Переключение между Proxy и TUN, при активном туннеле — с переподключением",
+  "hotkeyActionBestPing": "Сервер с лучшим пингом",
+  "hotkeyActionBestPingDesc": "Переключиться на сервер с наименьшим пингом",
+  "hotkeyActionToggleWindow": "Показать / скрыть окно",
+  "hotkeyActionToggleWindowDesc": "Развернуть окно из трея или спрятать его",
+  "hotkeyNotSet": "Не задано",
+  "hotkeyPressKeys": "Нажмите сочетание…",
+  "hotkeyRecordingHint": "Esc — отмена, Backspace — очистить",
+  "hotkeyNeedsModifier": "Нужен модификатор (Ctrl/Alt/Shift/Win) или F-клавиша",
+  "hotkeyConflictTaken": "Сочетание {combo} уже занято другим приложением",
+  "@hotkeyConflictTaken": {
+    "placeholders": {
+      "combo": {}
+    }
+  },
+  "hotkeyClearTooltip": "Сбросить сочетание",
+  "hotkeyNoPingData": "Нет результатов пинга — сначала запустите проверку"
 }

@@ -18,6 +18,8 @@ class StorageService {
   static const _kSettings      = 'keqdis_settings';
   static const _kSocksPort     = 'keqdis_socks_port';
   static const _kHwid          = 'keqdis_hwid';
+  static const _kWindowBounds  = 'keqdis_window_bounds';
+  static const _kSortModes     = 'keqdis_server_sort_modes';
 
   final SharedPreferences _prefs;
   StorageService(this._prefs);
@@ -319,4 +321,30 @@ class StorageService {
 
   Future<void> setHwid(String hwid) =>
       _serial(() => _prefs.setString(_kHwid, hwid));
+
+  // окно (Linux desktop; Windows хранит placement нативно в реестре)
+
+  /// Сохранённые границы окна: JSON `{x, y, w, h, maximized}`.
+  String? getWindowBoundsJson() => _prefs.getString(_kWindowBounds);
+
+  Future<void> setWindowBoundsJson(String json) =>
+      _serial(() => _prefs.setString(_kWindowBounds, json));
+
+  // сортировка серверов по группам
+
+  /// Режимы сортировки групп серверов (id подписки/'__manual__' → имя режима).
+  Map<String, String> getServerSortModes() {
+    final raw = _prefs.getString(_kSortModes);
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return {};
+      return decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setServerSortModes(Map<String, String> modes) =>
+      _serial(() => _prefs.setString(_kSortModes, jsonEncode(modes)));
 }

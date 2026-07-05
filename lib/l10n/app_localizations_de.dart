@@ -1257,4 +1257,63 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get qrNotSubscriptionLink => 'QR-Code enthält keinen Abo-Link';
+
+  @override
+  String get settingsHotkeysTitle => 'Tastenkürzel';
+
+  @override
+  String get settingsHotkeysSubtitle => 'Kürzel für Verbindung, Modus und Server';
+
+  @override
+  String get hotkeysHintGlobal => 'Kürzel funktionieren systemweit — auch wenn das Fenster im Tray versteckt ist. Alle Kürzel sind deaktiviert, bis Sie sie zuweisen.';
+
+  @override
+  String get hotkeysHintInApp => 'Unter Linux funktionieren Kürzel, solange das App-Fenster fokussiert ist. Alle Kürzel sind deaktiviert, bis Sie sie zuweisen.';
+
+  @override
+  String get hotkeyActionToggleConnection => 'Verbinden / Trennen';
+
+  @override
+  String get hotkeyActionToggleConnectionDesc => 'Tunnel für den aktiven Server umschalten';
+
+  @override
+  String get hotkeyActionToggleTun => 'TUN-Modus umschalten';
+
+  @override
+  String get hotkeyActionToggleTunDesc => 'Zwischen Proxy und TUN wechseln, bei Bedarf mit Neuverbindung';
+
+  @override
+  String get hotkeyActionBestPing => 'Server mit bestem Ping';
+
+  @override
+  String get hotkeyActionBestPingDesc => 'Zum Server mit dem niedrigsten Ping wechseln';
+
+  @override
+  String get hotkeyActionToggleWindow => 'Fenster zeigen / verstecken';
+
+  @override
+  String get hotkeyActionToggleWindowDesc => 'Fenster aus dem Tray holen oder verstecken';
+
+  @override
+  String get hotkeyNotSet => 'Nicht belegt';
+
+  @override
+  String get hotkeyPressKeys => 'Tasten drücken…';
+
+  @override
+  String get hotkeyRecordingHint => 'Esc — Abbrechen, Backspace — Löschen';
+
+  @override
+  String get hotkeyNeedsModifier => 'Modifikator (Strg/Alt/Umschalt/Win) oder F-Taste nötig';
+
+  @override
+  String hotkeyConflictTaken(Object combo) {
+    return 'Kürzel $combo wird bereits von einer anderen App verwendet';
+  }
+
+  @override
+  String get hotkeyClearTooltip => 'Kürzel entfernen';
+
+  @override
+  String get hotkeyNoPingData => 'Noch keine Ping-Ergebnisse — zuerst einen Ping-Test starten';
 }

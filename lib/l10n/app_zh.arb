@@ -612,5 +612,29 @@
       "name": {}
     }
   },
-  "qrNotSubscriptionLink": "二维码不包含订阅链接"
+  "qrNotSubscriptionLink": "二维码不包含订阅链接",
+  "settingsHotkeysTitle": "快捷键",
+  "settingsHotkeysSubtitle": "用于连接、模式和服务器的快捷键",
+  "hotkeysHintGlobal": "快捷键全局生效，即使窗口已隐藏到托盘。所有快捷键在您分配之前均处于禁用状态。",
+  "hotkeysHintInApp": "在 Linux 上，快捷键仅在应用窗口获得焦点时有效。所有快捷键在您分配之前均处于禁用状态。",
+  "hotkeyActionToggleConnection": "连接 / 断开",
+  "hotkeyActionToggleConnectionDesc": "切换当前服务器的隧道",
+  "hotkeyActionToggleTun": "切换 TUN 模式",
+  "hotkeyActionToggleTunDesc": "在 Proxy 与 TUN 之间切换，必要时自动重连",
+  "hotkeyActionBestPing": "最低延迟服务器",
+  "hotkeyActionBestPingDesc": "切换到延迟最低的服务器",
+  "hotkeyActionToggleWindow": "显示 / 隐藏窗口",
+  "hotkeyActionToggleWindowDesc": "从托盘恢复窗口或将其隐藏",
+  "hotkeyNotSet": "未设置",
+  "hotkeyPressKeys": "请按下快捷键…",
+  "hotkeyRecordingHint": "Esc 取消，Backspace 清除",
+  "hotkeyNeedsModifier": "需要修饰键（Ctrl/Alt/Shift/Win）或 F 键",
+  "hotkeyConflictTaken": "快捷键 {combo} 已被其他应用占用",
+  "@hotkeyConflictTaken": {
+    "placeholders": {
+      "combo": {}
+    }
+  },
+  "hotkeyClearTooltip": "清除快捷键",
+  "hotkeyNoPingData": "暂无延迟数据 — 请先运行延迟测试"
 }
