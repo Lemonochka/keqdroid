@@ -42,6 +42,10 @@ class Win32Window {
   // Show the current window. Returns true if the window was successfully shown.
   bool Show();
 
+  // Show command used by Show() (SW_SHOWNORMAL by default). Lets the runner
+  // restore a maximized session without flashing a normal-size window first.
+  void SetPreferredShowCommand(int show_command);
+
   // Release OS resources associated with window.
   void Destroy();
 
@@ -94,6 +98,9 @@ class Win32Window {
   static void UpdateTheme(HWND const window);
 
   bool quit_on_close_ = false;
+
+  // show command applied by Show() (see SetPreferredShowCommand).
+  int preferred_show_command_ = SW_SHOWNORMAL;
 
   // window handle for top level window.
   HWND window_handle_ = nullptr;

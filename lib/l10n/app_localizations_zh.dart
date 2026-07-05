@@ -1257,4 +1257,63 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get qrNotSubscriptionLink => '二维码不包含订阅链接';
+
+  @override
+  String get settingsHotkeysTitle => '快捷键';
+
+  @override
+  String get settingsHotkeysSubtitle => '用于连接、模式和服务器的快捷键';
+
+  @override
+  String get hotkeysHintGlobal => '快捷键全局生效，即使窗口已隐藏到托盘。所有快捷键在您分配之前均处于禁用状态。';
+
+  @override
+  String get hotkeysHintInApp => '在 Linux 上，快捷键仅在应用窗口获得焦点时有效。所有快捷键在您分配之前均处于禁用状态。';
+
+  @override
+  String get hotkeyActionToggleConnection => '连接 / 断开';
+
+  @override
+  String get hotkeyActionToggleConnectionDesc => '切换当前服务器的隧道';
+
+  @override
+  String get hotkeyActionToggleTun => '切换 TUN 模式';
+
+  @override
+  String get hotkeyActionToggleTunDesc => '在 Proxy 与 TUN 之间切换，必要时自动重连';
+
+  @override
+  String get hotkeyActionBestPing => '最低延迟服务器';
+
+  @override
+  String get hotkeyActionBestPingDesc => '切换到延迟最低的服务器';
+
+  @override
+  String get hotkeyActionToggleWindow => '显示 / 隐藏窗口';
+
+  @override
+  String get hotkeyActionToggleWindowDesc => '从托盘恢复窗口或将其隐藏';
+
+  @override
+  String get hotkeyNotSet => '未设置';
+
+  @override
+  String get hotkeyPressKeys => '请按下快捷键…';
+
+  @override
+  String get hotkeyRecordingHint => 'Esc 取消，Backspace 清除';
+
+  @override
+  String get hotkeyNeedsModifier => '需要修饰键（Ctrl/Alt/Shift/Win）或 F 键';
+
+  @override
+  String hotkeyConflictTaken(Object combo) {
+    return '快捷键 $combo 已被其他应用占用';
+  }
+
+  @override
+  String get hotkeyClearTooltip => '清除快捷键';
+
+  @override
+  String get hotkeyNoPingData => '暂无延迟数据 — 请先运行延迟测试';
 }

@@ -3,6 +3,7 @@
 #include "single_instance.h"
 #include "windows_apps_list.h"
 #include "windows_core_lifecycle.h"
+#include "windows_hotkeys.h"
 #include "windows_traffic_stats.h"
 #include "windows_tray.h"
 
@@ -971,6 +972,17 @@ void DispatchTrayMenuClosedToDart() {
       std::make_unique<flutter::EncodableValue>());
 }
 
+void DispatchHotkeyToDart(const std::string& action) {
+  if (g_vpn_channel == nullptr) {
+    return;
+  }
+  flutter::EncodableMap args;
+  args[flutter::EncodableValue("action")] = flutter::EncodableValue(action);
+  g_vpn_channel->InvokeMethod(
+      "onHotkeyPressed",
+      std::make_unique<flutter::EncodableValue>(args));
+}
+
 }  // namespace
 
 void KeqdisRequestAutostartConnect() {
@@ -996,6 +1008,10 @@ void KeqdisNotifyTrayMenuClosed() {
 
 void KeqdisNotifyTrayMenuClosedImmediate() {
   DispatchTrayMenuClosedToDart();
+}
+
+void KeqdisNotifyHotkeyPressed(const std::string& action) {
+  PostToPlatformThread([action]() { DispatchHotkeyToDart(action); });
 }
 
 void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
@@ -1300,9 +1316,64 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
           return;
         }
 
+        if (call.method_name() == "setGlobalHotkeys") {
+          std::vector<KeqdroidHotkeySpec> specs;
+          const auto* args =
+              std::get_if<flutter::EncodableList>(call.arguments());
+          if (args != nullptr) {
+            for (const auto& entry : *args) {
+              const auto* map = std::get_if<flutter::EncodableMap>(&entry);
+              if (map == nullptr) {
+                continue;
+              }
+              KeqdroidHotkeySpec spec;
+              auto action_it = map->find(flutter::EncodableValue("action"));
+              if (action_it != map->end()) {
+                const auto* action =
+                    std::get_if<std::string>(&action_it->second);
+                if (action != nullptr) {
+                  spec.action = *action;
+                }
+              }
+              auto read_uint = [&](const char* key) -> UINT {
+                auto it = map->find(flutter::EncodableValue(key));
+                if (it == map->end()) {
+                  return 0;
+                }
+                if (const auto* v32 = std::get_if<int32_t>(&it->second)) {
+                  return static_cast<UINT>(*v32);
+                }
+                if (const auto* v64 = std::get_if<int64_t>(&it->second)) {
+                  return static_cast<UINT>(*v64);
+                }
+                return 0;
+              };
+              spec.modifiers = read_uint("modifiers");
+              spec.virtual_key = read_uint("keyCode");
+              if (!spec.action.empty() && spec.virtual_key != 0) {
+                specs.push_back(std::move(spec));
+              }
+            }
+          }
+          const std::vector<std::string> failed =
+              KeqdroidApplyHotkeys(WindowsTrayGetMainHwnd(), specs);
+          flutter::EncodableList failed_list;
+          for (const auto& action : failed) {
+            failed_list.push_back(flutter::EncodableValue(action));
+          }
+          result->Success(flutter::EncodableValue(failed_list));
+          return;
+        }
+
         if (call.method_name() == "restoreMainWindow") {
           result->Success(
               flutter::EncodableValue(WindowsTrayRestoreMainWindow()));
+          return;
+        }
+
+        if (call.method_name() == "toggleMainWindow") {
+          result->Success(
+              flutter::EncodableValue(WindowsTrayToggleMainWindow()));
           return;
         }
 
@@ -1342,6 +1413,10 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
         }
 
         if (call.method_name() == "restartAsAdministrator") {
+          // Снять глобальные хоткеи ДО старта elevated-процесса: пока этот
+          // процесс доживает, RegisterHotKey в новом инстансе получал бы
+          // отказ («сочетание занято другим приложением»).
+          KeqdroidUnregisterAllHotkeys(WindowsTrayGetMainHwnd());
           if (!RestartAsAdministrator()) {
             result->Error("ELEVATION_FAILED",
                           "Failed to restart as administrator");

@@ -1259,4 +1259,63 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qrNotSubscriptionLink => 'В QR-коде нет ссылки на подписку';
+
+  @override
+  String get settingsHotkeysTitle => 'Горячие клавиши';
+
+  @override
+  String get settingsHotkeysSubtitle => 'Сочетания для подключения, режима и серверов';
+
+  @override
+  String get hotkeysHintGlobal => 'Хоткеи работают глобально — даже когда окно свёрнуто в трей. Все хоткеи выключены, пока вы их не назначите.';
+
+  @override
+  String get hotkeysHintInApp => 'На Linux хоткеи работают, пока окно приложения в фокусе. Все хоткеи выключены, пока вы их не назначите.';
+
+  @override
+  String get hotkeyActionToggleConnection => 'Подключить / отключить';
+
+  @override
+  String get hotkeyActionToggleConnectionDesc => 'Переключить туннель для активного сервера';
+
+  @override
+  String get hotkeyActionToggleTun => 'Переключить режим TUN';
+
+  @override
+  String get hotkeyActionToggleTunDesc => 'Переключение между Proxy и TUN, при активном туннеле — с переподключением';
+
+  @override
+  String get hotkeyActionBestPing => 'Сервер с лучшим пингом';
+
+  @override
+  String get hotkeyActionBestPingDesc => 'Переключиться на сервер с наименьшим пингом';
+
+  @override
+  String get hotkeyActionToggleWindow => 'Показать / скрыть окно';
+
+  @override
+  String get hotkeyActionToggleWindowDesc => 'Развернуть окно из трея или спрятать его';
+
+  @override
+  String get hotkeyNotSet => 'Не задано';
+
+  @override
+  String get hotkeyPressKeys => 'Нажмите сочетание…';
+
+  @override
+  String get hotkeyRecordingHint => 'Esc — отмена, Backspace — очистить';
+
+  @override
+  String get hotkeyNeedsModifier => 'Нужен модификатор (Ctrl/Alt/Shift/Win) или F-клавиша';
+
+  @override
+  String hotkeyConflictTaken(Object combo) {
+    return 'Сочетание $combo уже занято другим приложением';
+  }
+
+  @override
+  String get hotkeyClearTooltip => 'Сбросить сочетание';
+
+  @override
+  String get hotkeyNoPingData => 'Нет результатов пинга — сначала запустите проверку';
 }

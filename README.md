@@ -4,6 +4,8 @@
 
 <h1 align="center" id="keqdis">KEQDIS</h1>
 
+<p align="center">˚ʚ♡ɞ˚</p>
+
 <p align="center">
   <strong>English</strong> · <a href="#русский">Русский</a>
 </p>
@@ -14,8 +16,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/v/release/Lemonochka/keqdroid?label=release&style=flat-square" alt="release"></a>
-  <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/downloads/Lemonochka/keqdroid/total?label=downloads&style=flat-square&logo=github" alt="downloads"></a>
+  <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/v/release/Lemonochka/keqdroid?label=release&style=flat-square&color=f5a9b8" alt="release"></a>
+  <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/downloads/Lemonochka/keqdroid/total?label=downloads&style=flat-square&logo=github&color=b5e8d5" alt="downloads"></a>
+  <img src="https://img.shields.io/badge/made%20with-Flutter-9bc7f0?style=flat-square" alt="flutter">
 </p>
 
 <p align="center">
@@ -41,9 +44,9 @@ Each release includes `.sha256` sidecars next to the files. The built-in updater
 
 | Platform | Files in release |
 |----------|------------------|
-| **Android** 7.0+ | `keqdroid-<version>.apk` |
+| **Android** 7.0+ | `keqdroid-<version>-android.apk` |
 | **Windows** x64 | `keqdroid-windows-x64-<version>.zip` (portable) |
-| **Linux** x64 | `.tar.gz`, `.AppImage`, `.deb`; Arch — `PKGBUILD` in the release folder |
+| **Linux** x64 | `keqdroid-<version>-linux-x64.tar.gz` · `keqdroid-<version>-x86_64.AppImage` · `keqdroid_<version>_amd64.deb` · `PKGBUILD` for Arch |
 
 The app **does not provide servers**. Bring your own subscription or configs. Comply with the laws of your country.
 
@@ -53,9 +56,10 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 
 **Connection**
 - subscription URLs, scheduled auto-update
-- manual server entry and config import
-- one-tap connect, auto-reconnect to the last server
-- server checks: TCP, HTTP, speed test
+- manual server entry, config import, QR code scan (Android)
+- one-tap connect, auto-connect on system startup (Windows)
+- server checks: TCP, HTTP, ICMP, speed test
+- sort servers by ping, name or speed
 
 **Routing and tunnel**
 - rules: direct / via VPN / block; built-in list presets
@@ -63,8 +67,10 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 - kill switch
 
 **Other**
+- customizable hotkeys: connect/disconnect, TUN mode, best-ping server, show/hide window — system-wide on Windows, in-app on Linux
+- share the local proxy over LAN
+- color theme presets, dark and light mode, Material You palette on Android
 - settings export and import
-- dark and light theme
 - Russian, English, Deutsch, 中文
 - updates from GitHub Releases
 
@@ -102,18 +108,20 @@ Hysteria v1 is not supported.
 
 Firefox may ignore the system proxy; the app has a separate setting for it.
 
-The window minimizes to the tray. Subscriptions refresh while the app is open.
+The window minimizes to the tray and remembers its size and position. Launch at system startup with optional auto-connect. Global hotkeys are configured in Settings → Advanced → Hotkeys. Subscriptions refresh while the app is open.
 
 **Settings location:** `%APPDATA%\Roaming\com.keqdroid\keqdroid\` — not next to the exe. To move to another PC, use export/import in settings.
 
 ### Linux
 
-Debian/Arch, x86_64. Releases ship tar.gz, AppImage, deb; Arch users get a `PKGBUILD` in the release folder.
+Debian/Arch, x86_64. Releases ship tar.gz, AppImage, deb; Arch users get a `PKGBUILD` in the release assets.
 
 | Mode | Description |
 |------|-------------|
 | **Proxy** | No root |
 | **TUN** | Root via `pkexec` (polkit) on connect |
+
+The window remembers its size; hotkeys work while the app window is focused.
 
 ---
 
@@ -122,7 +130,7 @@ Debian/Arch, x86_64. Releases ship tar.gz, AppImage, deb; Arch users get a `PKGB
 1. **Subscriptions** — paste URL → «Add and fetch».
 2. **Servers** — pick a node.
 3. Connect.
-4. If needed — **Settings**: routing, split tunnel, Proxy/TUN mode (desktop).
+4. If needed — **Settings**: routing, split tunnel, hotkeys, Proxy/TUN mode (desktop).
 
 ---
 
@@ -164,6 +172,8 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 
 <h2 id="русский">Русский</h2>
 
+<p align="center">˚ʚ♡ɞ˚</p>
+
 <p align="center">
   <a href="#keqdis">English</a> · <strong>Русский</strong>
 </p>
@@ -174,8 +184,9 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 </p>
 
 <p align="center">
-  <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/v/release/Lemonochka/keqdroid?label=релиз&style=flat-square" alt="релиз"></a>
-  <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/downloads/Lemonochka/keqdroid/total?label=скачивания&style=flat-square&logo=github" alt="скачивания"></a>
+  <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/v/release/Lemonochka/keqdroid?label=релиз&style=flat-square&color=f5a9b8" alt="релиз"></a>
+  <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/downloads/Lemonochka/keqdroid/total?label=скачивания&style=flat-square&logo=github&color=b5e8d5" alt="скачивания"></a>
+  <img src="https://img.shields.io/badge/сделано%20на-Flutter-9bc7f0?style=flat-square" alt="flutter">
 </p>
 
 <p align="center">
@@ -195,9 +206,9 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 
 | Платформа | Файлы в релизе |
 |-----------|----------------|
-| **Android** 7.0+ | `keqdroid-<версия>.apk` |
+| **Android** 7.0+ | `keqdroid-<версия>-android.apk` |
 | **Windows** x64 | `keqdroid-windows-x64-<версия>.zip` (portable) |
-| **Linux** x64 | `.tar.gz`, `.AppImage`, `.deb`; для Arch — `PKGBUILD` в папке релиза |
+| **Linux** x64 | `keqdroid-<версия>-linux-x64.tar.gz` · `keqdroid-<версия>-x86_64.AppImage` · `keqdroid_<версия>_amd64.deb` · `PKGBUILD` для Arch |
 
 Приложение **не раздаёт серверы** — нужна своя подписка или конфиги. Соблюдайте законы вашей страны.
 
@@ -207,9 +218,10 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 
 **Подключение**
 - подписки по URL, автообновление по расписанию
-- ручное добавление серверов и импорт конфигов
-- одно нажатие для подключения, автоподключение к последнему серверу
-- проверка серверов: TCP, HTTP, тест скорости
+- ручное добавление серверов, импорт конфигов, сканирование QR-кодов (Android)
+- подключение в одно нажатие, автоподключение при старте системы (Windows)
+- проверка серверов: TCP, HTTP, ICMP, тест скорости
+- сортировка серверов по пингу, имени или скорости
 
 **Маршрутизация и туннель**
 - правила: напрямую / через VPN / блокировка; готовые пресеты списков
@@ -217,8 +229,10 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 - kill switch
 
 **Прочее**
+- настраиваемые хоткеи: подключение, режим TUN, сервер с лучшим пингом, показать/скрыть окно — глобальные на Windows, внутри приложения на Linux
+- раздача локального прокси в LAN
+- цветовые пресеты темы, тёмный и светлый режим, палитра Material You на Android
 - экспорт и импорт настроек
-- тёмная и светлая тема
 - русский, English, Deutsch, 中文
 - обновление из GitHub Releases
 
@@ -256,18 +270,20 @@ Hysteria v1 не поддерживается.
 
 Firefox может не брать системный прокси — в настройках приложения есть отдельный пункт.
 
-Окно сворачивается в трей. Подписки обновляются, пока приложение открыто.
+Окно сворачивается в трей и запоминает свой размер и позицию. Автозапуск вместе с системой с опциональным автоподключением. Глобальные хоткеи настраиваются в Настройки → Расширенные → Горячие клавиши. Подписки обновляются, пока приложение открыто.
 
 **Где лежат настройки:** `%APPDATA%\Roaming\com.keqdroid\keqdroid\` — не в папке с exe. Перенос на другой ПК: экспорт/импорт в настройках.
 
 ### Linux
 
-Debian/Arch, x86_64. В релизе — tar.gz, AppImage, deb; для Arch в папке релиза есть `PKGBUILD`.
+Debian/Arch, x86_64. В релизе — tar.gz, AppImage, deb; для Arch среди файлов релиза есть `PKGBUILD`.
 
 | Режим | Описание |
 |-------|----------|
 | **Proxy** | Без root |
 | **TUN** | Root через `pkexec` (polkit) при подключении |
+
+Окно запоминает размер; хоткеи работают, пока окно приложения в фокусе.
 
 ---
 
@@ -276,7 +292,7 @@ Debian/Arch, x86_64. В релизе — tar.gz, AppImage, deb; для Arch в �
 1. **Подписки** — URL → «Добавить и загрузить».
 2. **Серверы** — выбрать узел.
 3. Подключиться.
-4. При необходимости — **Настройки**: маршрутизация, split tunnel, режим Proxy/TUN (десктоп).
+4. При необходимости — **Настройки**: маршрутизация, split tunnel, хоткеи, режим Proxy/TUN (десктоп).
 
 ---
 
@@ -313,3 +329,8 @@ powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFi
 ```
 
 Версия и тег `vX.Y.Z` — из `pubspec.yaml`. При ручной заливке на GitHub не забудьте `.sha256` к каждому файлу.
+
+---
+
+<p align="center">✦ ˚ · . &nbsp; ˚ʚ♡ɞ˚ &nbsp; . · ˚ ✦</p>
+<p align="center"><sub>made with ♡ · Flutter + Xray + sing-box</sub></p>

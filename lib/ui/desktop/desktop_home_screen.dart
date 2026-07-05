@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,10 +9,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_logger.dart';
 import '../../platform/vpn_native_bridge.dart';
 import '../../services/desktop_background_service.dart';
+import '../../services/hotkey_service.dart';
 import '../../services/linux_background_service.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/app_settings.dart';
+import '../../models/hotkey_config.dart';
+import '../../models/server_item.dart';
 import '../../providers/providers.dart';
 import '../../screens/servers_tab.dart';
 import '../../screens/settings_tab.dart';
@@ -53,13 +57,161 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     );
     VpnNativeBridge.registerTrayMenuHandler(_onTrayMenuOpen);
     VpnNativeBridge.registerTrayMenuCloseHandler(_onTrayMenuClose);
+    HotkeyService.onPressed = _onHotkeyAction;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(homeTabIndexProvider.notifier).set(_index);
       ref.read(homeTabPageProvider.notifier).set(_index.toDouble());
       ref.read(updateInfoProvider);
       unawaited(_runWindowsStartupTasks());
+      unawaited(_applyHotkeysFromSettings());
     });
+  }
+
+  Future<void> _applyHotkeysFromSettings() async {
+    if (!HotkeyService.isSupported) return;
+    final settings = await ref.read(storageProvider).getSettings();
+    final bindings = HotkeyService.parseBindings(settings.hotkeys);
+    var failed = await HotkeyService.apply(bindings);
+    // После перезапуска (elevation для TUN, быстрый релонч) предыдущий
+    // процесс может ещё доживать и держать свои RegisterHotKey — повторяем
+    // попытку, прежде чем сообщать «занято другим приложением».
+    for (var attempt = 0; failed.isNotEmpty && attempt < 3; attempt++) {
+      await Future<void>.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+      failed = await HotkeyService.apply(bindings);
+    }
+    if (failed.isNotEmpty && mounted) {
+      _showHotkeyConflictSnack(failed, settings.hotkeys);
+    }
+  }
+
+  /// Snackbar о сочетаниях, занятых другими приложениями. Вызывать только
+  /// после проверки [mounted].
+  void _showHotkeyConflictSnack(
+    List<String> failedActionIds,
+    Map<String, String> hotkeys,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) return;
+    final labels = failedActionIds
+        .map((id) => HotkeyBinding.fromToken(hotkeys[id])?.label ?? id)
+        .join(', ');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.hotkeyConflictTaken(labels))),
+    );
+  }
+
+  /// Срабатывание хоткея: Windows — из натива (даже при скрытом окне),
+  /// Linux — из in-app обработчика HotkeyService.
+  Future<void> _onHotkeyAction(HotkeyAction action) async {
+    if (!mounted) return;
+    try {
+      switch (action) {
+        case HotkeyAction.toggleConnection:
+          await _hotkeyToggleConnection();
+        case HotkeyAction.toggleTunMode:
+          await _hotkeyToggleTunMode();
+        case HotkeyAction.bestPingServer:
+          await _hotkeyBestPingServer();
+        case HotkeyAction.toggleWindow:
+          if (Platform.isWindows) {
+            await WindowsDesktopService.toggleMainWindow();
+          } else if (Platform.isLinux) {
+            await LinuxBackgroundService.instance.toggleWindowVisibility();
+          }
+      }
+    } catch (e, st) {
+      AppLogger.instance.error(
+        'Hotkey action ${action.id} failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  Future<void> _hotkeyToggleConnection() async {
+    final status = ref.read(vpnStateProvider).value?.status;
+    if (status == VpnStatus.connected || status == VpnStatus.connecting) {
+      await ref.read(vpnStateProvider.notifier).disconnect();
+      return;
+    }
+    final active = ref.read(serversProvider).activeServer;
+    if (active == null) {
+      _showHotkeySnack((l10n) => l10n.vpnSelectServerFirst);
+      return;
+    }
+    await ref.read(vpnStateProvider.notifier).connect();
+  }
+
+  /// Переключить Proxy ⇄ TUN; при активном туннеле — с переподключением.
+  Future<void> _hotkeyToggleTunMode() async {
+    final settings =
+        ref.read(settingsNotifierProvider).value ?? const AppSettings();
+    final next = settings.connectionModeEnum == ConnectionMode.tun
+        ? ConnectionMode.proxy
+        : ConnectionMode.tun;
+
+    if (next == ConnectionMode.tun && Platform.isWindows) {
+      final elevated = await WindowsDesktopService.isProcessElevated();
+      if (!elevated) {
+        // Молчаливый UAC из глобального хоткея дезориентирует — показываем
+        // окно и обычный диалог перезапуска от администратора.
+        await WindowsDesktopService.restoreMainWindow();
+        if (!mounted) return;
+        await _applyMode(context, ref, settings, next);
+        return;
+      }
+    }
+
+    final status = ref.read(vpnStateProvider).value?.status;
+    final wasActive =
+        status == VpnStatus.connected || status == VpnStatus.connecting;
+    if (wasActive) {
+      await ref.read(vpnStateProvider.notifier).disconnect();
+    }
+    if (!mounted) return;
+    await ref.read(settingsNotifierProvider.notifier).save(
+          settings.copyWith(connectionMode: next.storageValue),
+        );
+    if (wasActive && mounted) {
+      await ref.read(vpnStateProvider.notifier).connect();
+    }
+  }
+
+  /// Переключиться на сервер с наименьшим пингом (speed-замеры не считаются).
+  Future<void> _hotkeyBestPingServer() async {
+    final serversState = ref.read(serversProvider);
+    ServerItem? best;
+    var bestPing = 1 << 30;
+    for (final s in serversState.servers) {
+      final ping = s.pingMs;
+      if (ping == null || s.lastPingType == 'speed') continue;
+      if (ping < bestPing) {
+        bestPing = ping;
+        best = s;
+      }
+    }
+    if (best == null) {
+      _showHotkeySnack((l10n) => l10n.hotkeyNoPingData);
+      return;
+    }
+    if (best.id != serversState.activeServerId) {
+      await ref.read(serversProvider.notifier).setActive(best);
+    }
+    final status = ref.read(vpnStateProvider).value?.status;
+    if (status == VpnStatus.connected || status == VpnStatus.connecting) {
+      await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
+    }
+  }
+
+  void _showHotkeySnack(String Function(AppLocalizations l10n) message) {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message(l10n))),
+    );
   }
 
   Future<void> _runWindowsStartupTasks() async {
@@ -135,6 +287,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onGlobalKey);
     if (Platform.isLinux) LinuxBackgroundService.instance.onQuit = null;
+    HotkeyService.onPressed = null;
     VpnNativeBridge.registerAutostartHandler(null);
     VpnNativeBridge.registerTrayMenuHandler(null);
     VpnNativeBridge.registerTrayMenuCloseHandler(null);
@@ -197,6 +350,24 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    // До ранних return'ов, чтобы подписка жила на каждом билде: хоткеи
+    // переприменяются при любом изменении настроек (экран хоткеев, восстановление
+    // бэкапа). До первого изменения действует применение из initState.
+    ref.listen<AsyncValue<AppSettings>>(settingsNotifierProvider, (prev, next) {
+      final prevHotkeys = prev?.value?.hotkeys;
+      final nextHotkeys = next.value?.hotkeys;
+      if (nextHotkeys == null) return;
+      if (prevHotkeys != null && mapEquals(prevHotkeys, nextHotkeys)) return;
+      unawaited(
+        HotkeyService.apply(HotkeyService.parseBindings(nextHotkeys)).then(
+          (failed) {
+            if (failed.isEmpty || !mounted) return;
+            _showHotkeyConflictSnack(failed, nextHotkeys);
+          },
+        ),
+      );
+    });
+
     final trayMenuVisible = ref.watch(trayMenuVisibleProvider);
     if (trayMenuVisible) {
       return const TrayMenuScreen();

@@ -49,6 +49,25 @@ final storageProvider = Provider<StorageService>((ref) {
   throw UnimplementedError('Override storageProvider before runApp');
 });
 
+/// Режим сортировки серверов внутри группы (ключ = id подписки / '__manual__',
+/// значение = ServerSortMode.name). Персистится, чтобы выбор переживал
+/// перезапуск приложения (в отличие от сворачивания групп).
+class ServerSortModesNotifier extends Notifier<Map<String, String>> {
+  @override
+  Map<String, String> build() =>
+      ref.read(storageProvider).getServerSortModes();
+
+  void update(Map<String, String> Function(Map<String, String> state) fn) {
+    state = fn(state);
+    unawaited(ref.read(storageProvider).setServerSortModes(state));
+  }
+}
+
+final serverSortModesProvider =
+    NotifierProvider<ServerSortModesNotifier, Map<String, String>>(
+  ServerSortModesNotifier.new,
+);
+
 final subscriptionServiceProvider = Provider<SubscriptionService>((ref) {
   return SubscriptionService(ref.read(storageProvider));
 });

@@ -53,6 +53,20 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const _LocalProxyPortsScreen()),
             ),
           ),
+          if (HotkeyService.isSupported) ...[
+            const SizedBox(height: 12),
+            _SettingsCard(
+              title: l10n.settingsHotkeysTitle,
+              subtitle: l10n.settingsHotkeysSubtitle,
+              icon: Icons.keyboard_outlined,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const _HotkeySettingsScreen(),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           _SettingsCard(
             title: l10n.settingsRoutingTitle,

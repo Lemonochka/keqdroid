@@ -1,9 +1,13 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show Rect, Size;
 
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../core/app_logger.dart';
+import 'storage_service.dart';
 
 /// Linux background/tray behaviour (Windows has its own native tray).
 ///
@@ -57,6 +61,7 @@ class LinuxBackgroundService with WindowListener, TrayListener {
     await windowManager.ensureInitialized();
     windowManager.addListener(this);
     await windowManager.setPreventClose(true);
+    await _restoreWindowBounds();
 
     trayManager.addListener(this);
     try {
@@ -85,9 +90,99 @@ class LinuxBackgroundService with WindowListener, TrayListener {
     _showWindow();
   }
 
+  /// Хоткей «показать/скрыть окно»: видимое окно прячется (в фон/трей),
+  /// скрытое — восстанавливается.
+  Future<void> toggleWindowVisibility() async {
+    if (await windowManager.isVisible()) {
+      _boundsSaveDebounce?.cancel();
+      await _saveWindowBounds();
+      await windowManager.hide();
+    } else {
+      await _showWindow();
+    }
+  }
+
   Future<void> _showWindow() async {
     await windowManager.show();
     await windowManager.focus();
+  }
+
+  // ---- Window bounds persistence -------------------------------------------
+  //
+  // GTK шлёт resize/move событиями непрерывно, поэтому запись дебаунсится.
+  // Под Wayland позиция окна недоступна приложению — восстанавливается хотя бы
+  // размер; на X11 работает и позиция.
+
+  Timer? _boundsSaveDebounce;
+
+  Future<void> _restoreWindowBounds() async {
+    try {
+      final storage = await StorageService.init();
+      final raw = storage.getWindowBoundsJson();
+      if (raw == null) return;
+      final data = jsonDecode(raw);
+      if (data is! Map) return;
+      final w = (data['w'] as num?)?.toDouble();
+      final h = (data['h'] as num?)?.toDouble();
+      final x = (data['x'] as num?)?.toDouble();
+      final y = (data['y'] as num?)?.toDouble();
+      final maximized = data['maximized'] as bool? ?? false;
+      if (w == null || h == null || w < 480 || h < 320) return;
+      if (x != null && y != null && x > -10000 && y > -10000) {
+        await windowManager.setBounds(Rect.fromLTWH(x, y, w, h));
+      } else {
+        await windowManager.setSize(Size(w, h));
+      }
+      if (maximized) {
+        await windowManager.maximize();
+      }
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Failed to restore window bounds',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  void _scheduleBoundsSave() {
+    _boundsSaveDebounce?.cancel();
+    _boundsSaveDebounce =
+        Timer(const Duration(milliseconds: 600), () => _saveWindowBounds());
+  }
+
+  Future<void> _saveWindowBounds() async {
+    try {
+      final storage = await StorageService.init();
+      final maximized = await windowManager.isMaximized();
+      Map<String, dynamic> data;
+      if (maximized) {
+        // Не затираем последние «нормальные» границы размером во весь экран —
+        // после unmaximize окно должно вернуться к ним.
+        final raw = storage.getWindowBoundsJson();
+        final prev = raw != null ? jsonDecode(raw) : null;
+        data = prev is Map
+            ? {...prev.map((k, v) => MapEntry(k.toString(), v))}
+            : <String, dynamic>{};
+        data['maximized'] = true;
+      } else {
+        final bounds = await windowManager.getBounds();
+        data = {
+          'x': bounds.left,
+          'y': bounds.top,
+          'w': bounds.width,
+          'h': bounds.height,
+          'maximized': false,
+        };
+      }
+      await storage.setWindowBoundsJson(jsonEncode(data));
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Failed to save window bounds',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   // ---- WindowListener -----------------------------------------------------
@@ -95,8 +190,22 @@ class LinuxBackgroundService with WindowListener, TrayListener {
   @override
   void onWindowClose() {
     // preventClose is on: hide to background rather than exit.
+    _boundsSaveDebounce?.cancel();
+    _saveWindowBounds();
     windowManager.hide();
   }
+
+  @override
+  void onWindowResize() => _scheduleBoundsSave();
+
+  @override
+  void onWindowMove() => _scheduleBoundsSave();
+
+  @override
+  void onWindowMaximize() => _scheduleBoundsSave();
+
+  @override
+  void onWindowUnmaximize() => _scheduleBoundsSave();
 
   // ---- TrayListener -------------------------------------------------------
 
@@ -120,6 +229,8 @@ class LinuxBackgroundService with WindowListener, TrayListener {
     try {
       await onQuit?.call();
     } catch (_) {}
+    _boundsSaveDebounce?.cancel();
+    await _saveWindowBounds();
     try {
       await trayManager.destroy();
     } catch (_) {}

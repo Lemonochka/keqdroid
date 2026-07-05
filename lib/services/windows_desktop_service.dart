@@ -131,6 +131,12 @@ class WindowsDesktopService {
     return await _channel.invokeMethod<bool>('restoreMainWindow') ?? false;
   }
 
+  /// Хоткей «показать/скрыть»: видимое окно прячется в трей, скрытое — наверх.
+  static Future<bool> toggleMainWindow() async {
+    if (!Platform.isWindows) return false;
+    return await _channel.invokeMethod<bool>('toggleMainWindow') ?? false;
+  }
+
   static Future<void> exitApp() async {
     if (!Platform.isWindows) return;
     await _channel.invokeMethod<void>('exitApp');

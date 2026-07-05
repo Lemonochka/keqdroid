@@ -612,5 +612,29 @@
       "name": {}
     }
   },
-  "qrNotSubscriptionLink": "QR-Code enthält keinen Abo-Link"
+  "qrNotSubscriptionLink": "QR-Code enthält keinen Abo-Link",
+  "settingsHotkeysTitle": "Tastenkürzel",
+  "settingsHotkeysSubtitle": "Kürzel für Verbindung, Modus und Server",
+  "hotkeysHintGlobal": "Kürzel funktionieren systemweit — auch wenn das Fenster im Tray versteckt ist. Alle Kürzel sind deaktiviert, bis Sie sie zuweisen.",
+  "hotkeysHintInApp": "Unter Linux funktionieren Kürzel, solange das App-Fenster fokussiert ist. Alle Kürzel sind deaktiviert, bis Sie sie zuweisen.",
+  "hotkeyActionToggleConnection": "Verbinden / Trennen",
+  "hotkeyActionToggleConnectionDesc": "Tunnel für den aktiven Server umschalten",
+  "hotkeyActionToggleTun": "TUN-Modus umschalten",
+  "hotkeyActionToggleTunDesc": "Zwischen Proxy und TUN wechseln, bei Bedarf mit Neuverbindung",
+  "hotkeyActionBestPing": "Server mit bestem Ping",
+  "hotkeyActionBestPingDesc": "Zum Server mit dem niedrigsten Ping wechseln",
+  "hotkeyActionToggleWindow": "Fenster zeigen / verstecken",
+  "hotkeyActionToggleWindowDesc": "Fenster aus dem Tray holen oder verstecken",
+  "hotkeyNotSet": "Nicht belegt",
+  "hotkeyPressKeys": "Tasten drücken…",
+  "hotkeyRecordingHint": "Esc — Abbrechen, Backspace — Löschen",
+  "hotkeyNeedsModifier": "Modifikator (Strg/Alt/Umschalt/Win) oder F-Taste nötig",
+  "hotkeyConflictTaken": "Kürzel {combo} wird bereits von einer anderen App verwendet",
+  "@hotkeyConflictTaken": {
+    "placeholders": {
+      "combo": {}
+    }
+  },
+  "hotkeyClearTooltip": "Kürzel entfernen",
+  "hotkeyNoPingData": "Noch keine Ping-Ergebnisse — zuerst einen Ping-Test starten"
 }
