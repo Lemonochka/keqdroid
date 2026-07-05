@@ -232,14 +232,19 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
           controller: controller,
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.card(context),
+          // Material вместо цветного Container: SwitchListTile рисует ink на
+          // ближайшем Material-предке, и цветной DecoratedBox прятал рипл
+          // (debug-спам «ink splashes may be invisible»)
+          Material(
+            color: AppTheme.card(context),
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppTheme.divider(context), width: 1),
+              side: BorderSide(color: AppTheme.divider(context), width: 1),
             ),
-            child: Column(
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -302,6 +307,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                   ),
                 ),
               ],
+            ),
             ),
           ),
           const SizedBox(height: 12),

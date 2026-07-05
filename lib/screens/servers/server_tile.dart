@@ -71,7 +71,7 @@ class _ServerTile extends ConsumerWidget {
       bottom: isLast ? const Radius.circular(22) : Radius.zero,
     );
 
-    // ???????? ?????, ????? ?? ??????? Theme.of() ?? ?????? ??????
+    // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
     final cardBgColor = isActive
         ? AppTheme.accent(context).withValues(alpha: 0.13)
         : AppTheme.card(context);
@@ -189,7 +189,7 @@ class _ServerTile extends ConsumerWidget {
               child: InkWell(
                 onTap: onTap,
                 onLongPress: () => _showOptions(context),
-                // ?? ???????? ?????? ???? ????????? ?? ?? ????
+                // на десктопе правый клик открывает то же меню
                 onSecondaryTap: () => _showOptions(context),
                 splashColor: accentColor.withValues(alpha: 0.2),
                 highlightColor: accentColor.withValues(alpha: 0.08),
@@ -451,7 +451,7 @@ class _ServerTile extends ConsumerWidget {
                       ),
                       const SizedBox(height: 14),
                       Text(
-                        'Health check',
+                        context.l10n.serversHealthCheck,
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,

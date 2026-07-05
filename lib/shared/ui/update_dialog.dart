@@ -9,34 +9,41 @@ import '../../providers/providers.dart';
 import '../../services/update_service.dart';
 import '../../tunnel/tunnel_state.dart';
 
-/// ?????????? ????: ?????? ??? ?????????? (??????? ??? ?????????????).
+/// «Диалог уже показывали в этой сессии» — по ВЕРСИИ, а не булев флаг:
+/// ре-раны updateInfoProvider с той же версией не спамят диалогом, но новый
+/// релиз, вышедший пока приложение работает (периодический ре-чек),
+/// предлагается снова.
 class UpdatePrompt {
   UpdatePrompt._();
 
-  static bool shownThisSession = false;
+  static String? promptedVersionThisSession;
 
-  static void markShown() => shownThisSession = true;
+  static void markShown(String version) =>
+      promptedVersionThisSession = version;
 }
 
-/// ????????? ?????? ??? ?????? ??????????? ??????????, ?? ??? refresh ??????????.
+/// Показывать диалог при первой загрузке информации об обновлении,
+/// но не при повторных refresh провайдера.
 bool shouldAutoPromptForUpdate(
   AsyncValue<UpdateInfo?>? prev,
   AsyncValue<UpdateInfo?> next,
 ) {
-  if (UpdatePrompt.shownThisSession) return false;
   final info = next.value;
   if (info == null) return false;
+  if (UpdatePrompt.promptedVersionThisSession == info.latestVersion) {
+    return false;
+  }
 
   final prevInfo = prev?.value;
   if (prevInfo?.latestVersion == info.latestVersion) return false;
 
-  // ????????? refresh ? ?????? ??????? ? ?? ????????? (?????? ???????? ???? ???????).
+  // повторный refresh с той же версией — не показываем (диалог уже видели)
   if (prevInfo != null && prev?.isLoading != true) return false;
 
   return true;
 }
 
-/// GitHub release body ????? ???????? HTML-????, ??????? flutter_markdown ?? ??????.
+/// GitHub release body может содержать HTML-теги, которые flutter_markdown не рендерит.
 String sanitizeReleaseNotes(String raw) {
   var text = raw;
   text = text.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
@@ -58,11 +65,11 @@ String sanitizeReleaseNotes(String raw) {
 
 bool _updateDialogOpen = false;
 
-/// ?????? ??????????
+/// Показ диалога обновления (не более одного одновременно).
 Future<void> showUpdateDialog(BuildContext context, UpdateInfo info) async {
   if (_updateDialogOpen) return;
   _updateDialogOpen = true;
-  UpdatePrompt.markShown();
+  UpdatePrompt.markShown(info.latestVersion);
   try {
     await showDialog<void>(
       context: context,
@@ -127,7 +134,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Size: ${widget.info.formattedSize}',
+              context.l10n.updateSizeLabel(widget.info.formattedSize),
               style: TextStyle(fontSize: 13, color: subtitleColor),
             ),
             if (sanitizedNotes != null && sanitizedNotes.isNotEmpty) ...[
@@ -218,6 +225,8 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
         ),
       ),
       actions: [
+        // «Пропустить версию» — осознанный отказ: пишет skip-настройку,
+        // эта версия больше не предлагается автоматически.
         TextButton(
           onPressed: _downloading
               ? null
@@ -225,6 +234,18 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
                   await UpdateService.skipVersion(widget.info.latestVersion);
                   if (context.mounted) Navigator.pop(context);
                 },
+          child: Text(
+            context.l10n.updateActionSkip,
+            style: TextStyle(color: subtitleColor),
+          ),
+        ),
+        // «Позже» просто закрывает диалог. Раньше он ТОЖЕ записывал skip —
+        // и версия навсегда пропадала из авто-предложений, хотя пользователь
+        // ожидал напоминания.
+        TextButton(
+          onPressed: _downloading
+              ? null
+              : () => Navigator.pop(context),
           child: Text(context.l10n.updateActionLater),
         ),
         FilledButton(
@@ -237,7 +258,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
             _downloading
                 ? _statusLabel(context)
                 : widget.info.openInBrowser
-                    ? 'Open download'
+                    ? context.l10n.updateOpenDownload
                     : context.l10n.updateActionNow,
           ),
         ),

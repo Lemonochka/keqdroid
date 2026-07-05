@@ -2282,6 +2282,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Name (A → Z)'**
   String get serversSortName;
+
+  /// No description provided for @updateActionSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip this version'**
+  String get updateActionSkip;
+
+  /// No description provided for @updateSizeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Size: {size}'**
+  String updateSizeLabel(Object size);
+
+  /// No description provided for @updateOpenDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Open download'**
+  String get updateOpenDownload;
+
+  /// No description provided for @vpnConnectedGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'VPN connected'**
+  String get vpnConnectedGeneric;
+
+  /// No description provided for @serversImportedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Servers added: {added} of {total}'**
+  String serversImportedSummary(Object added, Object total);
+
+  /// No description provided for @serversManualGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual servers'**
+  String get serversManualGroup;
+
+  /// No description provided for @serversEmptyGroupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No servers in this subscription'**
+  String get serversEmptyGroupHint;
+
+  /// No description provided for @healthCheckChecksPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Checks passed: {passed}/{total}'**
+  String healthCheckChecksPassed(Object passed, Object total);
+
+  /// No description provided for @healthCheckServerFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Server fields'**
+  String get healthCheckServerFields;
+
+  /// No description provided for @healthCheckDnsResolve.
+  ///
+  /// In en, this message translates to:
+  /// **'DNS resolve'**
+  String get healthCheckDnsResolve;
+
+  /// No description provided for @healthCheckTcpHandshake.
+  ///
+  /// In en, this message translates to:
+  /// **'TCP handshake'**
+  String get healthCheckTcpHandshake;
+
+  /// No description provided for @healthCheckConfigFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Config format'**
+  String get healthCheckConfigFormat;
+
+  /// No description provided for @healthCheckNoIpResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'No IP resolved'**
+  String get healthCheckNoIpResolved;
+
+  /// No description provided for @healthCheckDnsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed: {error}'**
+  String healthCheckDnsFailed(Object error);
+
+  /// No description provided for @healthCheckUriFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'URI format detected'**
+  String get healthCheckUriFormat;
+
+  /// No description provided for @healthCheckMissingScheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing URI scheme'**
+  String get healthCheckMissingScheme;
+
+  /// No description provided for @healthCheckConfigEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Config is empty'**
+  String get healthCheckConfigEmpty;
+
+  /// No description provided for @statsInLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'In'**
+  String get statsInLabel;
+
+  /// No description provided for @statsTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get statsTimeLabel;
+
+  /// No description provided for @qrScanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR code'**
+  String get qrScanTitle;
+
+  /// No description provided for @qrScanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at a QR code'**
+  String get qrScanHint;
+
+  /// No description provided for @qrScanCameraError.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera unavailable'**
+  String get qrScanCameraError;
+
+  /// No description provided for @serversScanQrHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Server link or subscription link'**
+  String get serversScanQrHint;
+
+  /// No description provided for @qrSubscriptionAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription added: {name}'**
+  String qrSubscriptionAdded(Object name);
+
+  /// No description provided for @qrNotSubscriptionLink.
+  ///
+  /// In en, this message translates to:
+  /// **'QR code doesn\'t contain a subscription link'**
+  String get qrNotSubscriptionLink;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

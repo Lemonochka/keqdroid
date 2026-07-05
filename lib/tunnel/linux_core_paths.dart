@@ -54,7 +54,7 @@ class LinuxCorePaths {
       return exeDir;
     }
 
-    return _extractGeoFilesToTemp();
+    return _extractGeoFiles();
   }
 
   static String? _geoDirBesideFlutterAssets() {
@@ -70,14 +70,17 @@ class LinuxCorePaths {
     return hasGeo ? dir : null;
   }
 
-  static Future<String?> _extractGeoFilesToTemp() async {
+  /// Extracts geo files into the stable cache (`~/.cache/keqdroid/geo`):
+  /// createTemp-каталоги keqdis_geo_* создавались на каждый вызов и никогда
+  /// не удалялись.
+  static Future<String?> _extractGeoFiles() async {
     try {
-      final outDir = Directory(
-        p.join(
-          (await Directory.systemTemp.createTemp('keqdis_geo_')).path,
-          'geo',
-        ),
-      );
+      final base = Platform.environment['XDG_CACHE_HOME'] ??
+          p.join(
+            Platform.environment['HOME'] ?? Directory.systemTemp.path,
+            '.cache',
+          );
+      final outDir = Directory(p.join(base, 'keqdroid', 'geo'));
       if (!outDir.existsSync()) outDir.createSync(recursive: true);
 
       var extracted = false;
@@ -87,10 +90,13 @@ class LinuxCorePaths {
       }.entries) {
         try {
           final data = await rootBundle.load(entry.key);
-          await File(p.join(outDir.path, entry.value)).writeAsBytes(
-            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-            flush: true,
-          );
+          final bytes = data.buffer
+              .asUint8List(data.offsetInBytes, data.lengthInBytes);
+          final outFile = File(p.join(outDir.path, entry.value));
+          // размер совпадает — уже извлечено этой же сборкой
+          if (!outFile.existsSync() || outFile.lengthSync() != bytes.length) {
+            await outFile.writeAsBytes(bytes, flush: true);
+          }
           extracted = true;
         } catch (_) {
           // file not bundled — skip
@@ -121,7 +127,7 @@ class LinuxCorePaths {
       return _stageExecutable(besideExe, fileName);
     }
 
-    final fromAsset = await _extractAssetToTemp(assetKey, fileName);
+    final fromAsset = await _extractAssetToCache(assetKey, fileName);
     if (fromAsset != null) {
       await _ensureExecutable(fromAsset);
       return fromAsset;
@@ -177,24 +183,28 @@ class LinuxCorePaths {
     return File(path).existsSync() ? path : null;
   }
 
-  static Future<String?> _extractAssetToTemp(
+  /// Extracts a bundled binary into the stable cores cache (same dir as
+  /// [_stageExecutable]): keqdis_bin_*-createTemp копился без подчистки.
+  static Future<String?> _extractAssetToCache(
     String assetKey,
     String fileName,
   ) async {
     try {
       final data = await rootBundle.load(assetKey);
-      final outDir = Directory(
-        p.join(
-          (await Directory.systemTemp.createTemp('keqdis_bin_')).path,
-          'cores',
-        ),
-      );
-      if (!outDir.existsSync()) outDir.createSync(recursive: true);
-      final outFile = File(p.join(outDir.path, fileName));
-      await outFile.writeAsBytes(
-        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-        flush: true,
-      );
+      final bytes =
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      final outFile = File(p.join(await _coresCacheDir(), fileName));
+      // размер совпадает — уже извлечён этой же сборкой
+      if (outFile.existsSync() && outFile.lengthSync() == bytes.length) {
+        return outFile.path;
+      }
+      try {
+        await outFile.writeAsBytes(bytes, flush: true);
+      } on FileSystemException {
+        // бинарь занят запущенным ядром — пользуемся существующей копией
+        if (outFile.existsSync()) return outFile.path;
+        rethrow;
+      }
       return outFile.path;
     } catch (_) {
       return null;

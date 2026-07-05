@@ -10,9 +10,9 @@ class _ShareHwidCard extends ConsumerWidget {
     final enabled = settings.shareDeviceHwid;
 
     Future<void> save(bool value) async {
+      // SubscriptionService читает shareDeviceHwid из настроек на каждый
+      // fetch — отдельно уведомлять его не нужно.
       await ref.read(settingsNotifierProvider.notifier).save(settings.copyWith(shareDeviceHwid: value));
-      // Also update subscription service preference
-      ref.read(subscriptionServiceProvider).updateShareDeviceHwid(value);
     }
 
     return Container(

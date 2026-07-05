@@ -768,14 +768,9 @@ class ConfigGeneratorV2 {
       rules.add({'type': 'field', 'ip': proxyIps, 'outboundTag': 'proxy'});
     }
 
-    // kill switch: 0.0.0.0/1 + 128.0.0.0/1 ловят весь трафик в обход default route
-    if (!isPingMode && settings.killSwitch) {
-      rules.add({
-        'type': 'field',
-        'ip': ['0.0.0.0/1', '128.0.0.0/1'],
-        'outboundTag': 'proxy',
-      });
-    }
+    // kill switch здесь не нужен: catch-all ниже и так шлёт всё в proxy,
+    // а реальный kill switch (final: block) живёт в sing-box TUN-конфиге
+    // (singbox_tun_config.dart).
     } // end full routing (non-ping)
 
     rules.add({'type': 'field', 'outboundTag': 'proxy', 'network': 'tcp,udp'});

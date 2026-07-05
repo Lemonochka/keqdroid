@@ -44,18 +44,24 @@ Widget _xraySettingsDivider(BuildContext context) => Padding(
       child: Divider(height: 1, color: AppTheme.divider(context)),
     );
 
+// Цвет и рамка на Material, а не на BoxDecoration: Switch/RadioListTile
+// рисуют ink-сплэши на ближайшем Material-предке, и цветной DecoratedBox
+// между ними прятал рипл (debug-спам «ListTile background color or ink
+// splashes may be invisible»).
 Widget _xraySettingsCard(BuildContext context, {required List<Widget> children}) =>
-    Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
+    Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.divider(context)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: AppTheme.divider(context)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
       ),
     );
 

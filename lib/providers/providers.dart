@@ -60,13 +60,37 @@ final vpnEngineProvider = Provider<VpnEngine>((ref) {
   return engine;
 });
 
+/// Пока приложение запущено, обновления перепроверяются сами с этим
+/// интервалом — раньше чек жил от запуска до запуска, и на долгоживущем
+/// десктопе (окно в трее неделями) новый релиз было видно только вручную.
+const _updateRecheckInterval = Duration(hours: 6);
+
 // ВАЖНО: подписываемся ТОЛЬКО на факт «подключён ли VPN» через select, а не на
 // весь VpnState. Раньше тут был `ref.watch(vpnStateProvider).value`, из-за чего
 // провайдер перезапускался на КАЖДЫЙ эмит состояния — телеметрия (скорость/время)
 // обновляется раз в секунду — и checkForUpdate долбил GitHub примерно раз в 3 c,
 // исчерпывая анонимный лимит в 60 запросов/час (после чего обновление вообще не
 // скачать). select даёт ре-ран только при реальной смене connected↔disconnected.
+// От спама сетью при частых ре-ранах защищает in-memory троттлинг в
+// UpdateService (не чаще раза в 30 минут).
 final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
+  // периодический ре-чек; таймер перевзводится на каждый ре-ран провайдера
+  final timer = Timer(_updateRecheckInterval, ref.invalidateSelf);
+  ref.onDispose(timer.cancel);
+
+  // после заморозки процесса (Android в фоне) таймеры не тикают — на resume
+  // проверяем давность последнего чека
+  final lifecycle = AppLifecycleListener(
+    onResume: () {
+      final last = UpdateService.lastAutoCheckAt;
+      if (last == null ||
+          DateTime.now().difference(last) >= _updateRecheckInterval) {
+        ref.invalidateSelf();
+      }
+    },
+  );
+  ref.onDispose(lifecycle.dispose);
+
   final vpnConnected = ref.watch(
     vpnStateProvider.select((s) => s.value?.status == VpnStatus.connected),
   );
@@ -146,10 +170,16 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       final due = await service.getDueForUpdate();
       if (due.isEmpty) return;
 
-      final results = await Future.wait(
-        due.map(service.updateSubscription),
-        eagerError: false,
-      );
+      // батчами по 3 (как updateAll): залп по всем due-подпискам разом
+      // упирается в сеть и rate-limit панелей
+      final results = <UpdateResult>[];
+      for (var i = 0; i < due.length; i += 3) {
+        final batch = due.skip(i).take(3).toList();
+        results.addAll(await Future.wait(
+          batch.map(service.updateSubscription),
+          eagerError: false,
+        ));
+      }
       final hasSuccess = results.any((r) => r.success);
       if (!hasSuccess) return;
 
@@ -237,30 +267,6 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     } finally {
       ref.read(subscriptionRefreshingIdsProvider.notifier)
           .update((set) => {...set}..remove(id));
-    }
-  }
-
-  Future<void> refreshAll() async {
-    final subs = state.value ?? [];
-    if (subs.isEmpty) return;
-
-    final errors = <String>[];
-
-    // батчами по 3 (как updateAll в сервисе): на десятках подписок залп
-    // одновременных запросов упирается в сеть и rate-limit панелей
-    for (var i = 0; i < subs.length; i += 3) {
-      final batch = subs.skip(i).take(3).toList();
-      await Future.wait(batch.map((sub) async {
-        try {
-          await refresh(sub);
-        } catch (e) {
-          errors.add('${sub.name}: ${_shortError(e)}');
-        }
-      }));
-    }
-
-    if (errors.isNotEmpty) {
-      throw Exception(errors.join('\n'));
     }
   }
 
@@ -500,41 +506,18 @@ class ServersNotifier extends Notifier<ServersState> {
     );
   }
 
-  Future<void> toggleFavorite(String id) async {
-    final idx = state.servers.indexWhere((s) => s.id == id);
-    if (idx == -1) return;
-    final updated = state.servers[idx].copyWith(
-      isFavorite: !state.servers[idx].isFavorite,
-    );
-    final newList = [...state.servers]..[idx] = updated;
-    await ref.read(storageProvider).saveServers(newList);
-    state = state.copyWith(servers: newList);
-  }
-
   /// батч-обновление ping + типа теста: один write в storage и один rebuild
   Future<void> updatePingResults(
     Map<String, ({int? pingMs, String? lastPingType})> updates,
   ) async {
     if (updates.isEmpty) return;
-    final now = DateTime.now();
-    final newList = state.servers
-        .map((s) {
-          final update = updates[s.id];
-          if (update == null) return s;
-          var item = s.copyWith(
-            pingMs: update.pingMs,
-            lastTestedAt: now,
-          );
-          if (update.lastPingType != null) {
-            item = item.copyWith(lastPingType: update.lastPingType);
-          }
-          return item;
-        })
-        .toList();
-    // newList уже посчитан из state — пишем его напрямую, без повторного
-    // getServers()+декода всего списка в storage.
-    await ref.read(storageProvider).saveServers(newList);
-    state = state.copyWith(servers: newList);
+    // Мержим в актуальный список ВНУТРИ serial-очереди storage: запись
+    // снапшота провайдера целиком (saveServers) затирала серверы, если
+    // параллельно успела обновиться подписка.
+    final merged = await ref
+        .read(storageProvider)
+        .applyPingUpdates(updates, DateTime.now());
+    state = state.copyWith(servers: merged);
   }
 
   /// пингует серверы: UI обновляем по мере результатов, в storage пишем разом в конце
@@ -620,9 +603,13 @@ class ServersNotifier extends Notifier<ServersState> {
     }
 
     if (pending.isNotEmpty) {
-      // state.servers уже содержит все апдейты (применены в _applyPingResultToState
-      // по мере прихода) — сохраняем готовый список без повторного декода в storage.
-      await ref.read(storageProvider).saveServers(state.servers);
+      // Мержим результаты в актуальный список из storage: снапшот провайдера
+      // мог устареть, если за время пинга обновилась подписка — прежний
+      // saveServers(state.servers) откатывал её серверы к старым.
+      final merged = await ref
+          .read(storageProvider)
+          .applyPingUpdates(pending, DateTime.now());
+      state = state.copyWith(servers: merged);
     }
     return results;
   }
@@ -988,7 +975,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       }
       if (sessionState.status == VpnStatus.connected) {
         state = AsyncData(sessionState);
-      } else if (sessionState.status != VpnStatus.error) {
+      } else if (sessionState.status == VpnStatus.error) {
+        // Присваиваем явно: во время смены сервера _applyNativeState дропает
+        // error-эмиты из стрима (_serverSwitchInProgress), а на десктопе нет
+        // поллинга — без этого UI навсегда застревал в «подключается».
+        state = AsyncData(sessionState);
+      } else {
         state = AsyncData(VpnState(
           status: VpnStatus.connected,
           activeMode: sessionState.activeMode,

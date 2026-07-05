@@ -560,5 +560,57 @@
   "serversSortDefault": "默认顺序",
   "serversSortPing": "Ping（从低到高）",
   "serversSortSpeed": "速度（从高到低）",
-  "serversSortName": "名称（A → Z）"
+  "serversSortName": "名称（A → Z）",
+  "updateActionSkip": "跳过此版本",
+  "updateSizeLabel": "大小：{size}",
+  "@updateSizeLabel": {
+    "placeholders": {
+      "size": {}
+    }
+  },
+  "updateOpenDownload": "打开下载",
+  "vpnConnectedGeneric": "VPN 已连接",
+  "serversImportedSummary": "已添加服务器：{added}/{total}",
+  "@serversImportedSummary": {
+    "placeholders": {
+      "added": {},
+      "total": {}
+    }
+  },
+  "serversManualGroup": "手动添加的服务器",
+  "serversEmptyGroupHint": "此订阅中没有服务器",
+  "healthCheckChecksPassed": "通过检查：{passed}/{total}",
+  "@healthCheckChecksPassed": {
+    "placeholders": {
+      "passed": {},
+      "total": {}
+    }
+  },
+  "healthCheckServerFields": "服务器字段",
+  "healthCheckDnsResolve": "DNS 解析",
+  "healthCheckTcpHandshake": "TCP 握手",
+  "healthCheckConfigFormat": "配置格式",
+  "healthCheckNoIpResolved": "未解析到 IP",
+  "healthCheckDnsFailed": "失败：{error}",
+  "@healthCheckDnsFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "healthCheckUriFormat": "已识别 URI 格式",
+  "healthCheckMissingScheme": "缺少 URI 协议头",
+  "healthCheckConfigEmpty": "配置为空",
+  "statsInLabel": "下载",
+  "statsTimeLabel": "时长",
+  "qrScanTitle": "扫描二维码",
+  "qrScanHint": "将相机对准二维码",
+  "qrScanCameraError": "相机不可用",
+  "serversScanQrHint": "服务器或订阅链接",
+  "qrSubscriptionAdded": "已添加订阅：{name}",
+  "@qrSubscriptionAdded": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "qrNotSubscriptionLink": "二维码不包含订阅链接"
 }

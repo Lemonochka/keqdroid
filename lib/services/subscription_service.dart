@@ -34,17 +34,9 @@ class SubscriptionService {
   String? _cachedHwid;
   String? _cachedDeviceModel;
   static const MethodChannel _platform = MethodChannel('keqdis_vpn_channel');
-  
-  /// слать ли hwid-заголовки при запросе подписки (см. updateShareDeviceHwid)
-  bool _shareDeviceHwid = true;
 
   SubscriptionService(this._storage, {Dio? dio, int? proxyHttpPort})
       : _dio = dio ?? _buildDio(proxyHttpPort: proxyHttpPort);
-
-  /// вызывать после загрузки AppSettings
-  void updateShareDeviceHwid(bool value) {
-    _shareDeviceHwid = value;
-  }
 
   /// dio с опциональным локальным HTTP-прокси (порт keqrnel/xray HTTP inbound).
   /// нужно в фоновом workmanager-изоляте, чтобы апдейт подписок шёл через туннель.
@@ -126,10 +118,16 @@ class SubscriptionService {
       final host = uri.host.toLowerCase();
       final port = uri.port.toString();
 
-      // vmess: uuid внутри base64-json в host части uri
+      // vmess: uuid внутри base64-json payload. Декодируем из СЫРОЙ строки:
+      // uri.host лоуэркейсит base64 (регистрозависимый), декод почти всегда
+      // падал, ключ уходил в фоллбэк с полным конфигом — и смена имени
+      // сервера (ps внутри payload) ломала сопоставление (терялись
+      // ping/избранное/активный сервер при обновлении подписки).
       if (rawConfig.startsWith('vmess://')) {
         try {
-          final decoded = utf8.decode(base64.decode(base64.normalize(uri.host)));
+          final payload = rawConfig.substring('vmess://'.length);
+          final decoded = _tryDecodeBase64Flexible(payload);
+          if (decoded == null) return 'vmess:@$host:$port';
           final json = jsonDecode(decoded) as Map<String, dynamic>;
           final id = (json['id'] as String? ?? '').toLowerCase();
           final add = (json['add'] as String? ?? '').toLowerCase();
@@ -171,8 +169,12 @@ class SubscriptionService {
       throw SubscriptionFetchException('Forbidden URL', url: url);
     }
 
-    // hwid только если разрешено в настройках
-    final hwid = _shareDeviceHwid ? await _getOrCreateHwid() : null;
+    // hwid только если разрешено в настройках. Читаем настройку на каждый
+    // запрос (getSettings кэширован): раньше значение висело в поле,
+    // инициализированном true, и после перезапуска/в фоновых изолятах
+    // (WorkManager, desktop-таймер) hwid слался даже при выключенном тумблере.
+    final shareHwid = (await _storage.getSettings()).shareDeviceHwid;
+    final hwid = shareHwid ? await _getOrCreateHwid() : null;
     final hwidHeaders = hwid != null
         ? await _buildRemnawaveHeaders(hwid)
         : const <String, String>{};
@@ -1564,8 +1566,11 @@ class SubscriptionService {
     // stop only at line breaks / html-quote delimiters, and use a negative lookahead
     // so two URIs sharing one line still split instead of merging. Dart's Uri.parse
     // percent-encodes the raw spaces and keeps the inner '#' as fragment text.
+    // Negative lookbehind по символам scheme (RFC 3986: ALPHA/DIGIT/+/-/.) —
+    // иначе `wss://host` из JS/HTML панелей матчился как `ss://host`, плодя
+    // фантомные shadowsocks-сервера при HTML-краулинге подписки.
     final matches = RegExp(
-      r'''(?:vless|vmess|trojan|ss|ssr|hysteria2?|hy2)://(?:(?!(?:vless|vmess|trojan|ssr|ss|hysteria2?|hy2)://)[^\r\n<>"'])+''',
+      r'''(?<![A-Za-z0-9+.\-])(?:vless|vmess|trojan|ss|ssr|hysteria2?|hy2)://(?:(?!(?:vless|vmess|trojan|ssr|ss|hysteria2?|hy2)://)[^\r\n<>"'])+''',
       caseSensitive: false,
     ).allMatches(text);
     final links = <String>[];
@@ -1853,20 +1858,28 @@ class SubscriptionService {
         for (final s in oldServers) _stableKey(s.config): s,
       };
 
-      final servers = result.configs.map((config) {
+      // Дедуп конфигов: построчные пути парсера не дедуплицируют, а два
+      // одинаковых конфига дали бы два ServerItem с ОДНИМ id (exactMatch
+      // возвращает один и тот же элемент) → duplicate ValueKey в списке UI.
+      final uniqueConfigs = result.configs.toSet().toList();
+
+      // Один старый сервер нельзя переиспользовать дважды: близкие конфиги
+      // могут сойтись на одном stable-ключе — второму выдаём новый id.
+      final usedOldIds = <String>{};
+      final servers = uniqueConfigs.map((config) {
         // быстрый путь: точное совпадение конфига
         final exactMatch = oldServers.cast<ServerItem?>().firstWhere(
               (s) => s?.config == config,
           orElse: () => null,
         );
-        if (exactMatch != null) {
+        if (exactMatch != null && usedOldIds.add(exactMatch.id)) {
           return exactMatch;
         }
 
         // медленный путь: совпадение по uuid+host+port
         final key = _stableKey(config);
         final stableMatch = oldByStableKey[key];
-        if (stableMatch != null) {
+        if (stableMatch != null && usedOldIds.add(stableMatch.id)) {
           // переиспользуем id и метаданные (pingMs, isFavorite и т.д.), но берём новый конфиг
           return stableMatch.copyWith(config: config);
         }
@@ -1890,13 +1903,13 @@ class SubscriptionService {
         usedBytes: result.usedBytes,
         totalBytes: result.totalBytes,
         expiresAt: result.expiresAt,
-        serverCount: result.configs.length,
+        serverCount: servers.length,
       );
       await _storage.upsertSubscription(updated);
 
       return UpdateResult(
         success: true,
-        serverCount: result.configs.length,
+        serverCount: servers.length,
         subscription: updated,
       );
     } catch (e, st) {

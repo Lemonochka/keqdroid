@@ -169,6 +169,39 @@ void main() {
     expect(proxyDns['detour'], 'proxy');
   });
 
+  test('kill switch (allProxy): final becomes block, split CIDRs go to proxy', () {
+    final json = SingBoxTunConfigGen.generate(
+      localSocksPort: 10808,
+      socksUsername: 'u',
+      socksPassword: 'p',
+      serverIpToExclude: '1.2.3.4',
+      settings: const AppSettings(killSwitch: true),
+    );
+    final map = jsonDecode(json) as Map<String, dynamic>;
+    final rules = _rules(json);
+
+    final splitRule = rules.firstWhere(
+      (r) => (r['ip_cidr'] as List?)?.contains('0.0.0.0/1') == true,
+    );
+    expect(splitRule['outbound'], 'proxy');
+    expect(splitRule['ip_cidr'] as List, contains('128.0.0.0/1'));
+    // весь несматченный трафик блокируется, а не утекает напрямую
+    expect((map['route'] as Map)['final'], 'block');
+  });
+
+  test('kill switch is inert outside allProxy routing', () {
+    final json = SingBoxTunConfigGen.generate(
+      localSocksPort: 10808,
+      socksUsername: 'u',
+      socksPassword: 'p',
+      serverIpToExclude: '1.2.3.4',
+      settings: const AppSettings(killSwitch: true),
+      routingMode: AppRoutingMode.onlySelected,
+    );
+    final map = jsonDecode(json) as Map<String, dynamic>;
+    expect((map['route'] as Map)['final'], 'direct');
+  });
+
   test('custom DNS is ignored while dnsUseCustom is off', () {
     final proxyDns = proxyDnsFor(
       const AppSettings(

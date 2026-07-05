@@ -52,10 +52,16 @@ class DesktopBackgroundService {
       );
       if (due.isEmpty) return;
 
-      final results = await Future.wait(
-        due.map(service.updateSubscription),
-        eagerError: false,
-      );
+      // батчами по 3 (как updateAll): залп по всем due-подпискам разом
+      // упирается в сеть и rate-limit панелей
+      final results = <UpdateResult>[];
+      for (var i = 0; i < due.length; i += 3) {
+        final batch = due.skip(i).take(3).toList();
+        results.addAll(await Future.wait(
+          batch.map(service.updateSubscription),
+          eagerError: false,
+        ));
+      }
 
       final ok = results.where((r) => r.success).length;
       final failed = results.length - ok;

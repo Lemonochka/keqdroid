@@ -26,6 +26,7 @@ import '../platform/vpn_native_bridge.dart';
 import '../ui/responsive/desktop_page_layout.dart';
 import '../utils/awg_profile.dart';
 import '../utils/error_messages.dart';
+import 'qr_scan_screen.dart';
 
 part 'servers/server_groups.dart';
 part 'servers/server_tile.dart';
@@ -345,7 +346,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
     final isActive = isConnected || isConnecting;
 
     final isDesktop = PlatformBootstrap.isDesktop;
-    // ?????????? ?????? ?? connecting/connected, ????? ?? ????????? ??? ???????????
+    // волна ниже на connecting/connected, чтобы хедер не разрастался при подключении
     final waveHeight = isDesktop
         ? (isActive ? 32.0 : 40.0)
         : (isActive ? 28.0 : 36.0);
@@ -507,7 +508,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
               _WavePaintWidget(
                 waveCtrl: _waveCtrl,
                 stateCtrl: _stateCtrl,
-                context: context,
                 height: waveHeight,
               ),
             ],
@@ -668,10 +668,76 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 _importConfigFile(ctx);
               },
             ),
+            // у mobile_scanner нет имплементации под Windows/Linux
+            if (!PlatformBootstrap.isDesktop)
+              ListTile(
+                leading: Icon(
+                  Icons.qr_code_scanner,
+                  color: AppTheme.accent(ctx),
+                ),
+                title: Text(
+                  l10n.qrScanTitle,
+                  style: TextStyle(color: AppTheme.text(ctx)),
+                ),
+                subtitle: Text(
+                  l10n.serversScanQrHint,
+                  style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx)),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx2);
+                  _scanQrAndImport(ctx);
+                },
+              ),
           ],
         ),
       ),
     );
+  }
+
+  /// Импорт из QR-кода: серверные ссылки/AWG-конфиг добавляются как серверы;
+  /// http(s)-ссылка — это подписка, добавляем её сразу, не гоняя пользователя
+  /// на соседнюю вкладку.
+  Future<void> _scanQrAndImport(BuildContext ctx) async {
+    final raw = await QrScanScreen.scan(ctx);
+    if (raw == null || raw.isEmpty || !ctx.mounted) return;
+
+    final asUri = Uri.tryParse(raw);
+    if (asUri != null && (asUri.scheme == 'http' || asUri.scheme == 'https')) {
+      try {
+        final sub = Subscription.create(name: asUri.host, url: raw);
+        await ref.read(subscriptionsProvider.notifier).add(sub);
+        if (ctx.mounted) {
+          _showSnack(AppLocalizations.of(ctx)!.qrSubscriptionAdded(asUri.host));
+        }
+      } catch (e) {
+        if (ctx.mounted) _showImportError(ctx, e);
+      }
+      return;
+    }
+
+    final configs = AwgProfile.isAwgConfig(raw)
+        ? [raw]
+        : raw
+              .split('\n')
+              .map((l) => l.trim())
+              .where((l) => l.isNotEmpty)
+              .toList();
+    final result = await _addConfigsResilient(configs);
+    if (!ctx.mounted) return;
+    if (result.firstError != null) {
+      _showImportSummary(
+        ctx,
+        added: result.added,
+        total: configs.length,
+        error: result.firstError!,
+      );
+    } else {
+      // после возврата с камеры без фидбека непонятно, добавилось ли что-то
+      _showSnack(
+        AppLocalizations.of(ctx)!
+            .serversImportedSummary(result.added, configs.length),
+      );
+    }
   }
 
   /// Импорт серверного конфига из файла (AmneziaWG `.conf` или список ссылок).
@@ -702,20 +768,59 @@ class _ServersTabState extends ConsumerState<ServersTab>
               .where((l) => l.isNotEmpty)
               .toList();
 
-    try {
-      for (final c in configs) {
-        await ref.read(serversProvider.notifier).addManual(c);
-      }
-    } catch (e) {
-      if (ctx.mounted) _showImportError(ctx, e);
+    // Каждую строку добавляем независимо: раньше первый же дубликат/битая
+    // ссылка обрывал импорт, и остальные валидные строки молча терялись.
+    final result = await _addConfigsResilient(configs);
+    if (!ctx.mounted) return;
+    if (result.firstError != null) {
+      _showImportSummary(
+        ctx,
+        added: result.added,
+        total: configs.length,
+        error: result.firstError!,
+      );
     }
+  }
+
+  Future<({int added, Object? firstError})> _addConfigsResilient(
+    List<String> configs,
+  ) async {
+    var added = 0;
+    Object? firstError;
+    for (final c in configs) {
+      try {
+        await ref.read(serversProvider.notifier).addManual(c);
+        added++;
+      } catch (e) {
+        firstError ??= e;
+      }
+    }
+    return (added: added, firstError: firstError);
   }
 
   void _showImportError(BuildContext ctx, Object e) {
     ScaffoldMessenger.of(ctx).showSnackBar(
       SnackBar(
-        content: Text(_friendlyError(e)),
+        content: Text(_friendlyError(e, ctx)),
         backgroundColor: AppTheme.red(ctx),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  void _showImportSummary(
+    BuildContext ctx, {
+    required int added,
+    required int total,
+    required Object error,
+  }) {
+    final summary = AppLocalizations.of(ctx)!.serversImportedSummary(added, total);
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(
+        content: Text('$summary\n${_friendlyError(error, ctx)}'),
+        backgroundColor: added > 0 ? AppTheme.orange(ctx) : AppTheme.red(ctx),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 5),
@@ -727,6 +832,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
     final l10n = AppLocalizations.of(ctx)!;
     final ctrl = TextEditingController();
     bool loading = false;
+    // Ошибка показывается в самой шторке (snackbar был бы скрыт за модальным
+    // барьером), а текст пользователя не теряется при неудаче.
+    String? sheetError;
     showModalBottomSheet(
       context: ctx,
       backgroundColor: AppTheme.bg(ctx),
@@ -785,6 +893,13 @@ class _ServersTabState extends ConsumerState<ServersTab>
                   ),
                 ),
               ),
+              if (sheetError != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  sheetError!,
+                  style: TextStyle(fontSize: 12, color: AppTheme.red(ctx)),
+                ),
+              ],
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
@@ -802,37 +917,46 @@ class _ServersTabState extends ConsumerState<ServersTab>
                       : () async {
                           final raw = ctrl.text.trim();
                           if (raw.isEmpty) return;
-                          setModalState(() => loading = true);
-                          try {
-                            final configs = AwgProfile.isAwgConfig(raw)
-                                ? [raw]
-                                : raw
-                                      .split('\n')
-                                      .map((line) => line.trim())
-                                      .where((line) => line.isNotEmpty)
-                                      .toList();
-                            for (final c in configs) {
-                              await ref
-                                  .read(serversProvider.notifier)
-                                  .addManual(c);
-                            }
-                            if (ctx2.mounted) Navigator.pop(ctx2);
-                          } catch (e) {
-                            setModalState(() => loading = false);
-                            if (ctx2.mounted) Navigator.pop(ctx2);
+                          setModalState(() {
+                            loading = true;
+                            sheetError = null;
+                          });
+                          final configs = AwgProfile.isAwgConfig(raw)
+                              ? [raw]
+                              : raw
+                                    .split('\n')
+                                    .map((line) => line.trim())
+                                    .where((line) => line.isNotEmpty)
+                                    .toList();
+                          // Строки добавляются независимо: раньше первый же
+                          // дубликат обрывал импорт, шторка закрывалась и
+                          // вставленный текст терялся.
+                          final result = await _addConfigsResilient(configs);
+                          if (!ctx2.mounted) return;
+                          if (result.firstError == null) {
+                            Navigator.pop(ctx2);
+                            return;
+                          }
+                          if (result.added > 0) {
+                            // часть добавилась — закрываем и показываем сводку
+                            Navigator.pop(ctx2);
                             if (ctx.mounted) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(
-                                  content: Text(_friendlyError(e)),
-                                  backgroundColor: AppTheme.red(ctx),
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  duration: const Duration(seconds: 5),
-                                ),
+                              _showImportSummary(
+                                ctx,
+                                added: result.added,
+                                total: configs.length,
+                                error: result.firstError!,
                               );
                             }
+                          } else {
+                            // ничего не добавилось — оставляем шторку с
+                            // текстом и показываем ошибку прямо в ней
+                            setModalState(() {
+                              loading = false;
+                              sheetError = ctx.mounted
+                                  ? _friendlyError(result.firstError!, ctx)
+                                  : _friendlyError(result.firstError!);
+                            });
                           }
                         },
                   child: loading
@@ -901,6 +1025,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
         VpnStatus.connecting => l10n.vpnConnecting,
         VpnStatus.disconnecting => l10n.vpnDisconnecting,
         VpnStatus.error => _vpnErrorStatusLabel(errorMessage, context),
+        // connected, но activeServer == null (активный сервер удалили при
+        // живом туннеле) — показываем «подключено», а не «выберите сервер»
+        VpnStatus.connected => l10n.vpnConnectedGeneric,
         _ =>
           activeServer != null
               ? l10n.vpnTapToConnect(
@@ -968,12 +1095,16 @@ class _ServersTabState extends ConsumerState<ServersTab>
       try {
         await ref.read(vpnStateProvider.notifier).connect();
       } catch (e) {
-        _showSnack(e.toString());
+        // человекочитаемый текст вместо сырого e.toString(); после await
+        // виджет мог быть демонтирован (сворачивание в трей)
+        if (!mounted) return;
+        _showSnack(_friendlyError(e, context));
       }
     }
   }
 
   void _showSnack(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),

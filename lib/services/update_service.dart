@@ -71,8 +71,20 @@ class UpdateService {
   );
 
   static const _prefSkipVersion = 'skip_update_version';
-  static const _prefUpdateCheckCount = 'update_check_count';
-  static const _checkInterval = 3;
+
+  /// Кэш последнего авто-чека (in-memory, на процесс): ре-раны
+  /// updateInfoProvider (смена VPN-статуса, resume, периодический таймер)
+  /// не должны ни долбить GitHub чаще [_minAutoCheckGap], ни затирать уже
+  /// найденное обновление возвратом null — раньше счётчик запусков пропускал
+  /// 2 из 3 проверок, и бейдж в настройках пропадал после переключения VPN.
+  static UpdateInfo? _cachedAutoResult;
+  static DateTime? _lastAutoCheckAt;
+  static const _minAutoCheckGap = Duration(minutes: 30);
+
+  /// Когда авто-чек последний раз реально ходил в сеть (null — ещё ни разу
+  /// или последняя попытка провалилась). Нужно updateInfoProvider, чтобы
+  /// перепроверить после долгой заморозки процесса.
+  static DateTime? get lastAutoCheckAt => _lastAutoCheckAt;
 
   /// When the VPN is connected on desktop, GitHub traffic uses the local HTTP
   /// proxy (Dart IO does not support SOCKS in [HttpClient.findProxy]).
@@ -99,75 +111,102 @@ class UpdateService {
     bool vpnConnected = false,
     int httpPort = 2081,
   }) async {
+    if (!force) {
+      final last = _lastAutoCheckAt;
+      if (last != null &&
+          DateTime.now().difference(last) < _minAutoCheckGap) {
+        return _cachedResultRespectingSkip();
+      }
+      // отмечаем ДО сети, чтобы параллельные ре-раны провайдера не прошли
+      // гейт вдвоём
+      _lastAutoCheckAt = DateTime.now();
+    }
+
     final dio = _buildDio(vpnConnected: vpnConnected, httpPort: httpPort);
     try {
-      if (!force) {
-        final prefs = await SharedPreferences.getInstance();
-        final checkCount = prefs.getInt(_prefUpdateCheckCount) ?? 0;
-        if (checkCount > 0 && checkCount % _checkInterval != 0) {
-          await prefs.setInt(_prefUpdateCheckCount, checkCount + 1);
-          return null;
-        }
-        await prefs.setInt(_prefUpdateCheckCount, checkCount + 1);
-      }
-
       final currentVersion = await _getCurrentVersion();
       final releases = await _fetchReleases(dio);
       if (releases.isEmpty) {
         if (force) {
           throw StateError('Could not fetch releases from GitHub');
         }
-        return null;
+        // сеть/лимит: не считаем попытку (следующий ре-ран — например,
+        // подключение VPN даст выход в сеть — перепроверит сразу)
+        _lastAutoCheckAt = null;
+        return _cachedResultRespectingSkip();
       }
 
-      final latestRelease = releases.first;
+      final result = _buildUpdateInfo(releases, currentVersion);
+      _lastAutoCheckAt = DateTime.now();
+      // force тоже обновляет кэш: settings инвалидирует провайдер после
+      // ручной проверки, и throttle-путь должен вернуть свежий результат
+      _cachedAutoResult = result;
 
+      if (result == null) return null;
       if (!force) {
         final prefs = await SharedPreferences.getInstance();
-        final skippedVersion = prefs.getString(_prefSkipVersion);
-        if (skippedVersion == latestRelease['tag_name']) {
+        if (prefs.getString(_prefSkipVersion) == result.latestVersion) {
           return null;
         }
       }
-
-      final latestTag = (latestRelease['tag_name'] ?? '').toString();
-      final currentRelease = _findReleaseForVersion(releases, currentVersion);
-      final latestPublished = _releaseDate(latestRelease);
-      final currentPublished = currentRelease != null
-          ? _releaseDate(currentRelease)
-          : null;
-
-      if (!isNewerRelease(
-        latestTag,
-        currentVersion,
-        latestPublished: latestPublished,
-        currentPublished: currentPublished,
-      )) {
-        return null;
-      }
-
-      final assets = latestRelease['assets'] as List?;
-      final asset = _findAssetForCurrentPlatform(assets);
-      if (asset == null) return null;
-
-      final assetName = (asset['name'] ?? '').toString();
-      final checksumAsset = _findChecksumAsset(assets, assetName);
-
-      return UpdateInfo(
-        currentVersion: currentVersion,
-        latestVersion: latestTag,
-        downloadUrl: asset['browser_download_url'],
-        releaseNotes: latestRelease['body'],
-        apkSize: asset['size'] ?? 0,
-        openInBrowser:
-            Platform.isWindows && _shouldOpenDesktopAssetInBrowser(asset),
-        assetName: assetName,
-        checksumUrl: checksumAsset?['browser_download_url'] as String?,
-      );
+      return result;
     } catch (e) {
       if (force) rethrow;
+      // транзиентная ошибка не должна ни закрывать гейт, ни стирать бейдж
+      _lastAutoCheckAt = null;
+      return _cachedResultRespectingSkip();
+    }
+  }
+
+  /// Кэшированный результат минус пропущенная пользователем версия
+  /// (skip мог случиться позже того, как результат попал в кэш).
+  static Future<UpdateInfo?> _cachedResultRespectingSkip() async {
+    final cached = _cachedAutoResult;
+    if (cached == null) return null;
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getString(_prefSkipVersion) == cached.latestVersion) return null;
+    return cached;
+  }
+
+  static UpdateInfo? _buildUpdateInfo(
+    List<Map<String, dynamic>> releases,
+    String currentVersion,
+  ) {
+    final latestRelease = releases.first;
+    final latestTag = (latestRelease['tag_name'] ?? '').toString();
+    final currentRelease = _findReleaseForVersion(releases, currentVersion);
+    final latestPublished = _releaseDate(latestRelease);
+    final currentPublished = currentRelease != null
+        ? _releaseDate(currentRelease)
+        : null;
+
+    if (!isNewerRelease(
+      latestTag,
+      currentVersion,
+      latestPublished: latestPublished,
+      currentPublished: currentPublished,
+    )) {
       return null;
     }
+
+    final assets = latestRelease['assets'] as List?;
+    final asset = _findAssetForCurrentPlatform(assets);
+    if (asset == null) return null;
+
+    final assetName = (asset['name'] ?? '').toString();
+    final checksumAsset = _findChecksumAsset(assets, assetName);
+
+    return UpdateInfo(
+      currentVersion: currentVersion,
+      latestVersion: latestTag,
+      downloadUrl: asset['browser_download_url'],
+      releaseNotes: latestRelease['body'],
+      apkSize: asset['size'] ?? 0,
+      openInBrowser:
+          Platform.isWindows && _shouldOpenDesktopAssetInBrowser(asset),
+      assetName: assetName,
+      checksumUrl: checksumAsset?['browser_download_url'] as String?,
+    );
   }
 
   static Future<String> _getCurrentVersion() async {
@@ -589,7 +628,14 @@ class UpdateService {
   }
 
   static Future<void> _openUrlInBrowser(String url) async {
-    if (!_isSafeHttpsUrl(url)) return;
+    if (!_isSafeHttpsUrl(url)) {
+      // Кидаем, а не выходим молча: раньше клик по «Обновить» просто ничего
+      // не делал, если URL ассета не прошёл проверку.
+      throw StateError(
+        'Refusing to open unsafe download URL. '
+        'Download the release manually from GitHub.',
+      );
+    }
     if (Platform.isWindows) {
       // без runInShell; url уже провалидирован (нет метасимволов cmd)
       await Process.start('cmd', ['/c', 'start', '', url]);

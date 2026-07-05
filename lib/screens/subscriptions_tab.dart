@@ -15,6 +15,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/subscription.dart';
 import '../platform/platform_bootstrap.dart';
 import '../providers/providers.dart';
+import 'qr_scan_screen.dart';
 import '../ui/responsive/desktop_page_layout.dart';
 import '../utils/error_messages.dart';
 
@@ -26,7 +27,7 @@ class SubscriptionsTab extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final subsAsync = ref.watch(subscriptionsProvider);
 
-    // ???????? ?????
+    // кэшируем цвета
     final bgColor = AppTheme.bg(context);
     final textColor = AppTheme.text(context);
     final accentColor = AppTheme.accent(context);
@@ -223,6 +224,9 @@ class SubscriptionsTab extends ConsumerWidget {
     final nameCtrl = TextEditingController();
     final urlCtrl = TextEditingController();
     bool loading = false;
+    // Ошибка сканирования QR — в самой шторке: snackbar был бы скрыт за
+    // модальным барьером.
+    String? qrError;
 
     final bgColor = AppTheme.bg(context);
     final textColor = AppTheme.text(context);
@@ -269,7 +273,42 @@ class SubscriptionsTab extends ConsumerWidget {
                 urlCtrl,
                 l10n.subscriptionUrlLabel,
                 l10n.subscriptionUrlHint,
+                // у mobile_scanner нет имплементации под Windows/Linux
+                suffix: PlatformBootstrap.isDesktop
+                    ? null
+                    : IconButton(
+                        icon: Icon(
+                          Icons.qr_code_scanner,
+                          color: AppTheme.accent(context),
+                        ),
+                        tooltip: l10n.qrScanTitle,
+                        onPressed: () async {
+                          final raw = await QrScanScreen.scan(ctx);
+                          if (raw == null || !ctx.mounted) return;
+                          final uri = Uri.tryParse(raw);
+                          if (uri != null &&
+                              (uri.scheme == 'http' ||
+                                  uri.scheme == 'https')) {
+                            urlCtrl.text = raw;
+                            setModalState(() => qrError = null);
+                          } else {
+                            setModalState(
+                              () => qrError = l10n.qrNotSubscriptionLink,
+                            );
+                          }
+                        },
+                      ),
               ),
+              if (qrError != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  qrError!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.red(context),
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -342,8 +381,9 @@ class SubscriptionsTab extends ConsumerWidget {
     BuildContext context,
     TextEditingController ctrl,
     String label,
-    String hint,
-  ) {
+    String hint, {
+    Widget? suffix,
+  }) {
     final textColor = AppTheme.text(context);
     final textLightColor = AppTheme.textLight(context);
     final cardColor = AppTheme.card(context);
@@ -356,6 +396,7 @@ class SubscriptionsTab extends ConsumerWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
+        suffixIcon: suffix,
         labelStyle: TextStyle(color: textLightColor),
         hintStyle: TextStyle(color: textLightColor.withValues(alpha: 0.5)),
         filled: true,
@@ -477,7 +518,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final hasRefreshError = refreshError != null;
     final pct = sub.usagePercent;
 
-    // ???????? ?????, ????? ?? ??????? Theme.of() ?? ?????? ??????
+    // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
     final cardColor = AppTheme.card(context);
     final textColor = AppTheme.text(context);
     final textLightColor = AppTheme.textLight(context);
@@ -822,8 +863,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
     );
   }
 
-  // mobile: ??? ???????? ???????? ? ReorderableDelayedDragStartListener
-  // desktop: ????? ??? ???? + long-press ?? ????????? ??? ?? ????????
+  // mobile: вся карточка тащится через ReorderableDelayedDragStartListener
+  // desktop: ручка для мыши + long-press на заголовке, как на мобильном
   Widget _buildHeaderDragTarget({
     required bool isDesktop,
     required int listIndex,
@@ -844,6 +885,9 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final sub = widget.sub;
     final nameCtrl = TextEditingController(text: sub.name);
     final urlCtrl = TextEditingController(text: sub.url);
+    // Ошибка сохранения (например, дубликат URL) — показываем в самой шторке:
+    // snackbar был бы скрыт за модальным барьером.
+    String? editError;
 
     final bgColor = AppTheme.bg(context);
     final cardColor = AppTheme.card(context);
@@ -934,9 +978,19 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                inputField(nameCtrl, 'Name', sub.name),
+                inputField(nameCtrl, l10n.subscriptionNameLabel, sub.name),
                 const SizedBox(height: 10),
-                inputField(urlCtrl, 'URL', sub.url, maxLines: 2),
+                inputField(urlCtrl, l10n.subscriptionUrlLabel, sub.url, maxLines: 2),
+                if (editError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    editError!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.red(ctx),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -980,9 +1034,11 @@ class _SubItemState extends ConsumerState<_SubItem> {
                             ref.read(subscriptionsProvider).value ?? [];
                         final idx = subs.indexWhere((s) => s.id == sub.id);
                         if (idx > 0) {
-                          ref
-                              .read(subscriptionsProvider.notifier)
-                              .reorder(idx, idx - 1);
+                          ref.read(subscriptionsProvider.notifier).reorder(
+                                idx,
+                                idx - 1,
+                                fromReorderableList: false,
+                              );
                         }
                       },
                     ),
@@ -995,9 +1051,14 @@ class _SubItemState extends ConsumerState<_SubItem> {
                             ref.read(subscriptionsProvider).value ?? [];
                         final idx = subs.indexWhere((s) => s.id == sub.id);
                         if (idx < subs.length - 1) {
-                          ref
-                              .read(subscriptionsProvider.notifier)
-                              .reorder(idx, idx + 1);
+                          // fromReorderableList: false обязателен — иначе
+                          // поправка «-1 при движении вниз» превращала
+                          // idx+1 обратно в idx, и кнопка была no-op.
+                          ref.read(subscriptionsProvider.notifier).reorder(
+                                idx,
+                                idx + 1,
+                                fromReorderableList: false,
+                              );
                         }
                       },
                     ),
@@ -1040,13 +1101,22 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       final newName = nameCtrl.text.trim();
                       final newUrl = urlCtrl.text.trim();
                       if (newUrl.isEmpty) return;
-                      await ref
-                          .read(subscriptionsProvider.notifier)
-                          .editMeta(
-                            sub.id,
-                            name: newName.isNotEmpty ? newName : null,
-                            url: newUrl,
-                          );
+                      try {
+                        await ref
+                            .read(subscriptionsProvider.notifier)
+                            .editMeta(
+                              sub.id,
+                              name: newName.isNotEmpty ? newName : null,
+                              url: newUrl,
+                            );
+                      } catch (e) {
+                        // например, дубликат URL — раньше ошибка молча
+                        // уходила в zone, а диалог «не реагировал» на Save
+                        if (ctx.mounted) {
+                          setSheet(() => editError = friendlyError(e, ctx));
+                        }
+                        return;
+                      }
                       if (ctx.mounted) Navigator.pop(ctx);
                     },
                     child: Text(

@@ -174,24 +174,24 @@ int _speedSortKey(ServerItem s) {
   return s.pingMs!;
 }
 
-/// ?????? ???????? ????? ??????
+/// высота градиента-затухания над списком серверов
 const _listTopFadeHeight = 56.0;
 
-/// ????????? ?????? ?????? ???????? ??? ???? (??? ?? android)
+/// насколько верхний тайл заезжает под фейд (виден из-под хедера)
 const _listTopFadeTileOverlap = 34.0;
 
-// ????? ???? ????? ?? ?????? padding ?????, ????? ?? ???? ??????? ?????? ????
+// фейд продлён вверх за нижний padding хедера, чтобы не было видимого шва
 const _listTopFadeUpExtension = 8.0;
 const _listTopFadeOverlayHeight = _listTopFadeHeight + _listTopFadeUpExtension;
-// ???? ???????????? ????? ??????? ???? ?? extension, ????? ???? ???????? ?? ??????
+// доля непрозрачной части градиента с учётом extension, чтобы фейд начинался у хедера
 const _listTopFadeSolidStop =
     (_listTopFadeUpExtension + 0.45 * _listTopFadeHeight) /
     _listTopFadeOverlayHeight;
 
-/// ????? ?????? ?????? ????????? ???????? ? [_ServerTile]
+/// высота строки группы совпадает с высотой [_ServerTile]
 const _subCardRowHeight = 76.0;
 
-/// ???? ? ?????: ????????????? asset ????? BoxFit.cover, ??? ??????? ?? ???????
+/// флаг в круге: масштабируем asset через BoxFit.cover, без искажения пропорций
 Widget _countryFlagCircle({
   required String? countryCode,
   required Color protocolColor,
@@ -330,9 +330,9 @@ class _SubCardState extends ConsumerState<_SubCard> {
     );
     final title = sub != null
         ? '${sub.name}  |  ${sub.usageLabel}'
-        : 'Manual servers';
+        : context.l10n.serversManualGroup;
 
-    // ???????? ?????, ????? ?? ??????? Theme.of() ?? ?????? ??????
+    // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
     final cardColor = AppTheme.card(context);
     final dividerColor = AppTheme.divider(context);
     final accentColor = AppTheme.accent(context);
@@ -582,7 +582,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'No servers in this subscription',
+            context.l10n.serversEmptyGroupHint,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: textLightColor),
           ),
@@ -722,7 +722,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Auto-update interval',
+                  context.l10n.subscriptionsAutoUpdateInterval,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -732,7 +732,9 @@ class _SubCardState extends ConsumerState<_SubCard> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Current: every ${sub.updateIntervalHours}h',
+                  context.l10n.subscriptionsCurrentInterval(
+                    sub.updateIntervalHours,
+                  ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
@@ -744,12 +746,12 @@ class _SubCardState extends ConsumerState<_SubCard> {
                   (h) => ListTile(
                     title: Text(
                       h == 1
-                          ? 'Every hour'
+                          ? context.l10n.subscriptionsEveryHour
                           : h < 24
-                          ? 'Every $h hours'
+                          ? context.l10n.subscriptionsEveryHours(h)
                           : h == 24
-                          ? 'Every day'
-                          : 'Every ${h ~/ 24} days',
+                          ? context.l10n.subscriptionsEveryDay
+                          : context.l10n.subscriptionsEveryDays(h ~/ 24),
                       style: TextStyle(
                         color: AppTheme.text(context),
                         fontWeight: h == sub.updateIntervalHours

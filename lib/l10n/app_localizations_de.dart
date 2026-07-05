@@ -1172,4 +1172,89 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get serversSortName => 'Name (A → Z)';
+
+  @override
+  String get updateActionSkip => 'Diese Version überspringen';
+
+  @override
+  String updateSizeLabel(Object size) {
+    return 'Größe: $size';
+  }
+
+  @override
+  String get updateOpenDownload => 'Download öffnen';
+
+  @override
+  String get vpnConnectedGeneric => 'VPN verbunden';
+
+  @override
+  String serversImportedSummary(Object added, Object total) {
+    return 'Server hinzugefügt: $added von $total';
+  }
+
+  @override
+  String get serversManualGroup => 'Manuelle Server';
+
+  @override
+  String get serversEmptyGroupHint => 'Keine Server in diesem Abo';
+
+  @override
+  String healthCheckChecksPassed(Object passed, Object total) {
+    return 'Bestanden: $passed/$total';
+  }
+
+  @override
+  String get healthCheckServerFields => 'Serverfelder';
+
+  @override
+  String get healthCheckDnsResolve => 'DNS-Auflösung';
+
+  @override
+  String get healthCheckTcpHandshake => 'TCP-Handshake';
+
+  @override
+  String get healthCheckConfigFormat => 'Konfigurationsformat';
+
+  @override
+  String get healthCheckNoIpResolved => 'Keine IP aufgelöst';
+
+  @override
+  String healthCheckDnsFailed(Object error) {
+    return 'Fehler: $error';
+  }
+
+  @override
+  String get healthCheckUriFormat => 'URI-Format erkannt';
+
+  @override
+  String get healthCheckMissingScheme => 'URI-Schema fehlt';
+
+  @override
+  String get healthCheckConfigEmpty => 'Konfiguration ist leer';
+
+  @override
+  String get statsInLabel => 'In';
+
+  @override
+  String get statsTimeLabel => 'Zeit';
+
+  @override
+  String get qrScanTitle => 'QR-Code scannen';
+
+  @override
+  String get qrScanHint => 'Richten Sie die Kamera auf einen QR-Code';
+
+  @override
+  String get qrScanCameraError => 'Kamera nicht verfügbar';
+
+  @override
+  String get serversScanQrHint => 'Server- oder Abo-Link';
+
+  @override
+  String qrSubscriptionAdded(Object name) {
+    return 'Abo hinzugefügt: $name';
+  }
+
+  @override
+  String get qrNotSubscriptionLink => 'QR-Code enthält keinen Abo-Link';
 }

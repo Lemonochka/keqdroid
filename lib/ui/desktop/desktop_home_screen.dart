@@ -153,10 +153,11 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     final servers = ref.read(serversProvider).servers;
     final settings =
         ref.read(settingsNotifierProvider).value ?? const AppSettings();
-    final darkTheme = settings.darkTheme ||
-        (settings.followSystemTheme &&
-            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-                Brightness.dark);
+    // Ровно как themeMode в app.dart: яркость приложения задаёт ТОЛЬКО
+    // settings.darkTheme (followSystemTheme переключает цветовую схему, а не
+    // яркость) — иначе при системной тёмной теме трей был тёмным на светлом
+    // приложении.
+    final darkTheme = settings.darkTheme;
 
     ref.read(trayMenuVisibleProvider.notifier).set(true);
     WidgetsBinding.instance.ensureVisualUpdate();
