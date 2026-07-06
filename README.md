@@ -110,7 +110,7 @@ Firefox may ignore the system proxy; the app has a separate setting for it.
 
 The window minimizes to the tray and remembers its size and position. Launch at system startup with optional auto-connect. Global hotkeys are configured in Settings → Advanced → Hotkeys. Subscriptions refresh while the app is open.
 
-**Settings location:** `%APPDATA%\Roaming\com.keqdroid\keqdroid\` — not next to the exe. To move to another PC, use export/import in settings.
+**Settings location:** `%APPDATA%\com.keqdroid\keqdroid\` — not next to the exe. To move to another PC, use export/import in settings.
 
 ### Linux
 
@@ -121,7 +121,7 @@ Debian/Arch, x86_64. Releases ship tar.gz, AppImage, deb; Arch users get a `PKGB
 | **Proxy** | No root |
 | **TUN** | Root via `pkexec` (polkit) on connect |
 
-The window remembers its size; hotkeys work while the app window is focused.
+The window remembers its size and position; hotkeys work while the app window is focused.
 
 ---
 
@@ -143,9 +143,10 @@ Full docs in [`docs/`](docs/README.md): onboarding, architecture, project map, g
 ```bash
 flutter pub get
 flutter build apk --release      # Android
-powershell -File tool/sync_windows_plugins.ps1  # Windows: strip Firebase (Android-only)
 flutter build windows --release  # Windows
 ```
+
+The Windows plugin list (`windows/flutter/app_plugins.cmake`) is checked in with Firebase (Android-only) already stripped, so a normal build just works. Re-run `powershell -File tool/sync_windows_plugins.ps1` only after adding or removing plugins.
 
 **Linux** — build on Linux or WSL only (the Windows SDK cannot target Linux):
 
@@ -272,7 +273,7 @@ Firefox может не брать системный прокси — в нас
 
 Окно сворачивается в трей и запоминает свой размер и позицию. Автозапуск вместе с системой с опциональным автоподключением. Глобальные хоткеи настраиваются в Настройки → Расширенные → Горячие клавиши. Подписки обновляются, пока приложение открыто.
 
-**Где лежат настройки:** `%APPDATA%\Roaming\com.keqdroid\keqdroid\` — не в папке с exe. Перенос на другой ПК: экспорт/импорт в настройках.
+**Где лежат настройки:** `%APPDATA%\com.keqdroid\keqdroid\` — не в папке с exe. Перенос на другой ПК: экспорт/импорт в настройках.
 
 ### Linux
 
@@ -283,7 +284,7 @@ Debian/Arch, x86_64. В релизе — tar.gz, AppImage, deb; для Arch ср
 | **Proxy** | Без root |
 | **TUN** | Root через `pkexec` (polkit) при подключении |
 
-Окно запоминает размер; хоткеи работают, пока окно приложения в фокусе.
+Окно запоминает размер и позицию; хоткеи работают, пока окно приложения в фокусе.
 
 ---
 
@@ -305,9 +306,10 @@ Debian/Arch, x86_64. В релизе — tar.gz, AppImage, deb; для Arch ср
 ```bash
 flutter pub get
 flutter build apk --release      # Android
-powershell -File tool/sync_windows_plugins.ps1  # Windows: убрать Firebase (только Android)
 flutter build windows --release  # Windows
 ```
+
+Список Windows-плагинов (`windows/flutter/app_plugins.cmake`) лежит в репозитории уже без Firebase (он только для Android), так что обычная сборка работает сразу. Перезапускать `powershell -File tool/sync_windows_plugins.ps1` нужно только после добавления или удаления плагинов.
 
 **Linux** — только на Linux или в WSL (Windows SDK для Linux не подходит):
 
