@@ -1,152 +1,141 @@
 # Onboarding: окружение, сборка, запуск, тесты
 
-Цель документа — за один присест довести нового разработчика до состояния
-«собрал, запустил, прогнал тесты». Архитектуру здесь не объясняем — это
-[ARCHITECTURE.md](ARCHITECTURE.md).
-
 ## 1. Что нужно установить
 
-| Инструмент | Версия | Зачем |
-|------------|--------|-------|
-| **Flutter SDK** | stable, **3.41.x** (Dart `^3.11.3`) | основной тулчейн |
-| **Android Studio** + Android SDK | Android 7.0+ (minSdk = Flutter default, см. `android/app/build.gradle`) | сборка/запуск Android |
-| **JDK** | 17 | Gradle/Android |
-| **Visual Studio 2022** + «Desktop development with C++» | — | сборка Windows (нативный runner на C++) |
-| **Git Bash** или WSL | — | bash-скрипты сборки Linux/ядер |
-| **gh CLI** | — | публикация релизов (необязательно) |
+| Инструмент | Версия | Заметки |
+|------------|--------|---------|
+| **Flutter SDK** | stable, 3.44+ (Dart `^3.11.3` — см. `pubspec.yaml`) | основной тулчейн |
+| **Android Studio** + Android SDK | compileSdk 36 | minSdk = 24 (дефолт Flutter, `android/app/build.gradle.kts` его не переопределяет) |
+| **JDK** | 17+ | jvmTarget в Gradle — 17; JDK из Android Studio (21) тоже подходит |
+| **Visual Studio** + «Desktop development with C++» | 2022 или новее | на VS 2026 (18.x) собирается: для новых STL в `windows/CMakeLists.txt` уже стоит `_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS` |
+| **WSL + Ubuntu** | — | сборка Linux-таргета (из Windows-SDK её не сделать) |
+| **gh CLI** | — | только для публикации релизов |
 
-Проверка окружения:
+`flutter doctor` покажет, чего не хватает. Ругань на github handshake при активном
+HTTP-прокси — известная особенность окружения, сборке не мешает.
 
-```bash
-flutter doctor
-```
-
-## 2. Первый запуск (любая платформа)
+## 2. Первый запуск
 
 ```bash
-flutter pub get          # зависимости + кодоген локализаций (flutter: generate: true)
+flutter pub get
 ```
 
-После `pub get` локализации (`lib/l10n/app_localizations*.dart`) генерируются автоматически
-из ARB-файлов. Если правишь строки — см. раздел 6.
+`pub get` заодно генерирует локализации (`flutter: generate: true` в pubspec) —
+`lib/l10n/app_localizations*.dart` появятся сами.
 
-## 3. Сборка и запуск по платформам
+## 3. Сборка и запуск
 
 ### Android
 
 ```bash
-flutter run                       # debug на подключённом устройстве/эмуляторе
-flutter build apk --release       # релизный APK
+flutter run                       # debug на устройстве/эмуляторе
+flutter build apk --release
 ```
 
-- Минимум Android 7.0. При первом подключении система спросит **разрешение VPN**.
-- Нативные ядра для Android лежат как **`jniLibs`** (`android/app/src/main/jniLibs/<abi>/*.so`),
-  а не как Flutter-ассеты (см. [PITFALLS.md](PITFALLS.md) про размер APK).
-- **Crashlytics** (Firebase) — только Android и только в release. Без
-  `google-services.json` приложение спокойно работает, просто без репортинга крэшей.
+- При первом подключении система спросит разрешение VPN.
+- Нативные ядра лежат как `jniLibs` (`android/app/src/main/jniLibs/<abi>/*.so`), а не как
+  Flutter-ассеты — иначе десктопные бинарники раздували APK (см. [PITFALLS.md](PITFALLS.md)).
+- Crashlytics работает только на Android и только в release. Без `google-services.json`
+  приложение собирается и работает, просто без репортинга крэшей.
+- После обновления версии Kotlin в `android/settings.gradle.kts` первая сборка может упасть
+  с бессмысленным «Unresolved reference» внутри чужого плагина — это протухший
+  инкрементальный кэш, лечится `flutter clean` (подробнее в [PITFALLS.md](PITFALLS.md)).
 
 ### Windows
 
 ```bash
-flutter pub get
-powershell -File tool/sync_windows_plugins.ps1   # ОБЯЗАТЕЛЬНО перед сборкой Windows
 flutter build windows --release
+# результат: build\windows\x64\runner\Release\keqdroid.exe + DLL + ядра
 ```
 
-- `sync_windows_plugins.ps1` вырезает Firebase из сгенерированного списка Windows-плагинов
-  (Firebase — Android-only; без этого шага линковка Windows падает).
-- Нативные ядра Windows (`keqrnel.exe`/`xray.exe`, при необходимости `sing-box.exe`,
-  `wireproxy.exe`, `wintun.dll`, `geoip.dat`, `geosite.dat`) кладутся **рядом с `keqdroid.exe`**
-  через `windows/CMakeLists.txt`, а не пакуются в APK. Исходно они лежат в
-  `assets/bin/windows/` — см. [`assets/bin/windows/README.md`](../assets/bin/windows/README.md).
-- **TUN-режим требует прав администратора** (sing-box создаёт wintun-адаптер). Proxy-режим
-  работает без админ-прав.
+- Список Windows-плагинов (`windows/flutter/app_plugins.cmake` +
+  `app_plugin_registrant.cc`) закоммичен уже без Firebase (он Android-only и ломает
+  линковку). Обычная сборка работает сразу; `tool/sync_windows_plugins.ps1` перезапускай
+  **только после добавления/удаления плагинов** в pubspec.
+- Ядра из `assets/bin/windows/` CMake кладёт рядом с exe. В поставке — `keqrnel.exe`,
+  `wireproxy.exe`, `wintun.dll`, `geoip.dat`, `geosite.dat`. Отдельных `xray.exe` /
+  `sing-box.exe` в бандле **нет**: дефолтное ядро — keqrnel, режим `chain` на Windows
+  заработает только если докинуть эти бинарники самостоятельно
+  ([`assets/bin/windows/README.md`](../assets/bin/windows/README.md)).
+- TUN-режим требует запуска от администратора (sing-box/keqrnel создаёт wintun-адаптер),
+  Proxy работает без прав.
 
 ### Linux (Debian/Arch, x86_64)
 
-Собирать **только на нативном Linux или в WSL** — Windows-SDK для Linux-таргета не годится.
-Готовый скрипт ставит тулчейн + нативный Flutter SDK и собирает:
+Только на нативном Linux или в WSL. Скриптов два, роли разные:
 
 ```bash
-wsl -e bash /mnt/c/.../keqdroid/tool/build_linux_wsl.sh
-# бинарь: build/linux/x64/release/bundle/keqdroid
+# первый раз: ставит GTK-тулчейн и нативный Linux-Flutter, потом собирает
+wsl -e bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/tool/build_linux_wsl.sh
+
+# повторные сборки/релиз (когда /opt/flutter в WSL уже есть): rsync проекта
+# на Linux-ФС + сборка + упаковка + копирование артефактов в release/
+wsl -d Ubuntu -u root bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/release/wsl_build_linux.sh
 ```
 
-- Ядра Linux (`xray`, `wireproxy`, `sing-box`, `keqrnel`, geo) — в `assets/bin/linux/`.
-- **Proxy** работает без root; **TUN** запрашивает root через `pkexec` (polkit) при подключении.
-- Упаковка в `.deb`/AppImage/tar.gz/PKGBUILD — `tool/package_linux.sh`.
+- Сборка на `/mnt/c` (drvfs) не работает: медленно и ломаются симлинки Flutter — поэтому
+  релизный скрипт сначала копирует проект в `/root/keqdroid`.
+- Ядра — в `assets/bin/linux/` (там лежит полный набор: keqrnel, xray, sing-box, wireproxy).
+- Proxy работает без root; TUN запрашивает root через `pkexec` при подключении.
+- Упаковка: `release/build_linux.sh` делает tar.gz + deb + AppImage;
+  `tool/package_linux.sh` — то же + `PKGBUILD` для Arch.
 
-## 4. Запуск тестов
+## 4. Тесты и анализ
 
 ```bash
-flutter test                      # весь набор
+flutter analyze                                # должно быть «No issues found!»
+flutter test                                   # весь набор (~24 файла)
 flutter test test/utils/config_gen_test.dart   # один файл
-flutter analyze                   # статический анализ (должен быть «No issues found!»)
 ```
 
-Тесты разложены по зеркалам `lib/`:
+Тесты зеркалят `lib/`: `test/utils/` — генераторы конфигов и парсеры, `test/services/` —
+storage/подписки/апдейтер/пинг, `test/models/`, `test/tunnel/`, `test/widgets/`,
+`test/providers/`. Фикстуры — в `test/helpers/` (`pump_app.dart`, `test_storage.dart`).
 
-```
-test/
-  utils/     — генерация конфигов, парсинг URI/AWG, роутинг
-  services/  — storage, subscriptions, update, ping
-  models/    — настройки ядра, имена серверов, ping-таргеты
-  tunnel/    — разбор статистики сессии
-  widgets/   — навигация, вкладки, индикатор подключения
-  helpers/   — pump_app.dart, test_storage.dart (фикстуры)
-```
+Чистый analyze и зелёные тесты — обязательное условие любого PR: и то и другое ловит
+реальные регрессии, а не для галочки.
 
-Чистый `flutter analyze` и зелёный `flutter test` — обязательное условие любого PR.
+## 5. Пересборка нативных ядер
 
-## 5. Сборка нативных ядер (редко нужно)
-
-Ядра обычно уже лежат собранные в `assets/bin/` и `jniLibs/`. Пересобирать нужно только
-при обновлении версий ядра:
+Обычно не нужна — собранные ядра уже лежат в `assets/bin/` и `jniLibs/`. Когда обновляешь
+версию ядра:
 
 | Скрипт | Что собирает |
 |--------|--------------|
 | `tool/build_amneziawg.ps1` | AmneziaWG-ядро (`wireproxy-awg`) для Windows |
-| `tool/build_linux_native.sh` / `build_linux_wsl.sh` | весь Linux-бандл + ядра |
-| `tool/fetch_xray_geo.ps1` | свежие `geoip.dat` / `geosite.dat` для xray |
-| `tools/amneziawg_android/` | сборка AmneziaWG `.so` под Android |
+| `tool/build_linux_native.sh` | Linux-бандл + ядра на нативном Linux |
+| `tool/fetch_xray_geo.ps1` | свежие `geoip.dat` / `geosite.dat` |
+| `tools/amneziawg_android/` | AmneziaWG `.so` под Android |
 
-> Важно про `xray.exe`/`wireproxy.exe` под Windows: собирать **unstripped** и бандлить в
-> ассеты, **не** запускать из `%TEMP%` — иначе Defender помечает их как угрозу. Подробности —
-> [PITFALLS.md](PITFALLS.md).
+`xray.exe`/`wireproxy.exe` под Windows собирай **unstripped** и не запускай из `%TEMP%` —
+иначе Defender считает их угрозой (см. [PITFALLS.md](PITFALLS.md)).
 
-## 6. Локализация (4 языка: en / ru / de / zh)
+## 6. Локализация (en / ru / de / zh)
 
-- Источник истины — ARB-файлы: `lib/l10n/app_en.arb` (база), `app_ru.arb`, `app_de.arb`,
-  `app_zh.arb`. Конфиг — `l10n.yaml`.
-- Добавил/изменил строку → правишь **все** ARB, затем:
+Источник истины — ARB: `lib/l10n/app_en.arb` (база) и `app_ru/de/zh.arb`. Добавил строку —
+добавь её **во все четыре** файла, иначе на «забытом» языке будет пустой ключ. Генерация
+подтягивается сама при `flutter pub get` / `flutter run` (или вручную `flutter gen-l10n`).
+`app_localizations*.dart` руками не редактируются.
 
-```bash
-flutter gen-l10n        # или просто flutter pub get / flutter run — генерится автоматически
-```
-
-- В коде строки берутся через `AppLocalizations.of(context)!.<ключ>`.
-- Не редактируй вручную `app_localizations*.dart` — они генерируемые.
-
-## 7. Релиз (для мейнтейнера)
+## 7. Релиз
 
 ```powershell
-# собрать APK + Windows-zip, посчитать SHA-256, разложить в release\<версия>\
+# APK + Windows-zip + SHA-256 → release\<версия>\
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
 
 # то же + публикация GitHub-релиза (нужен gh CLI)
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
 ```
 
-- Версия и тег (`vX.Y.Z`) берутся из `version:` в `pubspec.yaml`.
-- **Каждый ассет обязан иметь `<имя>.sha256`** (ASCII без BOM). Встроенный `UpdateService`
-  проверяет хеш и **отклоняет** установку без него (fail-closed). `make_release.ps1`
-  генерирует их сам.
+Правила, которые нельзя нарушать:
 
-## Чек-лист «готов к работе»
-
-- [ ] `flutter doctor` без критичных ошибок
-- [ ] `flutter pub get` отработал
-- [ ] приложение запускается на твоей платформе
-- [ ] `flutter analyze` → No issues found
-- [ ] `flutter test` → все зелёные
-- [ ] прочитал [ARCHITECTURE.md](ARCHITECTURE.md) и [PITFALLS.md](PITFALLS.md)
+- версия и тег `vX.Y.Z` берутся из `version:` в `pubspec.yaml` — это единственный источник;
+- **каждый** ассет несёт сайдкар `<имя>.sha256` (ASCII без BOM): апдейтер fail-closed и без
+  совпавшего хеша обновление не поставит. `make_release.ps1` и `release/gen_sha256.ps1`
+  генерируют сайдкары сами; при ручной заливке — не забудь;
+- имена ассетов фиксированные: `keqdroid-<версия>-android.apk`,
+  `keqdroid-windows-x64-<версия>.zip` (именно такой порядок слов),
+  `keqdroid-<версия>-linux-x64.tar.gz`, `keqdroid_<версия>_amd64.deb`,
+  `keqdroid-<версия>-x86_64.AppImage`;
+- APK перед копированием проверяй через `aapt dump badging | grep versionName` — после
+  упавшей сборки в `build/` остаётся **старый** APK от прошлого успеха.

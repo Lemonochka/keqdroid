@@ -1,7 +1,6 @@
 # Архитектура
 
-Документ объясняет, **как приложение устроено целиком** — чтобы понять поток данных, не
-читая весь код. Карта файлов — в [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md), термины — в
+Карта файлов — в [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md), термины — в
 [GLOSSARY.md](GLOSSARY.md).
 
 ## 1. Картина в одном экране
@@ -38,67 +37,68 @@
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-Главный принцип: **Dart-слой только генерирует конфиги и оркеструет**, а трафик гоняют
-нативные ядра. Один и тот же Dart-код управляет тремя платформами через единый интерфейс
-`TunnelBackend`.
+Главный принцип: Dart-слой только генерирует конфиги и оркеструет, трафик гоняют нативные
+ядра. Один и тот же Dart-код управляет тремя платформами через интерфейс `TunnelBackend`.
 
-## 2. Слои подробнее
+## 2. Слои
 
 ### UI (`lib/screens`, `lib/ui`, `lib/shared`)
-- Три вкладки: **Servers**, **Subscriptions**, **Settings** (`lib/screens/*_tab.dart`).
-- На мобильном — `VpnHomeScreen` (PageView с тремя вкладками, `lib/main.dart`).
-- На десктопе — `DesktopHomeScreen` (`lib/ui/desktop/`) с сайдбаром, и **трей-меню**
-  (`tray_menu_screen.dart`). Трей переиспользует то же окно (см. [PITFALLS.md](PITFALLS.md)).
-- Общие виджеты и тема — `lib/shared/ui/` (`app_theme.dart`, `bottom_nav.dart`,
-  `update_dialog.dart`). Material 3, светлая/тёмная тема, dynamic color.
+- Три вкладки: **Servers**, **Subscriptions**, **Settings** (`lib/screens/*_tab.dart`);
+  под-экраны настроек разложены по `lib/screens/settings/` (роутинг, split tunnel, хоткеи,
+  ядро, бэкап, LAN и т.д.), виджеты списка серверов — по `lib/screens/servers/`.
+- На мобильном — `VpnHomeScreen` (PageView, `lib/main.dart`), на десктопе —
+  `DesktopHomeScreen` (`lib/ui/desktop/`) с сайдбаром и трей-меню
+  (`tray_menu_screen.dart` — это то же окно, суженное, см. [PITFALLS.md](PITFALLS.md)).
+- Тема и общие виджеты — `lib/shared/ui/`. Material 3, светлая/тёмная, dynamic color.
 
 ### State (`lib/providers`)
-Состояние — на **Riverpod 3**. Ключевые провайдеры (`providers.dart`):
+Riverpod 3. Ключевые провайдеры (`providers.dart`):
 
-| Провайдер | Тип | За что отвечает |
-|-----------|-----|-----------------|
-| `storageProvider` | `Provider` | доступ к `StorageService` (переопределяется в `main.dart`) |
-| `serversProvider` | `NotifierProvider` | список серверов, активный сервер, пинги |
-| `subscriptionsProvider` | `AsyncNotifierProvider` | подписки, авто-обновление (таймер + WorkManager/onResume) |
-| `vpnStateProvider` | стрим состояния | статус подключения (`VpnStatus`), активный режим, статистика |
-| `settingsNotifierProvider` | `NotifierProvider` | `AppSettings` (режим, порты, DNS, kill switch…) |
-| `routingRulesProvider` | `NotifierProvider` | правила маршрутизации |
-| `splitTunnelingProvider` | `NotifierProvider` | include/exclude приложений/процессов |
-| `updateInfoProvider` | `FutureProvider` | проверка обновлений из GitHub |
-| `vpnEngineProvider` | `Provider` | синглтон `VpnEngine` |
+| Провайдер | За что отвечает |
+|-----------|-----------------|
+| `storageProvider` | доступ к `StorageService` (переопределяется в `main.dart`) |
+| `serversProvider` | список серверов, активный сервер, пинги |
+| `subscriptionsProvider` | подписки и их авто-обновление (таймер + WorkManager/onResume) |
+| `vpnStateProvider` | статус подключения (`VpnStatus`), режим, статистика |
+| `settingsNotifierProvider` | `AppSettings` (режим, порты, DNS, kill switch…) |
+| `routingRulesProvider` | правила маршрутизации |
+| `splitTunnelingProvider` | include/exclude приложений/процессов |
+| `updateInfoProvider` | проверка обновлений из GitHub |
+| `vpnEngineProvider` | синглтон `VpnEngine` |
 
-Чисто UI-состояние (какие группы свёрнуты, индексы вкладок, идёт ли пинг) вынесено в
-`lib/providers/ui_state_providers.dart`.
+Чисто UI-состояние (свёрнутость групп, индексы вкладок, идёт ли пинг) вынесено в
+`ui_state_providers.dart` — оно не переживает перезапуск и не должно тащить за собой
+rebuild'ы тяжёлых поддеревьев.
 
 ### Services / Domain (`lib/services`, `lib/utils`, `lib/models`)
-Бизнес-логика без UI:
-- **`StorageService`** — персист в `SharedPreferences` (серверы, подписки, правила,
-  настройки, активный сервер, HWID). Загрузка устойчива к битым записям — одна повреждённая
-  запись не уносит весь список.
-- **`SubscriptionService`** — скачивание/парсинг подписок, дедуп серверов, SSRF-фильтр URL,
-  HWID-заголовки, лимиты трафика из `X-Subscription-Userinfo`.
-- **`UpdateService`** — проверка GitHub Releases, скачивание, проверка SHA-256, портативное
-  обновление Windows на месте.
-- **`PingService`** / **`EphemeralXrayPing`** — TCP/ICMP/URL/speed-пинг серверов.
-- **`VpnEngine`** — фасад над `TunnelBackend` (см. ниже).
-- Фоновые сервисы: `BackgroundService` (Android WorkManager), `DesktopBackgroundService`,
-  `LinuxBackgroundService`, `NotificationService`.
-- **`lib/utils/`** — чистые функции: генерация конфигов и парсинг (см. раздел 4).
-- **`lib/models/`** — данные: `AppSettings`, `ServerItem`, `Subscription`, `RoutingRule`,
-  `XrayCoreSettings` и т.д. с `fromJson/toJson`.
-
-### Tunnel (`lib/tunnel`)
-Платформенная абстракция туннеля. См. раздел 3.
+- **`StorageService`** — персист в `SharedPreferences`. Читает списки устойчиво к битым
+  записям (одна повреждённая запись пропускается с логом, а не уносит весь список);
+  read-modify-write циклы сериализованы, чтобы фоновые изоляты не откатывали кэш.
+- **`SubscriptionService`** — скачивание и парсинг подписок (подробно в §6).
+- **`UpdateService`** — GitHub Releases: сравнение версий и дат публикации, скачивание,
+  проверка SHA-256 (fail-closed), на Windows — обновление zip на месте
+  (`WindowsZipUpdater`).
+- **`PingService`** / **`EphemeralXrayPing`** — TCP/ICMP/URL/speed-пинг; URL-пинг ходит
+  через эфемерный экземпляр ядра с HTTP-инбаундом (не SOCKS — Dart его не умеет,
+  см. [PITFALLS.md](PITFALLS.md)).
+- **`VpnEngine`** — фасад над `TunnelBackend`; **`TunnelSessionBuilder`** собирает
+  `TunnelSessionRequest` из настроек.
+- **`HotkeyService`** — диспетчер хоткеев (глобальные на Windows через нативный
+  `windows_hotkeys.cpp`, внутриоконные на Linux); **`DebugLogService`** — экспорт логов.
+- Фон: `BackgroundService` (Android WorkManager), `DesktopBackgroundService` /
+  `LinuxBackgroundService` (таймер, пока приложение открыто), `NotificationService`.
+- **`lib/utils/`** — чистые функции: генераторы конфигов и парсеры (§4).
+- **`lib/models/`** — данные с `fromJson`/`toJson`: `AppSettings`, `ServerItem`,
+  `Subscription`, `RoutingRule`, `XrayCoreSettings`, `HotkeyConfig` и т.д.
 
 ### Native + Cores
-- **Android**: Kotlin `KeqdisVpnService` (VpnService + tun2socks), `MainActivity` (мост
-  MethodChannel/EventChannel), Quick Settings tile, статус-провайдер.
-- **Windows**: C++ runner `windows/runner/` — системный прокси, трей, список процессов,
-  жизненный цикл ядра, счётчики трафика.
-- **Linux**: запуск ядер процессами, TUN через `pkexec`.
-- **Ядра** — внешние бинарники (см. [GLOSSARY.md](GLOSSARY.md)).
+- **Android**: Kotlin `KeqdisVpnService` (VpnService + tun2socks), `MainActivity`
+  (MethodChannel/EventChannel `keqdis_vpn_channel`), Quick Settings tile, статус-провайдер.
+- **Windows**: C++ runner — системный прокси, трей, глобальные хоткеи, позиция окна,
+  список процессов, жизненный цикл ядра, счётчики трафика.
+- **Linux**: запуск ядер процессами, TUN через `pkexec`, список процессов из `/proc`.
 
-## 3. Абстракция туннеля (сердце приложения)
+## 3. Абстракция туннеля
 
 ```
 UI/providers
@@ -114,98 +114,131 @@ TunnelBackend (интерфейс, lib/tunnel/tunnel_backend.dart)
    └── LinuxTunnelBackend     → спавн процессов ядра + pkexec для TUN
 ```
 
-`TunnelBackend` (единый контракт для всех платформ):
-- `startSession(TunnelSessionRequest)` / `stopSession()` — старт/стоп туннеля;
-- `stateStream` — поток `VpnState` (статус, режим, статистика);
-- `fetchSocksCredentials()` — креды локального SOCKS;
-- `requestTunnelPermission()` — VPN-разрешение (Android) / проверка админ-прав (десктоп);
-- `xrayUrlTestBatch` / `xraySpeedTestBatch` — пинг/спидтест через ядро;
-- `getInstalledApps` / `getAppIcon` — для split tunneling.
+Контракт `TunnelBackend`: `startSession(TunnelSessionRequest)` / `stopSession()`,
+`stateStream` (поток `VpnState`), `fetchSocksCredentials()`, `requestTunnelPermission()`
+(VPN-разрешение на Android / проверка админ-прав на десктопе), `xrayUrlTestBatch` /
+`xraySpeedTestBatch` (пинг через ядро), `getInstalledApps` / `getAppIcon` (split tunnel).
 
-**`TunnelSessionRequest`** (`lib/tunnel/tunnel_session_request.dart`) — всё, что нужно для
-запуска: режим (`ConnectionMode`), бэкенд (`VpnBackend`), `xrayConfig`, опционально
-`singboxConfig`/`awgConfig`, порты, split-списки, `systemProxy`, `killSwitch`, `coreEngine`.
-На Android сериализуется в аргументы MethodChannel.
+**`TunnelSessionRequest`** — всё, что нужно для запуска: режим (`ConnectionMode`), бэкенд
+(`VpnBackend`), `xrayConfig`, опционально `singboxConfig`/`awgConfig`, порты,
+split-списки, `systemProxy`, `killSwitch`, `coreEngine`. На Android сериализуется в
+аргументы MethodChannel.
 
-### Два «измерения» режима
+### Три «измерения» режима
 
-1. **`ConnectionMode`** — `proxy` или `tun`.
-   - `proxy`: локальный SOCKS/HTTP от xray + (Windows) системный прокси. Без админ-прав.
-   - `tun`: sing-box владеет TUN-устройством, аплинк — локальный SOCKS xray. Весь трафик в
-     туннель. Требует админ/root на десктопе. **Android — всегда tun** (через VpnService).
-
-2. **`VpnBackend`** — `xray` или `awg`.
-   - `xray`: обычный пайплайн (xray → SOCKS → tun2socks/sing-box).
-   - `awg`: AmneziaWG, ядро само владеет TUN/SOCKS (без xray-обёртки).
-
-### `coreEngine`: `chain` vs `keqrnel`
-- **`chain`** (дефолт): два процесса — `xray` (аплинк) → `sing-box` (TUN).
-- **`keqrnel`**: единый бинарь, заменяющий связку. `KeqrnelConfig.fromChain()` берёт
-  sing-box TUN-конфиг и подменяет socks-outbound `proxy` на встроенный xray-движок
-  (`{"type":"xray","xray": <xrayConfig>}`). Меньше RAM и размер — ради чего ядра и слили.
+1. **`ConnectionMode`**: `proxy` | `tun`.
+   - `proxy` — локальный SOCKS/HTTP + (Windows) системный прокси. Без админ-прав.
+   - `tun` — виртуальный адаптер, весь трафик ОС в туннеле. Админ/root на десктопе.
+     **Android — всегда tun** (VpnService), выбора там нет.
+2. **`VpnBackend`**: `xray` | `awg`. AmneziaWG идёт мимо xray-пайплайна — ядро само
+   владеет TUN/SOCKS.
+3. **`coreEngine`**: `keqrnel` (дефолт) | `chain`.
+   - **`keqrnel`** — единый бинарь: sing-box-хост со встроенным xray-движком.
+     `KeqrnelConfig.fromChain()` берёт sing-box TUN-конфиг и подменяет socks-outbound
+     `proxy` на `{"type":"xray","xray": <xrayConfig>}`. Один процесс вместо двух, меньше
+     RAM — ради этого ядра и слили.
+   - **`chain`** — классическая связка из двух процессов: `xray` (аплинк) → `sing-box`
+     (TUN). На Linux оба бинарника в бандле; на Windows в поставке их **нет** — chain
+     заработает, только если положить `xray.exe`/`sing-box.exe` рядом с приложением.
 
 ## 4. Генерация конфигов (`lib/utils`)
 
-Это место, где Dart превращает ссылку сервера + настройки в JSON для ядра. Самая частая
-область багов и правок.
+Здесь ссылка сервера + настройки превращаются в JSON для ядра — сюда чаще всего и
+приходится лезть при багах совместимости с провайдерами.
 
 | Файл | Что генерирует |
 |------|----------------|
-| `config_gen.dart` (`ConfigGeneratorV2`) | **xray-конфиг** из `vless://`/`vmess://`/`trojan://`/`ss://`/`hysteria2://`. Outbound по протоколу + inbounds (SOCKS/HTTP) + DNS + **routing rules**. |
-| `singbox_tun_config.dart` | **sing-box TUN-конфиг** для десктопного TUN: TUN-inbound, sniffing, маршрутизация по процессам (split tunnel). |
-| `keqrnel_config.dart` | **единый keqrnel-конфиг** из chain (sing-box + встроенный xray). |
-| `wireproxy_config.dart` | **wireproxy-конфиг** для AmneziaWG proxy-режима на Windows. |
-| `routing_entry.dart` | разбивает смешанные списки правил на домены / IP-CIDR / `geoip:`. |
-| `routing_presets.dart` | готовые списки (direct/proxy/block). |
-| `awg_profile.dart`, `hysteria_uri.dart` | парсинг AmneziaWG `.conf` и Hysteria-ссылок. |
+| `config_gen.dart` (`ConfigGeneratorV2`) | xray-конфиг из `vless://`/`vmess://`/`trojan://`/`ss://`/`hysteria2://`: outbound по протоколу, SOCKS/HTTP-инбаунды, DNS, routing rules |
+| `singbox_tun_config.dart` | sing-box TUN-конфиг для десктопного TUN: TUN-inbound, sniffing, split tunnel по процессам |
+| `keqrnel_config.dart` | единый keqrnel-конфиг из chain |
+| `wireproxy_config.dart` | wireproxy-конфиг (AmneziaWG в proxy-режиме) |
+| `routing_entry.dart` | разбор смешанных списков правил: домены / IP-CIDR / `geoip:` |
+| `routing_presets.dart` | готовые списки direct/proxy/block |
+| `awg_profile.dart`, `hysteria_uri.dart` | парсинг AmneziaWG `.conf` и Hysteria-ссылок |
+| `subscription_url.dart`, `subscription_diff.dart` | нормализация URL подписок, дифф серверов между обновлениями |
 
-Маршрутизация в xray: правила имеют поля `domain`, `ip`, `outboundTag` (`direct`/`proxy`/
-`block`). **GeoIP в xray задаётся через `ip: ["geoip:ru"]`, отдельного поля `geoip` нет.**
+Целевое ядро — **xray 26.x**, у него свои причуды, уже учтённые в `config_gen.dart`:
+пустой `fingerprint` отвергается, hysteria2 использует network `"hysteria"` (не `"quic"`),
+reality требует валидный utls-fingerprint, GeoIP задаётся только внутри поля `ip`
+(`ip: ["geoip:ru"]` — отдельного поля `geoip` нет). Если в Direct-списке есть свои
+IP/CIDR-диапазоны, `domainStrategy` поднимается `AsIs → IPIfNonMatch`, чтобы
+CONNECT-по-имени, чей адрес резолвится в диапазон, ушёл direct.
 
-> Целевое ядро — **xray 26.x**. У него свои причуды: пустой `fingerprint` отвергается,
-> hysteria2 использует network `"hysteria"` (а не `"quic"`), reality требует валидный
-> utls-fingerprint. Всё это уже учтено в `config_gen.dart` — см. комментарии там.
-
-## 5. Сквозной пример: что происходит при нажатии «Подключить»
+## 5. Что происходит при нажатии «Подключить»
 
 `VpnStateNotifier.connect()` в `lib/providers/providers.dart`:
 
 1. Защита от двойного коннекта (`_connectInFlight`).
-2. Берёт активный сервер; если его нет — состояние `error`.
+2. Берёт активный сервер; нет сервера — состояние `error`.
 3. `serversProvider.setActive(server)`, статус → `connecting`.
-4. Читает `AppSettings`, split-списки, считает `routingMode` и список процессов (Windows).
-5. Android — запрашивает VPN-разрешение; Windows TUN — проверяет админ-права (иначе fallback
-   в Proxy при автостарте).
+4. Читает `AppSettings` и split-списки, считает `routingMode` и список процессов (Windows).
+5. Android — запрашивает VPN-разрешение; Windows TUN — проверяет админ-права (при
+   автостарте без прав тихо откатывается в Proxy).
 6. `engine.fetchSocksCredentials()` — креды локального SOCKS из нативного сервиса.
-7. Резолвит домен сервера в IP (чтобы direct-правило шло по IP, а не по домену).
-8. `ConfigGeneratorV2.generateConfig(...)` → xray-конфиг (для AWG пропускается).
-9. `TunnelSessionBuilder.build(...)` → `TunnelSessionRequest`. Для десктопного TUN тут же
-   генерится `singboxConfig`.
-10. `engine.startSession(request)` → платформенный `TunnelBackend` поднимает ядро/VpnService.
-11. `engine.getCurrentState()` → статус `connected`, обновляется `vpnStateProvider`.
+7. Резолвит домен сервера в IP, чтобы direct-правило для него работало по IP.
+8. `ConfigGeneratorV2.generateConfig(...)` → xray-конфиг (для AWG шаг пропускается).
+9. `TunnelSessionBuilder.build(...)` → `TunnelSessionRequest`; для десктопного TUN здесь
+   же генерится sing-box/keqrnel-конфиг.
+10. `engine.startSession(request)` — платформенный бэкенд поднимает ядро/VpnService.
+11. `engine.getCurrentState()` → `connected`, `vpnStateProvider` обновляется.
 12. Ошибки логируются, состояние → `error`, исключение пробрасывается наверх.
 
-`vpnStateProvider` слушает `stateStream` бэкенда, и UI реактивно обновляется.
+Дальше UI живёт на `stateStream` бэкенда. Важно: статус приходит из нескольких
+независимых источников (поток из натива, snapshot при resume, QS-плитка на Android,
+onRevoke от системы) — при правках синхронизации статуса проверяй все пути, они уже
+не раз расходились.
 
-## 6. Подписки, обновления, хранение (коротко)
+## 6. Подписки
 
-- **Подписки**: `SubscriptionService.fetchRaw()` качает URL (один retry, HWID-фолбэк),
-  парсит конфиги, дедуп по «стабильному ключу» (`_stableKey`, устойчив к ротации
-  reality-параметров). Авто-обновление: Android — WorkManager (фон) + onResume; десктоп —
-  таймер, пока приложение открыто.
-- **Обновления**: `UpdateService.checkForUpdate()` ходит в GitHub API (нужен `User-Agent`,
-  иначе 403), сравнивает версии **и даты публикации**, скачивает ассет под платформу,
-  **проверяет SHA-256** (fail-closed), на Windows применяет zip на месте
-  (`WindowsZipUpdater`). При активном VPN на десктопе трафик идёт через локальный HTTP-прокси
-  (Dart не умеет SOCKS в `HttpClient`).
-- **Хранение**: `StorageService` поверх `SharedPreferences`. На Windows файлы — в
-  `%APPDATA%\Roaming\com.keqdroid\keqdroid\`, не рядом с exe.
+`SubscriptionService.fetchRaw(url, userAgent: ...)` — конвейер с несколькими уровнями
+фолбэков, потому что панели провайдеров ведут себя очень по-разному:
 
-## 7. Точки входа и инициализация
+1. **URL-фильтр** (`isSafeUrl`): только http/https, отсекаются localhost, приватные
+   диапазоны и облачные metadata-адреса — защита от SSRF через подписку.
+2. **Первый запрос** идёт с сохранённым для этой подписки User-Agent, а если его нет — с
+   UA приложения (`keqdroid/<версия>`). Многие панели маршрутизируют ответ по UA:
+   клиентам отдают payload, браузерам — HTML-страницу подписки.
+3. **Ответ 200 + payload** — парсинг: plain-список URI, base64, варианты вперемешку
+   (`_parseBody` гоняется в отдельном изоляте — тела бывают большими, а обновление
+   дёргается на onResume). Лимиты трафика и срок — из заголовка
+   `X-Subscription-Userinfo`, с фолбэком на «служебные ноды» в теле.
+4. **Ответ 200 + HTML** — перебор известных клиентских UA (свой первым, браузерный —
+   последним резервом); если payload так и не отдали, конфиги выковыриваются из самого
+   HTML или страница краулится на прямые ссылки подписки.
+5. **HTTP-ошибка (4xx/5xx)** — сначала попытка распарсить тело ошибки (некоторые панели
+   кладут payload в не-200 ответ), затем тот же UA-перебор, затем запрос нативным
+   `HttpClient` с браузерными заголовками (часть CDN/WAF режет именно Dio) и HWID-фолбэк
+   через query-параметр.
+6. **Успех** — сработавший UA сохраняется в `Subscription.userAgent`, и следующее
+   обновление обходится одним запросом. Если сохранённый UA перестал работать, перебор
+   запускается заново и перезаписывает его.
+
+Дедуп серверов между обновлениями — по «стабильному ключу» (`_stableKey`: схема +
+uuid/пароль + host + port), устойчивому к ротации reality-параметров (`sid`/`spx`/`pbk`)
+и смене имени — иначе при каждом обновлении терялись бы пинги и избранное.
+
+Авто-обновление: Android — WorkManager (работает и после убийства приложения) + onResume;
+десктоп — таймер, пока приложение открыто (свёрнутое в трей считается открытым). Батчи по
+3 подписки, чтобы не упереться в сеть и rate-limit панелей.
+
+## 7. Обновления приложения и хранение
+
+- `UpdateService.checkForUpdate()` ходит в GitHub API (без `User-Agent` тот отвечает 403),
+  сравнивает версии **и даты публикации**, качает ассет своей платформы, сверяет SHA-256 с
+  сайдкаром (нет сайдкара или не совпал — обновление не ставится). Windows-zip
+  распаковывается на место с перезапуском (`WindowsZipUpdater`). При активном VPN на
+  десктопе трафик апдейтера заворачивается в локальный **HTTP**-прокси — SOCKS Dart-овский
+  `HttpClient` не умеет.
+- `StorageService` — поверх `SharedPreferences`; на Windows файлы лежат в
+  `%APPDATA%\com.keqdroid\keqdroid\`, не рядом с exe.
+
+## 8. Точки входа
 
 `lib/main.dart` → `main()`:
-- оборачивает всё в `runZonedGuarded` (ловит необработанные ошибки в Crashlytics);
+- всё обёрнуто в `runZonedGuarded` — необработанные ошибки уходят в Crashlytics (Android);
 - Android: Firebase, `BackgroundService` (WorkManager), `NotificationService`;
-- Windows: `PlatformBootstrap.initialize()` (окно, трей, автозапуск);
-- Linux: `DesktopBackgroundService`, single-instance, очистка stale-прокси, окно+трей;
-- создаёт `StorageService`, выбирает `home` (desktop vs mobile), запускает `ProviderScope`.
+- Windows: `PlatformBootstrap.initialize()` — окно (с восстановлением позиции/размера),
+  трей, автозапуск, регистрация глобальных хоткеев;
+- Linux: `DesktopBackgroundService`, single-instance, очистка stale-прокси, окно + трей;
+- создаётся `StorageService`, выбирается home-экран (desktop/mobile), запускается
+  `ProviderScope`.

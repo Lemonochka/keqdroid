@@ -1,57 +1,49 @@
 # Android vs Windows
 
-How the two platforms compare, feature by feature.
+Сравнение платформ по фичам — что где есть и почему различия намеренные.
 
-| Feature | Android | Windows |
-|---------|---------|---------|
-| VPN connect | TUN (VpnService + Xray + tun2socks) | Proxy by default (Xray + system proxy); TUN is Xray → sing-box |
-| Split tunneling | per app (packages) | per process (TUN only) |
-| TCP / UDP ping | yes | yes |
-| URL ping | native ephemeral Xray | Dart `EphemeralXrayPing` (xray.exe) |
-| Xray debug logs | native buffer | session stdout/stderr export |
-| Proxy debug logs | — | yes |
-| Subscriptions | foreground + WorkManager | foreground + a timer while the app is open |
-| Live speed / session stats | EventChannel from VpnService | TUN: adapter counters; Proxy: Xray StatsService API |
-| App updates | GitHub `v*` release (`.apk`) | same release; the portable `.zip` is applied in place (extract, replace, restart) |
-| Background VPN / notifications | yes | no — the desktop has no VpnService |
-| System proxy | — | yes, plus the Firefox `user.js` helper |
+| Фича | Android | Windows |
+|------|---------|---------|
+| Подключение | всегда TUN (VpnService + xray + tun2socks) | по умолчанию Proxy (ядро + системный прокси); TUN — wintun-адаптер |
+| Split tunneling | по пакетам приложений | по именам процессов, только в TUN |
+| TCP / ICMP пинг | да | да |
+| URL-пинг / спидтест | нативный эфемерный xray | Dart `EphemeralXrayPing` поверх ядра |
+| Логи xray | нативный буфер | экспорт stdout/stderr сессии |
+| Отладочные логи прокси | — | да (`proxy_debug_log`) |
+| Обновление подписок | foreground + WorkManager (работает после убийства приложения) | foreground + таймер, пока приложение открыто (в трее — открыто) |
+| Живой трафик/статистика | EventChannel из VpnService | TUN: счётчики адаптера; Proxy: xray StatsService (`127.0.0.1:10985`) |
+| Обновление приложения | `.apk` из GitHub-релиза | тот же релиз; портативный `.zip` распаковывается на место с перезапуском |
+| Хоткеи | — | глобальные (RegisterHotKey), настраиваются в приложении |
+| Окно | — | сворачивание в трей, восстановление позиции/размера |
+| Уведомления VPN | foreground-уведомление, тап = подключить | нет — на десктопе нет VpnService |
+| Системный прокси | — | да + Firefox-хелпер (`user.js`) |
+| QR-импорт серверов/подписок | да (`mobile_scanner`) | нет — импорт из буфера/файла |
+| Quick Settings | плитка в шторке | — |
 
-## Only on Windows
+## Намеренные различия
 
-- the Proxy / TUN connection mode UI
-- system proxy and the Firefox helper
-- the process list for split tunneling
-- proxy debug logs
-- a side-by-side server layout on wide windows
+- **Split tunneling в Proxy-режиме на Windows ≠ per-app VPN Android.** Per-process
+  маршрутизация возможна только когда трафик идёт через TUN; в Proxy списки игнорируются
+  (с предупреждением в лог). Нужен аналог Android-поведения — включай TUN.
+- **Фон.** Windows/Linux обновляют подписки по таймеру, пока процесс жив; полностью
+  закрытое приложение ничего не делает. На Android WorkManager будит обновление даже
+  после убийства процесса (минимум раз в 15 минут по ограничению системы).
+- **Статистика в Proxy-режиме** приходит из xray StatsService API, а не со счётчиков
+  адаптера — адаптер в Proxy-режиме не используется.
 
-## Only on Android
+## Десктопная оболочка Windows
 
-- the VpnService permission flow
-- package-based split tunneling
-- tapping the notification to connect
-- the foreground VPN notification
-- the Quick Settings tile
-- WorkManager refresh when the app is killed
+- Закрытие окна прячет его в трей. ЛКМ/двойной клик по иконке — вернуть окно; ПКМ —
+  компактное меню: подключить/отключить, список серверов, Proxy/TUN, открыть, выход.
+  Меню — это то же окно приложения в суженном виде (см. [PITFALLS.md](PITFALLS.md)).
+- Переключение в TUN из трея без админ-прав открывает полное окно с тем же диалогом
+  «перезапустить от администратора», что и в сайдбаре.
+- Глобальные хоткеи (подключение, TUN, лучший пинг, показать/скрыть окно) регистрируются
+  нативно и работают при свёрнутом окне; на Linux те же действия доступны, но только пока
+  окно в фокусе.
 
-## Where the platforms differ on purpose
+## Чего пока нет
 
-- Split tunneling in Proxy mode on Windows isn't the same as Android's per-app
-  VPN. Use TUN mode if you need that.
-- Background refresh on Windows runs on a timer and when the app resumes, not
-  while it's fully closed.
-- Proxy-mode traffic stats come from Xray's StatsService on `127.0.0.1:10985`.
-
-## The Windows desktop shell
-
-- Closing the window hides it to the tray. Left-click (or double-click) the tray
-  icon to bring it back; right-click opens a small themed menu — connect/
-  disconnect, the server list, Proxy/TUN, open the app, exit.
-- The tray icon shows up the first time you close to tray.
-- Switching to TUN from the tray without admin rights opens the full app and
-  shows the same "restart as administrator" dialog as the sidebar.
-
-## Not done yet
-
-- an MSI/MSIX installer instead of the in-place zip update
-- a Windows toast with subscription-refresh results
-- a tray tooltip that reflects the connected state
+- MSI/MSIX-инсталлятора — обновление остаётся портативным zip-на-месте;
+- Windows-уведомления о результатах фонового обновления подписок;
+- тултипа у трей-иконки со статусом подключения.

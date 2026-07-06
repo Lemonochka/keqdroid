@@ -1,28 +1,41 @@
-# Windows tunnel architecture
+# Туннель на Windows
 
-## Cores
+## Процессы по режимам
 
-| Mode | Processes | What happens |
-|------|-----------|--------------|
-| Proxy | `xray.exe` | Everything goes through Xray. Chrome and Edge follow the Windows system proxy; Firefox gets an HTTP proxy through `user.js` (restart it after connecting). |
-| TUN | `xray.exe` → `sing-box.exe` | sing-box owns the TUN device and uses Xray's SOCKS5 as its upstream. |
+| Режим | Процессы (дефолт, `coreEngine: keqrnel`) | Что происходит |
+|-------|------------------------------------------|----------------|
+| **Proxy** | `keqrnel.exe` | ядро поднимает локальный SOCKS/HTTP; Chrome/Edge идут через системный прокси Windows, Firefox — через правку `user.js` (`firefox_proxy_helper`, нужен его перезапуск после подключения) |
+| **TUN** | `keqrnel.exe` | ядро создаёт wintun-адаптер и само же терминирует протокол встроенным xray-движком — один процесс на всё |
 
-In TUN mode the sing-box `proxy` outbound points at `127.0.0.1:<localPort>` and
-reuses the SOCKS5 username and password from the generated Xray inbound.
+С `coreEngine: chain` вместо keqrnel работает классическая связка `xray.exe` →
+`sing-box.exe`: sing-box владеет TUN-устройством, его `proxy`-outbound смотрит на
+`127.0.0.1:<localPort>` с кредами SOCKS-инбаунда из сгенерированного xray-конфига.
+В поставку эти два бинарника **не входят** — chain на Windows заработает, только если
+положить их рядом с приложением (см. [`assets/bin/windows/README.md`](../assets/bin/windows/README.md)).
 
-## Where the code lives
+AmneziaWG (`VpnBackend.awg`) идёт мимо обоих вариантов: в Proxy его обслуживает
+`wireproxy.exe`, в TUN ядро само владеет адаптером.
 
-- `lib/tunnel/` — `TunnelBackend` and the Android/Windows implementations
-- `lib/utils/singbox_tun_config.dart` — builds the sing-box TUN JSON
-- `lib/services/tunnel_session_builder.dart` — builds `TunnelSessionRequest`
-- `lib/services/vpn_engine.dart` — the facade the UI talks to
+## Где код
 
-## Native (Windows)
+- `lib/tunnel/windows_tunnel_backend.dart` — реализация `TunnelBackend`: спавн процессов,
+  ожидание готовности, статистика;
+- `lib/tunnel/windows_core_paths.dart` — резолв путей к ядрам/geo (рядом с exe);
+- `lib/utils/singbox_tun_config.dart` — sing-box TUN-JSON;
+- `lib/utils/keqrnel_config.dart` — склейка sing-box-конфига со встроенным xray;
+- `lib/services/tunnel_session_builder.dart` — сборка `TunnelSessionRequest`;
+- `lib/services/vpn_engine.dart` — фасад, с которым говорит UI.
 
-`windows/runner/tunnel_channel_handler.cpp` sets the system proxy via
-`INTERNET_OPTION_PER_CONNECTION_OPTION`. It fills `DefaultConnectionSettings` so
-the Windows Settings page shows the proxy, sets `ProxyServer`
-(`http=;https=;socks=`) for Chromium, imports the WinHTTP config, and checks for
-elevation before starting TUN.
+## Нативная часть (`windows/runner/`)
 
-For how this lines up with the Android side, see WINDOWS_ANDROID_PARITY.md.
+`tunnel_channel_handler.cpp` ставит системный прокси через
+`INTERNET_OPTION_PER_CONNECTION_OPTION`: заполняет `DefaultConnectionSettings` (чтобы
+прокси был виден на странице настроек Windows), выставляет `ProxyServer`
+(`http=;https=;socks=`) для Chromium, импортирует конфиг в WinHTTP и проверяет elevation
+перед стартом TUN. Жизненный цикл процессов ядра — `windows_core_lifecycle.cpp`, счётчики
+трафика адаптера — `windows_traffic_stats.cpp`.
+
+Статистика в Proxy-режиме берётся не с адаптера, а из xray StatsService API на
+`127.0.0.1:10985` (`lib/tunnel/xray_session_stats.dart`).
+
+Сопоставление с Android — в [WINDOWS_ANDROID_PARITY.md](WINDOWS_ANDROID_PARITY.md).

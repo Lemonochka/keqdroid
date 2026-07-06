@@ -1,133 +1,138 @@
 # Карта проекта
 
-«Где что лежит» — чтобы быстро находить место для правки. Как это всё связано — в
-[ARCHITECTURE.md](ARCHITECTURE.md).
+«Где что лежит». Как это связано между собой — в [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Верхний уровень
 
 ```
 keqdroid/
-├── lib/                 ← весь Dart-код приложения (см. ниже)
+├── lib/                 ← весь Dart-код (см. ниже)
 ├── android/             ← нативный Android (Kotlin VpnService + Gradle)
 ├── windows/             ← нативный Windows runner (C++)
 ├── linux/               ← нативный Linux runner + CMake
-├── ios/                 ← заготовка iOS (не поддерживается активно)
+├── ios/                 ← заготовка iOS (не поддерживается)
 ├── assets/              ← иконки, сплэш, нативные ядра (assets/bin/*)
-├── test/               ← тесты (зеркалят lib/)
-├── tool/                ← скрипты сборки/релиза (.ps1 и .sh)
-├── tools/               ← вспомогательные сборки (amneziawg_android)
+├── test/                ← тесты (зеркалят lib/)
+├── tool/                ← скрипты сборки ядер и релиза
+├── tools/               ← сборка AmneziaWG .so под Android
+├── release/             ← релизные скрипты (Linux-сборка в WSL, SHA-256) и артефакты
 ├── docs/                ← эта документация
 ├── l10n.yaml            ← конфиг генерации локализаций
 ├── pubspec.yaml         ← зависимости, версия, ассеты
 └── analysis_options.yaml← правила линтера
 ```
 
-> В корне валяются `*.log` файлы прошлых сборок — это мусор, не часть проекта.
-
 ## `lib/` — Dart-код
 
 ```
 lib/
-├── main.dart            ← точка входа: bootstrap, ProviderScope, выбор home-экрана
+├── main.dart            ← bootstrap, ProviderScope, выбор home-экрана
+├── split_tunneling_screen.dart ← выбор приложений/процессов для split tunnel
 │
-├── app/                 ← корневой MaterialApp
-│   └── app.dart           тема, пресеты тем, локаль, маршрут home
+├── app/
+│   └── app.dart           MaterialApp: тема, пресеты, локаль
 │
 ├── core/                ← инфраструктура без UI
 │   ├── app_logger.dart    единый логгер (developer.log + Crashlytics)
-│   ├── exceptions.dart    доменные исключения (StorageException, VpnException...)
-│   └── crashlytics_*.dart репортер крэшей (android/io/stub — условный импорт)
+│   ├── exceptions.dart    доменные исключения (StorageException, VpnException…)
+│   └── crashlytics_reporter*.dart  репортер крэшей (android/io/stub — условный импорт)
 │
 ├── models/              ← данные + (де)сериализация
-│   ├── app_settings.dart      ВСЕ настройки приложения (режим, порты, DNS, kill switch)
+│   ├── app_settings.dart      все настройки приложения (режим, порты, DNS, kill switch)
 │   ├── xray_core_settings.dart настройки ядра xray (DNS, log level, domain strategy, xmux)
-│   ├── server_item.dart       один сервер (raw config + метаданные + парсинг имени/адреса)
-│   ├── subscription.dart      подписка (url, имя, трафик, даты)
+│   ├── server_item.dart       один сервер: raw-ссылка + метаданные + парсинг имени/адреса
+│   ├── subscription.dart      подписка: url, имя, трафик, даты, рабочий User-Agent
 │   ├── routing_rule.dart      правило маршрутизации
+│   ├── hotkey_config.dart     привязки хоткеев
 │   ├── ping_test_config.dart  настройки и пресеты URL/speed-пинга
-│   ├── server_name_utils.dart извлечение страны/флага/чистого имени из названия сервера
+│   ├── server_name_utils.dart страна/флаг/чистое имя из названия сервера
 │   └── app_info.dart          установленное приложение (для split tunnel)
 │
 ├── providers/           ← состояние (Riverpod)
-│   ├── providers.dart         основные провайдеры (servers, subscriptions, vpnState, settings…)
-│   └── ui_state_providers.dart чисто UI-состояние (свёрнутость, индексы вкладок, флаги пинга)
+│   ├── providers.dart         servers, subscriptions, vpnState, settings, routing…
+│   └── ui_state_providers.dart  чисто UI-состояние (свёрнутость, вкладки, флаги пинга)
 │
 ├── services/            ← бизнес-логика
-│   ├── vpn_engine.dart        фасад над TunnelBackend (то, с чем говорит UI)
-│   ├── storage_service.dart   персист в SharedPreferences (устойчив к битым записям)
-│   ├── subscription_service.dart скачивание/парсинг/дедуп подписок, SSRF-фильтр, HWID
-│   ├── update_service.dart    проверка/скачивание/проверка SHA-256 обновлений из GitHub
-│   ├── windows_zip_updater.dart  портативное обновление Windows на месте
-│   ├── ping_service.dart      TCP/ICMP/URL/speed-пинг
-│   ├── ephemeral_xray_ping.dart  эфемерный xray для URL-пинга на десктопе
-│   ├── settings_backup_service.dart экспорт/импорт настроек (.json/.keqdis)
-│   ├── notification_service.dart  локальные уведомления (Android)
-│   ├── background_service.dart    WorkManager — фоновое обновление подписок (Android)
-│   ├── desktop_background_service.dart / linux_background_service.dart  десктоп-фон/трей
+│   ├── vpn_engine.dart          фасад над TunnelBackend — то, с чем говорит UI
+│   ├── tunnel_session_builder.dart  сборка TunnelSessionRequest из настроек
+│   ├── storage_service.dart     персист в SharedPreferences, устойчивый к битым записям
+│   ├── subscription_service.dart  скачивание/парсинг/дедуп подписок, UA-перебор, SSRF-фильтр, HWID
+│   ├── update_service.dart      обновления из GitHub: версии, SHA-256 (fail-closed)
+│   ├── windows_zip_updater.dart портативное обновление Windows на месте
+│   ├── ping_service.dart        TCP/ICMP/URL/speed-пинг
+│   ├── ephemeral_xray_ping.dart эфемерный xray с HTTP-инбаундом для URL-пинга (десктоп)
+│   ├── hotkey_service.dart      диспетчер хоткеев (Windows — глобальные, Linux — в окне)
+│   ├── debug_log_service.dart   сбор/экспорт отладочных логов
+│   ├── settings_backup_service.dart  экспорт/импорт настроек (.json/.keqdis)
+│   ├── notification_service.dart локальные уведомления (Android)
+│   ├── background_service.dart  WorkManager: фоновое обновление подписок (Android)
+│   ├── desktop_background_service.dart / linux_background_service.dart  десктоп-фон
 │   ├── windows_desktop_service.dart  окно/трей/автозапуск Windows
 │   └── firefox_proxy_helper.dart  правка Firefox user.js под системный прокси
 │
 ├── tunnel/              ← абстракция туннеля + платформенные реализации
 │   ├── tunnel_backend.dart        интерфейс TunnelBackend + константы спидтеста
-│   ├── tunnel_backend_factory.dart createTunnelBackend() по Platform
+│   ├── tunnel_backend_factory.dart  createTunnelBackend() по Platform
 │   ├── android_tunnel_backend.dart  MethodChannel → Kotlin VpnService
 │   ├── windows_tunnel_backend.dart  процессы ядра + системный прокси (C++ runner)
 │   ├── linux_tunnel_backend.dart    процессы ядра + pkexec (TUN), /proc (процессы)
 │   ├── tunnel_session_request.dart  параметры запуска сессии
-│   ├── tunnel_state.dart          VpnState + enum VpnStatus
-│   ├── connection_mode.dart       enum proxy/tun
-│   ├── vpn_backend.dart           enum xray/awg
-│   ├── app_routing_mode.dart      enum allProxy/onlySelected/allExceptSelected
-│   ├── windows_core_paths.dart / linux_core_paths.dart  пути к ядрам/geo
-│   └── xray_session_stats.dart    разбор статистики xray (StatsService API)
+│   ├── tunnel_state.dart            VpnState + enum VpnStatus
+│   ├── connection_mode.dart / vpn_backend.dart / app_routing_mode.dart  enum'ы режимов
+│   ├── windows_core_paths.dart / linux_core_paths.dart  резолв путей к ядрам/geo
+│   ├── socks_credential_generator.dart  генерация кредов локального SOCKS
+│   └── xray_session_stats.dart      разбор статистики xray (StatsService, порт 10985)
 │
 ├── utils/               ← чистые функции (легко тестируются)
-│   ├── config_gen.dart        ⭐ генератор xray-конфига (ConfigGeneratorV2)
-│   ├── singbox_tun_config.dart генератор sing-box TUN-конфига
-│   ├── keqrnel_config.dart    сборка единого keqrnel-конфига из chain
-│   ├── wireproxy_config.dart  генератор wireproxy-конфига (AmneziaWG proxy)
+│   ├── config_gen.dart        генератор xray-конфига (ConfigGeneratorV2) — правится чаще всего
+│   ├── singbox_tun_config.dart  генератор sing-box TUN-конфига
+│   ├── keqrnel_config.dart    единый keqrnel-конфиг из chain
+│   ├── wireproxy_config.dart  wireproxy-конфиг (AmneziaWG proxy)
 │   ├── routing_entry.dart     разбор смешанных списков правил (домены/IP/geoip)
 │   ├── routing_presets.dart   готовые списки direct/proxy/block
-│   ├── awg_profile.dart       парсинг AmneziaWG .conf
-│   ├── hysteria_uri.dart      парсинг Hysteria-ссылок
+│   ├── awg_profile.dart / hysteria_uri.dart  парсинг AWG .conf и Hysteria-ссылок
+│   ├── subscription_url.dart / subscription_diff.dart  нормализация URL, дифф серверов
 │   ├── socks5_credentials.dart  кеш кредов локального SOCKS
 │   ├── clipboard_import.dart  импорт конфигов из буфера
 │   ├── split_tunnel_routing.dart / process_name_utils.dart  логика split tunnel
 │   ├── local_vpn_proxy.dart   настройка Dio на локальный HTTP-прокси при активном VPN
-│   ├── config_gen.dart / error_messages.dart  человекочитаемые ошибки
+│   ├── error_messages.dart    человекочитаемые ошибки
 │   └── app_locale.dart        утилиты локали
 │
-├── screens/             ← основные экраны (вкладки)
+├── screens/             ← экраны
 │   ├── servers_tab.dart       список серверов, подключение, пинг
-│   ├── subscriptions_tab.dart список подписок, добавление/обновление
-│   └── settings_tab.dart      настройки (тема, режим, маршрутизация, ядро, язык, обновления)
-│
-├── split_tunneling_screen.dart  выбор приложений/процессов для split tunnel
+│   ├── servers/               виджеты вкладки: server_tile, server_groups,
+│   │                          connection_stats, wave_header
+│   ├── subscriptions_tab.dart подписки: добавление/обновление/лимиты
+│   ├── settings_tab.dart      корневой экран настроек
+│   ├── settings/              под-экраны: advanced, routing, split_tunneling, hotkeys,
+│   │                          xray_core, ping, theme, backup_restore, lan_sharing,
+│   │                          local_proxy_ports, share_hwid, debug_and_logs,
+│   │                          windows_desktop
+│   └── qr_scan_screen.dart    сканер QR (импорт серверов/подписок, Android)
 │
 ├── ui/                  ← платформо-специфичный UI
 │   ├── desktop/
-│   │   ├── desktop_home_screen.dart  десктопная оболочка (сайдбар + контент)
-│   │   ├── tray_menu_screen.dart     меню в трее (то же окно, суженное)
+│   │   ├── desktop_home_screen.dart   десктопная оболочка (сайдбар + контент)
+│   │   ├── tray_menu_screen.dart      меню в трее (то же окно, суженное)
 │   │   └── desktop_connection_mode.dart  переключатель Proxy/TUN
-│   └── responsive/        адаптивные лейауты (узкое/широкое окно)
+│   └── responsive/desktop_page_layout.dart  адаптивный лейаут узкое/широкое окно
 │
 ├── shared/              ← переиспользуемый UI
 │   ├── ui/app_theme.dart      цвета/тема (light/dark, dynamic color)
 │   ├── ui/bottom_nav.dart     нижняя навигация (mobile)
 │   ├── ui/update_dialog.dart  диалог обновления
 │   ├── ui/smooth_scroll.dart  плавный скролл
-│   └── extensions/            расширения (например, l10n-хелпер)
+│   └── extensions/build_context_l10n.dart  хелпер локализации
 │
-├── platform/            ← платформенный bootstrap
-│   ├── platform_bootstrap.dart  инициализация Windows (окно/трей/автозапуск)
+├── platform/
+│   ├── platform_bootstrap.dart  инициализация Windows (окно/трей/автозапуск/хоткеи)
 │   └── vpn_native_bridge.dart   тонкий мост к нативным методам
 │
-└── l10n/                ← локализация
-    ├── app_en.arb / app_ru.arb / app_de.arb / app_zh.arb   ⭐ источник строк
-    └── app_localizations*.dart  ГЕНЕРИРУЕМЫЕ (не править руками)
+└── l10n/
+    ├── app_en.arb / app_ru.arb / app_de.arb / app_zh.arb   источник строк
+    └── app_localizations*.dart  генерируемые — не править руками
 ```
-
-⭐ — файлы, которые трогают чаще всего.
 
 ## `android/` — нативный Android (Kotlin)
 
@@ -148,47 +153,61 @@ android/app/src/main/jniLibs/<abi>/   нативные ядра (.so) — НЕ F
 ```
 windows/runner/
 ├── main.cpp                 точка входа
-├── tunnel_channel_handler.* системный прокси (per-connection options), elevation, TUN
-├── windows_core_lifecycle.* запуск/останов ядра
-├── windows_tray.*           трей-иконка/меню
-├── windows_apps_list.*      список процессов для split tunnel
-├── windows_traffic_stats.*  счётчики трафика
-├── single_instance.h        single-instance
-└── proxy_debug_log.*        отладочные логи прокси
+├── flutter_window.* / win32_window.*  окно Flutter
+├── window_placement.*        сохранение/восстановление позиции и размера окна
+├── windows_hotkeys.*         глобальные хоткеи (RegisterHotKey)
+├── tunnel_channel_handler.*  системный прокси (per-connection options), elevation, TUN
+├── windows_core_lifecycle.*  запуск/останов процессов ядра
+├── windows_tray.*            трей-иконка и меню
+├── windows_apps_list.*       список процессов для split tunneling
+├── windows_traffic_stats.*   счётчики трафика адаптера
+├── single_instance.h         single-instance
+└── proxy_debug_log.*         отладочные логи прокси
 ```
 
-## `assets/bin/` — нативные ядра (бандлятся per-platform, НЕ в APK)
+## `assets/bin/` — нативные ядра
 
 ```
-assets/bin/windows/   keqrnel.exe, wireproxy.exe, wintun.dll, geoip.dat, geosite.dat, README.md
-assets/bin/linux/     keqrnel, xray, sing-box, wireproxy, geoip.dat, geosite.dat, README.md
+assets/bin/windows/   keqrnel.exe, wireproxy.exe, wintun.dll, geoip.dat, geosite.dat
+assets/bin/linux/     keqrnel, xray, sing-box, wireproxy, geoip.dat, geosite.dat
 ```
 
-> Почему не Flutter-ассеты: Flutter пакует ассеты во **все** платформы, и Windows-exe +
-> Linux-ELF + geo тянулись в Android APK (~150 МБ мусора). Теперь их раскладывают рядом с
-> исполняемым файлом через `windows/`/`linux/` CMakeLists, а Android берёт ядра из `jniLibs`.
+Windows-бандл намеренно без `xray.exe`/`sing-box.exe`: дефолтное ядро — keqrnel, режим
+`chain` там требует докинуть бинарники руками. В `pubspec.yaml` как Flutter-ассеты
+объявлены только geo-базы — сами ядра раскладываются рядом с exe через `windows/` /
+`linux/` CMakeLists, Android берёт их из `jniLibs`. Иначе Flutter паковал бы десктопные
+бинарники во все платформы (в APK когда-то уезжало ~150 МБ мусора).
 
-## `tool/` и `tools/` — скрипты
+## `tool/`, `tools/`, `release/` — скрипты
 
 | Файл | Назначение |
 |------|------------|
-| `tool/make_release.ps1` | собрать APK+zip, посчитать SHA-256, (опц.) опубликовать релиз |
-| `tool/sync_windows_plugins.ps1` | вырезать Firebase из Windows-плагинов (перед сборкой Windows) |
-| `tool/build_amneziawg.ps1` | собрать AmneziaWG-ядро для Windows |
-| `tool/build_linux_wsl.sh` / `build_linux_native.sh` | собрать Linux-бандл + ядра |
-| `tool/package_linux.sh` | упаковать в .deb/AppImage/tar.gz/PKGBUILD |
+| `tool/make_release.ps1` | APK + Windows-zip + SHA-256, опц. публикация релиза через gh |
+| `tool/sync_windows_plugins.ps1` | пересоздать список Windows-плагинов без Firebase — нужен только после изменения списка плагинов |
+| `tool/build_amneziawg.ps1` | AmneziaWG-ядро для Windows |
+| `tool/build_linux_wsl.sh` | первичная Linux-сборка в WSL: ставит тулчейн и нативный Flutter |
+| `tool/build_linux_native.sh` | Linux-сборка на нативном Linux |
+| `tool/package_linux.sh` | упаковка в .deb/AppImage/tar.gz + PKGBUILD |
 | `tool/fetch_xray_geo.ps1` | обновить geoip.dat/geosite.dat |
-| `tool/prepare_windows_icon.dart` | подготовка иконки Windows |
-| `tools/amneziawg_android/` | сборка AmneziaWG .so под Android |
+| `tool/prepare_windows_icon.dart` | иконка Windows |
+| `tools/amneziawg_android/` | AmneziaWG .so под Android |
+| `release/wsl_build_linux.sh` | релизная Linux-сборка: rsync проекта на Linux-ФС + сборка + артефакты в release/ |
+| `release/build_linux.sh` | сборка + упаковка tar.gz/deb/AppImage (вызывается из wsl-скрипта) |
+| `release/gen_sha256.ps1` | .sha256-сайдкары для всех артефактов в release/ |
 
 ## `test/` — тесты (зеркалят `lib/`)
 
 ```
 test/
-├── utils/       config_gen, awg_profile, hysteria_uri, routing_entry, singbox_tun_config
-├── services/    storage, subscription, update, ping (hysteria), windows_zip_updater
+├── utils/       config_gen, awg_profile, hysteria_uri, routing_entry,
+│                singbox_tun_config, subscription_url, subscription_diff
+├── services/    storage, subscription (UA-перебор, парсинг), update,
+│                ping_hysteria, windows_zip_updater
 ├── models/      xray_core_settings, server_name_utils, ping_test_config
+├── providers/   subscriptions_reorder
 ├── tunnel/      xray_session_stats
 ├── widgets/     home_navigation, subscriptions_flow, vpn_state_actions
-└── helpers/     pump_app.dart (рендер виджета в тесте), test_storage.dart (мок prefs)
+├── shared/      update_prompt
+├── keqrnel_config_test.dart
+└── helpers/     pump_app.dart (рендер виджета), test_storage.dart (мок prefs)
 ```
