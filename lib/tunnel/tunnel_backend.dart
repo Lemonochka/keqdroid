@@ -17,6 +17,13 @@ abstract class TunnelBackend {
   /// VPN permission (Android). Desktop: admin/TUN prerequisites.
   Future<bool> requestTunnelPermission();
 
+  /// Пауза/возобновление секундного опроса счётчиков трафика (десктоп).
+  /// Окно скрыто/свёрнуто — телеметрию никто не видит, поллинг зря жжёт CPU
+  /// в фоне (окно может жить в трее неделями). Статус-события (ошибки,
+  /// disconnect от вотчдога) не зависят от этого и эмитятся всегда.
+  /// Android получает статистику пушем из нативного сервиса — там no-op.
+  void setTrafficStatsPollingEnabled(bool enabled) {}
+
   Future<VpnState> getCurrentState();
 
   Future<int?> getPing(String address, int port);

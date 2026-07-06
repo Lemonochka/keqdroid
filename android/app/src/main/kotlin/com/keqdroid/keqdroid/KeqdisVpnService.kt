@@ -785,6 +785,7 @@ class KeqdisVpnService : VpnService() {
             var prevRx = android.net.TrafficStats.getUidRxBytes(uid).coerceAtLeast(0)
             var prevTx = android.net.TrafficStats.getUidTxBytes(uid).coerceAtLeast(0)
             var tick = 0
+            val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
 
             while (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) {
                 delay(1000)
@@ -806,8 +807,11 @@ class KeqdisVpnService : VpnService() {
                 // всегда. Без обновлений оно застывало на «Connected», и было «не
                 // понятно, отвалился серв или нет». notify() вместо startForeground:
                 // сервис уже foreground с этим ID, апдейт текста так дешевле.
+                // isInteractive: при погашенном экране уведомление никто не видит —
+                // не дёргаем NotificationManager (IPC + RemoteViews) 30 раз в минуту
+                // всю ночь; после включения экрана текст освежится ближайшим тиком.
                 tick++
-                if (status == VpnRunStatus.RUNNING && tick % 2 == 0) {
+                if (status == VpnRunStatus.RUNNING && tick % 2 == 0 && pm.isInteractive) {
                     val body =
                         "${formatUptime(System.currentTimeMillis() - startTime)}  ·  " +
                         "↓ ${formatSpeed(downloadSpeed.get())}  ·  " +

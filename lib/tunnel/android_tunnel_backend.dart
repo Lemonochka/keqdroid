@@ -50,6 +50,10 @@ class AndroidTunnelBackend implements TunnelBackend {
     _stateCtrl.close();
   }
 
+  /// Статистика приходит пушем из нативного VpnService — глушить нечего.
+  @override
+  void setTrafficStatsPollingEnabled(bool enabled) {}
+
   @override
   Future<({String username, String password})> fetchSocksCredentials() async {
     try {

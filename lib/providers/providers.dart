@@ -75,6 +75,19 @@ final subscriptionServiceProvider = Provider<SubscriptionService>((ref) {
 final vpnEngineProvider = Provider<VpnEngine>((ref) {
   final engine = VpnEngine();
   engine.init();
+  // Окно скрыто/свёрнуто (десктоп неделями живёт в трее) — секундный опрос
+  // счётчиков трафика никому не виден, глушим его, чтобы не жечь CPU в фоне.
+  // `inactive` на десктопе = окно видимо, но без фокуса — опрос продолжается.
+  // Статус-события (ошибка, disconnect от вотчдога) идут независимо от этого.
+  final lifecycle = AppLifecycleListener(
+    onStateChange: (state) {
+      final hidden = state == AppLifecycleState.hidden ||
+          state == AppLifecycleState.paused ||
+          state == AppLifecycleState.detached;
+      engine.setTrafficStatsPollingEnabled(!hidden);
+    },
+  );
+  ref.onDispose(lifecycle.dispose);
   ref.onDispose(engine.dispose);
   return engine;
 });
@@ -141,6 +154,14 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     );
     ref.onDispose(listener.dispose);
     _syncTimer ??= Timer.periodic(const Duration(seconds: 60), (_) async {
+      // Окно скрыто (десктоп в трее) — перечитывать storage с диска незачем:
+      // UI не виден, а onResume выше и так делает полный синк при возврате.
+      final ls = WidgetsBinding.instance.lifecycleState;
+      if (ls == AppLifecycleState.hidden ||
+          ls == AppLifecycleState.paused ||
+          ls == AppLifecycleState.detached) {
+        return;
+      }
       await _syncSubscriptionsFromStorage();
       // сетевой auto-update гоняем только на onResume + WorkManager, не на каждый тик
     });
@@ -1282,9 +1303,22 @@ NotifierProvider<SplitTunnelingNotifier, SplitTunnelingState>(
   SplitTunnelingNotifier.new,
 );
 
-final installedAppsProvider = FutureProvider.family<List<AppInfo>, bool>(
+final installedAppsProvider =
+    FutureProvider.autoDispose.family<List<AppInfo>, bool>(
       (ref, includeSystem) async {
-    ref.keepAlive();
+    // Список тяжёлый: у каждого приложения base64-иконка, на телефоне это
+    // мегабайты строк. Раньше keepAlive держал его в памяти до перезапуска
+    // приложения. Теперь кэш живёт, пока экран открыт, плюс 3 минуты после
+    // ухода последнего слушателя (быстрый повторный вход — без перезагрузки),
+    // затем освобождается; следующее открытие экрана перезагрузит список.
+    final link = ref.keepAlive();
+    Timer? release;
+    ref.onCancel(() {
+      release?.cancel();
+      release = Timer(const Duration(minutes: 3), link.close);
+    });
+    ref.onResume(() => release?.cancel());
+    ref.onDispose(() => release?.cancel());
     final engine = ref.read(vpnEngineProvider);
     final rawList = await engine.getInstalledApps(includeSystem: includeSystem);
     return rawList.map(AppInfo.fromJson).toList()
