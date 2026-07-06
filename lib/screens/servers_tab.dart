@@ -371,7 +371,11 @@ class _ServersTabState extends ConsumerState<ServersTab>
                       ? _breathAnim
                       : const AlwaysStoppedAnimation(1.0),
                   child: GestureDetector(
-                    onTap: isConnecting ? null : () => _toggleVpn(vpnStatus),
+                    // connecting остаётся тапабельным — это отмена попытки;
+                    // блокируем только disconnecting (гасить уже нечего).
+                    onTap: vpnStatus == VpnStatus.disconnecting
+                        ? null
+                        : () => _toggleVpn(vpnStatus),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 400),
                       width: 130,
@@ -1076,16 +1080,45 @@ class _ServersTabState extends ConsumerState<ServersTab>
   }
 
   Future<void> _selectServer(ServerItem server) async {
-    await ref.read(serversProvider.notifier).setActive(server);
     final vpnStatus = ref.read(vpnStateProvider).value?.status;
-    if (vpnStatus == VpnStatus.connected || vpnStatus == VpnStatus.connecting) {
-      await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
+    final tunnelActive =
+        vpnStatus == VpnStatus.connected || vpnStatus == VpnStatus.connecting;
+    // Повторный тап по уже активному серверу не перезапускает туннель:
+    // случайное касание не должно рвать соединение циклом disconnect/connect.
+    if (tunnelActive &&
+        server.id == ref.read(serversProvider).activeServer?.id) {
+      return;
+    }
+    await ref.read(serversProvider.notifier).setActive(server);
+    if (tunnelActive) {
+      try {
+        await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
+      } catch (e) {
+        if (!mounted) return;
+        _showSnack(_friendlyError(e, context));
+      }
     }
   }
 
   Future<void> _toggleVpn(VpnStatus status) async {
     if (status == VpnStatus.connected) {
-      await ref.read(vpnStateProvider.notifier).disconnect();
+      try {
+        await ref.read(vpnStateProvider.notifier).disconnect();
+      } catch (e) {
+        if (!mounted) return;
+        _showSnack(_friendlyError(e, context));
+      }
+    } else if (status == VpnStatus.connecting) {
+      // Тап по кругу во время подключения — отмена попытки, иначе мёртвый
+      // сервер держит пользователя на спиннере до конца 45-сек. поллинга.
+      try {
+        await ref.read(vpnStateProvider.notifier).cancelConnect();
+      } catch (e) {
+        if (!mounted) return;
+        _showSnack(_friendlyError(e, context));
+      }
+    } else if (status == VpnStatus.disconnecting) {
+      return;
     } else {
       final active = ref.read(serversProvider).activeServer;
       if (active == null) {

@@ -5,6 +5,7 @@ import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_logger.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_settings.dart';
 import '../../models/server_item.dart';
@@ -103,7 +104,17 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
   }
 
   Future<void> _exitApp() async {
+    // Симметрично Linux (tray Quit → _disconnectForQuit): сначала рвём туннель,
+    // иначе системный прокси остаётся указывать на мёртвый 127.0.0.1-порт и
+    // после выхода ломает интернет во всей системе. Нотифаер читаем до
+    // закрытия меню — после него виджет демонтируется и ref недоступен.
+    final vpnNotifier = ref.read(vpnStateProvider.notifier);
     await _closeMenu();
+    try {
+      await vpnNotifier.disconnect();
+    } catch (_) {
+      // Выходим в любом случае; стартовая зачистка подберёт остатки.
+    }
     if (Platform.isWindows) {
       await WindowsDesktopService.exitApp();
     }
@@ -118,13 +129,22 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      if (status == VpnStatus.connected || status == VpnStatus.connecting) {
+      if (status == VpnStatus.connected) {
         await ref.read(vpnStateProvider.notifier).disconnect();
+      } else if (status == VpnStatus.connecting) {
+        await ref.read(vpnStateProvider.notifier).cancelConnect();
       } else {
         final active = ref.read(serversProvider).activeServer;
         if (active == null) return;
         await ref.read(vpnStateProvider.notifier).connect();
       }
+    } catch (e, st) {
+      // В трее нет снекбаров — ошибку в лог, статус в шапке покажет «Ошибка».
+      AppLogger.instance.warn(
+        'Tray VPN toggle failed',
+        error: e,
+        stackTrace: st,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -132,18 +152,35 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
 
   Future<void> _selectServer(ServerItem server) async {
     if (_busy) return;
+    final vpnStatus = ref.read(vpnStateProvider).value?.status;
+    final tunnelActive = vpnStatus == VpnStatus.connected ||
+        vpnStatus == VpnStatus.connecting;
+    // Повторный тап по уже активному серверу не перезапускает туннель —
+    // только сворачиваем список.
+    if (tunnelActive &&
+        server.id == ref.read(serversProvider).activeServer?.id) {
+      if (_serversExpanded && mounted) {
+        setState(() => _serversExpanded = false);
+        await _syncPopupSize();
+      }
+      return;
+    }
     setState(() => _busy = true);
     try {
       await ref.read(serversProvider.notifier).setActive(server);
-      final vpnStatus = ref.read(vpnStateProvider).value?.status;
-      if (vpnStatus == VpnStatus.connected ||
-          vpnStatus == VpnStatus.connecting) {
+      if (tunnelActive) {
         await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
       }
       if (_serversExpanded && mounted) {
         setState(() => _serversExpanded = false);
         await _syncPopupSize();
       }
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Tray server select failed',
+        error: e,
+        stackTrace: st,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -155,25 +192,30 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
   ) async {
     if (next == settings.connectionModeEnum) return;
 
-    if (next == ConnectionMode.tun) {
+    if (next == ConnectionMode.tun && Platform.isWindows) {
       final elevated = await WindowsDesktopService.isProcessElevated();
       if (!elevated) {
-        await _closeMenu();
-        if (Platform.isWindows) {
-          await WindowsDesktopService.restoreMainWindow();
-        }
         if (!mounted) return;
-        final restart = await showDesktopTunAdminDialog(context);
-        if (restart != true || !mounted) return;
-        await ref.read(settingsNotifierProvider.notifier).save(
-              settings.copyWith(connectionMode: ConnectionMode.tun.storageValue),
-            );
+        // Всё нужное берём ДО закрытия меню: при закрытии TrayMenuScreen
+        // демонтируется (mounted == false, ref мёртв), поэтому диалог живёт
+        // на корневом Navigator — он переживает закрытие меню.
+        final navigator = Navigator.of(context, rootNavigator: true);
+        final settingsNotifier = ref.read(settingsNotifierProvider.notifier);
+        await _closeMenu();
+        await WindowsDesktopService.restoreMainWindow();
+        final navContext = navigator.context;
+        if (!navContext.mounted) return;
+        final restart = await showDesktopTunAdminDialog(navContext);
+        if (restart != true) return;
+        await settingsNotifier.save(
+          settings.copyWith(connectionMode: ConnectionMode.tun.storageValue),
+        );
         final ok = await WindowsDesktopService.restartAsAdministrator();
-        if (!ok && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        if (!ok && navContext.mounted) {
+          ScaffoldMessenger.of(navContext).showSnackBar(
             SnackBar(
               content: Text(
-                AppLocalizations.of(context)!.desktopTunAdminRestartFailed,
+                AppLocalizations.of(navContext)!.desktopTunAdminRestartFailed,
               ),
             ),
           );
@@ -319,6 +361,9 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
     final isConnected =
         status == VpnStatus.connected || status == VpnStatus.connecting;
     final canConnect = active != null && !isVpnBusy;
+    // «Отключить» доступен и во время connecting — это отмена попытки.
+    final canDisconnect = !_busy &&
+        (status == VpnStatus.connected || status == VpnStatus.connecting);
 
     final statusLabel = switch (status) {
       VpnStatus.connected => l10n.trayStatusConnected,
@@ -377,7 +422,7 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
               const _TrayDivider(),
               _TrayItem(
                 label: isConnected ? l10n.trayDisconnect : l10n.trayConnect,
-                enabled: isConnected ? !isVpnBusy : canConnect,
+                enabled: isConnected ? canDisconnect : canConnect,
                 onTap: () => _toggleVpn(status),
                 foregroundColor: itemFg,
               ),

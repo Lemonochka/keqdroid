@@ -636,5 +636,30 @@
     }
   },
   "hotkeyClearTooltip": "Clear shortcut",
-  "hotkeyNoPingData": "No ping results yet — run a ping test first"
+  "hotkeyNoPingData": "No ping results yet — run a ping test first",
+  "clipboardNoSubscriptionLink": "Clipboard has no subscription link (http/https)",
+  "splitTunnelingReconnectHint": "Changes apply after reconnecting the VPN",
+  "serversDeleteConfirm": "Are you sure you want to delete \"{name}\"?",
+  "@serversDeleteConfirm": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "errorTunAdminMessage": "TUN mode on Windows needs Administrator rights.",
+  "errorTunAdminAction": "Run the app as administrator or switch to Proxy mode in settings.",
+  "errorVpnPermissionMessage": "VPN permission was not granted.",
+  "errorVpnPermissionAction": "Allow VPN permission in the system dialog and try again.",
+  "errorHwidBindMessage": "Provider requires HWID binding for this device.",
+  "errorHwidBindAction": "Bind this device in provider panel, then refresh subscription.",
+  "errorDeviceLimitMessage": "Provider refused subscription due to device limit.",
+  "errorDeviceLimitAction": "Remove old devices in provider panel or raise device limit.",
+  "errorConfigInvalidMessage": "Subscription or server configuration is invalid.",
+  "errorConfigInvalidAction": "Check URL/config format and import a valid subscription link.",
+  "errorAuthDeniedMessage": "Access to subscription is denied by provider.",
+  "errorAuthDeniedAction": "Check token/credentials and verify subscription has not expired.",
+  "errorSubUrlInvalidMessage": "Subscription link is missing or expired.",
+  "errorSubUrlInvalidAction": "Request a fresh URL from provider and update it in app.",
+  "errorNetworkMessage": "Cannot reach server right now.",
+  "errorNetworkAction": "Check internet, DNS, and server availability, then retry.",
+  "errorUnknownAction": "Retry operation. If issue repeats, check server and app settings."
 }

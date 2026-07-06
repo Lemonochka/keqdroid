@@ -1318,4 +1318,66 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get hotkeyNoPingData => 'Нет результатов пинга — сначала запустите проверку';
+
+  @override
+  String get clipboardNoSubscriptionLink => 'В буфере нет ссылки подписки (http/https)';
+
+  @override
+  String get splitTunnelingReconnectHint => 'Изменения применятся после переподключения VPN';
+
+  @override
+  String serversDeleteConfirm(Object name) {
+    return 'Удалить сервер «$name»?';
+  }
+
+  @override
+  String get errorTunAdminMessage => 'Режим TUN на Windows требует прав администратора.';
+
+  @override
+  String get errorTunAdminAction => 'Запустите приложение от имени администратора или переключитесь на режим Proxy в настройках.';
+
+  @override
+  String get errorVpnPermissionMessage => 'Разрешение на VPN не было предоставлено.';
+
+  @override
+  String get errorVpnPermissionAction => 'Разрешите VPN в системном диалоге и повторите попытку.';
+
+  @override
+  String get errorHwidBindMessage => 'Провайдер требует привязку HWID для этого устройства.';
+
+  @override
+  String get errorHwidBindAction => 'Привяжите устройство в панели провайдера и обновите подписку.';
+
+  @override
+  String get errorDeviceLimitMessage => 'Провайдер отклонил подписку: достигнут лимит устройств.';
+
+  @override
+  String get errorDeviceLimitAction => 'Удалите старые устройства в панели провайдера или увеличьте лимит.';
+
+  @override
+  String get errorConfigInvalidMessage => 'Конфигурация подписки или сервера некорректна.';
+
+  @override
+  String get errorConfigInvalidAction => 'Проверьте формат ссылки/конфига и импортируйте корректную ссылку подписки.';
+
+  @override
+  String get errorAuthDeniedMessage => 'Провайдер отказал в доступе к подписке.';
+
+  @override
+  String get errorAuthDeniedAction => 'Проверьте токен/учётные данные и срок действия подписки.';
+
+  @override
+  String get errorSubUrlInvalidMessage => 'Ссылка подписки не найдена или устарела.';
+
+  @override
+  String get errorSubUrlInvalidAction => 'Запросите новую ссылку у провайдера и обновите её в приложении.';
+
+  @override
+  String get errorNetworkMessage => 'Сервер сейчас недоступен.';
+
+  @override
+  String get errorNetworkAction => 'Проверьте интернет, DNS и доступность сервера, затем повторите.';
+
+  @override
+  String get errorUnknownAction => 'Повторите операцию. Если ошибка повторяется, проверьте сервер и настройки приложения.';
 }

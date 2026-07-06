@@ -26,6 +26,7 @@ import '../../services/windows_desktop_service.dart';
 import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/update_dialog.dart';
 import '../../utils/clipboard_import.dart';
+import 'desktop_connection_mode.dart';
 import 'tray_menu_screen.dart';
 
 /// desktop shell: фиксированный sidebar + вкладки (без NavigationRail — на windows ломается layout)
@@ -156,27 +157,12 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       final elevated = await WindowsDesktopService.isProcessElevated();
       if (!elevated) {
         // Молчаливый UAC из глобального хоткея дезориентирует — показываем
-        // окно и обычный диалог перезапуска от администратора.
+        // окно, диалог перезапуска покажет applyDesktopConnectionMode.
         await WindowsDesktopService.restoreMainWindow();
-        if (!mounted) return;
-        await _applyMode(context, ref, settings, next);
-        return;
       }
     }
-
-    final status = ref.read(vpnStateProvider).value?.status;
-    final wasActive =
-        status == VpnStatus.connected || status == VpnStatus.connecting;
-    if (wasActive) {
-      await ref.read(vpnStateProvider.notifier).disconnect();
-    }
     if (!mounted) return;
-    await ref.read(settingsNotifierProvider.notifier).save(
-          settings.copyWith(connectionMode: next.storageValue),
-        );
-    if (wasActive && mounted) {
-      await ref.read(vpnStateProvider.notifier).connect();
-    }
+    await applyDesktopConnectionMode(context, ref, settings, next);
   }
 
   /// Переключиться на сервер с наименьшим пингом (speed-замеры не считаются).
@@ -584,7 +570,8 @@ class _ConnectionModeMenuButton extends ConsumerWidget {
         mode == ConnectionMode.tun ? Icons.vpn_lock_outlined : Icons.lan_outlined,
         size: 22,
       ),
-      onSelected: (next) => _applyMode(context, ref, settings, next),
+      onSelected: (next) =>
+          applyDesktopConnectionMode(context, ref, settings, next),
       itemBuilder: (context) => [
         CheckedPopupMenuItem(
           value: ConnectionMode.proxy,
@@ -633,7 +620,7 @@ class _ConnectionModeChip extends ConsumerWidget {
           ],
           selected: {mode},
           onSelectionChanged: (selected) {
-            _applyMode(context, ref, settings, selected.first);
+            applyDesktopConnectionMode(context, ref, settings, selected.first);
           },
         ),
       ],
@@ -641,80 +628,3 @@ class _ConnectionModeChip extends ConsumerWidget {
   }
 }
 
-Future<void> _applyMode(
-  BuildContext context,
-  WidgetRef ref,
-  AppSettings settings,
-  ConnectionMode next,
-) async {
-  if (next == settings.connectionModeEnum) return;
-
-  final vpn = ref.read(vpnStateProvider).value;
-  if (vpn?.status == VpnStatus.connected ||
-      vpn?.status == VpnStatus.connecting) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.desktopDisconnectBeforeModeChange,
-          ),
-        ),
-      );
-    }
-    return;
-  }
-
-  // Linux gets root for the tun device via pkexec at connect time, so no
-  // elevation/restart dance — just persist the mode. Windows must relaunch
-  // elevated before sing-box can create the TUN adapter.
-  if (next == ConnectionMode.tun && Platform.isWindows) {
-    final elevated = await WindowsDesktopService.isProcessElevated();
-    if (!elevated) {
-      if (!context.mounted) return;
-      final l10n = AppLocalizations.of(context)!;
-      final restart = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: AppTheme.card(ctx),
-          title: Text(
-            l10n.desktopTunAdminTitle,
-            style: TextStyle(color: AppTheme.text(ctx)),
-          ),
-          content: Text(
-            l10n.desktopTunAdminMessage,
-            style: TextStyle(
-              color: AppTheme.textLight(ctx),
-              height: 1.4,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.desktopTunAdminCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l10n.desktopTunAdminRestart),
-            ),
-          ],
-        ),
-      );
-      if (restart != true) return;
-
-      await ref.read(settingsNotifierProvider.notifier).save(
-            settings.copyWith(connectionMode: ConnectionMode.tun.storageValue),
-          );
-      final ok = await WindowsDesktopService.restartAsAdministrator();
-      if (!ok && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.desktopTunAdminRestartFailed)),
-        );
-      }
-      return;
-    }
-  }
-
-  await ref.read(settingsNotifierProvider.notifier).save(
-        settings.copyWith(connectionMode: next.storageValue),
-      );
-}

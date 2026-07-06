@@ -2546,6 +2546,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No ping results yet — run a ping test first'**
   String get hotkeyNoPingData;
+
+  /// No description provided for @clipboardNoSubscriptionLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard has no subscription link (http/https)'**
+  String get clipboardNoSubscriptionLink;
+
+  /// No description provided for @splitTunnelingReconnectHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes apply after reconnecting the VPN'**
+  String get splitTunnelingReconnectHint;
+
+  /// No description provided for @serversDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete \"{name}\"?'**
+  String serversDeleteConfirm(Object name);
+
+  /// No description provided for @errorTunAdminMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN mode on Windows needs Administrator rights.'**
+  String get errorTunAdminMessage;
+
+  /// No description provided for @errorTunAdminAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Run the app as administrator or switch to Proxy mode in settings.'**
+  String get errorTunAdminAction;
+
+  /// No description provided for @errorVpnPermissionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'VPN permission was not granted.'**
+  String get errorVpnPermissionMessage;
+
+  /// No description provided for @errorVpnPermissionAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow VPN permission in the system dialog and try again.'**
+  String get errorVpnPermissionAction;
+
+  /// No description provided for @errorHwidBindMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider requires HWID binding for this device.'**
+  String get errorHwidBindMessage;
+
+  /// No description provided for @errorHwidBindAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Bind this device in provider panel, then refresh subscription.'**
+  String get errorHwidBindAction;
+
+  /// No description provided for @errorDeviceLimitMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider refused subscription due to device limit.'**
+  String get errorDeviceLimitMessage;
+
+  /// No description provided for @errorDeviceLimitAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove old devices in provider panel or raise device limit.'**
+  String get errorDeviceLimitAction;
+
+  /// No description provided for @errorConfigInvalidMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription or server configuration is invalid.'**
+  String get errorConfigInvalidMessage;
+
+  /// No description provided for @errorConfigInvalidAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Check URL/config format and import a valid subscription link.'**
+  String get errorConfigInvalidAction;
+
+  /// No description provided for @errorAuthDeniedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Access to subscription is denied by provider.'**
+  String get errorAuthDeniedMessage;
+
+  /// No description provided for @errorAuthDeniedAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Check token/credentials and verify subscription has not expired.'**
+  String get errorAuthDeniedAction;
+
+  /// No description provided for @errorSubUrlInvalidMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription link is missing or expired.'**
+  String get errorSubUrlInvalidMessage;
+
+  /// No description provided for @errorSubUrlInvalidAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a fresh URL from provider and update it in app.'**
+  String get errorSubUrlInvalidAction;
+
+  /// No description provided for @errorNetworkMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot reach server right now.'**
+  String get errorNetworkMessage;
+
+  /// No description provided for @errorNetworkAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Check internet, DNS, and server availability, then retry.'**
+  String get errorNetworkAction;
+
+  /// No description provided for @errorUnknownAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry operation. If issue repeats, check server and app settings.'**
+  String get errorUnknownAction;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

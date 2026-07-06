@@ -141,6 +141,13 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // Правила читаются только в момент connect() — при активном туннеле
+    // изменения вступят в силу после переподключения.
+    final vpnStatus = ref.watch(
+      vpnStateProvider.select((a) => a.value?.status),
+    );
+    final tunnelActive = vpnStatus == VpnStatus.connected ||
+        vpnStatus == VpnStatus.connecting;
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
       appBar: AppBar(
@@ -165,6 +172,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         physics: const ClampingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
+          if (tunnelActive) ...[
+            _reconnectHintBanner(context, l10n),
+            const SizedBox(height: 12),
+          ],
           _intro(context, l10n),
           const SizedBox(height: 16),
           _presetsCard(context, l10n),
@@ -205,6 +216,32 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           _syntaxLegend(context, l10n),
         ],
       ),
+      ),
+    );
+  }
+
+  Widget _reconnectHintBanner(BuildContext context, AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.orange(context).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 16, color: AppTheme.orange(context)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.splitTunnelingReconnectHint,
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.35,
+                color: AppTheme.text(context),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

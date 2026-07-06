@@ -401,13 +401,77 @@ class _ServerTile extends ConsumerWidget {
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  onDelete();
+                  // Подтверждение как у удаления подписки: пункт стоит сразу
+                  // под безобидными «копировать», промахнуться слишком легко.
+                  _showDeleteConfirmation(context);
                 },
               ),
               const SizedBox(height: 8),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cardColor = AppTheme.card(context);
+    final textColor = AppTheme.text(context);
+    final textLightColor = AppTheme.textLight(context);
+    final redColor = AppTheme.red(context);
+    final name = ServerNameUtils.formatForDisplay(
+      ServerNameUtils.cleanDisplayName(server.displayName),
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: redColor, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                l10n.serversDeleteServer,
+                style: TextStyle(color: textColor, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          l10n.serversDeleteConfirm(name),
+          style: TextStyle(color: textLightColor, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              l10n.subscriptionsCancel,
+              style: TextStyle(color: textLightColor),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: redColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              onDelete();
+            },
+            child: Text(
+              l10n.subscriptionsDelete,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -422,7 +486,7 @@ class _ServerTile extends ConsumerWidget {
       ),
       builder: (ctx) =>
           FutureBuilder<List<({String name, bool ok, String details})>>(
-            future: _runHealthCheck(),
+            future: _runHealthCheck(AppLocalizations.of(ctx)!),
             builder: (ctx, snapshot) {
               final loading = snapshot.connectionState != ConnectionState.done;
               final checks =
@@ -504,7 +568,10 @@ class _ServerTile extends ConsumerWidget {
                             ),
                           ),
                           child: Text(
-                            'Checks passed: $successCount/${checks.length}',
+                            context.l10n.healthCheckChecksPassed(
+                              successCount,
+                              checks.length,
+                            ),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -581,11 +648,12 @@ class _ServerTile extends ConsumerWidget {
     );
   }
 
-  Future<List<({String name, bool ok, String details})>>
-  _runHealthCheck() async {
+  Future<List<({String name, bool ok, String details})>> _runHealthCheck(
+    AppLocalizations l10n,
+  ) async {
     final checks = <({String name, bool ok, String details})>[];
     checks.add((
-      name: 'Server fields',
+      name: l10n.healthCheckServerFields,
       ok:
           server.address.trim().isNotEmpty &&
           server.port > 0 &&
@@ -598,19 +666,23 @@ class _ServerTile extends ConsumerWidget {
         server.address,
       ).timeout(const Duration(seconds: 5));
       checks.add((
-        name: 'DNS resolve',
+        name: l10n.healthCheckDnsResolve,
         ok: addresses.isNotEmpty,
         details: addresses.isNotEmpty
             ? addresses.first.address
-            : 'No IP resolved',
+            : l10n.healthCheckNoIpResolved,
       ));
     } catch (e) {
-      checks.add((name: 'DNS resolve', ok: false, details: 'Failed: $e'));
+      checks.add((
+        name: l10n.healthCheckDnsResolve,
+        ok: false,
+        details: l10n.healthCheckDnsFailed('$e'),
+      ));
     }
 
     final ping = await PingService.pingTcp(server, timeoutSeconds: 6);
     checks.add((
-      name: 'TCP handshake',
+      name: l10n.healthCheckTcpHandshake,
       ok: ping.success,
       details: ping.success ? '${ping.latencyMs} ms' : ping.error,
     ));
@@ -620,11 +692,13 @@ class _ServerTile extends ConsumerWidget {
       r'^[a-zA-Z0-9+.-]+://',
     ).hasMatch(server.config.trim());
     checks.add((
-      name: 'Config format',
+      name: l10n.healthCheckConfigFormat,
       ok: hasConfig && hasScheme,
       details: hasConfig
-          ? (hasScheme ? 'URI format detected' : 'Missing URI scheme')
-          : 'Config is empty',
+          ? (hasScheme
+              ? l10n.healthCheckUriFormat
+              : l10n.healthCheckMissingScheme)
+          : l10n.healthCheckConfigEmpty,
     ));
 
     return checks;

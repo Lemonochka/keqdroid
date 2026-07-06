@@ -12,6 +12,7 @@ import '../models/app_info.dart';
 import '../providers/providers.dart';
 import '../platform/platform_bootstrap.dart';
 import '../tunnel/connection_mode.dart';
+import '../tunnel/tunnel_state.dart';
 import '../utils/process_name_utils.dart';
 
 const _kRussianPackagePrefixes = <String>[
@@ -433,6 +434,11 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     final proxyModeOnDesktop = _isDesktop &&
         settings?.connectionModeEnum == ConnectionMode.proxy;
     final appsLoaded = appsAsync.hasValue;
+    final vpnStatus = ref.watch(
+      vpnStateProvider.select((a) => a.value?.status),
+    );
+    final tunnelActive = vpnStatus == VpnStatus.connected ||
+        vpnStatus == VpnStatus.connecting;
 
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
@@ -449,6 +455,41 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
         child: Column(
           children: [
             _ModeSelector(current: _mode, onChanged: _setMode),
+            // Списки include/exclude читаются только в момент connect() —
+            // при активном туннеле изменения вступят в силу лишь после
+            // переподключения, и без подсказки это выглядит как «не работает».
+            if (tunnelActive)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Material(
+                  color: AppTheme.orange(context).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: AppTheme.orange(context),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            AppLocalizations.of(context)!
+                                .splitTunnelingReconnectHint,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              height: 1.35,
+                              color: AppTheme.text(context),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             if (proxyModeOnDesktop && _mode != TunnelMode.all)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),

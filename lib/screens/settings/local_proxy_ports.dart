@@ -16,9 +16,30 @@ class _LocalProxyPortsScreenState
 
   @override
   void dispose() {
+    // Сохранение при уходе с экрана: раньше применение висело только на
+    // Enter/onEditingComplete, и «назад» молча терял введённые порты.
+    _persistSilently();
     _socksCtrl.dispose();
     _httpCtrl.dispose();
     super.dispose();
+  }
+
+  /// Тихое сохранение валидных портов без снекбаров (контекст экрана уже
+  /// умирает). Невалидный ввод просто отбрасывается.
+  void _persistSilently() {
+    if (!_initialized) return;
+    final settings = ref.read(settingsNotifierProvider).value;
+    if (settings == null) return;
+    final vpn = ref.read(vpnStateProvider).value?.status;
+    if (vpn == VpnStatus.connected || vpn == VpnStatus.connecting) return;
+    final socks = int.tryParse(_socksCtrl.text.trim());
+    final http = int.tryParse(_httpCtrl.text.trim());
+    bool valid(int? p) => p != null && p > 0 && p < 65536;
+    if (!valid(socks) || !valid(http) || socks == http) return;
+    if (socks == settings.localPort && http == settings.httpPort) return;
+    unawaited(ref.read(settingsNotifierProvider.notifier).save(
+          settings.copyWith(localPort: socks, httpPort: http),
+        ));
   }
 
   void _syncControllers(AppSettings settings) {
@@ -29,6 +50,7 @@ class _LocalProxyPortsScreenState
   }
 
   Future<void> _apply(AppSettings settings) async {
+    if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     final socks = int.tryParse(_socksCtrl.text.trim());
     final http = int.tryParse(_httpCtrl.text.trim());
@@ -74,31 +96,40 @@ class _LocalProxyPortsScreenState
     bool enabled,
     VoidCallback onSubmit,
   ) {
-    return TextField(
-      controller: ctrl,
-      enabled: enabled,
-      keyboardType: TextInputType.number,
-      style: TextStyle(fontSize: 14, color: AppTheme.text(context)),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: AppTheme.textLight(context).withValues(alpha: 0.3),
+    // Применение и по потере фокуса, а не только по Enter: тап мимо поля
+    // или переход к другому полю раньше молча терял введённое значение.
+    return Focus(
+      skipTraversal: true,
+      onFocusChange: (focused) {
+        if (!focused) onSubmit();
+      },
+      child: TextField(
+        controller: ctrl,
+        enabled: enabled,
+        keyboardType: TextInputType.number,
+        style: TextStyle(fontSize: 14, color: AppTheme.text(context)),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle:
+              TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: AppTheme.textLight(context).withValues(alpha: 0.3),
+            ),
           ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppTheme.accent(context)),
+          ),
+          isDense: true,
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.accent(context)),
-        ),
-        isDense: true,
+        onSubmitted: (_) => onSubmit(),
+        onEditingComplete: onSubmit,
       ),
-      onSubmitted: (_) => onSubmit(),
-      onEditingComplete: onSubmit,
     );
   }
 

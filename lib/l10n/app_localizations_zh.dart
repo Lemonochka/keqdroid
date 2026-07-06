@@ -1316,4 +1316,66 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get hotkeyNoPingData => '暂无延迟数据 — 请先运行延迟测试';
+
+  @override
+  String get clipboardNoSubscriptionLink => '剪贴板中没有订阅链接（http/https）';
+
+  @override
+  String get splitTunnelingReconnectHint => '更改将在重新连接 VPN 后生效';
+
+  @override
+  String serversDeleteConfirm(Object name) {
+    return '确定要删除服务器“$name”吗？';
+  }
+
+  @override
+  String get errorTunAdminMessage => 'Windows 上的 TUN 模式需要管理员权限。';
+
+  @override
+  String get errorTunAdminAction => '以管理员身份运行应用，或在设置中切换到代理模式。';
+
+  @override
+  String get errorVpnPermissionMessage => '未授予 VPN 权限。';
+
+  @override
+  String get errorVpnPermissionAction => '请在系统对话框中允许 VPN 权限，然后重试。';
+
+  @override
+  String get errorHwidBindMessage => '提供商要求绑定此设备的 HWID。';
+
+  @override
+  String get errorHwidBindAction => '请在提供商面板中绑定此设备，然后刷新订阅。';
+
+  @override
+  String get errorDeviceLimitMessage => '由于设备数量限制，提供商拒绝了订阅。';
+
+  @override
+  String get errorDeviceLimitAction => '请在提供商面板中移除旧设备或提高设备上限。';
+
+  @override
+  String get errorConfigInvalidMessage => '订阅或服务器配置无效。';
+
+  @override
+  String get errorConfigInvalidAction => '请检查链接/配置格式，并导入有效的订阅链接。';
+
+  @override
+  String get errorAuthDeniedMessage => '提供商拒绝了对订阅的访问。';
+
+  @override
+  String get errorAuthDeniedAction => '请检查令牌/凭据，并确认订阅未过期。';
+
+  @override
+  String get errorSubUrlInvalidMessage => '订阅链接缺失或已过期。';
+
+  @override
+  String get errorSubUrlInvalidAction => '请向提供商索取新链接并在应用中更新。';
+
+  @override
+  String get errorNetworkMessage => '目前无法连接服务器。';
+
+  @override
+  String get errorNetworkAction => '请检查网络、DNS 和服务器可用性，然后重试。';
+
+  @override
+  String get errorUnknownAction => '请重试。若问题重复出现，请检查服务器和应用设置。';
 }

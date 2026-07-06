@@ -732,6 +732,26 @@ bool ReadRegistryProxy(bool* enabled, std::wstring* server) {
   return true;
 }
 
+// Recover from an unclean previous exit (crash, forced kill, tray exit that
+// skipped stopVpn): the registry may still route the whole system into a dead
+// 127.0.0.1 port. Symmetric to LinuxTunnelBackend.cleanupStaleState(). Runs
+// synchronously before Dart main, so it cannot race an autostart connect.
+// Only loopback proxies are touched — a user-configured corporate proxy is
+// left alone.
+void CleanupStaleSystemProxy() {
+  bool enabled = false;
+  std::wstring server;
+  if (!ReadRegistryProxy(&enabled, &server)) {
+    return;
+  }
+  if (!enabled || server.find(L"127.0.0.1") == std::wstring::npos) {
+    return;
+  }
+  ProxyDebugLog("Startup: clearing stale loopback system proxy \"%s\"",
+                WideToUtf8(server).c_str());
+  ApplySystemProxy(false, L"", L"", L"");
+}
+
 bool IsProcessElevated() {
   HANDLE token = nullptr;
   if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
@@ -1020,6 +1040,9 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
   }
 
   KeqdisInitCoreProcessGuard();
+  // The guard above kills orphaned cores; this drops the system proxy they
+  // may have left pointing at a now-dead local port.
+  CleanupStaleSystemProxy();
 
   // Created on the platform thread so worker threads can marshal results back.
   EnsureMarshalWindow();

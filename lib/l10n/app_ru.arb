@@ -636,5 +636,30 @@
     }
   },
   "hotkeyClearTooltip": "Сбросить сочетание",
-  "hotkeyNoPingData": "Нет результатов пинга — сначала запустите проверку"
+  "hotkeyNoPingData": "Нет результатов пинга — сначала запустите проверку",
+  "clipboardNoSubscriptionLink": "В буфере нет ссылки подписки (http/https)",
+  "splitTunnelingReconnectHint": "Изменения применятся после переподключения VPN",
+  "serversDeleteConfirm": "Удалить сервер «{name}»?",
+  "@serversDeleteConfirm": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "errorTunAdminMessage": "Режим TUN на Windows требует прав администратора.",
+  "errorTunAdminAction": "Запустите приложение от имени администратора или переключитесь на режим Proxy в настройках.",
+  "errorVpnPermissionMessage": "Разрешение на VPN не было предоставлено.",
+  "errorVpnPermissionAction": "Разрешите VPN в системном диалоге и повторите попытку.",
+  "errorHwidBindMessage": "Провайдер требует привязку HWID для этого устройства.",
+  "errorHwidBindAction": "Привяжите устройство в панели провайдера и обновите подписку.",
+  "errorDeviceLimitMessage": "Провайдер отклонил подписку: достигнут лимит устройств.",
+  "errorDeviceLimitAction": "Удалите старые устройства в панели провайдера или увеличьте лимит.",
+  "errorConfigInvalidMessage": "Конфигурация подписки или сервера некорректна.",
+  "errorConfigInvalidAction": "Проверьте формат ссылки/конфига и импортируйте корректную ссылку подписки.",
+  "errorAuthDeniedMessage": "Провайдер отказал в доступе к подписке.",
+  "errorAuthDeniedAction": "Проверьте токен/учётные данные и срок действия подписки.",
+  "errorSubUrlInvalidMessage": "Ссылка подписки не найдена или устарела.",
+  "errorSubUrlInvalidAction": "Запросите новую ссылку у провайдера и обновите её в приложении.",
+  "errorNetworkMessage": "Сервер сейчас недоступен.",
+  "errorNetworkAction": "Проверьте интернет, DNS и доступность сервера, затем повторите.",
+  "errorUnknownAction": "Повторите операцию. Если ошибка повторяется, проверьте сервер и настройки приложения."
 }

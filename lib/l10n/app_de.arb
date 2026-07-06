@@ -636,5 +636,30 @@
     }
   },
   "hotkeyClearTooltip": "Kürzel entfernen",
-  "hotkeyNoPingData": "Noch keine Ping-Ergebnisse — zuerst einen Ping-Test starten"
+  "hotkeyNoPingData": "Noch keine Ping-Ergebnisse — zuerst einen Ping-Test starten",
+  "clipboardNoSubscriptionLink": "Zwischenablage enthält keinen Abo-Link (http/https)",
+  "splitTunnelingReconnectHint": "Änderungen gelten nach dem erneuten Verbinden des VPN",
+  "serversDeleteConfirm": "Server \"{name}\" wirklich löschen?",
+  "@serversDeleteConfirm": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "errorTunAdminMessage": "Der TUN-Modus unter Windows benötigt Administratorrechte.",
+  "errorTunAdminAction": "Starte die App als Administrator oder wechsle in den Einstellungen in den Proxy-Modus.",
+  "errorVpnPermissionMessage": "Die VPN-Berechtigung wurde nicht erteilt.",
+  "errorVpnPermissionAction": "Erlaube die VPN-Berechtigung im Systemdialog und versuche es erneut.",
+  "errorHwidBindMessage": "Der Anbieter verlangt eine HWID-Bindung für dieses Gerät.",
+  "errorHwidBindAction": "Binde dieses Gerät im Anbieter-Panel und aktualisiere dann das Abo.",
+  "errorDeviceLimitMessage": "Der Anbieter hat das Abo wegen des Gerätelimits abgelehnt.",
+  "errorDeviceLimitAction": "Entferne alte Geräte im Anbieter-Panel oder erhöhe das Gerätelimit.",
+  "errorConfigInvalidMessage": "Die Abo- oder Serverkonfiguration ist ungültig.",
+  "errorConfigInvalidAction": "Prüfe das URL-/Konfigurationsformat und importiere einen gültigen Abo-Link.",
+  "errorAuthDeniedMessage": "Der Zugriff auf das Abo wurde vom Anbieter verweigert.",
+  "errorAuthDeniedAction": "Prüfe Token/Zugangsdaten und ob das Abo noch gültig ist.",
+  "errorSubUrlInvalidMessage": "Der Abo-Link fehlt oder ist abgelaufen.",
+  "errorSubUrlInvalidAction": "Fordere eine neue URL vom Anbieter an und aktualisiere sie in der App.",
+  "errorNetworkMessage": "Der Server ist derzeit nicht erreichbar.",
+  "errorNetworkAction": "Prüfe Internet, DNS und Servererreichbarkeit und versuche es erneut.",
+  "errorUnknownAction": "Versuche es erneut. Tritt der Fehler weiterhin auf, prüfe Server und App-Einstellungen."
 }
