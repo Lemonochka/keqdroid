@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import '../utils/local_vpn_proxy.dart';
 import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/app_logger.dart';
@@ -35,6 +36,32 @@ class SubscriptionService {
   String? _cachedDeviceModel;
   static const MethodChannel _platform = MethodChannel('keqdis_vpn_channel');
 
+  /// браузерный UA: базовый для краулинга html-страниц и последний резерв
+  /// в переборе (часть cdn/waf отдаёт payload только браузеру)
+  static const browserUserAgent =
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+  /// UA нашего клиента — им идёт первый запрос (если у подписки нет
+  /// сохранённого рабочего UA) и он первый в переборе. Версия подтягивается
+  /// из PackageInfo один раз; без платформенного канала (тесты, изоляты)
+  /// остаёмся на голом 'keqdroid'.
+  static String _appUserAgentCache = 'keqdroid';
+  static bool _appUserAgentResolved = false;
+  static Future<String> appUserAgent() async {
+    if (!_appUserAgentResolved) {
+      try {
+        final info = await PackageInfo.fromPlatform();
+        if (info.version.isNotEmpty) {
+          _appUserAgentCache = 'keqdroid/${info.version}';
+        }
+      } on Object {
+        // нет платформы — оставляем дефолт
+      }
+      _appUserAgentResolved = true;
+    }
+    return _appUserAgentCache;
+  }
+
   SubscriptionService(this._storage, {Dio? dio, int? proxyHttpPort})
       : _dio = dio ?? _buildDio(proxyHttpPort: proxyHttpPort);
 
@@ -46,8 +73,7 @@ class SubscriptionService {
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 30),
       headers: {
-        'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': browserUserAgent,
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.9',
       },
@@ -163,8 +189,9 @@ class SubscriptionService {
 
   /// качает подписку и отдаёт список raw-конфигов.
   /// заодно парсит X-Subscription-Userinfo для трафика. при сетевой ошибке один retry через 2с.
+  /// [userAgent] — сохранённый рабочий UA подписки: первый запрос идёт с ним.
   Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent})>
-  fetchRaw(String url, {CancelToken? cancelToken}) async {
+  fetchRaw(String url, {CancelToken? cancelToken, String? userAgent}) async {
     if (!isSafeUrl(url)) {
       throw SubscriptionFetchException('Forbidden URL', url: url);
     }
@@ -186,6 +213,7 @@ class SubscriptionService {
         attempt: 0,
         hwid: hwid,
         hwidHeaders: hwidHeaders,
+        savedUserAgent: userAgent,
       );
 
       return (
@@ -210,6 +238,7 @@ class SubscriptionService {
             attempt: 0,
             hwid: hwid,
             hwidHeaders: hwidHeaders,
+            savedUserAgent: userAgent,
           );
         }
       }
@@ -227,11 +256,16 @@ class SubscriptionService {
     String? savedUserAgent,
   }) async {
     String? usedUserAgent;
+    // первый запрос: сохранённый рабочий UA подписки, иначе UA приложения.
+    // если он перестал работать (html/4xx/5xx) — перебор ниже, без него
+    final initialUa = (savedUserAgent != null && savedUserAgent.isNotEmpty)
+        ? savedUserAgent
+        : await appUserAgent();
     try {
       Response<String> response = await _dio.get<String>(
         url,
         cancelToken: cancelToken,
-        options: _hwidOptions(hwidHeaders),
+        options: _hwidOptions({'User-Agent': initialUa, ...hwidHeaders}),
       );
       _logRemnawaveHwidHeaders(response.headers, source: 'DIO');
       _throwIfRemnawaveHwidHeadersIndicateError(response.headers, url: url);
@@ -264,7 +298,7 @@ class SubscriptionService {
           url,
           cancelToken: cancelToken,
           hwidHeaders: hwidHeaders,
-          savedUserAgent: savedUserAgent,
+          skipUserAgents: {initialUa},
         );
         if (uaResponse != null) {
           response = uaResponse;
@@ -284,11 +318,8 @@ class SubscriptionService {
           }
         }
       } else {
-        // сработал базовый ua — запоминаем его как успешный
-        final baseUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-        if (savedUserAgent == null || savedUserAgent.isEmpty) {
-          usedUserAgent = baseUa;
-        }
+        // первый запрос отдал payload — запоминаем его UA как рабочий
+        usedUserAgent = initialUa;
       }
 
       List<String> configs;
@@ -334,6 +365,22 @@ class SubscriptionService {
         return parsedFromError;
       }
 
+      // часть панелей маршрутизирует по User-Agent: браузерному отдаёт
+      // отдельную html-страницу подписки (и её бэкенд может лежать → 502),
+      // а клиентским UA — сам payload. UA-ретрай в успешной ветке сюда не
+      // добирается (dio кидает на не-2xx раньше), поэтому пробуем здесь
+      if ((e.response?.statusCode ?? 0) >= 400) {
+        final parsedWithClientUa = await _tryParseWithClientUserAgents(
+          url,
+          cancelToken: cancelToken,
+          hwidHeaders: hwidHeaders,
+          skipUserAgents: {initialUa},
+        );
+        if (parsedWithClientUa != null) {
+          return parsedWithClientUa;
+        }
+      }
+
       // часть cdn/waf отдаёт 502 с пустым body именно для dio.
       // пробуем забрать payload нативным HttpClient с браузерными заголовками
       try {
@@ -367,6 +414,7 @@ class SubscriptionService {
           attempt: 1,
           hwid: hwid,
           hwidHeaders: hwidHeaders,
+          savedUserAgent: savedUserAgent,
         );
       }
 
@@ -419,6 +467,51 @@ class SubscriptionService {
   }
 
   Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent})?>
+  _tryParseWithClientUserAgents(
+    String url, {
+    CancelToken? cancelToken,
+    required Map<String, String> hwidHeaders,
+    Set<String> skipUserAgents = const {},
+  }) async {
+    final response = await _retryWithSubscriptionUserAgents(
+      url,
+      cancelToken: cancelToken,
+      hwidHeaders: hwidHeaders,
+      skipUserAgents: skipUserAgents,
+    );
+    if (response == null) {
+      return null;
+    }
+    _logRemnawaveHwidHeaders(response.headers, source: 'UA-RETRY');
+    _throwIfRemnawaveHwidHeadersIndicateError(response.headers, url: url);
+
+    final body = response.data ?? '';
+    if (body.length > 10 * 1024 * 1024) {
+      throw SubscriptionFetchException('Response too large (>10MB)', url: url);
+    }
+
+    List<String> configs;
+    try {
+      configs = await _parseBodyOffThread(body);
+    } on FormatException {
+      return null;
+    }
+    if (configs.isEmpty) {
+      return null;
+    }
+
+    final headerMeta = _parseUserInfoHeader(response.headers);
+    final bodyMeta = _extractMetaFromBody(body);
+    return (
+      configs: configs,
+      usedBytes: headerMeta.usedBytes ?? bodyMeta.usedBytes,
+      totalBytes: headerMeta.totalBytes ?? bodyMeta.totalBytes,
+      expiresAt: headerMeta.expiresAt ?? bodyMeta.expiresAt,
+      usedUserAgent: response.requestOptions.headers['User-Agent'] as String?,
+    );
+  }
+
+  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent})?>
   _tryFetchWithHttpClientFallback(
     String url, {
     required String? hwid,
@@ -437,10 +530,7 @@ class SubscriptionService {
           ..connectionTimeout = const Duration(seconds: 15);
         final uri = Uri.parse(candidate);
         final req = await client.getUrl(uri);
-        req.headers.set(
-          HttpHeaders.userAgentHeader,
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        );
+        req.headers.set(HttpHeaders.userAgentHeader, browserUserAgent);
         req.headers.set(HttpHeaders.acceptHeader, '*/*');
         req.headers.set(HttpHeaders.acceptLanguageHeader, 'en-US,en;q=0.9');
         req.headers.set('Cache-Control', 'no-cache');
@@ -774,36 +864,12 @@ class SubscriptionService {
     String url, {
     CancelToken? cancelToken,
     required Map<String, String> hwidHeaders,
-    String? savedUserAgent,
+    Set<String> skipUserAgents = const {},
   }) async {
-    // сперва пробуем сохранённый ua, если есть
-    if (savedUserAgent != null && savedUserAgent.isNotEmpty) {
-      try {
-        final resp = await _dio.get<String>(
-          url,
-          cancelToken: cancelToken,
-          options: Options(
-            headers: {
-              'User-Agent': savedUserAgent,
-              'Accept': 'text/plain,*/*',
-              ...hwidHeaders,
-            },
-          ),
-        );
-        if (resp.statusCode == 200) {
-          final body = (resp.data ?? '').trimLeft();
-          final type = (resp.headers.value('content-type') ?? '').toLowerCase();
-          final isHtml = type.contains('text/html') ||
-              body.startsWith('<!doctype html') ||
-              body.startsWith('<html');
-          if (!isHtml) return resp;
-        }
-      } on Object {
-        // сохранённый ua не зашёл, идём к стандартным
-      }
-    }
-
-    const userAgents = <String>[
+    // [skipUserAgents] — уже опробованные (первый запрос), их не повторяем
+    final userAgents = <String>[
+      // свой UA первым — панели могут держать его в белом списке
+      await appUserAgent(),
       'v2rayNG/1.9.28',
       'NekoBox/1.3.9',
       'ClashMetaForAndroid/2.11.5',
@@ -811,9 +877,12 @@ class SubscriptionService {
       'sing-box',
       'QuantumultX',
       'Shadowrocket',
+      // браузерный — последний резерв
+      browserUserAgent,
     ];
 
     for (final ua in userAgents) {
+      if (skipUserAgents.contains(ua)) continue;
       try {
         final resp = await _dio.get<String>(
           url,
@@ -1846,7 +1915,11 @@ class SubscriptionService {
   Future<UpdateResult> updateSubscription(Subscription sub,
       {CancelToken? cancelToken}) async {
     try {
-      final result = await fetchRaw(sub.url, cancelToken: cancelToken);
+      final result = await fetchRaw(
+        sub.url,
+        cancelToken: cancelToken,
+        userAgent: sub.userAgent,
+      );
 
       final activeId = _storage.getActiveServerId();
       final oldServers = (await _storage.getServers())
@@ -1904,6 +1977,8 @@ class SubscriptionService {
         totalBytes: result.totalBytes,
         expiresAt: result.expiresAt,
         serverCount: servers.length,
+        // null (payload пришёл фолбэком без UA-перебора) не затирает сохранённый
+        userAgent: result.usedUserAgent,
       );
       await _storage.upsertSubscription(updated);
 
