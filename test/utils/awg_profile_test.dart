@@ -76,6 +76,20 @@ PersistentKeepalive = 25
     expect(uapi, isNot(contains(privBlock)));
   });
 
+  test('toUapi substitutes resolved endpoint for domain hosts', () {
+    final conf = sample.replaceFirst(
+        'Endpoint = 203.0.113.10:51820', 'Endpoint = vpn.example.com:945');
+    final p = AwgProfile.parse(conf);
+    expect(AwgProfile.splitEndpoint(p.peer.endpoint),
+        ('vpn.example.com', 945));
+    final uapi = p.toUapi(
+      endpointOverrides: {'vpn.example.com:945': '198.51.100.7:945'},
+    );
+    // amneziawg-go UAPI не резолвит DNS — в endpoint обязан уйти IP.
+    expect(uapi, contains('endpoint=198.51.100.7:945'));
+    expect(uapi, isNot(contains('endpoint=vpn.example.com:945')));
+  });
+
   test('tunnelName produces safe slug', () {
     expect(AwgProfile.parse(sample).tunnelName(), 'Test_AWG');
   });

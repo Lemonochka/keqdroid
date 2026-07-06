@@ -86,9 +86,13 @@ class UpdateService {
   /// перепроверить после долгой заморозки процесса.
   static DateTime? get lastAutoCheckAt => _lastAutoCheckAt;
 
-  /// When the VPN is connected on desktop, GitHub traffic uses the local HTTP
-  /// proxy (Dart IO does not support SOCKS in [HttpClient.findProxy]).
-  static Dio _buildDio({bool vpnConnected = false, int httpPort = 2081}) {
+  /// When the VPN is connected, GitHub traffic rides the tunnel through the
+  /// local HTTP inbound (Dart IO does not support SOCKS in
+  /// [HttpClient.findProxy]) — including Android in xray mode: the app's own
+  /// package is excluded from the TUN there, so direct Dio bypasses the VPN
+  /// and hits the RKN block on release-assets.githubusercontent.com.
+  /// [viaLocalProxy] — считается вызывающим через [tunnelHasLocalHttpProxy].
+  static Dio _buildDio({bool viaLocalProxy = false, int httpPort = 2081}) {
     final dio = Dio(
       BaseOptions(
         connectTimeout: const Duration(seconds: 15),
@@ -100,7 +104,7 @@ class UpdateService {
     );
     configureDioForActiveVpn(
       dio,
-      vpnConnected: vpnConnected,
+      useLocalProxy: viaLocalProxy,
       httpPort: httpPort,
     );
     return dio;
@@ -108,7 +112,7 @@ class UpdateService {
 
   static Future<UpdateInfo?> checkForUpdate({
     bool force = false,
-    bool vpnConnected = false,
+    bool viaLocalProxy = false,
     int httpPort = 2081,
   }) async {
     if (!force) {
@@ -122,7 +126,7 @@ class UpdateService {
       _lastAutoCheckAt = DateTime.now();
     }
 
-    final dio = _buildDio(vpnConnected: vpnConnected, httpPort: httpPort);
+    final dio = _buildDio(viaLocalProxy: viaLocalProxy, httpPort: httpPort);
     try {
       final currentVersion = await _getCurrentVersion();
       final releases = await _fetchReleases(dio);
@@ -459,12 +463,12 @@ class UpdateService {
   /// Returns `true` when the app is exiting to apply a Windows portable update.
   static Future<bool> downloadAndInstall(
     UpdateInfo info, {
-    bool vpnConnected = false,
+    bool viaLocalProxy = false,
     int httpPort = 2081,
     void Function(int received, int total)? onProgress,
     Future<void> Function()? beforeRestart,
   }) async {
-    final dio = _buildDio(vpnConnected: vpnConnected, httpPort: httpPort);
+    final dio = _buildDio(viaLocalProxy: viaLocalProxy, httpPort: httpPort);
     if (info.openInBrowser) {
       await _openUrlInBrowser(info.downloadUrl);
       return false;

@@ -106,7 +106,9 @@ class AndroidTunnelBackend implements TunnelBackend {
         for (final p in profile.peers) {
           allowed.addAll(p.allowedIps);
         }
-        args['awgUapi'] = profile.toUapi();
+        args['awgUapi'] = profile.toUapi(
+          endpointOverrides: await _resolveAwgEndpoints(profile),
+        );
         args['awgAddresses'] = profile.iface.addresses;
         args['awgDns'] = profile.iface.dns;
         args['awgAllowedIps'] = allowed.toList();
@@ -117,6 +119,39 @@ class AndroidTunnelBackend implements TunnelBackend {
     } on PlatformException catch (e) {
       throw _wrap(e, 'startVpn');
     }
+  }
+
+  /// Доменные `Endpoint` → IP:port. UAPI amneziawg-go принимает endpoint
+  /// только литеральным IP (netip.ParseAddrPort, DNS не делает) — с доменом
+  /// IpcSet падает и туннель не стартует вовсе.
+  Future<Map<String, String>> _resolveAwgEndpoints(AwgProfile profile) async {
+    final overrides = <String, String>{};
+    for (final p in profile.peers) {
+      final (host, port) = AwgProfile.splitEndpoint(p.endpoint);
+      if (InternetAddress.tryParse(host) != null) continue;
+      final List<InternetAddress> addrs;
+      try {
+        addrs = await InternetAddress.lookup(host);
+      } catch (e) {
+        throw VpnStartException(
+          'Failed to resolve AmneziaWG endpoint "$host": $e',
+        );
+      }
+      if (addrs.isEmpty) {
+        throw VpnStartException(
+          'Failed to resolve AmneziaWG endpoint "$host": no addresses',
+        );
+      }
+      // IPv4 предпочтительнее: v6-маршрута до сервера может не быть.
+      final addr = addrs.firstWhere(
+        (a) => a.type == InternetAddressType.IPv4,
+        orElse: () => addrs.first,
+      );
+      overrides[p.endpoint] = addr.type == InternetAddressType.IPv6
+          ? '[${addr.address}]:$port'
+          : '${addr.address}:$port';
+    }
+    return overrides;
   }
 
   @override

@@ -8,6 +8,8 @@ import 'package:keqdroid/shared/extensions/build_context_l10n.dart';
 import '../../providers/providers.dart';
 import '../../services/update_service.dart';
 import '../../tunnel/tunnel_state.dart';
+import '../../utils/awg_profile.dart';
+import '../../utils/local_vpn_proxy.dart';
 
 /// «Диалог уже показывали в этой сессии» — по ВЕРСИИ, а не булев флаг:
 /// ре-раны updateInfoProvider с той же версией не спамят диалогом, но новый
@@ -281,10 +283,15 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
 
     try {
       final vpn = ref.read(vpnStateProvider).value;
+      final activeServer = ref.read(serversProvider).activeServer;
       final settings = await ref.read(storageProvider).getSettings();
       final restarting = await UpdateService.downloadAndInstall(
         widget.info,
-        vpnConnected: vpn?.status == VpnStatus.connected,
+        viaLocalProxy: tunnelHasLocalHttpProxy(
+          vpnConnected: vpn?.status == VpnStatus.connected,
+          awgBackend: activeServer != null &&
+              AwgProfile.isAwgConfig(activeServer.config),
+        ),
         httpPort: settings.httpPort,
         onProgress: (received, total) {
           if (total > 0 && mounted) {

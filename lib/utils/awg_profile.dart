@@ -125,10 +125,10 @@ class AwgProfile {
   }
 
   /// Хост сервера из `Endpoint` первого пира (для пинга и direct-исключения).
-  String get endpointHost => _splitEndpoint(peer.endpoint).$1;
+  String get endpointHost => splitEndpoint(peer.endpoint).$1;
 
   /// Порт сервера из `Endpoint` первого пира.
-  int get endpointPort => _splitEndpoint(peer.endpoint).$2;
+  int get endpointPort => splitEndpoint(peer.endpoint).$2;
 
   /// Имя туннеля для Windows-сервиса: безопасный slug (буквы/цифры/`_-`).
   String tunnelName() {
@@ -143,7 +143,12 @@ class AwgProfile {
 
   /// UAPI-строка для amneziawg-go (Android `wgTurnOn`). Ключи WG в `.conf` —
   /// base64, UAPI требует hex. AWG-параметры идут на уровне устройства.
-  String toUapi() {
+  ///
+  /// [endpointOverrides] — подмена `Endpoint` по его исходной строке из
+  /// `.conf`: UAPI ядра принимает endpoint только как литеральный IP:port
+  /// (netip.ParseAddrPort, без DNS), так что доменные endpoint'ы вызывающий
+  /// код обязан отрезолвить заранее.
+  String toUapi({Map<String, String> endpointOverrides = const {}}) {
     final sb = StringBuffer();
     sb.writeln('private_key=${_b64ToHex(iface.privateKey)}');
     // Параметры обфускации AmneziaWG — на уровне device, до пиров.
@@ -156,7 +161,7 @@ class AwgProfile {
       if (p.presharedKey != null && p.presharedKey!.isNotEmpty) {
         sb.writeln('preshared_key=${_b64ToHex(p.presharedKey!)}');
       }
-      sb.writeln('endpoint=${p.endpoint}');
+      sb.writeln('endpoint=${endpointOverrides[p.endpoint] ?? p.endpoint}');
       if (p.persistentKeepalive != null) {
         sb.writeln('persistent_keepalive_interval=${p.persistentKeepalive}');
       }
@@ -190,7 +195,9 @@ class AwgProfile {
         .toList();
   }
 
-  static (String, int) _splitEndpoint(String endpoint) {
+  /// `host:port` / `[v6]:port` → (host, port). Публичный: нужен бэкендам,
+  /// чтобы резолвить доменные endpoint'ы каждого пира перед [toUapi].
+  static (String, int) splitEndpoint(String endpoint) {
     final ep = endpoint.trim();
     // IPv6 в скобках: [::1]:51820
     if (ep.startsWith('[')) {

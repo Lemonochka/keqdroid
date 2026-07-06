@@ -325,8 +325,10 @@ class LinuxTunnelBackend implements TunnelBackend {
     }
   }
 
+  // withHttp и в TUN-режиме: процесс приложения идёт мимо TUN (direct-правило
+  // sing-box), обновления качаются через локальный HTTP-инбаунд wireproxy.
   Future<void> _startAwgTunSession(TunnelSessionRequest request) async {
-    await _startWireproxy(request, withHttp: false);
+    await _startWireproxy(request, withHttp: true);
     final singConfig = request.singboxConfig;
     if (singConfig == null || singConfig.isEmpty) {
       throw const VpnStartException('singboxConfig is required for TUN mode');
