@@ -352,6 +352,10 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     addedTotal += extraAdded;
 
     if (!mounted) return;
+    // Полный список (includeSystem=true, иконки всех пакетов — мегабайты)
+    // нужен был только ради packageName'ов. Если экран его сейчас не
+    // показывает — освобождаем, не дожидаясь таймера autoDispose.
+    if (!_showSystem) ref.invalidate(installedAppsProvider(true));
     if (extraAdded > 0) {
       setState(() {
         if (_allApps.isNotEmpty) _applyInitialSort(_allApps);
@@ -1043,6 +1047,9 @@ class _AppIconState extends ConsumerState<_AppIcon> {
           width: 42, height: 42,
           fit: BoxFit.cover,
           gaplessPlayback: true,
+          // Декодируем под фактические 42lp: исходные иконки бывают до
+          // 512×512, полноразмерный декод раздувал image cache в разы.
+          cacheWidth: (42 * MediaQuery.devicePixelRatioOf(context)).round(),
           errorBuilder: (context, error, stackTrace) => _fallback(context),
         ),
       );

@@ -38,6 +38,11 @@ class VpnEngine {
     }
   }
 
+  /// Десктоп: пауза/возобновление секундного опроса счётчиков трафика,
+  /// пока окно скрыто (трей/свёрнуто) — телеметрию никто не видит.
+  void setTrafficStatsPollingEnabled(bool enabled) =>
+      _backend.setTrafficStatsPollingEnabled(enabled);
+
   Future<({String username, String password})> fetchSocksCredentials() =>
       _backend.fetchSocksCredentials();
 

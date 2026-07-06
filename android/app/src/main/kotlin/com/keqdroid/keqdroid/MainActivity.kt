@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.Lifecycle
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -354,18 +355,9 @@ class MainActivity : FlutterFragmentActivity() {
                 ch.setStreamHandler(object : EventChannel.StreamHandler {
                     override fun onListen(args: Any?, sink: EventChannel.EventSink) {
                         eventSink = sink
-                        telemetryJob?.cancel()
-                        telemetryJob = mainScope.launch {
-                            while (isActive) {
-                                emitVpnSnapshot()
-                                val status = vpnServiceBinder?.getStatus()
-                                val delayMs = when (status) {
-                                    VpnRunStatus.RUNNING -> 2_000L
-                                    VpnRunStatus.STARTING -> 500L
-                                    else -> 1_500L
-                                }
-                                delay(delayMs)
-                            }
+                        // Активность в фоне — цикл не заводим, его поднимет onStart.
+                        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                            startTelemetryLoop()
                         }
                     }
 
@@ -376,6 +368,39 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                 })
             }
+    }
+
+    private fun startTelemetryLoop() {
+        telemetryJob?.cancel()
+        telemetryJob = mainScope.launch {
+            while (isActive) {
+                emitVpnSnapshot()
+                val status = vpnServiceBinder?.getStatus()
+                val delayMs = when (status) {
+                    VpnRunStatus.RUNNING -> 2_000L
+                    VpnRunStatus.STARTING -> 500L
+                    else -> 1_500L
+                }
+                delay(delayMs)
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Возобновляем периодическую телеметрию, остановленную в onStop.
+        // Dart на resume дополнительно делает refreshStateStream()+syncFromNative().
+        if (eventSink != null && telemetryJob == null) startTelemetryLoop()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Свернули приложение: Dart-подписка на EventChannel не отменяется, и
+        // периодический цикл молотил бы снапшоты каждые 1.5–2с в фоне впустую.
+        // Событийные обновления статуса (statusListener, broadcast, QS-плитка)
+        // не зависят от цикла и продолжают доходить — синк статуса не страдает.
+        telemetryJob?.cancel()
+        telemetryJob = null
     }
 
     private fun emitVpnSnapshot(

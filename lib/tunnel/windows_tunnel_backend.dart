@@ -60,6 +60,18 @@ class WindowsTunnelBackend implements TunnelBackend {
   int _totalDownload = 0;
   int _totalUpload = 0;
   String? _xrayBinPath;
+  // false = окно скрыто (трей/свёрнуто): секундный опрос счётчиков приостановлен.
+  bool _statsPollingEnabled = true;
+  // Базовая отметка счётчиков снята (раньше «нет базы» кодировалось как
+  // prev == 0, но 0 — легитимное значение на старте сессии: с паузой опроса
+  // это теряло бы весь скрытый период из тоталов).
+  bool _statsBaselineTaken = false;
+  // Первый опрос после паузы: скрытый период целиком попадает в тоталы, но как
+  // «скорость» его не показываем — иначе на секунду вспыхивает гигантское значение.
+  bool _resumeBaselinePending = false;
+  // Один keep-alive клиент на сессию вместо нового HttpClient (сокет+закрытие)
+  // на каждый секундный опрос clash_api/wireproxy.
+  HttpClient? _statsHttpClient;
 
   @override
   Stream<VpnState> get stateStream => _stateCtrl.stream;
@@ -896,10 +908,61 @@ class WindowsTunnelBackend implements TunnelBackend {
     _prevOutOctets = 0;
     _totalDownload = 0;
     _totalUpload = 0;
+    _statsBaselineTaken = false;
+    if (_statsPollingEnabled) {
+      _startStatsTimer(mode);
+    } else {
+      // Окно скрыто (сессия из хоткея/автостарта в трее): цикл не заводим, но
+      // снимаем базовую отметку счётчиков — иначе трафик скрытого периода не
+      // попал бы в тоталы при возобновлении опроса.
+      unawaited(_takeHiddenBaseline(mode));
+    }
+  }
+
+  /// Разовая базовая отметка счётчиков для сессии, начатой при скрытом окне.
+  /// С ретраями: сразу после старта ядра эндпоинт статистики может ещё не
+  /// отвечать, а секундного цикла, который бы это добрал, в паузе нет.
+  Future<void> _takeHiddenBaseline(ConnectionMode mode) async {
+    final startedAt = _sessionStartedAt;
+    for (var i = 0; i < 5; i++) {
+      // Сессия сменилась/остановилась, опрос возобновился или база уже снята —
+      // дальше не наше дело.
+      if (!identical(_sessionStartedAt, startedAt) ||
+          _statsPollingEnabled ||
+          _statsBaselineTaken) {
+        return;
+      }
+      await _pollTrafficStats(mode, force: true);
+      if (_statsBaselineTaken) return;
+      await Future<void>.delayed(const Duration(seconds: 1));
+    }
+  }
+
+  void _startStatsTimer(ConnectionMode mode) {
     _statsTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       unawaited(_pollTrafficStats(mode));
     });
     unawaited(_pollTrafficStats(mode));
+  }
+
+  @override
+  void setTrafficStatsPollingEnabled(bool enabled) {
+    if (_statsPollingEnabled == enabled) return;
+    _statsPollingEnabled = enabled;
+    if (!enabled) {
+      // Только глушим таймер; сессионные поля (тоталы, started) не трогаем —
+      // при возобновлении кумулятивные счётчики ядра дадут корректные тоталы.
+      _statsTimer?.cancel();
+      _statsTimer = null;
+      _statsHttpClient?.close(force: true);
+      _statsHttpClient = null;
+      return;
+    }
+    final mode = _activeMode;
+    if (mode != null && _sessionStartedAt != null && _statsTimer == null) {
+      _resumeBaselinePending = true;
+      _startStatsTimer(mode);
+    }
   }
 
   void _stopStatsLoop() {
@@ -910,9 +973,14 @@ class WindowsTunnelBackend implements TunnelBackend {
     _prevOutOctets = 0;
     _totalDownload = 0;
     _totalUpload = 0;
+    _resumeBaselinePending = false;
+    _statsBaselineTaken = false;
+    _statsHttpClient?.close(force: true);
+    _statsHttpClient = null;
   }
 
-  Future<void> _pollTrafficStats(ConnectionMode mode) async {
+  Future<void> _pollTrafficStats(ConnectionMode mode, {bool force = false}) async {
+    if (!_statsPollingEnabled && !force) return;
     if (_xrayProcess == null &&
         _wireproxyProcess == null &&
         _keqrnelProcess == null) {
@@ -968,9 +1036,11 @@ class WindowsTunnelBackend implements TunnelBackend {
         return;
       }
 
-      if (_prevInOctets == 0 && _prevOutOctets == 0) {
+      if (!_statsBaselineTaken) {
+        _statsBaselineTaken = true;
         _prevInOctets = inOctets;
         _prevOutOctets = outOctets;
+        _resumeBaselinePending = false;
         _emitConnectedTelemetry(mode);
         return;
       }
@@ -984,26 +1054,42 @@ class WindowsTunnelBackend implements TunnelBackend {
       _totalDownload += deltaIn;
       _totalUpload += deltaOut;
 
+      final suppressSpeed = _resumeBaselinePending;
+      _resumeBaselinePending = false;
       _emitConnectedTelemetry(
         mode,
-        downloadSpeed: deltaIn,
-        uploadSpeed: deltaOut,
+        downloadSpeed: suppressSpeed ? null : deltaIn,
+        uploadSpeed: suppressSpeed ? null : deltaOut,
       );
     } catch (e) {
       AppLogger.instance.debug('getTrafficStats failed: $e');
     }
   }
 
+  /// keep-alive клиент для секундных опросов; после ошибки пересоздаётся,
+  /// чтобы зависший запрос не держал сокет (раньше это гарантировал
+  /// close(force) на каждом опросе).
+  HttpClient get _statsHttp =>
+      _statsHttpClient ??= HttpClient()
+        ..connectionTimeout = const Duration(seconds: 2);
+
+  void _resetStatsHttp() {
+    _statsHttpClient?.close(force: true);
+    _statsHttpClient = null;
+  }
+
   /// Читает кумулятивные rx/tx из wireproxy `/metrics` (UAPI dump).
   /// rx_bytes = принято (download), tx_bytes = отправлено (upload), сумма по пирам.
   Future<({int rx, int tx})?> _queryWireproxyMetrics(int port) async {
-    final client = HttpClient();
     try {
-      final req = await client
+      final req = await _statsHttp
           .get('127.0.0.1', port, '/metrics')
           .timeout(const Duration(seconds: 2));
       final resp = await req.close().timeout(const Duration(seconds: 2));
-      if (resp.statusCode != 200) return null;
+      if (resp.statusCode != 200) {
+        await resp.drain<void>();
+        return null;
+      }
       final body = await resp.transform(utf8.decoder).join();
       var rx = 0;
       var tx = 0;
@@ -1021,31 +1107,31 @@ class WindowsTunnelBackend implements TunnelBackend {
       }
       return (rx: rx, tx: tx);
     } catch (_) {
+      _resetStatsHttp();
       return null;
-    } finally {
-      client.close(force: true);
     }
   }
 
   /// Кумулятивный трафик из clash_api keqrnel: GET /connections →
   /// downloadTotal/uploadTotal (байты за сессию). down = принято, up = отправлено.
   Future<({int down, int up})?> _queryClashTraffic(int port) async {
-    final client = HttpClient();
     try {
-      final req = await client
+      final req = await _statsHttp
           .get('127.0.0.1', port, '/connections')
           .timeout(const Duration(seconds: 2));
       final resp = await req.close().timeout(const Duration(seconds: 2));
-      if (resp.statusCode != 200) return null;
+      if (resp.statusCode != 200) {
+        await resp.drain<void>();
+        return null;
+      }
       final body = await resp.transform(utf8.decoder).join();
       final json = jsonDecode(body) as Map<String, dynamic>;
       final down = (json['downloadTotal'] as num?)?.toInt() ?? 0;
       final up = (json['uploadTotal'] as num?)?.toInt() ?? 0;
       return (down: down, up: up);
     } catch (_) {
+      _resetStatsHttp();
       return null;
-    } finally {
-      client.close(force: true);
     }
   }
 
