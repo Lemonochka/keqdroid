@@ -15,6 +15,11 @@ void main() {
   late _MockStorageService storage;
   late SubscriptionService service;
 
+  setUpAll(() {
+    registerFallbackValue(const Subscription(id: '', name: '', url: ''));
+    registerFallbackValue(<ServerItem>[]);
+  });
+
   setUp(() {
     storage = _MockStorageService();
     service = SubscriptionService(storage);
@@ -127,6 +132,124 @@ void main() {
     });
   });
 
+  group('SubscriptionService User-Agent handling', () {
+    // в тестах PackageInfo недоступен → appUserAgent() падает в 'keqdroid'
+    const appUaPrefix = 'keqdroid';
+
+    late _UaGateAdapter adapter;
+
+    // сервис с UA-зависимым фейк-адаптером; базовый браузерный UA как в
+    // проде (_buildDio) — per-request UA обязан его переопределять
+    SubscriptionService buildService(bool Function(String ua) isAllowed) {
+      final dio = Dio(BaseOptions(headers: {
+        'User-Agent': SubscriptionService.browserUserAgent,
+      }));
+      adapter = _UaGateAdapter(isAllowed: isAllowed);
+      dio.httpClientAdapter = adapter;
+      return SubscriptionService(storage, dio: dio);
+    }
+
+    setUp(() {
+      when(() => storage.getSettings()).thenAnswer((_) async => const AppSettings());
+      when(() => storage.getHwid()).thenReturn(null);
+      when(() => storage.setHwid(any())).thenAnswer((_) async {});
+      when(() => storage.getServers()).thenAnswer((_) async => <ServerItem>[]);
+      when(() => storage.getActiveServerId()).thenReturn(null);
+      when(() => storage.replaceServersBySubscription(any(), any()))
+          .thenAnswer((_) async {});
+      when(() => storage.upsertSubscription(any())).thenAnswer((_) async {});
+    });
+
+    test('first request goes with app UA and it is persisted on success',
+        () async {
+      service = buildService((ua) => ua.startsWith(appUaPrefix));
+
+      final result = await service.updateSubscription(
+        const Subscription(id: 's1', name: 'S', url: 'https://example.com/sub'),
+      );
+
+      expect(result.error, isNull);
+      expect(result.success, isTrue);
+      expect(result.serverCount, 1);
+      // ровно один запрос, ушёл с UA приложения (не с базовым браузерным)
+      expect(adapter.requestedUserAgents, hasLength(1));
+      expect(adapter.requestedUserAgents.single, startsWith(appUaPrefix));
+      expect(result.subscription.userAgent, startsWith(appUaPrefix));
+    });
+
+    test('falls back to client UA list when panel rejects app UA with 502',
+        () async {
+      // Regression: панели, маршрутизирующие по UA, отдают неизвестным UA
+      // html-страницу подписки (её бэкенд может лежать → 502), а известным
+      // клиентским — payload. Раньше UA-ретрай жил только в успешной ветке
+      // (200+html) и до него не доходило: dio кидал на 502 раньше.
+      service = buildService((ua) => ua == 'v2rayNG/1.9.28');
+
+      final result = await service.updateSubscription(
+        const Subscription(id: 's1', name: 'S', url: 'https://example.com/sub'),
+      );
+
+      expect(result.error, isNull);
+      expect(result.success, isTrue);
+      expect(result.serverCount, 1);
+      // userinfo берётся из ответа под сработавшим UA
+      expect(result.subscription.usedBytes, 300);
+      expect(result.subscription.totalBytes, 1024);
+      // первым шёл UA приложения, повторно в переборе он не участвует
+      expect(adapter.requestedUserAgents.first, startsWith(appUaPrefix));
+      expect(
+        adapter.requestedUserAgents
+            .where((ua) => ua.startsWith(appUaPrefix))
+            .length,
+        1,
+      );
+      // сработавший UA сохранился в подписке
+      expect(result.subscription.userAgent, 'v2rayNG/1.9.28');
+    });
+
+    test('saved UA is used for the first request without iteration', () async {
+      service = buildService((ua) => ua == 'NekoBox/1.3.9');
+
+      final result = await service.updateSubscription(
+        const Subscription(
+          id: 's1',
+          name: 'S',
+          url: 'https://example.com/sub',
+          userAgent: 'NekoBox/1.3.9',
+        ),
+      );
+
+      expect(result.error, isNull);
+      expect(result.success, isTrue);
+      expect(adapter.requestedUserAgents, ['NekoBox/1.3.9']);
+      expect(result.subscription.userAgent, 'NekoBox/1.3.9');
+    });
+
+    test('re-iterates UA list when saved UA stopped working', () async {
+      service = buildService((ua) => ua == 'v2rayNG/1.9.28');
+
+      final result = await service.updateSubscription(
+        const Subscription(
+          id: 's1',
+          name: 'S',
+          url: 'https://example.com/sub',
+          userAgent: 'NekoBox/1.3.9', // раньше работал, теперь панель его режет
+        ),
+      );
+
+      expect(result.error, isNull);
+      expect(result.success, isTrue);
+      // сломанный сохранённый UA пробуем ровно один раз, без повтора в переборе
+      expect(adapter.requestedUserAgents.first, 'NekoBox/1.3.9');
+      expect(
+        adapter.requestedUserAgents.where((ua) => ua == 'NekoBox/1.3.9').length,
+        1,
+      );
+      // новый рабочий UA перезаписал сохранённый
+      expect(result.subscription.userAgent, 'v2rayNG/1.9.28');
+    });
+  });
+
   group('SubscriptionService._parseBody name extraction', () {
     test('keeps fragment names that contain spaces (and an inner #)', () {
       // Regression: a plain subscription where the #name has raw spaces, an emoji
@@ -159,6 +282,51 @@ void main() {
       expect(names, containsAll(<String>['name one', 'name two']));
     });
   });
+}
+
+/// payload — только UA, прошедшим [isAllowed]; остальным 502 (nginx-заглушка).
+class _UaGateAdapter implements HttpClientAdapter {
+  _UaGateAdapter({required this.isAllowed});
+
+  final bool Function(String ua) isAllowed;
+  final requestedUserAgents = <String>[];
+
+  static final _payload = base64.encode(
+    utf8.encode(
+      'vless://22222222-2222-2222-2222-222222222222@1.2.3.4:443?security=reality&type=tcp#Node',
+    ),
+  );
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<List<int>>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    final ua = options.headers['User-Agent'] as String? ?? '';
+    requestedUserAgents.add(ua);
+    if (!isAllowed(ua)) {
+      return ResponseBody.fromString(
+        '<html><head><title>502 Bad Gateway</title></head>'
+        '<body><center><h1>502 Bad Gateway</h1></center><hr><center>nginx</center></body></html>',
+        502,
+        headers: {
+          'content-type': ['text/html'],
+        },
+      );
+    }
+    return ResponseBody.fromString(
+      _payload,
+      200,
+      headers: {
+        'content-type': ['text/plain; charset=utf-8'],
+        'subscription-userinfo': ['upload=100; download=200; total=1024; expire=1788520373'],
+      },
+    );
+  }
 }
 
 class _FakeAdapter implements HttpClientAdapter {

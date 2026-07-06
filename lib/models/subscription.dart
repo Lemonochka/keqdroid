@@ -11,6 +11,7 @@ class Subscription {
   final bool autoUpdate;
   final int serverCount;
   final int updateIntervalHours; // свой интервал авто-обновления
+  final String? userAgent; // User-Agent, под которым панель отдала payload
 
   const Subscription({
     required this.id,
@@ -23,6 +24,7 @@ class Subscription {
     this.autoUpdate = true,
     this.serverCount = 0,
     this.updateIntervalHours = 12,
+    this.userAgent,
   });
 
   factory Subscription.create({required String name, required String url}) =>
@@ -47,6 +49,7 @@ class Subscription {
     autoUpdate: json['autoUpdate'] as bool? ?? true,
     serverCount: json['serverCount'] as int? ?? 0,
     updateIntervalHours: json['updateIntervalHours'] as int? ?? 12,
+    userAgent: json['userAgent'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -61,6 +64,7 @@ class Subscription {
     'autoUpdate': autoUpdate,
     'serverCount': serverCount,
     'updateIntervalHours': updateIntervalHours,
+    if (userAgent != null) 'userAgent': userAgent,
   };
 
   Subscription copyWith({
@@ -74,6 +78,7 @@ class Subscription {
     bool? autoUpdate,
     int? serverCount,
     int? updateIntervalHours,
+    String? userAgent,
   }) =>
       Subscription(
         id: id ?? this.id,
@@ -86,6 +91,7 @@ class Subscription {
         autoUpdate: autoUpdate ?? this.autoUpdate,
         serverCount: serverCount ?? this.serverCount,
         updateIntervalHours: updateIntervalHours ?? this.updateIntervalHours,
+        userAgent: userAgent ?? this.userAgent,
       );
 
   // total=0 от провайдера = безлимит
