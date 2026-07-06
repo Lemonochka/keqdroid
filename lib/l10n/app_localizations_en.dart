@@ -1316,4 +1316,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hotkeyNoPingData => 'No ping results yet — run a ping test first';
+
+  @override
+  String get clipboardNoSubscriptionLink => 'Clipboard has no subscription link (http/https)';
+
+  @override
+  String get splitTunnelingReconnectHint => 'Changes apply after reconnecting the VPN';
+
+  @override
+  String serversDeleteConfirm(Object name) {
+    return 'Are you sure you want to delete \"$name\"?';
+  }
+
+  @override
+  String get errorTunAdminMessage => 'TUN mode on Windows needs Administrator rights.';
+
+  @override
+  String get errorTunAdminAction => 'Run the app as administrator or switch to Proxy mode in settings.';
+
+  @override
+  String get errorVpnPermissionMessage => 'VPN permission was not granted.';
+
+  @override
+  String get errorVpnPermissionAction => 'Allow VPN permission in the system dialog and try again.';
+
+  @override
+  String get errorHwidBindMessage => 'Provider requires HWID binding for this device.';
+
+  @override
+  String get errorHwidBindAction => 'Bind this device in provider panel, then refresh subscription.';
+
+  @override
+  String get errorDeviceLimitMessage => 'Provider refused subscription due to device limit.';
+
+  @override
+  String get errorDeviceLimitAction => 'Remove old devices in provider panel or raise device limit.';
+
+  @override
+  String get errorConfigInvalidMessage => 'Subscription or server configuration is invalid.';
+
+  @override
+  String get errorConfigInvalidAction => 'Check URL/config format and import a valid subscription link.';
+
+  @override
+  String get errorAuthDeniedMessage => 'Access to subscription is denied by provider.';
+
+  @override
+  String get errorAuthDeniedAction => 'Check token/credentials and verify subscription has not expired.';
+
+  @override
+  String get errorSubUrlInvalidMessage => 'Subscription link is missing or expired.';
+
+  @override
+  String get errorSubUrlInvalidAction => 'Request a fresh URL from provider and update it in app.';
+
+  @override
+  String get errorNetworkMessage => 'Cannot reach server right now.';
+
+  @override
+  String get errorNetworkAction => 'Check internet, DNS, and server availability, then retry.';
+
+  @override
+  String get errorUnknownAction => 'Retry operation. If issue repeats, check server and app settings.';
 }

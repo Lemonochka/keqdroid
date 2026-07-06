@@ -224,9 +224,9 @@ class SubscriptionsTab extends ConsumerWidget {
     final nameCtrl = TextEditingController();
     final urlCtrl = TextEditingController();
     bool loading = false;
-    // Ошибка сканирования QR — в самой шторке: snackbar был бы скрыт за
-    // модальным барьером.
-    String? qrError;
+    // Ошибки (скан QR, загрузка подписки) — в самой шторке: snackbar был бы
+    // скрыт за модальным барьером, а закрытие шторки теряло бы введённый URL.
+    String? sheetError;
 
     final bgColor = AppTheme.bg(context);
     final textColor = AppTheme.text(context);
@@ -290,19 +290,19 @@ class SubscriptionsTab extends ConsumerWidget {
                               (uri.scheme == 'http' ||
                                   uri.scheme == 'https')) {
                             urlCtrl.text = raw;
-                            setModalState(() => qrError = null);
+                            setModalState(() => sheetError = null);
                           } else {
                             setModalState(
-                              () => qrError = l10n.qrNotSubscriptionLink,
+                              () => sheetError = l10n.qrNotSubscriptionLink,
                             );
                           }
                         },
                       ),
               ),
-              if (qrError != null) ...[
+              if (sheetError != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  qrError!,
+                  sheetError!,
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.red(context),
@@ -325,7 +325,10 @@ class SubscriptionsTab extends ConsumerWidget {
                       ? null
                       : () async {
                           if (urlCtrl.text.trim().isEmpty) return;
-                          setModalState(() => loading = true);
+                          setModalState(() {
+                            loading = true;
+                            sheetError = null;
+                          });
                           try {
                             final sub = Subscription.create(
                               name: nameCtrl.text.trim().isEmpty
@@ -338,21 +341,14 @@ class SubscriptionsTab extends ConsumerWidget {
                                 .add(sub);
                             if (ctx.mounted) Navigator.pop(ctx);
                           } catch (e) {
-                            setModalState(() => loading = false);
-                            if (ctx.mounted) Navigator.pop(ctx);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(friendlyError(e, context)),
-                                  backgroundColor: AppTheme.red(context),
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  duration: const Duration(seconds: 5),
-                                ),
-                              );
-                            }
+                            // Шторку не закрываем: ошибка показывается в ней
+                            // самой, а введённые имя и URL сохраняются (как в
+                            // шторке вставки серверов и диалоге редактирования).
+                            if (!ctx.mounted) return;
+                            setModalState(() {
+                              loading = false;
+                              sheetError = friendlyError(e, ctx);
+                            });
                           }
                         },
                   child: loading
@@ -1248,9 +1244,13 @@ class _SubItemState extends ConsumerState<_SubItem> {
       );
     } catch (e) {
       if (ctx.mounted) {
-        ScaffoldMessenger.of(
-          ctx,
-        ).showSnackBar(SnackBar(content: Text(l10n.subscriptionsShareFailed('$e'))));
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.subscriptionsShareFailed(friendlyError(e, ctx)),
+            ),
+          ),
+        );
       }
     }
   }

@@ -117,7 +117,13 @@ class _ThemeCustomizationScreen extends ConsumerWidget {
                     previewDark ? Brightness.dark : Brightness.light,
                   );
                   return GestureDetector(
-                    onTap: () => save(current.copyWith(themePresetId: p.id)),
+                    // Выбор пресета отключает системные цвета: пока
+                    // followSystemTheme включён, пресет не применяется и
+                    // галочка не рисуется — тап выглядел бы «ничего не делает».
+                    onTap: () => save(current.copyWith(
+                      themePresetId: p.id,
+                      followSystemTheme: false,
+                    )),
                     child: _ThemePreviewCard(
                       name: p.name,
                       scheme: scheme,

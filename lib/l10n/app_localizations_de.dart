@@ -1316,4 +1316,66 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get hotkeyNoPingData => 'Noch keine Ping-Ergebnisse — zuerst einen Ping-Test starten';
+
+  @override
+  String get clipboardNoSubscriptionLink => 'Zwischenablage enthält keinen Abo-Link (http/https)';
+
+  @override
+  String get splitTunnelingReconnectHint => 'Änderungen gelten nach dem erneuten Verbinden des VPN';
+
+  @override
+  String serversDeleteConfirm(Object name) {
+    return 'Server \"$name\" wirklich löschen?';
+  }
+
+  @override
+  String get errorTunAdminMessage => 'Der TUN-Modus unter Windows benötigt Administratorrechte.';
+
+  @override
+  String get errorTunAdminAction => 'Starte die App als Administrator oder wechsle in den Einstellungen in den Proxy-Modus.';
+
+  @override
+  String get errorVpnPermissionMessage => 'Die VPN-Berechtigung wurde nicht erteilt.';
+
+  @override
+  String get errorVpnPermissionAction => 'Erlaube die VPN-Berechtigung im Systemdialog und versuche es erneut.';
+
+  @override
+  String get errorHwidBindMessage => 'Der Anbieter verlangt eine HWID-Bindung für dieses Gerät.';
+
+  @override
+  String get errorHwidBindAction => 'Binde dieses Gerät im Anbieter-Panel und aktualisiere dann das Abo.';
+
+  @override
+  String get errorDeviceLimitMessage => 'Der Anbieter hat das Abo wegen des Gerätelimits abgelehnt.';
+
+  @override
+  String get errorDeviceLimitAction => 'Entferne alte Geräte im Anbieter-Panel oder erhöhe das Gerätelimit.';
+
+  @override
+  String get errorConfigInvalidMessage => 'Die Abo- oder Serverkonfiguration ist ungültig.';
+
+  @override
+  String get errorConfigInvalidAction => 'Prüfe das URL-/Konfigurationsformat und importiere einen gültigen Abo-Link.';
+
+  @override
+  String get errorAuthDeniedMessage => 'Der Zugriff auf das Abo wurde vom Anbieter verweigert.';
+
+  @override
+  String get errorAuthDeniedAction => 'Prüfe Token/Zugangsdaten und ob das Abo noch gültig ist.';
+
+  @override
+  String get errorSubUrlInvalidMessage => 'Der Abo-Link fehlt oder ist abgelaufen.';
+
+  @override
+  String get errorSubUrlInvalidAction => 'Fordere eine neue URL vom Anbieter an und aktualisiere sie in der App.';
+
+  @override
+  String get errorNetworkMessage => 'Der Server ist derzeit nicht erreichbar.';
+
+  @override
+  String get errorNetworkAction => 'Prüfe Internet, DNS und Servererreichbarkeit und versuche es erneut.';
+
+  @override
+  String get errorUnknownAction => 'Versuche es erneut. Tritt der Fehler weiterhin auf, prüfe Server und App-Einstellungen.';
 }

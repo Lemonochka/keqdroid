@@ -720,6 +720,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   StreamSubscription<VpnState>? _sub;
   bool _connectInFlight = false;
   bool _serverSwitchInProgress = false;
+  // Пользователь отменил попытку подключения (тап по кругу в connecting) —
+  // connect-in-flight сворачивается в disconnected вместо error/connected.
+  bool _cancelRequested = false;
   // Сигналит _waitForDisconnected при приходе события disconnected из стрима —
   // вместо опроса state с фиксированными задержками.
   Completer<void>? _disconnectWaiter;
@@ -823,6 +826,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   Future<VpnState> _awaitNativeConnectOutcome(VpnEngine engine) async {
     for (var i = 0; i < 150; i++) {
       await Future.delayed(const Duration(milliseconds: 300));
+      if (_cancelRequested) {
+        return const VpnState(status: VpnStatus.disconnected);
+      }
       final s = await engine.getCurrentState();
       if (s.status == VpnStatus.connected ||
           s.status == VpnStatus.error ||
@@ -849,6 +855,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
 
     _connectInFlight = true;
+    _cancelRequested = false;
 
     try {
       final isAwg = AwgProfile.isAwgConfig(server.config);
@@ -867,7 +874,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         state = AsyncData(native);
         final settled = await _awaitNativeConnectOutcome(engine);
         state = AsyncData(settled);
-        if (settled.status == VpnStatus.connected ||
+        if (_cancelRequested ||
+            settled.status == VpnStatus.connected ||
             settled.status == VpnStatus.error) {
           return;
         }
@@ -988,9 +996,22 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       );
       await engine.startSession(session);
 
+      if (_cancelRequested) {
+        // Отмена пришла, пока сессия поднималась — гасим её и выходим тихо.
+        try {
+          await engine.stopVpn();
+        } catch (_) {}
+        state = const AsyncData(VpnState(status: VpnStatus.disconnected));
+        return;
+      }
+
       var sessionState = await engine.getCurrentState();
       if (sessionState.status == VpnStatus.connecting) {
         sessionState = await _awaitNativeConnectOutcome(engine);
+      }
+      if (_cancelRequested) {
+        state = const AsyncData(VpnState(status: VpnStatus.disconnected));
+        return;
       }
       if (sessionState.status == VpnStatus.connected) {
         state = AsyncData(sessionState);
@@ -1006,6 +1027,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         ));
       }
     } catch (e, st) {
+      if (_cancelRequested) {
+        // Ошибка спровоцирована самой отменой (ядро убито стопом) —
+        // это не сбой подключения, показываем спокойный «отключён».
+        state = const AsyncData(VpnState(status: VpnStatus.disconnected));
+        return;
+      }
       AppLogger.instance.error(
         'VPN connect failed in VpnStateNotifier.connect()',
         error: e,
@@ -1018,6 +1045,27 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       Error.throwWithStackTrace(e, st);
     } finally {
       _connectInFlight = false;
+    }
+  }
+
+  /// Отмена идущей попытки подключения (тап по кругу в состоянии connecting):
+  /// гасим поднимающуюся сессию, connect-in-flight завершится как disconnected.
+  /// Если connect уже не в полёте — обычный disconnect.
+  Future<void> cancelConnect() async {
+    if (!_connectInFlight) {
+      await disconnect();
+      return;
+    }
+    _cancelRequested = true;
+    state = const AsyncData(VpnState(status: VpnStatus.disconnecting));
+    try {
+      await ref.read(vpnEngineProvider).stopVpn();
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'cancelConnect: stopVpn failed',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

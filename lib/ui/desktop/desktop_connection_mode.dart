@@ -9,8 +9,12 @@ import '../../providers/providers.dart';
 import '../../services/vpn_engine.dart';
 import '../../services/windows_desktop_service.dart';
 import '../../shared/ui/app_theme.dart';
+import '../../utils/error_messages.dart';
 
-/// Переключение Proxy/TUN на desktop (sidebar и tray).
+/// Переключение Proxy/TUN на desktop (sidebar, tray, хоткей).
+/// При активном туннеле режим меняется с автоматическим переподключением
+/// (disconnect → save → connect) — как это всегда делал хоткей, вместо
+/// отказа «сначала отключитесь».
 Future<void> applyDesktopConnectionMode(
   BuildContext context,
   WidgetRef ref,
@@ -18,21 +22,6 @@ Future<void> applyDesktopConnectionMode(
   ConnectionMode next,
 ) async {
   if (next == settings.connectionModeEnum) return;
-
-  final vpn = ref.read(vpnStateProvider).value;
-  if (vpn?.status == VpnStatus.connected ||
-      vpn?.status == VpnStatus.connecting) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.desktopDisconnectBeforeModeChange,
-          ),
-        ),
-      );
-    }
-    return;
-  }
 
   // Linux elevates per-connect via pkexec (sing-box), so only Windows needs
   // the relaunch-as-admin flow before switching to TUN.
@@ -60,9 +49,37 @@ Future<void> applyDesktopConnectionMode(
     }
   }
 
+  final status = ref.read(vpnStateProvider).value?.status;
+  final wasActive =
+      status == VpnStatus.connected || status == VpnStatus.connecting;
+  if (wasActive) {
+    try {
+      await ref.read(vpnStateProvider.notifier).disconnect();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyError(e, context))),
+        );
+      }
+      return;
+    }
+  }
   await ref.read(settingsNotifierProvider.notifier).save(
         settings.copyWith(connectionMode: next.storageValue),
       );
+  if (wasActive) {
+    try {
+      await ref.read(vpnStateProvider.notifier).connect();
+    } catch (e) {
+      // Ошибка уже лежит в state (её покажет круг подключения); снекбар —
+      // немедленная подсказка, если пользователь смотрит на sidebar/трей.
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyError(e, context))),
+        );
+      }
+    }
+  }
 }
 
 Future<bool?> showDesktopTunAdminDialog(BuildContext context) {

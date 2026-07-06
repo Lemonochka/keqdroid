@@ -4,14 +4,31 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 
 enum UiErrorKind { permission, network, config, auth, providerConfig, unknown }
 
+/// Конкретный случай ошибки: kind задаёт только заголовок, а для перевода
+/// message/action в explainErrorLocalized нужен точный вариант.
+enum UiErrorCode {
+  tunAdmin,
+  vpnPermission,
+  hwidBind,
+  deviceLimit,
+  providerNoHosts,
+  configInvalid,
+  authDenied,
+  subUrlInvalid,
+  network,
+  unknown,
+}
+
 class UiErrorMessage {
   final UiErrorKind kind;
+  final UiErrorCode code;
   final String title;
   final String message;
   final String action;
 
   const UiErrorMessage({
     required this.kind,
+    this.code = UiErrorCode.unknown,
     required this.title,
     required this.message,
     required this.action,
@@ -32,6 +49,7 @@ UiErrorMessage explainError(Object error) {
     final isWindowsAdmin = msg.contains('administrator');
     return UiErrorMessage(
       kind: UiErrorKind.permission,
+      code: isWindowsAdmin ? UiErrorCode.tunAdmin : UiErrorCode.vpnPermission,
       title: 'Permission Required',
       message: isWindowsAdmin
           ? 'TUN mode on Windows needs Administrator rights.'
@@ -45,6 +63,7 @@ UiErrorMessage explainError(Object error) {
   if (msg.contains('hwid') && (msg.contains('bind') || msg.contains('enable'))) {
     return const UiErrorMessage(
       kind: UiErrorKind.auth,
+      code: UiErrorCode.hwidBind,
       title: 'Device Binding Required',
       message: 'Provider requires HWID binding for this device.',
       action: 'Bind this device in provider panel, then refresh subscription.',
@@ -56,6 +75,7 @@ UiErrorMessage explainError(Object error) {
       msg.contains('x-hwid-limit')) {
     return const UiErrorMessage(
       kind: UiErrorKind.auth,
+      code: UiErrorCode.deviceLimit,
       title: 'Device Limit Reached',
       message: 'Provider refused subscription due to device limit.',
       action: 'Remove old devices in provider panel or raise device limit.',
@@ -68,6 +88,7 @@ UiErrorMessage explainError(Object error) {
       (msg.contains('service links') || msg.contains('0.0.0.0:1') || msg.contains('remnawave'))) {
     return const UiErrorMessage(
       kind: UiErrorKind.providerConfig,
+      code: UiErrorCode.providerNoHosts,
       title: 'Provider Configuration Required',
       message: 'Provider has no hosts assigned to this subscription.',
       action: 'Open provider panel, add/assign hosts, then refresh subscription.',
@@ -82,6 +103,7 @@ UiErrorMessage explainError(Object error) {
       msg.contains('unsupported protocol')) {
     return const UiErrorMessage(
       kind: UiErrorKind.config,
+      code: UiErrorCode.configInvalid,
       title: 'Configuration Error',
       message: 'Subscription or server configuration is invalid.',
       action: 'Check URL/config format and import a valid subscription link.',
@@ -94,6 +116,7 @@ UiErrorMessage explainError(Object error) {
       msg.contains('forbidden')) {
     return const UiErrorMessage(
       kind: UiErrorKind.auth,
+      code: UiErrorCode.authDenied,
       title: 'Authorization Failed',
       message: 'Access to subscription is denied by provider.',
       action: 'Check token/credentials and verify subscription has not expired.',
@@ -104,6 +127,7 @@ UiErrorMessage explainError(Object error) {
       msg.contains('http 410')) {
     return const UiErrorMessage(
       kind: UiErrorKind.config,
+      code: UiErrorCode.subUrlInvalid,
       title: 'Subscription URL Invalid',
       message: 'Subscription link is missing or expired.',
       action: 'Request a fresh URL from provider and update it in app.',
@@ -120,6 +144,7 @@ UiErrorMessage explainError(Object error) {
       error is TimeoutException) {
     return const UiErrorMessage(
       kind: UiErrorKind.network,
+      code: UiErrorCode.network,
       title: 'Network Error',
       message: 'Cannot reach server right now.',
       action: 'Check internet, DNS, and server availability, then retry.',
@@ -135,6 +160,7 @@ UiErrorMessage explainError(Object error) {
 
   return UiErrorMessage(
     kind: UiErrorKind.unknown,
+    code: UiErrorCode.unknown,
     title: 'Operation Failed',
     message: clean.isNotEmpty ? clean : 'Unknown error',
     action: 'Retry operation. If issue repeats, check server and app settings.',
@@ -143,44 +169,62 @@ UiErrorMessage explainError(Object error) {
 
 UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
   final base = explainError(error);
-  return switch (base.kind) {
-    UiErrorKind.permission => UiErrorMessage(
-        kind: base.kind,
-        title: l10n.errorConnectionPermission,
-        message: base.message,
-        action: base.action,
-      ),
-    UiErrorKind.network => UiErrorMessage(
-        kind: base.kind,
-        title: l10n.errorConnectionNetwork,
-        message: base.message,
-        action: base.action,
-      ),
-    UiErrorKind.config => UiErrorMessage(
-        kind: base.kind,
-        title: l10n.errorConnectionConfig,
-        message: base.message,
-        action: base.action,
-      ),
-    UiErrorKind.auth => UiErrorMessage(
-        kind: base.kind,
-        title: l10n.errorConnectionAuth,
-        message: base.message,
-        action: base.action,
-      ),
-    UiErrorKind.providerConfig => UiErrorMessage(
-        kind: base.kind,
-        title: l10n.errorProviderConfigTitle,
-        message: l10n.errorProviderNoHostsMessage,
-        action: l10n.errorProviderNoHostsAction,
-      ),
-    UiErrorKind.unknown => UiErrorMessage(
-        kind: base.kind,
-        title: l10n.errorConnectionGeneric,
-        message: base.message,
-        action: base.action,
-      ),
+  final title = switch (base.kind) {
+    UiErrorKind.permission => l10n.errorConnectionPermission,
+    UiErrorKind.network => l10n.errorConnectionNetwork,
+    UiErrorKind.config => l10n.errorConnectionConfig,
+    UiErrorKind.auth => l10n.errorConnectionAuth,
+    UiErrorKind.providerConfig => l10n.errorProviderConfigTitle,
+    UiErrorKind.unknown => l10n.errorConnectionGeneric,
   };
+  final (message, action) = switch (base.code) {
+    UiErrorCode.tunAdmin => (
+        l10n.errorTunAdminMessage,
+        l10n.errorTunAdminAction,
+      ),
+    UiErrorCode.vpnPermission => (
+        l10n.errorVpnPermissionMessage,
+        l10n.errorVpnPermissionAction,
+      ),
+    UiErrorCode.hwidBind => (
+        l10n.errorHwidBindMessage,
+        l10n.errorHwidBindAction,
+      ),
+    UiErrorCode.deviceLimit => (
+        l10n.errorDeviceLimitMessage,
+        l10n.errorDeviceLimitAction,
+      ),
+    UiErrorCode.providerNoHosts => (
+        l10n.errorProviderNoHostsMessage,
+        l10n.errorProviderNoHostsAction,
+      ),
+    UiErrorCode.configInvalid => (
+        l10n.errorConfigInvalidMessage,
+        l10n.errorConfigInvalidAction,
+      ),
+    UiErrorCode.authDenied => (
+        l10n.errorAuthDeniedMessage,
+        l10n.errorAuthDeniedAction,
+      ),
+    UiErrorCode.subUrlInvalid => (
+        l10n.errorSubUrlInvalidMessage,
+        l10n.errorSubUrlInvalidAction,
+      ),
+    UiErrorCode.network => (
+        l10n.errorNetworkMessage,
+        l10n.errorNetworkAction,
+      ),
+    // unknown: message — вычищенный текст исходной ошибки (динамический,
+    // перевести нельзя), локализуем только рекомендацию.
+    UiErrorCode.unknown => (base.message, l10n.errorUnknownAction),
+  };
+  return UiErrorMessage(
+    kind: base.kind,
+    code: base.code,
+    title: title,
+    message: message,
+    action: action,
+  );
 }
 
 String friendlyError(Object error, [BuildContext? context]) {
