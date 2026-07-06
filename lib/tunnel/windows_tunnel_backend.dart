@@ -379,8 +379,13 @@ class WindowsTunnelBackend implements TunnelBackend {
 
   /// TUN: wireproxy отдаёт локальный SOCKS5, sing-box заворачивает в него tun.
   /// Переиспользует проверенный xray-TUN пайплайн (роутинг/split/kill-switch).
+  ///
+  /// withHttp: сам процесс приложения роутится в TUN «direct» (ради честных
+  /// пингов, см. singbox_tun_config), поэтому чекер/загрузчик обновлений ходит
+  /// через локальный HTTP-инбаунд — без него апдейт при активном AWG TUN
+  /// уходил напрямую на 127.0.0.1:httpPort без слушателя и падал.
   Future<void> _startAwgTunSession(TunnelSessionRequest request) async {
-    await _startWireproxy(request, withHttp: false);
+    await _startWireproxy(request, withHttp: true);
     await _startSingboxSession(request);
 
     await WindowsDesktopService.registerSessionCoreProcesses(

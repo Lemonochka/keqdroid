@@ -516,7 +516,19 @@ class KeqdisVpnService : VpnService() {
 
 
     /// inc/exc split-tunnel app filter, общий для xray- и awg-туннелей.
-    private fun applyAppFilter(b: Builder, inc: List<String>, exc: List<String>) {
+    ///
+    /// [excludeSelf]: в xray-режиме собственный пакет ОБЯЗАН идти мимо туннеля —
+    /// исходящие сокеты in-process xray не protect()-ятся и зациклились бы.
+    /// В awg-режиме наоборот: WG-сокет защищён protect(), а трафик самого
+    /// приложения (чек/скачивание обновлений с GitHub, апдейт подписок) должен
+    /// ехать через туннель — напрямую его режут (RKN), и локального прокси,
+    /// как у xray, в awg-режиме нет.
+    private fun applyAppFilter(
+        b: Builder,
+        inc: List<String>,
+        exc: List<String>,
+        excludeSelf: Boolean = true,
+    ) {
         if (inc.isNotEmpty()) {
             // [FIX-HUAWEI] Считаем сколько пакетов реально добавилось.
             // runCatching молча глотал PackageManager.NameNotFoundException —
@@ -531,11 +543,15 @@ class KeqdisVpnService : VpnService() {
                 }
             }
             if (addedInc == 0) {
+                // Полный туннель: в awg-режиме (excludeSelf=false) он уже включает
+                // и наш пакет, отдельного addAllowed не нужно.
                 android.util.Log.w("KEQDIS", "buildTun: include list produced 0 valid apps, falling back to full tunnel")
-                runCatching { b.addDisallowedApplication(packageName) }
+                if (excludeSelf) runCatching { b.addDisallowedApplication(packageName) }
+            } else if (!excludeSelf) {
+                runCatching { b.addAllowedApplication(packageName) }
             }
         } else {
-            runCatching { b.addDisallowedApplication(packageName) }
+            if (excludeSelf) runCatching { b.addDisallowedApplication(packageName) }
             exc.forEach { pkg ->
                 try {
                     b.addDisallowedApplication(pkg)
@@ -586,13 +602,18 @@ class KeqdisVpnService : VpnService() {
             val tun = buildAwgTunInterface(addresses, dns, allowedIps, mtu, excludePkgs, includePkgs)
             tunInterface = tun
 
-            val handle = GoBackend.awgTurnOn("awg0", tun.fd, uapi)
+            // awgTurnOn забирает владение fd ЦЕЛИКОМ: и на успехе (device.Close()
+            // закроет), и на ЛЮБОЙ ошибке (все error-пути api-android.go делают
+            // unix.Close). Поэтому detachFd() — ДО вызова. Раньше detach был только
+            // после успеха, и провальный awgTurnOn (например, доменный Endpoint,
+            // который UAPI не парсит) оставлял fd во владении ParcelFileDescriptor —
+            // cleanup() закрывал его вторым разом, fdsan (Android 11+) убивал
+            // процесс SIGABRT'ом: приложение «мгновенно закрывалось» вместо ошибки.
+            val tunFd = tun.detachFd()
+            val handle = GoBackend.awgTurnOn("awg0", tunFd, uapi)
             if (handle < 0)
                 throw IllegalStateException("amneziawg-go failed to start (awgTurnOn=$handle)")
             awgHandle = handle
-            // fd теперь принадлежит ядру (device.Close() его закроет) — снимаем владение
-            // у ParcelFileDescriptor, чтобы cleanup() не закрыл его повторно.
-            runCatching { tun.detachFd() }
 
             // WG egress-сокет должен идти мимо туннеля, иначе петля маршрутизации.
             protectAwgSockets(handle)
@@ -664,7 +685,9 @@ class KeqdisVpnService : VpnService() {
             }
         }
 
-        applyAppFilter(b, inc, exc)
+        // excludeSelf=false: WG-сокет и так protect()-ится, а собственному
+        // трафику приложения (GitHub-обновления, подписки) нужен туннель.
+        applyAppFilter(b, inc, exc, excludeSelf = false)
         applyHuaweiUnderlying(b)
 
         return b.establish() ?: throw IllegalStateException(

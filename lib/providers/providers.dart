@@ -24,6 +24,7 @@ import '../tunnel/vpn_backend.dart';
 import '../utils/awg_profile.dart';
 import '../utils/config_gen.dart';
 import '../utils/error_messages.dart';
+import '../utils/local_vpn_proxy.dart';
 import '../utils/process_name_utils.dart';
 import '../utils/socks5_credentials.dart';
 import '../utils/split_tunnel_routing.dart';
@@ -126,10 +127,22 @@ final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
   final vpnConnected = ref.watch(
     vpnStateProvider.select((s) => s.value?.status == VpnStatus.connected),
   );
+  // Android+AWG — единственный случай без локального HTTP-прокси (Dio тогда
+  // идёт напрямую, но пакет приложения включён в TUN и трафик всё равно в
+  // туннеле). select — чтобы ре-ран был только при смене awg↔xray.
+  final awgActive = ref.watch(
+    serversProvider.select((s) {
+      final srv = s.activeServer;
+      return srv != null && AwgProfile.isAwgConfig(srv.config);
+    }),
+  );
   final settings = await ref.read(storageProvider).getSettings();
   return UpdateService.checkForUpdate(
     force: false,
-    vpnConnected: vpnConnected,
+    viaLocalProxy: tunnelHasLocalHttpProxy(
+      vpnConnected: vpnConnected,
+      awgBackend: awgActive,
+    ),
     httpPort: settings.httpPort,
   );
 });

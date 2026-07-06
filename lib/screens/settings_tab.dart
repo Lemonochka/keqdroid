@@ -23,6 +23,8 @@ import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:keqdroid/services/update_service.dart';
 import 'package:keqdroid/shared/ui/update_dialog.dart';
 import 'package:keqdroid/utils/app_locale.dart';
+import 'package:keqdroid/utils/awg_profile.dart';
+import 'package:keqdroid/utils/local_vpn_proxy.dart';
 import 'package:keqdroid/utils/routing_presets.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/split_tunneling_screen.dart';
@@ -401,10 +403,15 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
     setState(() => _forceChecking = true);
     try {
       final vpn = ref.read(vpnStateProvider).value;
+      final activeServer = ref.read(serversProvider).activeServer;
       final settings = await ref.read(storageProvider).getSettings();
       final info = await UpdateService.checkForUpdate(
         force: true,
-        vpnConnected: vpn?.status == VpnStatus.connected,
+        viaLocalProxy: tunnelHasLocalHttpProxy(
+          vpnConnected: vpn?.status == VpnStatus.connected,
+          awgBackend: activeServer != null &&
+              AwgProfile.isAwgConfig(activeServer.config),
+        ),
         httpPort: settings.httpPort,
       );
       if (!mounted) return;

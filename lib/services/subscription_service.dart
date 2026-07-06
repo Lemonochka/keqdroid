@@ -82,7 +82,7 @@ class SubscriptionService {
     if (proxyHttpPort != null) {
       configureDioForActiveVpn(
         dio,
-        vpnConnected: true,
+        useLocalProxy: true,
         httpPort: proxyHttpPort,
       );
     }
