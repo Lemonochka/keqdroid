@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../tunnel/connection_mode.dart';
 import '../utils/routing_presets.dart';
 import 'ping_test_config.dart';
+import 'tun_settings.dart';
 import 'xray_core_settings.dart';
 
 class AppSettings {
@@ -28,6 +29,8 @@ class AppSettings {
   final int lanHttpPort;
   final bool shareDeviceHwid; // слать ли hwid при запросе подписок
   final XrayCoreSettings xrayCore;
+  /// Desktop TUN: стек (system/gvisor/mixed), MTU и прочие опции sing-box-инбаунда.
+  final TunSettings tun;
   /// Desktop: `proxy` (только Xray) или `tun` (Xray → sing-box). См. [ConnectionMode].
   final String connectionMode;
   /// Desktop proxy: включать системный прокси Windows.
@@ -65,6 +68,7 @@ class AppSettings {
     this.lanHttpPort = 8080,
     this.shareDeviceHwid = true,
     this.xrayCore = const XrayCoreSettings(),
+    this.tun = const TunSettings(),
     this.connectionMode = 'proxy',
     this.systemProxyEnabled = true,
     this.appLanguageCode = 'system',
@@ -94,6 +98,7 @@ class AppSettings {
     'lanHttpPort': lanHttpPort,
     'shareDeviceHwid': shareDeviceHwid,
     'xrayCore': xrayCore.toJson(),
+    'tun': tun.toJson(),
     'connectionMode': connectionMode,
     'systemProxyEnabled': systemProxyEnabled,
     'appLanguageCode': appLanguageCode,
@@ -147,6 +152,7 @@ class AppSettings {
       xrayCore: XrayCoreSettings.fromJson(
         json['xrayCore'] as Map<String, dynamic>?,
       ),
+      tun: TunSettings.fromJson(json['tun'] as Map<String, dynamic>?),
       connectionMode: ConnectionMode.fromStorage(
         json['connectionMode'] as String?,
       ).storageValue,
@@ -248,6 +254,7 @@ class AppSettings {
     int? lanHttpPort,
     bool? shareDeviceHwid,
     XrayCoreSettings? xrayCore,
+    TunSettings? tun,
     String? connectionMode,
     bool? systemProxyEnabled,
     String? appLanguageCode,
@@ -276,6 +283,7 @@ class AppSettings {
         lanHttpPort: lanHttpPort ?? this.lanHttpPort,
         shareDeviceHwid: shareDeviceHwid ?? this.shareDeviceHwid,
         xrayCore: xrayCore ?? this.xrayCore,
+        tun: tun ?? this.tun,
         connectionMode: connectionMode ?? this.connectionMode,
         systemProxyEnabled: systemProxyEnabled ?? this.systemProxyEnabled,
         appLanguageCode: appLanguageCode ?? this.appLanguageCode,
@@ -309,6 +317,7 @@ class AppSettings {
               lanHttpPort == other.lanHttpPort &&
               shareDeviceHwid == other.shareDeviceHwid &&
               xrayCore == other.xrayCore &&
+              tun == other.tun &&
               connectionMode == other.connectionMode &&
               systemProxyEnabled == other.systemProxyEnabled &&
               appLanguageCode == other.appLanguageCode &&
@@ -347,6 +356,7 @@ class AppSettings {
     lanHttpPort,
     shareDeviceHwid,
     xrayCore,
+    tun,
     connectionMode,
     systemProxyEnabled,
     appLanguageCode,

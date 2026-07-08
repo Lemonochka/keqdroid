@@ -846,7 +846,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXrayCoreSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Engine, DNS, XMUX, log and routing'**
+  /// **'Engine, DNS, XMUX, TUN, log and routing'**
   String get settingsXrayCoreSubtitle;
 
   /// No description provided for @settingsXrayDnsSection.
@@ -1028,6 +1028,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Keep-alive period (sec)'**
   String get settingsXrayXmuxHKeepAlivePeriod;
+
+  /// No description provided for @settingsTunSection.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN mode'**
+  String get settingsTunSection;
+
+  /// No description provided for @settingsTunSectionNote.
+  ///
+  /// In en, this message translates to:
+  /// **'sing-box TUN interface options (desktop). Applied on next connection.'**
+  String get settingsTunSectionNote;
+
+  /// No description provided for @settingsTunStackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Network stack'**
+  String get settingsTunStackTitle;
+
+  /// No description provided for @settingsTunStackSystemHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Kernel TCP/IP stack — fastest, default'**
+  String get settingsTunStackSystemHint;
+
+  /// No description provided for @settingsTunStackGvisorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Userspace stack — better compatibility, a bit slower'**
+  String get settingsTunStackGvisorHint;
+
+  /// No description provided for @settingsTunStackMixedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'system for TCP, gVisor for UDP'**
+  String get settingsTunStackMixedHint;
+
+  /// No description provided for @settingsTunMtu.
+  ///
+  /// In en, this message translates to:
+  /// **'MTU'**
+  String get settingsTunMtu;
+
+  /// No description provided for @settingsTunMtuHint.
+  ///
+  /// In en, this message translates to:
+  /// **'576–65535, default 1400'**
+  String get settingsTunMtuHint;
+
+  /// No description provided for @settingsTunUdpTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'UDP timeout (sec)'**
+  String get settingsTunUdpTimeout;
+
+  /// No description provided for @settingsTunUdpTimeoutHint.
+  ///
+  /// In en, this message translates to:
+  /// **'NAT lifetime of idle UDP sessions, default 300'**
+  String get settingsTunUdpTimeoutHint;
+
+  /// No description provided for @settingsTunStrictRouteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Strict route'**
+  String get settingsTunStrictRouteTitle;
+
+  /// No description provided for @settingsTunStrictRouteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Prevents traffic from leaking around the TUN. On Windows it can break routing when another VPN (e.g. Tailscale) is active'**
+  String get settingsTunStrictRouteHint;
+
+  /// No description provided for @settingsTunStrictRouteAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get settingsTunStrictRouteAuto;
+
+  /// No description provided for @settingsTunStrictRouteAutoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Linux: on, Windows: off'**
+  String get settingsTunStrictRouteAutoHint;
+
+  /// No description provided for @settingsTunStrictRouteOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get settingsTunStrictRouteOn;
+
+  /// No description provided for @settingsTunStrictRouteOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get settingsTunStrictRouteOff;
+
+  /// No description provided for @settingsTunEin.
+  ///
+  /// In en, this message translates to:
+  /// **'Endpoint-independent NAT'**
+  String get settingsTunEin;
+
+  /// No description provided for @settingsTunEinHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Full-cone NAT for UDP — helps P2P and games. gVisor/mixed stack only'**
+  String get settingsTunEinHint;
+
+  /// No description provided for @settingsTunAutoRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto route'**
+  String get settingsTunAutoRoute;
+
+  /// No description provided for @settingsTunAutoRouteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds system routes into the tunnel automatically. Disable only if you manage routes yourself — without it no traffic enters the TUN'**
+  String get settingsTunAutoRouteHint;
 
   /// No description provided for @settingsPingTitle.
   ///

@@ -2,7 +2,7 @@ name: keqdroid
 description: "KEQDIS proxy/VPN client for Android and Windows."
 publish_to: 'none'
 
-version: 0.7.0+13
+version: 0.7.1+14
 
 environment:
   sdk: ^3.11.3
@@ -79,6 +79,8 @@ flutter:
     - assets/icon.png
     - assets/icon_foreground.png
     - assets/icon_windows_launcher.png
+    # OFL-лицензия Comfortaa обязана ехать вместе со шрифтом в дистрибутиве.
+    - assets/fonts/Comfortaa-OFL.txt
     # GeoIP/Geosite DBs for xray routing (geoip:/geosite: rules on Android).
     - assets/bin/windows/geoip.dat
     - assets/bin/windows/geosite.dat
@@ -88,3 +90,9 @@ flutter:
   # weight; Android uses jniLibs instead). They're now installed next to the
   # executable per-platform by windows/ and linux/ CMakeLists.txt, so each
   # desktop build ships only its own and the APK ships none.
+
+  fonts:
+    # Comfortaa (variable, OFL, с кириллицей) — шрифт kawaii-пресета темы.
+    - family: Comfortaa
+      fonts:
+        - asset: assets/fonts/Comfortaa-Variable.ttf

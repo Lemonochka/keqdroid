@@ -10,6 +10,7 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/hotkey_config.dart';
 import 'package:keqdroid/models/ping_test_config.dart';
+import 'package:keqdroid/models/tun_settings.dart';
 import 'package:keqdroid/models/xray_core_settings.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/services/debug_log_service.dart';

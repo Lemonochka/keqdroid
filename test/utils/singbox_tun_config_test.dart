@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/models/tun_settings.dart';
 import 'package:keqdroid/models/xray_core_settings.dart';
 import 'package:keqdroid/tunnel/app_routing_mode.dart';
 import 'package:keqdroid/utils/singbox_tun_config.dart';
@@ -200,6 +201,73 @@ void main() {
     );
     final map = jsonDecode(json) as Map<String, dynamic>;
     expect((map['route'] as Map)['final'], 'direct');
+  });
+
+  Map<String, dynamic> tunInboundFor(AppSettings settings) {
+    final json = SingBoxTunConfigGen.generate(
+      localSocksPort: 10808,
+      socksUsername: 'u',
+      socksPassword: 'p',
+      serverIpToExclude: '1.2.3.4',
+      settings: settings,
+    );
+    final map = jsonDecode(json) as Map<String, dynamic>;
+    return (map['inbounds'] as List).first as Map<String, dynamic>;
+  }
+
+  test('default tun inbound matches the legacy hardcoded values', () {
+    final inbound = tunInboundFor(const AppSettings());
+    expect(inbound['stack'], 'system');
+    expect(inbound['mtu'], 1400);
+    expect(inbound['auto_route'], isTrue);
+    // дефолтные значения не должны раздувать конфиг новыми ключами
+    expect(inbound.containsKey('endpoint_independent_nat'), isFalse);
+    expect(inbound.containsKey('udp_timeout'), isFalse);
+  });
+
+  test('tun settings flow into the inbound (stack, mtu, udp_timeout, EIN)', () {
+    final inbound = tunInboundFor(const AppSettings(
+      tun: TunSettings(
+        stack: 'gvisor',
+        mtu: 9000,
+        strictRoute: TunSettings.strictRouteOn,
+        endpointIndependentNat: true,
+        udpTimeoutSec: 60,
+      ),
+    ));
+    expect(inbound['stack'], 'gvisor');
+    expect(inbound['mtu'], 9000);
+    expect(inbound['strict_route'], isTrue);
+    expect(inbound['endpoint_independent_nat'], isTrue);
+    // sing-box 1.13 (keqrnel): badoption.Duration — строка вида "60s"
+    expect(inbound['udp_timeout'], '60s');
+  });
+
+  test('endpoint_independent_nat is dropped on the system stack', () {
+    // system-стек его не поддерживает — не шлём ядру бессмысленный ключ
+    final inbound = tunInboundFor(const AppSettings(
+      tun: TunSettings(stack: 'system', endpointIndependentNat: true),
+    ));
+    expect(inbound.containsKey('endpoint_independent_nat'), isFalse);
+  });
+
+  test('strict route on/off overrides the platform default', () {
+    final on = tunInboundFor(const AppSettings(
+      tun: TunSettings(strictRoute: TunSettings.strictRouteOn),
+    ));
+    expect(on['strict_route'], isTrue);
+
+    final off = tunInboundFor(const AppSettings(
+      tun: TunSettings(strictRoute: TunSettings.strictRouteOff),
+    ));
+    expect(off['strict_route'], isFalse);
+  });
+
+  test('auto_route can be disabled for manual route management', () {
+    final inbound = tunInboundFor(const AppSettings(
+      tun: TunSettings(autoRoute: false),
+    ));
+    expect(inbound['auto_route'], isFalse);
   });
 
   test('custom DNS is ignored while dnsUseCustom is off', () {

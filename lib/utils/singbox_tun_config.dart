@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../models/app_settings.dart';
+import '../models/tun_settings.dart';
 import '../tunnel/app_routing_mode.dart';
 import 'process_name_utils.dart';
 import 'routing_entry.dart';
@@ -343,15 +344,23 @@ class SingBoxTunConfigGen {
       },
     };
 
+    final tun = settings.tun;
     final tunInbound = <String, dynamic>{
       'type': 'tun',
       'tag': tunInboundTag,
-      'mtu': 1400,
+      'mtu': tun.mtu,
       'address': ['172.19.0.1/30'],
-      'auto_route': true,
-      // strict_route breaks routing when another vpn (e.g. tailscale) is active.
-      'strict_route': !Platform.isWindows,
-      'stack': 'system',
+      // без auto_route трафик в TUN не попадает; off — только для ручных маршрутов
+      'auto_route': tun.autoRoute,
+      // auto: on везде, кроме Windows — там strict_route breaks routing when
+      // another vpn (e.g. tailscale) is active.
+      'strict_route': tun.strictRouteEnabled(windows: Platform.isWindows),
+      'stack': tun.stack,
+      // full-cone NAT считает только gvisor-netstack (в mixed он держит UDP)
+      if (tun.endpointIndependentNat && tun.stack != TunSettings.stackSystem)
+        'endpoint_independent_nat': true,
+      if (tun.udpTimeoutSec != TunSettings.defaultUdpTimeoutSec)
+        'udp_timeout': '${tun.udpTimeoutSec}s',
     };
     if (!Platform.isWindows) {
       tunInbound['interface_name'] = 'tun-keqdis';

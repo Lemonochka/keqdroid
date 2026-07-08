@@ -6,6 +6,7 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 
 import '../models/app_settings.dart';
 import '../providers/providers.dart';
+import '../shared/ui/kawaii_decorations.dart';
 import '../utils/app_locale.dart';
 
 const kSeedFallback = Color(0xFFFFAEBC);
@@ -14,11 +15,67 @@ class ThemePreset {
   final String id;
   final String name;
   final Color seed;
+
+  /// Кастомная схема вместо одноцветного fromSeed.
+  final ColorScheme Function(Brightness)? schemeBuilder;
+
+  /// «Финтифлюшки»: свой шрифт, сильнее скругления, анимированный оверлей.
+  final bool flair;
+
+  /// Палитра kawaii-оверлея (стикеры и дождик из частиц); только у flair-тем.
+  final KawaiiFlavor? kawaii;
+
   const ThemePreset({
     required this.id,
     required this.name,
     required this.seed,
+    this.schemeBuilder,
+    this.flair = false,
+    this.kawaii,
   });
+}
+
+/// Kawaii «Sakura»: однотонная клубнично-молочная пастель. Раньше тема была
+/// двухцветной (небо + сакура) — юзер попросил чистый розовый kawaii-кор.
+/// База — fromSeed, чтобы тона/контрасты остались корректными по Material 3;
+/// вручную только фоновые поверхности: кремово-розовые вместо нейтрально-серых
+/// в светлой, тёмная — сливовая с розовым тинтом. Контрасты onSurface не
+/// страдают: тона близки к исходным.
+ColorScheme _sakuraScheme(Brightness brightness) {
+  final pink = ColorScheme.fromSeed(
+    seedColor: const Color(0xFFFF8FB8),
+    brightness: brightness,
+    dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+  );
+  final light = brightness == Brightness.light;
+  return pink.copyWith(
+    surface: light ? const Color(0xFFFFF4F8) : const Color(0xFF251721),
+    surfaceContainerLowest:
+        light ? const Color(0xFFFBE7EF) : const Color(0xFF1B1017),
+    surfaceContainerHigh:
+        light ? const Color(0xFFFFFFFF) : const Color(0xFF382431),
+    surfaceContainer:
+        light ? const Color(0xFFFFF8FB) : const Color(0xFF2E1D28),
+  );
+}
+
+/// Kawaii «Milky Lavender»: лавандово-молочная пастель, устроена как сакура.
+ColorScheme _lavenderMilkScheme(Brightness brightness) {
+  final lavender = ColorScheme.fromSeed(
+    seedColor: const Color(0xFFB39DF2),
+    brightness: brightness,
+    dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+  );
+  final light = brightness == Brightness.light;
+  return lavender.copyWith(
+    surface: light ? const Color(0xFFF7F3FE) : const Color(0xFF1F1930),
+    surfaceContainerLowest:
+        light ? const Color(0xFFEFE7FB) : const Color(0xFF161126),
+    surfaceContainerHigh:
+        light ? const Color(0xFFFFFFFF) : const Color(0xFF2F2749),
+    surfaceContainer:
+        light ? const Color(0xFFFAF7FF) : const Color(0xFF272040),
+  );
 }
 
 const kThemePresets = <ThemePreset>[
@@ -32,6 +89,24 @@ const kThemePresets = <ThemePreset>[
   ThemePreset(id: 'mint', name: 'Mint', seed: Color(0xFF2EC4B6)),
   ThemePreset(id: 'cobalt', name: 'Cobalt', seed: Color(0xFF4361EE)),
   ThemePreset(id: 'rose', name: 'Rose', seed: Color(0xFFE76FAD)),
+  // id остался «sakura_sky» с двухцветных времён: он сохранён в настройках
+  // пользователей, смена уронила бы их на дефолтный ocean.
+  ThemePreset(
+    id: 'sakura_sky',
+    name: 'Sakura ✿',
+    seed: Color(0xFFFF8FB8),
+    schemeBuilder: _sakuraScheme,
+    flair: true,
+    kawaii: KawaiiFlavor.sakura,
+  ),
+  ThemePreset(
+    id: 'lavender_milk',
+    name: 'Milky Lavender ☁',
+    seed: Color(0xFFB39DF2),
+    schemeBuilder: _lavenderMilkScheme,
+    flair: true,
+    kawaii: KawaiiFlavor.lavender,
+  ),
 ];
 
 ThemePreset resolveThemePreset(String id) {
@@ -42,6 +117,8 @@ ThemePreset resolveThemePreset(String id) {
 }
 
 ColorScheme buildPresetScheme(ThemePreset preset, Brightness brightness) {
+  final custom = preset.schemeBuilder;
+  if (custom != null) return custom(brightness);
   return ColorScheme.fromSeed(
     seedColor: preset.seed,
     brightness: brightness,
@@ -49,17 +126,41 @@ ColorScheme buildPresetScheme(ThemePreset preset, Brightness brightness) {
   );
 }
 
-ThemeData _buildAppTheme(ColorScheme scheme) {
+ThemeData buildAppTheme(ColorScheme scheme, {bool flair = false}) {
   return ThemeData(
     colorScheme: scheme,
     useMaterial3: true,
-    cardTheme: const CardThemeData(surfaceTintColor: Colors.transparent),
+    // Flair: округлый Comfortaa (variable TTF, OFL, кириллица есть) и мягче
+    // скругления у контейнеров, которые берут форму из темы.
+    fontFamily: flair ? 'Comfortaa' : null,
+    cardTheme: flair
+        ? CardThemeData(
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          )
+        : const CardThemeData(surfaceTintColor: Colors.transparent),
     appBarTheme: const AppBarTheme(surfaceTintColor: Colors.transparent),
     navigationBarTheme:
         const NavigationBarThemeData(surfaceTintColor: Colors.transparent),
     bottomSheetTheme:
         const BottomSheetThemeData(surfaceTintColor: Colors.transparent),
-    dialogTheme: const DialogThemeData(surfaceTintColor: Colors.transparent),
+    dialogTheme: flair
+        ? DialogThemeData(
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(26),
+            ),
+          )
+        : const DialogThemeData(surfaceTintColor: Colors.transparent),
+    snackBarTheme: flair
+        ? SnackBarThemeData(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          )
+        : null,
   );
 }
 
@@ -114,6 +215,9 @@ class _ThemedApp extends ConsumerWidget {
     final customLight = buildPresetScheme(preset, Brightness.light);
     final customDark = buildPresetScheme(preset, Brightness.dark);
     final useSystem = settings.followSystemTheme;
+    // Финтифлюшки только когда пресет реально применён (системные цвета
+    // выключены): следуем той же логике, что и палитра.
+    final flair = !useSystem && preset.flair;
 
     final locale = localeFromSettings(settings);
 
@@ -121,8 +225,15 @@ class _ThemedApp extends ConsumerWidget {
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       debugShowCheckedModeBanner: false,
       themeMode: settings.darkTheme ? ThemeMode.dark : ThemeMode.light,
-      theme: _buildAppTheme(useSystem ? lightScheme : customLight),
-      darkTheme: _buildAppTheme(useSystem ? darkScheme : customDark),
+      theme: buildAppTheme(useSystem ? lightScheme : customLight, flair: flair),
+      darkTheme: buildAppTheme(useSystem ? darkScheme : customDark, flair: flair),
+      builder: (context, child) {
+        if (!flair || child == null) return child ?? const SizedBox.shrink();
+        return KawaiiOverlay(
+          flavor: preset.kawaii ?? KawaiiFlavor.sakura,
+          child: child,
+        );
+      },
       locale: locale,
       localeResolutionCallback: (deviceLocale, supported) {
         if (locale != null) {
@@ -146,4 +257,3 @@ class _ThemedApp extends ConsumerWidget {
     );
   }
 }
-
