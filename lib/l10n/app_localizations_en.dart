@@ -521,10 +521,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTunStackSystemHint => 'Kernel TCP/IP stack — fastest, default';
 
   @override
-  String get settingsTunStackGvisorHint => 'Userspace stack — better compatibility, a bit slower';
+  String get settingsTunStackGvisorHint => 'Userspace stack — better compatibility, a bit slower. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)';
 
   @override
-  String get settingsTunStackMixedHint => 'system for TCP, gVisor for UDP';
+  String get settingsTunStackMixedHint => 'system for TCP, gVisor for UDP. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)';
 
   @override
   String get settingsTunMtu => 'MTU';

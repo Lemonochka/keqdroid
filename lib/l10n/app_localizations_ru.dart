@@ -523,10 +523,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunStackSystemHint => 'Стек ядра ОС — самый быстрый, по умолчанию';
 
   @override
-  String get settingsTunStackGvisorHint => 'Userspace-стек — лучше совместимость, чуть медленнее';
+  String get settingsTunStackGvisorHint => 'Userspace-стек — лучше совместимость, чуть медленнее. Нужно ядро, собранное с gVisor (ядра из приложения 0.7.1 и старше падают с кодом 1)';
 
   @override
-  String get settingsTunStackMixedHint => 'system для TCP, gVisor для UDP';
+  String get settingsTunStackMixedHint => 'system для TCP, gVisor для UDP. Нужно ядро, собранное с gVisor (ядра из приложения 0.7.1 и старше падают с кодом 1)';
 
   @override
   String get settingsTunMtu => 'MTU';
