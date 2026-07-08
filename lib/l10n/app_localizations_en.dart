@@ -416,7 +416,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayCoreTitle => 'Core & protocols';
 
   @override
-  String get settingsXrayCoreSubtitle => 'Engine, DNS, XMUX, log and routing';
+  String get settingsXrayCoreSubtitle => 'Engine, DNS, XMUX, TUN, log and routing';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -507,6 +507,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsXrayXmuxHKeepAlivePeriod => 'Keep-alive period (sec)';
+
+  @override
+  String get settingsTunSection => 'TUN mode';
+
+  @override
+  String get settingsTunSectionNote => 'sing-box TUN interface options (desktop). Applied on next connection.';
+
+  @override
+  String get settingsTunStackTitle => 'Network stack';
+
+  @override
+  String get settingsTunStackSystemHint => 'Kernel TCP/IP stack — fastest, default';
+
+  @override
+  String get settingsTunStackGvisorHint => 'Userspace stack — better compatibility, a bit slower';
+
+  @override
+  String get settingsTunStackMixedHint => 'system for TCP, gVisor for UDP';
+
+  @override
+  String get settingsTunMtu => 'MTU';
+
+  @override
+  String get settingsTunMtuHint => '576–65535, default 1400';
+
+  @override
+  String get settingsTunUdpTimeout => 'UDP timeout (sec)';
+
+  @override
+  String get settingsTunUdpTimeoutHint => 'NAT lifetime of idle UDP sessions, default 300';
+
+  @override
+  String get settingsTunStrictRouteTitle => 'Strict route';
+
+  @override
+  String get settingsTunStrictRouteHint => 'Prevents traffic from leaking around the TUN. On Windows it can break routing when another VPN (e.g. Tailscale) is active';
+
+  @override
+  String get settingsTunStrictRouteAuto => 'Auto';
+
+  @override
+  String get settingsTunStrictRouteAutoHint => 'Linux: on, Windows: off';
+
+  @override
+  String get settingsTunStrictRouteOn => 'Enabled';
+
+  @override
+  String get settingsTunStrictRouteOff => 'Disabled';
+
+  @override
+  String get settingsTunEin => 'Endpoint-independent NAT';
+
+  @override
+  String get settingsTunEinHint => 'Full-cone NAT for UDP — helps P2P and games. gVisor/mixed stack only';
+
+  @override
+  String get settingsTunAutoRoute => 'Auto route';
+
+  @override
+  String get settingsTunAutoRouteHint => 'Adds system routes into the tunnel automatically. Disable only if you manage routes yourself — without it no traffic enters the TUN';
 
   @override
   String get settingsPingTitle => 'Server ping';

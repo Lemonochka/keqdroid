@@ -416,7 +416,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayCoreTitle => '内核与协议';
 
   @override
-  String get settingsXrayCoreSubtitle => '引擎、DNS、XMUX、日志与路由';
+  String get settingsXrayCoreSubtitle => '引擎、DNS、XMUX、TUN、日志与路由';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -507,6 +507,66 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsXrayXmuxHKeepAlivePeriod => '保活周期（秒）';
+
+  @override
+  String get settingsTunSection => 'TUN 模式';
+
+  @override
+  String get settingsTunSectionNote => 'sing-box TUN 接口选项（桌面端）。下次连接时生效。';
+
+  @override
+  String get settingsTunStackTitle => '网络栈';
+
+  @override
+  String get settingsTunStackSystemHint => '内核 TCP/IP 栈 — 最快，默认';
+
+  @override
+  String get settingsTunStackGvisorHint => '用户态网络栈 — 兼容性更好，稍慢';
+
+  @override
+  String get settingsTunStackMixedHint => 'TCP 用 system，UDP 用 gVisor';
+
+  @override
+  String get settingsTunMtu => 'MTU';
+
+  @override
+  String get settingsTunMtuHint => '576–65535，默认 1400';
+
+  @override
+  String get settingsTunUdpTimeout => 'UDP 超时（秒）';
+
+  @override
+  String get settingsTunUdpTimeoutHint => '空闲 UDP 会话的 NAT 存活时间，默认 300';
+
+  @override
+  String get settingsTunStrictRouteTitle => '严格路由 (strict route)';
+
+  @override
+  String get settingsTunStrictRouteHint => '防止流量绕过 TUN。在 Windows 上，若有其他 VPN（如 Tailscale）处于活动状态，可能破坏路由';
+
+  @override
+  String get settingsTunStrictRouteAuto => '自动';
+
+  @override
+  String get settingsTunStrictRouteAutoHint => 'Linux：开启，Windows：关闭';
+
+  @override
+  String get settingsTunStrictRouteOn => '开启';
+
+  @override
+  String get settingsTunStrictRouteOff => '关闭';
+
+  @override
+  String get settingsTunEin => 'Endpoint-independent NAT';
+
+  @override
+  String get settingsTunEinHint => 'UDP 的全锥形 NAT — 有助于 P2P 和游戏。仅 gVisor/mixed 栈';
+
+  @override
+  String get settingsTunAutoRoute => '自动路由 (auto route)';
+
+  @override
+  String get settingsTunAutoRouteHint => '自动将系统路由指向隧道。仅在手动管理路由时关闭 — 否则流量不会进入 TUN';
 
   @override
   String get settingsPingTitle => '服务器 Ping';

@@ -94,8 +94,19 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
         .save(settings.copyWith(xrayCore: core));
   }
 
+  Future<void> _saveTun(AppSettings settings, TunSettings tun) async {
+    await ref
+        .read(settingsNotifierProvider.notifier)
+        .save(settings.copyWith(tun: tun));
+  }
+
   Future<void> _resetDefaults(AppSettings settings) async {
-    await _save(settings, const XrayCoreSettings());
+    await ref.read(settingsNotifierProvider.notifier).save(
+          settings.copyWith(
+            xrayCore: const XrayCoreSettings(),
+            tun: const TunSettings(),
+          ),
+        );
     _dnsServersCtrl.text = const XrayCoreSettings().dnsServers;
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -131,6 +142,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
     final settings =
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final core = settings.xrayCore;
+    final tun = settings.tun;
     final accent = AppTheme.accent(context);
 
     if (_dnsServersCtrl.text.isEmpty && core.dnsServers.isNotEmpty) {
@@ -564,6 +576,217 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
               ),
             ],
           ),
+          // sing-box TUN есть только на десктопе: Android держит TUN через
+          // VpnService + tun2socks, эти опции там ни на что не влияют.
+          if (Platform.isWindows || Platform.isLinux) ...[
+            _XrayCoreSectionHeader(
+              icon: Icons.lan_outlined,
+              title: l10n.settingsTunSection,
+            ),
+            _xraySettingsCard(
+              context,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Text(
+                    l10n.settingsTunSectionNote,
+                    style: _xrayTileSubtitleStyle(context),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: Text(
+                    l10n.settingsTunStackTitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.text(context),
+                    ),
+                  ),
+                ),
+                RadioGroup<String>(
+                  groupValue: tun.stack,
+                  onChanged: (v) {
+                    if (v != null) _saveTun(settings, tun.copyWith(stack: v));
+                  },
+                  child: Column(
+                    children: [
+                      _choiceTile(
+                        context: context,
+                        value: TunSettings.stackSystem,
+                        accent: accent,
+                        title: 'system',
+                        subtitle: l10n.settingsTunStackSystemHint,
+                      ),
+                      _choiceTile(
+                        context: context,
+                        value: TunSettings.stackGvisor,
+                        accent: accent,
+                        title: 'gVisor',
+                        subtitle: l10n.settingsTunStackGvisorHint,
+                      ),
+                      _choiceTile(
+                        context: context,
+                        value: TunSettings.stackMixed,
+                        accent: accent,
+                        title: 'mixed',
+                        subtitle: l10n.settingsTunStackMixedHint,
+                      ),
+                    ],
+                  ),
+                ),
+                _xraySettingsDivider(context),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _XrayCoreTextField(
+                          key: ValueKey('tun_mtu_${tun.mtu}'),
+                          label: l10n.settingsTunMtu,
+                          hint: '${TunSettings.defaultMtu}',
+                          initialValue: '${tun.mtu}',
+                          keyboardType: TextInputType.number,
+                          onSave: (v) {
+                            final n = int.tryParse(v.trim());
+                            if (n == null) return;
+                            _saveTun(
+                              settings,
+                              tun.copyWith(mtu: TunSettings.clampMtu(n)),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _XrayCoreTextField(
+                          key: ValueKey('tun_udp_${tun.udpTimeoutSec}'),
+                          label: l10n.settingsTunUdpTimeout,
+                          hint: '${TunSettings.defaultUdpTimeoutSec}',
+                          initialValue: '${tun.udpTimeoutSec}',
+                          keyboardType: TextInputType.number,
+                          onSave: (v) {
+                            final n = int.tryParse(v.trim());
+                            if (n == null) return;
+                            _saveTun(
+                              settings,
+                              tun.copyWith(
+                                udpTimeoutSec: TunSettings.clampUdpTimeout(n),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.settingsTunMtuHint,
+                          style: _xrayTileSubtitleStyle(context),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          l10n.settingsTunUdpTimeoutHint,
+                          style: _xrayTileSubtitleStyle(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _xraySettingsDivider(context),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Text(
+                    l10n.settingsTunStrictRouteTitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.text(context),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                  child: Text(
+                    l10n.settingsTunStrictRouteHint,
+                    style: _xrayTileSubtitleStyle(context),
+                  ),
+                ),
+                RadioGroup<String>(
+                  groupValue: tun.strictRoute,
+                  onChanged: (v) {
+                    if (v != null) {
+                      _saveTun(settings, tun.copyWith(strictRoute: v));
+                    }
+                  },
+                  child: Column(
+                    children: [
+                      _choiceTile(
+                        context: context,
+                        value: TunSettings.strictRouteAuto,
+                        accent: accent,
+                        title: l10n.settingsTunStrictRouteAuto,
+                        subtitle: l10n.settingsTunStrictRouteAutoHint,
+                      ),
+                      _choiceTile(
+                        context: context,
+                        value: TunSettings.strictRouteOn,
+                        accent: accent,
+                        title: l10n.settingsTunStrictRouteOn,
+                      ),
+                      _choiceTile(
+                        context: context,
+                        value: TunSettings.strictRouteOff,
+                        accent: accent,
+                        title: l10n.settingsTunStrictRouteOff,
+                      ),
+                    ],
+                  ),
+                ),
+                _xraySettingsDivider(context),
+                AnimatedOpacity(
+                  opacity: tun.stack != TunSettings.stackSystem ? 1 : 0.45,
+                  duration: const Duration(milliseconds: 180),
+                  child: SwitchListTile(
+                    value: tun.endpointIndependentNat,
+                    onChanged: tun.stack != TunSettings.stackSystem
+                        ? (v) => _saveTun(
+                              settings,
+                              tun.copyWith(endpointIndependentNat: v),
+                            )
+                        : null,
+                    activeThumbColor: accent,
+                    title: Text(l10n.settingsTunEin),
+                    subtitle: Text(
+                      l10n.settingsTunEinHint,
+                      style: _xrayTileSubtitleStyle(context),
+                    ),
+                  ),
+                ),
+                _xraySettingsDivider(context),
+                SwitchListTile(
+                  value: tun.autoRoute,
+                  onChanged: (v) =>
+                      _saveTun(settings, tun.copyWith(autoRoute: v)),
+                  activeThumbColor: accent,
+                  title: Text(l10n.settingsTunAutoRoute),
+                  subtitle: Text(
+                    l10n.settingsTunAutoRouteHint,
+                    style: _xrayTileSubtitleStyle(context),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () => _resetDefaults(settings),
@@ -659,11 +882,13 @@ class _XrayCoreTextFieldState extends State<_XrayCoreTextField> {
 
 String _xrayCoreSettingsSubtitle(AppLocalizations l10n, AppSettings? settings) {
   final core = settings?.xrayCore ?? const XrayCoreSettings();
-  if (core == const XrayCoreSettings()) {
+  final tun = settings?.tun ?? const TunSettings();
+  if (core == const XrayCoreSettings() && tun.isDefault) {
     return l10n.settingsXrayCoreSubtitle;
   }
   final parts = <String>[core.logLevel];
   if (core.dnsUseCustom) parts.insert(0, 'DNS');
   if (core.xmuxEnabled) parts.add('XMUX');
+  if (!tun.isDefault) parts.add('TUN');
   return parts.join(' · ');
 }
