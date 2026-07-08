@@ -521,10 +521,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunStackSystemHint => '内核 TCP/IP 栈 — 最快，默认';
 
   @override
-  String get settingsTunStackGvisorHint => '用户态网络栈 — 兼容性更好，稍慢';
+  String get settingsTunStackGvisorHint => '用户态网络栈 — 兼容性更好，稍慢。需要包含 gVisor 的内核（0.7.1 及更早版本自带的内核会以代码 1 退出）';
 
   @override
-  String get settingsTunStackMixedHint => 'TCP 用 system，UDP 用 gVisor';
+  String get settingsTunStackMixedHint => 'TCP 用 system，UDP 用 gVisor。需要包含 gVisor 的内核（0.7.1 及更早版本自带的内核会以代码 1 退出）';
 
   @override
   String get settingsTunMtu => 'MTU';

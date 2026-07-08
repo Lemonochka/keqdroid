@@ -35,6 +35,16 @@ import 'xray_session_stats.dart';
 class LinuxTunnelBackend implements TunnelBackend {
   static const tunInterfaceName = 'tun-keqdis';
 
+  /// Куда root-обёртка pkexec редиректит stdout/stderr ядра (см.
+  /// [_runKeqrnelAsRoot]): pkexec не держит наш pipe, и без файла реальная
+  /// причина падения ядра терялась — наружу уходил только generic exit code.
+  static const _coreLogPath = '/tmp/keqdroid_keqrnel.log';
+
+  /// Момент запуска pkexec текущей сессии — [_coreLogPath] обнуляется только
+  /// внутри root-обёртки, так что при падении ДО неё (сам pkexec) файл ещё
+  /// хранит прошлую сессию; по mtime отличаем свежий лог от застарелого.
+  DateTime? _keqrnelLaunchedAt;
+
   /// Active session — lets DebugLogService surface core logs on Linux.
   static LinuxTunnelBackend? activeInstance;
 
@@ -391,7 +401,7 @@ class LinuxTunnelBackend implements TunnelBackend {
     // surfaced. Redirect them to a stable, root-readable file so the REAL reason
     // a TUN start failed is always available. Readiness is detected via the tun
     // interface appearing, so this doesn't depend on the live pipe.
-    const coreLogPath = '/tmp/keqdroid_keqrnel.log';
+    const coreLogPath = _coreLogPath;
     final sentinelFile = File(p.join(_sessionDir!.path, 'keqrnel.run'));
     await sentinelFile.writeAsString('1');
     _rootSentinel = sentinelFile;
@@ -416,6 +426,7 @@ echo "[wrap v3 sentinel] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(k
 kill -TERM "$sb" 2>/dev/null
 wait "$sb"
 ''';
+    _keqrnelLaunchedAt = DateTime.now();
     try {
       _singboxProcess = await Process.start(
         'pkexec',
@@ -567,8 +578,7 @@ wait "$sb"
 
     // Pull core log one last time for the error message below.
     try {
-      const coreLogPath = '/tmp/keqdroid_keqrnel.log';
-      final coreLog = await File(coreLogPath).readAsString();
+      final coreLog = await File(_coreLogPath).readAsString();
       if (coreLog.trim().isNotEmpty) {
         log
           ..writeln('=== keqrnel (core, timeout) ===')
@@ -603,8 +613,28 @@ wait "$sb"
             '(pkexec). Install/start a polkit authentication agent, or use '
             'Proxy mode.';
       default:
+        // Реальный вывод ядра лежит в _coreLogPath (pipe pkexec обычно пуст,
+        // см. коммент у обёртки) — тянем его, иначе юзер видит голый код.
+        // Файл доверяем только если он записан ПОСЛЕ запуска этой сессии.
+        var coreTail = '';
+        try {
+          final coreLog = File(_coreLogPath);
+          final launchedAt = _keqrnelLaunchedAt;
+          if (launchedAt != null &&
+              !coreLog.lastModifiedSync().isBefore(launchedAt)) {
+            coreTail = coreLog.readAsStringSync().trim();
+          }
+        } catch (_) {}
+        final detail =
+            coreTail.isNotEmpty ? _tail(StringBuffer(coreTail)) : _tail(log);
+        if (coreTail.contains('gVisor is not included in this build')) {
+          return 'keqrnel exited with code $code: this core build has no '
+              'gVisor network stack. Set TUN stack to "system" in Settings → '
+              'Core and protocols, or update the app to a core built with '
+              'gVisor.\n$detail';
+        }
         return 'keqrnel exited with code $code (TUN/elevation failed?).\n'
-            '${_tail(log)}';
+            '$detail';
     }
   }
 

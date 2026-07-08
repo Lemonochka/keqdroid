@@ -1056,13 +1056,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunStackGvisorHint.
   ///
   /// In en, this message translates to:
-  /// **'Userspace stack — better compatibility, a bit slower'**
+  /// **'Userspace stack — better compatibility, a bit slower. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)'**
   String get settingsTunStackGvisorHint;
 
   /// No description provided for @settingsTunStackMixedHint.
   ///
   /// In en, this message translates to:
-  /// **'system for TCP, gVisor for UDP'**
+  /// **'system for TCP, gVisor for UDP. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)'**
   String get settingsTunStackMixedHint;
 
   /// No description provided for @settingsTunMtu.

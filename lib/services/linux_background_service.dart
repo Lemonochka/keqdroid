@@ -12,8 +12,9 @@ import 'storage_service.dart';
 /// Linux background/tray behaviour (Windows has its own native tray).
 ///
 /// * Closing the window hides it (the tunnel keeps running) instead of quitting.
-/// * A tray icon restores the window / quits — on vanilla GNOME the icon needs
-///   the AppIndicator extension to be visible.
+/// * The tray icon's menu restores the window / quits. AppIndicator is
+///   menu-only: raw clicks are never delivered to the app, and on vanilla
+///   GNOME the icon needs the AppIndicator extension to be visible.
 /// * Single-instance: launching the app again brings the running window back to
 ///   front (the reliable way to restore on GNOME-without-tray) instead of
 ///   spawning a second copy.
@@ -66,7 +67,9 @@ class LinuxBackgroundService with WindowListener, TrayListener {
     trayManager.addListener(this);
     try {
       await trayManager.setIcon('assets/icon.png');
-      await trayManager.setToolTip('KeqDroid');
+      // Нет setToolTip: Linux-реализация tray_manager его не поддерживает
+      // (MissingPluginException), а вылет здесь оставит индикатор с пустым
+      // меню — AppIndicator без меню вообще не реагирует на клики.
       await trayManager.setContextMenu(
         Menu(items: [
           MenuItem(key: 'show', label: 'Show KeqDroid'),
@@ -208,12 +211,9 @@ class LinuxBackgroundService with WindowListener, TrayListener {
   void onWindowUnmaximize() => _scheduleBoundsSave();
 
   // ---- TrayListener -------------------------------------------------------
-
-  @override
-  void onTrayIconMouseDown() => _showWindow();
-
-  @override
-  void onTrayIconRightMouseDown() => trayManager.popUpContextMenu();
+  //
+  // Только пункты меню: mouse-down событий и popUpContextMenu у AppIndicator
+  // нет, меню показывает сам хост (шелл) по клику на иконку.
 
   @override
   void onTrayMenuItemClick(MenuItem menuItem) {
