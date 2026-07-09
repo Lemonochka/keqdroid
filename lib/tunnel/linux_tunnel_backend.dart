@@ -57,7 +57,6 @@ class LinuxTunnelBackend implements TunnelBackend {
   // to stop (reverts auto_route/nftables) without re-elevation. See _runKeqrnelAsRoot.
   File? _rootSentinel;
   Directory? _sessionDir;
-  ({String username, String password})? _pendingCreds;
   ConnectionMode? _activeMode;
   final StringBuffer _xrayLog = StringBuffer();
   final StringBuffer _singboxLog = StringBuffer();
@@ -125,8 +124,9 @@ class LinuxTunnelBackend implements TunnelBackend {
 
   @override
   Future<({String username, String password})> fetchSocksCredentials() async {
-    _pendingCreds = SocksCredentialGenerator.generatePair();
-    return _pendingCreds!;
+    // Linux doesn't stash these (unlike Windows, which guards startSession on
+    // them): the caller applies the returned pair via Socks5Credentials().init.
+    return SocksCredentialGenerator.generatePair();
   }
 
   @override
@@ -526,11 +526,8 @@ wait "$sb"
     const maxWait = Duration(minutes: 2);
     final sw = Stopwatch()..start();
     while (sw.elapsed < maxWait) {
-      final code = await process.exitCode.timeout(
-        const Duration(milliseconds: 1),
-        onTimeout: () => -1,
-      );
-      if (code >= 0) {
+      final code = await _exitCodeOrNull(process);
+      if (code != null) {
         throw VpnStartException(_elevationError(code, log));
       }
       if (authMarker.existsSync()) return;
@@ -555,11 +552,8 @@ wait "$sb"
   }) async {
     var waited = 0;
     while (waited < 20000) {
-      final code = await process.exitCode.timeout(
-        const Duration(milliseconds: 1),
-        onTimeout: () => -1,
-      );
-      if (code >= 0) {
+      final code = await _exitCodeOrNull(process);
+      if (code != null) {
         throw VpnStartException(_elevationError(code, log));
       }
       final text = log.toString().toLowerCase();
@@ -586,11 +580,8 @@ wait "$sb"
       }
     } catch (_) {}
 
-    final stillRunning = await process.exitCode.timeout(
-      const Duration(milliseconds: 1),
-      onTimeout: () => -1,
-    );
-    if (stillRunning >= 0) {
+    final stillRunning = await _exitCodeOrNull(process);
+    if (stillRunning != null) {
       throw VpnStartException(_elevationError(stillRunning, log));
     }
     return false;
@@ -977,9 +968,21 @@ wait "$sb"
       }
     }
 
-    process.stderr.transform(utf8.decoder).listen(handle);
-    process.stdout.transform(utf8.decoder).listen(handle);
+    // allowMalformed: a core line in a non-UTF-8 locale (or a stray binary
+    // byte) must not throw FormatException and silently kill the log pipe —
+    // that's exactly when the log matters most.
+    const decoder = Utf8Decoder(allowMalformed: true);
+    process.stderr.transform(decoder).listen(handle);
+    process.stdout.transform(decoder).listen(handle);
   }
+
+  /// Non-blocking peek at a process's exit status. `null` means still running;
+  /// otherwise the exit code — which is NEGATIVE when the process was killed by
+  /// a signal on Linux (SIGKILL -> -9, SIGTERM -> -15). Callers must therefore
+  /// treat "not null" (not ">= 0") as "exited", or an OOM/kill reads as alive.
+  static Future<int?> _exitCodeOrNull(Process process) => process.exitCode
+      .then<int?>((c) => c)
+      .timeout(const Duration(milliseconds: 1), onTimeout: () => null);
 
   /// Stops the elevated sing-box gracefully. We cannot signal the root process
   /// directly, so we delete the sentinel file the root wrapper polls — it then
@@ -1030,11 +1033,8 @@ wait "$sb"
     var waited = 0;
     while (waited < 20000) {
       if (process != null) {
-        final code = await process.exitCode.timeout(
-          const Duration(milliseconds: 1),
-          onTimeout: () => -1,
-        );
-        if (code >= 0) {
+        final code = await _exitCodeOrNull(process);
+        if (code != null) {
           if (code != 0) {
             throw VpnStartException(
               '$processLabel exited with code $code.\n${_tail(log ?? StringBuffer())}',

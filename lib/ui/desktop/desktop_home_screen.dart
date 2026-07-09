@@ -58,6 +58,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     );
     VpnNativeBridge.registerTrayMenuHandler(_onTrayMenuOpen);
     VpnNativeBridge.registerTrayMenuCloseHandler(_onTrayMenuClose);
+    VpnNativeBridge.registerWindowVisibilityHandler(_onWindowVisibility);
     HotkeyService.onPressed = _onHotkeyAction;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -277,6 +278,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     VpnNativeBridge.registerAutostartHandler(null);
     VpnNativeBridge.registerTrayMenuHandler(null);
     VpnNativeBridge.registerTrayMenuCloseHandler(null);
+    VpnNativeBridge.registerWindowVisibilityHandler(null);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -318,6 +320,14 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   Future<void> _onTrayMenuClose() async {
     if (!mounted) return;
     ref.read(trayMenuVisibleProvider.notifier).set(false);
+  }
+
+  /// Нативный трей сообщил, скрыто окно (SW_HIDE) или восстановлено. Это
+  /// авторитетный сигнал видимости для десктопа — гасит/возобновляет волну и
+  /// опрос трафика (Flutter-lifecycle на трей-hide отдаёт лишь `inactive`).
+  void _onWindowVisibility(bool visible) {
+    if (!mounted) return;
+    ref.read(desktopWindowVisibleProvider.notifier).set(visible);
   }
 
   @override

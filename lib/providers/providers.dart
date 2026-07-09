@@ -78,16 +78,29 @@ final vpnEngineProvider = Provider<VpnEngine>((ref) {
   engine.init();
   // Окно скрыто/свёрнуто (десктоп неделями живёт в трее) — секундный опрос
   // счётчиков трафика никому не виден, глушим его, чтобы не жечь CPU в фоне.
+  // Два входа: (1) Flutter-lifecycle (`hidden`/`paused` — реальное сворачивание/
+  // фон), (2) нативный трей на Windows через desktopWindowVisibleProvider — трей
+  // SW_HIDE движок отдаёт лишь как `inactive`, поэтому lifecycle его не ловит.
+  // Опрашиваем, только когда окно и на переднем плане, и реально видимо.
   // `inactive` на десктопе = окно видимо, но без фокуса — опрос продолжается.
   // Статус-события (ошибка, disconnect от вотчдога) идут независимо от этого.
+  var lifecycleForeground = true;
+  var uiVisible = true;
+  void applyPolling() =>
+      engine.setTrafficStatsPollingEnabled(lifecycleForeground && uiVisible);
   final lifecycle = AppLifecycleListener(
     onStateChange: (state) {
       final hidden = state == AppLifecycleState.hidden ||
           state == AppLifecycleState.paused ||
           state == AppLifecycleState.detached;
-      engine.setTrafficStatsPollingEnabled(!hidden);
+      lifecycleForeground = !hidden;
+      applyPolling();
     },
   );
+  ref.listen<bool>(desktopUiVisibleProvider, (_, next) {
+    uiVisible = next;
+    applyPolling();
+  });
   ref.onDispose(lifecycle.dispose);
   ref.onDispose(engine.dispose);
   return engine;

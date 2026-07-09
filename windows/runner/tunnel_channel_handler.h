@@ -20,4 +20,10 @@ void KeqdisNotifyTrayMenuClosedImmediate();
 // WM_HOTKEY: forward the triggered global-hotkey action to Dart.
 void KeqdisNotifyHotkeyPressed(const std::string& action);
 
+// Main window hidden to / restored from the tray. Dart uses this as the
+// authoritative "is the window on screen" signal to pause the off-screen wave
+// animation and the traffic-stats polling — the Flutter lifecycle reports a
+// tray SW_HIDE only as `inactive`, not `hidden`, so those guards never engage.
+void KeqdisNotifyWindowVisibility(bool visible);
+
 #endif  // RUNNER_TUNNEL_CHANNEL_HANDLER_H_

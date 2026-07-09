@@ -267,6 +267,10 @@ void HideWindowToTray(HWND hwnd) {
   EnsureTrayIcon();
   g_window_hidden_in_tray = true;
   ::ShowWindow(hwnd, SW_HIDE);
+  // Tell Dart the window is off screen so it stops the wave animation and the
+  // traffic-stats polling — the Flutter lifecycle reports SW_HIDE only as
+  // `inactive`, so it would otherwise keep rendering at 60fps in the tray.
+  KeqdisNotifyWindowVisibility(false);
 }
 
 }  // namespace
@@ -298,6 +302,8 @@ bool WindowsTrayActivateMainWindow() {
     return false;
   }
   KeqdisNotifyTrayMenuClosedImmediate();
+  // Window is coming back on screen — resume the animation / stats polling.
+  KeqdisNotifyWindowVisibility(true);
   g_window_hidden_in_tray = false;
   if (g_popup.active) {
     WindowsTrayHideMenuPopup(g_tray_hwnd, true);

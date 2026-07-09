@@ -92,15 +92,6 @@ class SubscriptionService {
 
   // безопасность
 
-  static const _privateIpPatterns = [
-    r'^10\.',
-    r'^172\.(1[6-9]|2[0-9]|3[01])\.',
-    r'^192\.168\.',
-    r'^169\.254\.',
-    r'^fc00:',
-    r'^fe80:',
-  ];
-
   static const _blockedHostnames = {
     'metadata.google.internal',
     '169.254.169.254',           // AWS/GCP/Azure IMDS
@@ -125,13 +116,40 @@ class SubscriptionService {
         return false;
       }
 
-      for (final pattern in _privateIpPatterns) {
-        if (RegExp(pattern).hasMatch(host)) return false;
-      }
+      if (_isDisallowedIpHost(host)) return false;
       return true;
     } catch (_) {
       return false;
     }
+  }
+
+  /// True when [host] is (or is written as) an IP address in a range a
+  /// subscription URL must never target — loopback, private, link-local, CGNAT,
+  /// IPv6 ULA. Also rejects numeric shorthands (decimal `2130706433`,
+  /// hex `0x7f000001`) that spell a private IP while sneaking past dotted-quad
+  /// string checks. A plain hostname returns false here (DNS-rebinding SSRF is
+  /// out of scope; this is input hardening, not a full egress firewall).
+  static bool _isDisallowedIpHost(String host) {
+    if (RegExp(r'^0x[0-9a-f]+$').hasMatch(host)) return true;
+    if (RegExp(r'^\d+$').hasMatch(host)) return true; // bare-integer IP form
+
+    final addr = InternetAddress.tryParse(host);
+    if (addr == null) return false; // hostname, not a literal IP
+    if (addr.isLoopback || addr.isLinkLocal || addr.isMulticast) return true;
+
+    final b = addr.rawAddress;
+    if (addr.type == InternetAddressType.IPv4) {
+      if (b[0] == 0) return true; // 0.0.0.0/8
+      if (b[0] == 10) return true; // 10/8
+      if (b[0] == 127) return true; // 127/8
+      if (b[0] == 169 && b[1] == 254) return true; // 169.254/16
+      if (b[0] == 172 && b[1] >= 16 && b[1] <= 31) return true; // 172.16/12
+      if (b[0] == 192 && b[1] == 168) return true; // 192.168/16
+      if (b[0] == 100 && b[1] >= 64 && b[1] <= 127) return true; // CGNAT 100.64/10
+    } else if (addr.type == InternetAddressType.IPv6) {
+      if ((b[0] & 0xfe) == 0xfc) return true; // fc00::/7 ULA
+    }
+    return false;
   }
 
   /// стабильный ключ для сопоставления серверов между обновлениями.
