@@ -72,6 +72,18 @@ class TrayMenuVisibleNotifier extends Notifier<bool> {
   void set(bool value) => state = value;
 }
 
+/// desktop: правда ли окно на экране. На Windows его выставляет нативный трей
+/// (onWindowVisibility) при скрытии/восстановлении окна — Flutter-lifecycle на
+/// SW_HIDE отдаёт лишь `inactive`, поэтому это отдельный авторитетный сигнал,
+/// глушащий волну-анимацию и опрос трафика в фоне. По умолчанию true (и на
+/// платформах без трея так и остаётся).
+class DesktopWindowVisibleNotifier extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  void set(bool value) => state = value;
+}
+
 final subscriptionRefreshingIdsProvider =
     NotifierProvider<SubscriptionRefreshingIdsNotifier, Set<String>>(
   SubscriptionRefreshingIdsNotifier.new,
@@ -120,3 +132,17 @@ final vpnServerSwitchInProgressProvider =
 
 final trayMenuVisibleProvider =
     NotifierProvider<TrayMenuVisibleNotifier, bool>(TrayMenuVisibleNotifier.new);
+
+final desktopWindowVisibleProvider =
+    NotifierProvider<DesktopWindowVisibleNotifier, bool>(
+  DesktopWindowVisibleNotifier.new,
+);
+
+/// Видно ли пользователю UI на десктопе: либо окно на экране, либо открыт
+/// попап меню трея. Ложь только когда всё реально скрыто в трее — тогда
+/// глобальный TickerMode (app.dart) глушит все анимации (волна, kawaii-оверлей),
+/// а vpnEngine — секундный опрос трафика, чтобы не жечь CPU в фоне.
+final desktopUiVisibleProvider = Provider<bool>((ref) {
+  return ref.watch(desktopWindowVisibleProvider) ||
+      ref.watch(trayMenuVisibleProvider);
+});

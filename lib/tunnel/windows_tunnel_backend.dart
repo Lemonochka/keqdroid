@@ -774,9 +774,21 @@ class WindowsTunnelBackend implements TunnelBackend {
       }
     }
 
-    process.stderr.transform(utf8.decoder).listen(handle);
-    process.stdout.transform(utf8.decoder).listen(handle);
+    // allowMalformed: a core line in the system ANSI codepage (RU Windows) or
+    // a stray binary byte must not throw FormatException and silently kill the
+    // log pipe — that's exactly when the log matters most.
+    const decoder = Utf8Decoder(allowMalformed: true);
+    process.stderr.transform(decoder).listen(handle);
+    process.stdout.transform(decoder).listen(handle);
   }
+
+  /// Non-blocking peek at a process's exit status. `null` means still running;
+  /// otherwise the exit code. On Windows a killed process yields a large exit
+  /// code (not a negative signal like Linux), but keep the same null-means-
+  /// running contract so "exited" is never misread as "alive".
+  static Future<int?> _exitCodeOrNull(Process process) => process.exitCode
+      .then<int?>((c) => c)
+      .timeout(const Duration(milliseconds: 1), onTimeout: () => null);
 
   Future<void> _killProcess(Process? process, {bool graceful = false}) async {
     if (process == null) return;
@@ -812,11 +824,8 @@ class WindowsTunnelBackend implements TunnelBackend {
   }) async {
     var waited = 0;
     while (waited < 15000) {
-      final code = await process.exitCode.timeout(
-        const Duration(milliseconds: 1),
-        onTimeout: () => -1,
-      );
-      if (code >= 0) {
+      final code = await _exitCodeOrNull(process);
+      if (code != null) {
         throw VpnStartException(
           'sing-box exited with code $code.\n${_tail(log ?? StringBuffer())}',
         );
@@ -833,11 +842,8 @@ class WindowsTunnelBackend implements TunnelBackend {
       waited += 300;
     }
     // some builds never print "started", so a still-running process counts as ok
-    final stillRunning = await process.exitCode.timeout(
-      const Duration(milliseconds: 1),
-      onTimeout: () => -1,
-    );
-    return stillRunning < 0;
+    final stillRunning = await _exitCodeOrNull(process);
+    return stillRunning == null;
   }
 
   Future<bool> _waitForPort(
@@ -850,11 +856,8 @@ class WindowsTunnelBackend implements TunnelBackend {
     var waited = 0;
     while (waited < 20000) {
       if (process != null) {
-        final code = await process.exitCode.timeout(
-          const Duration(milliseconds: 1),
-          onTimeout: () => -1,
-        );
-        if (code >= 0) {
+        final code = await _exitCodeOrNull(process);
+        if (code != null) {
           if (code != 0) {
             throw VpnStartException(
               '$processLabel exited with code $code.\n${_tail(log ?? StringBuffer())}',

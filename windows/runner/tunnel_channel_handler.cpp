@@ -1003,6 +1003,17 @@ void DispatchHotkeyToDart(const std::string& action) {
       std::make_unique<flutter::EncodableValue>(args));
 }
 
+void DispatchWindowVisibilityToDart(bool visible) {
+  if (g_vpn_channel == nullptr) {
+    return;
+  }
+  flutter::EncodableMap args;
+  args[flutter::EncodableValue("visible")] = flutter::EncodableValue(visible);
+  g_vpn_channel->InvokeMethod(
+      "onWindowVisibility",
+      std::make_unique<flutter::EncodableValue>(args));
+}
+
 }  // namespace
 
 void KeqdisRequestAutostartConnect() {
@@ -1032,6 +1043,10 @@ void KeqdisNotifyTrayMenuClosedImmediate() {
 
 void KeqdisNotifyHotkeyPressed(const std::string& action) {
   PostToPlatformThread([action]() { DispatchHotkeyToDart(action); });
+}
+
+void KeqdisNotifyWindowVisibility(bool visible) {
+  PostToPlatformThread([visible]() { DispatchWindowVisibilityToDart(visible); });
 }
 
 void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {

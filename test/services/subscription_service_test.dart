@@ -34,6 +34,24 @@ void main() {
       expect(SubscriptionService.isSafeUrl('http://localhost:8080/test'), isFalse);
       expect(SubscriptionService.isSafeUrl('http://169.254.169.254/latest'), isFalse);
     });
+
+    test('blocks private and loopback literal ips', () {
+      expect(SubscriptionService.isSafeUrl('http://10.0.0.1/sub'), isFalse);
+      expect(SubscriptionService.isSafeUrl('http://172.16.5.4/sub'), isFalse);
+      expect(SubscriptionService.isSafeUrl('http://192.168.1.1/sub'), isFalse);
+      expect(SubscriptionService.isSafeUrl('http://127.0.0.1/sub'), isFalse);
+      expect(SubscriptionService.isSafeUrl('http://[::1]/sub'), isFalse);
+    });
+
+    test('blocks numeric-shorthand loopback that bypasses dotted-quad checks', () {
+      // 2130706433 == 0x7f000001 == 127.0.0.1
+      expect(SubscriptionService.isSafeUrl('http://2130706433/sub'), isFalse);
+      expect(SubscriptionService.isSafeUrl('http://0x7f000001/sub'), isFalse);
+    });
+
+    test('still allows a public literal ip', () {
+      expect(SubscriptionService.isSafeUrl('https://1.1.1.1/sub'), isTrue);
+    });
   });
 
   group('SubscriptionService.getDueForUpdate', () {

@@ -8,6 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'linux_appimage_updater.dart';
 import 'windows_zip_updater.dart';
 import '../utils/local_vpn_proxy.dart';
 
@@ -507,6 +508,24 @@ class UpdateService {
         zipPath: file.path,
         beforeRestart: beforeRestart,
       );
+    }
+
+    if (Platform.isLinux && ext == '.appimage') {
+      final target = LinuxAppImageUpdater.currentAppImagePath();
+      if (target != null) {
+        // Running as an AppImage: swap it in place and relaunch.
+        return LinuxAppImageUpdater.applyInPlace(
+          newAppImage: file.path,
+          targetAppImage: target,
+          beforeRestart: beforeRestart,
+        );
+      }
+      // Not launched as an AppImage (deb/tar.gz install, dev run): we don't own
+      // an install path to replace. At least make the download runnable so the
+      // hand-off below launches it instead of opening an archive manager.
+      try {
+        await Process.run('chmod', ['+x', file.path]);
+      } catch (_) {}
     }
 
     await OpenFilex.open(file.path);

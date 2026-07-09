@@ -193,6 +193,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
     // Крутим бесконечные анимации (60fps) только когда окно на переднем плане.
     // Раньше при vpnActive они продолжались и в свёрнутом окне → движок рендерил
     // в фоне и жёг 3-4% CPU. При возврате из трея (resumed) анимация перезапустится.
+    // Трей-hide (SW_HIDE = lifecycle `inactive`) дополнительно гасится глобальным
+    // TickerMode в app.dart (там же — kawaii-оверлей), см. desktopUiVisibleProvider.
     final run = _appInForeground && (_serversTabVisible || vpnActive);
     if (run) {
       if (!_waveCtrl.isAnimating) _waveCtrl.repeat();

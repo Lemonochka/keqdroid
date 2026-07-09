@@ -228,11 +228,17 @@ class _ThemedApp extends ConsumerWidget {
       theme: buildAppTheme(useSystem ? lightScheme : customLight, flair: flair),
       darkTheme: buildAppTheme(useSystem ? darkScheme : customDark, flair: flair),
       builder: (context, child) {
-        if (!flair || child == null) return child ?? const SizedBox.shrink();
-        return KawaiiOverlay(
-          flavor: preset.kawaii ?? KawaiiFlavor.sakura,
-          child: child,
-        );
+        final content = (!flair || child == null)
+            ? (child ?? const SizedBox.shrink())
+            : KawaiiOverlay(
+                flavor: preset.kawaii ?? KawaiiFlavor.sakura,
+                child: child,
+              );
+        // Пока окно скрыто в трее (не видно и меню трея не открыто) — глушим ВСЕ
+        // тикеры поддерева: волну-хедер, «дыхание» и полноэкранный kawaii-оверлей
+        // (иначе он рендерил 60fps за кадром и жёг CPU в трее). Возвращается сам,
+        // как только окно/меню снова на экране. См. desktopUiVisibleProvider.
+        return _VisibilityTickerGate(child: content);
       },
       locale: locale,
       localeResolutionCallback: (deviceLocale, supported) {
@@ -255,5 +261,19 @@ class _ThemedApp extends ConsumerWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       home: home,
     );
+  }
+}
+
+/// Глушит тикеры всего поддерева, когда десктопный UI не на экране (окно скрыто
+/// в трей и меню трея закрыто). На платформах без трея desktopUiVisibleProvider
+/// всегда true — TickerMode включён, поведение не меняется.
+class _VisibilityTickerGate extends ConsumerWidget {
+  final Widget child;
+  const _VisibilityTickerGate({required this.child});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final visible = ref.watch(desktopUiVisibleProvider);
+    return TickerMode(enabled: visible, child: child);
   }
 }

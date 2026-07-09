@@ -298,7 +298,10 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
             setState(() => _progress = received / total);
           }
         },
-        beforeRestart: Platform.isWindows
+        // Desktop restarts (Windows zip, Linux AppImage in-place) tear the VPN
+        // down first. Only invoked right before the app exits to apply — the
+        // browser/deb hand-off path returns without calling it.
+        beforeRestart: Platform.isWindows || Platform.isLinux
             ? () async {
                 if (mounted) setState(() => _applying = true);
                 await ref.read(vpnStateProvider.notifier).disconnect();

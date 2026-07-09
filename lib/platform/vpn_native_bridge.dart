@@ -19,6 +19,7 @@ class VpnNativeBridge {
   static Future<void> Function()? _autostartHandler;
   static Future<void> Function(MethodCall call)? _trayMenuHandler;
   static Future<void> Function()? _trayMenuCloseHandler;
+  static void Function(bool visible)? _windowVisibilityHandler;
 
   static Future<String?> getLaunchAction() async {
     if (!supportsNotificationLaunch) return null;
@@ -58,6 +59,14 @@ class VpnNativeBridge {
     _syncMethodCallHandler();
   }
 
+  /// Windows: окно скрыто в трей / восстановлено (нативный `onWindowVisibility`).
+  static void registerWindowVisibilityHandler(
+    void Function(bool visible)? handler,
+  ) {
+    _windowVisibilityHandler = handler;
+    _syncMethodCallHandler();
+  }
+
   static void _syncMethodCallHandler() {
     final needsHandler = supportsNotificationLaunch ||
         supportsAutostartNotification ||
@@ -77,6 +86,12 @@ class VpnNativeBridge {
       }
       if (call.method == 'onTrayMenuClose' && supportsTrayMenu) {
         await _trayMenuCloseHandler?.call();
+        return;
+      }
+      if (call.method == 'onWindowVisibility' && supportsTrayMenu) {
+        final args = call.arguments;
+        final visible = args is Map ? args['visible'] as bool? ?? true : true;
+        _windowVisibilityHandler?.call(visible);
         return;
       }
       if (call.method == 'onHotkeyPressed' && supportsGlobalHotkeys) {
