@@ -77,7 +77,7 @@ class LinuxAppImageUpdater {
 
   // Waits for the app (its PID) to exit, atomically replaces the AppImage with
   // the downloaded one (same-dir `mv`, `cp` fallback), keeps the exec bit, and
-  // relaunches. Verified end-to-end in WSL against a busy-file + relaunch stub.
+  // relaunches.
   static const _script = r'''
 APPPID="$1"; NEW="$2"; TARGET="$3"
 LOG="${TMPDIR:-/tmp}/keqdroid_update.log"

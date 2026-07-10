@@ -199,8 +199,8 @@ void main() {
         () async {
       // Regression: панели, маршрутизирующие по UA, отдают неизвестным UA
       // html-страницу подписки (её бэкенд может лежать → 502), а известным
-      // клиентским — payload. Раньше UA-ретрай жил только в успешной ветке
-      // (200+html) и до него не доходило: dio кидал на 502 раньше.
+      // клиентским — payload. UA-ретрай обязан жить и в error-ветке: dio
+      // кидает на 502 до того, как успешная ветка (200+html) до него дойдёт.
       service = buildService((ua) => ua == 'v2rayNG/1.9.28');
 
       final result = await service.updateSubscription(
@@ -251,7 +251,7 @@ void main() {
           id: 's1',
           name: 'S',
           url: 'https://example.com/sub',
-          userAgent: 'NekoBox/1.3.9', // раньше работал, теперь панель его режет
+          userAgent: 'NekoBox/1.3.9', // сохранённый UA, который панель перестала принимать
         ),
       );
 

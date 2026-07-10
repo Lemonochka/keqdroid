@@ -70,9 +70,9 @@ class LinuxCorePaths {
     return hasGeo ? dir : null;
   }
 
-  /// Extracts geo files into the stable cache (`~/.cache/keqdroid/geo`):
-  /// createTemp-каталоги keqdis_geo_* создавались на каждый вызов и никогда
-  /// не удалялись.
+  /// Extracts geo files into the stable cache (`~/.cache/keqdroid/geo`) —
+  /// именно в стабильный каталог: createTemp на каждый вызов копит в /tmp
+  /// каталоги, которые никто не удаляет.
   static Future<String?> _extractGeoFiles() async {
     try {
       final base = Platform.environment['XDG_CACHE_HOME'] ??
@@ -184,7 +184,7 @@ class LinuxCorePaths {
   }
 
   /// Extracts a bundled binary into the stable cores cache (same dir as
-  /// [_stageExecutable]): keqdis_bin_*-createTemp копился без подчистки.
+  /// [_stageExecutable]); createTemp-каталог на каждый вызов копил бы мусор.
   static Future<String?> _extractAssetToCache(
     String assetKey,
     String fileName,

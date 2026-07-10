@@ -78,9 +78,9 @@ class LinuxTunnelBackend implements TunnelBackend {
   int _totalUpload = 0;
   // false = окно скрыто (трей/свёрнуто): секундный опрос счётчиков приостановлен.
   bool _statsPollingEnabled = true;
-  // Базовая отметка счётчиков снята (раньше «нет базы» кодировалось как
-  // prev == 0, но 0 — легитимное значение на старте сессии: с паузой опроса
-  // это теряло бы весь скрытый период из тоталов).
+  // Базовая отметка счётчиков снята. Отдельный флаг, а не «prev == 0»:
+  // 0 — легитимное значение на старте сессии, и с паузой опроса такое
+  // кодирование теряло бы весь скрытый период из тоталов.
   bool _statsBaselineTaken = false;
   // Первый опрос после паузы: скрытый период целиком попадает в тоталы, но как
   // «скорость» его не показываем — иначе на секунду вспыхивает гигантское значение.
@@ -355,8 +355,8 @@ class LinuxTunnelBackend implements TunnelBackend {
   // ---- sing-box TUN (root via pkexec) -------------------------------------
 
   /// Запускает keqrnel под root через pkexec (TUN нужен root). keqrnel — это
-  /// sing-box host, поднимает переданный sing-box-конфиг. Заменяет прежний
-  /// отдельный sing-box.exe и для xray-протоколов, и для AmneziaWG-TUN.
+  /// sing-box host: поднимает переданный sing-box-конфиг, один и тот же путь
+  /// и для xray-протоколов, и для AmneziaWG-TUN.
   Future<void> _runKeqrnelAsRoot(String config) async {
     final singBin = await LinuxCorePaths.keqrnelExecutable();
     if (singBin == null) {
@@ -391,15 +391,10 @@ class LinuxTunnelBackend implements TunnelBackend {
     // delete the file (on stop) — or the app dies — it SIGTERMs sing-box AS ROOT,
     // letting it revert auto_route/nftables.
     //
-    // Why a sentinel file and PID poll instead of stdin: an earlier design closed
-    // our stdin pipe to ask for a stop. That is fundamentally broken through
-    // pkexec — once a polkit agent AUTHENTICATES, pkexec does NOT keep the
-    // caller's stdin attached to the elevated child, so the child's stdin is at
-    // EOF from the start. A `cat`-on-stdin watchdog then fired instantly and
-    // killed keqrnel the moment it launched (symptom: "keqrnel exited with code 0
-    // (TUN/elevation failed?)" with the TUN already up and the core log showing
-    // `keqrnel started` immediately followed by `keqrnel shutting down`). The
-    // sentinel + `kill -0` PID poll needs no stdin and no re-elevation.
+    // Sentinel-файл + `kill -0` PID poll, а НЕ stdin: после polkit-аутентификации
+    // pkexec не пробрасывает stdin вызывающего в elevated-потомка — у того stdin
+    // сразу на EOF, и любой stdin-вотчдог убивает keqrnel в момент запуска.
+    // Сентинел не требует ни stdin, ни повторной элевации.
     //
     // pkexec runs keqrnel as root in the background; its stdout/stderr don't
     // reliably reach our captured pipe (the process can exit before the async
@@ -514,11 +509,10 @@ wait "$sb"
   /// Ждёт завершения polkit-аутентификации перед отсчётом готовности TUN.
   ///
   /// [Process.start] для pkexec возвращается сразу — ещё ДО того, как
-  /// пользователь ввёл пароль в окне polkit. Раньше 20-секундный бюджет
-  /// [_waitForSingbox] стартовал в этот же момент: медленный ввод пароля (или
-  /// просто его хвост) съедал бюджет, tun-интерфейс не успевал появиться и
-  /// коннект падал «keqrnel TUN did not start» сразу после запроса прав —
-  /// гонка между скоростью набора пароля и таймаутом ядра.
+  /// пользователь ввёл пароль в окне polkit. Если запустить 20-секундный
+  /// бюджет [_waitForSingbox] в этот же момент, его съедает сам ввод пароля:
+  /// tun-интерфейс не успевает появиться и коннект падает «keqrnel TUN did
+  /// not start» сразу после запроса прав.
   ///
   /// Root-обёртка первым действием создаёт [authMarker] — это сигнал «пароль
   /// принят, ядро запускается». До маркера ждём без TUN-бюджета (до 2 минут на
@@ -913,7 +907,7 @@ wait "$sb"
   }) async {
     if (items.isEmpty) return [];
     // EphemeralXrayPing is Windows-only for now; on Linux this degrades to a
-    // clear per-item error (TCP ping still works via getPing). Phase 1.5.
+    // clear per-item error (TCP ping still works via getPing).
     final raw = await EphemeralXrayPing.urlTestBatch(
       items: items.map((e) => (id: e.$1, xrayConfigJson: e.$2)).toList(),
       socksPort: socksPort,
@@ -1273,9 +1267,8 @@ wait "$sb"
     }
   }
 
-  /// keep-alive клиент для секундных опросов; после ошибки пересоздаётся,
-  /// чтобы зависший запрос не держал сокет (раньше это гарантировал
-  /// close(force) на каждом опросе).
+  /// keep-alive клиент для секундных опросов; после ошибки пересоздаётся
+  /// (см. [_resetStatsHttp]), чтобы зависший запрос не держал сокет.
   HttpClient get _statsHttp =>
       _statsHttpClient ??= HttpClient()
         ..connectionTimeout = const Duration(seconds: 2);

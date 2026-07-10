@@ -4,7 +4,7 @@ import 'dart:convert';
 /// цепочки. Берёт sing-box TUN-конфиг и заменяет его socks-outbound `proxy`
 /// (который шёл в локальный xray) на встроенный xray-outbound
 /// `{"type":"xray","xray": <xrayConfig>}`. Один процесс keqrnel заменяет связку
-/// xray + sing-box, при этом весь TUN/роутинг/DNS остаётся прежним.
+/// xray + sing-box; TUN/роутинг/DNS из sing-box-конфига сохраняются как есть.
 class KeqrnelConfig {
   KeqrnelConfig._();
 
@@ -122,7 +122,7 @@ class KeqrnelConfig {
   /// через него в xray-bridge — поэтому sing-box его считает и отдаёт через
   /// clash_api по HTTP. Сплит-роутинг xray (direct/proxy/block по доменам/IP)
   /// сохраняется: он применяется внутри встроенного xray в core.Dial. У xray
-  /// убираем только inbounds — листенеры теперь на стороне sing-box.
+  /// убираем только inbounds — листенеры на стороне sing-box.
   static String proxyWithStats({
     required String xrayConfig,
     required int socksPort,

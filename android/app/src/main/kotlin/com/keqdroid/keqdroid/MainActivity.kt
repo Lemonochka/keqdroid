@@ -69,8 +69,8 @@ class MainActivity : FlutterFragmentActivity() {
     private var methodChannel: MethodChannel? = null
     private var eventChannel: EventChannel? = null
 
-    // [FIX-UNBIND-CRASH] Отслеживаем, был ли bindService успешен,
-    // чтобы не вызывать unbindService без привязки → IllegalArgumentException.
+    // Был ли bindService успешен: unbindService без привязки кидает
+    // IllegalArgumentException.
     private var serviceBound = false
     private var vpnStatusReceiverRegistered = false
 
@@ -119,7 +119,6 @@ class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         XrayGeoAssets.ensure(this, filesDir)
-        // [FIX-UNBIND-CRASH] Сохраняем результат bindService.
         ensureVpnServiceBound()
         setupMethodChannel(flutterEngine)
         setupEventChannel(flutterEngine)
@@ -453,8 +452,8 @@ class MainActivity : FlutterFragmentActivity() {
             return
         }
 
-        // [FIX-CREDENTIALS-GUARD] Требуем явного вызова getSocksCredentials перед каждым startVpn.
-        // Если pending credentials отсутствуют — возвращаем ошибку вместо тихой отправки пустых строк.
+        // Каждому startVpn обязан предшествовать getSocksCredentials: без pending
+        // credentials возвращаем ошибку, а не шлём сервису пустые строки.
         val username = pendingSocksUsername
         val password = pendingSocksPassword
         if (username.isNullOrEmpty() || password.isNullOrEmpty()) {
@@ -463,14 +462,14 @@ class MainActivity : FlutterFragmentActivity() {
             return
         }
 
-        // [FIX-IO-ON-MAIN] writeConfig теперь async — IO выполняется в Dispatchers.IO,
-        // result.success/error вызывается обратно в Main thread через mainScope.
+        // Запись конфига — в Dispatchers.IO (на main она давала бы фризы),
+        // result.success/error возвращаются в Main thread через mainScope.
         mainScope.launch {
             val xrayPath = try {
                 withContext(Dispatchers.IO) { writeConfig(xrayConfig, "xray_config.json") }
             } catch (e: IOException) {
-                // [FIX-CREDENTIALS-GUARD] При ошибке IO — НЕ сбрасываем credentials,
-                // чтобы Dart мог повторить startVpn без повторного вызова getSocksCredentials.
+                // Credentials при ошибке IO НЕ сбрасываем: Dart может повторить
+                // startVpn без нового вызова getSocksCredentials.
                 result.error("IO_ERROR", "Failed to write config: ${e.message}", null)
                 return@launch
             }
@@ -495,17 +494,15 @@ class MainActivity : FlutterFragmentActivity() {
                 if (!serverName.isNullOrBlank()) {
                     putExtra(KeqdisVpnService.EXTRA_SERVER_NAME, serverName)
                 }
-                // [FIX-CREDENTIALS-GUARD] Передаём локальные переменные — они уже
-                // проверены на non-null/non-empty выше. НЕ используем binder как fallback —
-                // binder мог вернуть "" после cleanup().
+                // Локальные переменные, проверенные выше; binder как fallback
+                // не годится — после cleanup() он возвращает "".
                 putExtra(KeqdisVpnService.EXTRA_SOCKS_USERNAME, username)
                 putExtra(KeqdisVpnService.EXTRA_SOCKS_PASSWORD, password)
             })
 
-            // [FIX-CREDENTIALS-GUARD] Сбрасываем pending credentials только ПОСЛЕ
-            // успешной отправки Intent. При следующем startVpn Dart обязан снова
-            // вызвать getSocksCredentials — это гарантирует свежие credentials
-            // и синхронизацию с новым xray_config.json.
+            // Pending credentials сбрасываем только ПОСЛЕ успешной отправки
+            // Intent: следующий startVpn снова требует getSocksCredentials,
+            // так креды всегда свежие и совпадают с новым xray_config.json.
             pendingSocksUsername = null
             pendingSocksPassword = null
 
@@ -549,9 +546,8 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun stopVpn(result: MethodChannel.Result) {
-        // [FIX-CREDENTIALS-GUARD] При явной остановке — тоже сбрасываем pending credentials.
-        // Если Dart вызвал getSocksCredentials, но потом stopVpn вместо startVpn —
-        // credentials устаревают и должны быть перегенерированы перед следующим startVpn.
+        // Явная остановка тоже сбрасывает pending credentials: getSocksCredentials
+        // без последующего startVpn оставил бы устаревшие креды.
         pendingSocksUsername = null
         pendingSocksPassword = null
         startService(Intent(this, KeqdisVpnService::class.java).apply {
@@ -585,8 +581,8 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // [FIX-NEW-INTENT] Обновляем intent, чтобы getLaunchAction вернул актуальный extra
-        // когда приложение уже запущено в фоне и тайл открывает его через openAppForConnect().
+        // Обновляем intent, чтобы getLaunchAction вернул актуальный extra, когда
+        // приложение уже в фоне и тайл открывает его через openAppForConnect().
         setIntent(intent)
         notifyLaunchActionIfNeeded()
     }
@@ -770,8 +766,8 @@ class MainActivity : FlutterFragmentActivity() {
         mainScope.launch {
             val apps = withContext(Dispatchers.IO) {
                 val pm = packageManager
-                // [FIX-PERF] GET_META_DATA избыточен для получения имени/иконки.
-                // Используем 0 — PackageManager сам подтянет нужное через getApplicationLabel/Icon.
+                // flags=0: GET_META_DATA для имени/иконки не нужен, их отдаёт
+                // getApplicationLabel/Icon.
                 @Suppress("DEPRECATION")
                 pm.getInstalledApplications(0)
                     .filter { info ->
@@ -864,8 +860,8 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    // [FIX-IO-ON-MAIN] writeConfig теперь вызывается только из Dispatchers.IO.
-    // Пробрасывает IOException — не глотает ошибки молча.
+    // Звать только из Dispatchers.IO. Пробрасывает IOException — ошибки
+    // записи не глотаются молча.
     @Throws(IOException::class)
     private fun writeConfig(json: String, fileName: String): String {
         val file = File(filesDir, fileName)
@@ -883,7 +879,7 @@ class MainActivity : FlutterFragmentActivity() {
             vpnStatusReceiverRegistered = false
         }
 
-        // [FIX-UNBIND-CRASH] Вызываем unbindService только если привязка была успешна.
+        // unbindService без успешной привязки кидает IllegalArgumentException.
         if (serviceBound) {
             unbindService(serviceConnection)
             serviceBound = false
@@ -902,7 +898,6 @@ class MainActivity : FlutterFragmentActivity() {
         )
         pendingPermissionResult = null
 
-        // [FIX-CREDENTIALS-GUARD] Сбрасываем pending credentials при уничтожении Activity.
         pendingSocksUsername = null
         pendingSocksPassword = null
         telemetryJob?.cancel()

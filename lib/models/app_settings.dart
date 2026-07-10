@@ -41,13 +41,13 @@ class AppSettings {
   final bool minimizeToTray;
   /// Windows: запуск вместе с системой.
   final bool launchAtStartup;
-  /// Ядро: `chain` (xray → sing-box, как было) или `keqrnel` (единое ядро со
-  /// встроенным xray). Дефолт `chain` — существующее поведение не меняется.
+  /// Ядро: `keqrnel` (единое ядро со встроенным xray, дефолт) или `chain`
+  /// (связка xray → sing-box; только если явно сохранён в настройках).
   final String coreEngine;
   /// Desktop: хоткеи (HotkeyAction.id → токен сочетания, напр. `ctrl+shift+keyT`).
   /// Пустая карта = все хоткеи выключены (дефолт).
   final Map<String, String> hotkeys;
-  /// Список серверов в две колонки (issue: удобнее организовывать сервера).
+  /// Список серверов в две колонки.
   final bool serversTwoColumns;
 
   const AppSettings({

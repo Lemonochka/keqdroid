@@ -8,8 +8,8 @@ class TunSettings {
   final String stack;
   final int mtu;
   /// [strictRouteAuto] | [strictRouteOn] | [strictRouteOff].
-  /// Auto повторяет прежнее зашитое поведение: on везде, кроме Windows
-  /// (там strict_route ломает маршруты при активном другом VPN, напр. Tailscale).
+  /// Auto = on везде, кроме Windows: там strict_route ломает маршруты при
+  /// активном другом VPN (например, Tailscale).
   final String strictRoute;
   /// Full-cone NAT для UDP. sing-box применяет только на gvisor/mixed стеке.
   final bool endpointIndependentNat;

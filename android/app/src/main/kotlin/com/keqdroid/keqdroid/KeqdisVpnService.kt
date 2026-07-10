@@ -148,10 +148,10 @@ class KeqdisVpnService : VpnService() {
 
     override fun onBind(intent: Intent?): IBinder? {
         // Системный биндинг VPN (action android.net.VpnService) обязан получить
-        // внутренний binder из super.onBind() — раньше сюда всегда отдавался
-        // LocalBinder, из-за чего onRevoke() никогда не доставлялся: если VPN
-        // перехватывало другое приложение или систему, сервис навсегда оставался
-        // в RUNNING, а приложение/тайл показывали «подключено» при мёртвом туннеле.
+        // внутренний binder из super.onBind(), иначе onRevoke() не доставляется:
+        // когда VPN перехватывает другое приложение/система, сервис навсегда
+        // остаётся в RUNNING, а приложение/тайл показывают «подключено» при
+        // мёртвом туннеле. LocalBinder — только для нашей Activity.
         return if (intent?.action == VpnService.SERVICE_INTERFACE) super.onBind(intent) else binder
     }
 
@@ -180,12 +180,11 @@ class KeqdisVpnService : VpnService() {
         latestStartId = startId
         when (intent?.action) {
             ACTION_TOGGLE -> {
-                // Переключение состояния VPN.
-                // Если VPN уже запущен или находится в процессе запуска, прекращаем его.
                 if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) {
                     serviceScope.launch { stopVpn(startId) }
                 } else if (status == VpnRunStatus.STOPPED || status == VpnRunStatus.ERROR) {
-                    // Запросим Flutter обработать подключение через launchPendingIntent
+                    // Сам сервис подключение не собирает (конфиг генерирует Dart) —
+                    // открываем приложение, Flutter подхватит по launch action.
                     val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
                     launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     launchIntent?.putExtra("action", "connect_from_notification")
@@ -295,12 +294,12 @@ class KeqdisVpnService : VpnService() {
     override fun onRevoke() { serviceScope.launch { stopVpn() }; super.onRevoke() }
 
     override fun onDestroy() {
-        // [FIX-ANR] Не вызываем cleanup() если она уже запущена в stopVpn().
-        // runBlocking на main thread может вызвать ANR если cleanup долгая.
-        // Если stopVpn() был вызван, cleanupDone будет true через несколько мс.
-        // Если сервис убит без stopVpn() (emergency kill), do quick cleanup без wait.
+        // Полный cleanup() здесь не зовём: runBlocking на main thread с долгой
+        // очисткой — это ANR, а после штатного stopVpn() cleanupDone и так
+        // станет true через несколько мс. Ветка ниже — только для убийства
+        // сервиса без stopVpn() (force kill).
         if (!cleanupDone) {
-            // Только быстрая очистка PID, без wait на процессы
+            // быстрая очистка PID, без wait на процессы
             runCatching {
                 if (tun2socksPid > 0) {
                     try { android.os.Process.killProcess(tun2socksPid) } catch (_: Exception) {}
@@ -365,13 +364,13 @@ class KeqdisVpnService : VpnService() {
                 throw IllegalStateException("SOCKS5 credentials are empty — Intent was malformed")
             }
 
-            // На Android всегда libxray.so (chain): keqrnel-обёртка ломала сплит-
-            // роутинг (см. AndroidTunnelBackend), а libkeqrnel.so удалён из jniLibs.
+            // На Android всегда libxray.so (chain): keqrnel-обёртка ломает сплит-
+            // роутинг (см. AndroidTunnelBackend), и libkeqrnel.so в jniLibs нет.
             // coreEngine оставлен в сигнатурах для совместимости, но игнорируется —
-            // даже старый сохранённый engine=keqrnel не должен искать удалённый бинарь.
+            // даже старый сохранённый engine=keqrnel не должен искать отсутствующий бинарь.
             xrayPid = startXray(getBinaryPath("libxray.so"), xrayConfigPath)
 
-            // 2. Ждём пока Xray поднимет SOCKS5 порт
+            // ждём пока Xray поднимет SOCKS5 порт
             var waited = 0
             while (!isPortOpen("127.0.0.1", socksPort) && waited < 10000) {
                 delay(300); waited += 300
@@ -379,11 +378,11 @@ class KeqdisVpnService : VpnService() {
             if (!isPortOpen("127.0.0.1", socksPort))
                 throw IllegalStateException("Xray SOCKS5 port $socksPort not ready")
 
-            // 3. Создаём TUN-интерфейс
+            // создаём TUN-интерфейс
             val tun = buildTunInterface(excludePkgs, includePkgs)
             tunInterface = tun
 
-            // 4. Запускаем tun2socks через нативный fork
+            // запускаем tun2socks через нативный fork
             val tunRawFd = tun.fd
             activeSocksPort = socksPort
             startTun2Socks(tunRawFd, socksPort, socksNoAuth = socksNoAuth)
@@ -423,7 +422,8 @@ class KeqdisVpnService : VpnService() {
             return@withLock
         }
 
-        // [FIX-TILE-DELAY] Статус → STOPPED сразу, чтобы плитка обновилась мгновенно.
+        // Статус → STOPPED до cleanup, чтобы плитка обновилась мгновенно,
+        // а не после многосекундного убийства процессов.
         setStatus(VpnRunStatus.STOPPED)
         showControlNotification("Disconnected", isConnected = false, isTransitioning = false)
         withContext(Dispatchers.Main) {
@@ -431,9 +431,9 @@ class KeqdisVpnService : VpnService() {
         }
         unregisterNotificationReceiver()
 
-        // cleanup() ВНУТРИ мьютекса (await), чтобы следующий старт не начался, пока
-        // не убиты старые xray/tun2socks и не закрыт TUN. Раньше cleanup уезжал в
-        // отдельную корутину и гонялся с новым стартом — отсюда и зависания.
+        // cleanup() ВНУТРИ мьютекса (await), чтобы следующий старт не начался,
+        // пока не убиты старые xray/tun2socks и не закрыт TUN: cleanup в
+        // отдельной корутине гонялся бы с новым стартом и подвешивал его.
         try {
             cleanup()
         } catch (e: Exception) {
@@ -474,11 +474,10 @@ class KeqdisVpnService : VpnService() {
             xrayPid = -1
         }
 
-        // [FIX-CREDENTIALS-GUARD] НЕ сбрасываем socksUsername/socksPassword здесь.
-        // Credentials живут до следующего ACTION_START — это позволяет корректно
-        // завершить уже запущенный tun2socks после cleanup, и даёт binder возможность
-        // вернуть актуальные значения для диагностики.
-        // Сброс происходит только при получении нового ACTION_START с новыми credentials.
+        // socksUsername/socksPassword здесь НЕ сбрасываем: они живут до
+        // следующего ACTION_START (с его новыми credentials) — так корректно
+        // дозавершается уже запущенный tun2socks, а binder может вернуть
+        // актуальные значения для диагностики.
         startTime = 0L
         uploadTotal.set(0); downloadTotal.set(0)
         uploadSpeed.set(0); downloadSpeed.set(0)
@@ -530,9 +529,9 @@ class KeqdisVpnService : VpnService() {
         excludeSelf: Boolean = true,
     ) {
         if (inc.isNotEmpty()) {
-            // [FIX-HUAWEI] Считаем сколько пакетов реально добавилось.
-            // runCatching молча глотал PackageManager.NameNotFoundException —
-            // если все пакеты невалидны, establish() на Huawei/Honor возвращает null.
+            // Считаем, сколько пакетов реально добавилось: NameNotFoundException
+            // нельзя просто глотать — если невалидны ВСЕ пакеты, establish()
+            // на Huawei/Honor возвращает null.
             var addedInc = 0
             inc.forEach { pkg ->
                 try {
@@ -604,11 +603,12 @@ class KeqdisVpnService : VpnService() {
 
             // awgTurnOn забирает владение fd ЦЕЛИКОМ: и на успехе (device.Close()
             // закроет), и на ЛЮБОЙ ошибке (все error-пути api-android.go делают
-            // unix.Close). Поэтому detachFd() — ДО вызова. Раньше detach был только
-            // после успеха, и провальный awgTurnOn (например, доменный Endpoint,
-            // который UAPI не парсит) оставлял fd во владении ParcelFileDescriptor —
-            // cleanup() закрывал его вторым разом, fdsan (Android 11+) убивал
-            // процесс SIGABRT'ом: приложение «мгновенно закрывалось» вместо ошибки.
+            // unix.Close). Поэтому detachFd() — строго ДО вызова: если detach'ить
+            // только после успеха, провальный awgTurnOn (например, доменный
+            // Endpoint, который UAPI не парсит) оставляет fd во владении
+            // ParcelFileDescriptor, cleanup() закрывает его вторым разом, и fdsan
+            // (Android 11+) валит процесс SIGABRT'ом — приложение «мгновенно
+            // закрывается» вместо показа ошибки.
             val tunFd = tun.detachFd()
             val handle = GoBackend.awgTurnOn("awg0", tunFd, uapi)
             if (handle < 0)
@@ -782,9 +782,10 @@ class KeqdisVpnService : VpnService() {
                 opMutex.withLock {
                     if ((status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) &&
                         monitorPid == xrayPid) {
-                        // [FIX-STALE-TUN2SOCKS] Убиваем tun2socks немедленно при падении Xray.
-                        // Без этого старый tun2socks продолжает жить и при следующем запуске
-                        // подключается к новому Xray со старыми credentials → invalid password.
+                        // Убиваем tun2socks немедленно при падении Xray: иначе
+                        // старый tun2socks доживает до следующего запуска и
+                        // подключается к новому Xray со старыми credentials
+                        // → invalid password.
                         android.util.Log.w("KEQDIS", "[xray] triggering full cleanup after unexpected exit")
                         xrayPid = -1  // уже мёртв — не пытаемся убить повторно в cleanup()
                         setStatus(VpnRunStatus.ERROR, "Xray exited unexpectedly")

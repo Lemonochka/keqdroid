@@ -159,7 +159,6 @@ class ServerItem {
 
 
   /// Имя сервера без флаг-эмодзи и кода страны в начале.
-  /// Используется для отображения в UI.
   String get cleanName => ServerNameUtils.cleanDisplayName(displayName);
 
   /// ISO alpha-2 код страны, определённый из displayName.
@@ -170,8 +169,8 @@ class ServerItem {
 
   /// vmess://BASE64(JSON) — реальные host/port лежат внутри payload, а не в
   /// authority URI. Декодируем из СЫРОЙ строки конфига: Uri.parse лоуэркейсит
-  /// host, что ломает base64 (регистрозависимый) — раньше address для vmess
-  /// возвращал обрезанный base64-блоб, а port — 443 (дефолт https).
+  /// host, а base64 регистрозависим — через Uri address превращался бы в
+  /// обрезанный base64-блоб, а port — в 443 (дефолт https).
   Map<String, dynamic>? _vmessPayload() {
     if (_vmessPayloadParsed) return _cachedVmessPayload;
     _vmessPayloadParsed = true;
@@ -190,7 +189,6 @@ class ServerItem {
     return _cachedVmessPayload;
   }
 
-  /// Адрес сервера
   String get address {
     final cached = _cachedAddress;
     if (cached != null) return cached;
@@ -211,7 +209,6 @@ class ServerItem {
     }
   }
 
-  /// Порт сервера
   int get port {
     final cached = _cachedPort;
     if (cached != null) return cached;

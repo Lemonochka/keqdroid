@@ -106,19 +106,15 @@ final vpnEngineProvider = Provider<VpnEngine>((ref) {
   return engine;
 });
 
-/// Пока приложение запущено, обновления перепроверяются сами с этим
-/// интервалом — раньше чек жил от запуска до запуска, и на долгоживущем
-/// десктопе (окно в трее неделями) новый релиз было видно только вручную.
+/// Интервал самопроверки обновлений на живом процессе: десктоп неделями висит
+/// в трее без перезапуска, и без перепроверки новый релиз виден только вручную.
 const _updateRecheckInterval = Duration(hours: 6);
 
-// ВАЖНО: подписываемся ТОЛЬКО на факт «подключён ли VPN» через select, а не на
-// весь VpnState. Раньше тут был `ref.watch(vpnStateProvider).value`, из-за чего
-// провайдер перезапускался на КАЖДЫЙ эмит состояния — телеметрия (скорость/время)
-// обновляется раз в секунду — и checkForUpdate долбил GitHub примерно раз в 3 c,
-// исчерпывая анонимный лимит в 60 запросов/час (после чего обновление вообще не
-// скачать). select даёт ре-ран только при реальной смене connected↔disconnected.
-// От спама сетью при частых ре-ранах защищает in-memory троттлинг в
-// UpdateService (не чаще раза в 30 минут).
+// Подписка ТОЛЬКО на факт «подключён ли VPN» через select, не на весь VpnState:
+// телеметрия эмитит состояние каждую секунду, и watch целиком ре-ранил бы
+// провайдер на каждый эмит — checkForUpdate выжирал бы анонимный лимит GitHub
+// (60 запросов/час). Дополнительно от спама сетью защищает in-memory троттлинг
+// в UpdateService (не чаще раза в 30 минут).
 final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
   // периодический ре-чек; таймер перевзводится на каждый ре-ран провайдера
   final timer = Timer(_updateRecheckInterval, ref.invalidateSelf);
@@ -430,9 +426,8 @@ class ServersState {
   final bool isLoading;
   final String? error;
 
-  /// Индекс серверов по id — считается один раз на состояние. Раньше каждый
-  /// `_ServerTile` линейно искал себя в `servers` (O(N) на тайл → O(N²) на
-  /// список), что заметно тормозило построение/обновление длинных списков.
+  /// Индекс серверов по id — считается один раз на состояние, чтобы каждый
+  /// `_ServerTile` не искал себя в `servers` линейно (O(N²) на длинный список).
   final Map<String, ServerItem> byId;
 
   ServersState({
@@ -669,9 +664,9 @@ class ServersNotifier extends Notifier<ServersState> {
     }
 
     if (pending.isNotEmpty) {
-      // Мержим результаты в актуальный список из storage: снапшот провайдера
-      // мог устареть, если за время пинга обновилась подписка — прежний
-      // saveServers(state.servers) откатывал её серверы к старым.
+      // Мержим результаты в актуальный список из storage, а не пишем снапшот
+      // провайдера целиком: если за время пинга обновилась подписка, снапшот
+      // устарел и затёр бы её новые серверы.
       final merged = await ref
           .read(storageProvider)
           .applyPingUpdates(pending, DateTime.now());
@@ -1167,12 +1162,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       try {
         await waiter.future.timeout(const Duration(seconds: 4));
       } on TimeoutException {
-        // движок не прислал disconnected за таймаут — продолжаем как раньше
+        // движок не прислал disconnected за таймаут — не блокируем переподключение
       } finally {
         if (identical(_disconnectWaiter, waiter)) _disconnectWaiter = null;
       }
     }
-    // даём ядру/туннелю осесть перед повторным connect (как было)
+    // даём ядру/туннелю осесть перед повторным connect
     await Future.delayed(const Duration(milliseconds: 350));
   }
 
@@ -1332,11 +1327,10 @@ NotifierProvider<SplitTunnelingNotifier, SplitTunnelingState>(
 final installedAppsProvider =
     FutureProvider.autoDispose.family<List<AppInfo>, bool>(
       (ref, includeSystem) async {
-    // Список тяжёлый: у каждого приложения base64-иконка, на телефоне это
-    // мегабайты строк. Раньше keepAlive держал его в памяти до перезапуска
-    // приложения. Теперь кэш живёт, пока экран открыт, плюс 3 минуты после
-    // ухода последнего слушателя (быстрый повторный вход — без перезагрузки),
-    // затем освобождается; следующее открытие экрана перезагрузит список.
+    // Список тяжёлый (base64-иконка у каждого приложения — мегабайты строк),
+    // поэтому не держим его в памяти вечно: кэш живёт, пока экран открыт,
+    // плюс 3 минуты после ухода последнего слушателя — быстрый повторный вход
+    // обходится без перезагрузки, а дальше список освобождается.
     final link = ref.keepAlive();
     Timer? release;
     ref.onCancel(() {
