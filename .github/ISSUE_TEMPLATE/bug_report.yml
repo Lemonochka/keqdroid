@@ -1,0 +1,44 @@
+name: Bug report
+description: Crash, wrong behavior, won't connect
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Russian or English — whichever is easier.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - Windows
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      placeholder: "0.7.4"
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Connection mode
+      options:
+        - Proxy
+        - TUN
+        - not connected / doesn't matter
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got instead. Steps to reproduce if you know them.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Connection log from the app, crash text, a screenshot — anything that helps.

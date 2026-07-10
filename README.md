@@ -18,6 +18,8 @@
 <p align="center">
   <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/v/release/Lemonochka/keqdroid?label=release&style=flat-square&color=f5a9b8" alt="release"></a>
   <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/downloads/Lemonochka/keqdroid/total?label=downloads&style=flat-square&logo=github&color=b5e8d5" alt="downloads"></a>
+  <a href="https://github.com/Lemonochka/keqdroid/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Lemonochka/keqdroid/ci.yml?branch=master&label=build&style=flat-square" alt="build"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-c9b8f5?style=flat-square" alt="license"></a>
   <img src="https://img.shields.io/badge/made%20with-Flutter-9bc7f0?style=flat-square" alt="flutter">
 </p>
 
@@ -171,6 +173,12 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 
 ---
 
+## License
+
+[GPL-3.0](LICENSE). The bundled cores keep their upstream licenses: Xray-core (MPL-2.0), sing-box (GPL-3.0), amneziawg-go (MIT).
+
+---
+
 <h2 id="русский">Русский</h2>
 
 <p align="center">˚ʚ♡ɞ˚</p>
@@ -187,6 +195,8 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 <p align="center">
   <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/v/release/Lemonochka/keqdroid?label=%D1%80%D0%B5%D0%BB%D0%B8%D0%B7&style=flat-square&color=f5a9b8" alt="релиз"></a>
   <a href="https://github.com/Lemonochka/keqdroid/releases"><img src="https://img.shields.io/github/downloads/Lemonochka/keqdroid/total?label=%D1%81%D0%BA%D0%B0%D1%87%D0%B8%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F&style=flat-square&logo=github&color=b5e8d5" alt="скачивания"></a>
+  <a href="https://github.com/Lemonochka/keqdroid/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Lemonochka/keqdroid/ci.yml?branch=master&label=%D1%81%D0%B1%D0%BE%D1%80%D0%BA%D0%B0&style=flat-square" alt="сборка"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-GPL--3.0-c9b8f5?style=flat-square" alt="лицензия"></a>
   <img src="https://img.shields.io/badge/сделано%20на-Flutter-9bc7f0?style=flat-square" alt="flutter">
 </p>
 
@@ -331,6 +341,12 @@ powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFi
 ```
 
 Версия и тег `vX.Y.Z` — из `pubspec.yaml`. При ручной заливке на GitHub не забудьте `.sha256` к каждому файлу.
+
+---
+
+## Лицензия
+
+[GPL-3.0](LICENSE). Встроенные ядра — под своими лицензиями: Xray-core (MPL-2.0), sing-box (GPL-3.0), amneziawg-go (MIT).
 
 ---
 
