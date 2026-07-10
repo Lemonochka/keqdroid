@@ -344,6 +344,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeColorThemesTitle => '颜色主题';
 
   @override
+  String get serversTwoColumnsTitle => '服务器双列显示';
+
+  @override
+  String get serversTwoColumnsSubtitle => '以双列显示服务器，屏幕可容纳更多内容';
+
+  @override
   String get settingsLanProxyTitle => 'LAN 代理';
 
   @override

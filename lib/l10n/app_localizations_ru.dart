@@ -346,6 +346,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get themeColorThemesTitle => 'Цветовые темы';
 
   @override
+  String get serversTwoColumnsTitle => 'Список серверов в две колонки';
+
+  @override
+  String get serversTwoColumnsSubtitle => 'Показывать серверы в две колонки — на экране помещается больше';
+
+  @override
   String get settingsLanProxyTitle => 'LAN прокси';
 
   @override
