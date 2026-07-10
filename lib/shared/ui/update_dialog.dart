@@ -241,9 +241,8 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
             style: TextStyle(color: subtitleColor),
           ),
         ),
-        // «Позже» просто закрывает диалог. Раньше он ТОЖЕ записывал skip —
-        // и версия навсегда пропадала из авто-предложений, хотя пользователь
-        // ожидал напоминания.
+        // «Позже» просто закрывает диалог — БЕЗ записи skip: пользователь ждёт
+        // напоминания, а skip навсегда убирает версию из авто-предложений.
         TextButton(
           onPressed: _downloading
               ? null

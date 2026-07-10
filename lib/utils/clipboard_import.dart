@@ -59,8 +59,8 @@ Future<void> pasteServersFromClipboard(
           .toList();
   if (configs.isEmpty) return;
   // Каждую строку добавляем независимо (как _addConfigsResilient в
-  // servers_tab): раньше первый же дубликат обрывал импорт, и остальные
-  // валидные строки молча терялись.
+  // servers_tab): первый же дубликат не должен обрывать импорт и молча
+  // терять остальные валидные строки.
   var added = 0;
   Object? firstError;
   for (final c in configs) {

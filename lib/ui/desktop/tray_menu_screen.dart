@@ -352,7 +352,7 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
     // Надёжные имена подписок (у ServerItem.subscriptionName часто пусто).
     final subs = ref.watch(subscriptionsProvider).value ?? const [];
     final subNames = {for (final s in subs) s.id: s.name};
-    // select по статусу: подписка на весь VpnState перестраивала открытое
+    // select по статусу: подписка на весь VpnState перестраивала бы открытое
     // меню на каждый секундный эмит телеметрии (скорость/время).
     final status = ref.watch(
       vpnStateProvider.select(

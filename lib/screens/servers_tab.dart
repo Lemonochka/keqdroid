@@ -118,12 +118,12 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // На десктопе `inactive` = окно ВИДИМО, но не в фокусе (клик по другому окну,
-    // разворот из трея через таскбар). Раньше `inactive` считался «фоном» и глушил
-    // анимацию линии подключения. При возврате через таскбар Windows нередко
-    // доставляет только `inactive` (а `resumed` — лишь при получении фокуса), так
-    // что линия оставалась замороженной. Поэтому фоном на десктопе считаем только
-    // `hidden`/`paused` (реально свёрнуто/скрыто в трей); `inactive` = передний план.
+    // На десктопе `inactive` = окно ВИДИМО, но не в фокусе (клик по другому
+    // окну, разворот из трея через таскбар) — считать его «фоном» нельзя:
+    // при развороте через таскбар Windows нередко доставляет только `inactive`
+    // (`resumed` — лишь при получении фокуса), и анимация линии подключения
+    // осталась бы замороженной. Фон на десктопе — только `hidden`/`paused`
+    // (реально свёрнуто/скрыто в трей).
     final isDesktop =
         Platform.isWindows || Platform.isLinux || Platform.isMacOS;
     final background = state == AppLifecycleState.paused ||
@@ -190,11 +190,11 @@ class _ServersTabState extends ConsumerState<ServersTab>
         status == VpnStatus.connecting ||
         status == VpnStatus.disconnecting ||
         status == VpnStatus.connected;
-    // Крутим бесконечные анимации (60fps) только когда окно на переднем плане.
-    // Раньше при vpnActive они продолжались и в свёрнутом окне → движок рендерил
-    // в фоне и жёг 3-4% CPU. При возврате из трея (resumed) анимация перезапустится.
-    // Трей-hide (SW_HIDE = lifecycle `inactive`) дополнительно гасится глобальным
-    // TickerMode в app.dart (там же — kawaii-оверлей), см. desktopUiVisibleProvider.
+    // Бесконечные анимации (60fps) крутим только на переднем плане: в свёрнутом
+    // окне движок рендерил бы их за кадром и жёг 3-4% CPU. При возврате из трея
+    // (resumed) анимация перезапускается. Трей-hide (SW_HIDE = lifecycle
+    // `inactive`) дополнительно гасится глобальным TickerMode в app.dart
+    // (там же — kawaii-оверлей), см. desktopUiVisibleProvider.
     final run = _appInForeground && (_serversTabVisible || vpnActive);
     if (run) {
       if (!_waveCtrl.isAnimating) _waveCtrl.repeat();
@@ -479,11 +479,10 @@ class _ServersTabState extends ConsumerState<ServersTab>
                     ),
                   ),
                 ),
-              // Скорость/трафик/время — на всех платформах (issue: на Android
-              // цифры были только в уведомлении, теперь и на главном экране).
-              // Появление плавное: AnimatedSize раздвигает место (контент ниже
-              // не прыгает), а чипы всплывают снизу с фейдом; дефолтный клип
-              // AnimatedSize обрезает их на входе — эффект «из тумана снизу».
+              // Скорость/трафик/время. Появление плавное: AnimatedSize
+              // раздвигает место (контент ниже не прыгает), а чипы всплывают
+              // снизу с фейдом; дефолтный клип AnimatedSize обрезает их на
+              // входе — эффект «из тумана снизу».
               AnimatedSize(
                 duration: const Duration(milliseconds: 380),
                 curve: Curves.easeOutCubic,
@@ -774,8 +773,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
               .where((l) => l.isNotEmpty)
               .toList();
 
-    // Каждую строку добавляем независимо: раньше первый же дубликат/битая
-    // ссылка обрывал импорт, и остальные валидные строки молча терялись.
+    // Каждую строку добавляем независимо: если первый же дубликат/битая
+    // ссылка обрывает импорт, остальные валидные строки молча теряются.
     final result = await _addConfigsResilient(configs);
     if (!ctx.mounted) return;
     if (result.firstError != null) {
@@ -934,9 +933,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
                                     .map((line) => line.trim())
                                     .where((line) => line.isNotEmpty)
                                     .toList();
-                          // Строки добавляются независимо: раньше первый же
-                          // дубликат обрывал импорт, шторка закрывалась и
-                          // вставленный текст терялся.
+                          // Строки добавляются независимо, чтобы первый же
+                          // дубликат не обрывал импорт (шторка закрылась бы,
+                          // потеряв вставленный текст).
                           final result = await _addConfigsResilient(configs);
                           if (!ctx2.mounted) return;
                           if (result.firstError == null) {

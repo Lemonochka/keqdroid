@@ -21,8 +21,8 @@
 # SUBSCRIPTION PARSING - CRITICAL FOR STACK OVERFLOW FIX
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# [FIX-STACK-OVERFLOW-RELEASE] Защищаем критические методы парсинга от R8 оптимизации.
-# R8 может встроить (inline) методы парсинга и вызвать stack overflow.
+# Методы парсинга подписок защищены от R8: инлайн рекурсивного парсинга
+# приводил к StackOverflow в release-сборке.
 
 -keep class com.keqdroid.keqdroid.services.SubscriptionService {
     *** _parseBody(...);
@@ -47,9 +47,8 @@
 # JSON SERIALIZATION & DATA MODELS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# [FIX-STACKOVERLOW] Keep ALL model classes and their members completely intact.
-# R8 StackOverflow на подписках происходит из-за удаления полей/конструкторов.
-# Dartные модели (Subscription, ServerItem, AppSettings) требуют полной защиты.
+# Модели держим целиком: удаление полей/конструкторов R8'ом ломает
+# сериализацию подписок (вплоть до StackOverflow на глубоком JSON).
 -keep class com.keqdroid.keqdroid.models.** { *; }
 -keep class com.keqdroid.keqdroid.Subscription { *; }
 -keep class com.keqdroid.keqdroid.ServerItem { *; }
@@ -128,7 +127,7 @@
 # ADDITIONAL UTF-8 & BASE64 PROTECTION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# [ADDITIONAL-FIX] Дополнительная защита для UTF-8 и Base64 операций
+# UTF-8 и Base64 — тоже целиком (используются парсером подписок)
 -keep class java.util.Base64 { *; }
 -keep class java.util.Base64$Decoder { *; }
 -keep class java.util.Base64$Encoder { *; }

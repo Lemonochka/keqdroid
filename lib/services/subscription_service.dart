@@ -163,10 +163,10 @@ class SubscriptionService {
       final port = uri.port.toString();
 
       // vmess: uuid внутри base64-json payload. Декодируем из СЫРОЙ строки:
-      // uri.host лоуэркейсит base64 (регистрозависимый), декод почти всегда
-      // падал, ключ уходил в фоллбэк с полным конфигом — и смена имени
-      // сервера (ps внутри payload) ломала сопоставление (терялись
-      // ping/избранное/активный сервер при обновлении подписки).
+      // uri.host лоуэркейсит base64 (регистрозависимый), декод падает, и ключ
+      // уходит в фоллбэк с полным конфигом — тогда смена имени сервера
+      // (ps внутри payload) ломает сопоставление, теряя ping/избранное/
+      // активный сервер при обновлении подписки.
       if (rawConfig.startsWith('vmess://')) {
         try {
           final payload = rawConfig.substring('vmess://'.length);
@@ -214,10 +214,10 @@ class SubscriptionService {
       throw SubscriptionFetchException('Forbidden URL', url: url);
     }
 
-    // hwid только если разрешено в настройках. Читаем настройку на каждый
-    // запрос (getSettings кэширован): раньше значение висело в поле,
-    // инициализированном true, и после перезапуска/в фоновых изолятах
-    // (WorkManager, desktop-таймер) hwid слался даже при выключенном тумблере.
+    // hwid только если разрешено в настройках. Настройку читаем на каждый
+    // запрос (getSettings кэширован), а не держим в поле: поле с дефолтом
+    // расходится с тумблером в фоновых изолятах (WorkManager, desktop-таймер)
+    // и после перезапуска.
     final shareHwid = (await _storage.getSettings()).shareDeviceHwid;
     final hwid = shareHwid ? await _getOrCreateHwid() : null;
     final hwidHeaders = hwid != null
@@ -1646,13 +1646,12 @@ class SubscriptionService {
   }
 
   static List<String> _extractUriLinks(String text) {
-    // Allow spaces inside a link: a URI fragment (the #name) legitimately contains
-    // spaces, e.g. "#🇷🇺 Белый интернет #1 | Все операторы". The old `[^\s...]`
-    // stopped at the first space, truncating such names to just the flag emoji —
-    // which cleanDisplayName then strips, leaving an empty server name. We instead
-    // stop only at line breaks / html-quote delimiters, and use a negative lookahead
-    // so two URIs sharing one line still split instead of merging. Dart's Uri.parse
-    // percent-encodes the raw spaces and keeps the inner '#' as fragment text.
+    // Пробел внутри ссылки — валиден: во fragment'е (#имя сервера) он встречается
+    // сплошь и рядом ("#🇷🇺 Белый интернет #1 | Все операторы"), и обрыв по первому
+    // пробелу оставлял от имени один флаг-эмодзи (который cleanDisplayName затем
+    // срезает — имя пустое). Поэтому режем только по переводам строк / html-кавычкам,
+    // а negative lookahead разделяет два URI на одной строке. Сырые пробелы
+    // Uri.parse перекодирует сам, внутренний '#' остаётся текстом fragment'а.
     // Negative lookbehind по символам scheme (RFC 3986: ALPHA/DIGIT/+/-/.) —
     // иначе `wss://host` из JS/HTML панелей матчился как `ss://host`, плодя
     // фантомные shadowsocks-сервера при HTML-краулинге подписки.

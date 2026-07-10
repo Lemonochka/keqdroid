@@ -1106,8 +1106,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
                               url: newUrl,
                             );
                       } catch (e) {
-                        // например, дубликат URL — раньше ошибка молча
-                        // уходила в zone, а диалог «не реагировал» на Save
+                        // например, дубликат URL: без catch ошибка молча уходит
+                        // в zone, и диалог «не реагирует» на Save
                         if (ctx.mounted) {
                           setSheet(() => editError = friendlyError(e, ctx));
                         }

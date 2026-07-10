@@ -34,8 +34,8 @@ void main() {
     expect(sakura.flair, isTrue);
     expect(sakura.kawaii, KawaiiFlavor.sakura);
 
-    // Однотонность: secondary больше не «сшит» из чужой (голубой) схемы —
-    // primary и secondary из одного розового seed.
+    // Однотонность: primary и secondary из одного розового seed, без
+    // подмешивания чужой (голубой) схемы.
     final light = buildPresetScheme(sakura, Brightness.light);
     final seedOnly = ColorScheme.fromSeed(
       seedColor: sakura.seed,
@@ -50,7 +50,7 @@ void main() {
     expect(lavender.flair, isTrue);
     expect(lavender.kawaii, KawaiiFlavor.lavender);
 
-    // Неизвестный id по-прежнему падает на дефолтный пресет.
+    // Неизвестный id падает на дефолтный пресет.
     expect(resolveThemePreset('nope').id, kThemePresets.first.id);
   });
 }

@@ -62,9 +62,9 @@ class WindowsTunnelBackend implements TunnelBackend {
   String? _xrayBinPath;
   // false = окно скрыто (трей/свёрнуто): секундный опрос счётчиков приостановлен.
   bool _statsPollingEnabled = true;
-  // Базовая отметка счётчиков снята (раньше «нет базы» кодировалось как
-  // prev == 0, но 0 — легитимное значение на старте сессии: с паузой опроса
-  // это теряло бы весь скрытый период из тоталов).
+  // Базовая отметка счётчиков снята. Отдельный флаг, а не «prev == 0»:
+  // 0 — легитимное значение на старте сессии, и с паузой опроса такое
+  // кодирование теряло бы весь скрытый период из тоталов.
   bool _statsBaselineTaken = false;
   // Первый опрос после паузы: скрытый период целиком попадает в тоталы, но как
   // «скорость» его не показываем — иначе на секунду вспыхивает гигантское значение.
@@ -129,8 +129,8 @@ class WindowsTunnelBackend implements TunnelBackend {
       if (request.vpnBackend == VpnBackend.awg) {
         await _startAwgSession(request);
       } else {
-        // keqrnel — единственное ядро для xray-протоколов (proxy и TUN).
-        // Отдельные xray.exe/sing-box.exe больше не используются и не поставляются.
+        // keqrnel — единственное ядро для xray-протоколов (proxy и TUN);
+        // отдельные xray.exe/sing-box.exe не поставляются.
         await _startKeqrnelSession(request);
       }
 
@@ -408,9 +408,8 @@ class WindowsTunnelBackend implements TunnelBackend {
     return port;
   }
 
-  /// TUN-обёртка для AmneziaWG: keqrnel (как sing-box host) заворачивает локальный
-  /// SOCKS5 wireproxy в TUN. Раньше это делал отдельный sing-box.exe — теперь его
-  /// роль выполняет единое ядро keqrnel, поэтому sing-box.exe больше не нужен.
+  /// TUN-обёртка для AmneziaWG: keqrnel (как sing-box host) заворачивает
+  /// локальный SOCKS5 wireproxy в TUN — отдельный sing-box.exe не нужен.
   Future<void> _startSingboxSession(TunnelSessionRequest request) async {
     final bin = await WindowsCorePaths.keqrnelExecutable();
     if (bin == null) {
@@ -1080,9 +1079,8 @@ class WindowsTunnelBackend implements TunnelBackend {
     }
   }
 
-  /// keep-alive клиент для секундных опросов; после ошибки пересоздаётся,
-  /// чтобы зависший запрос не держал сокет (раньше это гарантировал
-  /// close(force) на каждом опросе).
+  /// keep-alive клиент для секундных опросов; после ошибки пересоздаётся
+  /// (см. [_resetStatsHttp]), чтобы зависший запрос не держал сокет.
   HttpClient get _statsHttp =>
       _statsHttpClient ??= HttpClient()
         ..connectionTimeout = const Duration(seconds: 2);

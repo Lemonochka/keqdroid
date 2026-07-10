@@ -306,8 +306,8 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
 
     // 1) Мгновенный проход по уже загруженному списку — галочки и снекбар
     //    появляются сразу. Полный список (includeSystem=true, с иконками
-    //    каждого пакета) телефон собирает 5–30 секунд; раньше всё это время
-    //    не было никакой реакции, а уход с экрана молча отменял добавление.
+    //    каждого пакета) телефон собирает 5–30 секунд — всё это время без
+    //    быстрого прохода не было бы никакой реакции на кнопку.
     final visibleApps =
         ref.read(installedAppsProvider(_showSystem)).value ?? const <AppInfo>[];
     final quickRussian = visibleApps
@@ -871,7 +871,7 @@ class _AppTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children:[
-              // РРєРѕРЅРєР° РїСЂРёР»РѕР¶РµРЅРёСЏ
+              // иконка приложения
               _AppIcon(
                 iconBase64: app.iconBase64,
                 appName: app.appName,
@@ -1084,9 +1084,9 @@ class _RuFlagIcon extends StatelessWidget {
         dimension: size,
         child: Column(
           children: [
-            Expanded(child: Container(color: const Color(0xFFFFFFFF))), // Р±РµР»С‹Р№
-            Expanded(child: Container(color: const Color(0xFF0039A6))), // СЃРёРЅРёР№
-            Expanded(child: Container(color: const Color(0xFFD52B1E))), // РєСЂР°СЃРЅС‹Р№
+            Expanded(child: Container(color: const Color(0xFFFFFFFF))), // белый
+            Expanded(child: Container(color: const Color(0xFF0039A6))), // синий
+            Expanded(child: Container(color: const Color(0xFFD52B1E))), // красный
           ],
         ),
       ),

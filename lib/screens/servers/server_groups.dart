@@ -75,9 +75,9 @@ class _ServersListPanel extends ConsumerWidget {
     );
 
     // CustomScrollView + sliver-группы: тайлы серверов строятся лениво по мере
-    // прокрутки (SliverList.builder в _SubCard), а не все разом Column'ом.
-    // Раньше раскрытая группа на сотни серверов строила все _ServerTile сразу —
-    // основной источник джанка свайпа (build + семантика на каждый кадр).
+    // прокрутки (SliverList.builder в _SubCard), а не все разом Column'ом —
+    // раскрытая группа на сотни серверов иначе джанкает свайп (build +
+    // семантика каждого тайла на каждый кадр).
     final list = SmoothScroll(
       builder: (context, controller) => CustomScrollView(
         controller: controller,
@@ -611,9 +611,9 @@ class _SubCardState extends ConsumerState<_SubCard> {
               ),
             ),
 
-            // Свёрнутая группа — просто без sliver'а тайлов. AnimatedSize с
-            // Column всех тайлов ушёл: он строил их разом и несовместим с
-            // ленивым sliver-построением (шеврон по-прежнему анимируется).
+            // Свёрнутая группа — просто без sliver'а тайлов. Никакого
+            // AnimatedSize вокруг: он требует построить все тайлы разом и
+            // несовместим с ленивым sliver-построением (анимируется шеврон).
             if (!collapsed)
               _buildExpandedServerList(
                 servers: sortedServers,
@@ -627,10 +627,10 @@ class _SubCardState extends ConsumerState<_SubCard> {
     );
   }
 
-  /// Sliver с тайлами: SliverList.builder строит только видимые в viewport —
-  /// раскрытая группа на сотни серверов больше не собирает все тайлы разом.
-  /// [twoColumns] — опциональная сетка в две колонки (issue: удобнее
-  /// организовывать сервера); строится так же лениво через SliverGrid.
+  /// Sliver с тайлами: SliverList.builder строит только видимые в viewport,
+  /// чтобы раскрытая группа на сотни серверов не собирала все тайлы разом.
+  /// [twoColumns] — опциональная сетка в две колонки, строится так же лениво
+  /// через SliverGrid.
   Widget _buildExpandedServerList({
     required List<ServerItem> servers,
     required String? activeServerId,

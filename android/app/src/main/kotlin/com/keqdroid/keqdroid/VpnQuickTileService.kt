@@ -20,7 +20,7 @@ class VpnQuickTileService : TileService() {
 
     companion object {
         // Монохромный вектор (силуэт на прозрачном фоне): QS-плитки тинтуют иконку,
-        // поэтому полноцветный ic_launcher_foreground превращался в белый кружок.
+        // и полноцветный ic_launcher_foreground превращается в белый кружок.
         // Тот же ресурс стоит в android:icon сервиса в манифесте, чтобы и в редакторе
         // плиток (где берётся манифестная иконка) показывался логотип, а не пустой круг.
         private val TILE_ICON_RES = R.drawable.ic_launcher_monochrome
@@ -96,7 +96,6 @@ class VpnQuickTileService : TileService() {
             android.util.Log.e("KEQDIS", "Failed to register content observer: ${e.message}")
         }
 
-        // Register broadcast receiver for status updates
         try {
             val filter = IntentFilter(KeqdisVpnService.BROADCAST_VPN_STATUS_CHANGED)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

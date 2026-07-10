@@ -16,8 +16,8 @@ class _LocalProxyPortsScreenState
 
   @override
   void dispose() {
-    // Сохранение при уходе с экрана: раньше применение висело только на
-    // Enter/onEditingComplete, и «назад» молча терял введённые порты.
+    // Сохранение при уходе с экрана: «назад» без Enter не должен молча
+    // терять введённые порты.
     _persistSilently();
     _socksCtrl.dispose();
     _httpCtrl.dispose();
@@ -97,7 +97,7 @@ class _LocalProxyPortsScreenState
     VoidCallback onSubmit,
   ) {
     // Применение и по потере фокуса, а не только по Enter: тап мимо поля
-    // или переход к другому полю раньше молча терял введённое значение.
+    // или переход к другому полю не должен молча терять введённое значение.
     return Focus(
       skipTraversal: true,
       onFocusChange: (focused) {

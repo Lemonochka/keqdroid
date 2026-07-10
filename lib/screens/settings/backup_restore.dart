@@ -100,7 +100,6 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
         sections: selected,
       );
 
-      // Refresh in-memory state.
       await ref.read(storageProvider).reloadFromDisk();
       ref.invalidate(serversProvider);
       ref.invalidate(subscriptionsProvider);

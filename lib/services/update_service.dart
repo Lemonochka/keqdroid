@@ -63,9 +63,8 @@ class UpdateService {
   static const _repo = 'keqdroid';
 
   /// Единый semver-тег релиза: v0.1.0, v0.4.1 (Android + Windows в одном release).
-  // Tags may or may not carry a leading "v" (e.g. both `v0.5.1` and `0.5.1`).
-  // Requiring the "v" silently dropped releases tagged without it, so the app
-  // never offered them as updates.
+  // Ведущая "v" опциональна: в репозитории есть теги обоих видов (`v0.5.1` и
+  // `0.5.1`), и требование "v" молча прятало бы часть релизов от авто-обновления.
   static final _releaseTagPattern = RegExp(
     r'^v?\d+\.\d+(\.\d+)?(-[\w.]+)?$',
     caseSensitive: false,
@@ -76,8 +75,8 @@ class UpdateService {
   /// Кэш последнего авто-чека (in-memory, на процесс): ре-раны
   /// updateInfoProvider (смена VPN-статуса, resume, периодический таймер)
   /// не должны ни долбить GitHub чаще [_minAutoCheckGap], ни затирать уже
-  /// найденное обновление возвратом null — раньше счётчик запусков пропускал
-  /// 2 из 3 проверок, и бейдж в настройках пропадал после переключения VPN.
+  /// найденное обновление возвратом null (иначе бейдж в настройках пропадает
+  /// после первого же переключения VPN).
   static UpdateInfo? _cachedAutoResult;
   static DateTime? _lastAutoCheckAt;
   static const _minAutoCheckGap = Duration(minutes: 30);
@@ -652,8 +651,8 @@ class UpdateService {
 
   static Future<void> _openUrlInBrowser(String url) async {
     if (!_isSafeHttpsUrl(url)) {
-      // Кидаем, а не выходим молча: раньше клик по «Обновить» просто ничего
-      // не делал, если URL ассета не прошёл проверку.
+      // Кидаем, а не выходим молча: иначе клик по «Обновить» просто ничего
+      // не делает, и непонятно почему.
       throw StateError(
         'Refusing to open unsafe download URL. '
         'Download the release manually from GitHub.',

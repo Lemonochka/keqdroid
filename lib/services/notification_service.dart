@@ -84,7 +84,6 @@ class NotificationService {
     );
   }
 
-  /// то же showNotification, для удобства
   static Future<void> updateStatus(VpnState state, {String? serverName}) async {
     await showNotification(state: state, serverName: serverName);
   }
