@@ -167,6 +167,8 @@
   "themeUseSystemColorsSubtitle": "Follow Windows or Linux accent colors when available",
   "themeCustomPaletteHint": "Custom palette is active. Light/Dark works independently.",
   "themeColorThemesTitle": "Color themes",
+  "serversTwoColumnsTitle": "Two-column server list",
+  "serversTwoColumnsSubtitle": "Show servers in two columns to fit more on screen",
   "settingsLanProxyTitle": "LAN Proxy",
   "settingsOff": "Off",
   "settingsLanSharingOnIp": "Sharing on {ip}",

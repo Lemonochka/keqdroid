@@ -344,6 +344,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get themeColorThemesTitle => 'Farbthemen';
 
   @override
+  String get serversTwoColumnsTitle => 'Serverliste in zwei Spalten';
+
+  @override
+  String get serversTwoColumnsSubtitle => 'Server zweispaltig anzeigen – mehr passt auf den Bildschirm';
+
+  @override
   String get settingsLanProxyTitle => 'LAN-Proxy';
 
   @override

@@ -139,6 +139,12 @@ class LinuxTunnelBackend implements TunnelBackend {
     try {
       await _cleanupForRestart();
       activeInstance = this;
+      // _cleanupForRestart() зануляет _activeMode внутри _stopSessionInner —
+      // вернуть режим НОВОЙ сессии. Иначе вся сессия живёт с _activeMode=null:
+      // getCurrentState теряет режим, а setTrafficStatsPollingEnabled(true)
+      // после разворота из трея молча НЕ перезапускает опрос счётчиков —
+      // трафик/время замерзают до реконнекта.
+      _activeMode = request.mode;
       _sessionDir = await LinuxCorePaths.sessionDir();
 
       final isAwg = request.vpnBackend == VpnBackend.awg;

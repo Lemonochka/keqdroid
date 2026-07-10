@@ -167,6 +167,8 @@
   "themeUseSystemColorsSubtitle": "Akzentfarben von Windows oder Linux übernehmen, wenn verfügbar",
   "themeCustomPaletteHint": "Die benutzerdefinierte Palette ist aktiv. Hell/Dunkel funktioniert unabhängig.",
   "themeColorThemesTitle": "Farbthemen",
+  "serversTwoColumnsTitle": "Serverliste in zwei Spalten",
+  "serversTwoColumnsSubtitle": "Server zweispaltig anzeigen – mehr passt auf den Bildschirm",
   "settingsLanProxyTitle": "LAN-Proxy",
   "settingsOff": "Aus",
   "settingsLanSharingOnIp": "Freigabe auf {ip}",

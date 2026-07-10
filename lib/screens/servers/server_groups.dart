@@ -64,11 +64,21 @@ class _ServersListPanel extends ConsumerWidget {
       );
     }
 
+    // Режим колонок читаем здесь и раздаём карточкам ПАРАМЕТРОМ, а не вотчем
+    // внутри _SubCard: при смене настройки AnimatedSwitcher ниже держит старое
+    // поддерево на кросс-фейде, и вотч внутри него мгновенно перестроил бы
+    // «уходящий» список в новую раскладку — перехода не было бы видно.
+    final twoColumns = ref.watch(
+      settingsNotifierProvider.select(
+        (a) => a.value?.serversTwoColumns ?? false,
+      ),
+    );
+
     // CustomScrollView + sliver-группы: тайлы серверов строятся лениво по мере
     // прокрутки (SliverList.builder в _SubCard), а не все разом Column'ом.
     // Раньше раскрытая группа на сотни серверов строила все _ServerTile сразу —
     // основной источник джанка свайпа (build + семантика на каждый кадр).
-    return SmoothScroll(
+    final list = SmoothScroll(
       builder: (context, controller) => CustomScrollView(
         controller: controller,
         physics: const ClampingScrollPhysics(),
@@ -85,12 +95,32 @@ class _ServersListPanel extends ConsumerWidget {
                 key: groups[index].key,
                 subscription: groups[index].subscription,
                 servers: groups[index].servers,
+                twoColumns: twoColumns,
                 onSelectServer: onSelectServer,
                 onRefresh: groups[index].onRefresh,
                 onPingAll: groups[index].onPingAll,
               ),
             ),
         ],
+      ),
+    );
+
+    // Плавная смена раскладки 1↔2 колонки: мягкий фейд с лёгким масштабом
+    // (в стиле остальных AnimatedSwitcher приложения) вместо резкого скачка.
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.98, end: 1.0).animate(animation),
+          child: child,
+        ),
+      ),
+      child: KeyedSubtree(
+        key: ValueKey(twoColumns),
+        child: list,
       ),
     );
   }
@@ -262,6 +292,9 @@ Widget _subCardHeaderIconButton({
 class _SubCard extends ConsumerStatefulWidget {
   final Subscription? subscription;
   final List<ServerItem> servers;
+  /// Раскладка списка приходит параметром сверху (см. _ServersListPanel):
+  /// вотч настройки внутри карточки сломал бы кросс-фейд смены колонок.
+  final bool twoColumns;
   final void Function(ServerItem) onSelectServer;
   final Future<void> Function()? onRefresh;
   final Future<void> Function() onPingAll;
@@ -270,6 +303,7 @@ class _SubCard extends ConsumerStatefulWidget {
     super.key,
     required this.subscription,
     required this.servers,
+    required this.twoColumns,
     required this.onSelectServer,
     required this.onRefresh,
     required this.onPingAll,
@@ -585,6 +619,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                 servers: sortedServers,
                 activeServerId: activeServerId,
                 textLightColor: textLightColor,
+                twoColumns: widget.twoColumns,
               ),
           ],
         ),
@@ -594,10 +629,13 @@ class _SubCardState extends ConsumerState<_SubCard> {
 
   /// Sliver с тайлами: SliverList.builder строит только видимые в viewport —
   /// раскрытая группа на сотни серверов больше не собирает все тайлы разом.
+  /// [twoColumns] — опциональная сетка в две колонки (issue: удобнее
+  /// организовывать сервера); строится так же лениво через SliverGrid.
   Widget _buildExpandedServerList({
     required List<ServerItem> servers,
     required String? activeServerId,
     required Color textLightColor,
+    required bool twoColumns,
   }) {
     if (servers.isEmpty) {
       return SliverToBoxAdapter(
@@ -608,6 +646,55 @@ class _SubCardState extends ConsumerState<_SubCard> {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: textLightColor),
           ),
+        ),
+      );
+    }
+
+    if (twoColumns) {
+      // Нижний ряд: при нечётном числе серверов последняя плитка одна слева,
+      // пустая правая половина — фон карточки (DecoratedSliver) со своим
+      // скруглением. У плиток нижнего ряда скругляется только внешний угол.
+      final lastRowStart =
+          servers.length.isEven ? servers.length - 2 : servers.length - 1;
+      return SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisExtent: _subCardRowHeight,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final server = servers[index];
+            final inLastRow = index >= lastRowStart;
+            return _ServerTile(
+              key: ValueKey(server.id),
+              server: server,
+              isActive: server.id == activeServerId,
+              isFirst: index < 2,
+              isLast: inLastRow,
+              // Внутренний край (к середине карточки): подсветка активного
+              // сервера растворяется к нему градиентом, а не обрывается
+              // резкой линией на стыке колонок.
+              innerEdge:
+                  index.isEven ? _TileInnerEdge.right : _TileInnerEdge.left,
+              radius: BorderRadius.only(
+                bottomLeft: inLastRow && index.isEven
+                    ? const Radius.circular(22)
+                    : Radius.zero,
+                bottomRight: inLastRow && index.isOdd
+                    ? const Radius.circular(22)
+                    : Radius.zero,
+              ),
+              onTap: () => widget.onSelectServer(server),
+              onDelete: () =>
+                  ref.read(serversProvider.notifier).delete(server.id),
+              onPing: () =>
+                  ref.read(serversProvider.notifier).pingSingle(server.id),
+            );
+          },
+          childCount: servers.length,
+          addAutomaticKeepAlives: false,
+          // _ServerTile сам оборачивается в RepaintBoundary — не дублируем.
+          addRepaintBoundaries: false,
         ),
       );
     }
