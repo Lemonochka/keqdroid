@@ -1,0 +1,14 @@
+name: Feature request
+description: Something the app should do but doesn't
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: Russian or English — whichever is easier.
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What's missing and when you needed it.
+    validations:
+      required: true
