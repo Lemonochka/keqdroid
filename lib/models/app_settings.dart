@@ -47,6 +47,8 @@ class AppSettings {
   /// Desktop: хоткеи (HotkeyAction.id → токен сочетания, напр. `ctrl+shift+keyT`).
   /// Пустая карта = все хоткеи выключены (дефолт).
   final Map<String, String> hotkeys;
+  /// Список серверов в две колонки (issue: удобнее организовывать сервера).
+  final bool serversTwoColumns;
 
   const AppSettings({
     this.localPort = 2080,
@@ -76,6 +78,7 @@ class AppSettings {
     this.launchAtStartup = false,
     this.coreEngine = coreEngineKeqrnel,
     this.hotkeys = const {},
+    this.serversTwoColumns = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -106,6 +109,7 @@ class AppSettings {
     'launchAtStartup': launchAtStartup,
     'coreEngine': coreEngine,
     'hotkeys': hotkeys,
+    'serversTwoColumns': serversTwoColumns,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -164,6 +168,7 @@ class AppSettings {
       launchAtStartup: json['launchAtStartup'] as bool? ?? false,
       coreEngine: normalizeCoreEngine(json['coreEngine'] as String?),
       hotkeys: _readHotkeys(json['hotkeys']),
+      serversTwoColumns: json['serversTwoColumns'] as bool? ?? false,
     );
   }
 
@@ -262,6 +267,7 @@ class AppSettings {
     bool? launchAtStartup,
     String? coreEngine,
     Map<String, String>? hotkeys,
+    bool? serversTwoColumns,
   }) =>
       AppSettings(
         localPort: localPort ?? this.localPort,
@@ -291,6 +297,7 @@ class AppSettings {
         launchAtStartup: launchAtStartup ?? this.launchAtStartup,
         coreEngine: coreEngine ?? this.coreEngine,
         hotkeys: hotkeys ?? this.hotkeys,
+        serversTwoColumns: serversTwoColumns ?? this.serversTwoColumns,
       );
 
   @override
@@ -324,6 +331,7 @@ class AppSettings {
               minimizeToTray == other.minimizeToTray &&
               launchAtStartup == other.launchAtStartup &&
               coreEngine == other.coreEngine &&
+              serversTwoColumns == other.serversTwoColumns &&
               _hotkeysEqual(hotkeys, other.hotkeys);
 
   static bool _hotkeysEqual(Map<String, String> a, Map<String, String> b) {
@@ -363,6 +371,7 @@ class AppSettings {
     minimizeToTray,
     launchAtStartup,
     coreEngine,
+    serversTwoColumns,
     // порядок ключей в Map не влияет: хэшируем отсортированные записи
     Object.hashAll(
       (hotkeys.entries.toList()

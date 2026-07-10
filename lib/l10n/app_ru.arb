@@ -167,6 +167,8 @@
   "themeUseSystemColorsSubtitle": "Цвета из акцента Windows или Linux, если доступны",
   "themeCustomPaletteHint": "Активна пользовательская палитра. Светлая/тёмная работают независимо.",
   "themeColorThemesTitle": "Цветовые темы",
+  "serversTwoColumnsTitle": "Список серверов в две колонки",
+  "serversTwoColumnsSubtitle": "Показывать серверы в две колонки — на экране помещается больше",
   "settingsLanProxyTitle": "LAN прокси",
   "settingsOff": "Выкл",
   "settingsLanSharingOnIp": "Раздача на {ip}",
