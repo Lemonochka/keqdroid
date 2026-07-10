@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
@@ -65,11 +66,15 @@ void main() {
       appProcessName: 'keqdroid.exe',
     ));
 
-    final xrayRule = _processRule(rules, 'xray.exe');
-    expect(xrayRule, isNotNull, reason: 'xray.exe must bypass the TUN');
+    // Core names carry `.exe` on Windows only; mirror the generator's suffix
+    // so the test matches the host OS it runs on.
+    final exe = Platform.isWindows ? '.exe' : '';
+
+    final xrayRule = _processRule(rules, 'xray$exe');
+    expect(xrayRule, isNotNull, reason: 'xray must bypass the TUN');
     expect(xrayRule!['outbound'], 'direct');
 
-    final singRule = _processRule(rules, 'sing-box.exe');
+    final singRule = _processRule(rules, 'sing-box$exe');
     expect(singRule, isNotNull);
     expect(singRule!['outbound'], 'direct');
 
