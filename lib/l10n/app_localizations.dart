@@ -711,6 +711,18 @@ abstract class AppLocalizations {
   /// **'Color themes'**
   String get themeColorThemesTitle;
 
+  /// No description provided for @serversTwoColumnsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Two-column server list'**
+  String get serversTwoColumnsTitle;
+
+  /// No description provided for @serversTwoColumnsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show servers in two columns to fit more on screen'**
+  String get serversTwoColumnsSubtitle;
+
   /// No description provided for @settingsLanProxyTitle.
   ///
   /// In en, this message translates to:

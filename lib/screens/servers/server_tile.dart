@@ -1,10 +1,23 @@
 part of '../servers_tab.dart';
 
+/// Внутренний край плитки в сетке из двух колонок — край, обращённый к
+/// середине карточки. Подсветка активного сервера мягко растворяется к нему
+/// градиентом, чтобы граница между соседями в ряду была плавной, а не резкой
+/// вертикальной линией.
+enum _TileInnerEdge { left, right }
+
 class _ServerTile extends ConsumerWidget {
   final ServerItem server;
   final bool isActive;
   final bool isFirst;
   final bool isLast;
+  /// Скругление углов тайла. По умолчанию — нижние углы у последнего тайла
+  /// (одноколоночный список); сетка в две колонки передаёт своё (у нижнего
+  /// ряда скругляется только внешний угол каждой колонки).
+  final BorderRadius? radius;
+  /// Внутренний край плитки в режиме двух колонок; null — одноколоночный
+  /// список, подсветка активного сервера сплошная на всю ширину.
+  final _TileInnerEdge? innerEdge;
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final Future<void> Function() onPing;
@@ -15,6 +28,8 @@ class _ServerTile extends ConsumerWidget {
     required this.isActive,
     required this.isFirst,
     required this.isLast,
+    this.radius,
+    this.innerEdge,
     required this.onTap,
     required this.onDelete,
     required this.onPing,
@@ -67,17 +82,40 @@ class _ServerTile extends ConsumerWidget {
             vpnStatus == VpnStatus.connecting ||
             vpnStatus == VpnStatus.disconnecting);
 
-    final radius = BorderRadius.vertical(
-      bottom: isLast ? const Radius.circular(22) : Radius.zero,
-    );
+    final radius = this.radius ??
+        BorderRadius.vertical(
+          bottom: isLast ? const Radius.circular(22) : Radius.zero,
+        );
 
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
-    final cardBgColor = isActive
-        ? AppTheme.accent(context).withValues(alpha: 0.13)
-        : AppTheme.card(context);
     final textColor = AppTheme.text(context);
     final accentColor = AppTheme.accent(context);
     final textLightColor = AppTheme.textLight(context);
+
+    // Фон плитки. В сетке из двух колонок подсветка активного сервера не
+    // обрывается резкой линией по середине карточки, а мягко растворяется
+    // градиентом к внутреннему краю плитки (несколько стоп приближают
+    // ease-out, чтобы не было видимого излома). Полупрозрачные цвета ложатся
+    // на фон DecoratedSliver карточки — так же, как сплошная подсветка.
+    final Decoration tileDecoration;
+    if (isActive && innerEdge != null) {
+      Color glow(double f) => accentColor.withValues(alpha: 0.13 * f);
+      final toRight = innerEdge == _TileInnerEdge.right;
+      tileDecoration = BoxDecoration(
+        gradient: LinearGradient(
+          begin: toRight ? Alignment.centerLeft : Alignment.centerRight,
+          end: toRight ? Alignment.centerRight : Alignment.centerLeft,
+          colors: [glow(1), glow(1), glow(0.55), glow(0.18), glow(0)],
+          stops: const [0.0, 0.45, 0.7, 0.88, 1.0],
+        ),
+      );
+    } else {
+      tileDecoration = BoxDecoration(
+        color: isActive
+            ? accentColor.withValues(alpha: 0.13)
+            : AppTheme.card(context),
+      );
+    }
     final protocolColor = _protocolColor(server.protocol, context);
 
     final titleText = ServerNameUtils.formatForDisplay(
@@ -183,7 +221,7 @@ class _ServerTile extends ConsumerWidget {
           clipBehavior: Clip.antiAlias,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            color: cardBgColor,
+            decoration: tileDecoration,
             child: Material(
               type: MaterialType.transparency,
               child: InkWell(

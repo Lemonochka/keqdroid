@@ -167,6 +167,8 @@
   "themeUseSystemColorsSubtitle": "在可用时跟随 Windows 或 Linux 的强调色",
   "themeCustomPaletteHint": "自定义调色板已启用。浅色/深色可独立工作。",
   "themeColorThemesTitle": "颜色主题",
+  "serversTwoColumnsTitle": "服务器双列显示",
+  "serversTwoColumnsSubtitle": "以双列显示服务器，屏幕可容纳更多内容",
   "settingsLanProxyTitle": "LAN 代理",
   "settingsOff": "关闭",
   "settingsLanSharingOnIp": "正在 {ip} 上共享",
