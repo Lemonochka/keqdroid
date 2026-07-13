@@ -230,6 +230,23 @@ class MainActivity : FlutterFragmentActivity() {
                                 "password" to pendingSocksPassword!!,
                             ))
                         }
+                        "getActiveSocksCredentials" -> {
+                            // Креды УЖЕ работающей сессии, БЕЗ генерации новых: VpnService
+                            // переживает пересоздание Flutter-движка, а Dart-синглтон
+                            // Socks5Credentials — нет. Без восстановления свежий изолят ходит
+                            // в запароленный локальный http-инбаунд без Proxy-Authorization
+                            // и получает 407 (проверка обновлений, рефреш подписок).
+                            var user = vpnServiceBinder?.getSocksUsername() ?: ""
+                            var pass = vpnServiceBinder?.getSocksPassword() ?: ""
+                            if (user.isEmpty() || pass.isEmpty()) {
+                                // Binder ещё не привязан (холодный старт) — сервис кладёт
+                                // те же креды в QS-prefs при каждом старте xray-сессии.
+                                val prefs = getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
+                                user = prefs.getString(KeqdisVpnService.KEY_QS_LAST_SOCKS_USERNAME, "") ?: ""
+                                pass = prefs.getString(KeqdisVpnService.KEY_QS_LAST_SOCKS_PASSWORD, "") ?: ""
+                            }
+                            result.success(mapOf("username" to user, "password" to pass))
+                        }
                         "getPing" -> {
                             val addr    = call.argument<String>("address") ?: ""
                             val port    = call.argument<Int>("port") ?: 0

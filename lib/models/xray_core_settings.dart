@@ -178,7 +178,10 @@ class XrayCoreSettings {
     } else {
       if (dnsSplitDirectDomains && directDomains.isNotEmpty) {
         servers.add({
-          'address': 'https+local://1.1.1.1/dns-query',
+          // 'localhost' — системный резолвер xray. Direct-домены включают
+          // корпоративные/LAN-зоны сплит-DNS, которых публичный DoH не знает:
+          // с ним домен из Direct-списка получал NXDOMAIN при direct-маршруте.
+          'address': 'localhost',
           'domains': directDomains,
           'skipFallback': true,
         });

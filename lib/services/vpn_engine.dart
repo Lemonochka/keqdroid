@@ -46,6 +46,18 @@ class VpnEngine {
   Future<({String username, String password})> fetchSocksCredentials() =>
       _backend.fetchSocksCredentials();
 
+  /// Android: креды локальных инбаундов уже работающей сессии. На десктопе
+  /// ядра — дочерние процессы приложения и туннель не переживает изолят,
+  /// восстанавливать нечего — null.
+  Future<({String username, String password})?>
+      fetchActiveSocksCredentials() async {
+    final backend = _backend;
+    if (backend is AndroidTunnelBackend) {
+      return backend.fetchActiveSocksCredentials();
+    }
+    return null;
+  }
+
   Future<void> startSession(TunnelSessionRequest request) =>
       _backend.startSession(request);
 

@@ -621,7 +621,11 @@ class ConfigGeneratorV2 {
     originalServerAddress ??= serverAddress;
     final isPingMode = pingSocksPort != null;
 
-    List<String> parseList(String s) => s.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    // Разделители — и запятая, и перевод строки: UI обещает «по одному в
+    // строке или через запятую», сплит только по ',' склеивал построчные
+    // записи в один несрабатывающий токен.
+    List<String> parseList(String s) =>
+        s.split(RegExp(r'[\r\n,]+')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
 
     List<String> normalizeDomains(List<String> domains) => domains.map((d) {
       final c = d.trim().toLowerCase();
