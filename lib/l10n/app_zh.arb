@@ -187,6 +187,9 @@
   "settingsSetupAnotherDeviceTitle": "在其他设备上设置：",
   "settingsSocks5PortLabel": "SOCKS5 端口",
   "settingsHttpPortLabel": "HTTP 端口",
+  "settingsLanUsernameLabel": "用户名",
+  "settingsLanPasswordLabel": "密码",
+  "settingsLanAuthHint": "两项都填写 — 设备需用其登录代理。留空 — 无密码（局域网内任何人都可使用）。",
   "settingsLocalPortsTitle": "本地代理端口",
   "settingsLocalPortsSubtitle": "SOCKS {socks} · HTTP {http}",
   "@settingsLocalPortsSubtitle": {

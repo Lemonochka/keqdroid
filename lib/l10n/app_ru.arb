@@ -187,6 +187,9 @@
   "settingsSetupAnotherDeviceTitle": "Настройка на другом устройстве:",
   "settingsSocks5PortLabel": "Порт SOCKS5",
   "settingsHttpPortLabel": "Порт HTTP",
+  "settingsLanUsernameLabel": "Логин",
+  "settingsLanPasswordLabel": "Пароль",
+  "settingsLanAuthHint": "Оба поля заполнены — устройства подключаются к прокси по ним. Пусто — без пароля (прокси открыт для всех в вашей сети).",
   "settingsLocalPortsTitle": "Локальные порты прокси",
   "settingsLocalPortsSubtitle": "SOCKS {socks} · HTTP {http}",
   "@settingsLocalPortsSubtitle": {

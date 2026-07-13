@@ -104,6 +104,103 @@ void main() {
     expect(inbounds.first['listen_port'], 2080);
   });
 
+  test(
+    'proxyWithStats carries LAN inbounds over with creds and source guard',
+    () {
+      final xray = jsonEncode({
+        'inbounds': [
+          {'tag': 'socks', 'port': 2080, 'listen': '127.0.0.1', 'protocol': 'socks'},
+          {'tag': 'http', 'port': 2081, 'listen': '127.0.0.1', 'protocol': 'http'},
+          {
+            'tag': 'socks-lan',
+            'port': 1080,
+            'listen': '0.0.0.0',
+            'protocol': 'socks',
+            'settings': {
+              'auth': 'password',
+              'udp': true,
+              'accounts': [
+                {'user': 'keq', 'pass': 'droid'},
+              ],
+            },
+          },
+          {'tag': 'http-lan', 'port': 8080, 'listen': '0.0.0.0', 'protocol': 'http'},
+        ],
+        'outbounds': [
+          {'protocol': 'vless', 'tag': 'vless-out'},
+        ],
+      });
+
+      final out = KeqrnelConfig.proxyWithStats(
+        xrayConfig: xray,
+        socksPort: 2080,
+        httpPort: 2081,
+        clashPort: 9090,
+      );
+      final m = jsonDecode(out) as Map<String, dynamic>;
+      final inbounds = (m['inbounds'] as List).cast<Map<String, dynamic>>();
+
+      // loopback-листенеры — только socks-in/http-in от sing-box, без дублей
+      // одноимённых xray-инбаундов на тех же портах.
+      expect(inbounds.where((i) => i['listen'] == '127.0.0.1'), hasLength(2));
+
+      final socksLan = inbounds.firstWhere((i) => i['tag'] == 'socks-lan');
+      expect(socksLan['listen'], '0.0.0.0');
+      expect(socksLan['listen_port'], 1080);
+      expect(socksLan['users'], [
+        {'username': 'keq', 'password': 'droid'},
+      ]);
+      final httpLan = inbounds.firstWhere((i) => i['tag'] == 'http-lan');
+      expect(httpLan['listen_port'], 8080);
+      expect(httpLan.containsKey('users'), isFalse);
+
+      // source-guard: частные диапазоны → proxy, остальное на LAN-тегах → block.
+      final rules =
+          ((m['route'] as Map)['rules'] as List).cast<Map<String, dynamic>>();
+      expect(rules, hasLength(2));
+      expect(rules[0]['inbound'], ['socks-lan', 'http-lan']);
+      expect(rules[0]['source_ip_cidr'], contains('192.168.0.0/16'));
+      expect(rules[0]['outbound'], 'proxy');
+      expect(rules[1], {
+        'inbound': ['socks-lan', 'http-lan'],
+        'outbound': 'block',
+      });
+      final outbounds = (m['outbounds'] as List).cast<Map<String, dynamic>>();
+      expect(outbounds.any((o) => o['tag'] == 'block'), isTrue);
+
+      // у встроенного xray инбаундов не остаётся вовсе.
+      final proxy = outbounds.firstWhere((o) => o['tag'] == 'proxy');
+      expect((proxy['xray'] as Map).containsKey('inbounds'), isFalse);
+    },
+  );
+
+  test('proxyWithStats without LAN sharing keeps loopback-only layout', () {
+    final xray = jsonEncode({
+      'inbounds': [
+        {'tag': 'socks', 'port': 2080, 'listen': '127.0.0.1', 'protocol': 'socks'},
+      ],
+      'outbounds': [
+        {'protocol': 'vless', 'tag': 'vless-out'},
+      ],
+    });
+    final out = KeqrnelConfig.proxyWithStats(
+      xrayConfig: xray,
+      socksPort: 2080,
+      httpPort: 2081,
+      clashPort: 9090,
+    );
+    final m = jsonDecode(out) as Map<String, dynamic>;
+    final inbounds = (m['inbounds'] as List).cast<Map<String, dynamic>>();
+    expect(inbounds, hasLength(2));
+    expect(inbounds.every((i) => i['listen'] == '127.0.0.1'), isTrue);
+    expect((m['route'] as Map).containsKey('rules'), isFalse);
+    expect(
+      ((m['outbounds'] as List).cast<Map<String, dynamic>>())
+          .any((o) => o['tag'] == 'block'),
+      isFalse,
+    );
+  });
+
   test('fromChain throws when there is no proxy outbound to replace', () {
     final singbox = jsonEncode({
       'outbounds': [

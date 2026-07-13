@@ -393,6 +393,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsHttpPortLabel => 'Порт HTTP';
 
   @override
+  String get settingsLanUsernameLabel => 'Логин';
+
+  @override
+  String get settingsLanPasswordLabel => 'Пароль';
+
+  @override
+  String get settingsLanAuthHint => 'Оба поля заполнены — устройства подключаются к прокси по ним. Пусто — без пароля (прокси открыт для всех в вашей сети).';
+
+  @override
   String get settingsLocalPortsTitle => 'Локальные порты прокси';
 
   @override

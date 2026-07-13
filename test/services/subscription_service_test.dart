@@ -52,6 +52,11 @@ void main() {
     test('still allows a public literal ip', () {
       expect(SubscriptionService.isSafeUrl('https://1.1.1.1/sub'), isTrue);
     });
+
+    test('blocks plain http (subscription payload carries server secrets)', () {
+      expect(SubscriptionService.isSafeUrl('http://example.com/sub'), isFalse);
+      expect(SubscriptionService.isSafeUrl('http://1.1.1.1/sub'), isFalse);
+    });
   });
 
   group('SubscriptionService.getDueForUpdate', () {

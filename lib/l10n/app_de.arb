@@ -187,6 +187,9 @@
   "settingsSetupAnotherDeviceTitle": "Einrichtung auf einem anderen Gerät:",
   "settingsSocks5PortLabel": "SOCKS5-Port",
   "settingsHttpPortLabel": "HTTP-Port",
+  "settingsLanUsernameLabel": "Benutzername",
+  "settingsLanPasswordLabel": "Passwort",
+  "settingsLanAuthHint": "Beide Felder gesetzt — Geräte melden sich damit am Proxy an. Leer — kein Passwort (jeder im Netzwerk kann ihn nutzen).",
   "settingsLocalPortsTitle": "Lokale Proxy-Ports",
   "settingsLocalPortsSubtitle": "SOCKS {socks} · HTTP {http}",
   "@settingsLocalPortsSubtitle": {

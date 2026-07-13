@@ -391,6 +391,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsHttpPortLabel => 'HTTP 端口';
 
   @override
+  String get settingsLanUsernameLabel => '用户名';
+
+  @override
+  String get settingsLanPasswordLabel => '密码';
+
+  @override
+  String get settingsLanAuthHint => '两项都填写 — 设备需用其登录代理。留空 — 无密码（局域网内任何人都可使用）。';
+
+  @override
   String get settingsLocalPortsTitle => '本地代理端口';
 
   @override

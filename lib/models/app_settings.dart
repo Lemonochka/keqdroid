@@ -27,6 +27,10 @@ class AppSettings {
   final bool lanSharing;
   final int lanSocksPort;
   final int lanHttpPort;
+  /// Креды LAN-инбаундов (socks-lan/http-lan). Обе строки непустые — инбаунды
+  /// требуют пароль; иначе noauth (открытый прокси в локальной сети).
+  final String lanUsername;
+  final String lanPassword;
   final bool shareDeviceHwid; // слать ли hwid при запросе подписок
   final XrayCoreSettings xrayCore;
   /// Desktop TUN: стек (system/gvisor/mixed), MTU и прочие опции sing-box-инбаунда.
@@ -68,6 +72,8 @@ class AppSettings {
     this.lanSharing = false,
     this.lanSocksPort = 1080,
     this.lanHttpPort = 8080,
+    this.lanUsername = '',
+    this.lanPassword = '',
     this.shareDeviceHwid = true,
     this.xrayCore = const XrayCoreSettings(),
     this.tun = const TunSettings(),
@@ -99,6 +105,8 @@ class AppSettings {
     'lanSharing': lanSharing,
     'lanSocksPort': lanSocksPort,
     'lanHttpPort': lanHttpPort,
+    'lanUsername': lanUsername,
+    'lanPassword': lanPassword,
     'shareDeviceHwid': shareDeviceHwid,
     'xrayCore': xrayCore.toJson(),
     'tun': tun.toJson(),
@@ -152,6 +160,8 @@ class AppSettings {
       lanSharing: json['lanSharing'] as bool? ?? false,
       lanSocksPort: port('lanSocksPort', 1080),
       lanHttpPort: port('lanHttpPort', 8080),
+      lanUsername: json['lanUsername'] as String? ?? '',
+      lanPassword: json['lanPassword'] as String? ?? '',
       shareDeviceHwid: json['shareDeviceHwid'] as bool? ?? true,
       xrayCore: XrayCoreSettings.fromJson(
         json['xrayCore'] as Map<String, dynamic>?,
@@ -257,6 +267,8 @@ class AppSettings {
     bool? lanSharing,
     int? lanSocksPort,
     int? lanHttpPort,
+    String? lanUsername,
+    String? lanPassword,
     bool? shareDeviceHwid,
     XrayCoreSettings? xrayCore,
     TunSettings? tun,
@@ -287,6 +299,8 @@ class AppSettings {
         lanSharing: lanSharing ?? this.lanSharing,
         lanSocksPort: lanSocksPort ?? this.lanSocksPort,
         lanHttpPort: lanHttpPort ?? this.lanHttpPort,
+        lanUsername: lanUsername ?? this.lanUsername,
+        lanPassword: lanPassword ?? this.lanPassword,
         shareDeviceHwid: shareDeviceHwid ?? this.shareDeviceHwid,
         xrayCore: xrayCore ?? this.xrayCore,
         tun: tun ?? this.tun,
@@ -322,6 +336,8 @@ class AppSettings {
               lanSharing == other.lanSharing &&
               lanSocksPort == other.lanSocksPort &&
               lanHttpPort == other.lanHttpPort &&
+              lanUsername == other.lanUsername &&
+              lanPassword == other.lanPassword &&
               shareDeviceHwid == other.shareDeviceHwid &&
               xrayCore == other.xrayCore &&
               tun == other.tun &&
@@ -362,6 +378,8 @@ class AppSettings {
     lanSharing,
     lanSocksPort,
     lanHttpPort,
+    lanUsername,
+    lanPassword,
     shareDeviceHwid,
     xrayCore,
     tun,

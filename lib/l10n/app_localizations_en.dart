@@ -391,6 +391,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsHttpPortLabel => 'HTTP port';
 
   @override
+  String get settingsLanUsernameLabel => 'Username';
+
+  @override
+  String get settingsLanPasswordLabel => 'Password';
+
+  @override
+  String get settingsLanAuthHint => 'Both fields set — devices sign in to the proxy with them. Empty — no password (anyone on your network can use it).';
+
+  @override
   String get settingsLocalPortsTitle => 'Local proxy ports';
 
   @override
