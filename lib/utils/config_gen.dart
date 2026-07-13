@@ -74,6 +74,11 @@ class ConfigGeneratorV2 {
   /// ephemeral socks port for url ping (fixed, one xray at a time).
   static int ephemeralPingPortFor(String serverId) => ephemeralPingPort;
 
+  /// Пароль на LAN-инбаунды включается только полной парой логин+пароль:
+  /// половинчатый ввод даёт noauth, а не пустой логин/пароль в accounts.
+  static bool _lanAuthEnabled(AppSettings settings) =>
+      settings.lanUsername.trim().isNotEmpty && settings.lanPassword.isNotEmpty;
+
   static bool _truthyQueryFlag(String Function(String, [String]) getParam, List<String> keys) {
     for (final k in keys) {
       final v = getParam(k, '').trim().toLowerCase();
@@ -842,15 +847,29 @@ class ConfigGeneratorV2 {
               },
       },
       if (settings.lanSharing) ...[
+        // Опциональный пароль на LAN-инбаунды: обе строки непустые — auth
+        // password, иначе noauth (инбаунды слушают 0.0.0.0, source-правило
+        // в роутинге пускает только частные диапазоны).
         {
           'tag': 'socks-lan',
           'port': settings.lanSocksPort,
           'listen': '0.0.0.0',
           'protocol': 'socks',
-          'settings': {
-            'auth': 'noauth',
-            'udp': true,
-          },
+          'settings': _lanAuthEnabled(settings)
+              ? {
+                  'auth': 'password',
+                  'udp': true,
+                  'accounts': [
+                    {
+                      'user': settings.lanUsername.trim(),
+                      'pass': settings.lanPassword,
+                    }
+                  ],
+                }
+              : {
+                  'auth': 'noauth',
+                  'udp': true,
+                },
           'sniffing': core.buildSniffing(),
         },
         {
@@ -858,7 +877,17 @@ class ConfigGeneratorV2 {
           'port': settings.lanHttpPort,
           'listen': '0.0.0.0',
           'protocol': 'http',
-          'settings': {'allowTransparent': false},
+          'settings': _lanAuthEnabled(settings)
+              ? {
+                  'allowTransparent': false,
+                  'accounts': [
+                    {
+                      'user': settings.lanUsername.trim(),
+                      'pass': settings.lanPassword,
+                    }
+                  ],
+                }
+              : {'allowTransparent': false},
         },
       ],
       ],

@@ -102,7 +102,9 @@ class SubscriptionService {
     try {
       if (url.length > 2048) return false;
       final uri = Uri.parse(url);
-      if (!uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      // Только https: payload подписки несёт серверные секреты (пароли, uuid,
+      // ключи), по plain http их читает и подменяет любой MITM по пути.
+      if (!uri.hasScheme || uri.scheme != 'https') {
         return false;
       }
       if (uri.host.isEmpty) return false;

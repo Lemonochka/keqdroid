@@ -801,6 +801,24 @@ abstract class AppLocalizations {
   /// **'HTTP port'**
   String get settingsHttpPortLabel;
 
+  /// No description provided for @settingsLanUsernameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get settingsLanUsernameLabel;
+
+  /// No description provided for @settingsLanPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get settingsLanPasswordLabel;
+
+  /// No description provided for @settingsLanAuthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Both fields set — devices sign in to the proxy with them. Empty — no password (anyone on your network can use it).'**
+  String get settingsLanAuthHint;
+
   /// No description provided for @settingsLocalPortsTitle.
   ///
   /// In en, this message translates to:

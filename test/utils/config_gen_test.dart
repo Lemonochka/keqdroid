@@ -190,6 +190,65 @@ void main() {
       expect((map['routing'] as Map)['domainStrategy'], 'AsIs');
     });
 
+    test('LAN inbounds are noauth without credentials', () {
+      Socks5Credentials().init('u', 'p');
+      const s = AppSettings(lanSharing: true);
+      final config =
+          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', s);
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final inbounds =
+          (map['inbounds'] as List).cast<Map<String, dynamic>>();
+
+      final socksLan = inbounds.firstWhere((i) => i['tag'] == 'socks-lan');
+      expect((socksLan['settings'] as Map)['auth'], 'noauth');
+      expect((socksLan['settings'] as Map).containsKey('accounts'), isFalse);
+
+      final httpLan = inbounds.firstWhere((i) => i['tag'] == 'http-lan');
+      expect((httpLan['settings'] as Map).containsKey('accounts'), isFalse);
+    });
+
+    test('LAN inbounds require password when both credentials are set', () {
+      Socks5Credentials().init('u', 'p');
+      const s = AppSettings(
+        lanSharing: true,
+        lanUsername: 'lan-user',
+        lanPassword: 'lan-pass',
+      );
+      final config =
+          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', s);
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final inbounds =
+          (map['inbounds'] as List).cast<Map<String, dynamic>>();
+
+      final socksLan = inbounds.firstWhere((i) => i['tag'] == 'socks-lan');
+      expect((socksLan['settings'] as Map)['auth'], 'password');
+      expect((socksLan['settings'] as Map)['accounts'],
+          [{'user': 'lan-user', 'pass': 'lan-pass'}]);
+      // UDP-режим SOCKS сохраняется и с паролем
+      expect((socksLan['settings'] as Map)['udp'], isTrue);
+
+      final httpLan = inbounds.firstWhere((i) => i['tag'] == 'http-lan');
+      expect((httpLan['settings'] as Map)['accounts'],
+          [{'user': 'lan-user', 'pass': 'lan-pass'}]);
+
+      // локальные loopback-инбаунды не затронуты LAN-кредами
+      final socksIn = inbounds.firstWhere((i) => i['tag'] == 'socks-in');
+      final accounts =
+          ((socksIn['settings'] as Map)['accounts'] as List).cast<Map>();
+      expect(accounts.single['user'], 'u');
+    });
+
+    test('half-filled LAN credentials fall back to noauth', () {
+      Socks5Credentials().init('u', 'p');
+      const s = AppSettings(lanSharing: true, lanUsername: 'only-user');
+      final config =
+          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', s);
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final socksLan = ((map['inbounds'] as List).cast<Map<String, dynamic>>())
+          .firstWhere((i) => i['tag'] == 'socks-lan');
+      expect((socksLan['settings'] as Map)['auth'], 'noauth');
+    });
+
     test('newline-separated routing lists parse per line, same as commas', () {
       Socks5Credentials().init('u', 'p');
       // UI обещает «по одному в строке или через запятую»; сплит только по ','

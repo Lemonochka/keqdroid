@@ -12,6 +12,8 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
   String? _localIp;
   late TextEditingController _socksCtrl;
   late TextEditingController _httpCtrl;
+  late TextEditingController _userCtrl;
+  late TextEditingController _passCtrl;
 
   @override
   void initState() {
@@ -19,6 +21,8 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     final s = widget.settingsAsync.value ?? const AppSettings();
     _socksCtrl = TextEditingController(text: s.lanSocksPort.toString());
     _httpCtrl = TextEditingController(text: s.lanHttpPort.toString());
+    _userCtrl = TextEditingController(text: s.lanUsername);
+    _passCtrl = TextEditingController(text: s.lanPassword);
     _fetchLocalIp();
   }
 
@@ -26,6 +30,8 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
   void dispose() {
     _socksCtrl.dispose();
     _httpCtrl.dispose();
+    _userCtrl.dispose();
+    _passCtrl.dispose();
     super.dispose();
   }
 
@@ -57,11 +63,20 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     } catch (_) {}
   }
 
-  Future<void> _saveSettings(AppSettings current, {bool? lanSharing, int? socksPort, int? httpPort}) async {
+  Future<void> _saveSettings(
+    AppSettings current, {
+    bool? lanSharing,
+    int? socksPort,
+    int? httpPort,
+    String? username,
+    String? password,
+  }) async {
     await ref.read(settingsNotifierProvider.notifier).save(current.copyWith(
       lanSharing: lanSharing,
       lanSocksPort: socksPort,
       lanHttpPort: httpPort,
+      lanUsername: username,
+      lanPassword: password,
     ));
   }
 
@@ -199,6 +214,33 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _textField(
+                    context,
+                    l10n.settingsLanUsernameLabel,
+                    _userCtrl,
+                    (v) => _saveSettings(settings, username: v.trim()),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _textField(
+                    context,
+                    l10n.settingsLanPasswordLabel,
+                    _passCtrl,
+                    (v) => _saveSettings(settings, password: v),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l10n.settingsLanAuthHint,
+              style: TextStyle(fontSize: 11, color: AppTheme.textLight(context)),
+            ),
           ],
           if (isConnected && isLan)
             Padding(
@@ -238,6 +280,30 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
           child: Icon(Icons.copy, size: 14, color: AppTheme.textLight(context)),
         ),
       ],
+    );
+  }
+
+  Widget _textField(BuildContext context, String label, TextEditingController ctrl, ValueChanged<String> onSubmit) {
+    return TextField(
+      controller: ctrl,
+      style: TextStyle(fontSize: 14, color: AppTheme.text(context)),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.textLight(context).withValues(alpha: 0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.accent(context)),
+        ),
+        isDense: true,
+      ),
+      onSubmitted: onSubmit,
+      onEditingComplete: () => onSubmit(ctrl.text),
     );
   }
 

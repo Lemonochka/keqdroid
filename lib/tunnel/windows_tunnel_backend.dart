@@ -167,9 +167,9 @@ class WindowsTunnelBackend implements TunnelBackend {
     }
   }
 
-  /// proxy-режим: keqrnel = чистый socks/http-провайдер (встроенный xray
-  /// поднимает inbounds из xray-конфига), системный прокси Windows — поверх.
-  /// sing-box TUN здесь не задействован, админ не нужен.
+  /// proxy-режим: локальные socks/http (и LAN-инбаунды при шаринге) слушает
+  /// sing-box-часть keqrnel, внутри — встроенный xray. Системный прокси
+  /// Windows — поверх. sing-box TUN здесь не задействован, админ не нужен.
   Future<void> _startKeqrnelProxySession(TunnelSessionRequest request) async {
     final bin = await WindowsCorePaths.keqrnelExecutable();
     if (bin == null) {

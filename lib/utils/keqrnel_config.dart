@@ -58,7 +58,8 @@ class KeqrnelConfig {
   /// сервера) во встроенный xray-движок, без sing-box TUN. Используется там, где
   /// туннель/прокси держит кто-то другой:
   ///  - Android: VpnService + tun2socks (keqrnel = drop-in замена libxray.so);
-  ///  - desktop proxy-режим: системный прокси Windows поверх socks/http keqrnel.
+  ///  - эфемерный keqrnel для url-пинга (EphemeralXrayPing).
+  /// Desktop proxy-режим идёт через [proxyWithStats] — там нужен подсчёт трафика.
   static String wrapXray(String xrayConfig) {
     final xray = jsonDecode(xrayConfig) as Map<String, dynamic>;
     final inbounds = _singboxInboundsFromXray(xray);
@@ -122,7 +123,9 @@ class KeqrnelConfig {
   /// через него в xray-bridge — поэтому sing-box его считает и отдаёт через
   /// clash_api по HTTP. Сплит-роутинг xray (direct/proxy/block по доменам/IP)
   /// сохраняется: он применяется внутри встроенного xray в core.Dial. У xray
-  /// убираем только inbounds — листенеры на стороне sing-box.
+  /// убираем все inbounds: loopback-листенеры sing-box поднимает сам, а
+  /// LAN-инбаунды (socks-lan/http-lan) переезжают на его сторону вместе с
+  /// кредами; вход в них, как и в xray-роутинге, только с частных адресов.
   static String proxyWithStats({
     required String xrayConfig,
     required int socksPort,
@@ -130,6 +133,11 @@ class KeqrnelConfig {
     required int clashPort,
   }) {
     final xray = jsonDecode(xrayConfig) as Map<String, dynamic>;
+    // Loopback-инбаунды xray не переносим — их порты уже держат socks-in/http-in.
+    final lanInbounds = _singboxInboundsFromXray(xray)
+        .where((i) => !const {'127.0.0.1', '::1', 'localhost'}.contains(i['listen']))
+        .toList();
+    final lanTags = [for (final i in lanInbounds) i['tag'] as String];
     xray.remove('inbounds');
 
     final box = <String, dynamic>{
@@ -150,13 +158,38 @@ class KeqrnelConfig {
           'listen': '127.0.0.1',
           'listen_port': httpPort,
         },
+        ...lanInbounds,
       ],
       'outbounds': [
         {'type': 'xray', 'tag': 'proxy', 'xray': xray},
         {'type': 'direct', 'tag': 'direct'},
+        if (lanTags.isNotEmpty) {'type': 'block', 'tag': 'block'},
       ],
-      'route': {'final': 'proxy'},
+      'route': {
+        // Зеркало source-правил xray-роутинга (ConfigGeneratorV2): LAN-инбаунды
+        // доступны только с частных адресов, прочие источники — block.
+        if (lanTags.isNotEmpty)
+          'rules': [
+            {
+              'inbound': lanTags,
+              'source_ip_cidr': _lanAllowedSources,
+              'outbound': 'proxy',
+            },
+            {'inbound': lanTags, 'outbound': 'block'},
+          ],
+        'final': 'proxy',
+      },
     };
     return const JsonEncoder.withIndent('  ').convert(box);
   }
+
+  /// Частные диапазоны, которым открыт вход в LAN-инбаунды — тот же список,
+  /// что в source-правиле xray-роутинга (ConfigGeneratorV2).
+  static const _lanAllowedSources = [
+    '10.0.0.0/8',
+    '172.16.0.0/12',
+    '192.168.0.0/16',
+    '169.254.0.0/16',
+    '127.0.0.0/8',
+  ];
 }
