@@ -190,6 +190,32 @@ void main() {
       expect((map['routing'] as Map)['domainStrategy'], 'AsIs');
     });
 
+    test('newline-separated routing lists parse per line, same as commas', () {
+      Socks5Credentials().init('u', 'p');
+      // UI обещает «по одному в строке или через запятую»; сплит только по ','
+      // склеивал построчные записи в один несрабатывающий domain-токен.
+      const s = AppSettings(directRules: 'yandex.ru\nvk.com\n192.168.50.0/24');
+      final config =
+          ConfigGeneratorV2.generateConfig('vless://uuid@example.com:443', s);
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final rules =
+          ((map['routing'] as Map)['rules'] as List).cast<Map<String, dynamic>>();
+
+      final domainRule = rules.firstWhere((r) =>
+          r['outboundTag'] == 'direct' &&
+          (r['domain'] as List?)?.contains('domain:yandex.ru') == true);
+      expect(domainRule['domain'], contains('domain:vk.com'));
+      expect(
+        (domainRule['domain'] as List).any((d) => (d as String).contains('\n')),
+        isFalse,
+      );
+
+      final hasCidr = rules.any((r) =>
+          r['outboundTag'] == 'direct' &&
+          (r['ip'] as List?)?.contains('192.168.50.0/24') == true);
+      expect(hasCidr, true);
+    });
+
     test('builds Trojan outbound with TLS', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(

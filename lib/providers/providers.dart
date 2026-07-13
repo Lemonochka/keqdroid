@@ -772,6 +772,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   AppLifecycleListener? _androidLifecycle;
 
   void _applyNativeState(VpnState s) {
+    _restoreSocksCredentialsIfNeeded(s);
     if (_serverSwitchInProgress && s.status == VpnStatus.error) return;
     if (_connectInFlight) {
       if (s.status == VpnStatus.error ||
@@ -792,6 +793,36 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       return;
     }
     state = AsyncData(s);
+  }
+
+  bool _credsRestoreInFlight = false;
+
+  /// VpnService на Android переживает пересоздание Flutter-движка, а синглтон
+  /// Socks5Credentials живёт в Dart-изоляте: свежий изолят видит connected, но
+  /// ходит в запароленный локальный http-инбаунд без Proxy-Authorization и
+  /// получает 407 (проверка обновлений, рефреш подписок). Подтягиваем креды
+  /// работающей сессии из нативного сервиса. Connect-flow перезапишет их при
+  /// следующем подключении через Socks5Credentials().init.
+  void _restoreSocksCredentialsIfNeeded(VpnState s) {
+    if (!Platform.isAndroid) return;
+    if (s.status != VpnStatus.connected) return;
+    if (Socks5Credentials().isInitialized) return;
+    if (_credsRestoreInFlight) return;
+    _credsRestoreInFlight = true;
+    unawaited(() async {
+      try {
+        final creds =
+            await ref.read(vpnEngineProvider).fetchActiveSocksCredentials();
+        if (creds != null) {
+          Socks5Credentials().init(creds.username, creds.password);
+          AppLogger.instance.info(
+            'SOCKS5 credentials restored from the running VPN service',
+          );
+        }
+      } finally {
+        _credsRestoreInFlight = false;
+      }
+    }());
   }
 
   void _startAndroidPolling() {

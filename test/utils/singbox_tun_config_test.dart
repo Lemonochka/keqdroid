@@ -283,4 +283,66 @@ void main() {
     );
     expect(proxyDns['type'], 'https'); // дефолтный DoH, а не выключенный кастом
   });
+
+  Map<String, dynamic> dnsFor(AppSettings settings) {
+    final json = SingBoxTunConfigGen.generate(
+      localSocksPort: 10808,
+      socksUsername: 'u',
+      socksPassword: 'p',
+      serverIpToExclude: '1.2.3.4',
+      settings: settings,
+    );
+    return (jsonDecode(json) as Map<String, dynamic>)['dns']
+        as Map<String, dynamic>;
+  }
+
+  test('direct-list domains resolve via local-dns (split-DNS), rest via tunnel', () {
+    // hijack-dns перехватывает все запросы, поэтому корпоративные/LAN-зоны
+    // достижимы только через dns.rules → local-dns; без правила домен из
+    // Direct-списка получает NXDOMAIN от публичного DoH при direct-маршруте.
+    final dns = dnsFor(const AppSettings(
+      directRules: 'ru, .corp.example, full:host.exact, 10.0.0.0/8',
+    ));
+
+    final rules = (dns['rules'] as List).cast<Map<String, dynamic>>();
+    expect(rules, hasLength(1));
+    final rule = rules.single;
+    expect(rule['server'], 'local-dns');
+    expect(rule['domain'], ['host.exact']);
+    expect(rule['domain_suffix'], containsAll(['ru', 'corp.example']));
+    // IP/CIDR-записи — не доменные, в dns-правило не попадают
+    expect((rule['domain_suffix'] as List), isNot(contains('10.0.0.0/8')));
+    // всё остальное по-прежнему резолвится через туннель
+    expect(dns['final'], 'proxy-dns');
+  });
+
+  test('no dns.rules emitted when the direct list has no domains', () {
+    final dns = dnsFor(const AppSettings(directRules: '10.0.0.0/8'));
+    expect(dns.containsKey('rules'), isFalse);
+    expect(dns['final'], 'proxy-dns');
+  });
+
+  test('newline-separated routing lists parse per line, same as commas', () {
+    final rules = _rules(SingBoxTunConfigGen.generate(
+      localSocksPort: 10808,
+      socksUsername: 'u',
+      socksPassword: 'p',
+      serverIpToExclude: '1.2.3.4',
+      settings: const AppSettings(
+        directRules: 'yandex.ru\n192.168.50.0/24\nvk.com',
+      ),
+    ));
+
+    final domainRule = rules.firstWhere(
+      (r) => r['outbound'] == 'direct' && r.containsKey('domain_suffix'),
+    );
+    expect(domainRule['domain_suffix'], containsAll(['yandex.ru', 'vk.com']));
+
+    final cidrRule = rules.firstWhere(
+      (r) =>
+          r['outbound'] == 'direct' &&
+          (r['ip_cidr'] as List?)?.contains('192.168.50.0/24') == true,
+    );
+    expect(cidrRule, isNotNull);
+  });
 }

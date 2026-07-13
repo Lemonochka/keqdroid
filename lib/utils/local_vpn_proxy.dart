@@ -16,12 +16,15 @@ void configureDioForLocalVpnHttpProxy(
   String? username,
   String? password,
 }) {
-  final user = username ?? Socks5Credentials().username;
-  final pass = password ?? Socks5Credentials().password;
   final host = InternetAddress.loopbackIPv4.address;
 
   dio.httpClientAdapter = IOHttpClientAdapter(
     createHttpClient: () {
+      // Синглтон читается в момент первого запроса, а не сборки Dio: на
+      // Android после пересоздания изолята креды восстанавливаются из
+      // нативного сервиса асинхронно и могут появиться позже сборки.
+      final user = username ?? Socks5Credentials().username;
+      final pass = password ?? Socks5Credentials().password;
       final client = HttpClient();
       client.findProxy = (_) => 'PROXY $host:$httpPort';
       if (user.isNotEmpty && pass.isNotEmpty) {

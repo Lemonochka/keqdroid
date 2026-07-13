@@ -25,8 +25,14 @@ class SingBoxTunConfigGen {
     /// sockets measure latency from the local pc, not through the active server.
     String appProcessName = '',
   }) {
-    List<String> parseList(String s) =>
-        s.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    // Разделители — и запятая, и перевод строки: UI обещает «по одному в
+    // строке или через запятую», сплит только по ',' склеивал построчные
+    // записи в один несрабатывающий токен.
+    List<String> parseList(String s) => s
+        .split(RegExp(r'[\r\n,]+'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
 
     Map<String, dynamic> buildProxyDnsServer() {
       // Кастомный DNS уважаем только когда он включён в настройках xray-ядра.
@@ -344,6 +350,27 @@ class SingBoxTunConfigGen {
       },
     };
 
+    // Direct-домены резолвим системным резолвером (local-dns): он знает
+    // корпоративные/LAN-зоны сплит-DNS, которых у публичного DoH нет — иначе
+    // домен из Direct-списка получает NXDOMAIN, хотя маршрут для него direct.
+    // hijack-dns при этом перехватывает ВСЕ запросы (анти-leak, см. dns.final),
+    // поэтому выбор резолвера возможен только здесь, через dns.rules.
+    final directDnsParts = classifyDomains(directDomains);
+    final dnsRules = <Map<String, dynamic>>[
+      if (directDnsParts.domain.isNotEmpty ||
+          directDnsParts.domainSuffix.isNotEmpty ||
+          directDnsParts.domainRegex.isNotEmpty)
+        {
+          if (directDnsParts.domain.isNotEmpty)
+            'domain': directDnsParts.domain,
+          if (directDnsParts.domainSuffix.isNotEmpty)
+            'domain_suffix': directDnsParts.domainSuffix,
+          if (directDnsParts.domainRegex.isNotEmpty)
+            'domain_regex': directDnsParts.domainRegex,
+          'server': 'local-dns',
+        },
+    ];
+
     final tun = settings.tun;
     final tunInbound = <String, dynamic>{
       'type': 'tun',
@@ -376,10 +403,12 @@ class SingBoxTunConfigGen {
           {'tag': 'local-dns', 'type': 'local'},
           buildProxyDnsServer(),
         ],
+        if (dnsRules.isNotEmpty) 'rules': dnsRules,
         'strategy': 'ipv4_only',
         // Клиентский DNS идёт через туннель (proxy-dns), а не через системный
         // резолвер: иначе на машинах с Tailscale его перехватывает MagicDNS
         // (100.100.100.100) и резолв ломается, плюс это утечка DNS мимо VPN.
+        // Исключение — direct-домены, их dns.rules выше шлют в local-dns.
         'final': 'proxy-dns',
       },
       'inbounds': [tunInbound],

@@ -72,6 +72,27 @@ class AndroidTunnelBackend implements TunnelBackend {
     }
   }
 
+  /// Креды локальных инбаундов УЖЕ работающей сессии — в отличие от
+  /// [fetchSocksCredentials], который генерирует новую пару под будущий
+  /// startVpn. Нужно свежему Dart-изоляту, когда VpnService пережил
+  /// пересоздание Flutter-движка: без этого Socks5Credentials пуст и
+  /// локальный http-инбаунд отвечает 407. null — кредов у сервиса нет.
+  Future<({String username, String password})?>
+      fetchActiveSocksCredentials() async {
+    try {
+      final result =
+          await _method.invokeMethod<Map>('getActiveSocksCredentials');
+      final username = result?['username'] as String? ?? '';
+      final password = result?['password'] as String? ?? '';
+      if (username.isEmpty || password.isEmpty) return null;
+      return (username: username, password: password);
+    } catch (_) {
+      // Восстановление — best effort: вызывающий ретраит на следующем
+      // эмите состояния.
+      return null;
+    }
+  }
+
   @override
   Future<void> startSession(TunnelSessionRequest request) async {
     try {
