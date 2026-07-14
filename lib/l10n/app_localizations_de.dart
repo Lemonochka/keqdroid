@@ -1446,6 +1446,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get errorSubUrlInvalidAction => 'Fordere eine neue URL vom Anbieter an und aktualisiere sie in der App.';
 
   @override
+  String get errorSubInsecureHttpMessage => 'Der Abo-Link nutzt unverschlüsseltes http, Updates sind blockiert.';
+
+  @override
+  String get errorSubInsecureHttpAction => 'Ersetze den Link durch seine https-Version.';
+
+  @override
+  String get subInsecureHttpWarning => 'http-Link — Updates blockiert';
+
+  @override
+  String get subSwitchToHttps => 'Auf https umstellen';
+
+  @override
   String get errorNetworkMessage => 'Der Server ist derzeit nicht erreichbar.';
 
   @override

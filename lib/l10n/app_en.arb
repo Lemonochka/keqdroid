@@ -684,6 +684,10 @@
   "errorAuthDeniedAction": "Check token/credentials and verify subscription has not expired.",
   "errorSubUrlInvalidMessage": "Subscription link is missing or expired.",
   "errorSubUrlInvalidAction": "Request a fresh URL from provider and update it in app.",
+  "errorSubInsecureHttpMessage": "Subscription link uses plain http, updates are blocked.",
+  "errorSubInsecureHttpAction": "Replace the link with its https:// version.",
+  "subInsecureHttpWarning": "http link — updates are blocked",
+  "subSwitchToHttps": "Switch to https",
   "errorNetworkMessage": "Cannot reach server right now.",
   "errorNetworkAction": "Check internet, DNS, and server availability, then retry.",
   "errorUnknownAction": "Retry operation. If issue repeats, check server and app settings."

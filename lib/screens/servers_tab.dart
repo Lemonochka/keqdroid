@@ -25,6 +25,7 @@ import '../platform/platform_bootstrap.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../ui/responsive/desktop_page_layout.dart';
 import '../utils/awg_profile.dart';
+import '../utils/clipboard_import.dart';
 import '../utils/error_messages.dart';
 import 'qr_scan_screen.dart';
 
@@ -87,6 +88,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (Platform.isAndroid) {
         unawaited(_checkLaunchAction());
+        unawaited(_checkPendingDeepLink());
       }
       _syncHeaderAnimations();
       _scheduleHeaderMeasure();
@@ -140,6 +142,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
       if (Platform.isAndroid && state == AppLifecycleState.resumed) {
         unawaited(_syncVpnStateFromNative());
         unawaited(_checkLaunchAction());
+        unawaited(_checkPendingDeepLink());
       }
     }
   }
@@ -210,6 +213,11 @@ class _ServersTabState extends ConsumerState<ServersTab>
       await _checkLaunchAction();
       return;
     }
+    if (call.method == 'onDeepLink') {
+      final url = ((call.arguments as Map?)?['url'] as String?)?.trim();
+      if (url != null && url.isNotEmpty) await _importDeepLink(url);
+      return;
+    }
     // Notification / QS tile may send a quick status snapshot via native
     // method channel when EventChannel stream isn't connected. In that case
     // trigger an explicit sync from native to update VPN state in Riverpod.
@@ -221,6 +229,39 @@ class _ServersTabState extends ConsumerState<ServersTab>
       } catch (e, st) {
         AppLogger.instance.debug('Failed to sync VPN state from native', error: e, stackTrace: st);
       }
+    }
+  }
+
+  /// Ссылка со схемой сервера (vless:// и т.п.), которой открыли приложение
+  /// снаружи (Telegram, браузер). Холодный старт — забираем одноразовую
+  /// pending-ссылку у натива; тёплый приходит пушем onDeepLink.
+  Future<void> _checkPendingDeepLink() async {
+    if (!VpnNativeBridge.supportsDeepLinks) return;
+    try {
+      final url = (await VpnNativeBridge.getPendingDeepLink())?.trim();
+      if (url == null || url.isEmpty || !mounted) return;
+      await _importDeepLink(url);
+    } catch (e, st) {
+      AppLogger.instance.debug(
+        'Failed to handle pending deep link',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  Future<void> _importDeepLink(String raw) async {
+    if (!mounted) return;
+    // Тот же путь, что вставка/QR: дубликат или битая ссылка показываются
+    // как ошибка импорта, а не роняют обработчик.
+    final result = await _addConfigsResilient([raw]);
+    if (!mounted) return;
+    if (result.firstError != null) {
+      _showImportError(context, result.firstError!);
+    } else {
+      _showSnack(
+        AppLocalizations.of(context)!.serversImportedSummary(result.added, 1),
+      );
     }
   }
 
@@ -1074,6 +1115,29 @@ class _ServersTabState extends ConsumerState<ServersTab>
             l10n.serversEmptyHint,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.accentContainer(context),
+              foregroundColor: AppTheme.onAccentContainer(context),
+            ),
+            onPressed: () => _showAddServerDialog(context),
+            icon: const Icon(Icons.add, size: 18),
+            label: Text(l10n.serversAddServer),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () => pasteServersFromClipboard(context, ref),
+            icon: Icon(
+              Icons.content_paste,
+              size: 16,
+              color: AppTheme.accent(context),
+            ),
+            label: Text(
+              l10n.serversPasteLinks,
+              style: TextStyle(color: AppTheme.accent(context)),
+            ),
           ),
         ],
       ),

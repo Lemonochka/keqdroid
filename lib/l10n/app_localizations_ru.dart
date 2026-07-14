@@ -1448,6 +1448,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorSubUrlInvalidAction => 'Запросите новую ссылку у провайдера и обновите её в приложении.';
 
   @override
+  String get errorSubInsecureHttpMessage => 'Ссылка подписки использует открытый http, обновления заблокированы.';
+
+  @override
+  String get errorSubInsecureHttpAction => 'Замените ссылку на её https-версию.';
+
+  @override
+  String get subInsecureHttpWarning => 'http-ссылка — обновления заблокированы';
+
+  @override
+  String get subSwitchToHttps => 'Исправить на https';
+
+  @override
   String get errorNetworkMessage => 'Сервер сейчас недоступен.';
 
   @override

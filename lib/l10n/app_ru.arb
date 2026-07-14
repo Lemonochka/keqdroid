@@ -684,6 +684,10 @@
   "errorAuthDeniedAction": "Проверьте токен/учётные данные и срок действия подписки.",
   "errorSubUrlInvalidMessage": "Ссылка подписки не найдена или устарела.",
   "errorSubUrlInvalidAction": "Запросите новую ссылку у провайдера и обновите её в приложении.",
+  "errorSubInsecureHttpMessage": "Ссылка подписки использует открытый http, обновления заблокированы.",
+  "errorSubInsecureHttpAction": "Замените ссылку на её https-версию.",
+  "subInsecureHttpWarning": "http-ссылка — обновления заблокированы",
+  "subSwitchToHttps": "Исправить на https",
   "errorNetworkMessage": "Сервер сейчас недоступен.",
   "errorNetworkAction": "Проверьте интернет, DNS и доступность сервера, затем повторите.",
   "errorUnknownAction": "Повторите операцию. Если ошибка повторяется, проверьте сервер и настройки приложения."

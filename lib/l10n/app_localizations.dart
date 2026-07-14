@@ -2799,6 +2799,30 @@ abstract class AppLocalizations {
   /// **'Request a fresh URL from provider and update it in app.'**
   String get errorSubUrlInvalidAction;
 
+  /// No description provided for @errorSubInsecureHttpMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription link uses plain http, updates are blocked.'**
+  String get errorSubInsecureHttpMessage;
+
+  /// No description provided for @errorSubInsecureHttpAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace the link with its https:// version.'**
+  String get errorSubInsecureHttpAction;
+
+  /// No description provided for @subInsecureHttpWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'http link — updates are blocked'**
+  String get subInsecureHttpWarning;
+
+  /// No description provided for @subSwitchToHttps.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to https'**
+  String get subSwitchToHttps;
+
   /// No description provided for @errorNetworkMessage.
   ///
   /// In en, this message translates to:

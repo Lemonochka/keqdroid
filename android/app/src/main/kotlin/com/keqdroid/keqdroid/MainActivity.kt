@@ -17,6 +17,7 @@ import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.net.VpnService
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
 import android.util.Base64
@@ -62,6 +63,10 @@ class MainActivity : FlutterFragmentActivity() {
         }
     private var pendingSocksUsername: String? = null
     private var pendingSocksPassword: String? = null
+
+    // Серверная ссылка (vless:// и т.п.), которой открыли приложение с холодного
+    // старта: Dart забирает её через getPendingDeepLink, когда UI уже поднят.
+    private var pendingDeepLink: String? = null
     private var eventSink: EventChannel.EventSink? = null
     private var telemetryJob: Job? = null
     private var lastStatusError: String? = null
@@ -115,6 +120,14 @@ class MainActivity : FlutterFragmentActivity() {
             ensureVpnServiceBound()
         }
     }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        pendingDeepLink = deepLinkFrom(intent)
+    }
+
+    private fun deepLinkFrom(intent: Intent?): String? =
+        if (intent?.action == Intent.ACTION_VIEW) intent.data?.toString() else null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -267,6 +280,12 @@ class MainActivity : FlutterFragmentActivity() {
                         "clearLaunchAction" -> {
                             intent?.removeExtra(EXTRA_LAUNCH_ACTION)
                             result.success(null)
+                        }
+                        "getPendingDeepLink" -> {
+                            // Одноразовая выдача: повторный запрос (resumed после
+                            // пересоздания активности) не должен импортировать ссылку дважды.
+                            result.success(pendingDeepLink)
+                            pendingDeepLink = null
                         }
                         "getAndroidId" -> {
                             val androidId = Settings.Secure.getString(
@@ -602,6 +621,16 @@ class MainActivity : FlutterFragmentActivity() {
         // приложение уже в фоне и тайл открывает его через openAppForConnect().
         setIntent(intent)
         notifyLaunchActionIfNeeded()
+        // Тёплый старт по серверной ссылке: активность жива — пушим ссылку в Dart
+        // сразу; без канала (движок пересоздаётся) откладываем до getPendingDeepLink.
+        deepLinkFrom(intent)?.let { url ->
+            val ch = methodChannel
+            if (ch == null) {
+                pendingDeepLink = url
+            } else {
+                mainScope.launch { ch.invokeMethod("onDeepLink", mapOf("url" to url)) }
+            }
+        }
     }
 
     private fun notifyLaunchActionIfNeeded() {

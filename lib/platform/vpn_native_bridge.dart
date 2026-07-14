@@ -11,6 +11,7 @@ class VpnNativeBridge {
   static const channel = MethodChannel('keqdis_vpn_channel');
 
   static bool get supportsNotificationLaunch => Platform.isAndroid;
+  static bool get supportsDeepLinks => Platform.isAndroid;
   static bool get supportsAutostartNotification => Platform.isWindows;
   static bool get supportsTrayMenu => Platform.isWindows;
   static bool get supportsGlobalHotkeys => Platform.isWindows;
@@ -29,6 +30,13 @@ class VpnNativeBridge {
   static Future<void> clearLaunchAction() async {
     if (!supportsNotificationLaunch) return;
     await channel.invokeMethod<void>('clearLaunchAction');
+  }
+
+  /// Ссылка vless://…, с которой систему попросили открыть приложение
+  /// (холодный старт). Одноразовая: натив отдаёт и забывает её.
+  static Future<String?> getPendingDeepLink() async {
+    if (!supportsDeepLinks) return null;
+    return channel.invokeMethod<String>('getPendingDeepLink');
   }
 
   static void registerLaunchHandler(

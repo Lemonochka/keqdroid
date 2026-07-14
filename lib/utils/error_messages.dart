@@ -15,6 +15,7 @@ enum UiErrorCode {
   configInvalid,
   authDenied,
   subUrlInvalid,
+  subUrlInsecureHttp,
   network,
   unknown,
 }
@@ -92,6 +93,18 @@ UiErrorMessage explainError(Object error) {
       title: 'Provider Configuration Required',
       message: 'Provider has no hosts assigned to this subscription.',
       action: 'Open provider panel, add/assign hosts, then refresh subscription.',
+    );
+  }
+
+  // Раньше generic-веток: «insecure http» содержит «http», а тексты про
+  // forbidden/401/403 перехватили бы его как чужой случай.
+  if (msg.contains('insecure http')) {
+    return const UiErrorMessage(
+      kind: UiErrorKind.config,
+      code: UiErrorCode.subUrlInsecureHttp,
+      title: 'Insecure Subscription URL',
+      message: 'Subscription link uses plain http, updates are blocked.',
+      action: 'Replace the link with its https:// version.',
     );
   }
 
@@ -209,6 +222,10 @@ UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
     UiErrorCode.subUrlInvalid => (
         l10n.errorSubUrlInvalidMessage,
         l10n.errorSubUrlInvalidAction,
+      ),
+    UiErrorCode.subUrlInsecureHttp => (
+        l10n.errorSubInsecureHttpMessage,
+        l10n.errorSubInsecureHttpAction,
       ),
     UiErrorCode.network => (
         l10n.errorNetworkMessage,
