@@ -1446,6 +1446,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorSubUrlInvalidAction => '请向提供商索取新链接并在应用中更新。';
 
   @override
+  String get errorSubInsecureHttpMessage => '订阅链接使用明文 http，更新已被阻止。';
+
+  @override
+  String get errorSubInsecureHttpAction => '请将链接替换为 https 版本。';
+
+  @override
+  String get subInsecureHttpWarning => 'http 链接 — 更新已被阻止';
+
+  @override
+  String get subSwitchToHttps => '改用 https';
+
+  @override
   String get errorNetworkMessage => '目前无法连接服务器。';
 
   @override

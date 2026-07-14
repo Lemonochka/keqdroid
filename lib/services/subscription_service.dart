@@ -213,6 +213,11 @@ class SubscriptionService {
   Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent})>
   fetchRaw(String url, {CancelToken? cancelToken, String? userAgent}) async {
     if (!isSafeUrl(url)) {
+      // http выделяем в отдельное сообщение: у него в UI точечный фикс
+      // («Исправить на https» в карточке подписки), а не generic Forbidden URL.
+      if (Uri.tryParse(url)?.scheme.toLowerCase() == 'http') {
+        throw SubscriptionFetchException('Insecure http URL', url: url);
+      }
       throw SubscriptionFetchException('Forbidden URL', url: url);
     }
 

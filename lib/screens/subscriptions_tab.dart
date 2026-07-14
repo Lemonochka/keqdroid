@@ -499,6 +499,31 @@ class _SubItem extends ConsumerStatefulWidget {
 class _SubItemState extends ConsumerState<_SubItem> {
   AppLocalizations get l10n => AppLocalizations.of(context)!;
 
+  bool get _isInsecureHttp =>
+      widget.sub.url.trim().toLowerCase().startsWith('http://');
+
+  /// Точечный фикс для http-подписки: с 0.7.6 такие не обновляются
+  /// (isSafeUrl принимает только https). Меняем схему и сразу пробуем обновить.
+  Future<void> _switchToHttps() async {
+    final httpsUrl = widget.sub.url
+        .trim()
+        .replaceFirst(RegExp(r'^http://', caseSensitive: false), 'https://');
+    await ref
+        .read(subscriptionsProvider.notifier)
+        .editMeta(widget.sub.id, url: httpsUrl);
+    try {
+      await widget.onRefresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(friendlyError(e, context)),
+          backgroundColor: AppTheme.red(context),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sub = widget.sub;
@@ -678,6 +703,41 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (_isInsecureHttp)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          children: [
+                            Icon(Icons.lock_open, size: 14, color: orangeColor),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                l10n.subInsecureHttpWarning,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: orangeColor,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _switchToHttps,
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                              ),
+                              child: Text(
+                                l10n.subSwitchToHttps,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: accentColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 10),
                     Row(
                       children: [

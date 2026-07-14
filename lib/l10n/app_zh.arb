@@ -684,6 +684,10 @@
   "errorAuthDeniedAction": "请检查令牌/凭据，并确认订阅未过期。",
   "errorSubUrlInvalidMessage": "订阅链接缺失或已过期。",
   "errorSubUrlInvalidAction": "请向提供商索取新链接并在应用中更新。",
+  "errorSubInsecureHttpMessage": "订阅链接使用明文 http，更新已被阻止。",
+  "errorSubInsecureHttpAction": "请将链接替换为 https 版本。",
+  "subInsecureHttpWarning": "http 链接 — 更新已被阻止",
+  "subSwitchToHttps": "改用 https",
   "errorNetworkMessage": "目前无法连接服务器。",
   "errorNetworkAction": "请检查网络、DNS 和服务器可用性，然后重试。",
   "errorUnknownAction": "请重试。若问题重复出现，请检查服务器和应用设置。"

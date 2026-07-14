@@ -1446,6 +1446,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorSubUrlInvalidAction => 'Request a fresh URL from provider and update it in app.';
 
   @override
+  String get errorSubInsecureHttpMessage => 'Subscription link uses plain http, updates are blocked.';
+
+  @override
+  String get errorSubInsecureHttpAction => 'Replace the link with its https:// version.';
+
+  @override
+  String get subInsecureHttpWarning => 'http link — updates are blocked';
+
+  @override
+  String get subSwitchToHttps => 'Switch to https';
+
+  @override
   String get errorNetworkMessage => 'Cannot reach server right now.';
 
   @override

@@ -14,6 +14,7 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
   late TextEditingController _httpCtrl;
   late TextEditingController _userCtrl;
   late TextEditingController _passCtrl;
+  bool _lanPassVisible = false;
 
   @override
   void initState() {
@@ -232,6 +233,7 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
                     l10n.settingsLanPasswordLabel,
                     _passCtrl,
                     (v) => _saveSettings(settings, password: v),
+                    obscurable: true,
                   ),
                 ),
               ],
@@ -283,9 +285,10 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     );
   }
 
-  Widget _textField(BuildContext context, String label, TextEditingController ctrl, ValueChanged<String> onSubmit) {
+  Widget _textField(BuildContext context, String label, TextEditingController ctrl, ValueChanged<String> onSubmit, {bool obscurable = false}) {
     return TextField(
       controller: ctrl,
+      obscureText: obscurable && !_lanPassVisible,
       style: TextStyle(fontSize: 14, color: AppTheme.text(context)),
       decoration: InputDecoration(
         labelText: label,
@@ -300,6 +303,16 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: AppTheme.accent(context)),
         ),
+        suffixIcon: obscurable
+            ? IconButton(
+                icon: Icon(
+                  _lanPassVisible ? Icons.visibility_off : Icons.visibility,
+                  size: 18,
+                  color: AppTheme.textLight(context),
+                ),
+                onPressed: () => setState(() => _lanPassVisible = !_lanPassVisible),
+              )
+            : null,
         isDense: true,
       ),
       onSubmitted: onSubmit,
