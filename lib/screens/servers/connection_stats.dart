@@ -34,6 +34,16 @@ class _ConnectionStats extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Видимость чипов настраивается в Appearance: трафик (скорость + объём)
+    // и время подключения — отдельными переключателями.
+    final (showTraffic, showTime) = ref.watch(
+      settingsNotifierProvider.select((async) {
+        final s = async.value ?? const AppSettings();
+        return (s.showTrafficStats, s.showConnectionTime);
+      }),
+    );
+    if (!showTraffic && !showTime) return const SizedBox.shrink();
+
     final stats = ref.watch(
       vpnStateProvider.select((a) {
         final v = a.value;
@@ -46,33 +56,41 @@ class _ConnectionStats extends ConsumerWidget {
       padding: const EdgeInsets.only(top: 10),
       // Все чипы — один семантический узел (см. комментарий в _ServerTile).
       child: MergeSemantics(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _statChip(
-              context,
-              icon: Icons.arrow_downward,
-              value: _formatVpnRate(stats.$1),
-            ),
-            const SizedBox(width: 8),
-            _statChip(
-              context,
-              icon: Icons.arrow_upward,
-              value: _formatVpnRate(stats.$2),
-            ),
-            const SizedBox(width: 8),
-            _statChip(
-              context,
-              label: context.l10n.statsInLabel,
-              value: _formatVpnBytes(stats.$3),
-            ),
-            const SizedBox(width: 8),
-            _statChip(
-              context,
-              label: context.l10n.statsTimeLabel,
-              value: _formatVpnDuration(stats.$4),
-            ),
-          ],
+        // На узких экранах четыре чипа могут не влезть на пару пикселей
+        // (RenderFlex overflow) — scaleDown чуть ужимает ряд вместо переноса.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (showTraffic) ...[
+                _statChip(
+                  context,
+                  icon: Icons.arrow_downward,
+                  value: _formatVpnRate(stats.$1),
+                ),
+                const SizedBox(width: 8),
+                _statChip(
+                  context,
+                  icon: Icons.arrow_upward,
+                  value: _formatVpnRate(stats.$2),
+                ),
+                const SizedBox(width: 8),
+                _statChip(
+                  context,
+                  label: context.l10n.statsInLabel,
+                  value: _formatVpnBytes(stats.$3),
+                ),
+              ],
+              if (showTraffic && showTime) const SizedBox(width: 8),
+              if (showTime)
+                _statChip(
+                  context,
+                  label: context.l10n.statsTimeLabel,
+                  value: _formatVpnDuration(stats.$4),
+                ),
+            ],
+          ),
         ),
       ),
     );

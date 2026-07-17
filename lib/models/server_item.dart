@@ -17,14 +17,24 @@ class ServerItem {
   final String? subscriptionId;
   final String? subscriptionName;
   final DateTime addedAt;
-  final bool isFavorite;
+  /// Пользовательское имя: перекрывает имя из конфига, переживает обновление
+  /// подписки (переносится в copyWith при stable-match). null/пусто — имя
+  /// берётся из конфига как раньше.
+  final String? customName;
+  /// Момент закрепления: закреплённые серверы всегда наверху группы (порядок —
+  /// по времени пина), независимо от режима сортировки. null — не закреплён.
+  final DateTime? pinnedAt;
+  /// Конфиг подписочного сервера отредактирован вручную: при обновлении
+  /// подписки stable-match сохраняет пользовательский конфиг, а не затирает
+  /// его серверным. Для manual-серверов не используется.
+  final bool configOverridden;
   final int? pingMs;
   final DateTime? lastTestedAt;
   /// `'tcp'` | `'url'` — метод последнего пинга, нужен для цвета в UI
   final String? lastPingType;
 
   // кэш чтобы не парсить uri каждый раз
-  String? _cachedDisplayName;
+  String? _cachedDerivedName;
   String? _cachedCountryCode;
   String? _cachedAddress;
   int? _cachedPort;
@@ -38,7 +48,9 @@ class ServerItem {
     this.subscriptionId,
     this.subscriptionName,
     DateTime? addedAt,
-    this.isFavorite = false,
+    this.customName,
+    this.pinnedAt,
+    this.configOverridden = false,
     this.pingMs,
     this.lastTestedAt,
     this.lastPingType,
@@ -72,7 +84,11 @@ class ServerItem {
     addedAt: json['addedAt'] != null
         ? DateTime.parse(json['addedAt'] as String)
         : DateTime.now(),
-    isFavorite: json['isFavorite'] as bool? ?? false,
+    customName: json['customName'] as String?,
+    pinnedAt: json['pinnedAt'] != null
+        ? DateTime.tryParse(json['pinnedAt'] as String)
+        : null,
+    configOverridden: json['configOverridden'] as bool? ?? false,
     pingMs: json['pingMs'] as int?,
     lastTestedAt: json['lastTestedAt'] != null
         ? DateTime.parse(json['lastTestedAt'] as String)
@@ -87,7 +103,9 @@ class ServerItem {
     if (subscriptionId != null) 'subscriptionId': subscriptionId,
     if (subscriptionName != null) 'subscriptionName': subscriptionName,
     'addedAt': addedAt.toIso8601String(),
-    'isFavorite': isFavorite,
+    if (customName != null) 'customName': customName,
+    if (pinnedAt != null) 'pinnedAt': pinnedAt!.toIso8601String(),
+    if (configOverridden) 'configOverridden': configOverridden,
     if (pingMs != null) 'pingMs': pingMs,
     if (lastTestedAt != null) 'lastTestedAt': lastTestedAt!.toIso8601String(),
     if (lastPingType != null) 'lastPingType': lastPingType,
@@ -100,7 +118,9 @@ class ServerItem {
     String? subscriptionId,
     String? subscriptionName,
     DateTime? addedAt,
-    bool? isFavorite,
+    Object? customName = _sentinel,
+    Object? pinnedAt = _sentinel,
+    bool? configOverridden,
     Object? pingMs = _sentinel,
     Object? lastTestedAt = _sentinel,
     Object? lastPingType = _sentinel,
@@ -112,7 +132,11 @@ class ServerItem {
         subscriptionId: subscriptionId ?? this.subscriptionId,
         subscriptionName: subscriptionName ?? this.subscriptionName,
         addedAt: addedAt ?? this.addedAt,
-        isFavorite: isFavorite ?? this.isFavorite,
+        customName:
+            customName == _sentinel ? this.customName : customName as String?,
+        pinnedAt:
+            pinnedAt == _sentinel ? this.pinnedAt : pinnedAt as DateTime?,
+        configOverridden: configOverridden ?? this.configOverridden,
         pingMs: pingMs == _sentinel ? this.pingMs : pingMs as int?,
         lastTestedAt: lastTestedAt == _sentinel
             ? this.lastTestedAt
@@ -122,20 +146,36 @@ class ServerItem {
             : lastPingType as String?,
       );
 
-  /// Читаемое название сервера из фрагмента URI.
+  bool get isPinned => pinnedAt != null;
+
+  /// Имя для отображения: пользовательское [customName], если задано,
+  /// иначе — имя из конфига ([derivedName]).
+  String get displayName {
+    final custom = customName?.trim();
+    if (custom != null && custom.isNotEmpty) return _sanitizeUtf16(custom);
+    return derivedName;
+  }
+
+  /// Читаемое название сервера из фрагмента URI (без учёта переименования).
   ///
   /// санитизируем после decodeComponent: некоторые провайдеры суют битые
   /// surrogate-эмодзи, на которых flutter падает "string is not well-formed UTF-16".
-  String get displayName {
-    if (_cachedDisplayName != null) return _cachedDisplayName!;
+  String get derivedName {
+    if (_cachedDerivedName != null) return _cachedDerivedName!;
     try {
       if (protocol == 'awg') {
         final profile = AwgProfile.parse(config);
         final remark = profile.remark;
-        _cachedDisplayName = _sanitizeUtf16(
+        _cachedDerivedName = _sanitizeUtf16(
           (remark != null && remark.isNotEmpty) ? remark : profile.endpointHost,
         );
-        return _cachedDisplayName!;
+        return _cachedDerivedName!;
+      }
+      if (protocol == 'vmess') {
+        final ps = (_vmessPayload()?['ps'] ?? '').toString().trim();
+        if (ps.isNotEmpty) {
+          return _cachedDerivedName = _sanitizeUtf16(ps);
+        }
       }
       final uri = Uri.parse(config);
       String raw;
@@ -150,20 +190,23 @@ class ServerItem {
       } else {
         raw = uri.host;
       }
-      _cachedDisplayName = _sanitizeUtf16(raw.isEmpty ? 'Unknown Server' : raw);
+      _cachedDerivedName = _sanitizeUtf16(raw.isEmpty ? 'Unknown Server' : raw);
     } catch (_) {
-      _cachedDisplayName = 'Unknown Server';
+      _cachedDerivedName = 'Unknown Server';
     }
-    return _cachedDisplayName!;
+    return _cachedDerivedName!;
   }
 
 
   /// Имя сервера без флаг-эмодзи и кода страны в начале.
   String get cleanName => ServerNameUtils.cleanDisplayName(displayName);
 
-  /// ISO alpha-2 код страны, определённый из displayName.
+  /// ISO alpha-2 код страны. Сначала из отображаемого имени; если пользователь
+  /// переименовал сервер без страновых меток — фолбэк на имя из конфига,
+  /// чтобы флаг не пропадал после переименования.
   String? get countryCode {
-    _cachedCountryCode ??= ServerNameUtils.extractCountryCode(displayName);
+    _cachedCountryCode ??= ServerNameUtils.extractCountryCode(displayName) ??
+        ServerNameUtils.extractCountryCode(derivedName);
     return _cachedCountryCode;
   }
 

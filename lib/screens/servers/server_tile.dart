@@ -139,15 +139,36 @@ class _ServerTile extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  titleText,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-                    color: textColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    if (server.isPinned)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Transform.rotate(
+                          // слегка наклонённая канцелярская кнопка — как
+                          // «приколотый» пин в мессенджерах
+                          angle: 45 * pi / 180,
+                          child: Icon(
+                            Icons.push_pin,
+                            size: 13,
+                            color: accentColor,
+                          ),
+                        ),
+                      ),
+                    Flexible(
+                      child: Text(
+                        titleText,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight:
+                              isActive ? FontWeight.w700 : FontWeight.w600,
+                          color: textColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Row(
@@ -226,9 +247,9 @@ class _ServerTile extends ConsumerWidget {
               type: MaterialType.transparency,
               child: InkWell(
                 onTap: onTap,
-                onLongPress: () => _showOptions(context),
+                onLongPress: () => _showOptions(context, ref),
                 // на десктопе правый клик открывает то же меню
-                onSecondaryTap: () => _showOptions(context),
+                onSecondaryTap: () => _showOptions(context, ref),
                 splashColor: accentColor.withValues(alpha: 0.2),
                 highlightColor: accentColor.withValues(alpha: 0.08),
                 child: tileBody,
@@ -305,7 +326,7 @@ class _ServerTile extends ConsumerWidget {
     );
   }
 
-  void _showOptions(BuildContext context) {
+  void _showOptions(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.bg(context),
@@ -390,6 +411,72 @@ class _ServerTile extends ConsumerWidget {
                 },
               ),
               ListTile(
+                leading: Transform.rotate(
+                  angle: server.isPinned ? 0 : 45 * pi / 180,
+                  child: Icon(
+                    server.isPinned
+                        ? Icons.push_pin_outlined
+                        : Icons.push_pin,
+                    color: server.isPinned
+                        ? AppTheme.textLight(context)
+                        : AppTheme.accent(context),
+                  ),
+                ),
+                title: Text(
+                  server.isPinned
+                      ? AppLocalizations.of(context)!.serversUnpin
+                      : AppLocalizations.of(context)!.serversPin,
+                ),
+                subtitle: server.isPinned
+                    ? null
+                    : Text(
+                        AppLocalizations.of(context)!.serversPinDesc,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textLight(context),
+                        ),
+                      ),
+                onTap: () {
+                  Navigator.pop(context);
+                  unawaited(
+                    ref.read(serversProvider.notifier).togglePin(server.id),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.drive_file_rename_outline,
+                  color: AppTheme.text(context),
+                ),
+                title: Text(AppLocalizations.of(context)!.serversRename),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showRenameDialog(context, ref);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.tune, color: AppTheme.text(context)),
+                title: Text(AppLocalizations.of(context)!.serversEditConfig),
+                subtitle: Text(
+                  AppLocalizations.of(context)!.serversEditConfigDesc,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textLight(context),
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      fullscreenDialog: true,
+                      builder: (_) => ServerConfigEditorScreen(
+                        serverId: server.id,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
                 leading: Icon(Icons.copy, color: AppTheme.text(context)),
                 title: Text(AppLocalizations.of(context)!.serversCopyAddress),
                 onTap: () {
@@ -449,6 +536,128 @@ class _ServerTile extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// Диалог переименования: пишет customName поверх имени из конфига
+  /// (переживает обновление подписки); пустое или исходное имя — сброс.
+  void _showRenameDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final cardColor = AppTheme.card(context);
+    final textColor = AppTheme.text(context);
+    final textLightColor = AppTheme.textLight(context);
+    final accentColor = AppTheme.accent(context);
+    final hasCustomName = server.customName?.trim().isNotEmpty ?? false;
+    final ctrl = TextEditingController(text: server.displayName);
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.drive_file_rename_outline, color: accentColor, size: 26),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                l10n.serversRenameTitle,
+                style: TextStyle(color: textColor, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              maxLines: 1,
+              style: TextStyle(color: textColor, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: l10n.serversRenameHint,
+                hintStyle: TextStyle(
+                  color: textLightColor.withValues(alpha: 0.5),
+                ),
+                filled: true,
+                fillColor: AppTheme.bg(ctx),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: accentColor, width: 2),
+                ),
+              ),
+              onSubmitted: (_) => _applyRename(ctx, ref, ctrl.text),
+            ),
+            if (hasCustomName) ...[
+              const SizedBox(height: 8),
+              Text(
+                l10n.serversRenameOriginal(
+                  ServerNameUtils.formatForDisplay(
+                    ServerNameUtils.cleanDisplayName(server.derivedName),
+                  ),
+                ),
+                style: TextStyle(fontSize: 11, color: textLightColor),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          if (hasCustomName)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                unawaited(
+                  ref.read(serversProvider.notifier).rename(server.id, null),
+                );
+              },
+              child: Text(
+                l10n.serversRenameReset,
+                style: TextStyle(color: textLightColor),
+              ),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              l10n.subscriptionsCancel,
+              style: TextStyle(color: textLightColor),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentContainer(ctx),
+              foregroundColor: AppTheme.onAccentContainer(ctx),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            onPressed: () => _applyRename(ctx, ref, ctrl.text),
+            child: Text(
+              l10n.subscriptionsSave,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _applyRename(BuildContext dialogCtx, WidgetRef ref, String raw) {
+    Navigator.pop(dialogCtx);
+    final name = raw.trim();
+    // имя, совпавшее с исходным из конфига, — это сброс, а не override
+    unawaited(
+      ref
+          .read(serversProvider.notifier)
+          .rename(server.id, name == server.derivedName ? null : name),
     );
   }
 

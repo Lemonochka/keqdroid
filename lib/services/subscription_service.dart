@@ -1977,12 +1977,26 @@ class SubscriptionService {
         final key = _stableKey(config);
         final stableMatch = oldByStableKey[key];
         if (stableMatch != null && usedOldIds.add(stableMatch.id)) {
-          // переиспользуем id и метаданные (pingMs, isFavorite и т.д.), но берём новый конфиг
+          // Переиспользуем id и метаданные (pingMs, customName, pinnedAt и
+          // т.д.), но берём новый конфиг. Исключение — пользователь правил
+          // конфиг руками (configOverridden): его правки не затираем, пока
+          // сервер остаётся тем же (stable key совпал).
+          if (stableMatch.configOverridden) return stableMatch;
           return stableMatch.copyWith(config: config);
         }
 
         return ServerItem.fromRaw(config, subscriptionId: sub.id);
       }).toList();
+
+      // Правленные вручную серверы, не совпавшие ни с одним конфигом подписки
+      // (пользователь сменил host/port/uuid — stable key разошёлся): рефреш не
+      // должен молча стирать правки, оставляем их в группе. Удалить такой
+      // сервер можно только вручную.
+      servers.addAll(
+        oldServers.where(
+          (s) => s.configOverridden && !usedOldIds.contains(s.id),
+        ),
+      );
 
       await _storage.replaceServersBySubscription(sub.id, servers);
 

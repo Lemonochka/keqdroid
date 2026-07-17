@@ -28,6 +28,7 @@ import '../utils/awg_profile.dart';
 import '../utils/clipboard_import.dart';
 import '../utils/error_messages.dart';
 import 'qr_scan_screen.dart';
+import 'servers/server_config_editor.dart';
 
 part 'servers/server_groups.dart';
 part 'servers/server_tile.dart';

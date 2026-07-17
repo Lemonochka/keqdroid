@@ -162,7 +162,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTitle => '设置';
 
   @override
-  String get settingsThemeTitle => '主题';
+  String get settingsThemeTitle => '外观';
 
   @override
   String get settingsSplitTitle => '分应用代理';
@@ -317,7 +317,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeModeLight => '浅色';
 
   @override
-  String get themeCustomizationTitle => '主题自定义';
+  String get themeCustomizationTitle => '外观';
 
   @override
   String get themeUseDynamicColors => '使用 Android 动态颜色';
@@ -1465,4 +1465,177 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorUnknownAction => '请重试。若问题重复出现，请检查服务器和应用设置。';
+
+  @override
+  String get serversPin => '置顶服务器';
+
+  @override
+  String get serversUnpin => '取消置顶';
+
+  @override
+  String get serversPinDesc => '置顶的服务器始终显示在列表顶部';
+
+  @override
+  String get serversRename => '重命名';
+
+  @override
+  String get serversRenameTitle => '重命名服务器';
+
+  @override
+  String get serversRenameHint => '服务器名称';
+
+  @override
+  String get serversRenameReset => '恢复默认';
+
+  @override
+  String serversRenameOriginal(Object name) {
+    return '原始名称：$name';
+  }
+
+  @override
+  String get serversEditConfig => '编辑配置';
+
+  @override
+  String get serversEditConfigDesc => 'SNI、指纹、传输方式等参数';
+
+  @override
+  String get serverEditorTitle => '服务器配置';
+
+  @override
+  String get serverEditorSectionGeneral => '服务器';
+
+  @override
+  String get serverEditorSectionSecurity => '安全';
+
+  @override
+  String get serverEditorSectionTransport => '传输';
+
+  @override
+  String get serverEditorSectionProtocol => '协议设置';
+
+  @override
+  String get serverEditorAddress => '地址';
+
+  @override
+  String get serverEditorPort => '端口';
+
+  @override
+  String get serverEditorPassword => '密码';
+
+  @override
+  String get serverEditorMethod => '加密方式';
+
+  @override
+  String get serverEditorEncryption => '加密';
+
+  @override
+  String get serverEditorSecurityMode => '安全模式';
+
+  @override
+  String get serverEditorFingerprint => '指纹 (uTLS)';
+
+  @override
+  String get serverEditorAlpn => 'ALPN（逗号分隔）';
+
+  @override
+  String get serverEditorAllowInsecure => '允许不安全证书 (insecure)';
+
+  @override
+  String get serverEditorPbk => '公钥 (pbk)';
+
+  @override
+  String get serverEditorSid => 'Short ID (sid)';
+
+  @override
+  String get serverEditorSpx => 'SpiderX (spx)';
+
+  @override
+  String get serverEditorTransportType => '类型';
+
+  @override
+  String get serverEditorPath => '路径';
+
+  @override
+  String get serverEditorServiceName => 'gRPC 服务名';
+
+  @override
+  String get serverEditorMode => '模式';
+
+  @override
+  String get serverEditorHeaderType => '伪装头类型';
+
+  @override
+  String get serverEditorAuth => '认证密码';
+
+  @override
+  String get serverEditorObfs => '混淆 (obfs)';
+
+  @override
+  String get serverEditorObfsPassword => '混淆密码';
+
+  @override
+  String get serverEditorUp => '上行 Mbps';
+
+  @override
+  String get serverEditorDown => '下行 Mbps';
+
+  @override
+  String get serverEditorMport => '端口跳跃 (mport)';
+
+  @override
+  String get serverEditorHopInterval => '跳跃间隔（秒）';
+
+  @override
+  String get serverEditorPinSha256 => '证书固定 (SHA-256)';
+
+  @override
+  String get serverEditorRawConfig => '原始配置';
+
+  @override
+  String get serverEditorRawToggle => '以文本方式编辑';
+
+  @override
+  String get serverEditorRawOnlyNote => '该格式以原始文本方式编辑';
+
+  @override
+  String get serverEditorPreview => '最终链接';
+
+  @override
+  String get serverEditorSubscriptionNote => '该服务器来自订阅：更新订阅时将保留你的修改。';
+
+  @override
+  String get serverEditorOverriddenNote => '配置已手动修改，订阅更新不再覆盖它。';
+
+  @override
+  String get serverEditorRevert => '恢复订阅配置';
+
+  @override
+  String get serverEditorSaved => '配置已保存';
+
+  @override
+  String get serverEditorReconnecting => '配置已保存，正在重新连接…';
+
+  @override
+  String get serverEditorInvalidPort => '端口无效';
+
+  @override
+  String get serverEditorServerMissing => '服务器已被删除';
+
+  @override
+  String get appearanceTabGeneral => '常规';
+
+  @override
+  String get appearanceTabThemes => '主题';
+
+  @override
+  String get appearanceShowTraffic => '显示流量';
+
+  @override
+  String get appearanceShowTrafficSubtitle => '连接按钮下方的速度和流量信息';
+
+  @override
+  String get appearanceShowTime => '显示连接时长';
+
+  @override
+  String get appearanceShowTimeSubtitle => '连接按钮下方的会话时长';
 }

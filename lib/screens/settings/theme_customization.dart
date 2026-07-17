@@ -36,29 +36,132 @@ class _ThemeCustomizationScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final current = ref.watch(settingsNotifierProvider).value ?? settings;
-    final previewDark = current.darkTheme;
     final controlsAccent = AppTheme.accent(context);
-    final isDesktop = PlatformBootstrap.isDesktop;
 
     Future<void> save(AppSettings next) async {
       await ref.read(settingsNotifierProvider.notifier).save(next);
     }
 
-    return Scaffold(
-      backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
+    // Две вкладки: «Общие» — как выглядит приложение (колонки, чипы статистики),
+    // «Темы» — всё про цвета (динамические/системные, светлая/тёмная, пресеты).
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
         backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        title: Text(l10n.themeCustomizationTitle),
+        appBar: AppBar(
+          backgroundColor: AppTheme.bg(context),
+          elevation: 0,
+          title: Text(l10n.themeCustomizationTitle),
+          bottom: TabBar(
+            labelColor: controlsAccent,
+            unselectedLabelColor: AppTheme.textLight(context),
+            indicatorColor: controlsAccent,
+            dividerColor: AppTheme.divider(context),
+            tabs: [
+              Tab(text: l10n.appearanceTabGeneral),
+              Tab(text: l10n.appearanceTabThemes),
+            ],
+          ),
+        ),
+        // Не TabBarView: его PageView при смене зависимостей (тёмная/светлая
+        // тема из этого же экрана, метрики окна) синхронизирует застрявший
+        // offset страницы через jumpToPage прямо в didChangeDependencies —
+        // «setState() called during build» в консоли. Свайп между двумя
+        // вкладками настроек не нужен, переключаем контент сами по index.
+        body: Builder(
+          builder: (context) {
+            final tabController = DefaultTabController.of(context);
+            return ListenableBuilder(
+              listenable: tabController,
+              builder: (context, _) => AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) =>
+                    FadeTransition(opacity: animation, child: child),
+                child: KeyedSubtree(
+                  key: ValueKey(tabController.index),
+                  child: tabController.index == 0
+                      ? _AppearanceGeneralTab(current: current, onSave: save)
+                      : _AppearanceThemesTab(current: current, onSave: save),
+                ),
+              ),
+            );
+          },
+        ),
       ),
-      body: SmoothScroll(
-        builder: (context, controller) => ListView(
-          controller: controller,
+    );
+  }
+}
+
+/// Вкладка «Общие»: раскладка списка серверов и чипы статистики под кнопкой.
+class _AppearanceGeneralTab extends StatelessWidget {
+  final AppSettings current;
+  final Future<void> Function(AppSettings) onSave;
+  const _AppearanceGeneralTab({required this.current, required this.onSave});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final controlsAccent = AppTheme.accent(context);
+    return SmoothScroll(
+      builder: (context, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.all(16),
+        children: [
+          SwitchListTile(
+            value: current.serversTwoColumns,
+            onChanged: (v) => onSave(current.copyWith(serversTwoColumns: v)),
+            activeThumbColor: controlsAccent,
+            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
+            secondary: Icon(Icons.view_column_outlined, color: controlsAccent),
+            title: Text(l10n.serversTwoColumnsTitle),
+            subtitle: Text(l10n.serversTwoColumnsSubtitle),
+          ),
+          SwitchListTile(
+            value: current.showTrafficStats,
+            onChanged: (v) => onSave(current.copyWith(showTrafficStats: v)),
+            activeThumbColor: controlsAccent,
+            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
+            secondary: Icon(Icons.swap_vert, color: controlsAccent),
+            title: Text(l10n.appearanceShowTraffic),
+            subtitle: Text(l10n.appearanceShowTrafficSubtitle),
+          ),
+          SwitchListTile(
+            value: current.showConnectionTime,
+            onChanged: (v) => onSave(current.copyWith(showConnectionTime: v)),
+            activeThumbColor: controlsAccent,
+            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
+            secondary: Icon(Icons.timer_outlined, color: controlsAccent),
+            title: Text(l10n.appearanceShowTime),
+            subtitle: Text(l10n.appearanceShowTimeSubtitle),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Вкладка «Темы»: динамические/системные цвета, светлая/тёмная, пресеты.
+class _AppearanceThemesTab extends StatelessWidget {
+  final AppSettings current;
+  final Future<void> Function(AppSettings) onSave;
+  const _AppearanceThemesTab({required this.current, required this.onSave});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final controlsAccent = AppTheme.accent(context);
+    final previewDark = current.darkTheme;
+    final isDesktop = PlatformBootstrap.isDesktop;
+    return SmoothScroll(
+      builder: (context, controller) => ListView(
+        controller: controller,
         padding: const EdgeInsets.all(16),
         children: [
           SwitchListTile(
             value: current.followSystemTheme,
-            onChanged: (v) => save(current.copyWith(followSystemTheme: v)),
+            onChanged: (v) => onSave(current.copyWith(followSystemTheme: v)),
             activeThumbColor: controlsAccent,
             activeTrackColor: controlsAccent.withValues(alpha: 0.32),
             secondary: Icon(
@@ -78,7 +181,7 @@ class _ThemeCustomizationScreen extends ConsumerWidget {
           _LightDarkThemeSlider(
             isDark: current.darkTheme,
             accentColor: controlsAccent,
-            onChanged: (isDark) => save(current.copyWith(darkTheme: isDark)),
+            onChanged: (isDark) => onSave(current.copyWith(darkTheme: isDark)),
           ),
           const SizedBox(height: 6),
           Text(
@@ -86,16 +189,6 @@ class _ThemeCustomizationScreen extends ConsumerWidget {
                 ? (isDesktop ? l10n.themeSystemPaletteHint : l10n.themeDynamicPaletteHint)
                 : l10n.themeCustomPaletteHint,
             style: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
-          ),
-          const SizedBox(height: 12),
-          SwitchListTile(
-            value: current.serversTwoColumns,
-            onChanged: (v) => save(current.copyWith(serversTwoColumns: v)),
-            activeThumbColor: controlsAccent,
-            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
-            secondary: Icon(Icons.view_column_outlined, color: controlsAccent),
-            title: Text(l10n.serversTwoColumnsTitle),
-            subtitle: Text(l10n.serversTwoColumnsSubtitle),
           ),
           const SizedBox(height: 14),
           Text(l10n.themeColorThemesTitle,
@@ -130,7 +223,7 @@ class _ThemeCustomizationScreen extends ConsumerWidget {
                     // Выбор пресета отключает системные цвета: пока
                     // followSystemTheme включён, пресет не применяется и
                     // галочка не рисуется — тап выглядел бы «ничего не делает».
-                    onTap: () => save(current.copyWith(
+                    onTap: () => onSave(current.copyWith(
                       themePresetId: p.id,
                       followSystemTheme: false,
                     )),
@@ -147,7 +240,6 @@ class _ThemeCustomizationScreen extends ConsumerWidget {
             },
           ),
         ],
-      ),
       ),
     );
   }

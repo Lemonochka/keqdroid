@@ -384,7 +384,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsThemeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Theme'**
+  /// **'Appearance'**
   String get settingsThemeTitle;
 
   /// No description provided for @settingsSplitTitle.
@@ -660,7 +660,7 @@ abstract class AppLocalizations {
   /// No description provided for @themeCustomizationTitle.
   ///
   /// In en, this message translates to:
-  /// **'Theme customization'**
+  /// **'Appearance'**
   String get themeCustomizationTitle;
 
   /// No description provided for @themeUseDynamicColors.
@@ -2840,6 +2840,348 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry operation. If issue repeats, check server and app settings.'**
   String get errorUnknownAction;
+
+  /// No description provided for @serversPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin server'**
+  String get serversPin;
+
+  /// No description provided for @serversUnpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin server'**
+  String get serversUnpin;
+
+  /// No description provided for @serversPinDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned servers stay on top of the list'**
+  String get serversPinDesc;
+
+  /// No description provided for @serversRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get serversRename;
+
+  /// No description provided for @serversRenameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename server'**
+  String get serversRenameTitle;
+
+  /// No description provided for @serversRenameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Server name'**
+  String get serversRenameHint;
+
+  /// No description provided for @serversRenameReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get serversRenameReset;
+
+  /// No description provided for @serversRenameOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original name: {name}'**
+  String serversRenameOriginal(Object name);
+
+  /// No description provided for @serversEditConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit configuration'**
+  String get serversEditConfig;
+
+  /// No description provided for @serversEditConfigDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'SNI, fingerprint, transport and other settings'**
+  String get serversEditConfigDesc;
+
+  /// No description provided for @serverEditorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Server configuration'**
+  String get serverEditorTitle;
+
+  /// No description provided for @serverEditorSectionGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'Server'**
+  String get serverEditorSectionGeneral;
+
+  /// No description provided for @serverEditorSectionSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get serverEditorSectionSecurity;
+
+  /// No description provided for @serverEditorSectionTransport.
+  ///
+  /// In en, this message translates to:
+  /// **'Transport'**
+  String get serverEditorSectionTransport;
+
+  /// No description provided for @serverEditorSectionProtocol.
+  ///
+  /// In en, this message translates to:
+  /// **'Protocol settings'**
+  String get serverEditorSectionProtocol;
+
+  /// No description provided for @serverEditorAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get serverEditorAddress;
+
+  /// No description provided for @serverEditorPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Port'**
+  String get serverEditorPort;
+
+  /// No description provided for @serverEditorPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get serverEditorPassword;
+
+  /// No description provided for @serverEditorMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Encryption method'**
+  String get serverEditorMethod;
+
+  /// No description provided for @serverEditorEncryption.
+  ///
+  /// In en, this message translates to:
+  /// **'Encryption'**
+  String get serverEditorEncryption;
+
+  /// No description provided for @serverEditorSecurityMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Security mode'**
+  String get serverEditorSecurityMode;
+
+  /// No description provided for @serverEditorFingerprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Fingerprint (uTLS)'**
+  String get serverEditorFingerprint;
+
+  /// No description provided for @serverEditorAlpn.
+  ///
+  /// In en, this message translates to:
+  /// **'ALPN (comma-separated)'**
+  String get serverEditorAlpn;
+
+  /// No description provided for @serverEditorAllowInsecure.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow insecure certificate (insecure)'**
+  String get serverEditorAllowInsecure;
+
+  /// No description provided for @serverEditorPbk.
+  ///
+  /// In en, this message translates to:
+  /// **'Public key (pbk)'**
+  String get serverEditorPbk;
+
+  /// No description provided for @serverEditorSid.
+  ///
+  /// In en, this message translates to:
+  /// **'Short ID (sid)'**
+  String get serverEditorSid;
+
+  /// No description provided for @serverEditorSpx.
+  ///
+  /// In en, this message translates to:
+  /// **'SpiderX (spx)'**
+  String get serverEditorSpx;
+
+  /// No description provided for @serverEditorTransportType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get serverEditorTransportType;
+
+  /// No description provided for @serverEditorPath.
+  ///
+  /// In en, this message translates to:
+  /// **'Path'**
+  String get serverEditorPath;
+
+  /// No description provided for @serverEditorServiceName.
+  ///
+  /// In en, this message translates to:
+  /// **'gRPC service name'**
+  String get serverEditorServiceName;
+
+  /// No description provided for @serverEditorMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get serverEditorMode;
+
+  /// No description provided for @serverEditorHeaderType.
+  ///
+  /// In en, this message translates to:
+  /// **'Header type'**
+  String get serverEditorHeaderType;
+
+  /// No description provided for @serverEditorAuth.
+  ///
+  /// In en, this message translates to:
+  /// **'Auth password'**
+  String get serverEditorAuth;
+
+  /// No description provided for @serverEditorObfs.
+  ///
+  /// In en, this message translates to:
+  /// **'Obfuscation (obfs)'**
+  String get serverEditorObfs;
+
+  /// No description provided for @serverEditorObfsPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Obfuscation password'**
+  String get serverEditorObfsPassword;
+
+  /// No description provided for @serverEditorUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload, Mbps'**
+  String get serverEditorUp;
+
+  /// No description provided for @serverEditorDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Download, Mbps'**
+  String get serverEditorDown;
+
+  /// No description provided for @serverEditorMport.
+  ///
+  /// In en, this message translates to:
+  /// **'Port hopping (mport)'**
+  String get serverEditorMport;
+
+  /// No description provided for @serverEditorHopInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Hop interval, s'**
+  String get serverEditorHopInterval;
+
+  /// No description provided for @serverEditorPinSha256.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate pinning (SHA-256)'**
+  String get serverEditorPinSha256;
+
+  /// No description provided for @serverEditorRawConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw config'**
+  String get serverEditorRawConfig;
+
+  /// No description provided for @serverEditorRawToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit as text'**
+  String get serverEditorRawToggle;
+
+  /// No description provided for @serverEditorRawOnlyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This format is edited as raw text'**
+  String get serverEditorRawOnlyNote;
+
+  /// No description provided for @serverEditorPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Resulting link'**
+  String get serverEditorPreview;
+
+  /// No description provided for @serverEditorSubscriptionNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This server comes from a subscription: your edits are kept when it refreshes.'**
+  String get serverEditorSubscriptionNote;
+
+  /// No description provided for @serverEditorOverriddenNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Config edited manually — subscription updates no longer replace it.'**
+  String get serverEditorOverriddenNote;
+
+  /// No description provided for @serverEditorRevert.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore subscription config'**
+  String get serverEditorRevert;
+
+  /// No description provided for @serverEditorSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration saved'**
+  String get serverEditorSaved;
+
+  /// No description provided for @serverEditorReconnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration saved, reconnecting…'**
+  String get serverEditorReconnecting;
+
+  /// No description provided for @serverEditorInvalidPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid port'**
+  String get serverEditorInvalidPort;
+
+  /// No description provided for @serverEditorServerMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Server no longer exists'**
+  String get serverEditorServerMissing;
+
+  /// No description provided for @appearanceTabGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get appearanceTabGeneral;
+
+  /// No description provided for @appearanceTabThemes.
+  ///
+  /// In en, this message translates to:
+  /// **'Themes'**
+  String get appearanceTabThemes;
+
+  /// No description provided for @appearanceShowTraffic.
+  ///
+  /// In en, this message translates to:
+  /// **'Show traffic'**
+  String get appearanceShowTraffic;
+
+  /// No description provided for @appearanceShowTrafficSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed and data usage chips under the connect button'**
+  String get appearanceShowTrafficSubtitle;
+
+  /// No description provided for @appearanceShowTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Show connection time'**
+  String get appearanceShowTime;
+
+  /// No description provided for @appearanceShowTimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session duration chip under the connect button'**
+  String get appearanceShowTimeSubtitle;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
