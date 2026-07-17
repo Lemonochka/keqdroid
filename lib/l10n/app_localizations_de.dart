@@ -162,7 +162,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTitle => 'Einstellungen';
 
   @override
-  String get settingsThemeTitle => 'Design';
+  String get settingsThemeTitle => 'Erscheinungsbild';
 
   @override
   String get settingsSplitTitle => 'Split-Tunneling';
@@ -317,7 +317,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get themeModeLight => 'Hell';
 
   @override
-  String get themeCustomizationTitle => 'Design anpassen';
+  String get themeCustomizationTitle => 'Erscheinungsbild';
 
   @override
   String get themeUseDynamicColors => 'Dynamische Android-Farben verwenden';
@@ -1465,4 +1465,177 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get errorUnknownAction => 'Versuche es erneut. Tritt der Fehler weiterhin auf, prüfe Server und App-Einstellungen.';
+
+  @override
+  String get serversPin => 'Server anheften';
+
+  @override
+  String get serversUnpin => 'Server lösen';
+
+  @override
+  String get serversPinDesc => 'Angeheftete Server bleiben oben in der Liste';
+
+  @override
+  String get serversRename => 'Umbenennen';
+
+  @override
+  String get serversRenameTitle => 'Server umbenennen';
+
+  @override
+  String get serversRenameHint => 'Servername';
+
+  @override
+  String get serversRenameReset => 'Zurücksetzen';
+
+  @override
+  String serversRenameOriginal(Object name) {
+    return 'Ursprünglicher Name: $name';
+  }
+
+  @override
+  String get serversEditConfig => 'Konfiguration bearbeiten';
+
+  @override
+  String get serversEditConfigDesc => 'SNI, Fingerprint, Transport und weitere Parameter';
+
+  @override
+  String get serverEditorTitle => 'Serverkonfiguration';
+
+  @override
+  String get serverEditorSectionGeneral => 'Server';
+
+  @override
+  String get serverEditorSectionSecurity => 'Sicherheit';
+
+  @override
+  String get serverEditorSectionTransport => 'Transport';
+
+  @override
+  String get serverEditorSectionProtocol => 'Protokoll-Einstellungen';
+
+  @override
+  String get serverEditorAddress => 'Adresse';
+
+  @override
+  String get serverEditorPort => 'Port';
+
+  @override
+  String get serverEditorPassword => 'Passwort';
+
+  @override
+  String get serverEditorMethod => 'Verschlüsselungsmethode';
+
+  @override
+  String get serverEditorEncryption => 'Verschlüsselung';
+
+  @override
+  String get serverEditorSecurityMode => 'Sicherheitsmodus';
+
+  @override
+  String get serverEditorFingerprint => 'Fingerprint (uTLS)';
+
+  @override
+  String get serverEditorAlpn => 'ALPN (durch Komma getrennt)';
+
+  @override
+  String get serverEditorAllowInsecure => 'Unsicheres Zertifikat erlauben (insecure)';
+
+  @override
+  String get serverEditorPbk => 'Öffentlicher Schlüssel (pbk)';
+
+  @override
+  String get serverEditorSid => 'Short ID (sid)';
+
+  @override
+  String get serverEditorSpx => 'SpiderX (spx)';
+
+  @override
+  String get serverEditorTransportType => 'Typ';
+
+  @override
+  String get serverEditorPath => 'Pfad';
+
+  @override
+  String get serverEditorServiceName => 'gRPC-Dienstname';
+
+  @override
+  String get serverEditorMode => 'Modus';
+
+  @override
+  String get serverEditorHeaderType => 'Header-Typ';
+
+  @override
+  String get serverEditorAuth => 'Auth-Passwort';
+
+  @override
+  String get serverEditorObfs => 'Verschleierung (obfs)';
+
+  @override
+  String get serverEditorObfsPassword => 'Verschleierungs-Passwort';
+
+  @override
+  String get serverEditorUp => 'Upload, Mbit/s';
+
+  @override
+  String get serverEditorDown => 'Download, Mbit/s';
+
+  @override
+  String get serverEditorMport => 'Port-Hopping (mport)';
+
+  @override
+  String get serverEditorHopInterval => 'Hop-Intervall, s';
+
+  @override
+  String get serverEditorPinSha256 => 'Zertifikat-Pinning (SHA-256)';
+
+  @override
+  String get serverEditorRawConfig => 'Roh-Konfiguration';
+
+  @override
+  String get serverEditorRawToggle => 'Als Text bearbeiten';
+
+  @override
+  String get serverEditorRawOnlyNote => 'Dieses Format wird als Rohtext bearbeitet';
+
+  @override
+  String get serverEditorPreview => 'Ergebnis-Link';
+
+  @override
+  String get serverEditorSubscriptionNote => 'Server aus einem Abo: Änderungen bleiben beim Abo-Update erhalten.';
+
+  @override
+  String get serverEditorOverriddenNote => 'Konfiguration manuell geändert — Abo-Updates ersetzen sie nicht mehr.';
+
+  @override
+  String get serverEditorRevert => 'Abo-Konfiguration wiederherstellen';
+
+  @override
+  String get serverEditorSaved => 'Konfiguration gespeichert';
+
+  @override
+  String get serverEditorReconnecting => 'Konfiguration gespeichert, Verbindung wird neu aufgebaut…';
+
+  @override
+  String get serverEditorInvalidPort => 'Ungültiger Port';
+
+  @override
+  String get serverEditorServerMissing => 'Server existiert nicht mehr';
+
+  @override
+  String get appearanceTabGeneral => 'Allgemein';
+
+  @override
+  String get appearanceTabThemes => 'Designs';
+
+  @override
+  String get appearanceShowTraffic => 'Datenverkehr anzeigen';
+
+  @override
+  String get appearanceShowTrafficSubtitle => 'Chips für Geschwindigkeit und Datenvolumen unter dem Verbindungsknopf';
+
+  @override
+  String get appearanceShowTime => 'Verbindungsdauer anzeigen';
+
+  @override
+  String get appearanceShowTimeSubtitle => 'Chip mit Sitzungsdauer unter dem Verbindungsknopf';
 }

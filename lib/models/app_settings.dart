@@ -53,6 +53,10 @@ class AppSettings {
   final Map<String, String> hotkeys;
   /// Список серверов в две колонки.
   final bool serversTwoColumns;
+  /// Чипы скорости и объёма трафика под кнопкой подключения.
+  final bool showTrafficStats;
+  /// Чип времени подключения под кнопкой подключения.
+  final bool showConnectionTime;
 
   const AppSettings({
     this.localPort = 2080,
@@ -85,6 +89,8 @@ class AppSettings {
     this.coreEngine = coreEngineKeqrnel,
     this.hotkeys = const {},
     this.serversTwoColumns = false,
+    this.showTrafficStats = true,
+    this.showConnectionTime = true,
   });
 
   Map<String, dynamic> toJson() => {
@@ -118,6 +124,8 @@ class AppSettings {
     'coreEngine': coreEngine,
     'hotkeys': hotkeys,
     'serversTwoColumns': serversTwoColumns,
+    'showTrafficStats': showTrafficStats,
+    'showConnectionTime': showConnectionTime,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -179,6 +187,8 @@ class AppSettings {
       coreEngine: normalizeCoreEngine(json['coreEngine'] as String?),
       hotkeys: _readHotkeys(json['hotkeys']),
       serversTwoColumns: json['serversTwoColumns'] as bool? ?? false,
+      showTrafficStats: json['showTrafficStats'] as bool? ?? true,
+      showConnectionTime: json['showConnectionTime'] as bool? ?? true,
     );
   }
 
@@ -280,6 +290,8 @@ class AppSettings {
     String? coreEngine,
     Map<String, String>? hotkeys,
     bool? serversTwoColumns,
+    bool? showTrafficStats,
+    bool? showConnectionTime,
   }) =>
       AppSettings(
         localPort: localPort ?? this.localPort,
@@ -312,6 +324,8 @@ class AppSettings {
         coreEngine: coreEngine ?? this.coreEngine,
         hotkeys: hotkeys ?? this.hotkeys,
         serversTwoColumns: serversTwoColumns ?? this.serversTwoColumns,
+        showTrafficStats: showTrafficStats ?? this.showTrafficStats,
+        showConnectionTime: showConnectionTime ?? this.showConnectionTime,
       );
 
   @override
@@ -348,6 +362,8 @@ class AppSettings {
               launchAtStartup == other.launchAtStartup &&
               coreEngine == other.coreEngine &&
               serversTwoColumns == other.serversTwoColumns &&
+              showTrafficStats == other.showTrafficStats &&
+              showConnectionTime == other.showConnectionTime &&
               _hotkeysEqual(hotkeys, other.hotkeys);
 
   static bool _hotkeysEqual(Map<String, String> a, Map<String, String> b) {
@@ -390,6 +406,8 @@ class AppSettings {
     launchAtStartup,
     coreEngine,
     serversTwoColumns,
+    showTrafficStats,
+    showConnectionTime,
     // порядок ключей в Map не влияет: хэшируем отсортированные записи
     Object.hashAll(
       (hotkeys.entries.toList()

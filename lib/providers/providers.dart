@@ -487,7 +487,7 @@ class ServersNotifier extends Notifier<ServersState> {
 
   Future<void> addManual(String rawConfig) async {
     final config = rawConfig.trim();
-    final validationError = _validateManualConfig(config);
+    final validationError = validateServerConfig(config);
     if (validationError != null) throw Exception(validationError);
     if (state.servers.any((s) => s.config == config)) {
       throw Exception('This server is already added');
@@ -497,7 +497,73 @@ class ServersNotifier extends Notifier<ServersState> {
     state = state.copyWith(servers: [...state.servers, server]);
   }
 
-  String? _validateManualConfig(String rawConfig) {
+  /// Пользовательское имя сервера; null/пусто — сброс к имени из конфига.
+  Future<void> rename(String id, String? name) async {
+    final trimmed = name?.trim();
+    await _updateServer(
+      id,
+      (s) => s.copyWith(
+        customName: (trimmed == null || trimmed.isEmpty) ? null : trimmed,
+      ),
+    );
+  }
+
+  Future<void> togglePin(String id) async {
+    await _updateServer(
+      id,
+      (s) => s.copyWith(pinnedAt: s.isPinned ? null : DateTime.now()),
+    );
+  }
+
+  /// Замена конфига сервера из GUI-редактора. Для подписочных серверов взводит
+  /// configOverridden, чтобы правка пережила обновление подписки.
+  Future<void> updateConfig(String id, String rawConfig) async {
+    final config = rawConfig.trim();
+    final validationError = validateServerConfig(config);
+    if (validationError != null) throw Exception(validationError);
+    if (state.servers.any((s) => s.id != id && s.config == config)) {
+      throw Exception('This server is already added');
+    }
+    await _updateServer(
+      id,
+      (s) => s.copyWith(
+        config: config,
+        configOverridden: s.type == ServerItemType.subscription &&
+            (s.configOverridden || config != s.config),
+      ),
+    );
+  }
+
+  /// Возврат подписочного сервера к конфигу из подписки: снимает
+  /// override-флаг и тянет свежий конфиг рефрешем подписки.
+  Future<void> revertConfigOverride(ServerItem server) async {
+    if (!server.configOverridden || server.subscriptionId == null) return;
+    await _updateServer(server.id, (s) => s.copyWith(configOverridden: false));
+    final subs = ref.read(subscriptionsProvider).value ?? [];
+    final sub = subs.cast<Subscription?>().firstWhere(
+          (s) => s?.id == server.subscriptionId,
+          orElse: () => null,
+        );
+    if (sub != null) {
+      await ref.read(subscriptionsProvider.notifier).refreshTracked(sub);
+    }
+  }
+
+  /// Точечное обновление сервера: пишет через serial-очередь storage и
+  /// обновляет state, не трогая остальной список.
+  Future<void> _updateServer(
+    String id,
+    ServerItem Function(ServerItem) change,
+  ) async {
+    final idx = state.servers.indexWhere((s) => s.id == id);
+    if (idx == -1) return;
+    final updated = change(state.servers[idx]);
+    await ref.read(storageProvider).upsertServer(updated);
+    final list = [...state.servers]..[idx] = updated;
+    state = state.copyWith(servers: list);
+  }
+
+  static String? validateServerConfig(String rawConfig) {
     if (rawConfig.isEmpty) return 'Configuration is empty';
 
     if (AwgProfile.isAwgConfig(rawConfig)) {

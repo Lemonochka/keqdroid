@@ -162,7 +162,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTitle => 'Настройки';
 
   @override
-  String get settingsThemeTitle => 'Тема';
+  String get settingsThemeTitle => 'Внешний вид';
 
   @override
   String get settingsSplitTitle => 'Раздельное туннелирование';
@@ -319,7 +319,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get themeModeLight => 'Светлая';
 
   @override
-  String get themeCustomizationTitle => 'Настройка темы';
+  String get themeCustomizationTitle => 'Внешний вид';
 
   @override
   String get themeUseDynamicColors => 'Использовать тему Android';
@@ -1467,4 +1467,177 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorUnknownAction => 'Повторите операцию. Если ошибка повторяется, проверьте сервер и настройки приложения.';
+
+  @override
+  String get serversPin => 'Закрепить сервер';
+
+  @override
+  String get serversUnpin => 'Открепить сервер';
+
+  @override
+  String get serversPinDesc => 'Закреплённый сервер всегда наверху списка';
+
+  @override
+  String get serversRename => 'Переименовать';
+
+  @override
+  String get serversRenameTitle => 'Переименовать сервер';
+
+  @override
+  String get serversRenameHint => 'Имя сервера';
+
+  @override
+  String get serversRenameReset => 'Сбросить';
+
+  @override
+  String serversRenameOriginal(Object name) {
+    return 'Исходное имя: $name';
+  }
+
+  @override
+  String get serversEditConfig => 'Редактировать конфигурацию';
+
+  @override
+  String get serversEditConfigDesc => 'SNI, fingerprint, транспорт и другие параметры';
+
+  @override
+  String get serverEditorTitle => 'Конфигурация сервера';
+
+  @override
+  String get serverEditorSectionGeneral => 'Сервер';
+
+  @override
+  String get serverEditorSectionSecurity => 'Безопасность';
+
+  @override
+  String get serverEditorSectionTransport => 'Транспорт';
+
+  @override
+  String get serverEditorSectionProtocol => 'Параметры протокола';
+
+  @override
+  String get serverEditorAddress => 'Адрес';
+
+  @override
+  String get serverEditorPort => 'Порт';
+
+  @override
+  String get serverEditorPassword => 'Пароль';
+
+  @override
+  String get serverEditorMethod => 'Метод шифрования';
+
+  @override
+  String get serverEditorEncryption => 'Шифрование';
+
+  @override
+  String get serverEditorSecurityMode => 'Режим защиты';
+
+  @override
+  String get serverEditorFingerprint => 'Отпечаток (uTLS)';
+
+  @override
+  String get serverEditorAlpn => 'ALPN (через запятую)';
+
+  @override
+  String get serverEditorAllowInsecure => 'Разрешить небезопасный сертификат (insecure)';
+
+  @override
+  String get serverEditorPbk => 'Публичный ключ (pbk)';
+
+  @override
+  String get serverEditorSid => 'Short ID (sid)';
+
+  @override
+  String get serverEditorSpx => 'SpiderX (spx)';
+
+  @override
+  String get serverEditorTransportType => 'Тип';
+
+  @override
+  String get serverEditorPath => 'Путь';
+
+  @override
+  String get serverEditorServiceName => 'Имя gRPC-сервиса';
+
+  @override
+  String get serverEditorMode => 'Режим';
+
+  @override
+  String get serverEditorHeaderType => 'Тип заголовка';
+
+  @override
+  String get serverEditorAuth => 'Пароль (auth)';
+
+  @override
+  String get serverEditorObfs => 'Обфускация (obfs)';
+
+  @override
+  String get serverEditorObfsPassword => 'Пароль обфускации';
+
+  @override
+  String get serverEditorUp => 'Отдача, Мбит/с';
+
+  @override
+  String get serverEditorDown => 'Загрузка, Мбит/с';
+
+  @override
+  String get serverEditorMport => 'Диапазон портов (mport)';
+
+  @override
+  String get serverEditorHopInterval => 'Интервал смены порта, с';
+
+  @override
+  String get serverEditorPinSha256 => 'Пиннинг сертификата (SHA-256)';
+
+  @override
+  String get serverEditorRawConfig => 'Сырой конфиг';
+
+  @override
+  String get serverEditorRawToggle => 'Редактировать как текст';
+
+  @override
+  String get serverEditorRawOnlyNote => 'Этот формат редактируется как сырой текст';
+
+  @override
+  String get serverEditorPreview => 'Итоговая ссылка';
+
+  @override
+  String get serverEditorSubscriptionNote => 'Сервер из подписки: правки сохранятся при её обновлении.';
+
+  @override
+  String get serverEditorOverriddenNote => 'Конфиг изменён вручную — обновления подписки его больше не заменяют.';
+
+  @override
+  String get serverEditorRevert => 'Вернуть конфиг из подписки';
+
+  @override
+  String get serverEditorSaved => 'Конфигурация сохранена';
+
+  @override
+  String get serverEditorReconnecting => 'Конфигурация сохранена, переподключение…';
+
+  @override
+  String get serverEditorInvalidPort => 'Некорректный порт';
+
+  @override
+  String get serverEditorServerMissing => 'Сервер уже удалён';
+
+  @override
+  String get appearanceTabGeneral => 'Общие';
+
+  @override
+  String get appearanceTabThemes => 'Темы';
+
+  @override
+  String get appearanceShowTraffic => 'Показывать трафик';
+
+  @override
+  String get appearanceShowTrafficSubtitle => 'Чипы скорости и объёма трафика под кнопкой подключения';
+
+  @override
+  String get appearanceShowTime => 'Показывать время подключения';
+
+  @override
+  String get appearanceShowTimeSubtitle => 'Чип длительности сессии под кнопкой подключения';
 }

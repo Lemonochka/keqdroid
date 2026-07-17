@@ -171,23 +171,33 @@ enum ServerSortMode {
       };
 }
 
-/// Возвращает копию [servers], отсортированную по [mode] (для defaultOrder —
-/// исходный порядок без копии). Серверы без нужной метрики уходят в конец.
+/// Возвращает копию [servers], отсортированную по [mode] (для defaultOrder
+/// без закреплённых — исходный порядок без копии). Закреплённые серверы всегда
+/// первыми (в порядке закрепления), независимо от режима сортировки; остальные
+/// сортируются по [mode], серверы без нужной метрики уходят в конец.
 List<ServerItem> _sortServersBy(List<ServerItem> servers, ServerSortMode mode) {
-  if (mode == ServerSortMode.defaultOrder) return servers;
-  final list = [...servers];
+  final hasPinned = servers.any((s) => s.isPinned);
+  if (mode == ServerSortMode.defaultOrder && !hasPinned) return servers;
+
+  final pinned = <ServerItem>[];
+  final rest = <ServerItem>[];
+  for (final s in servers) {
+    (s.isPinned ? pinned : rest).add(s);
+  }
+  pinned.sort((a, b) => a.pinnedAt!.compareTo(b.pinnedAt!));
+
   switch (mode) {
     case ServerSortMode.name:
-      list.sort((a, b) =>
+      rest.sort((a, b) =>
           a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
     case ServerSortMode.ping:
-      list.sort((a, b) => _pingSortKey(a).compareTo(_pingSortKey(b)));
+      rest.sort((a, b) => _pingSortKey(a).compareTo(_pingSortKey(b)));
     case ServerSortMode.speed:
-      list.sort((a, b) => _speedSortKey(b).compareTo(_speedSortKey(a)));
+      rest.sort((a, b) => _speedSortKey(b).compareTo(_speedSortKey(a)));
     case ServerSortMode.defaultOrder:
       break;
   }
-  return list;
+  return [...pinned, ...rest];
 }
 
 // Латентность (url/tcp/icmp), меньше — лучше. Нет данных или это speed-результат

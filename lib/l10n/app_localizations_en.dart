@@ -162,7 +162,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Settings';
 
   @override
-  String get settingsThemeTitle => 'Theme';
+  String get settingsThemeTitle => 'Appearance';
 
   @override
   String get settingsSplitTitle => 'Split Tunneling';
@@ -317,7 +317,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeModeLight => 'Light';
 
   @override
-  String get themeCustomizationTitle => 'Theme customization';
+  String get themeCustomizationTitle => 'Appearance';
 
   @override
   String get themeUseDynamicColors => 'Use Android dynamic colors';
@@ -1465,4 +1465,177 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorUnknownAction => 'Retry operation. If issue repeats, check server and app settings.';
+
+  @override
+  String get serversPin => 'Pin server';
+
+  @override
+  String get serversUnpin => 'Unpin server';
+
+  @override
+  String get serversPinDesc => 'Pinned servers stay on top of the list';
+
+  @override
+  String get serversRename => 'Rename';
+
+  @override
+  String get serversRenameTitle => 'Rename server';
+
+  @override
+  String get serversRenameHint => 'Server name';
+
+  @override
+  String get serversRenameReset => 'Reset';
+
+  @override
+  String serversRenameOriginal(Object name) {
+    return 'Original name: $name';
+  }
+
+  @override
+  String get serversEditConfig => 'Edit configuration';
+
+  @override
+  String get serversEditConfigDesc => 'SNI, fingerprint, transport and other settings';
+
+  @override
+  String get serverEditorTitle => 'Server configuration';
+
+  @override
+  String get serverEditorSectionGeneral => 'Server';
+
+  @override
+  String get serverEditorSectionSecurity => 'Security';
+
+  @override
+  String get serverEditorSectionTransport => 'Transport';
+
+  @override
+  String get serverEditorSectionProtocol => 'Protocol settings';
+
+  @override
+  String get serverEditorAddress => 'Address';
+
+  @override
+  String get serverEditorPort => 'Port';
+
+  @override
+  String get serverEditorPassword => 'Password';
+
+  @override
+  String get serverEditorMethod => 'Encryption method';
+
+  @override
+  String get serverEditorEncryption => 'Encryption';
+
+  @override
+  String get serverEditorSecurityMode => 'Security mode';
+
+  @override
+  String get serverEditorFingerprint => 'Fingerprint (uTLS)';
+
+  @override
+  String get serverEditorAlpn => 'ALPN (comma-separated)';
+
+  @override
+  String get serverEditorAllowInsecure => 'Allow insecure certificate (insecure)';
+
+  @override
+  String get serverEditorPbk => 'Public key (pbk)';
+
+  @override
+  String get serverEditorSid => 'Short ID (sid)';
+
+  @override
+  String get serverEditorSpx => 'SpiderX (spx)';
+
+  @override
+  String get serverEditorTransportType => 'Type';
+
+  @override
+  String get serverEditorPath => 'Path';
+
+  @override
+  String get serverEditorServiceName => 'gRPC service name';
+
+  @override
+  String get serverEditorMode => 'Mode';
+
+  @override
+  String get serverEditorHeaderType => 'Header type';
+
+  @override
+  String get serverEditorAuth => 'Auth password';
+
+  @override
+  String get serverEditorObfs => 'Obfuscation (obfs)';
+
+  @override
+  String get serverEditorObfsPassword => 'Obfuscation password';
+
+  @override
+  String get serverEditorUp => 'Upload, Mbps';
+
+  @override
+  String get serverEditorDown => 'Download, Mbps';
+
+  @override
+  String get serverEditorMport => 'Port hopping (mport)';
+
+  @override
+  String get serverEditorHopInterval => 'Hop interval, s';
+
+  @override
+  String get serverEditorPinSha256 => 'Certificate pinning (SHA-256)';
+
+  @override
+  String get serverEditorRawConfig => 'Raw config';
+
+  @override
+  String get serverEditorRawToggle => 'Edit as text';
+
+  @override
+  String get serverEditorRawOnlyNote => 'This format is edited as raw text';
+
+  @override
+  String get serverEditorPreview => 'Resulting link';
+
+  @override
+  String get serverEditorSubscriptionNote => 'This server comes from a subscription: your edits are kept when it refreshes.';
+
+  @override
+  String get serverEditorOverriddenNote => 'Config edited manually — subscription updates no longer replace it.';
+
+  @override
+  String get serverEditorRevert => 'Restore subscription config';
+
+  @override
+  String get serverEditorSaved => 'Configuration saved';
+
+  @override
+  String get serverEditorReconnecting => 'Configuration saved, reconnecting…';
+
+  @override
+  String get serverEditorInvalidPort => 'Invalid port';
+
+  @override
+  String get serverEditorServerMissing => 'Server no longer exists';
+
+  @override
+  String get appearanceTabGeneral => 'General';
+
+  @override
+  String get appearanceTabThemes => 'Themes';
+
+  @override
+  String get appearanceShowTraffic => 'Show traffic';
+
+  @override
+  String get appearanceShowTrafficSubtitle => 'Speed and data usage chips under the connect button';
+
+  @override
+  String get appearanceShowTime => 'Show connection time';
+
+  @override
+  String get appearanceShowTimeSubtitle => 'Session duration chip under the connect button';
 }
