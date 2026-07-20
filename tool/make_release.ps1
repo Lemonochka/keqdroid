@@ -5,8 +5,8 @@
 
 .DESCRIPTION
   Produces, under release\<version>\:
-    keqdroid-<version>.apk                      (Android)
-    keqdroid-<version>.apk.sha256
+    keqdroid-<version>-android.apk              (Android)
+    keqdroid-<version>-android.apk.sha256
     keqdroid-windows-x64-<version>.zip          (Windows portable)
     keqdroid-windows-x64-<version>.zip.sha256
 
@@ -105,7 +105,9 @@ if (-not $SkipAndroid) {
   $apkSrc = Join-Path $repoRoot 'build\app\outputs\flutter-apk\app-release.apk'
   if (-not (Test-Path -LiteralPath $apkSrc)) { throw "APK not found at $apkSrc" }
 
-  $apkOut = Join-Path $outDir "keqdroid-$version.apk"
+  # "-android" в имени — как во всех опубликованных релизах; апдейтер ищет
+  # просто *.apk, ему суффикс не важен.
+  $apkOut = Join-Path $outDir "keqdroid-$version-android.apk"
   Copy-Item -LiteralPath $apkSrc -Destination $apkOut -Force
   Write-Sha256Sidecar $apkOut
 }
