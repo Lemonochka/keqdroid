@@ -238,3 +238,4 @@ class LinuxBackgroundService with WindowListener, TrayListener {
     await windowManager.destroy();
   }
 }
+
