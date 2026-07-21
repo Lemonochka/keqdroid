@@ -3182,6 +3182,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Session duration chip under the connect button'**
   String get appearanceShowTimeSubtitle;
+
+  /// No description provided for @appearanceFontTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Font'**
+  String get appearanceFontTitle;
+
+  /// No description provided for @appearanceFontSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get appearanceFontSystem;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

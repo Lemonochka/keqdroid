@@ -752,5 +752,7 @@
   "appearanceShowTraffic": "Datenverkehr anzeigen",
   "appearanceShowTrafficSubtitle": "Chips für Geschwindigkeit und Datenvolumen unter dem Verbindungsknopf",
   "appearanceShowTime": "Verbindungsdauer anzeigen",
-  "appearanceShowTimeSubtitle": "Chip mit Sitzungsdauer unter dem Verbindungsknopf"
+  "appearanceShowTimeSubtitle": "Chip mit Sitzungsdauer unter dem Verbindungsknopf",
+  "appearanceFontTitle": "Schriftart",
+  "appearanceFontSystem": "System"
 }

@@ -752,5 +752,7 @@
   "appearanceShowTraffic": "显示流量",
   "appearanceShowTrafficSubtitle": "连接按钮下方的速度和流量信息",
   "appearanceShowTime": "显示连接时长",
-  "appearanceShowTimeSubtitle": "连接按钮下方的会话时长"
+  "appearanceShowTimeSubtitle": "连接按钮下方的会话时长",
+  "appearanceFontTitle": "字体",
+  "appearanceFontSystem": "系统"
 }

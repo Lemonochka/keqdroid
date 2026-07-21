@@ -4,56 +4,17 @@ import 'package:path/path.dart' as p;
 
 import '../core/app_logger.dart';
 
-/// Firefox по умолчанию не переключается на системный прокси автоматически при
-/// его смене, поэтому мы лишь ВКЛЮЧАЕМ ему режим «использовать системный прокси»
-/// (`network.proxy.type = 5`) через user.js. Дальше Firefox едет по тому же
-/// системному `127.0.0.1:httpPort`, что и Chrome/Edge, и сам отпускает его при
-/// отключении VPN. Никакой ручной адрес/порт не прописываем.
+/// Только очистка. Раньше приложение на каждом подключении принудительно
+/// включало Firefox режим «использовать системный прокси»
+/// (`network.proxy.type = 5`) через user.js — это затирало вручную выставленный
+/// пользователем прокси. Поведение убрано. Остался лишь [clearProxyPref],
+/// который снимает НАШ старый блок (по маркерам) из user.js и никогда не трогает
+/// файл, если нашего блока в нём нет.
 class FirefoxProxyHelper {
   FirefoxProxyHelper._();
 
   static const _markerStart = '// keqdis-proxy-start';
   static const _markerEnd = '// keqdis-proxy-end';
-
-  /// Включает в каждом профиле режим «использовать системный прокси».
-  /// Returns profile directories that were updated.
-  static Future<List<String>> applySystemProxyPref() async {
-    final profiles = await _discoverProfileDirs();
-    if (profiles.isEmpty) {
-      AppLogger.instance.debug('Firefox: no profiles found under APPDATA');
-      return [];
-    }
-
-    final block = _buildBlock();
-    final updated = <String>[];
-
-    for (final dir in profiles) {
-      try {
-        final userJs = File(p.join(dir.path, 'user.js'));
-        var content = userJs.existsSync() ? await userJs.readAsString() : '';
-        content = _stripBlock(content);
-        if (content.isNotEmpty && !content.endsWith('\n')) {
-          content = '$content\n';
-        }
-        await userJs.writeAsString('$content$block\n');
-        updated.add(dir.path);
-      } catch (e, st) {
-        AppLogger.instance.warn(
-          'Firefox: failed to update user.js in ${dir.path}',
-          error: e,
-          stackTrace: st,
-        );
-      }
-    }
-
-    if (updated.isNotEmpty) {
-      AppLogger.instance.info(
-        'Firefox: enabled "use system proxy" (network.proxy.type=5) in '
-        '${updated.length} profile(s). Restart Firefox completely.',
-      );
-    }
-    return updated;
-  }
 
   static Future<List<String>> clearProxyPref() async {
     final profiles = await _discoverProfileDirs();
@@ -63,7 +24,10 @@ class FirefoxProxyHelper {
       try {
         final userJs = File(p.join(dir.path, 'user.js'));
         if (!userJs.existsSync()) continue;
-        final content = _stripBlock(await userJs.readAsString());
+        final original = await userJs.readAsString();
+        // Нет нашего блока → это чужой/ручной user.js, не прикасаемся к нему.
+        if (!original.contains(_markerStart)) continue;
+        final content = _stripBlock(original);
         if (content.trim().isEmpty) {
           await userJs.delete();
         } else {
@@ -80,14 +44,6 @@ class FirefoxProxyHelper {
     }
     return cleared;
   }
-
-  // network.proxy.type = 5 → «использовать системный прокси». Firefox сам
-  // подхватывает системный HTTP-прокси Windows (тот же, что читает Chrome) и
-  // освобождает его при отключении VPN — ручной адрес/порт не пишем.
-  static String _buildBlock() => '''
-$_markerStart — KeqDroid; restart Firefox after connect/disconnect
-user_pref("network.proxy.type", 5);
-$_markerEnd''';
 
   static String _stripBlock(String content) {
     final start = content.indexOf(_markerStart);

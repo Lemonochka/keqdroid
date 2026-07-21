@@ -23,6 +23,8 @@ class AppSettings {
   final bool darkTheme;
   final bool followSystemTheme;
   final String themePresetId;
+  /// Шрифт интерфейса: id из [kAppFonts] (`system` по умолчанию).
+  final String fontId;
   final bool debugMode;
   final bool lanSharing;
   final int lanSocksPort;
@@ -72,6 +74,7 @@ class AppSettings {
     this.darkTheme = false,
     this.followSystemTheme = true,
     this.themePresetId = 'ocean',
+    this.fontId = 'system',
     this.debugMode = false,
     this.lanSharing = false,
     this.lanSocksPort = 1080,
@@ -107,6 +110,7 @@ class AppSettings {
     'darkTheme': darkTheme,
     'followSystemTheme': followSystemTheme,
     'themePresetId': themePresetId,
+    'fontId': fontId,
     'debugMode': debugMode,
     'lanSharing': lanSharing,
     'lanSocksPort': lanSocksPort,
@@ -164,6 +168,7 @@ class AppSettings {
       darkTheme: json['darkTheme'] as bool? ?? false,
       followSystemTheme: json['followSystemTheme'] as bool? ?? true,
       themePresetId: json['themePresetId'] as String? ?? 'ocean',
+      fontId: json['fontId'] as String? ?? 'system',
       debugMode: json['debugMode'] as bool? ?? false,
       lanSharing: json['lanSharing'] as bool? ?? false,
       lanSocksPort: port('lanSocksPort', 1080),
@@ -273,6 +278,7 @@ class AppSettings {
     bool? darkTheme,
     bool? followSystemTheme,
     String? themePresetId,
+    String? fontId,
     bool? debugMode,
     bool? lanSharing,
     int? lanSocksPort,
@@ -307,6 +313,7 @@ class AppSettings {
         darkTheme: darkTheme ?? this.darkTheme,
         followSystemTheme: followSystemTheme ?? this.followSystemTheme,
         themePresetId: themePresetId ?? this.themePresetId,
+        fontId: fontId ?? this.fontId,
         debugMode: debugMode ?? this.debugMode,
         lanSharing: lanSharing ?? this.lanSharing,
         lanSocksPort: lanSocksPort ?? this.lanSocksPort,
@@ -346,6 +353,7 @@ class AppSettings {
               darkTheme == other.darkTheme &&
               followSystemTheme == other.followSystemTheme &&
               themePresetId == other.themePresetId &&
+              fontId == other.fontId &&
               debugMode == other.debugMode &&
               lanSharing == other.lanSharing &&
               lanSocksPort == other.lanSocksPort &&
@@ -390,6 +398,7 @@ class AppSettings {
     darkTheme,
     followSystemTheme,
     themePresetId,
+    fontId,
     debugMode,
     lanSharing,
     lanSocksPort,

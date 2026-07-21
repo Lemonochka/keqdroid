@@ -517,8 +517,6 @@ class WindowsTunnelBackend implements TunnelBackend {
       }
       throw VpnStartException(buffer.toString(), cause: e);
     }
-
-    unawaited(_applyFirefoxProxyAfterConnect());
   }
 
   /// Вотчдог: ядро завершилось само (не через [stopSession]) → снимаем
@@ -1200,24 +1198,6 @@ class WindowsTunnelBackend implements TunnelBackend {
       }
     } catch (e) {
       AppLogger.instance.debug('Background proxy probes failed: $e');
-    }
-  }
-
-  Future<void> _applyFirefoxProxyAfterConnect() async {
-    try {
-      final profiles = await FirefoxProxyHelper.applySystemProxyPref();
-      if (profiles.isNotEmpty) {
-        await _proxyDebugLogViaChannel(
-          'Firefox user.js updated (${profiles.length} profile(s)): '
-          'enabled "use system proxy". Restart Firefox.',
-        );
-      }
-    } catch (e, st) {
-      AppLogger.instance.warn(
-        'Firefox proxy update failed',
-        error: e,
-        stackTrace: st,
-      );
     }
   }
 

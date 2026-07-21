@@ -1640,4 +1640,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get appearanceShowTimeSubtitle => 'Чип длительности сессии под кнопкой подключения';
+
+  @override
+  String get appearanceFontTitle => 'Шрифт';
+
+  @override
+  String get appearanceFontSystem => 'Системный';
 }

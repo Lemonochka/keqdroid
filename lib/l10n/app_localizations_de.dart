@@ -1638,4 +1638,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get appearanceShowTimeSubtitle => 'Chip mit Sitzungsdauer unter dem Verbindungsknopf';
+
+  @override
+  String get appearanceFontTitle => 'Schriftart';
+
+  @override
+  String get appearanceFontSystem => 'System';
 }

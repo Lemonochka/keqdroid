@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 
+import '../models/app_font.dart';
 import '../models/app_settings.dart';
 import '../providers/providers.dart';
 import '../shared/ui/kawaii_decorations.dart';
@@ -126,13 +127,18 @@ ColorScheme buildPresetScheme(ThemePreset preset, Brightness brightness) {
   );
 }
 
-ThemeData buildAppTheme(ColorScheme scheme, {bool flair = false}) {
+ThemeData buildAppTheme(
+  ColorScheme scheme, {
+  bool flair = false,
+  String? fontFamily,
+}) {
   return ThemeData(
     colorScheme: scheme,
     useMaterial3: true,
-    // Flair: округлый Comfortaa (variable TTF, OFL, кириллица есть) и мягче
-    // скругления у контейнеров, которые берут форму из темы.
-    fontFamily: flair ? 'Comfortaa' : null,
+    // Шрифт приходит из выбора пользователя (см. _ThemedApp): flair-пресеты по
+    // умолчанию несут Comfortaa, но пользователь может сменить его в любой теме.
+    // Прочие «финтифлюшки» (усиленные скругления) остаются привязаны к flair.
+    fontFamily: fontFamily,
     cardTheme: flair
         ? CardThemeData(
             surfaceTintColor: Colors.transparent,
@@ -219,14 +225,21 @@ class _ThemedApp extends ConsumerWidget {
     // выключены): следуем той же логике, что и палитра.
     final flair = !useSystem && preset.flair;
 
+    // Выбранный шрифт применяется в любой теме. Оставлен системный дефолт —
+    // flair-пресеты сохраняют фирменный Comfortaa.
+    final font = resolveAppFont(settings.fontId);
+    final fontFamily = font.family ?? (flair ? 'Comfortaa' : null);
+
     final locale = localeFromSettings(settings);
 
     return MaterialApp(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       debugShowCheckedModeBanner: false,
       themeMode: settings.darkTheme ? ThemeMode.dark : ThemeMode.light,
-      theme: buildAppTheme(useSystem ? lightScheme : customLight, flair: flair),
-      darkTheme: buildAppTheme(useSystem ? darkScheme : customDark, flair: flair),
+      theme: buildAppTheme(useSystem ? lightScheme : customLight,
+          flair: flair, fontFamily: fontFamily),
+      darkTheme: buildAppTheme(useSystem ? darkScheme : customDark,
+          flair: flair, fontFamily: fontFamily),
       builder: (context, child) {
         final content = (!flair || child == null)
             ? (child ?? const SizedBox.shrink())

@@ -752,5 +752,7 @@
   "appearanceShowTraffic": "Show traffic",
   "appearanceShowTrafficSubtitle": "Speed and data usage chips under the connect button",
   "appearanceShowTime": "Show connection time",
-  "appearanceShowTimeSubtitle": "Session duration chip under the connect button"
+  "appearanceShowTimeSubtitle": "Session duration chip under the connect button",
+  "appearanceFontTitle": "Font",
+  "appearanceFontSystem": "System"
 }

@@ -752,5 +752,7 @@
   "appearanceShowTraffic": "Показывать трафик",
   "appearanceShowTrafficSubtitle": "Чипы скорости и объёма трафика под кнопкой подключения",
   "appearanceShowTime": "Показывать время подключения",
-  "appearanceShowTimeSubtitle": "Чип длительности сессии под кнопкой подключения"
+  "appearanceShowTimeSubtitle": "Чип длительности сессии под кнопкой подключения",
+  "appearanceFontTitle": "Шрифт",
+  "appearanceFontSystem": "Системный"
 }
