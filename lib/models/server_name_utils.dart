@@ -355,25 +355,28 @@ class ServerNameUtils {
     }
 
     final lower = displayName.toLowerCase();
-    final tokens = lower
-        .replaceAll(RegExp(r'[|,\-_/\\]'), ' ')
-        .split(RegExp(r'\s+'))
-        .where((s) => s.isNotEmpty)
-        .map((s) => s.replaceAll(RegExp(r'[^a-zа-яё]'), ''))
-        .where((s) => s.isNotEmpty)
-        .toList();
 
-    for (final tok in tokens) {
-      if (tok.length == 2 || tok.length == 3) {
-        final code = _keywords[tok];
-        if (code != null) return code;
+    // Многословные названия ("hong kong", "united states", "южная африка")
+    // достаточно уникальны, чтобы безопасно искать их как подстроку.
+    for (final entry in _keywords.entries) {
+      if (entry.key.contains(' ') && lower.contains(entry.key)) {
+        return entry.value;
       }
     }
 
-    final sortedKeys = _keywords.keys.toList()
-      ..sort((a, b) => b.length.compareTo(a.length));
-    for (final key in sortedKeys) {
-      if (lower.contains(key)) return _keywords[key]!;
+    // Одиночные названия и 2–3-буквенные коды матчим ТОЛЬКО как целое слово.
+    // Раньше здесь был поиск подстроки по всем ключам, из-за чего произвольные
+    // имена без страны получали чужой флаг: "cloudflare" → "are" (ARE=ОАЭ),
+    // "southampton" → "pt" (PT), "united kingdom" → "ng" (NG) и т.п.
+    final tokens = lower
+        .replaceAll(RegExp(r'[|,\-_/\\]'), ' ')
+        .split(RegExp(r'\s+'))
+        .map((s) => s.replaceAll(RegExp(r'[^a-zа-яё]'), ''))
+        .where((s) => s.isNotEmpty);
+
+    for (final tok in tokens) {
+      final code = _keywords[tok];
+      if (code != null) return code;
     }
 
     return null;

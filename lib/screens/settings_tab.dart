@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
+import 'package:keqdroid/models/app_font.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/hotkey_config.dart';
 import 'package:keqdroid/models/ping_test_config.dart';

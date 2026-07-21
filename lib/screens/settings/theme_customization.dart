@@ -109,6 +109,11 @@ class _AppearanceGeneralTab extends StatelessWidget {
         controller: controller,
         padding: const EdgeInsets.all(16),
         children: [
+          _FontPicker(
+            currentFontId: current.fontId,
+            onSelect: (id) => onSave(current.copyWith(fontId: id)),
+          ),
+          const SizedBox(height: 16),
           SwitchListTile(
             value: current.serversTwoColumns,
             onChanged: (v) => onSave(current.copyWith(serversTwoColumns: v)),
@@ -137,6 +142,132 @@ class _AppearanceGeneralTab extends StatelessWidget {
             subtitle: Text(l10n.appearanceShowTimeSubtitle),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Горизонтальный выбор шрифта интерфейса. Каждая карточка рисует образец своим
+/// шрифтом (латиница + кириллица); применяется поверх любой темы.
+class _FontPicker extends StatelessWidget {
+  final String currentFontId;
+  final ValueChanged<String> onSelect;
+  const _FontPicker({required this.currentFontId, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final accent = AppTheme.accent(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.text_fields, size: 20, color: accent),
+            const SizedBox(width: 8),
+            Text(
+              l10n.appearanceFontTitle,
+              style: TextStyle(
+                color: AppTheme.text(context),
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 88,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: kAppFonts.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final font = kAppFonts[i];
+              return _FontCard(
+                label: font.id == kDefaultFontId
+                    ? l10n.appearanceFontSystem
+                    : font.label,
+                fontFamily: font.family,
+                selected: font.id == currentFontId,
+                accent: accent,
+                onTap: () => onSelect(font.id),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FontCard extends StatelessWidget {
+  final String label;
+  final String? fontFamily;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+  const _FontCard({
+    required this.label,
+    required this.fontFamily,
+    required this.selected,
+    required this.accent,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 110,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? accent.withValues(alpha: 0.12)
+              : AppTheme.inset(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? accent : AppTheme.divider(context),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Aa Яя',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: fontFamily,
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.text(context),
+              ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: fontFamily,
+                      fontSize: 13,
+                      color: selected ? accent : AppTheme.textLight(context),
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+                if (selected) Icon(Icons.check_circle, size: 16, color: accent),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

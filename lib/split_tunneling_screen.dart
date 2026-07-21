@@ -85,14 +85,14 @@ const _kRussianPackageSegments = <String>[
   'apteki',
 ];
 
-// кириллица в названии приложения
-final _cyrillicRe = RegExp(r'[а-яёА-ЯЁ]');
-
+// Русскость определяется ТОЛЬКО по имени пакета (курируемые списки ниже).
+// Язык отображаемого имени (кириллица в app.appName) НЕ используется: на
+// ru-locale системные приложения MIUI/HyperOS и сторонние (клавиатура FUTO
+// и т.п.) локализованы кириллицей и ошибочно попадали в bypass-список.
 bool _isRussianApp(AppInfo app) {
   final pkg = app.packageName.toLowerCase();
   if (_kRussianPackagePrefixes.any((p) => pkg.startsWith(p))) return true;
   if (_kRussianPackageSegments.any((s) => pkg.contains(s))) return true;
-  if (_cyrillicRe.hasMatch(app.appName)) return true;
   return false;
 }
 

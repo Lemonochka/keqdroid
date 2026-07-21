@@ -1638,4 +1638,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appearanceShowTimeSubtitle => 'Session duration chip under the connect button';
+
+  @override
+  String get appearanceFontTitle => 'Font';
+
+  @override
+  String get appearanceFontSystem => 'System';
 }

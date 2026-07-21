@@ -1638,4 +1638,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appearanceShowTimeSubtitle => '连接按钮下方的会话时长';
+
+  @override
+  String get appearanceFontTitle => '字体';
+
+  @override
+  String get appearanceFontSystem => '系统';
 }
