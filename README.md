@@ -21,11 +21,13 @@
   <a href="https://github.com/Lemonochka/keqdroid/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Lemonochka/keqdroid/ci.yml?branch=master&label=build&style=flat-square" alt="build"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-c9b8f5?style=flat-square" alt="license"></a>
   <img src="https://img.shields.io/badge/made%20with-Flutter-9bc7f0?style=flat-square" alt="flutter">
-  <img src="https://img.shields.io/badge/telegram-9bc7f0?style=flat-square" alt="telegram">
+  <a href="https://t.me/keqdroid"><img src="https://img.shields.io/badge/Telegram-chat-8ec5e6?style=flat-square&logo=telegram&logoColor=white" alt="Telegram chat"></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/Lemonochka/keqdroid/releases"><strong>Download</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://t.me/keqdroid">Telegram chat</a>
   &nbsp;·&nbsp;
   <a href="docs/README.md">Developer docs</a>
 </p>
@@ -108,8 +110,6 @@ Hysteria v1 is not supported.
 |------|-------------|
 | **Proxy** | System proxy — browsers and most apps. No administrator rights. |
 | **TUN** | All traffic through a VPN adapter. Run as administrator. |
-
-Firefox may ignore the system proxy; the app has a separate setting for it.
 
 The window minimizes to the tray and remembers its size and position. Launch at system startup with optional auto-connect. Global hotkeys are configured in Settings → Advanced → Hotkeys. Subscriptions refresh while the app is open.
 
@@ -199,10 +199,13 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
   <a href="https://github.com/Lemonochka/keqdroid/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Lemonochka/keqdroid/ci.yml?branch=master&label=%D1%81%D0%B1%D0%BE%D1%80%D0%BA%D0%B0&style=flat-square" alt="сборка"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-GPL--3.0-c9b8f5?style=flat-square" alt="лицензия"></a>
   <img src="https://img.shields.io/badge/сделано%20на-Flutter-9bc7f0?style=flat-square" alt="flutter">
+  <a href="https://t.me/keqdroid"><img src="https://img.shields.io/badge/Telegram-%D1%87%D0%B0%D1%82-8ec5e6?style=flat-square&logo=telegram&logoColor=white" alt="Чат в Telegram"></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/Lemonochka/keqdroid/releases"><strong>Скачать</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://t.me/keqdroid">Чат в Telegram</a>
   &nbsp;·&nbsp;
   <a href="docs/README.md">Документация для разработчиков</a>
 </p>
@@ -279,8 +282,6 @@ Hysteria v1 не поддерживается.
 |-------|----------|
 | **Proxy** | Системный прокси — браузеры и большинство программ. Без прав администратора. |
 | **TUN** | Весь трафик через VPN-адаптер. Запуск от имени администратора. |
-
-Firefox может не брать системный прокси — в настройках приложения есть отдельный пункт.
 
 Окно сворачивается в трей и запоминает свой размер и позицию. Автозапуск вместе с системой с опциональным автоподключением. Глобальные хоткеи настраиваются в Настройки → Расширенные → Горячие клавиши. Подписки обновляются, пока приложение открыто.
 
