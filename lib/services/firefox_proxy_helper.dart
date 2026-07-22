@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -73,41 +74,57 @@ class FirefoxProxyHelper {
   }
 
   static Future<List<Directory>> _discoverProfileDirs() async {
-    final base = _firefoxBaseDir();
-    if (base == null) return [];
+    try {
+      final base = _firefoxBaseDir();
+      if (base == null) return [];
 
-    final iniFile = File(p.join(base.path, 'profiles.ini'));
-    if (!iniFile.existsSync()) return [];
+      final iniFile = File(p.join(base.path, 'profiles.ini'));
+      if (!iniFile.existsSync()) return [];
 
-    final lines = await iniFile.readAsLines();
-    final profiles = <Directory>[];
+      // profiles.ini бывает НЕ в UTF-8 (Windows ANSI/cp1251, нелатинские символы
+      // в путях/именах профилей). Строгий readAsLines() кидал «Failed to decode
+      // data using encoding 'utf-8'», и это исключение валило ПОДКЛЮЧЕНИЕ (чистка
+      // зовётся из _cleanupForRestart на connect). Файл только читаем — декодируем
+      // терпимо: битый путь просто не пройдёт existsSync. Любая ошибка → пустой
+      // список, чистка Firefox никогда не должна ломать коннект.
+      final bytes = await iniFile.readAsBytes();
+      final lines = utf8.decode(bytes, allowMalformed: true).split(RegExp(r'\r?\n'));
+      final profiles = <Directory>[];
 
-    String? path;
-    var isRelative = true;
+      String? path;
+      var isRelative = true;
 
-    void flush() {
-      if (path == null || path!.isEmpty) return;
-      // profiles.ini stores relative paths with `/`; join in OS separators.
-      final fullPath = isRelative
-          ? p.join(base.path, p.joinAll(path!.split('/')))
-          : p.normalize(path!);
-      final dir = Directory(fullPath);
-      if (dir.existsSync()) profiles.add(dir);
-      path = null;
-      isRelative = true;
-    }
-
-    for (final line in lines) {
-      final trimmed = line.trim();
-      if (trimmed.startsWith('Path=')) {
-        path = trimmed.substring(5).trim();
-      } else if (trimmed.startsWith('IsRelative=')) {
-        isRelative = trimmed.substring(11).trim() != '0';
-      } else if (trimmed.isEmpty) {
-        flush();
+      void flush() {
+        if (path == null || path!.isEmpty) return;
+        // profiles.ini stores relative paths with `/`; join in OS separators.
+        final fullPath = isRelative
+            ? p.join(base.path, p.joinAll(path!.split('/')))
+            : p.normalize(path!);
+        final dir = Directory(fullPath);
+        if (dir.existsSync()) profiles.add(dir);
+        path = null;
+        isRelative = true;
       }
+
+      for (final line in lines) {
+        final trimmed = line.trim();
+        if (trimmed.startsWith('Path=')) {
+          path = trimmed.substring(5).trim();
+        } else if (trimmed.startsWith('IsRelative=')) {
+          isRelative = trimmed.substring(11).trim() != '0';
+        } else if (trimmed.isEmpty) {
+          flush();
+        }
+      }
+      flush();
+      return profiles;
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Firefox: could not read profiles.ini; skipping cleanup',
+        error: e,
+        stackTrace: st,
+      );
+      return [];
     }
-    flush();
-    return profiles;
   }
 }
