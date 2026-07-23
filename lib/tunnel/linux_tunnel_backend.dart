@@ -8,7 +8,6 @@ import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../services/ephemeral_xray_ping.dart';
 import '../utils/keqrnel_config.dart';
-import '../services/firefox_proxy_helper.dart';
 import '../utils/wireproxy_config.dart';
 import 'connection_mode.dart';
 import 'linux_core_paths.dart';
@@ -18,6 +17,14 @@ import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
 import 'vpn_backend.dart';
 import 'xray_session_stats.dart';
+
+/// Пульс «прошла polkit-аутентификация для TUN, а беспарольного правила ещё
+/// нет». Десктопный UI на Linux слушает поток и предлагает один раз установить
+/// правило, чтобы дальше TUN стартовал без пароля. См.
+/// [LinuxTunnelBackend.installPasswordlessTun].
+final StreamController<void> _linuxTunRememberController =
+    StreamController<void>.broadcast();
+Stream<void> get linuxTunRememberOffers => _linuxTunRememberController.stream;
 
 /// Linux desktop backend (proxy + TUN).
 ///
@@ -352,6 +359,117 @@ class LinuxTunnelBackend implements TunnelBackend {
     await _runKeqrnelAsRoot(singConfig);
   }
 
+  // ---- passwordless TUN (polkit rule) -------------------------------------
+
+  /// Root-owned хелпер, который pkexec запускает вместо inline `sh -c`.
+  /// polkit-правило разрешает беспарольный запуск ИМЕННО этого пути.
+  static const _polkitHelperPath = '/usr/local/lib/keqdroid/keqrnel-tun-root';
+
+  /// polkit JS-правило (polkit >= 0.106). Разрешает беспарольный запуск хелпера
+  /// для активной локальной сессии.
+  static const _polkitRulePath = '/etc/polkit-1/rules.d/49-keqdroid-tun.rules';
+
+  /// Разово за запуск приложения: показали ли уже предложение установить правило.
+  static bool _rememberOfferedThisRun = false;
+
+  /// Тело root-обёртки TUN. Один и тот же скрипт запускается двумя путями:
+  ///  * правило не стоит → `pkexec sh -c <body> sh <args>` (polkit спросит пароль);
+  ///  * правило стоит     → `pkexec <_polkitHelperPath> <args>` (без пароля),
+  ///    файл хелпера = shebang + это тело.
+  static const _tunWrapperBody = r'''SB="$1"; CFG="$2"; GEO="$3"; LOGF="$4"; SENT="$5"; APPPID="$6"; AUTHF="$7"
+: >"$LOGF"
+: >"$AUTHF"
+echo "[wrap v3 sentinel] start SENT=$SENT exists=$([ -e "$SENT" ] && echo y || echo n) APPPID=$APPPID app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+if [ -n "$GEO" ]; then export XRAY_LOCATION_ASSET="$GEO"; fi
+"$SB" run -c "$CFG" >>"$LOGF" 2>&1 &
+sb=$!
+while [ -e "$SENT" ] && kill -0 "$APPPID" 2>/dev/null; do
+  kill -0 "$sb" 2>/dev/null || break
+  sleep 1
+done
+echo "[wrap v3 sentinel] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) sb=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+kill -TERM "$sb" 2>/dev/null
+wait "$sb"
+''';
+
+  /// polkit-правило: беспарольный exec фиксированного хелпера для активной
+  /// локальной сессии. Удаление файла возвращает запрос пароля.
+  static const _polkitRuleContent =
+      '''// keqdroid: passwordless authorization for TUN mode (installed on user request).
+// Removing this file restores the password prompt on every TUN connect.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.policykit.exec" &&
+        action.lookup("program") == "$_polkitHelperPath" &&
+        subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+});
+''';
+
+  /// Установлено ли беспарольное правило (root-хелпер + polkit-правило на месте).
+  static bool isPasswordlessTunInstalled() {
+    if (!Platform.isLinux) return false;
+    try {
+      return File(_polkitHelperPath).existsSync() &&
+          File(_polkitRulePath).existsSync();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Ставит root-хелпер и polkit-правило ОДНИМ элевейтед-запуском (polkit
+  /// спросит пароль один раз). После этого TUN стартует без пароля. true — успех.
+  static Future<bool> installPasswordlessTun() async {
+    if (!Platform.isLinux) return false;
+    final helper = '#!/bin/sh\n$_tunWrapperBody';
+    // Кавычки вокруг разделителей heredoc (<<'EOF') запрещают шеллу разворачивать
+    // $1/$SB/$(...) внутри — они пишутся в файлы буквально.
+    final script = '''
+set -e
+mkdir -p /usr/local/lib/keqdroid
+cat > '$_polkitHelperPath' <<'KEQDROID_HELPER_EOF'
+$helper
+KEQDROID_HELPER_EOF
+chmod 0755 '$_polkitHelperPath'
+chown root:root '$_polkitHelperPath' 2>/dev/null || true
+mkdir -p /etc/polkit-1/rules.d
+cat > '$_polkitRulePath' <<'KEQDROID_RULE_EOF'
+$_polkitRuleContent
+KEQDROID_RULE_EOF
+chmod 0644 '$_polkitRulePath'
+chown root:root '$_polkitRulePath' 2>/dev/null || true
+''';
+    try {
+      final res = await Process.run('pkexec', ['sh', '-c', script]);
+      if (res.exitCode != 0) {
+        AppLogger.instance.warn(
+          'installPasswordlessTun failed: code=${res.exitCode} '
+          'err=${res.stderr}',
+        );
+      }
+      return res.exitCode == 0;
+    } catch (e, st) {
+      AppLogger.instance
+          .error('installPasswordlessTun error', error: e, stackTrace: st);
+      return false;
+    }
+  }
+
+  /// Удаляет root-хелпер и polkit-правило (снова элевейтед-запуск с паролем) —
+  /// возвращает поведение к запросу пароля на каждый TUN-коннект.
+  static Future<bool> removePasswordlessTun() async {
+    if (!Platform.isLinux) return false;
+    final script = "rm -f '$_polkitHelperPath' '$_polkitRulePath'";
+    try {
+      final res = await Process.run('pkexec', ['sh', '-c', script]);
+      return res.exitCode == 0;
+    } catch (e, st) {
+      AppLogger.instance
+          .error('removePasswordlessTun error', error: e, stackTrace: st);
+      return false;
+    }
+  }
+
   // ---- sing-box TUN (root via pkexec) -------------------------------------
 
   /// Запускает keqrnel под root через pkexec (TUN нужен root). keqrnel — это
@@ -411,39 +529,29 @@ class LinuxTunnelBackend implements TunnelBackend {
     // «ядро стартовало и должно поднять TUN» (см. _waitForElevation). Session
     // dir свежий на каждую сессию — застарелый маркер исключён.
     final authMarker = File(p.join(_sessionDir!.path, 'keqrnel.auth'));
-    const wrapper = r'''
-SB="$1"; CFG="$2"; GEO="$3"; LOGF="$4"; SENT="$5"; APPPID="$6"; AUTHF="$7"
-: >"$LOGF"
-: >"$AUTHF"
-echo "[wrap v3 sentinel] start SENT=$SENT exists=$([ -e "$SENT" ] && echo y || echo n) APPPID=$APPPID app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
-if [ -n "$GEO" ]; then export XRAY_LOCATION_ASSET="$GEO"; fi
-"$SB" run -c "$CFG" >>"$LOGF" 2>&1 &
-sb=$!
-while [ -e "$SENT" ] && kill -0 "$APPPID" 2>/dev/null; do
-  kill -0 "$sb" 2>/dev/null || break
-  sleep 1
-done
-echo "[wrap v3 sentinel] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) sb=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
-kill -TERM "$sb" 2>/dev/null
-wait "$sb"
-''';
     _keqrnelLaunchedAt = DateTime.now();
+
+    // Аргументы root-обёртки одинаковы для обоих путей запуска.
+    final coreArgs = <String>[
+      rootSingBin,
+      singConfigFile.path,
+      rootGeoDir ?? '',
+      coreLogPath,
+      sentinelFile.path,
+      '$pid',
+      authMarker.path,
+    ];
+    // Если установлено беспарольное правило — pkexec запускает root-owned хелпер
+    // по фиксированному пути (polkit пропускает без пароля). Иначе inline-обёртка
+    // через `sh -c` (polkit покажет запрос пароля, как раньше).
+    final usePasswordless = isPasswordlessTunInstalled();
+    final pkexecArgs = usePasswordless
+        ? <String>[_polkitHelperPath, ...coreArgs]
+        : <String>['sh', '-c', _tunWrapperBody, 'sh', ...coreArgs];
     try {
       _singboxProcess = await Process.start(
         'pkexec',
-        [
-          'sh',
-          '-c',
-          wrapper,
-          'sh',
-          rootSingBin,
-          singConfigFile.path,
-          rootGeoDir ?? '',
-          coreLogPath,
-          sentinelFile.path,
-          '$pid',
-          authMarker.path,
-        ],
+        pkexecArgs,
         workingDirectory: _sessionDir!.path,
         mode: ProcessStartMode.normal,
       );
@@ -463,6 +571,16 @@ wait "$sb"
       authMarker: authMarker,
       log: _singboxLog,
     );
+
+    // Пользователь только что ввёл пароль в polkit, а беспарольного правила нет —
+    // разово за запуск сигналим UI предложить его установить. Дальше — гейт по
+    // настройке linuxTunRememberDismissed на стороне UI.
+    if (!usePasswordless && !_rememberOfferedThisRun) {
+      _rememberOfferedThisRun = true;
+      if (!_linuxTunRememberController.isClosed) {
+        _linuxTunRememberController.add(null);
+      }
+    }
 
     final ready = await _waitForSingbox(
       process: _singboxProcess!,
@@ -649,11 +767,9 @@ wait "$sb"
         'it manually if your desktop does not honour gsettings.',
       );
     }
-    // Deliberately NOT writing Firefox user.js on Linux: it forced a *manual*
-    // proxy (network.proxy.type=1) that survived disconnect and our cleanup —
-    // causing endless auth prompts and traffic to a dead 127.0.0.1 proxy after
-    // quit. gsettings is enough; Firefox users can pick "Use system proxy
-    // settings" once. We still CLEAR any stale block left by older builds.
+    // Намеренно НЕ трогаем прокси-настройки браузеров: gsettings задаёт
+    // системный прокси, а Firefox можно один раз переключить на «Использовать
+    // системные настройки прокси». Приложение чужие значения не правит.
   }
 
   Future<bool> _gsettingsProxy({
@@ -692,9 +808,9 @@ wait "$sb"
   }
 
   /// Best-effort cleanup of state a previous (possibly crashed) run may have
-  /// left behind: a system proxy still pointing at a dead local port and a
-  /// stale Firefox proxy block. Called on Linux app startup. Does not touch
-  /// core processes (avoid killing unrelated xray/sing-box the user may run).
+  /// left behind: a system proxy still pointing at a dead local port. Called on
+  /// Linux app startup. Does not touch core processes (avoid killing unrelated
+  /// xray/sing-box the user may run).
   static Future<void> cleanupStaleState() async {
     try {
       await Process.run('gsettings', [
@@ -703,9 +819,6 @@ wait "$sb"
         'mode',
         'none',
       ]);
-    } catch (_) {}
-    try {
-      await FirefoxProxyHelper.clearProxyPref();
     } catch (_) {}
   }
 
@@ -774,9 +887,6 @@ wait "$sb"
     // it (left over from a previous run/crash) — otherwise the desktop keeps
     // routing to a dead 127.0.0.1 proxy.
     await _gsettingsProxy(enabled: false);
-    try {
-      await FirefoxProxyHelper.clearProxyPref();
-    } catch (_) {}
 
     // sing-box first: it owns the tun device + routes, tear it down before the
     // upstream SOCKS provider so traffic fails closed, not into a dead socks.

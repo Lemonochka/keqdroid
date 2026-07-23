@@ -9,7 +9,6 @@ import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../services/debug_log_service.dart';
 import '../services/ephemeral_xray_ping.dart';
-import '../services/firefox_proxy_helper.dart';
 import '../services/windows_desktop_service.dart';
 import '../utils/keqrnel_config.dart';
 import '../utils/wireproxy_config.dart';
@@ -577,14 +576,6 @@ class WindowsTunnelBackend implements TunnelBackend {
     try {
       await _method.invokeMethod<void>('setSystemProxy', {'enabled': false});
     } catch (_) {}
-
-    final cleared = await FirefoxProxyHelper.clearProxyPref();
-    if (cleared.isNotEmpty) {
-      AppLogger.instance.info(
-        'Firefox: removed KeqDroid proxy block from ${cleared.length} profile(s). '
-        'Restart Firefox if it was running.',
-      );
-    }
 
     // TUN owners first (gracefully, so the embedded sing-box reverts the TUN
     // adapter / routes / DNS), then the upstream socks providers.

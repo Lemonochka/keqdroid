@@ -3194,6 +3194,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'System'**
   String get appearanceFontSystem;
+
+  /// No description provided for @settingsResetConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset settings?'**
+  String get settingsResetConfirmTitle;
+
+  /// No description provided for @settingsResetConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get settingsResetConfirmAction;
+
+  /// No description provided for @settingsResetRoutingConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'This restores the built-in routing rules and discards your direct/proxy/blocked lists. This can\'t be undone.'**
+  String get settingsResetRoutingConfirm;
+
+  /// No description provided for @settingsLocalPortsResetConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'This restores the default local proxy ports. This can\'t be undone.'**
+  String get settingsLocalPortsResetConfirm;
+
+  /// No description provided for @settingsXrayResetConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'This restores the default Xray core and TUN settings. This can\'t be undone.'**
+  String get settingsXrayResetConfirm;
+
+  /// No description provided for @settingsPermissionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permissions'**
+  String get settingsPermissionsTitle;
+
+  /// No description provided for @settingsPermissionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'App permissions you can review and revoke'**
+  String get settingsPermissionsSubtitle;
+
+  /// No description provided for @settingsPermNotifTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsPermNotifTitle;
+
+  /// No description provided for @settingsPermNotifDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'VPN status bar and subscription-update alerts'**
+  String get settingsPermNotifDesc;
+
+  /// No description provided for @settingsPermStatusGranted.
+  ///
+  /// In en, this message translates to:
+  /// **'Granted'**
+  String get settingsPermStatusGranted;
+
+  /// No description provided for @settingsPermStatusDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Denied'**
+  String get settingsPermStatusDenied;
+
+  /// No description provided for @settingsPermCameraTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get settingsPermCameraTitle;
+
+  /// No description provided for @settingsPermCameraDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan config QR codes'**
+  String get settingsPermCameraDesc;
+
+  /// No description provided for @settingsPermInstallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Install apps'**
+  String get settingsPermInstallTitle;
+
+  /// No description provided for @settingsPermInstallDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Install app updates'**
+  String get settingsPermInstallDesc;
+
+  /// No description provided for @settingsPermOpenAppSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open app settings'**
+  String get settingsPermOpenAppSettings;
+
+  /// No description provided for @settingsPermRevokeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke any permission in the system app settings.'**
+  String get settingsPermRevokeHint;
+
+  /// No description provided for @settingsPermTunHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN MODE (LINUX)'**
+  String get settingsPermTunHeader;
+
+  /// No description provided for @settingsPermTunPasswordlessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwordless TUN'**
+  String get settingsPermTunPasswordlessTitle;
+
+  /// No description provided for @settingsPermTunPasswordlessSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start TUN mode without entering the polkit password each time'**
+  String get settingsPermTunPasswordlessSubtitle;
+
+  /// No description provided for @settingsPermTunDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwordless TUN disabled'**
+  String get settingsPermTunDisabled;
+
+  /// No description provided for @appearanceNotifSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'NOTIFICATION'**
+  String get appearanceNotifSectionTitle;
+
+  /// No description provided for @appearanceNotifSpeedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection speed in notification'**
+  String get appearanceNotifSpeedTitle;
+
+  /// No description provided for @appearanceNotifSpeedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show ↓/↑ speed in the VPN status notification'**
+  String get appearanceNotifSpeedSubtitle;
+
+  /// No description provided for @appearanceNotifUptimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection time in notification'**
+  String get appearanceNotifUptimeTitle;
+
+  /// No description provided for @appearanceNotifUptimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show session uptime in the VPN status notification'**
+  String get appearanceNotifUptimeSubtitle;
+
+  /// No description provided for @appearanceNotifSubUpdatesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription update notifications'**
+  String get appearanceNotifSubUpdatesTitle;
+
+  /// No description provided for @appearanceNotifSubUpdatesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notify when subscriptions refresh in the background'**
+  String get appearanceNotifSubUpdatesSubtitle;
+
+  /// No description provided for @tunRememberTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember authorization?'**
+  String get tunRememberTitle;
+
+  /// No description provided for @tunRememberMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN mode needs root and asks for your password each time. Install a polkit rule so it starts without a password from now on? You\'ll be asked for your password once to install it.'**
+  String get tunRememberMessage;
+
+  /// No description provided for @tunRememberWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'After this, any program running as your user can start the VPN core as root without a password. You can undo it anytime in Advanced → Permissions.'**
+  String get tunRememberWarning;
+
+  /// No description provided for @tunRememberEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get tunRememberEnable;
+
+  /// No description provided for @tunRememberNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get tunRememberNotNow;
+
+  /// No description provided for @tunRememberInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwordless TUN enabled'**
+  String get tunRememberInstalled;
+
+  /// No description provided for @tunRememberFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not change TUN authorization'**
+  String get tunRememberFailed;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

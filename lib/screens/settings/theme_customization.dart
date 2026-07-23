@@ -141,6 +141,50 @@ class _AppearanceGeneralTab extends StatelessWidget {
             title: Text(l10n.appearanceShowTime),
             subtitle: Text(l10n.appearanceShowTimeSubtitle),
           ),
+          const SizedBox(height: 8),
+          Divider(color: AppTheme.divider(context)),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+            child: Text(
+              l10n.appearanceNotifSectionTitle,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textLight(context),
+              ),
+            ),
+          ),
+          SwitchListTile(
+            value: current.showSpeedInNotification,
+            onChanged: (v) =>
+                onSave(current.copyWith(showSpeedInNotification: v)),
+            activeThumbColor: controlsAccent,
+            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
+            secondary: Icon(Icons.speed_outlined, color: controlsAccent),
+            title: Text(l10n.appearanceNotifSpeedTitle),
+            subtitle: Text(l10n.appearanceNotifSpeedSubtitle),
+          ),
+          SwitchListTile(
+            value: current.showUptimeInNotification,
+            onChanged: (v) =>
+                onSave(current.copyWith(showUptimeInNotification: v)),
+            activeThumbColor: controlsAccent,
+            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
+            secondary: Icon(Icons.timer_outlined, color: controlsAccent),
+            title: Text(l10n.appearanceNotifUptimeTitle),
+            subtitle: Text(l10n.appearanceNotifUptimeSubtitle),
+          ),
+          SwitchListTile(
+            value: current.notifySubscriptionUpdates,
+            onChanged: (v) =>
+                onSave(current.copyWith(notifySubscriptionUpdates: v)),
+            activeThumbColor: controlsAccent,
+            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
+            secondary: Icon(Icons.sync_outlined, color: controlsAccent),
+            title: Text(l10n.appearanceNotifSubUpdatesTitle),
+            subtitle: Text(l10n.appearanceNotifSubUpdatesSubtitle),
+          ),
         ],
       ),
     );

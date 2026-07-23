@@ -12,7 +12,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/services/background_service.dart';
 import 'package:keqdroid/services/desktop_background_service.dart';
-import 'package:keqdroid/services/firefox_proxy_helper.dart';
 import 'package:keqdroid/services/notification_service.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/servers_tab.dart';
@@ -49,11 +48,6 @@ Future<void> main() async {
       await NotificationService.init();
     } else if (Platform.isWindows) {
       await PlatformBootstrap.initialize();
-      // Одноразовая миграция: прежние сборки принудительно включали в Firefox
-      // системный прокси (network.proxy.type=5) через user.js на каждом
-      // подключении. Поведение убрано — снимаем оставшийся наш блок, чтобы
-      // Firefox снова слушался собственных настроек. No-op, если блока нет.
-      unawaited(FirefoxProxyHelper.clearProxyPref());
     } else if (Platform.isLinux || Platform.isMacOS) {
       await DesktopBackgroundService.init();
       if (Platform.isLinux) {

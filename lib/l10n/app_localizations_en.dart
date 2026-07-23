@@ -1644,4 +1644,109 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appearanceFontSystem => 'System';
+
+  @override
+  String get settingsResetConfirmTitle => 'Reset settings?';
+
+  @override
+  String get settingsResetConfirmAction => 'Reset';
+
+  @override
+  String get settingsResetRoutingConfirm => 'This restores the built-in routing rules and discards your direct/proxy/blocked lists. This can\'t be undone.';
+
+  @override
+  String get settingsLocalPortsResetConfirm => 'This restores the default local proxy ports. This can\'t be undone.';
+
+  @override
+  String get settingsXrayResetConfirm => 'This restores the default Xray core and TUN settings. This can\'t be undone.';
+
+  @override
+  String get settingsPermissionsTitle => 'Permissions';
+
+  @override
+  String get settingsPermissionsSubtitle => 'App permissions you can review and revoke';
+
+  @override
+  String get settingsPermNotifTitle => 'Notifications';
+
+  @override
+  String get settingsPermNotifDesc => 'VPN status bar and subscription-update alerts';
+
+  @override
+  String get settingsPermStatusGranted => 'Granted';
+
+  @override
+  String get settingsPermStatusDenied => 'Denied';
+
+  @override
+  String get settingsPermCameraTitle => 'Camera';
+
+  @override
+  String get settingsPermCameraDesc => 'Scan config QR codes';
+
+  @override
+  String get settingsPermInstallTitle => 'Install apps';
+
+  @override
+  String get settingsPermInstallDesc => 'Install app updates';
+
+  @override
+  String get settingsPermOpenAppSettings => 'Open app settings';
+
+  @override
+  String get settingsPermRevokeHint => 'Revoke any permission in the system app settings.';
+
+  @override
+  String get settingsPermTunHeader => 'TUN MODE (LINUX)';
+
+  @override
+  String get settingsPermTunPasswordlessTitle => 'Passwordless TUN';
+
+  @override
+  String get settingsPermTunPasswordlessSubtitle => 'Start TUN mode without entering the polkit password each time';
+
+  @override
+  String get settingsPermTunDisabled => 'Passwordless TUN disabled';
+
+  @override
+  String get appearanceNotifSectionTitle => 'NOTIFICATION';
+
+  @override
+  String get appearanceNotifSpeedTitle => 'Connection speed in notification';
+
+  @override
+  String get appearanceNotifSpeedSubtitle => 'Show ↓/↑ speed in the VPN status notification';
+
+  @override
+  String get appearanceNotifUptimeTitle => 'Connection time in notification';
+
+  @override
+  String get appearanceNotifUptimeSubtitle => 'Show session uptime in the VPN status notification';
+
+  @override
+  String get appearanceNotifSubUpdatesTitle => 'Subscription update notifications';
+
+  @override
+  String get appearanceNotifSubUpdatesSubtitle => 'Notify when subscriptions refresh in the background';
+
+  @override
+  String get tunRememberTitle => 'Remember authorization?';
+
+  @override
+  String get tunRememberMessage => 'TUN mode needs root and asks for your password each time. Install a polkit rule so it starts without a password from now on? You\'ll be asked for your password once to install it.';
+
+  @override
+  String get tunRememberWarning => 'After this, any program running as your user can start the VPN core as root without a password. You can undo it anytime in Advanced → Permissions.';
+
+  @override
+  String get tunRememberEnable => 'Enable';
+
+  @override
+  String get tunRememberNotNow => 'Not now';
+
+  @override
+  String get tunRememberInstalled => 'Passwordless TUN enabled';
+
+  @override
+  String get tunRememberFailed => 'Could not change TUN authorization';
 }

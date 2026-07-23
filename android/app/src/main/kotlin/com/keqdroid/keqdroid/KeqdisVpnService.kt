@@ -836,10 +836,18 @@ class KeqdisVpnService : VpnService() {
                 // всю ночь; после включения экрана текст освежится ближайшим тиком.
                 tick++
                 if (status == VpnRunStatus.RUNNING && tick % 2 == 0 && pm.isInteractive) {
-                    val body =
-                        "${formatUptime(System.currentTimeMillis() - startTime)}  ·  " +
-                        "↓ ${formatSpeed(downloadSpeed.get())}  ·  " +
-                        "↑ ${formatSpeed(uploadSpeed.get())}"
+                    // Пользователь мог оффнуть аптайм и/или скорость в уведомлении
+                    // (настройки в Appearance) — собираем строку из включённых частей.
+                    val prefs = readNotifBodyPrefs()
+                    val parts = ArrayList<String>(3)
+                    if (prefs.showUptime) {
+                        parts.add(formatUptime(System.currentTimeMillis() - startTime))
+                    }
+                    if (prefs.showSpeed) {
+                        parts.add("↓ ${formatSpeed(downloadSpeed.get())}")
+                        parts.add("↑ ${formatSpeed(uploadSpeed.get())}")
+                    }
+                    val body = if (parts.isEmpty()) "Connected" else parts.joinToString("  ·  ")
                     runCatching {
                         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(
                             NOTIFICATION_ID,
@@ -868,6 +876,27 @@ class KeqdisVpnService : VpnService() {
             h > 0 -> "${h}h ${m}m"
             m > 0 -> "${m}m ${sec}s"
             else -> "${sec}s"
+        }
+    }
+
+    // Что показывать в строке уведомления (аптайм / скорость) — настройки из
+    // приложения. Flutter хранит AppSettings как JSON-строку в
+    // FlutterSharedPreferences с префиксом "flutter.". Читаем прямо оттуда —
+    // работает для всех путей старта (Dart, плитка, кнопка уведомления), без
+    // прокидывания extra через Intent.
+    private data class NotifBodyPrefs(val showUptime: Boolean, val showSpeed: Boolean)
+
+    private fun readNotifBodyPrefs(): NotifBodyPrefs {
+        return try {
+            val raw = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                .getString("flutter.keqdis_settings", null) ?: return NotifBodyPrefs(true, true)
+            val o = org.json.JSONObject(raw)
+            NotifBodyPrefs(
+                o.optBoolean("showUptimeInNotification", true),
+                o.optBoolean("showSpeedInNotification", true),
+            )
+        } catch (e: Exception) {
+            NotifBodyPrefs(true, true)
         }
     }
 

@@ -271,6 +271,21 @@ class MainActivity : FlutterFragmentActivity() {
                             getInstalledApps(sys, result)
                         }
                         "getStatus" -> getStatus(result)
+                        "openAppSettings" -> {
+                            // Системный экран «О приложении» — там пользователь
+                            // отзывает любые разрешения (уведомления, камера, и т.д.).
+                            try {
+                                startActivity(
+                                    Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        android.net.Uri.fromParts("package", packageName, null),
+                                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                                result.success(true)
+                            } catch (e: Exception) {
+                                result.error("OPEN_SETTINGS_FAILED", e.message, null)
+                            }
+                        }
                         "getDeviceModel" -> result.success(android.os.Build.MODEL ?: "Android Device")
                         "getLaunchAction" -> {
                             // Возвращает action из Intent если приложение было запущено из уведомления

@@ -59,6 +59,15 @@ class AppSettings {
   final bool showTrafficStats;
   /// Чип времени подключения под кнопкой подключения.
   final bool showConnectionTime;
+  /// Показывать скорость (↓/↑) в системном уведомлении VPN.
+  final bool showSpeedInNotification;
+  /// Показывать время подключения (аптайм) в системном уведомлении VPN.
+  final bool showUptimeInNotification;
+  /// Слать локальное уведомление после фонового обновления подписок.
+  final bool notifySubscriptionUpdates;
+  /// Linux: пользователь уже ответил на предложение сделать TUN беспарольным
+  /// (установка polkit-правила) — окно больше не показываем.
+  final bool linuxTunRememberDismissed;
 
   const AppSettings({
     this.localPort = 2080,
@@ -94,6 +103,10 @@ class AppSettings {
     this.serversTwoColumns = false,
     this.showTrafficStats = true,
     this.showConnectionTime = true,
+    this.showSpeedInNotification = true,
+    this.showUptimeInNotification = true,
+    this.notifySubscriptionUpdates = true,
+    this.linuxTunRememberDismissed = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -130,6 +143,10 @@ class AppSettings {
     'serversTwoColumns': serversTwoColumns,
     'showTrafficStats': showTrafficStats,
     'showConnectionTime': showConnectionTime,
+    'showSpeedInNotification': showSpeedInNotification,
+    'showUptimeInNotification': showUptimeInNotification,
+    'notifySubscriptionUpdates': notifySubscriptionUpdates,
+    'linuxTunRememberDismissed': linuxTunRememberDismissed,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -194,6 +211,13 @@ class AppSettings {
       serversTwoColumns: json['serversTwoColumns'] as bool? ?? false,
       showTrafficStats: json['showTrafficStats'] as bool? ?? true,
       showConnectionTime: json['showConnectionTime'] as bool? ?? true,
+      showSpeedInNotification: json['showSpeedInNotification'] as bool? ?? true,
+      showUptimeInNotification:
+          json['showUptimeInNotification'] as bool? ?? true,
+      notifySubscriptionUpdates:
+          json['notifySubscriptionUpdates'] as bool? ?? true,
+      linuxTunRememberDismissed:
+          json['linuxTunRememberDismissed'] as bool? ?? false,
     );
   }
 
@@ -298,6 +322,10 @@ class AppSettings {
     bool? serversTwoColumns,
     bool? showTrafficStats,
     bool? showConnectionTime,
+    bool? showSpeedInNotification,
+    bool? showUptimeInNotification,
+    bool? notifySubscriptionUpdates,
+    bool? linuxTunRememberDismissed,
   }) =>
       AppSettings(
         localPort: localPort ?? this.localPort,
@@ -333,6 +361,14 @@ class AppSettings {
         serversTwoColumns: serversTwoColumns ?? this.serversTwoColumns,
         showTrafficStats: showTrafficStats ?? this.showTrafficStats,
         showConnectionTime: showConnectionTime ?? this.showConnectionTime,
+        showSpeedInNotification:
+            showSpeedInNotification ?? this.showSpeedInNotification,
+        showUptimeInNotification:
+            showUptimeInNotification ?? this.showUptimeInNotification,
+        notifySubscriptionUpdates:
+            notifySubscriptionUpdates ?? this.notifySubscriptionUpdates,
+        linuxTunRememberDismissed:
+            linuxTunRememberDismissed ?? this.linuxTunRememberDismissed,
       );
 
   @override
@@ -372,6 +408,10 @@ class AppSettings {
               serversTwoColumns == other.serversTwoColumns &&
               showTrafficStats == other.showTrafficStats &&
               showConnectionTime == other.showConnectionTime &&
+              showSpeedInNotification == other.showSpeedInNotification &&
+              showUptimeInNotification == other.showUptimeInNotification &&
+              notifySubscriptionUpdates == other.notifySubscriptionUpdates &&
+              linuxTunRememberDismissed == other.linuxTunRememberDismissed &&
               _hotkeysEqual(hotkeys, other.hotkeys);
 
   static bool _hotkeysEqual(Map<String, String> a, Map<String, String> b) {
@@ -417,6 +457,10 @@ class AppSettings {
     serversTwoColumns,
     showTrafficStats,
     showConnectionTime,
+    showSpeedInNotification,
+    showUptimeInNotification,
+    notifySubscriptionUpdates,
+    linuxTunRememberDismissed,
     // порядок ключей в Map не влияет: хэшируем отсортированные записи
     Object.hashAll(
       (hotkeys.entries.toList()
