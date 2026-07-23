@@ -406,12 +406,19 @@ polkit.addRule(function(action, subject) {
 });
 ''';
 
-  /// Установлено ли беспарольное правило (root-хелпер + polkit-правило на месте).
+  /// Установлено ли беспарольное правило. Признаком берём root-хелпер по
+  /// [_polkitHelperPath], а polkit-правило НАМЕРЕННО не статим: каталог
+  /// `/etc/polkit-1/rules.d` имеет режим 0700 (root/polkitd), обычный юзер в
+  /// него не может зайти — `existsSync` на файле внутри ВСЕГДА вернёт false,
+  /// даже когда правило на месте. Гейт по нему держал тумблер вечно
+  /// «выключенным» после успешной установки (пользователь вводил пароль,
+  /// файлы писались, но UI перечитывал «не установлено» и просил пароль снова).
+  /// Хелпер лежит в общедоступном каталоге и ставится/удаляется вместе с
+  /// правилом — это верный признак «беспарольный TUN установлен».
   static bool isPasswordlessTunInstalled() {
     if (!Platform.isLinux) return false;
     try {
-      return File(_polkitHelperPath).existsSync() &&
-          File(_polkitRulePath).existsSync();
+      return File(_polkitHelperPath).existsSync();
     } catch (_) {
       return false;
     }
