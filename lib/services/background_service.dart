@@ -53,11 +53,16 @@ void callbackDispatcher() {
       final failed  = results.length - ok;
       final total   = results.fold(0, (sum, r) => sum + r.serverCount);
 
-      await _showUpdateNotification(
-        ok: ok,
-        failed: failed,
-        totalServers: total,
-      );
+      // Пользователь мог оффнуть уведы об обновлении подписки
+      // (настройка в «Разрешениях») — тогда молча обновляем без нотификации.
+      final settings = await storage.getSettings();
+      if (settings.notifySubscriptionUpdates) {
+        await _showUpdateNotification(
+          ok: ok,
+          failed: failed,
+          totalServers: total,
+        );
+      }
 
       return true;
     } catch (e, st) {

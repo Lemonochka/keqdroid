@@ -78,6 +78,11 @@ class _LocalProxyPortsScreenState
   }
 
   Future<void> _resetDefaults(AppSettings settings) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (!await _confirmReset(context, message: l10n.settingsLocalPortsResetConfirm)) {
+      return;
+    }
+    if (!mounted) return;
     const defaults = AppSettings();
     _socksCtrl.text = defaults.localPort.toString();
     _httpCtrl.text = defaults.httpPort.toString();

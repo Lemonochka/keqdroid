@@ -101,6 +101,13 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
   }
 
   Future<void> _resetDefaults(AppSettings settings) async {
+    if (!await _confirmReset(
+      context,
+      message: AppLocalizations.of(context)!.settingsXrayResetConfirm,
+    )) {
+      return;
+    }
+    if (!mounted) return;
     await ref.read(settingsNotifierProvider.notifier).save(
           settings.copyWith(
             xrayCore: const XrayCoreSettings(),

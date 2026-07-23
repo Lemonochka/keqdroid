@@ -1644,4 +1644,109 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appearanceFontSystem => '系统';
+
+  @override
+  String get settingsResetConfirmTitle => '重置设置？';
+
+  @override
+  String get settingsResetConfirmAction => '重置';
+
+  @override
+  String get settingsResetRoutingConfirm => '将恢复内置路由规则并清除你的直连/代理/屏蔽列表。此操作无法撤销。';
+
+  @override
+  String get settingsLocalPortsResetConfirm => '将恢复默认的本地代理端口。此操作无法撤销。';
+
+  @override
+  String get settingsXrayResetConfirm => '将恢复 Xray 内核和 TUN 的默认设置。此操作无法撤销。';
+
+  @override
+  String get settingsPermissionsTitle => '权限';
+
+  @override
+  String get settingsPermissionsSubtitle => '可查看和撤销的应用权限';
+
+  @override
+  String get settingsPermNotifTitle => '通知';
+
+  @override
+  String get settingsPermNotifDesc => 'VPN 状态栏和订阅更新提醒';
+
+  @override
+  String get settingsPermStatusGranted => '已授予';
+
+  @override
+  String get settingsPermStatusDenied => '已拒绝';
+
+  @override
+  String get settingsPermCameraTitle => '相机';
+
+  @override
+  String get settingsPermCameraDesc => '扫描配置二维码';
+
+  @override
+  String get settingsPermInstallTitle => '安装应用';
+
+  @override
+  String get settingsPermInstallDesc => '安装应用更新';
+
+  @override
+  String get settingsPermOpenAppSettings => '打开应用设置';
+
+  @override
+  String get settingsPermRevokeHint => '可在系统应用设置中撤销任意权限。';
+
+  @override
+  String get settingsPermTunHeader => 'TUN 模式（LINUX）';
+
+  @override
+  String get settingsPermTunPasswordlessTitle => '免密码 TUN';
+
+  @override
+  String get settingsPermTunPasswordlessSubtitle => '启动 TUN 模式时无需每次输入 polkit 密码';
+
+  @override
+  String get settingsPermTunDisabled => '已关闭免密码 TUN';
+
+  @override
+  String get appearanceNotifSectionTitle => '通知';
+
+  @override
+  String get appearanceNotifSpeedTitle => '通知中的连接速度';
+
+  @override
+  String get appearanceNotifSpeedSubtitle => '在 VPN 状态通知中显示 ↓/↑ 速度';
+
+  @override
+  String get appearanceNotifUptimeTitle => '通知中的连接时间';
+
+  @override
+  String get appearanceNotifUptimeSubtitle => '在 VPN 状态通知中显示会话时长';
+
+  @override
+  String get appearanceNotifSubUpdatesTitle => '订阅更新通知';
+
+  @override
+  String get appearanceNotifSubUpdatesSubtitle => '后台更新订阅后发送通知';
+
+  @override
+  String get tunRememberTitle => '记住授权？';
+
+  @override
+  String get tunRememberMessage => 'TUN 模式需要 root 并且每次都会要求输入密码。是否安装 polkit 规则，使其今后无需密码即可启动？安装时需要输入一次密码。';
+
+  @override
+  String get tunRememberWarning => '此后，以你的用户身份运行的任何程序都能以 root 免密码启动 VPN 内核。可随时在“高级 → 权限”中撤销。';
+
+  @override
+  String get tunRememberEnable => '启用';
+
+  @override
+  String get tunRememberNotNow => '暂不';
+
+  @override
+  String get tunRememberInstalled => '已启用免密码 TUN';
+
+  @override
+  String get tunRememberFailed => '无法更改 TUN 授权';
 }

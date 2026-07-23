@@ -1646,4 +1646,109 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get appearanceFontSystem => 'Системный';
+
+  @override
+  String get settingsResetConfirmTitle => 'Сбросить настройки?';
+
+  @override
+  String get settingsResetConfirmAction => 'Сбросить';
+
+  @override
+  String get settingsResetRoutingConfirm => 'Вернутся встроенные правила маршрутизации, ваши списки direct/proxy/block будут удалены. Действие нельзя отменить.';
+
+  @override
+  String get settingsLocalPortsResetConfirm => 'Локальные порты прокси вернутся к значениям по умолчанию. Действие нельзя отменить.';
+
+  @override
+  String get settingsXrayResetConfirm => 'Настройки ядра Xray и TUN вернутся к значениям по умолчанию. Действие нельзя отменить.';
+
+  @override
+  String get settingsPermissionsTitle => 'Разрешения';
+
+  @override
+  String get settingsPermissionsSubtitle => 'Разрешения приложения — посмотреть и отозвать';
+
+  @override
+  String get settingsPermNotifTitle => 'Уведомления';
+
+  @override
+  String get settingsPermNotifDesc => 'Строка статуса VPN и уведы об обновлении подписок';
+
+  @override
+  String get settingsPermStatusGranted => 'Разрешено';
+
+  @override
+  String get settingsPermStatusDenied => 'Запрещено';
+
+  @override
+  String get settingsPermCameraTitle => 'Камера';
+
+  @override
+  String get settingsPermCameraDesc => 'Сканирование QR-кодов конфигураций';
+
+  @override
+  String get settingsPermInstallTitle => 'Установка приложений';
+
+  @override
+  String get settingsPermInstallDesc => 'Установка обновлений приложения';
+
+  @override
+  String get settingsPermOpenAppSettings => 'Открыть настройки приложения';
+
+  @override
+  String get settingsPermRevokeHint => 'Отозвать любое разрешение можно в системных настройках приложения.';
+
+  @override
+  String get settingsPermTunHeader => 'РЕЖИМ TUN (LINUX)';
+
+  @override
+  String get settingsPermTunPasswordlessTitle => 'TUN без пароля';
+
+  @override
+  String get settingsPermTunPasswordlessSubtitle => 'Запускать режим TUN без ввода пароля polkit каждый раз';
+
+  @override
+  String get settingsPermTunDisabled => 'Беспарольный TUN выключен';
+
+  @override
+  String get appearanceNotifSectionTitle => 'УВЕДОМЛЕНИЕ';
+
+  @override
+  String get appearanceNotifSpeedTitle => 'Скорость соединения в уведомлении';
+
+  @override
+  String get appearanceNotifSpeedSubtitle => 'Показывать скорость ↓/↑ в уведомлении статуса VPN';
+
+  @override
+  String get appearanceNotifUptimeTitle => 'Время подключения в уведомлении';
+
+  @override
+  String get appearanceNotifUptimeSubtitle => 'Показывать длительность сессии в уведомлении статуса VPN';
+
+  @override
+  String get appearanceNotifSubUpdatesTitle => 'Уведомления об обновлении подписок';
+
+  @override
+  String get appearanceNotifSubUpdatesSubtitle => 'Показывать уведомление после фонового обновления подписок';
+
+  @override
+  String get tunRememberTitle => 'Запомнить авторизацию?';
+
+  @override
+  String get tunRememberMessage => 'Режим TUN требует root и спрашивает пароль при каждом запуске. Установить правило polkit, чтобы дальше запускалось без пароля? Один раз потребуется ввести пароль для установки.';
+
+  @override
+  String get tunRememberWarning => 'После этого любая программа под вашим пользователем сможет запускать ядро VPN под root без пароля. Отключить можно в «Дополнительно → Разрешения».';
+
+  @override
+  String get tunRememberEnable => 'Включить';
+
+  @override
+  String get tunRememberNotNow => 'Не сейчас';
+
+  @override
+  String get tunRememberInstalled => 'Беспарольный TUN включён';
+
+  @override
+  String get tunRememberFailed => 'Не удалось изменить авторизацию TUN';
 }

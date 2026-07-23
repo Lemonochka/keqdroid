@@ -67,6 +67,18 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
               ),
             ),
           ],
+          if (Platform.isAndroid || Platform.isLinux) ...[
+            const SizedBox(height: 12),
+            _SettingsCard(
+              title: l10n.settingsPermissionsTitle,
+              subtitle: l10n.settingsPermissionsSubtitle,
+              icon: Icons.admin_panel_settings_outlined,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const _PermissionsScreen()),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           _SettingsCard(
             title: l10n.settingsRoutingTitle,
@@ -86,6 +98,12 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
             onTap: () async {
               final current = ref.read(settingsNotifierProvider).value;
               if (current == null) return;
+              if (!await _confirmReset(
+                context,
+                message: l10n.settingsResetRoutingConfirm,
+              )) {
+                return;
+              }
               await ref.read(settingsNotifierProvider.notifier).save(
                     current.copyWith(
                       directRules: RoutingPresets.defaultDirectRules,

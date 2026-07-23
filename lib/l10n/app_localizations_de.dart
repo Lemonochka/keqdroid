@@ -1644,4 +1644,109 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get appearanceFontSystem => 'System';
+
+  @override
+  String get settingsResetConfirmTitle => 'Einstellungen zurücksetzen?';
+
+  @override
+  String get settingsResetConfirmAction => 'Zurücksetzen';
+
+  @override
+  String get settingsResetRoutingConfirm => 'Die integrierten Routing-Regeln werden wiederhergestellt und deine Direct-/Proxy-/Block-Listen verworfen. Das kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get settingsLocalPortsResetConfirm => 'Die Standard-Ports des lokalen Proxys werden wiederhergestellt. Das kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get settingsXrayResetConfirm => 'Die Standardeinstellungen für Xray-Core und TUN werden wiederhergestellt. Das kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get settingsPermissionsTitle => 'Berechtigungen';
+
+  @override
+  String get settingsPermissionsSubtitle => 'App-Berechtigungen ansehen und widerrufen';
+
+  @override
+  String get settingsPermNotifTitle => 'Benachrichtigungen';
+
+  @override
+  String get settingsPermNotifDesc => 'VPN-Statusleiste und Abo-Update-Hinweise';
+
+  @override
+  String get settingsPermStatusGranted => 'Erteilt';
+
+  @override
+  String get settingsPermStatusDenied => 'Verweigert';
+
+  @override
+  String get settingsPermCameraTitle => 'Kamera';
+
+  @override
+  String get settingsPermCameraDesc => 'Konfigurations-QR-Codes scannen';
+
+  @override
+  String get settingsPermInstallTitle => 'Apps installieren';
+
+  @override
+  String get settingsPermInstallDesc => 'App-Updates installieren';
+
+  @override
+  String get settingsPermOpenAppSettings => 'App-Einstellungen öffnen';
+
+  @override
+  String get settingsPermRevokeHint => 'Jede Berechtigung lässt sich in den System-App-Einstellungen widerrufen.';
+
+  @override
+  String get settingsPermTunHeader => 'TUN-MODUS (LINUX)';
+
+  @override
+  String get settingsPermTunPasswordlessTitle => 'TUN ohne Passwort';
+
+  @override
+  String get settingsPermTunPasswordlessSubtitle => 'TUN-Modus starten, ohne jedes Mal das polkit-Passwort einzugeben';
+
+  @override
+  String get settingsPermTunDisabled => 'TUN ohne Passwort deaktiviert';
+
+  @override
+  String get appearanceNotifSectionTitle => 'BENACHRICHTIGUNG';
+
+  @override
+  String get appearanceNotifSpeedTitle => 'Verbindungsgeschwindigkeit in Benachrichtigung';
+
+  @override
+  String get appearanceNotifSpeedSubtitle => '↓/↑-Geschwindigkeit in der VPN-Statusbenachrichtigung anzeigen';
+
+  @override
+  String get appearanceNotifUptimeTitle => 'Verbindungszeit in Benachrichtigung';
+
+  @override
+  String get appearanceNotifUptimeSubtitle => 'Sitzungsdauer in der VPN-Statusbenachrichtigung anzeigen';
+
+  @override
+  String get appearanceNotifSubUpdatesTitle => 'Benachrichtigungen zu Abo-Updates';
+
+  @override
+  String get appearanceNotifSubUpdatesSubtitle => 'Benachrichtigen, wenn Abos im Hintergrund aktualisiert werden';
+
+  @override
+  String get tunRememberTitle => 'Autorisierung merken?';
+
+  @override
+  String get tunRememberMessage => 'Der TUN-Modus benötigt Root und fragt jedes Mal nach deinem Passwort. Eine polkit-Regel installieren, damit er künftig ohne Passwort startet? Zur Installation wirst du einmal nach dem Passwort gefragt.';
+
+  @override
+  String get tunRememberWarning => 'Danach kann jedes unter deinem Benutzer laufende Programm den VPN-Core ohne Passwort als Root starten. Rückgängig jederzeit unter „Erweitert → Berechtigungen“.';
+
+  @override
+  String get tunRememberEnable => 'Aktivieren';
+
+  @override
+  String get tunRememberNotNow => 'Nicht jetzt';
+
+  @override
+  String get tunRememberInstalled => 'TUN ohne Passwort aktiviert';
+
+  @override
+  String get tunRememberFailed => 'TUN-Autorisierung konnte nicht geändert werden';
 }

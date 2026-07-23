@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
@@ -30,6 +31,7 @@ import 'package:keqdroid/utils/local_vpn_proxy.dart';
 import 'package:keqdroid/utils/routing_presets.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/split_tunneling_screen.dart';
+import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
 import 'package:keqdroid/ui/responsive/desktop_page_layout.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -39,6 +41,7 @@ part 'settings/debug_and_logs.dart';
 part 'settings/hotkey_settings.dart';
 part 'settings/lan_sharing.dart';
 part 'settings/local_proxy_ports.dart';
+part 'settings/permissions_settings.dart';
 part 'settings/ping_settings.dart';
 part 'settings/routing_screen.dart';
 part 'settings/share_hwid.dart';
@@ -357,6 +360,68 @@ class _SettingsCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Общий диалог подтверждения для деструктивных действий (сброс настроек).
+/// Возвращает true, если пользователь подтвердил. Виден всем part-файлам
+/// настроек (advanced/local ports/xray core).
+Future<bool> _confirmReset(
+  BuildContext context, {
+  required String message,
+}) async {
+  final l10n = AppLocalizations.of(context)!;
+  final cardColor = AppTheme.card(context);
+  final textColor = AppTheme.text(context);
+  final textLightColor = AppTheme.textLight(context);
+  final redColor = AppTheme.red(context);
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: redColor, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              l10n.settingsResetConfirmTitle,
+              style: TextStyle(color: textColor, fontSize: 18),
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        message,
+        style: TextStyle(color: textLightColor, height: 1.4),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(
+            l10n.subscriptionsCancel,
+            style: TextStyle(color: textLightColor),
+          ),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: redColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          ),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(
+            l10n.settingsResetConfirmAction,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
 }
 
 class _AppVersionSection extends StatelessWidget {
