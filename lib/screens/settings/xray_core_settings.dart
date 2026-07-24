@@ -80,14 +80,6 @@ class _XrayCoreSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen> {
-  final _dnsServersCtrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _dnsServersCtrl.dispose();
-    super.dispose();
-  }
-
   Future<void> _save(AppSettings settings, XrayCoreSettings core) async {
     await ref
         .read(settingsNotifierProvider.notifier)
@@ -114,7 +106,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
             tun: const TunSettings(),
           ),
         );
-    _dnsServersCtrl.text = const XrayCoreSettings().dnsServers;
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context)!.settingsXrayResetDone)),
@@ -151,10 +142,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
     final core = settings.xrayCore;
     final tun = settings.tun;
     final accent = AppTheme.accent(context);
-
-    if (_dnsServersCtrl.text.isEmpty && core.dnsServers.isNotEmpty) {
-      _dnsServersCtrl.text = core.dnsServers;
-    }
 
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
@@ -233,31 +220,11 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                     _xraySettingsDivider(context),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                      child: TextField(
-                        controller: _dnsServersCtrl,
-                        maxLines: 4,
-                        style: TextStyle(color: AppTheme.text(context), fontSize: 13),
-                        decoration: InputDecoration(
-                          labelText: l10n.settingsXrayDnsServers,
-                          hintText: 'https+local://1.1.1.1/dns-query',
-                          alignLabelWithHint: true,
-                          filled: true,
-                          fillColor: AppTheme.bg(context).withValues(alpha: 0.55),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppTheme.divider(context)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppTheme.divider(context)),
-                          ),
-                        ),
-                        onSubmitted: (v) =>
+                      child: _DnsServersField(
+                        initialValue: core.dnsServers,
+                        label: l10n.settingsXrayDnsServers,
+                        onSave: (v) =>
                             _save(settings, core.copyWith(dnsServers: v)),
-                        onEditingComplete: () => _save(
-                          settings,
-                          core.copyWith(dnsServers: _dnsServersCtrl.text),
-                        ),
                       ),
                     ),
                   ],
@@ -810,6 +777,97 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
           ),
         ],
       ),
+      ),
+    );
+  }
+}
+
+/// Поле со списком DNS-серверов. Оно многострочное (`maxLines > 1`), а такой
+/// TextField не шлёт onSubmitted/onEditingComplete — Enter вставляет перенос
+/// строки, поэтому раньше введённые адреса нигде не сохранялись и «слетали»
+/// при выходе с экрана. Сохраняем по потере фокуса и при уходе с экрана.
+class _DnsServersField extends StatefulWidget {
+  const _DnsServersField({
+    required this.initialValue,
+    required this.label,
+    required this.onSave,
+  });
+
+  final String initialValue;
+  final String label;
+  final ValueChanged<String> onSave;
+
+  @override
+  State<_DnsServersField> createState() => _DnsServersFieldState();
+}
+
+class _DnsServersFieldState extends State<_DnsServersField> {
+  late final TextEditingController _ctrl;
+  late final FocusNode _focus;
+  late String _savedValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.initialValue);
+    _savedValue = widget.initialValue;
+    _focus = FocusNode()..addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (!_focus.hasFocus) _flush();
+  }
+
+  void _flush() {
+    final text = _ctrl.text;
+    if (text == _savedValue) return;
+    _savedValue = text;
+    widget.onSave(text);
+  }
+
+  @override
+  void didUpdateWidget(covariant _DnsServersField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Внешнее изменение (например «Сбросить настройки») подхватываем только
+    // когда пользователь не редактирует поле, чтобы не затирать ввод.
+    if (widget.initialValue != oldWidget.initialValue &&
+        !_focus.hasFocus &&
+        widget.initialValue != _ctrl.text) {
+      _ctrl.text = widget.initialValue;
+      _savedValue = widget.initialValue;
+    }
+  }
+
+  @override
+  void dispose() {
+    _flush();
+    _focus.removeListener(_onFocusChange);
+    _focus.dispose();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _ctrl,
+      focusNode: _focus,
+      maxLines: 4,
+      style: TextStyle(color: AppTheme.text(context), fontSize: 13),
+      decoration: InputDecoration(
+        labelText: widget.label,
+        hintText: 'https+local://1.1.1.1/dns-query',
+        alignLabelWithHint: true,
+        filled: true,
+        fillColor: AppTheme.bg(context).withValues(alpha: 0.55),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.divider(context)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.divider(context)),
+        ),
       ),
     );
   }
