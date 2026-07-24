@@ -286,6 +286,81 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsRoutingValuesHint => 'Eine pro Zeile oder durch Komma getrennt';
 
   @override
+  String get settingsRoutingFinalTitle => 'Übriger Datenverkehr';
+
+  @override
+  String get settingsRoutingFinalDesc => 'Standardaktion für Verkehr außerhalb der Regeln.';
+
+  @override
+  String get settingsRoutingFinalProxy => 'Proxy';
+
+  @override
+  String get settingsRoutingFinalDirect => 'Umgehen';
+
+  @override
+  String get settingsRoutingFinalBlock => 'Blockieren';
+
+  @override
+  String get settingsRoutingAdvancedTitle => 'Eigene Regeln';
+
+  @override
+  String get settingsRoutingAdvancedHint => 'Einzelne Regeln mit eigenem Ein/Aus-Schalter. Werden zusätzlich zu den Listen oben angewendet.';
+
+  @override
+  String get settingsRoutingAdvancedEmpty => 'Noch keine eigenen Regeln';
+
+  @override
+  String get settingsRoutingAdvancedAdd => 'Regel hinzufügen';
+
+  @override
+  String get settingsRoutingRuleNewTitle => 'Neue Regel';
+
+  @override
+  String get settingsRoutingRuleEditTitle => 'Regel bearbeiten';
+
+  @override
+  String get settingsRoutingRuleName => 'Name';
+
+  @override
+  String get settingsRoutingRuleNameHint => 'z. B. Streaming';
+
+  @override
+  String get settingsRoutingRuleValues => 'Werte';
+
+  @override
+  String get settingsRoutingRuleValuesHint => 'Eines pro Zeile oder durch Komma getrennt';
+
+  @override
+  String get settingsRoutingRuleMatchBy => 'Abgleich nach';
+
+  @override
+  String get settingsRoutingRuleTypeDomain => 'Domain';
+
+  @override
+  String get settingsRoutingRuleTypeIp => 'IP / CIDR';
+
+  @override
+  String get settingsRoutingRuleTypeGeoip => 'GeoIP';
+
+  @override
+  String get settingsRoutingRuleTypeGeosite => 'GeoSite';
+
+  @override
+  String get settingsRoutingRuleAction => 'Aktion';
+
+  @override
+  String get settingsRoutingRuleSave => 'Speichern';
+
+  @override
+  String get settingsRoutingRuleDeleteConfirm => 'Diese Regel löschen?';
+
+  @override
+  String get routingCheatSheetTitle => 'Regeln schreiben';
+
+  @override
+  String get routingCheatSheetBody => 'Regeln sind einfach eine Liste: was wohin geht. Jede Zeile ist eine Domain, eine IP oder ein Geo-Tag, daneben die Aktion: direkt raus (umgehen), über das VPN (Proxy) oder blockiert.\n\n## Domains\nvk.com — die Domain selbst und alle Subdomains\nru — alles, was auf .ru endet (einfach ein Wort ohne Punkt)\n.example.com — nur Subdomains, nicht die Domain selbst\nfull:example.com — genau dieser Host, keine Subdomains\nregexp:… — ein regulärer Ausdruck, wenn es kompliziert sein muss\n\n## IP-Adressen\n1.2.3.4 — eine einzelne Adresse\n10.0.0.0/8 — ein ganzer Bereich (CIDR)\n\n## GeoIP — nach Land\ngeoip:ru — alle russischen IPs. Statt ru jedes Land: us, de, cn, ua, kz…\nDazu fertige Pakete: geoip:private (LAN), geoip:telegram, geoip:google.\nNach Land? Genau dafür — geoip kennt sie alle.\n\n## GeoSite — fertige Listen\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nDas sind keine Länder, sondern Dienst-Kategorien, die jemand schon zusammengestellt hat.\nLänder gibt es hier kaum (nur geolocation-cn und geolocation-!cn), nach Land ist also eher geoip.\n\n## Am PC (Kern keqrnel)\nGeo funktioniert wie am Handy: das in keqrnel eingebaute xray macht den Abgleich. Es braucht nur geoip.dat und geosite.dat neben keqdroid.exe — im Release liegen sie schon dort. Wenn Geo-Regeln ignoriert wirken, prüf zuerst diese zwei Dateien.\n\n## Reihenfolge\nVon oben nach unten: erst Block, dann dein Server (immer direkt, sonst gibt es eine Schleife), dann Umgehen, dann Proxy. Alles Übrige folgt dem Schalter Übriger Datenverkehr oben.';
+
+  @override
   String get settingsRoutingSavedToast => 'Routing aktualisiert';
 
   @override

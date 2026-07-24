@@ -14,6 +14,11 @@ class AppSettings {
   final String directRules;
   final String proxyRules;
   final String blockedRules;
+  /// Финальное действие (catch-all) для трафика, не попавшего ни в одно правило:
+  /// `proxy` — глобальный прокси (дефолт), `direct` — обход (bypass, как выключение
+  /// глобал-прокси в Happ), `block` — блокировать. Прошивается в catch-all обоих
+  /// генераторов конфига (xray и sing-box TUN).
+  final String finalOutbound;
   final bool autoConnectLastServer;
   final String pingType;
   /// [PingTestConfig.targetGstatic] | cloudflare | microsoft | custom
@@ -75,6 +80,7 @@ class AppSettings {
     this.directRules = RoutingPresets.defaultDirectRules,
     this.proxyRules = RoutingPresets.defaultProxyRules,
     this.blockedRules = RoutingPresets.defaultBlockedRules,
+    this.finalOutbound = finalOutboundProxy,
     this.autoConnectLastServer = false,
     this.pingType = 'tcp',
     this.pingTestTarget = PingTestConfig.targetGstatic,
@@ -115,6 +121,7 @@ class AppSettings {
     'directRules': directRules,
     'proxyRules': proxyRules,
     'blockedRules': blockedRules,
+    'finalOutbound': finalOutbound,
     'autoConnectLastServer': autoConnectLastServer,
     'pingType': pingType,
     'pingTestTarget': pingTestTarget,
@@ -175,6 +182,7 @@ class AppSettings {
         legacyKeys: const ['blockedDomains'],
         fallback: '',
       ),
+      finalOutbound: normalizeFinalOutbound(json['finalOutbound'] as String?),
       autoConnectLastServer: json['autoConnectLastServer'] as bool? ?? false,
       pingType: _normalizePingType(json['pingType'] as String?),
       pingTestTarget: PingTestConfig.normalizeTarget(
@@ -228,6 +236,21 @@ class AppSettings {
       if (k is String && v is String && v.isNotEmpty) out[k] = v;
     });
     return out;
+  }
+
+  /// Допустимые значения [finalOutbound].
+  static const finalOutboundProxy = 'proxy';
+  static const finalOutboundDirect = 'direct';
+  static const finalOutboundBlock = 'block';
+  static const finalOutbounds = [
+    finalOutboundProxy,
+    finalOutboundDirect,
+    finalOutboundBlock,
+  ];
+
+  static String normalizeFinalOutbound(String? raw) {
+    final v = raw?.trim().toLowerCase();
+    return finalOutbounds.contains(v) ? v! : finalOutboundProxy;
   }
 
   /// Допустимые значения [coreEngine].
@@ -294,6 +317,7 @@ class AppSettings {
     String? directRules,
     String? proxyRules,
     String? blockedRules,
+    String? finalOutbound,
     bool? autoConnectLastServer,
     String? pingType,
     String? pingTestTarget,
@@ -333,6 +357,7 @@ class AppSettings {
         directRules: directRules ?? this.directRules,
         proxyRules: proxyRules ?? this.proxyRules,
         blockedRules: blockedRules ?? this.blockedRules,
+        finalOutbound: finalOutbound ?? this.finalOutbound,
         autoConnectLastServer: autoConnectLastServer ?? this.autoConnectLastServer,
         pingType: pingType ?? this.pingType,
         pingTestTarget: pingTestTarget ?? this.pingTestTarget,
@@ -381,6 +406,7 @@ class AppSettings {
               directRules == other.directRules &&
               proxyRules == other.proxyRules &&
               blockedRules == other.blockedRules &&
+              finalOutbound == other.finalOutbound &&
               autoConnectLastServer == other.autoConnectLastServer &&
               pingType == other.pingType &&
               pingTestTarget == other.pingTestTarget &&
@@ -430,6 +456,7 @@ class AppSettings {
     directRules,
     proxyRules,
     blockedRules,
+    finalOutbound,
     autoConnectLastServer,
     pingType,
     pingTestTarget,

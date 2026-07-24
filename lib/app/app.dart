@@ -170,24 +170,32 @@ ThemeData buildAppTheme(
   );
 }
 
-class KeqdisApp extends StatelessWidget {
+class KeqdisApp extends ConsumerWidget {
   final Widget home;
   const KeqdisApp({super.key, required this.home});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Запасной сид «динамических цветов». Плагин dynamic_color отдаёт схему
+    // только на устройствах с официальным флагом Material You (Pixel); на
+    // Realme/ColorOS, OneUI и прочих он молчит, хотя системный акцент у них есть.
+    // Читаем его нативно и используем как сид, чтобы «следовать цветам системы»
+    // работало и там. Нет акцента (Android < 12 / не Android) — фирменный fallback.
+    final systemAccent = ref.watch(systemAccentColorProvider).value;
+    final fallbackSeed = systemAccent ?? kSeedFallback;
+
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
         final lightScheme = (lightDynamic ??
                 ColorScheme.fromSeed(
-                  seedColor: kSeedFallback,
+                  seedColor: fallbackSeed,
                   brightness: Brightness.light,
                 ))
             .harmonized();
 
         final darkScheme = (darkDynamic ??
                 ColorScheme.fromSeed(
-                  seedColor: kSeedFallback,
+                  seedColor: fallbackSeed,
                   brightness: Brightness.dark,
                 ))
             .harmonized();

@@ -242,7 +242,11 @@ class StorageService {
   Future<List<RoutingRule>> getRules() async {
     try {
       final raw = _prefs.getString(_kRules);
-      if (raw == null) return RoutingRule.defaults;
+      // Пусто по умолчанию: структурированные правила — опциональная надстройка
+      // поверх текстовых списков (см. applyRoutingRules). Дефолтный набор
+      // RoutingRule.defaults иначе задвоил бы дефолты текстовых списков и молча
+      // поменял роутинг у всех при обновлении. Набор доступен через «Сбросить».
+      if (raw == null) return const [];
       return _decodeListResilient(raw, RoutingRule.fromJson, 'routing rule');
     } catch (e) {
       throw StorageException('Failed to load routing rules', cause: e);

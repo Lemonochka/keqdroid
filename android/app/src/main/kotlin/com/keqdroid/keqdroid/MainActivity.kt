@@ -171,6 +171,25 @@ class MainActivity : FlutterFragmentActivity() {
             ?.lowercase()
             ?: "disconnected"
 
+    /**
+     * ARGB системного акцента (Material You `system_accent1_500`) на Android 12+.
+     *
+     * Плагин dynamic_color отдаёт схему только когда OEM выставил официальный
+     * флаг поддержки Material You — Pixel это делает, а Realme/ColorOS, OneUI и
+     * прочие часто НЕ выставляют, хотя ресурсы `system_accent1_*` у них заполнены
+     * из обоев/темы. Тогда DynamicColorBuilder возвращает null и приложение
+     * застывает на дефолтном сид-цвете. Читаем ресурс напрямую как запасной сид —
+     * так «динамические цвета» работают и на не-Pixel устройствах. Возвращаем
+     * null на API < 31 (ресурса нет) и при любой ошибке чтения.
+     */
+    private fun readSystemAccentColor(): Int? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+        return runCatching {
+            @Suppress("DEPRECATION")
+            resources.getColor(android.R.color.system_accent1_500, theme)
+        }.getOrNull()
+    }
+
     private fun setupMethodChannel(flutterEngine: FlutterEngine) {
         methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
             .also { ch ->
@@ -287,6 +306,7 @@ class MainActivity : FlutterFragmentActivity() {
                             }
                         }
                         "getDeviceModel" -> result.success(android.os.Build.MODEL ?: "Android Device")
+                        "getSystemAccentColor" -> result.success(readSystemAccentColor())
                         "getLaunchAction" -> {
                             // Возвращает action из Intent если приложение было запущено из уведомления
                             val action = intent?.getStringExtra(EXTRA_LAUNCH_ACTION)

@@ -19,6 +19,7 @@ import '../services/subscription_service.dart';
 import '../services/update_service.dart';
 import '../services/tunnel_session_builder.dart';
 import '../services/vpn_engine.dart';
+import '../platform/vpn_native_bridge.dart';
 import '../tunnel/app_routing_mode.dart';
 import '../tunnel/vpn_backend.dart';
 import '../utils/awg_profile.dart';
@@ -26,6 +27,7 @@ import '../utils/config_gen.dart';
 import '../utils/error_messages.dart';
 import '../utils/local_vpn_proxy.dart';
 import '../utils/process_name_utils.dart';
+import '../utils/routing_rules_fold.dart';
 import '../utils/socks5_credentials.dart';
 import '../utils/split_tunnel_routing.dart';
 import '../utils/subscription_diff.dart';
@@ -115,6 +117,14 @@ const _updateRecheckInterval = Duration(hours: 6);
 // провайдер на каждый эмит — checkForUpdate выжирал бы анонимный лимит GitHub
 // (60 запросов/час). Дополнительно от спама сетью защищает in-memory троттлинг
 // в UpdateService (не чаще раза в 30 минут).
+/// Системный акцент (Material You) как запасной сид «динамических цветов», когда
+/// плагин dynamic_color молчит на не-Pixel устройствах. `null` — цвета из плагина
+/// доступны, платформа не Android, или Android < 12. Читается один раз при старте.
+final systemAccentColorProvider = FutureProvider<Color?>((ref) async {
+  final argb = await VpnNativeBridge.getSystemAccentColor();
+  return argb == null ? null : Color(argb);
+});
+
 final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
   // периодический ре-чек; таймер перевзводится на каждый ре-ран провайдера
   final timer = Timer(_updateRecheckInterval, ref.invalidateSelf);
@@ -1021,7 +1031,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       } else {
         state = const AsyncData(VpnState(status: VpnStatus.connecting));
       }
-      final settings = await ref.read(storageProvider).getSettings();
+      // Структурированные правила (RoutingRule) складываем в текстовые списки
+      // настроек — так они попадают в оба генератора конфига без правок в них.
+      final settings = applyRoutingRules(
+        await ref.read(storageProvider).getSettings(),
+        await ref.read(storageProvider).getRules(),
+      );
       final split = ref.read(splitTunnelingProvider);
       final excludePkgs = split.excludePackages.toList();
       final includePkgs = split.includePackages.toList();

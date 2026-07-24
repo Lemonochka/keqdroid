@@ -286,6 +286,81 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingValuesHint => '每行一个，或用逗号分隔';
 
   @override
+  String get settingsRoutingFinalTitle => '其余流量';
+
+  @override
+  String get settingsRoutingFinalDesc => '规则之外流量的默认动作。';
+
+  @override
+  String get settingsRoutingFinalProxy => '代理';
+
+  @override
+  String get settingsRoutingFinalDirect => '绕过';
+
+  @override
+  String get settingsRoutingFinalBlock => '阻止';
+
+  @override
+  String get settingsRoutingAdvancedTitle => '自定义规则';
+
+  @override
+  String get settingsRoutingAdvancedHint => '带有独立开关的单条规则。在上述列表之上应用。';
+
+  @override
+  String get settingsRoutingAdvancedEmpty => '暂无自定义规则';
+
+  @override
+  String get settingsRoutingAdvancedAdd => '添加规则';
+
+  @override
+  String get settingsRoutingRuleNewTitle => '新建规则';
+
+  @override
+  String get settingsRoutingRuleEditTitle => '编辑规则';
+
+  @override
+  String get settingsRoutingRuleName => '名称';
+
+  @override
+  String get settingsRoutingRuleNameHint => '例如 流媒体';
+
+  @override
+  String get settingsRoutingRuleValues => '值';
+
+  @override
+  String get settingsRoutingRuleValuesHint => '每行一个或用逗号分隔';
+
+  @override
+  String get settingsRoutingRuleMatchBy => '匹配方式';
+
+  @override
+  String get settingsRoutingRuleTypeDomain => '域名';
+
+  @override
+  String get settingsRoutingRuleTypeIp => 'IP / CIDR';
+
+  @override
+  String get settingsRoutingRuleTypeGeoip => 'GeoIP';
+
+  @override
+  String get settingsRoutingRuleTypeGeosite => 'GeoSite';
+
+  @override
+  String get settingsRoutingRuleAction => '动作';
+
+  @override
+  String get settingsRoutingRuleSave => '保存';
+
+  @override
+  String get settingsRoutingRuleDeleteConfirm => '删除此规则？';
+
+  @override
+  String get routingCheatSheetTitle => '怎么写规则';
+
+  @override
+  String get routingCheatSheetBody => '规则就是一张清单：什么走哪里。每一行是一个域名、一个 IP 或一个地理标签，旁边写上动作：直连（绕过）、走 VPN（代理），或者屏蔽。\n\n## 域名\nvk.com — 这个域名本身和它所有子域名\nru — 所有以 .ru 结尾的（直接写个词，不带点）\n.example.com — 只匹配子域名，不含域名本身\nfull:example.com — 就这一个主机，不含子域名\nregexp:… — 实在需要花活儿时，用正则\n\n## IP 地址\n1.2.3.4 — 单个地址\n10.0.0.0/8 — 一整段（CIDR）\n\n## GeoIP — 按国家\ngeoip:ru — 所有俄罗斯 IP。把 ru 换成任意国家：us、de、cn、ua、kz……\n还有现成的包：geoip:private（局域网）、geoip:telegram、geoip:google。\n想按国家就用它——geoip 全都认得。\n\n## GeoSite — 现成清单\ngeosite:google、geosite:netflix、geosite:telegram、geosite:category-ads-all……\n这些不是国家，而是别人已经整理好的服务分类。\n这里几乎没有国家（只有 geolocation-cn 和 geolocation-!cn），所以按国家还得靠 geoip。\n\n## 在电脑上（keqrnel 内核）\n地理规则和手机上一样：由 keqrnel 内置的 xray 来匹配。只要 geoip.dat 和 geosite.dat 和 keqdroid.exe 放在一起就行——正式版里本来就有。要是地理规则好像没生效，先检查这两个文件。\n\n## 顺序\n从上到下：先屏蔽，再是你的服务器（始终直连，否则会成环），然后绕过，然后代理。剩下的都走上面「其余流量」那个开关。';
+
+  @override
   String get settingsRoutingSavedToast => '路由已更新';
 
   @override

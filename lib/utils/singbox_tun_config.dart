@@ -293,10 +293,27 @@ class SingBoxTunConfigGen {
       rules.add({'ip_cidr': proxyIpsForSingBox, 'outbound': 'proxy'});
     }
 
-    var routeFinal =
-        routingMode == AppRoutingMode.onlySelected ? 'direct' : 'proxy';
+    // Финальное действие (catch-all). При per-app сплите режим сам диктует финал
+    // (onlySelected → direct: не выбранные приложения идут напрямую). В обычном
+    // режиме allProxy финал выбирает пользователь: proxy (глобал-прокси),
+    // direct (обход) или block.
+    final finalOutbound = switch (settings.finalOutbound) {
+      AppSettings.finalOutboundDirect => 'direct',
+      AppSettings.finalOutboundBlock => 'block',
+      _ => 'proxy',
+    };
+    var routeFinal = switch (routingMode) {
+      AppRoutingMode.onlySelected => 'direct',
+      AppRoutingMode.allExceptSelected => 'proxy',
+      AppRoutingMode.allProxy => finalOutbound,
+    };
 
-    if (settings.killSwitch && routingMode == AppRoutingMode.allProxy) {
+    // Kill switch имеет смысл только когда финал — proxy (глобал-прокси): гоним
+    // весь IP-трафик в proxy, а финал делаем block, чтобы при падении прокси не
+    // было утечки. Для direct (обход) и block это не нужно.
+    if (settings.killSwitch &&
+        routingMode == AppRoutingMode.allProxy &&
+        routeFinal == 'proxy') {
       rules.add({
         'ip_cidr': ['0.0.0.0/1', '128.0.0.0/1'],
         'outbound': 'proxy',
