@@ -175,6 +175,94 @@ void main() {
     expect(proxyDns['detour'], 'proxy');
   });
 
+  test('default custom DNS (https+local://) becomes a valid DoH server, not raw tcp', () {
+    // Регрессия: раньше xray-адрес скармливался sing-box как {type:tcp,
+    // server:"https+local://1.1.1.1/dns-query"} — невалидный адрес ронял
+    // keqrnel (exit code 2) при любом включении кастомного DNS.
+    final proxyDns = proxyDnsFor(
+      AppSettings(
+        xrayCore: XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: const XrayCoreSettings().dnsServers, // дефолт из UI
+        ),
+      ),
+    );
+    expect(proxyDns['type'], 'https');
+    expect(proxyDns['server'], '1.1.1.1');
+    expect(proxyDns['path'], '/dns-query');
+    expect(proxyDns['detour'], 'proxy');
+    // адрес НИКОГДА не должен утечь в server целиком
+    expect(proxyDns['server'], isNot(contains('://')));
+  });
+
+  test('plain https:// DoH keeps host and path', () {
+    final proxyDns = proxyDnsFor(
+      const AppSettings(
+        xrayCore: XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: 'https://dns.google/dns-query',
+        ),
+      ),
+    );
+    expect(proxyDns['type'], 'https');
+    expect(proxyDns['server'], 'dns.google');
+    expect(proxyDns['path'], '/dns-query');
+  });
+
+  test('tls:// (DoT) maps to a tls server with port', () {
+    final proxyDns = proxyDnsFor(
+      const AppSettings(
+        xrayCore: XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: 'tls://1.1.1.1:853',
+        ),
+      ),
+    );
+    expect(proxyDns['type'], 'tls');
+    expect(proxyDns['server'], '1.1.1.1');
+    expect(proxyDns['server_port'], 853);
+  });
+
+  test('quic:// (DoQ) maps to a quic server', () {
+    final proxyDns = proxyDnsFor(
+      const AppSettings(
+        xrayCore: XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: 'quic://dns.adguard-dns.com',
+        ),
+      ),
+    );
+    expect(proxyDns['type'], 'quic');
+    expect(proxyDns['server'], 'dns.adguard-dns.com');
+  });
+
+  test('plain host:port DNS rides TCP with the given port', () {
+    final proxyDns = proxyDnsFor(
+      const AppSettings(
+        xrayCore: XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: '8.8.8.8:5353',
+        ),
+      ),
+    );
+    expect(proxyDns['type'], 'tcp');
+    expect(proxyDns['server'], '8.8.8.8');
+    expect(proxyDns['server_port'], 5353);
+  });
+
+  test('non-networkable resolver (localhost) falls back to default DoH', () {
+    final proxyDns = proxyDnsFor(
+      const AppSettings(
+        xrayCore: XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: 'localhost',
+        ),
+      ),
+    );
+    expect(proxyDns['type'], 'https');
+    expect(proxyDns['server'], '1.1.1.1');
+  });
+
   test('kill switch (allProxy): final becomes block, split CIDRs go to proxy', () {
     final json = SingBoxTunConfigGen.generate(
       localSocksPort: 10808,
