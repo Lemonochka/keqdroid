@@ -286,6 +286,81 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsRoutingValuesHint => 'По одному в строке или через запятую';
 
   @override
+  String get settingsRoutingFinalTitle => 'Остальной трафик';
+
+  @override
+  String get settingsRoutingFinalDesc => 'Действие по умолчанию для трафика вне правил.';
+
+  @override
+  String get settingsRoutingFinalProxy => 'Прокси';
+
+  @override
+  String get settingsRoutingFinalDirect => 'Обход';
+
+  @override
+  String get settingsRoutingFinalBlock => 'Блок';
+
+  @override
+  String get settingsRoutingAdvancedTitle => 'Свои правила';
+
+  @override
+  String get settingsRoutingAdvancedHint => 'Отдельные правила с собственным переключателем. Применяются поверх списков выше.';
+
+  @override
+  String get settingsRoutingAdvancedEmpty => 'Пока нет своих правил';
+
+  @override
+  String get settingsRoutingAdvancedAdd => 'Добавить правило';
+
+  @override
+  String get settingsRoutingRuleNewTitle => 'Новое правило';
+
+  @override
+  String get settingsRoutingRuleEditTitle => 'Изменить правило';
+
+  @override
+  String get settingsRoutingRuleName => 'Название';
+
+  @override
+  String get settingsRoutingRuleNameHint => 'напр. Стриминг';
+
+  @override
+  String get settingsRoutingRuleValues => 'Значения';
+
+  @override
+  String get settingsRoutingRuleValuesHint => 'По одному в строке или через запятую';
+
+  @override
+  String get settingsRoutingRuleMatchBy => 'Сопоставлять по';
+
+  @override
+  String get settingsRoutingRuleTypeDomain => 'Домен';
+
+  @override
+  String get settingsRoutingRuleTypeIp => 'IP / CIDR';
+
+  @override
+  String get settingsRoutingRuleTypeGeoip => 'GeoIP';
+
+  @override
+  String get settingsRoutingRuleTypeGeosite => 'GeoSite';
+
+  @override
+  String get settingsRoutingRuleAction => 'Действие';
+
+  @override
+  String get settingsRoutingRuleSave => 'Сохранить';
+
+  @override
+  String get settingsRoutingRuleDeleteConfirm => 'Удалить это правило?';
+
+  @override
+  String get routingCheatSheetTitle => 'Как писать правила';
+
+  @override
+  String get routingCheatSheetBody => 'Правила — это просто список: что куда отправить. Каждая строка — домен, IP или гео-метка, а рядом действие: напрямую (обход), через VPN (прокси) или в блок.\n\n## Домены\nvk.com — сам домен и все его поддомены\nru — всё, что оканчивается на .ru (просто слово без точки)\n.example.com — только поддомены, без самого домена\nfull:example.com — ровно этот адрес, без поддоменов\nregexp:… — если совсем надо, можно регуляркой\n\n## IP-адреса\n1.2.3.4 — один адрес\n10.0.0.0/8 — целый диапазон (CIDR)\n\n## GeoIP — по стране\ngeoip:ru — все российские IP. Вместо ru любая страна: us, de, cn, ua, kz…\nПлюс готовые пачки: geoip:private (локалка), geoip:telegram, geoip:google.\nНужно «по стране» — это сюда, geoip знает все.\n\n## GeoSite — готовые списки\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nЭто не страны, а категории сервисов, которые уже собрали за тебя.\nСтран тут почти нет (только geolocation-cn и geolocation-!cn), так что «по стране» — всё-таки geoip.\n\n## На ПК (ядро keqrnel)\nГео работает так же, как на телефоне: его считает встроенный в keqrnel xray. Нужно лишь, чтобы рядом с keqdroid.exe лежали geoip.dat и geosite.dat — в релизе они уже там. Если гео-правила будто не работают, первым делом проверь эти два файла.\n\n## Порядок\nСверху вниз: сначала блок, потом твой сервер (он всегда напрямую, иначе будет петля), потом обход, потом прокси. Всё, что не подошло, идёт по переключателю «Остальной трафик» вверху.';
+
+  @override
   String get settingsRoutingSavedToast => 'Маршрутизация обновлена';
 
   @override

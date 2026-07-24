@@ -39,6 +39,17 @@ class VpnNativeBridge {
     return channel.invokeMethod<String>('getPendingDeepLink');
   }
 
+  /// ARGB системного акцента (Material You), когда плагин dynamic_color молчит
+  /// на не-Pixel устройствах. `null` — до Android 12, при ошибке или не на Android.
+  static Future<int?> getSystemAccentColor() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      return await channel.invokeMethod<int>('getSystemAccentColor');
+    } catch (_) {
+      return null;
+    }
+  }
+
   static void registerLaunchHandler(
     Future<void> Function(MethodCall call)? handler,
   ) {

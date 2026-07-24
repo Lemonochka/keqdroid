@@ -621,6 +621,156 @@ abstract class AppLocalizations {
   /// **'One per line, or comma separated'**
   String get settingsRoutingValuesHint;
 
+  /// No description provided for @settingsRoutingFinalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmatched traffic'**
+  String get settingsRoutingFinalTitle;
+
+  /// No description provided for @settingsRoutingFinalDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Default action for traffic outside the rules.'**
+  String get settingsRoutingFinalDesc;
+
+  /// No description provided for @settingsRoutingFinalProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy'**
+  String get settingsRoutingFinalProxy;
+
+  /// No description provided for @settingsRoutingFinalDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Bypass'**
+  String get settingsRoutingFinalDirect;
+
+  /// No description provided for @settingsRoutingFinalBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Block'**
+  String get settingsRoutingFinalBlock;
+
+  /// No description provided for @settingsRoutingAdvancedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom rules'**
+  String get settingsRoutingAdvancedTitle;
+
+  /// No description provided for @settingsRoutingAdvancedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Individual rules with their own on/off switch. Applied on top of the lists above.'**
+  String get settingsRoutingAdvancedHint;
+
+  /// No description provided for @settingsRoutingAdvancedEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No custom rules yet'**
+  String get settingsRoutingAdvancedEmpty;
+
+  /// No description provided for @settingsRoutingAdvancedAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add rule'**
+  String get settingsRoutingAdvancedAdd;
+
+  /// No description provided for @settingsRoutingRuleNewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New rule'**
+  String get settingsRoutingRuleNewTitle;
+
+  /// No description provided for @settingsRoutingRuleEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit rule'**
+  String get settingsRoutingRuleEditTitle;
+
+  /// No description provided for @settingsRoutingRuleName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get settingsRoutingRuleName;
+
+  /// No description provided for @settingsRoutingRuleNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Streaming'**
+  String get settingsRoutingRuleNameHint;
+
+  /// No description provided for @settingsRoutingRuleValues.
+  ///
+  /// In en, this message translates to:
+  /// **'Values'**
+  String get settingsRoutingRuleValues;
+
+  /// No description provided for @settingsRoutingRuleValuesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'One per line or comma-separated'**
+  String get settingsRoutingRuleValuesHint;
+
+  /// No description provided for @settingsRoutingRuleMatchBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Match by'**
+  String get settingsRoutingRuleMatchBy;
+
+  /// No description provided for @settingsRoutingRuleTypeDomain.
+  ///
+  /// In en, this message translates to:
+  /// **'Domain'**
+  String get settingsRoutingRuleTypeDomain;
+
+  /// No description provided for @settingsRoutingRuleTypeIp.
+  ///
+  /// In en, this message translates to:
+  /// **'IP / CIDR'**
+  String get settingsRoutingRuleTypeIp;
+
+  /// No description provided for @settingsRoutingRuleTypeGeoip.
+  ///
+  /// In en, this message translates to:
+  /// **'GeoIP'**
+  String get settingsRoutingRuleTypeGeoip;
+
+  /// No description provided for @settingsRoutingRuleTypeGeosite.
+  ///
+  /// In en, this message translates to:
+  /// **'GeoSite'**
+  String get settingsRoutingRuleTypeGeosite;
+
+  /// No description provided for @settingsRoutingRuleAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Action'**
+  String get settingsRoutingRuleAction;
+
+  /// No description provided for @settingsRoutingRuleSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get settingsRoutingRuleSave;
+
+  /// No description provided for @settingsRoutingRuleDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this rule?'**
+  String get settingsRoutingRuleDeleteConfirm;
+
+  /// No description provided for @routingCheatSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How to write rules'**
+  String get routingCheatSheetTitle;
+
+  /// No description provided for @routingCheatSheetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules are just a list: what goes where. Each line is a domain, an IP, or a geo tag, and next to it the action — straight out (bypass), through the VPN (proxy), or blocked.\n\n## Domains\nvk.com — the domain itself and all its subdomains\nru — anything ending in .ru (a bare word, no dot)\n.example.com — subdomains only, not the domain itself\nfull:example.com — exactly this host, no subdomains\nregexp:… — a regex, if you really need to get fancy\n\n## IP addresses\n1.2.3.4 — a single address\n10.0.0.0/8 — a whole range (CIDR)\n\n## GeoIP — by country\ngeoip:ru — every Russian IP. Swap ru for any country: us, de, cn, ua, kz…\nPlus ready-made bundles: geoip:private (LAN), geoip:telegram, geoip:google.\nNeed it by country? This is the one — geoip knows them all.\n\n## GeoSite — ready-made lists\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nThese aren\'t countries but service categories someone already put together for you.\nHardly any countries here (just geolocation-cn and geolocation-!cn), so by-country is really geoip\'s job.\n\n## On PC (keqrnel core)\nGeo works the same as on the phone: the xray built into keqrnel does the matching. It just needs geoip.dat and geosite.dat sitting next to keqdroid.exe — a release build already has them there. If geo rules look ignored, check those two files first.\n\n## Order\nTop to bottom: block first, then your server (always direct, or you\'d get a loop), then bypass, then proxy. Whatever is left follows the Unmatched traffic switch up top.'**
+  String get routingCheatSheetBody;
+
   /// No description provided for @settingsRoutingSavedToast.
   ///
   /// In en, this message translates to:

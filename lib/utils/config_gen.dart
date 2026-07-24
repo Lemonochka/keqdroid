@@ -782,7 +782,17 @@ class ConfigGeneratorV2 {
     // (singbox_tun_config.dart).
     } // end full routing (non-ping)
 
-    rules.add({'type': 'field', 'outboundTag': 'proxy', 'network': 'tcp,udp'});
+    // Финальное действие (catch-all) для всего, что не попало в правила.
+    // В ping-режиме всегда proxy (тестируем сам прокси); иначе — выбор
+    // пользователя: proxy (глобал-прокси), direct (обход) или block.
+    final finalTag = isPingMode
+        ? 'proxy'
+        : switch (settings.finalOutbound) {
+            AppSettings.finalOutboundDirect => 'direct',
+            AppSettings.finalOutboundBlock => 'block',
+            _ => 'proxy',
+          };
+    rules.add({'type': 'field', 'outboundTag': finalTag, 'network': 'tcp,udp'});
 
     final socksPort = pingSocksPort ?? settings.localPort;
     final useNoAuthInbound = isPingMode || localInboundsNoAuth;

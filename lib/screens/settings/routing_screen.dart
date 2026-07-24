@@ -56,6 +56,22 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         );
   }
 
+  /// Сохраняет финальное действие вместе с текущим текстом полей (сбрасывая
+  /// debounce), чтобы незакоммиченные правки списков не потерялись.
+  Future<void> _saveFinalOutbound(String value) async {
+    _debounce?.cancel();
+    final current = ref.read(settingsNotifierProvider).value;
+    if (current == null) return;
+    await ref.read(settingsNotifierProvider.notifier).save(
+          current.copyWith(
+            directRules: _directRules.text,
+            proxyRules: _proxyRules.text,
+            blockedRules: _blockedRules.text,
+            finalOutbound: value,
+          ),
+        );
+  }
+
   TextEditingController _controllerFor(RoutingField f) => switch (f) {
         RoutingField.direct => _directRules,
         RoutingField.proxy => _proxyRules,
@@ -148,6 +164,11 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     );
     final tunnelActive = vpnStatus == VpnStatus.connected ||
         vpnStatus == VpnStatus.connecting;
+    final finalOutbound = ref.watch(
+      settingsNotifierProvider.select(
+        (a) => a.value?.finalOutbound ?? AppSettings.finalOutboundProxy,
+      ),
+    );
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
       appBar: AppBar(
@@ -159,6 +180,11 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           style: TextStyle(color: AppTheme.text(context)),
         ),
         actions: [
+          IconButton(
+            tooltip: l10n.routingCheatSheetTitle,
+            icon: Icon(Icons.help_outline, color: AppTheme.text(context)),
+            onPressed: () => _showCheatSheet(context, l10n),
+          ),
           IconButton(
             tooltip: l10n.settingsResetRoutingTitle,
             icon: Icon(Icons.restore, color: AppTheme.text(context)),
@@ -177,6 +203,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             const SizedBox(height: 12),
           ],
           _intro(context, l10n),
+          const SizedBox(height: 16),
+          _finalOutboundCard(context, l10n, finalOutbound),
           const SizedBox(height: 16),
           _presetsCard(context, l10n),
           const SizedBox(height: 16),
@@ -213,6 +241,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             l10n: l10n,
           ),
           const SizedBox(height: 16),
+          _advancedRulesCard(context, l10n),
+          const SizedBox(height: 16),
           _syntaxLegend(context, l10n),
         ],
       ),
@@ -244,6 +274,410 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         ],
       ),
     );
+  }
+
+  // ── Финальное действие (глобал-прокси / обход / блок) ──────────────────────
+
+  String _finalLabel(AppLocalizations l10n, String value) => switch (value) {
+        AppSettings.finalOutboundDirect => l10n.settingsRoutingFinalDirect,
+        AppSettings.finalOutboundBlock => l10n.settingsRoutingFinalBlock,
+        _ => l10n.settingsRoutingFinalProxy,
+      };
+
+  IconData _finalIcon(String value) => switch (value) {
+        AppSettings.finalOutboundDirect => Icons.call_made,
+        AppSettings.finalOutboundBlock => Icons.block,
+        _ => Icons.vpn_lock,
+      };
+
+  Color _finalColor(BuildContext context, String value) => switch (value) {
+        AppSettings.finalOutboundDirect => AppTheme.green(context),
+        AppSettings.finalOutboundBlock => AppTheme.red(context),
+        _ => AppTheme.accent(context),
+      };
+
+  Widget _finalOutboundCard(
+      BuildContext context, AppLocalizations l10n, String current) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.card(context),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.alt_route, size: 18, color: AppTheme.accent(context)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.settingsRoutingFinalTitle,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.text(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l10n.settingsRoutingFinalDesc,
+            style: TextStyle(fontSize: 11.5, color: AppTheme.textLight(context)),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              for (final value in AppSettings.finalOutbounds) ...[
+                Expanded(
+                  child: _finalSegment(
+                    context: context,
+                    label: _finalLabel(l10n, value),
+                    icon: _finalIcon(value),
+                    color: _finalColor(context, value),
+                    selected: current == value,
+                    onTap: () => _saveFinalOutbound(value),
+                  ),
+                ),
+                if (value != AppSettings.finalOutbounds.last)
+                  const SizedBox(width: 8),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _finalSegment({
+    required BuildContext context,
+    required String label,
+    required IconData icon,
+    required Color color,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+        decoration: BoxDecoration(
+          color: selected ? color.withValues(alpha: 0.14) : AppTheme.bg(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? color : AppTheme.divider(context),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon,
+                size: 20,
+                color: selected ? color : AppTheme.textLight(context)),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? color : AppTheme.text(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Структурированные правила (RoutingRule) ────────────────────────────────
+
+  String _actionLabel(AppLocalizations l10n, RuleAction a) => switch (a) {
+        RuleAction.direct => l10n.settingsRoutingFinalDirect,
+        RuleAction.proxy => l10n.settingsRoutingFinalProxy,
+        RuleAction.block => l10n.settingsRoutingFinalBlock,
+      };
+
+  Color _actionColor(BuildContext context, RuleAction a) => switch (a) {
+        RuleAction.direct => AppTheme.green(context),
+        RuleAction.proxy => AppTheme.accent(context),
+        RuleAction.block => AppTheme.red(context),
+      };
+
+  String _typeLabel(AppLocalizations l10n, RuleType t) => switch (t) {
+        RuleType.domain => l10n.settingsRoutingRuleTypeDomain,
+        RuleType.ipCidr => l10n.settingsRoutingRuleTypeIp,
+        RuleType.geoip => l10n.settingsRoutingRuleTypeGeoip,
+        RuleType.geosite => l10n.settingsRoutingRuleTypeGeosite,
+        RuleType.processName => l10n.settingsRoutingRuleTypeDomain,
+      };
+
+  Widget _advancedRulesCard(BuildContext context, AppLocalizations l10n) {
+    final rulesAsync = ref.watch(routingRulesProvider);
+    // processName-правила не поддержаны в этом редакторе (пер-аппный роутинг —
+    // отдельный экран split tunneling); прячем их, чтобы не путать.
+    final rules = (rulesAsync.value ?? const <RoutingRule>[])
+        .where((r) => r.type != RuleType.processName)
+        .toList();
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.card(context),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.tune, size: 18, color: AppTheme.accent(context)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.settingsRoutingAdvancedTitle,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.text(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l10n.settingsRoutingAdvancedHint,
+            style: TextStyle(fontSize: 11.5, color: AppTheme.textLight(context)),
+          ),
+          const SizedBox(height: 12),
+          if (rules.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Center(
+                child: Text(
+                  l10n.settingsRoutingAdvancedEmpty,
+                  style: TextStyle(
+                      fontSize: 12.5, color: AppTheme.textLight(context)),
+                ),
+              ),
+            )
+          else
+            for (final rule in rules) _ruleTile(context, l10n, rule),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.tonalIcon(
+              onPressed: () => _openRuleEditor(l10n, null),
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(l10n.settingsRoutingAdvancedAdd),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ruleTile(
+      BuildContext context, AppLocalizations l10n, RoutingRule rule) {
+    final color = _actionColor(context, rule.action);
+    final valuesPreview = rule.values.join(', ');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: AppTheme.bg(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.divider(context)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        rule.name.trim().isEmpty
+                            ? valuesPreview
+                            : rule.name.trim(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: rule.enabled
+                              ? AppTheme.text(context)
+                              : AppTheme.textLight(context),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    _pill(_typeLabel(l10n, rule.type),
+                        AppTheme.textLight(context)),
+                    const SizedBox(width: 4),
+                    _pill(_actionLabel(l10n, rule.action), color),
+                  ],
+                ),
+                if (rule.name.trim().isNotEmpty && valuesPreview.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    valuesPreview,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textLight(context),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: l10n.settingsRoutingRuleEditTitle,
+            icon: Icon(Icons.edit_outlined,
+                size: 18, color: AppTheme.textLight(context)),
+            onPressed: () => _openRuleEditor(l10n, rule),
+          ),
+          Switch(
+            value: rule.enabled,
+            activeThumbColor: color,
+            activeTrackColor: color.withValues(alpha: 0.32),
+            onChanged: (_) =>
+                ref.read(routingRulesProvider.notifier).toggle(rule.id),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pill(String text, Color color) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+              fontSize: 10, fontWeight: FontWeight.w600, color: color),
+        ),
+      );
+
+  // Использует context/mounted самого State (не переданный параметр), чтобы
+  // проверки mounted были «связаны» с BuildContext после await (линтер).
+  Future<void> _openRuleEditor(
+      AppLocalizations l10n, RoutingRule? existing) async {
+    final result = await showDialog<_RuleEditorResult>(
+      context: context,
+      builder: (_) => _RuleEditorDialog(existing: existing),
+    );
+    if (result == null || !mounted) return;
+    final notifier = ref.read(routingRulesProvider.notifier);
+    switch (result) {
+      case _RuleSave(:final rule):
+        if (existing == null) {
+          await notifier.add(rule);
+        } else {
+          await notifier.updateRule(rule);
+        }
+      case _RuleDelete():
+        if (existing == null) return;
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            content: Text(l10n.settingsRoutingRuleDeleteConfirm),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.subscriptionsCancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.subscriptionsDelete),
+              ),
+            ],
+          ),
+        );
+        if (ok == true) await notifier.remove(existing.id);
+    }
+  }
+
+  // ── Шпаргалка «как писать правила» ─────────────────────────────────────────
+
+  void _showCheatSheet(BuildContext context, AppLocalizations l10n) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.card(context),
+      isScrollControlled: true,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => ConstrainedBox(
+        constraints:
+            BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.85),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.routingCheatSheetTitle,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.text(context),
+                ),
+              ),
+              const SizedBox(height: 10),
+              ..._cheatLines(context, l10n.routingCheatSheetBody),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Разбивает текст шпаргалки на строки; строки с префиксом `## ` рисуются как
+  /// заголовки секций (акцентом), остальные — обычным текстом. Так один
+  /// локализованный текст остаётся живой заметкой, а не стеной.
+  List<Widget> _cheatLines(BuildContext context, String body) {
+    final out = <Widget>[];
+    for (final raw in body.split('\n')) {
+      final isHeader = raw.startsWith('## ');
+      if (raw.trim().isEmpty) {
+        out.add(const SizedBox(height: 10));
+        continue;
+      }
+      out.add(Padding(
+        padding: EdgeInsets.only(top: isHeader ? 8 : 1, bottom: isHeader ? 4 : 1),
+        child: Text(
+          isHeader ? raw.substring(3) : raw,
+          style: isHeader
+              ? TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.3,
+                  color: AppTheme.accent(context),
+                )
+              : TextStyle(
+                  fontSize: 13.5,
+                  height: 1.45,
+                  color: AppTheme.text(context),
+                ),
+        ),
+      ));
+    }
+    return out;
   }
 
   Widget _syntaxLegend(BuildContext context, AppLocalizations l10n) {
@@ -502,16 +936,260 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                 color: AppTheme.textLight(context),
               ),
               filled: true,
-              fillColor: AppTheme.bg(context),
+              // inset (surfaceContainerLowest) заметно контрастнее карточки, чем
+              // bg/surface — на дынамик-тёмных темах, где surface ≈
+              // surfaceContainerHigh, поле иначе сливалось с карточкой.
+              fillColor: AppTheme.inset(context),
+              // Явная граница: заливки мало, когда тона поверхностей близки —
+              // тогда поле выглядело как текст без рамки (видно было только на ПК).
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+                borderSide: BorderSide(color: AppTheme.divider(context)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppTheme.divider(context)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppTheme.accent(context), width: 1.5),
               ),
             ),
             onChanged: (_) => _scheduleSave(),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Результат редактора правила: сохранить или удалить (null — отмена, из pop).
+sealed class _RuleEditorResult {
+  const _RuleEditorResult();
+}
+
+class _RuleSave extends _RuleEditorResult {
+  final RoutingRule rule;
+  const _RuleSave(this.rule);
+}
+
+class _RuleDelete extends _RuleEditorResult {
+  const _RuleDelete();
+}
+
+/// Диалог создания/редактирования одного [RoutingRule]: имя, значения, тип
+/// сопоставления и действие. Возвращает [_RuleEditorResult] через Navigator.pop.
+class _RuleEditorDialog extends StatefulWidget {
+  final RoutingRule? existing;
+  const _RuleEditorDialog({this.existing});
+
+  @override
+  State<_RuleEditorDialog> createState() => _RuleEditorDialogState();
+}
+
+class _RuleEditorDialogState extends State<_RuleEditorDialog> {
+  late final TextEditingController _name;
+  late final TextEditingController _values;
+  late RuleType _type;
+  late RuleAction _action;
+
+  static const _types = [
+    RuleType.domain,
+    RuleType.ipCidr,
+    RuleType.geoip,
+    RuleType.geosite,
+  ];
+  static const _actions = [
+    RuleAction.proxy,
+    RuleAction.direct,
+    RuleAction.block,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    _name = TextEditingController(text: e?.name ?? '');
+    _values = TextEditingController(text: e?.values.join('\n') ?? '');
+    // processName в этом редакторе не предлагается — на всякий случай схлопываем
+    // на domain, чтобы сегмент типа гарантированно имел выбранное значение.
+    _type = (e != null && _types.contains(e.type)) ? e.type : RuleType.domain;
+    _action = e?.action ?? RuleAction.proxy;
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _values.dispose();
+    super.dispose();
+  }
+
+  List<String> _parseValues() => _values.text
+      .split(RegExp(r'[\r\n,]+'))
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
+
+  String _typeLabel(AppLocalizations l10n, RuleType t) => switch (t) {
+        RuleType.domain => l10n.settingsRoutingRuleTypeDomain,
+        RuleType.ipCidr => l10n.settingsRoutingRuleTypeIp,
+        RuleType.geoip => l10n.settingsRoutingRuleTypeGeoip,
+        RuleType.geosite => l10n.settingsRoutingRuleTypeGeosite,
+        RuleType.processName => l10n.settingsRoutingRuleTypeDomain,
+      };
+
+  String _actionLabel(AppLocalizations l10n, RuleAction a) => switch (a) {
+        RuleAction.direct => l10n.settingsRoutingFinalDirect,
+        RuleAction.proxy => l10n.settingsRoutingFinalProxy,
+        RuleAction.block => l10n.settingsRoutingFinalBlock,
+      };
+
+  Color _actionColor(BuildContext context, RuleAction a) => switch (a) {
+        RuleAction.direct => AppTheme.green(context),
+        RuleAction.proxy => AppTheme.accent(context),
+        RuleAction.block => AppTheme.red(context),
+      };
+
+  void _save() {
+    final values = _parseValues();
+    if (values.isEmpty) return;
+    final e = widget.existing;
+    final rule = e == null
+        ? RoutingRule.create(
+            name: _name.text.trim(),
+            type: _type,
+            values: values,
+            action: _action,
+          )
+        : e.copyWith(
+            name: _name.text.trim(),
+            type: _type,
+            values: values,
+            action: _action,
+          );
+    Navigator.pop<_RuleEditorResult>(context, _RuleSave(rule));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final accent = AppTheme.accent(context);
+    final isEdit = widget.existing != null;
+    return AlertDialog(
+      backgroundColor: AppTheme.card(context),
+      title: Text(
+        isEdit
+            ? l10n.settingsRoutingRuleEditTitle
+            : l10n.settingsRoutingRuleNewTitle,
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _name,
+              style: TextStyle(color: AppTheme.text(context)),
+              decoration: InputDecoration(
+                isDense: true,
+                labelText: l10n.settingsRoutingRuleName,
+                hintText: l10n.settingsRoutingRuleNameHint,
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _values,
+              minLines: 2,
+              maxLines: 5,
+              style: TextStyle(color: AppTheme.text(context), fontSize: 13),
+              decoration: InputDecoration(
+                isDense: true,
+                labelText: l10n.settingsRoutingRuleValues,
+                hintText: l10n.settingsRoutingRuleValuesHint,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.settingsRoutingRuleMatchBy,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textLight(context)),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final t in _types)
+                  ChoiceChip(
+                    label: Text(_typeLabel(l10n, t)),
+                    selected: _type == t,
+                    onSelected: (_) => setState(() => _type = t),
+                    selectedColor: accent.withValues(alpha: 0.18),
+                    labelStyle: TextStyle(
+                      fontSize: 12.5,
+                      color: _type == t ? accent : AppTheme.text(context),
+                      fontWeight:
+                          _type == t ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.settingsRoutingRuleAction,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textLight(context)),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final a in _actions)
+                  ChoiceChip(
+                    label: Text(_actionLabel(l10n, a)),
+                    selected: _action == a,
+                    onSelected: (_) => setState(() => _action = a),
+                    selectedColor:
+                        _actionColor(context, a).withValues(alpha: 0.18),
+                    labelStyle: TextStyle(
+                      fontSize: 12.5,
+                      color: _action == a
+                          ? _actionColor(context, a)
+                          : AppTheme.text(context),
+                      fontWeight:
+                          _action == a ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        if (isEdit)
+          TextButton(
+            onPressed: () => Navigator.pop<_RuleEditorResult>(
+                context, const _RuleDelete()),
+            child: Text(
+              l10n.subscriptionsDelete,
+              style: TextStyle(color: AppTheme.red(context)),
+            ),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.subscriptionsCancel),
+        ),
+        FilledButton(
+          onPressed: _parseValues().isEmpty ? null : _save,
+          child: Text(l10n.settingsRoutingRuleSave),
+        ),
+      ],
     );
   }
 }
