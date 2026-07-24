@@ -48,55 +48,21 @@ class SingBoxTunConfigGen {
       // исходящий порт 53 (анти-abuse), из-за чего и UDP-, и TCP-DNS через
       // прокси умирали с "read response: EOF" — браузер получал "server not
       // found" при живом туннеле. DoH на 443 неотличим от обычного HTTPS.
-      if (customDns.isEmpty) {
-        return {
-          'tag': 'proxy-dns',
-          'type': 'https',
-          'server': '1.1.1.1',
-          'detour': 'proxy',
-        };
-      }
-      final raw = customDns.first.trim();
-      final lower = raw.toLowerCase();
-
-      if (lower.startsWith('https://') || lower.startsWith('http://')) {
-        final uri = Uri.tryParse(raw);
-        if (uri != null && uri.host.isNotEmpty) {
-          return {
+      Map<String, dynamic> defaultDoh() => {
             'tag': 'proxy-dns',
             'type': 'https',
-            'server': uri.host,
-            if (uri.hasPort) 'server_port': uri.port,
-            if (uri.path.isNotEmpty && uri.path != '/') 'path': uri.path,
+            'server': '1.1.1.1',
             'detour': 'proxy',
           };
-        }
-      }
 
-      String host = raw;
-      int? port;
-      if (raw.contains(':') && !raw.contains('://')) {
-        final idx = raw.lastIndexOf(':');
-        final p = int.tryParse(raw.substring(idx + 1));
-        if (p != null) {
-          host = raw.substring(0, idx).trim();
-          port = p;
-        }
-      }
+      if (customDns.isEmpty) return defaultDoh();
 
-      return {
-        'tag': 'proxy-dns',
-        // DNS over the SOCKS proxy строго по TCP на ВСЕХ платформах. UDP требует
-        // SOCKS UDP-ASSOCIATE, который хрупок и на Linux (запросы молча тонут),
-        // и на Windows: в TUN-режиме все DNS-обмены падали с "exchange failed:
-        // EOF" → браузер ничего не резолвил, «сайты не грузятся» при живом
-        // туннеле. TCP:53 едет тем же надёжным SOCKS-TCP-путём, что и весь
-        // остальной трафик, и поддерживается 1.1.1.1/8.8.8.8/типовыми DNS.
-        'type': 'tcp',
-        'server': host,
-        'server_port': ?port,
-        'detour': 'proxy',
-      };
+      // Поле DNS хранит адреса в xray-синтаксисе (https+local://, tls://,
+      // quic://, tcp://, голый ip[:port]). sing-box же ждёт типизированный
+      // объект сервера, а НЕ сырую xray-строку: если скормить её как есть,
+      // keqrnel падал на разборе конфига (exit code 2 — «ошибка подключения»).
+      // Переводим первый адрес; непереводимое (localhost/fakedns/…) → дефолт.
+      return _singBoxDnsServerFromXray(customDns.first) ?? defaultDoh();
     }
 
     ({
@@ -427,5 +393,78 @@ class SingBoxTunConfigGen {
     };
 
     return const JsonEncoder.withIndent('  ').convert(map);
+  }
+
+  /// Переводит один DNS-адрес из xray-синтаксиса в объект sing-box dns-сервера
+  /// (формат 1.12+: `{type, server, server_port?, path?}`). Возвращает null,
+  /// когда адрес нельзя гонять как сетевой upstream через прокси
+  /// (localhost/fakedns/dhcp) — вызывающий тогда берёт дефолтный DoH.
+  ///
+  /// UDP через SOCKS хрупок (см. коммент выше про TCP:53), поэтому и «голый»
+  /// адрес, и udp://-схему форсируем в TCP. Все серверы идут `detour: proxy`.
+  static Map<String, dynamic>? _singBoxDnsServerFromXray(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+    final lower = trimmed.toLowerCase();
+
+    // Служебные xray-резолверы без сетевого upstream — их через прокси не гонишь.
+    if (lower == 'localhost' || lower == 'fakedns' || lower.startsWith('dhcp')) {
+      return null;
+    }
+
+    Map<String, dynamic> server(String type, String host, int? port,
+            {String? path}) =>
+        {
+          'tag': 'proxy-dns',
+          'type': type,
+          'server': host,
+          'server_port': ?port,
+          if (path != null && path.isNotEmpty && path != '/') 'path': path,
+          'detour': 'proxy',
+        };
+
+    // Схема вида `scheme://`. У xray scheme может нести суффикс (`https+local`,
+    // `tcp+local`, …) — базой считаем часть до '+'.
+    final schemeMatch = RegExp(r'^([a-z][a-z0-9.+-]*)://').firstMatch(lower);
+    if (schemeMatch != null) {
+      final base = schemeMatch.group(1)!.split('+').first;
+      final uri = Uri.tryParse(trimmed);
+      if (uri == null || uri.host.isEmpty) return null;
+      final port = uri.hasPort ? uri.port : null;
+      switch (base) {
+        case 'https':
+        case 'h2c':
+          return server('https', uri.host, port, path: uri.path);
+        case 'tls':
+        case 'dot':
+          return server('tls', uri.host, port);
+        case 'quic':
+        case 'doq':
+          return server('quic', uri.host, port);
+        case 'tcp':
+          return server('tcp', uri.host, port);
+        case 'udp':
+        case 'dns':
+          return server('tcp', uri.host, port); // UDP over SOCKS ненадёжен → TCP
+        default:
+          return null;
+      }
+    }
+
+    // Без схемы: голый ip / host / host:port / [ipv6]:port → TCP:53 через прокси.
+    String host = trimmed;
+    int? port;
+    final bracketed = RegExp(r'^\[([0-9a-fA-F:]+)\]:(\d+)$').firstMatch(trimmed);
+    if (bracketed != null) {
+      host = bracketed.group(1)!;
+      port = int.parse(bracketed.group(2)!);
+    } else if (RegExp(r'^[^:]+:\d+$').hasMatch(trimmed)) {
+      // Ровно один ':' с числовым портом — иначе это голый IPv6, не host:port.
+      final idx = trimmed.lastIndexOf(':');
+      host = trimmed.substring(0, idx).trim();
+      port = int.parse(trimmed.substring(idx + 1));
+    }
+    if (host.isEmpty) return null;
+    return server('tcp', host, port);
   }
 }
