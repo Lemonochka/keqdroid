@@ -182,9 +182,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsResetRoutingTitle => 'Routing auf Standard zurücksetzen';
 
   @override
-  String get settingsResetRoutingSubtitle => 'Integrierte Routing-Regeln wiederherstellen';
-
-  @override
   String get settingsRoutingResetDone => 'Routing-Regeln zurückgesetzt';
 
   @override
@@ -478,15 +475,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsLocalPortsTitle => 'Lokale Proxy-Ports';
 
   @override
-  String settingsLocalPortsSubtitle(Object socks, Object http) {
-    return 'SOCKS $socks · HTTP $http';
-  }
-
-  @override
   String get settingsLocalPortsHint => 'Listen-Ports der lokalen SOCKS5- und HTTP-Proxys (Standard 2080 / 2081). Werden bei der nächsten Verbindung angewendet. Die beiden Ports müssen sich unterscheiden.';
-
-  @override
-  String get settingsLocalPortsResetTitle => 'Auf Standard zurücksetzen';
 
   @override
   String get settingsPortInvalid => 'Geben Sie einen Port zwischen 1 und 65535 ein';
@@ -503,10 +492,10 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get settingsXrayCoreTitle => 'Kern & Protokolle';
+  String get settingsXrayCoreTitle => 'Kern-Einstellungen';
 
   @override
-  String get settingsXrayCoreSubtitle => 'Engine, DNS, XMUX, TUN, Log und Routing';
+  String get settingsXrayCoreSubtitle => 'Ports, DNS, XMUX, TUN, Log und Routing';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -1730,10 +1719,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsResetRoutingConfirm => 'Die integrierten Routing-Regeln werden wiederhergestellt und deine Direct-/Proxy-/Block-Listen verworfen. Das kann nicht rückgängig gemacht werden.';
 
   @override
-  String get settingsLocalPortsResetConfirm => 'Die Standard-Ports des lokalen Proxys werden wiederhergestellt. Das kann nicht rückgängig gemacht werden.';
-
-  @override
-  String get settingsXrayResetConfirm => 'Die Standardeinstellungen für Xray-Core und TUN werden wiederhergestellt. Das kann nicht rückgängig gemacht werden.';
+  String get settingsXrayResetConfirm => 'Die Standardeinstellungen für Xray-Core, TUN und die lokalen Ports werden wiederhergestellt. Das kann nicht rückgängig gemacht werden.';
 
   @override
   String get settingsPermissionsTitle => 'Berechtigungen';

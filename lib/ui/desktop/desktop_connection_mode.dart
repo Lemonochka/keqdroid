@@ -32,6 +32,10 @@ Future<void> applyDesktopConnectionMode(
       final restart = await showDesktopTunAdminDialog(context);
       if (restart != true) return;
 
+      await stopSessionBeforeElevation(
+        notifier: ref.read(vpnStateProvider.notifier),
+        status: ref.read(vpnStateProvider).value?.status,
+      );
       await ref.read(settingsNotifierProvider.notifier).save(
             settings.copyWith(connectionMode: ConnectionMode.tun.storageValue),
           );
@@ -80,6 +84,25 @@ Future<void> applyDesktopConnectionMode(
       }
     }
   }
+}
+
+/// Рвёт активный туннель перед перезапуском с правами администратора.
+///
+/// `restartAsAdministrator` просто вызывает PostQuitMessage и процесс умирает,
+/// ничего не остановив: без этого keqrnel proxy-сессии оставался жить (новый
+/// elevated-экземпляр поднимался раньше, чем умирал старый, и держал job object
+/// открытым), а системный прокси Windows продолжал указывать на порт, который
+/// вот-вот исчезнет. Нотифаер и статус передаются значениями: в трее вызов идёт
+/// уже после демонтажа меню, когда `ref` мёртв. Ошибку глотаем — перезапуск
+/// важнее, остатки подберёт стартовая зачистка (initCoreProcessGuard).
+Future<void> stopSessionBeforeElevation({
+  required VpnStateNotifier notifier,
+  required VpnStatus? status,
+}) async {
+  if (status != VpnStatus.connected && status != VpnStatus.connecting) return;
+  try {
+    await notifier.disconnect();
+  } catch (_) {}
 }
 
 Future<bool?> showDesktopTunAdminDialog(BuildContext context) {

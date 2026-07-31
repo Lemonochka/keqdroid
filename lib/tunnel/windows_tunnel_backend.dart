@@ -28,6 +28,11 @@ class WindowsTunnelBackend implements TunnelBackend {
   /// Active session backend — for Xray log export on desktop.
   static WindowsTunnelBackend? activeInstance;
 
+  /// Логи последней ЗАВЕРШЁННОЙ сессии. После teardown [activeInstance]
+  /// зануляется, и экран логов отвечал «подключитесь сначала» ровно в тот
+  /// момент, когда логи нужнее всего — после внезапной смерти ядра.
+  static String lastSessionLogs = '';
+
   final _stateCtrl = StreamController<VpnState>.broadcast();
   Process? _xrayProcess;
   Process? _singboxProcess;
@@ -93,6 +98,23 @@ class WindowsTunnelBackend implements TunnelBackend {
     return _tail(combined, maxLines: maxLines);
   }
 
+  /// `true` — админ, `false` — нет, `null` — выяснить не удалось (канал не
+  /// ответил). На `null` попытку не блокируем: лучше дать ядру сказать своё.
+  Future<bool?> _isElevated() async {
+    try {
+      return await _method.invokeMethod<bool>('requestTunnelPermission');
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// Несколько последних строк вывода ядра для текста ошибки. Пусто, если
+  /// ядро вообще ничего не написало.
+  String _sessionLogTail({int maxLines = 10}) {
+    final text = exportSessionLogs(maxLines: maxLines).trim();
+    return text == '(no process output)' ? '' : text;
+  }
+
   @override
   Future<({String username, String password})> fetchSocksCredentials() async {
     _pendingCreds = SocksCredentialGenerator.generatePair();
@@ -122,6 +144,19 @@ class WindowsTunnelBackend implements TunnelBackend {
       // после разворота из трея молча НЕ перезапускает опрос счётчиков —
       // трафик/время замерзают до реконнекта.
       _activeMode = request.mode;
+
+      // TUN поднимает wintun-адаптер и правит таблицу маршрутов — без прав
+      // администратора ядро просто умирает, и пользователь видит «keqrnel
+      // stopped unexpectedly (exit code 1)» вместо причины. Отсекаем заранее:
+      // формулировка со словами «administrator rights» попадает в готовый
+      // локализованный случай UiErrorCode.tunAdmin (см. explainError).
+      if (request.mode == ConnectionMode.tun && await _isElevated() == false) {
+        throw const VpnStartException(
+          'TUN mode needs administrator rights: the wintun adapter and the '
+          'system route table cannot be set up without them. Restart the app '
+          'as administrator, or use Proxy mode.',
+        );
+      }
 
       _sessionDir = await WindowsCorePaths.sessionDir();
 
@@ -532,8 +567,13 @@ class WindowsTunnelBackend implements TunnelBackend {
           !identical(process, _xrayProcess)) {
         return;
       }
+      // Хвост снимаем ДО teardown и кладём прямо в текст ошибки: голый exit
+      // code не говорит ничего, а экран логов после остановки сессии показать
+      // уже нечего (см. lastSessionLogs).
+      final details = _sessionLogTail();
       AppLogger.instance.error(
-        '$label exited unexpectedly with code $code; tearing the session down',
+        '$label exited unexpectedly with code $code; tearing the session down'
+        '${details.isEmpty ? '' : '\n$details'}',
       );
       try {
         await stopSession();
@@ -541,7 +581,8 @@ class WindowsTunnelBackend implements TunnelBackend {
       _emit(VpnState(
         status: VpnStatus.error,
         errorMessage:
-            '$label stopped unexpectedly (exit code $code). Disconnected.',
+            '$label stopped unexpectedly (exit code $code). Disconnected.'
+            '${details.isEmpty ? '' : '\n$details'}',
       ));
     }));
   }
@@ -571,6 +612,13 @@ class WindowsTunnelBackend implements TunnelBackend {
 
   Future<void> _stopSessionInner({bool emitStates = true}) async {
     _stopStatsLoop();
+    // Забираем логи сессии до её разбора: после teardown экран логов уже не
+    // достучится до этого инстанса, а разбирать чаще всего приходится именно
+    // упавшую сессию.
+    final logs = exportSessionLogs();
+    if (logs.trim().isNotEmpty && logs.trim() != '(no process output)') {
+      lastSessionLogs = logs;
+    }
     if (emitStates) _emit(const VpnState(status: VpnStatus.disconnecting));
 
     try {

@@ -43,7 +43,12 @@ bool EnsureCoreJobObject() {
   if (g_core_job != nullptr) {
     return true;
   }
-  g_core_job = ::CreateJobObjectW(nullptr, L"KeqDroidCoreJob");
+  // Безымянный job — принципиально. С именем ("KeqDroidCoreJob") новый
+  // экземпляр приложения (перезапуск с правами администратора при переходе
+  // proxy → TUN) открывал ТОТ ЖЕ объект: пока жив его второй хэндл,
+  // JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE при выходе старого экземпляра не
+  // срабатывает, и ядро старой сессии остаётся висеть, занимая порты.
+  g_core_job = ::CreateJobObjectW(nullptr, nullptr);
   if (g_core_job == nullptr) {
     return false;
   }
@@ -86,7 +91,12 @@ bool IsKeqdisCoreProcess(DWORD pid) {
   bool is_core = false;
   if (::QueryFullProcessImageNameW(process, 0, path, &size)) {
     const std::wstring image(path);
-    is_core = EndsWithIgnoreCase(image, L"xray.exe") ||
+    // keqrnel.exe — единственное ядро, которое приложение сейчас запускает
+    // (sing-box host + встроенный xray). Без него в списке осиротевший процесс
+    // не убивался: pid-файл вычищался, а ядро жило и занимало порт/TUN, из-за
+    // чего следующая сессия падала и процесс приходилось снимать вручную.
+    is_core = EndsWithIgnoreCase(image, L"keqrnel.exe") ||
+              EndsWithIgnoreCase(image, L"xray.exe") ||
               EndsWithIgnoreCase(image, L"sing-box.exe") ||
               EndsWithIgnoreCase(image, L"wireproxy.exe");
   }
@@ -95,7 +105,7 @@ bool IsKeqdisCoreProcess(DWORD pid) {
 }
 
 bool TerminatePid(DWORD pid) {
-  if (pid == 0 || !IsKeqdisCoreProcess(pid)) {
+  if (pid == 0) {
     return false;
   }
   HANDLE process = ::OpenProcess(PROCESS_TERMINATE, FALSE, pid);
@@ -107,7 +117,7 @@ bool TerminatePid(DWORD pid) {
   return ok != FALSE;
 }
 
-void WritePidFile(DWORD xray_pid, DWORD singbox_pid) {
+void WritePidFile(const std::vector<DWORD>& pids) {
   const std::wstring path = CorePidFilePath();
   if (path.empty()) {
     return;
@@ -117,11 +127,10 @@ void WritePidFile(DWORD xray_pid, DWORD singbox_pid) {
   if (!out) {
     return;
   }
-  if (xray_pid != 0) {
-    out << xray_pid << L"\n";
-  }
-  if (singbox_pid != 0) {
-    out << singbox_pid << L"\n";
+  for (const DWORD pid : pids) {
+    if (pid != 0) {
+      out << pid << L"\n";
+    }
   }
 }
 
@@ -138,19 +147,40 @@ int KillOrphanCoresFromPidFile() {
     return 0;
   }
 
-  std::wifstream in(path);
-  if (!in) {
-    return 0;
+  std::vector<DWORD> pids;
+  {
+    std::wifstream in(path);
+    if (!in) {
+      return 0;
+    }
+    DWORD pid = 0;
+    while (in >> pid) {
+      pids.push_back(pid);
+    }
   }
 
   int killed = 0;
-  DWORD pid = 0;
-  while (in >> pid) {
+  std::vector<DWORD> survivors;
+  for (const DWORD pid : pids) {
+    // Проверка образа обязательна: pid мог быть переиспользован системой под
+    // чужой процесс, и TerminateProcess по нему был бы диверсией.
+    if (!IsKeqdisCoreProcess(pid)) {
+      continue;  // мёртв или уже не наш — просто забываем
+    }
     if (TerminatePid(pid)) {
       ++killed;
+      continue;
     }
+    // Живое наше ядро, но снять не вышло — обычно оно elevated, а мы нет.
+    // Оставляем в файле: следующий запуск с правами администратора доберёт.
+    survivors.push_back(pid);
   }
-  ClearPidFile();
+
+  if (survivors.empty()) {
+    ClearPidFile();
+  } else {
+    WritePidFile(survivors);
+  }
   return killed;
 }
 
@@ -173,7 +203,7 @@ void KeqdisRegisterSessionCoreProcesses(DWORD xray_pid, DWORD singbox_pid) {
   if (singbox_pid != 0) {
     AttachProcessToCoreJob(singbox_pid);
   }
-  WritePidFile(xray_pid, singbox_pid);
+  WritePidFile({xray_pid, singbox_pid});
 }
 
 void KeqdisClearSessionCoreProcesses() {

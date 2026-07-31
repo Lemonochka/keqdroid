@@ -182,9 +182,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsResetRoutingTitle => 'Reset routing to defaults';
 
   @override
-  String get settingsResetRoutingSubtitle => 'Restore built-in routing rules';
-
-  @override
   String get settingsRoutingResetDone => 'Routing rules reset';
 
   @override
@@ -478,15 +475,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLocalPortsTitle => 'Local proxy ports';
 
   @override
-  String settingsLocalPortsSubtitle(Object socks, Object http) {
-    return 'SOCKS $socks · HTTP $http';
-  }
-
-  @override
   String get settingsLocalPortsHint => 'Listen ports for the local SOCKS5 and HTTP proxies (defaults 2080 / 2081). Applied on the next connection. The two ports must differ.';
-
-  @override
-  String get settingsLocalPortsResetTitle => 'Reset to defaults';
 
   @override
   String get settingsPortInvalid => 'Enter a port between 1 and 65535';
@@ -503,10 +492,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsXrayCoreTitle => 'Core & protocols';
+  String get settingsXrayCoreTitle => 'Core settings';
 
   @override
-  String get settingsXrayCoreSubtitle => 'Engine, DNS, XMUX, TUN, log and routing';
+  String get settingsXrayCoreSubtitle => 'Ports, DNS, XMUX, TUN, log and routing';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -1730,10 +1719,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsResetRoutingConfirm => 'This restores the built-in routing rules and discards your direct/proxy/blocked lists. This can\'t be undone.';
 
   @override
-  String get settingsLocalPortsResetConfirm => 'This restores the default local proxy ports. This can\'t be undone.';
-
-  @override
-  String get settingsXrayResetConfirm => 'This restores the default Xray core and TUN settings. This can\'t be undone.';
+  String get settingsXrayResetConfirm => 'This restores the default Xray core, TUN and local port settings. This can\'t be undone.';
 
   @override
   String get settingsPermissionsTitle => 'Permissions';

@@ -372,9 +372,15 @@ class SingBoxTunConfigGen {
       if (tun.udpTimeoutSec != TunSettings.defaultUdpTimeoutSec)
         'udp_timeout': '${tun.udpTimeoutSec}s',
     };
-    if (!Platform.isWindows) {
-      tunInbound['interface_name'] = 'tun-keqdis';
-    }
+    // Собственное имя интерфейса ОБЯЗАТЕЛЬНО и на Windows. Без него sing-box
+    // берёт `CalculateInterfaceName("")` → «tun0», а wintun-адаптер получает
+    // GUID = MD5("wintun" + имя) — то есть ровно тот же GUID, что у любого
+    // другого sing-box-клиента на этой машине (Happ, Nekoray, sing-box CLI).
+    // Дальше по коду sing-tun: CreateAdapter падает с ErrExist и делается
+    // OpenAdapter(имя) — мы молча забираем ЧУЖОЙ адаптер и настраиваем на нём
+    // свои адреса и маршруты. Отсюда и «TUN запустился, ошибок нет, трафика
+    // нет», и падения через раз на машинах, где стоит второй такой клиент.
+    tunInbound['interface_name'] = 'tun-keqdis';
 
     final map = <String, dynamic>{
       'log': {

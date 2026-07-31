@@ -307,7 +307,6 @@ class _SettingsCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
-  final bool isDestructive;
   final VoidCallback onTap;
 
   const _SettingsCard({
@@ -315,7 +314,6 @@ class _SettingsCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.onTap,
-    this.isDestructive = false,
   });
 
   @override
@@ -334,10 +332,10 @@ class _SettingsCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: (isDestructive ? AppTheme.red(context) : AppTheme.accent(context)).withValues(alpha: 0.2),
+                color: AppTheme.accent(context).withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 20, color: isDestructive ? AppTheme.red(context) : AppTheme.text(context)),
+              child: Icon(icon, size: 20, color: AppTheme.text(context)),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -348,7 +346,7 @@ class _SettingsCard extends StatelessWidget {
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: isDestructive ? AppTheme.red(context) : AppTheme.text(context),
+                      color: AppTheme.text(context),
                     ),
                   ),
                   Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textLight(context))),

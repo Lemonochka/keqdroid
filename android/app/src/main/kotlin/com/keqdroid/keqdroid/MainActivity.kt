@@ -40,6 +40,15 @@ class MainActivity : FlutterFragmentActivity() {
         const val METHOD_CHANNEL         = "keqdis_vpn_channel"
         const val EVENT_CHANNEL          = "keqdis_vpn_status"
         const val EXTRA_LAUNCH_ACTION    = "action"
+        // Значения EXTRA_LAUNCH_ACTION, которые обрабатывает Dart (servers_tab).
+        // Держатся здесь, чтобы ярлыки из res/xml/shortcuts.xml и уведомление
+        // не разъезжались со строками в коде.
+        const val LAUNCH_ACTION_CONNECT    = "connect_from_notification"
+        const val LAUNCH_ACTION_DISCONNECT = "disconnect_from_shortcut"
+        private val LAUNCH_ACTIONS = setOf(
+            LAUNCH_ACTION_CONNECT,
+            LAUNCH_ACTION_DISCONNECT,
+        )
         private const val ICON_SIZE_PX   = 96
         private const val DEFAULT_SPEED_TEST_URL =
             "https://speed.cloudflare.com/__down?bytes=2000000"
@@ -669,9 +678,12 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun notifyLaunchActionIfNeeded() {
-        if (intent?.getStringExtra(EXTRA_LAUNCH_ACTION) != "connect_from_notification") return
+        // connect_from_notification — уведомление и плитка QS;
+        // disconnect_from_shortcut — ярлык долгого тапа по иконке приложения.
+        val action = intent?.getStringExtra(EXTRA_LAUNCH_ACTION) ?: return
+        if (action !in LAUNCH_ACTIONS) return
         mainScope.launch {
-            methodChannel?.invokeMethod("onLaunchAction", mapOf("action" to "connect_from_notification"))
+            methodChannel?.invokeMethod("onLaunchAction", mapOf("action" to action))
         }
     }
 

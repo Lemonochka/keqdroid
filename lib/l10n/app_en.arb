@@ -94,7 +94,6 @@
   },
   "settingsRoutingSubtitle": "Direct / proxy / block rules and presets",
   "settingsResetRoutingTitle": "Reset routing to defaults",
-  "settingsResetRoutingSubtitle": "Restore built-in routing rules",
   "settingsRoutingResetDone": "Routing rules reset",
   "settingsRoutingHeaderDesc": "Decide which sites go directly past the VPN, which are forced through it, and which are blocked. Use a preset for a quick start, then fine-tune each list below.",
   "settingsRoutingPresetsTitle": "Quick presets",
@@ -216,15 +215,7 @@
   "settingsLanPasswordLabel": "Password",
   "settingsLanAuthHint": "Both fields set — devices sign in to the proxy with them. Empty — no password (anyone on your network can use it).",
   "settingsLocalPortsTitle": "Local proxy ports",
-  "settingsLocalPortsSubtitle": "SOCKS {socks} · HTTP {http}",
-  "@settingsLocalPortsSubtitle": {
-    "placeholders": {
-      "socks": {},
-      "http": {}
-    }
-  },
   "settingsLocalPortsHint": "Listen ports for the local SOCKS5 and HTTP proxies (defaults 2080 / 2081). Applied on the next connection. The two ports must differ.",
-  "settingsLocalPortsResetTitle": "Reset to defaults",
   "settingsPortInvalid": "Enter a port between 1 and 65535",
   "settingsPortsMustDiffer": "SOCKS and HTTP ports must differ",
   "settingsTurnOffToChange": "Turn off to change setting",
@@ -235,8 +226,8 @@
       "address": {}
     }
   },
-  "settingsXrayCoreTitle": "Core & protocols",
-  "settingsXrayCoreSubtitle": "Engine, DNS, XMUX, TUN, log and routing",
+  "settingsXrayCoreTitle": "Core settings",
+  "settingsXrayCoreSubtitle": "Ports, DNS, XMUX, TUN, log and routing",
   "settingsXrayDnsSection": "DNS",
   "settingsXrayDnsCustom": "Custom DNS servers",
   "settingsXrayDnsCustomHint": "One address per line (DoH, DoT, or plain)",
@@ -783,8 +774,7 @@
   "settingsResetConfirmTitle": "Reset settings?",
   "settingsResetConfirmAction": "Reset",
   "settingsResetRoutingConfirm": "This restores the built-in routing rules and discards your direct/proxy/blocked lists. This can't be undone.",
-  "settingsLocalPortsResetConfirm": "This restores the default local proxy ports. This can't be undone.",
-  "settingsXrayResetConfirm": "This restores the default Xray core and TUN settings. This can't be undone.",
+  "settingsXrayResetConfirm": "This restores the default Xray core, TUN and local port settings. This can't be undone.",
   "settingsPermissionsTitle": "Permissions",
   "settingsPermissionsSubtitle": "App permissions you can review and revoke",
   "settingsPermNotifTitle": "Notifications",

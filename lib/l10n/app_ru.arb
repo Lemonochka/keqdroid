@@ -94,7 +94,6 @@
   },
   "settingsRoutingSubtitle": "Правила direct / proxy / block и пресеты",
   "settingsResetRoutingTitle": "Сбросить настройки маршрутизации",
-  "settingsResetRoutingSubtitle": "Восстановить изначальные правила маршрутизации",
   "settingsRoutingResetDone": "Правила маршрутизации сброшены",
   "settingsRoutingHeaderDesc": "Выберите, какие сайты идут напрямую мимо VPN, какие принудительно через него, а какие блокируются. Начните с пресета, затем при необходимости отредактируйте списки ниже.",
   "settingsRoutingPresetsTitle": "Быстрые пресеты",
@@ -216,15 +215,7 @@
   "settingsLanPasswordLabel": "Пароль",
   "settingsLanAuthHint": "Оба поля заполнены — устройства подключаются к прокси по ним. Пусто — без пароля (прокси открыт для всех в вашей сети).",
   "settingsLocalPortsTitle": "Локальные порты прокси",
-  "settingsLocalPortsSubtitle": "SOCKS {socks} · HTTP {http}",
-  "@settingsLocalPortsSubtitle": {
-    "placeholders": {
-      "socks": {},
-      "http": {}
-    }
-  },
   "settingsLocalPortsHint": "Порты прослушивания локальных прокси SOCKS5 и HTTP (по умолчанию 2080 / 2081). Применяются при следующем подключении. Порты должны отличаться друг от друга.",
-  "settingsLocalPortsResetTitle": "Сбросить по умолчанию",
   "settingsPortInvalid": "Введите порт от 1 до 65535",
   "settingsPortsMustDiffer": "Порты SOCKS и HTTP должны отличаться",
   "settingsTurnOffToChange": "Выключите для изменения настройки",
@@ -235,8 +226,8 @@
       "address": {}
     }
   },
-  "settingsXrayCoreTitle": "Ядро и протоколы",
-  "settingsXrayCoreSubtitle": "Движок, DNS, XMUX, TUN, лог и маршрутизация",
+  "settingsXrayCoreTitle": "Настройки ядра",
+  "settingsXrayCoreSubtitle": "Порты, DNS, XMUX, TUN, лог и маршрутизация",
   "settingsXrayDnsSection": "DNS",
   "settingsXrayDnsCustom": "Свои DNS-серверы",
   "settingsXrayDnsCustomHint": "Один адрес на строку (DoH, DoT или обычный)",
@@ -783,8 +774,7 @@
   "settingsResetConfirmTitle": "Сбросить настройки?",
   "settingsResetConfirmAction": "Сбросить",
   "settingsResetRoutingConfirm": "Вернутся встроенные правила маршрутизации, ваши списки direct/proxy/block будут удалены. Действие нельзя отменить.",
-  "settingsLocalPortsResetConfirm": "Локальные порты прокси вернутся к значениям по умолчанию. Действие нельзя отменить.",
-  "settingsXrayResetConfirm": "Настройки ядра Xray и TUN вернутся к значениям по умолчанию. Действие нельзя отменить.",
+  "settingsXrayResetConfirm": "Настройки ядра Xray, TUN и локальные порты вернутся к значениям по умолчанию. Действие нельзя отменить.",
   "settingsPermissionsTitle": "Разрешения",
   "settingsPermissionsSubtitle": "Разрешения приложения — посмотреть и отозвать",
   "settingsPermNotifTitle": "Уведомления",
