@@ -13,6 +13,7 @@ import '../models/ping_test_config.dart';
 import '../models/routing_rule.dart';
 import '../models/server_item.dart';
 import '../models/subscription.dart';
+import '../services/geo_asset_service.dart';
 import '../services/ping_service.dart';
 import '../services/storage_service.dart';
 import '../services/subscription_service.dart';
@@ -1033,9 +1034,14 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       }
       // Структурированные правила (RoutingRule) складываем в текстовые списки
       // настроек — так они попадают в оба генератора конфига без правок в них.
-      final settings = applyRoutingRules(
-        await ref.read(storageProvider).getSettings(),
-        await ref.read(storageProvider).getRules(),
+      // Затем выкидываем geoip:/geosite:-коды, которых нет в поставляемых базах:
+      // xray на неизвестном коде не игнорирует правило, а падает на разборе
+      // всего конфига, и подключение умирает с «SOCKS port not ready».
+      final settings = await GeoAssetService.sanitizeRules(
+        applyRoutingRules(
+          await ref.read(storageProvider).getSettings(),
+          await ref.read(storageProvider).getRules(),
+        ),
       );
       final split = ref.read(splitTunnelingProvider);
       final excludePkgs = split.excludePackages.toList();

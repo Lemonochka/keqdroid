@@ -38,6 +38,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Долгий тап по плитке Quick Settings. Без этого фильтра система
+                 не находит, что открывать, и показывает «О приложении»
+                 (системные настройки) вместо самого приложения. -->
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <!-- Ярлыки долгого тапа по иконке приложения в лаунчере. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+
             <!-- Серверные ссылки из внешних приложений (Telegram и т.п.):
                  те же схемы, что принимает вставка ссылок. -->
             <intent-filter>

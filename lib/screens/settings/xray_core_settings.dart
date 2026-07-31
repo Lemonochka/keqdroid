@@ -100,10 +100,18 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
       return;
     }
     if (!mounted) return;
+    // Порты при активном туннеле не трогаем — их и руками менять нельзя, пока
+    // ядро слушает старые (см. _LocalPortsSection).
+    final vpn = ref.read(vpnStateProvider).value?.status;
+    final portsLocked =
+        vpn == VpnStatus.connected || vpn == VpnStatus.connecting;
+    const defaults = AppSettings();
     await ref.read(settingsNotifierProvider.notifier).save(
           settings.copyWith(
             xrayCore: const XrayCoreSettings(),
             tun: const TunSettings(),
+            localPort: portsLocked ? null : defaults.localPort,
+            httpPort: portsLocked ? null : defaults.httpPort,
           ),
         );
     if (!mounted) return;
@@ -197,6 +205,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
               ],
             ),
           ),
+          const _LocalPortsSection(),
           _XrayCoreSectionHeader(icon: Icons.dns_outlined, title: l10n.settingsXrayDnsSection),
           _xraySettingsCard(
             context,
@@ -946,14 +955,19 @@ class _XrayCoreTextFieldState extends State<_XrayCoreTextField> {
 }
 
 String _xrayCoreSettingsSubtitle(AppLocalizations l10n, AppSettings? settings) {
-  final core = settings?.xrayCore ?? const XrayCoreSettings();
-  final tun = settings?.tun ?? const TunSettings();
-  if (core == const XrayCoreSettings() && tun.isDefault) {
+  const defaults = AppSettings();
+  final current = settings ?? defaults;
+  final core = current.xrayCore;
+  final tun = current.tun;
+  final customPorts = current.localPort != defaults.localPort ||
+      current.httpPort != defaults.httpPort;
+  if (core == const XrayCoreSettings() && tun.isDefault && !customPorts) {
     return l10n.settingsXrayCoreSubtitle;
   }
   final parts = <String>[core.logLevel];
   if (core.dnsUseCustom) parts.insert(0, 'DNS');
   if (core.xmuxEnabled) parts.add('XMUX');
   if (!tun.isDefault) parts.add('TUN');
+  if (customPorts) parts.add('${current.localPort}/${current.httpPort}');
   return parts.join(' · ');
 }

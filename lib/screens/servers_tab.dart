@@ -272,7 +272,10 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
     try {
       final action = await VpnNativeBridge.getLaunchAction();
-      if (action != 'connect_from_notification') return;
+      if (action != 'connect_from_notification' &&
+          action != 'disconnect_from_shortcut') {
+        return;
+      }
 
       await VpnNativeBridge.clearLaunchAction();
 
@@ -282,6 +285,19 @@ class _ServersTabState extends ConsumerState<ServersTab>
       await ref.read(vpnStateProvider.notifier).syncFromNative();
       if (!mounted) return;
       final currentStatus = ref.read(vpnStateProvider).value?.status;
+
+      // Ярлык «Отключить» с иконки приложения: сервис нельзя дёрнуть напрямую
+      // из ярлыка (лаунчер умеет запускать только активности), поэтому
+      // приложение открывается и рвёт соединение здесь.
+      if (action == 'disconnect_from_shortcut') {
+        if (currentStatus == VpnStatus.connected ||
+            currentStatus == VpnStatus.connecting) {
+          await ref.read(vpnStateProvider.notifier).disconnect();
+        }
+        _syncConnectButtonAnimation();
+        return;
+      }
+
       if (currentStatus == VpnStatus.connected ||
           currentStatus == VpnStatus.connecting) {
         _syncConnectButtonAnimation();
@@ -297,7 +313,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
       await ref.read(vpnStateProvider.notifier).connect();
     } catch (e, st) {
       AppLogger.instance.error(
-        'Failed to handle launch action connect_from_notification',
+        'Failed to handle launch action',
         error: e,
         stackTrace: st,
       );

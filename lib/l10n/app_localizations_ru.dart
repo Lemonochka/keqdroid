@@ -182,9 +182,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsResetRoutingTitle => 'Сбросить настройки маршрутизации';
 
   @override
-  String get settingsResetRoutingSubtitle => 'Восстановить изначальные правила маршрутизации';
-
-  @override
   String get settingsRoutingResetDone => 'Правила маршрутизации сброшены';
 
   @override
@@ -480,15 +477,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsLocalPortsTitle => 'Локальные порты прокси';
 
   @override
-  String settingsLocalPortsSubtitle(Object socks, Object http) {
-    return 'SOCKS $socks · HTTP $http';
-  }
-
-  @override
   String get settingsLocalPortsHint => 'Порты прослушивания локальных прокси SOCKS5 и HTTP (по умолчанию 2080 / 2081). Применяются при следующем подключении. Порты должны отличаться друг от друга.';
-
-  @override
-  String get settingsLocalPortsResetTitle => 'Сбросить по умолчанию';
 
   @override
   String get settingsPortInvalid => 'Введите порт от 1 до 65535';
@@ -505,10 +494,10 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get settingsXrayCoreTitle => 'Ядро и протоколы';
+  String get settingsXrayCoreTitle => 'Настройки ядра';
 
   @override
-  String get settingsXrayCoreSubtitle => 'Движок, DNS, XMUX, TUN, лог и маршрутизация';
+  String get settingsXrayCoreSubtitle => 'Порты, DNS, XMUX, TUN, лог и маршрутизация';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -1732,10 +1721,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsResetRoutingConfirm => 'Вернутся встроенные правила маршрутизации, ваши списки direct/proxy/block будут удалены. Действие нельзя отменить.';
 
   @override
-  String get settingsLocalPortsResetConfirm => 'Локальные порты прокси вернутся к значениям по умолчанию. Действие нельзя отменить.';
-
-  @override
-  String get settingsXrayResetConfirm => 'Настройки ядра Xray и TUN вернутся к значениям по умолчанию. Действие нельзя отменить.';
+  String get settingsXrayResetConfirm => 'Настройки ядра Xray, TUN и локальные порты вернутся к значениям по умолчанию. Действие нельзя отменить.';
 
   @override
   String get settingsPermissionsTitle => 'Разрешения';

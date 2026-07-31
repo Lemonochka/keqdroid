@@ -17,6 +17,12 @@ class DebugLogService {
         final text = backend.exportSessionLogs(maxLines: maxLines);
         if (text.trim().isNotEmpty) return text;
       }
+      // Сессии нет — отдаём последнюю завершённую. Именно она нужна, когда
+      // ядро упало: активного инстанса к моменту открытия логов уже нет.
+      final last = WindowsTunnelBackend.lastSessionLogs;
+      if (last.trim().isNotEmpty) {
+        return '--- Last session (core no longer running) ---\n$last';
+      }
       return 'No Xray session logs yet. Connect VPN first.';
     }
     if (Platform.isLinux) {

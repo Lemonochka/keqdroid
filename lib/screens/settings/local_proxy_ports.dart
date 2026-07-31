@@ -1,52 +1,97 @@
 part of '../settings_tab.dart';
 
-class _LocalProxyPortsScreen extends ConsumerStatefulWidget {
-  const _LocalProxyPortsScreen();
+/// Локальные порты SOCKS5/HTTP — секция экрана настроек ядра
+/// ([_XrayCoreSettingsScreen]), а не отдельный экран: порты едут в те же
+/// inbounds генерируемого конфига, что и остальные параметры ядра.
+/// Отдельной кнопки сброса нет — порты возвращает к дефолту общий сброс
+/// экрана (`_resetDefaults` там же), поэтому поля умеют подхватывать
+/// изменение настроек извне.
+class _LocalPortsSection extends ConsumerStatefulWidget {
+  const _LocalPortsSection();
 
   @override
-  ConsumerState<_LocalProxyPortsScreen> createState() =>
-      _LocalProxyPortsScreenState();
+  ConsumerState<_LocalPortsSection> createState() => _LocalPortsSectionState();
 }
 
-class _LocalProxyPortsScreenState
-    extends ConsumerState<_LocalProxyPortsScreen> {
+class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
   final _socksCtrl = TextEditingController();
   final _httpCtrl = TextEditingController();
+  final _socksFocus = FocusNode();
+  final _httpFocus = FocusNode();
+  late final VoidCallback _socksBlur;
+  late final VoidCallback _httpBlur;
   bool _initialized = false;
+
+  // Снимок для dispose(). Трогать там `ref` нельзя: Riverpod помечает элемент
+  // defunct в super.unmount() ДО State.dispose(), а watch-подписки закрывает
+  // ПОСЛЕ него — брошенный из ref.read StateError обрывает unmount, подписки
+  // остаются живыми на мёртвом элементе, и дальше каждое изменение любого
+  // провайдера валится ассертом markNeedsBuild на defunct-элементе.
+  SettingsNotifier? _settingsNotifier;
+  AppSettings? _lastSettings;
+  bool _portsLocked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Применение по потере фокуса, а не только по Enter: тап мимо поля или
+    // переход к соседнему не должен молча терять введённое значение.
+    VoidCallback blurListener(FocusNode focus) => () {
+          if (focus.hasFocus) return;
+          final settings = ref.read(settingsNotifierProvider).value;
+          if (settings != null) unawaited(_apply(settings));
+        };
+    _socksFocus.addListener(_socksBlur = blurListener(_socksFocus));
+    _httpFocus.addListener(_httpBlur = blurListener(_httpFocus));
+  }
 
   @override
   void dispose() {
+    // Слушатели снимаем ПЕРВЫМИ: FocusNode.dispose() снимает фокус и дёрнул бы
+    // _apply, который лезет в context (снекбары) уже на умирающем экране.
+    _socksFocus.removeListener(_socksBlur);
+    _httpFocus.removeListener(_httpBlur);
     // Сохранение при уходе с экрана: «назад» без Enter не должен молча
     // терять введённые порты.
     _persistSilently();
+    _socksFocus.dispose();
+    _httpFocus.dispose();
     _socksCtrl.dispose();
     _httpCtrl.dispose();
     super.dispose();
   }
 
   /// Тихое сохранение валидных портов без снекбаров (контекст экрана уже
-  /// умирает). Невалидный ввод просто отбрасывается.
+  /// умирает). Невалидный ввод просто отбрасывается. Работает только по
+  /// снимку из build — см. комментарий у полей.
   void _persistSilently() {
-    if (!_initialized) return;
-    final settings = ref.read(settingsNotifierProvider).value;
-    if (settings == null) return;
-    final vpn = ref.read(vpnStateProvider).value?.status;
-    if (vpn == VpnStatus.connected || vpn == VpnStatus.connecting) return;
+    if (!_initialized || _portsLocked) return;
+    final settings = _lastSettings;
+    final notifier = _settingsNotifier;
+    if (settings == null || notifier == null) return;
     final socks = int.tryParse(_socksCtrl.text.trim());
     final http = int.tryParse(_httpCtrl.text.trim());
     bool valid(int? p) => p != null && p > 0 && p < 65536;
     if (!valid(socks) || !valid(http) || socks == http) return;
     if (socks == settings.localPort && http == settings.httpPort) return;
-    unawaited(ref.read(settingsNotifierProvider.notifier).save(
-          settings.copyWith(localPort: socks, httpPort: http),
-        ));
+    unawaited(notifier.save(
+      settings.copyWith(localPort: socks, httpPort: http),
+    ));
   }
 
-  void _syncControllers(AppSettings settings) {
-    if (_initialized) return;
-    _socksCtrl.text = settings.localPort.toString();
-    _httpCtrl.text = settings.httpPort.toString();
-    _initialized = true;
+  /// Внешнее изменение настроек (общий сброс экрана). Вызывается из
+  /// `ref.listen`, то есть ПОСЛЕ фазы build: присваивать текст контроллеру
+  /// прямо в build нельзя — это markNeedsBuild у уже смонтированного TextField.
+  void _adoptExternal(AppSettings settings) {
+    void adopt(TextEditingController ctrl, FocusNode focus, int value) {
+      // Поле в фокусе — пользователь печатает, не перебиваем.
+      if (focus.hasFocus) return;
+      final text = value.toString();
+      if (ctrl.text != text) ctrl.text = text;
+    }
+
+    adopt(_socksCtrl, _socksFocus, settings.localPort);
+    adopt(_httpCtrl, _httpFocus, settings.httpPort);
   }
 
   Future<void> _apply(AppSettings settings) async {
@@ -77,64 +122,39 @@ class _LocalProxyPortsScreenState
         );
   }
 
-  Future<void> _resetDefaults(AppSettings settings) async {
-    final l10n = AppLocalizations.of(context)!;
-    if (!await _confirmReset(context, message: l10n.settingsLocalPortsResetConfirm)) {
-      return;
-    }
-    if (!mounted) return;
-    const defaults = AppSettings();
-    _socksCtrl.text = defaults.localPort.toString();
-    _httpCtrl.text = defaults.httpPort.toString();
-    await ref.read(settingsNotifierProvider.notifier).save(
-          settings.copyWith(
-            localPort: defaults.localPort,
-            httpPort: defaults.httpPort,
-          ),
-        );
-  }
-
   Widget _portField(
     BuildContext context,
     String label,
     TextEditingController ctrl,
+    FocusNode focus,
     bool enabled,
     VoidCallback onSubmit,
   ) {
-    // Применение и по потере фокуса, а не только по Enter: тап мимо поля
-    // или переход к другому полю не должен молча терять введённое значение.
-    return Focus(
-      skipTraversal: true,
-      onFocusChange: (focused) {
-        if (!focused) onSubmit();
-      },
-      child: TextField(
-        controller: ctrl,
-        enabled: enabled,
-        keyboardType: TextInputType.number,
-        style: TextStyle(fontSize: 14, color: AppTheme.text(context)),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle:
-              TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: AppTheme.textLight(context).withValues(alpha: 0.3),
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppTheme.accent(context)),
-          ),
-          isDense: true,
+    return TextField(
+      controller: ctrl,
+      focusNode: focus,
+      enabled: enabled,
+      keyboardType: TextInputType.number,
+      style: TextStyle(fontSize: 14, color: AppTheme.text(context)),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        isDense: true,
+        filled: true,
+        fillColor: AppTheme.bg(context).withValues(alpha: 0.45),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.divider(context)),
         ),
-        onSubmitted: (_) => onSubmit(),
-        onEditingComplete: onSubmit,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppTheme.accent(context)),
+        ),
       ),
+      onSubmitted: (_) => onSubmit(),
     );
   }
 
@@ -143,7 +163,16 @@ class _LocalProxyPortsScreenState
     final l10n = AppLocalizations.of(context)!;
     final settings =
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
-    _syncControllers(settings);
+
+    if (!_initialized) {
+      _socksCtrl.text = settings.localPort.toString();
+      _httpCtrl.text = settings.httpPort.toString();
+      _initialized = true;
+    }
+    ref.listen(settingsNotifierProvider, (_, next) {
+      final value = next.value;
+      if (value != null) _adoptExternal(value);
+    });
 
     final isConnected = ref.watch(
       vpnStateProvider.select((a) {
@@ -152,86 +181,73 @@ class _LocalProxyPortsScreenState
       }),
     );
 
-    return Scaffold(
-      backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        title: Text(l10n.settingsLocalPortsTitle),
-      ),
-      body: SmoothScroll(
-        builder: (context, controller) => ListView(
-          controller: controller,
-        physics: const ClampingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.card(context),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppTheme.divider(context), width: 1),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _portField(
-                        context,
-                        l10n.settingsSocks5PortLabel,
-                        _socksCtrl,
-                        !isConnected,
-                        () => _apply(settings),
-                      ),
+    _settingsNotifier = ref.read(settingsNotifierProvider.notifier);
+    _lastSettings = settings;
+    _portsLocked = isConnected;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _XrayCoreSectionHeader(
+          icon: Icons.settings_input_component,
+          title: l10n.settingsLocalPortsTitle,
+        ),
+        _xraySettingsCard(
+          context,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _portField(
+                      context,
+                      l10n.settingsSocks5PortLabel,
+                      _socksCtrl,
+                      _socksFocus,
+                      !isConnected,
+                      () => _apply(settings),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _portField(
-                        context,
-                        l10n.settingsHttpPortLabel,
-                        _httpCtrl,
-                        !isConnected,
-                        () => _apply(settings),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.settingsLocalPortsHint,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textLight(context),
-                    height: 1.35,
                   ),
-                ),
-                if (isConnected) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.settingsTurnOffToChange,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.orange(context),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _portField(
+                      context,
+                      l10n.settingsHttpPortLabel,
+                      _httpCtrl,
+                      _httpFocus,
+                      !isConnected,
+                      () => _apply(settings),
                     ),
                   ),
                 ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: isConnected ? null : () => _resetDefaults(settings),
-              icon: const Icon(Icons.restore, size: 18),
-              label: Text(l10n.settingsLocalPortsResetTitle),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.settingsLocalPortsHint,
+                    style: _xrayTileSubtitleStyle(context),
+                  ),
+                  if (isConnected) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.settingsTurnOffToChange,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.orange(context),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-      ),
+          ],
+        ),
+      ],
     );
   }
 }

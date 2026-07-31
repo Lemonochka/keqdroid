@@ -94,7 +94,6 @@
   },
   "settingsRoutingSubtitle": "Direct- / Proxy- / Block-Regeln und Presets",
   "settingsResetRoutingTitle": "Routing auf Standard zurücksetzen",
-  "settingsResetRoutingSubtitle": "Integrierte Routing-Regeln wiederherstellen",
   "settingsRoutingResetDone": "Routing-Regeln zurückgesetzt",
   "settingsRoutingHeaderDesc": "Lege fest, welche Seiten direkt am VPN vorbei gehen, welche zwingend hindurch geleitet und welche blockiert werden. Beginne mit einem Preset und passe dann jede Liste unten an.",
   "settingsRoutingPresetsTitle": "Schnelle Presets",
@@ -216,15 +215,7 @@
   "settingsLanPasswordLabel": "Passwort",
   "settingsLanAuthHint": "Beide Felder gesetzt — Geräte melden sich damit am Proxy an. Leer — kein Passwort (jeder im Netzwerk kann ihn nutzen).",
   "settingsLocalPortsTitle": "Lokale Proxy-Ports",
-  "settingsLocalPortsSubtitle": "SOCKS {socks} · HTTP {http}",
-  "@settingsLocalPortsSubtitle": {
-    "placeholders": {
-      "socks": {},
-      "http": {}
-    }
-  },
   "settingsLocalPortsHint": "Listen-Ports der lokalen SOCKS5- und HTTP-Proxys (Standard 2080 / 2081). Werden bei der nächsten Verbindung angewendet. Die beiden Ports müssen sich unterscheiden.",
-  "settingsLocalPortsResetTitle": "Auf Standard zurücksetzen",
   "settingsPortInvalid": "Geben Sie einen Port zwischen 1 und 65535 ein",
   "settingsPortsMustDiffer": "SOCKS- und HTTP-Port müssen sich unterscheiden",
   "settingsTurnOffToChange": "Zum Ändern der Einstellung ausschalten",
@@ -235,8 +226,8 @@
       "address": {}
     }
   },
-  "settingsXrayCoreTitle": "Kern & Protokolle",
-  "settingsXrayCoreSubtitle": "Engine, DNS, XMUX, TUN, Log und Routing",
+  "settingsXrayCoreTitle": "Kern-Einstellungen",
+  "settingsXrayCoreSubtitle": "Ports, DNS, XMUX, TUN, Log und Routing",
   "settingsXrayDnsSection": "DNS",
   "settingsXrayDnsCustom": "Eigene DNS-Server",
   "settingsXrayDnsCustomHint": "Eine Adresse pro Zeile (DoH, DoT oder einfach)",
@@ -783,8 +774,7 @@
   "settingsResetConfirmTitle": "Einstellungen zurücksetzen?",
   "settingsResetConfirmAction": "Zurücksetzen",
   "settingsResetRoutingConfirm": "Die integrierten Routing-Regeln werden wiederhergestellt und deine Direct-/Proxy-/Block-Listen verworfen. Das kann nicht rückgängig gemacht werden.",
-  "settingsLocalPortsResetConfirm": "Die Standard-Ports des lokalen Proxys werden wiederhergestellt. Das kann nicht rückgängig gemacht werden.",
-  "settingsXrayResetConfirm": "Die Standardeinstellungen für Xray-Core und TUN werden wiederhergestellt. Das kann nicht rückgängig gemacht werden.",
+  "settingsXrayResetConfirm": "Die Standardeinstellungen für Xray-Core, TUN und die lokalen Ports werden wiederhergestellt. Das kann nicht rückgängig gemacht werden.",
   "settingsPermissionsTitle": "Berechtigungen",
   "settingsPermissionsSubtitle": "App-Berechtigungen ansehen und widerrufen",
   "settingsPermNotifTitle": "Benachrichtigungen",

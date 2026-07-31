@@ -182,9 +182,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsResetRoutingTitle => '重置路由为默认值';
 
   @override
-  String get settingsResetRoutingSubtitle => '恢复内置路由规则';
-
-  @override
   String get settingsRoutingResetDone => '路由规则已重置';
 
   @override
@@ -478,15 +475,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLocalPortsTitle => '本地代理端口';
 
   @override
-  String settingsLocalPortsSubtitle(Object socks, Object http) {
-    return 'SOCKS $socks · HTTP $http';
-  }
-
-  @override
   String get settingsLocalPortsHint => '本地 SOCKS5 和 HTTP 代理的监听端口（默认 2080 / 2081）。将在下次连接时生效。两个端口必须不同。';
-
-  @override
-  String get settingsLocalPortsResetTitle => '恢复默认';
 
   @override
   String get settingsPortInvalid => '请输入 1 到 65535 之间的端口';
@@ -503,10 +492,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get settingsXrayCoreTitle => '内核与协议';
+  String get settingsXrayCoreTitle => '内核设置';
 
   @override
-  String get settingsXrayCoreSubtitle => '引擎、DNS、XMUX、TUN、日志与路由';
+  String get settingsXrayCoreSubtitle => '端口、DNS、XMUX、TUN、日志与路由';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -1730,10 +1719,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsResetRoutingConfirm => '将恢复内置路由规则并清除你的直连/代理/屏蔽列表。此操作无法撤销。';
 
   @override
-  String get settingsLocalPortsResetConfirm => '将恢复默认的本地代理端口。此操作无法撤销。';
-
-  @override
-  String get settingsXrayResetConfirm => '将恢复 Xray 内核和 TUN 的默认设置。此操作无法撤销。';
+  String get settingsXrayResetConfirm => '将恢复 Xray 内核、TUN 和本地端口的默认设置。此操作无法撤销。';
 
   @override
   String get settingsPermissionsTitle => '权限';

@@ -376,7 +376,9 @@ class KeqdisVpnService : VpnService() {
                 delay(300); waited += 300
             }
             if (!isPortOpen("127.0.0.1", socksPort))
-                throw IllegalStateException("Xray SOCKS5 port $socksPort not ready")
+                throw IllegalStateException(
+                    "Xray SOCKS5 port $socksPort not ready${coreLogTail()}"
+                )
 
             // создаём TUN-интерфейс
             val tun = buildTunInterface(excludePkgs, includePkgs)
@@ -755,6 +757,25 @@ class KeqdisVpnService : VpnService() {
     }
 
     // ── Xray ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Последние строки core_logs.txt для текста ошибки. Само по себе «port not
+     * ready» ничего не говорит: ядро чаще всего уже вышло с внятной жалобой на
+     * конфиг (например, на geosite:-код, которого нет в базе), а logcat на
+     * Android 13+ untrusted_app недоступен. Ограничиваем длину — строка едет в
+     * уведомление и в блок ошибки на экране подключения.
+     */
+    private fun coreLogTail(maxLines: Int = 6, maxChars: Int = 600): String =
+        runCatching {
+            val file = File(filesDir, CORE_LOG_FILE)
+            if (!file.exists() || file.length() == 0L) return@runCatching ""
+            val tail = file.readLines()
+                .filter { it.isNotBlank() }
+                .takeLast(maxLines)
+                .joinToString("\n")
+                .takeLast(maxChars)
+            if (tail.isBlank()) "" else "\n$tail"
+        }.getOrDefault("")
 
     private fun startXray(binary: String, config: String): Int {
         // NativeHelper.startXray: fork+execv из nativeLibraryDir, дублирует вывод ядра

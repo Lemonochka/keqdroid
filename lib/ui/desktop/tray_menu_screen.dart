@@ -201,12 +201,18 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
         // на корневом Navigator — он переживает закрытие меню.
         final navigator = Navigator.of(context, rootNavigator: true);
         final settingsNotifier = ref.read(settingsNotifierProvider.notifier);
+        final vpnNotifier = ref.read(vpnStateProvider.notifier);
+        final vpnStatus = ref.read(vpnStateProvider).value?.status;
         await _closeMenu();
         await WindowsDesktopService.restoreMainWindow();
         final navContext = navigator.context;
         if (!navContext.mounted) return;
         final restart = await showDesktopTunAdminDialog(navContext);
         if (restart != true) return;
+        await stopSessionBeforeElevation(
+          notifier: vpnNotifier,
+          status: vpnStatus,
+        );
         await settingsNotifier.save(
           settings.copyWith(connectionMode: ConnectionMode.tun.storageValue),
         );

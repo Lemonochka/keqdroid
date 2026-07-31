@@ -91,6 +91,15 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
   }
 
   Future<void> _resetToDefaults() async {
+    // Единственная кнопка сброса правил (из «Дополнительно» карточка убрана),
+    // и она стирает все три списка — спрашиваем подтверждение.
+    if (!await _confirmReset(
+      context,
+      message: AppLocalizations.of(context)!.settingsResetRoutingConfirm,
+    )) {
+      return;
+    }
+    if (!mounted) return;
     _directRules.text = RoutingPresets.defaultDirectRules;
     _proxyRules.text = RoutingPresets.defaultProxyRules;
     _blockedRules.text = RoutingPresets.defaultBlockedRules;

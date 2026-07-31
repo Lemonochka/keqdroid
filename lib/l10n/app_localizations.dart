@@ -417,12 +417,6 @@ abstract class AppLocalizations {
   /// **'Reset routing to defaults'**
   String get settingsResetRoutingTitle;
 
-  /// No description provided for @settingsResetRoutingSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Restore built-in routing rules'**
-  String get settingsResetRoutingSubtitle;
-
   /// No description provided for @settingsRoutingResetDone.
   ///
   /// In en, this message translates to:
@@ -975,23 +969,11 @@ abstract class AppLocalizations {
   /// **'Local proxy ports'**
   String get settingsLocalPortsTitle;
 
-  /// No description provided for @settingsLocalPortsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'SOCKS {socks} · HTTP {http}'**
-  String settingsLocalPortsSubtitle(Object socks, Object http);
-
   /// No description provided for @settingsLocalPortsHint.
   ///
   /// In en, this message translates to:
   /// **'Listen ports for the local SOCKS5 and HTTP proxies (defaults 2080 / 2081). Applied on the next connection. The two ports must differ.'**
   String get settingsLocalPortsHint;
-
-  /// No description provided for @settingsLocalPortsResetTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset to defaults'**
-  String get settingsLocalPortsResetTitle;
 
   /// No description provided for @settingsPortInvalid.
   ///
@@ -1020,13 +1002,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXrayCoreTitle.
   ///
   /// In en, this message translates to:
-  /// **'Core & protocols'**
+  /// **'Core settings'**
   String get settingsXrayCoreTitle;
 
   /// No description provided for @settingsXrayCoreSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Engine, DNS, XMUX, TUN, log and routing'**
+  /// **'Ports, DNS, XMUX, TUN, log and routing'**
   String get settingsXrayCoreSubtitle;
 
   /// No description provided for @settingsXrayDnsSection.
@@ -3363,16 +3345,10 @@ abstract class AppLocalizations {
   /// **'This restores the built-in routing rules and discards your direct/proxy/blocked lists. This can\'t be undone.'**
   String get settingsResetRoutingConfirm;
 
-  /// No description provided for @settingsLocalPortsResetConfirm.
-  ///
-  /// In en, this message translates to:
-  /// **'This restores the default local proxy ports. This can\'t be undone.'**
-  String get settingsLocalPortsResetConfirm;
-
   /// No description provided for @settingsXrayResetConfirm.
   ///
   /// In en, this message translates to:
-  /// **'This restores the default Xray core and TUN settings. This can\'t be undone.'**
+  /// **'This restores the default Xray core, TUN and local port settings. This can\'t be undone.'**
   String get settingsXrayResetConfirm;
 
   /// No description provided for @settingsPermissionsTitle.

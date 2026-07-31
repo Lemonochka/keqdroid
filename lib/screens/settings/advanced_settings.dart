@@ -40,19 +40,6 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const _XrayCoreSettingsScreen()),
             ),
           ),
-          const SizedBox(height: 12),
-          _SettingsCard(
-            title: l10n.settingsLocalPortsTitle,
-            subtitle: l10n.settingsLocalPortsSubtitle(
-              (settingsAsync.value ?? const AppSettings()).localPort.toString(),
-              (settingsAsync.value ?? const AppSettings()).httpPort.toString(),
-            ),
-            icon: Icons.settings_input_component,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const _LocalProxyPortsScreen()),
-            ),
-          ),
           if (HotkeyService.isSupported) ...[
             const SizedBox(height: 12),
             _SettingsCard(
@@ -88,35 +75,6 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
               context,
               MaterialPageRoute(builder: (_) => const _RoutingScreen()),
             ),
-          ),
-          const SizedBox(height: 12),
-          _SettingsCard(
-            title: l10n.settingsResetRoutingTitle,
-            subtitle: l10n.settingsResetRoutingSubtitle,
-            icon: Icons.restore,
-            isDestructive: false,
-            onTap: () async {
-              final current = ref.read(settingsNotifierProvider).value;
-              if (current == null) return;
-              if (!await _confirmReset(
-                context,
-                message: l10n.settingsResetRoutingConfirm,
-              )) {
-                return;
-              }
-              await ref.read(settingsNotifierProvider.notifier).save(
-                    current.copyWith(
-                      directRules: RoutingPresets.defaultDirectRules,
-                      proxyRules: RoutingPresets.defaultProxyRules,
-                      blockedRules: RoutingPresets.defaultBlockedRules,
-                    ),
-                  );
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l10n.settingsRoutingResetDone)),
-                );
-              }
-            },
           ),
           const SizedBox(height: 12),
           _DebugModeCard(settingsAsync: settingsAsync),

@@ -16,6 +16,13 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
   bool _needsModifierHint = false;
   final FocusNode _captureFocus = FocusNode(debugLabel: 'hotkeyCapture');
 
+  // Снимок для dispose(): `ref` там уже нельзя — Riverpod помечает элемент
+  // defunct до State.dispose(), а watch-подписки закрывает после, так что
+  // StateError из ref.read обрывает unmount и оставляет живую подписку на
+  // мёртвом элементе (дальше ассерт markNeedsBuild на каждое изменение
+  // провайдера).
+  Map<String, String> _lastHotkeys = const {};
+
   @override
   void dispose() {
     // Уход с экрана посреди записи: вернуть снятую регистрацию хоткеев.
@@ -28,12 +35,7 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
   }
 
   void _reapplyBindings() {
-    final settings = ref.read(settingsNotifierProvider).value;
-    if (settings != null) {
-      unawaited(
-        HotkeyService.apply(HotkeyService.parseBindings(settings.hotkeys)),
-      );
-    }
+    unawaited(HotkeyService.apply(HotkeyService.parseBindings(_lastHotkeys)));
   }
 
   void _startRecording(HotkeyAction action) {
@@ -126,6 +128,7 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final settings =
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
+    _lastHotkeys = settings.hotkeys;
 
     final actions = <(HotkeyAction, IconData, String, String)>[
       (

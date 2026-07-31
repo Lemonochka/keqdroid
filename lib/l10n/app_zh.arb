@@ -94,7 +94,6 @@
   },
   "settingsRoutingSubtitle": "直连 / 代理 / 阻止规则及预设",
   "settingsResetRoutingTitle": "重置路由为默认值",
-  "settingsResetRoutingSubtitle": "恢复内置路由规则",
   "settingsRoutingResetDone": "路由规则已重置",
   "settingsRoutingHeaderDesc": "决定哪些站点直接绕过 VPN、哪些强制经过 VPN、哪些被阻止。可先使用预设快速开始，然后再微调下方的每个列表。",
   "settingsRoutingPresetsTitle": "快速预设",
@@ -216,15 +215,7 @@
   "settingsLanPasswordLabel": "密码",
   "settingsLanAuthHint": "两项都填写 — 设备需用其登录代理。留空 — 无密码（局域网内任何人都可使用）。",
   "settingsLocalPortsTitle": "本地代理端口",
-  "settingsLocalPortsSubtitle": "SOCKS {socks} · HTTP {http}",
-  "@settingsLocalPortsSubtitle": {
-    "placeholders": {
-      "socks": {},
-      "http": {}
-    }
-  },
   "settingsLocalPortsHint": "本地 SOCKS5 和 HTTP 代理的监听端口（默认 2080 / 2081）。将在下次连接时生效。两个端口必须不同。",
-  "settingsLocalPortsResetTitle": "恢复默认",
   "settingsPortInvalid": "请输入 1 到 65535 之间的端口",
   "settingsPortsMustDiffer": "SOCKS 和 HTTP 端口必须不同",
   "settingsTurnOffToChange": "关闭后才能更改此设置",
@@ -235,8 +226,8 @@
       "address": {}
     }
   },
-  "settingsXrayCoreTitle": "内核与协议",
-  "settingsXrayCoreSubtitle": "引擎、DNS、XMUX、TUN、日志与路由",
+  "settingsXrayCoreTitle": "内核设置",
+  "settingsXrayCoreSubtitle": "端口、DNS、XMUX、TUN、日志与路由",
   "settingsXrayDnsSection": "DNS",
   "settingsXrayDnsCustom": "自定义 DNS 服务器",
   "settingsXrayDnsCustomHint": "每行一个地址（DoH、DoT 或普通）",
@@ -783,8 +774,7 @@
   "settingsResetConfirmTitle": "重置设置？",
   "settingsResetConfirmAction": "重置",
   "settingsResetRoutingConfirm": "将恢复内置路由规则并清除你的直连/代理/屏蔽列表。此操作无法撤销。",
-  "settingsLocalPortsResetConfirm": "将恢复默认的本地代理端口。此操作无法撤销。",
-  "settingsXrayResetConfirm": "将恢复 Xray 内核和 TUN 的默认设置。此操作无法撤销。",
+  "settingsXrayResetConfirm": "将恢复 Xray 内核、TUN 和本地端口的默认设置。此操作无法撤销。",
   "settingsPermissionsTitle": "权限",
   "settingsPermissionsSubtitle": "可查看和撤销的应用权限",
   "settingsPermNotifTitle": "通知",
