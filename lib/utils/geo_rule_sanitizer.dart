@@ -54,6 +54,25 @@ GeoSanitizeResult stripUnknownGeoTokens(
   );
 }
 
+/// geo-токены из текстового списка правил, которых нет в поставляемых базах.
+///
+/// Тот же критерий, по которому [stripUnknownGeoTokens] выкидывает правило перед
+/// стартом ядра — но для UI: пользователь должен видеть, что `geoip:telegram`
+/// (в v2fly его нет) не сработает, а не гадать, почему «ТГ не учитывается».
+/// Порядок сохраняем, дубликаты убираем.
+List<String> unknownGeoTokens(String raw, GeoAssetIndex index) {
+  if (index.isEmpty) return const [];
+  final seen = <String>{};
+  final unknown = <String>[];
+  for (final token in raw.split(RegExp(r'[\r\n,]+'))) {
+    final trimmed = token.trim();
+    if (trimmed.isEmpty) continue;
+    if (isKnownGeoToken(trimmed, index)) continue;
+    if (seen.add(trimmed.toLowerCase())) unknown.add(trimmed);
+  }
+  return unknown;
+}
+
 /// true для всего, что не `geoip:`/`geosite:`, и для тех кодов, которые есть в
 /// базе. Понимает синтаксис xray: отрицание (`geoip:!ru`) и атрибут
 /// (`geosite:google@ads`) — проверяем сам код.

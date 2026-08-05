@@ -277,7 +277,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingBlockDesc => '此列表中的域名和 IP 将被丢弃且永不连接。';
 
   @override
-  String get settingsRoutingSyntaxHint => '每个列表可同时填写域名和 IP，用逗号或换行分隔：\n• ru — 所有 *.ru 主机（不带点的词 = 域名后缀）\n• vk.com — 该域名及其子域名\n• .example.com — 仅子域名\n• 10.0.0.0/8 或 1.2.3.4 — IP 地址或 CIDR 范围\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite（仅代理模式）\n私有/局域网 IP 和你的服务器始终自动直连。';
+  String get settingsRoutingSyntaxHint => '每个列表可同时填写域名和 IP，用逗号或换行分隔：\n• ru — 所有 *.ru 主机（不带点的词 = 域名后缀）\n• vk.com — 该域名及其子域名\n• .example.com — 仅子域名\n• 10.0.0.0/8 或 1.2.3.4 — IP 地址或 CIDR 范围\n• geoip:ru / geosite:refilter — 内置数据库中的 GeoIP/Geosite 代码\n私有/局域网 IP 和你的服务器始终自动直连。';
 
   @override
   String get settingsRoutingValuesHint => '每行一个，或用逗号分隔';
@@ -1810,4 +1810,121 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get tunRememberFailed => '无法更改 TUN 授权';
+
+  @override
+  String get settingsRoutingPresetTelegramGeoTitle => 'Telegram（GeoIP+GeoSite）— 代理';
+
+  @override
+  String get settingsRoutingPresetTelegramGeoDesc => '按域名和 IP 段匹配 Telegram（MTProto 直接使用 IP）';
+
+  @override
+  String get settingsRoutingPresetRefilterTitle => '俄罗斯被封锁（Re-filter）— 代理';
+
+  @override
+  String get settingsRoutingPresetRefilterDesc => '在俄罗斯被封锁的域名和 IP 走 VPN，其余直连';
+
+  @override
+  String get settingsRoutingGeoUnknownTitle => '地理数据库中不存在 — 将被忽略';
+
+  @override
+  String get settingsRoutingGeoUnknownHint => '遇到未知的地理代码，内核会拒绝整个配置，因此这些条目会在连接前被丢弃。请用上面的地球按钮选择已有代码。';
+
+  @override
+  String get settingsRoutingGeoPickerTooltip => '插入地理代码';
+
+  @override
+  String get settingsRoutingGeoPickerTitle => '内置数据库中的地理代码';
+
+  @override
+  String get settingsRoutingGeoPickerSearchHint => '搜索，例如 telegram';
+
+  @override
+  String get settingsRoutingGeoPickerEmpty => '未找到匹配的代码';
+
+  @override
+  String get settingsRoutingGeoPickerGeosite => '域名（geosite）';
+
+  @override
+  String get settingsRoutingGeoPickerGeoip => 'IP 段（geoip）';
+
+  @override
+  String get settingsOpenConnections => '连接';
+
+  @override
+  String get settingsConnectionsTitle => '连接';
+
+  @override
+  String get connectionsEmpty => '暂未捕获到连接。';
+
+  @override
+  String get connectionsUnavailable => '连接列表不可用。';
+
+  @override
+  String get connectionsFilterHint => '按域名、IP、进程或规则筛选';
+
+  @override
+  String connectionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个连接',
+      zero: '无连接',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get connectionsPause => '暂停刷新';
+
+  @override
+  String get connectionsResume => '继续刷新';
+
+  @override
+  String get connectionsPaused => '已暂停';
+
+  @override
+  String get connectionsSourceApi => '内核实时数据';
+
+  @override
+  String get connectionsSourceLog => '来自内核日志';
+
+  @override
+  String get connectionsSourceUnavailable => '无数据源';
+
+  @override
+  String get connectionsRuleHint => '只有日志级别为 Info 时，内核才会记录命中的规则。';
+
+  @override
+  String get connectionsRuleHintAction => '设为 Info';
+
+  @override
+  String get connectionsRuleHintApplied => '内核日志级别已设为 Info — 重新连接后生效';
+
+  @override
+  String get connectionsRuleDefault => '无规则（默认动作）';
+
+  @override
+  String get connectionsVerdictProxy => '代理';
+
+  @override
+  String get connectionsVerdictDirect => '直连';
+
+  @override
+  String get connectionsVerdictBlock => '已阻止';
+
+  @override
+  String subscriptionsExpiredOn(String date) {
+    return '订阅已于 $date 到期';
+  }
+
+  @override
+  String get subscriptionsExpiredHint => '服务商已不再更新服务器列表。请续订以继续使用。';
+
+  @override
+  String get subscriptionsExpiredNotifTitle => '订阅已到期';
+
+  @override
+  String subscriptionsExpiredNotifBody(String name, String date) {
+    return '“$name”已于 $date 到期。服务商已停止更新服务器列表 — 请续订以保持服务器可用。';
+  }
 }

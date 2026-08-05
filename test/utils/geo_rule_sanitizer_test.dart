@@ -20,6 +20,36 @@ void main() {
         blockedRules: blocked,
       );
 
+  group('unknownGeoTokens', () {
+    test('lists only geo tokens absent from the databases, in order', () {
+      expect(
+        unknownGeoTokens(
+          'geoip:telegram, vk.com, geosite:yandex\ngeosite:sberbank, 10.0.0.0/8',
+          index,
+        ),
+        ['geoip:telegram', 'geosite:sberbank'],
+      );
+    });
+
+    test('duplicates collapse case-insensitively', () {
+      expect(
+        unknownGeoTokens('geoip:telegram, GeoIP:Telegram', index),
+        ['geoip:telegram'],
+      );
+    });
+
+    test('everything is fine when all codes exist', () {
+      expect(unknownGeoTokens('geoip:ru, geosite:youtube', index), isEmpty);
+    });
+
+    test('no databases means no warnings (nothing to validate against)', () {
+      expect(
+        unknownGeoTokens('geoip:telegram', GeoAssetIndex.empty),
+        isEmpty,
+      );
+    });
+  });
+
   group('isKnownGeoToken', () {
     test('non-geo tokens are always kept', () {
       for (final token in [

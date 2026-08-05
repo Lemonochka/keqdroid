@@ -132,7 +132,7 @@
   "settingsRoutingProxyDesc": "Домены и IP из этого списка всегда идут через VPN.",
   "settingsRoutingBlockTitle": "Заблокировано",
   "settingsRoutingBlockDesc": "Домены и IP из этого списка блокируются и не подключаются.",
-  "settingsRoutingSyntaxHint": "Каждое поле принимает домены и IP вместе, через запятую или с новой строки:\n• ru — любой хост *.ru (слово без точки = суффикс домена)\n• vk.com — этот домен и его поддомены\n• .example.com — только поддомены\n• 10.0.0.0/8 или 1.2.3.4 — IP-адрес или диапазон CIDR\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite (только режим Proxy)\nПриватные IP локальной сети и ваш сервер всегда идут напрямую автоматически.",
+  "settingsRoutingSyntaxHint": "Каждое поле принимает домены и IP вместе, через запятую или с новой строки:\n• ru — любой хост *.ru (слово без точки = суффикс домена)\n• vk.com — этот домен и его поддомены\n• .example.com — только поддомены\n• 10.0.0.0/8 или 1.2.3.4 — IP-адрес или диапазон CIDR\n• geoip:ru / geosite:refilter — коды GeoIP/Geosite из поставляемых баз\nПриватные IP локальной сети и ваш сервер всегда идут напрямую автоматически.",
   "settingsRoutingValuesHint": "По одному в строке или через запятую",
   "settingsRoutingFinalTitle": "Остальной трафик",
   "settingsRoutingFinalDesc": "Действие по умолчанию для трафика вне правил.",
@@ -804,5 +804,64 @@
   "tunRememberEnable": "Включить",
   "tunRememberNotNow": "Не сейчас",
   "tunRememberInstalled": "Беспарольный TUN включён",
-  "tunRememberFailed": "Не удалось изменить авторизацию TUN"
+  "tunRememberFailed": "Не удалось изменить авторизацию TUN",
+  "settingsRoutingPresetTelegramGeoTitle": "Telegram (GeoIP+GeoSite) — через VPN",
+  "settingsRoutingPresetTelegramGeoDesc": "Telegram по доменам и по диапазонам IP (MTProto ходит на голые IP)",
+  "settingsRoutingPresetRefilterTitle": "Заблокировано в РФ (Re-filter) — через VPN",
+  "settingsRoutingPresetRefilterDesc": "Домены и IP, заблокированные в России, идут через VPN, остальное — напрямую",
+  "settingsRoutingGeoUnknownTitle": "Нет в гео-базах — будет проигнорировано",
+  "settingsRoutingGeoUnknownHint": "На неизвестном гео-коде ядро роняет весь конфиг, поэтому такие записи выкидываются перед подключением. Выберите существующий код кнопкой с глобусом выше.",
+  "settingsRoutingGeoPickerTooltip": "Вставить гео-код",
+  "settingsRoutingGeoPickerTitle": "Гео-коды из поставляемых баз",
+  "settingsRoutingGeoPickerSearchHint": "Поиск, например telegram",
+  "settingsRoutingGeoPickerEmpty": "Ничего не найдено",
+  "settingsRoutingGeoPickerGeosite": "Домены (geosite)",
+  "settingsRoutingGeoPickerGeoip": "Диапазоны IP (geoip)",
+  "settingsOpenConnections": "Соединения",
+  "settingsConnectionsTitle": "Соединения",
+  "connectionsEmpty": "Соединений пока не видно.",
+  "connectionsUnavailable": "Список соединений недоступен.",
+  "connectionsFilterHint": "Фильтр по домену, IP, процессу или правилу",
+  "connectionsCount": "{count, plural, =0{нет соединений} =1{1 соединение} few{{count} соединения} other{{count} соединений}}",
+  "@connectionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectionsPause": "Приостановить обновление",
+  "connectionsResume": "Продолжить обновление",
+  "connectionsPaused": "Пауза",
+  "connectionsSourceApi": "живой снимок ядра",
+  "connectionsSourceLog": "из лога ядра",
+  "connectionsSourceUnavailable": "нет источника",
+  "connectionsRuleHint": "Ядро пишет, какое правило сработало, только на уровне логов Info.",
+  "connectionsRuleHintAction": "Включить Info",
+  "connectionsRuleHintApplied": "Уровень логов ядра — Info. Переподключитесь, чтобы применить",
+  "connectionsRuleDefault": "без правила (действие по умолчанию)",
+  "connectionsVerdictProxy": "ПРОКСИ",
+  "connectionsVerdictDirect": "НАПРЯМУЮ",
+  "connectionsVerdictBlock": "БЛОК",
+  "subscriptionsExpiredOn": "Подписка истекла {date}",
+  "@subscriptionsExpiredOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionsExpiredHint": "Провайдер больше не обновляет список серверов. Продлите подписку, чтобы она продолжала работать.",
+  "subscriptionsExpiredNotifTitle": "Подписка истекла",
+  "subscriptionsExpiredNotifBody": "«{name}» истекла {date}. Провайдер перестал обновлять список серверов — продлите подписку, чтобы серверы продолжали работать.",
+  "@subscriptionsExpiredNotifBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  }
 }

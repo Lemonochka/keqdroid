@@ -132,7 +132,7 @@
   "settingsRoutingProxyDesc": "此列表中的域名和 IP 始终经过 VPN。",
   "settingsRoutingBlockTitle": "已阻止",
   "settingsRoutingBlockDesc": "此列表中的域名和 IP 将被丢弃且永不连接。",
-  "settingsRoutingSyntaxHint": "每个列表可同时填写域名和 IP，用逗号或换行分隔：\n• ru — 所有 *.ru 主机（不带点的词 = 域名后缀）\n• vk.com — 该域名及其子域名\n• .example.com — 仅子域名\n• 10.0.0.0/8 或 1.2.3.4 — IP 地址或 CIDR 范围\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite（仅代理模式）\n私有/局域网 IP 和你的服务器始终自动直连。",
+  "settingsRoutingSyntaxHint": "每个列表可同时填写域名和 IP，用逗号或换行分隔：\n• ru — 所有 *.ru 主机（不带点的词 = 域名后缀）\n• vk.com — 该域名及其子域名\n• .example.com — 仅子域名\n• 10.0.0.0/8 或 1.2.3.4 — IP 地址或 CIDR 范围\n• geoip:ru / geosite:refilter — 内置数据库中的 GeoIP/Geosite 代码\n私有/局域网 IP 和你的服务器始终自动直连。",
   "settingsRoutingValuesHint": "每行一个，或用逗号分隔",
   "settingsRoutingFinalTitle": "其余流量",
   "settingsRoutingFinalDesc": "规则之外流量的默认动作。",
@@ -804,5 +804,64 @@
   "tunRememberEnable": "启用",
   "tunRememberNotNow": "暂不",
   "tunRememberInstalled": "已启用免密码 TUN",
-  "tunRememberFailed": "无法更改 TUN 授权"
+  "tunRememberFailed": "无法更改 TUN 授权",
+  "settingsRoutingPresetTelegramGeoTitle": "Telegram（GeoIP+GeoSite）— 代理",
+  "settingsRoutingPresetTelegramGeoDesc": "按域名和 IP 段匹配 Telegram（MTProto 直接使用 IP）",
+  "settingsRoutingPresetRefilterTitle": "俄罗斯被封锁（Re-filter）— 代理",
+  "settingsRoutingPresetRefilterDesc": "在俄罗斯被封锁的域名和 IP 走 VPN，其余直连",
+  "settingsRoutingGeoUnknownTitle": "地理数据库中不存在 — 将被忽略",
+  "settingsRoutingGeoUnknownHint": "遇到未知的地理代码，内核会拒绝整个配置，因此这些条目会在连接前被丢弃。请用上面的地球按钮选择已有代码。",
+  "settingsRoutingGeoPickerTooltip": "插入地理代码",
+  "settingsRoutingGeoPickerTitle": "内置数据库中的地理代码",
+  "settingsRoutingGeoPickerSearchHint": "搜索，例如 telegram",
+  "settingsRoutingGeoPickerEmpty": "未找到匹配的代码",
+  "settingsRoutingGeoPickerGeosite": "域名（geosite）",
+  "settingsRoutingGeoPickerGeoip": "IP 段（geoip）",
+  "settingsOpenConnections": "连接",
+  "settingsConnectionsTitle": "连接",
+  "connectionsEmpty": "暂未捕获到连接。",
+  "connectionsUnavailable": "连接列表不可用。",
+  "connectionsFilterHint": "按域名、IP、进程或规则筛选",
+  "connectionsCount": "{count, plural, =0{无连接} other{{count} 个连接}}",
+  "@connectionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectionsPause": "暂停刷新",
+  "connectionsResume": "继续刷新",
+  "connectionsPaused": "已暂停",
+  "connectionsSourceApi": "内核实时数据",
+  "connectionsSourceLog": "来自内核日志",
+  "connectionsSourceUnavailable": "无数据源",
+  "connectionsRuleHint": "只有日志级别为 Info 时，内核才会记录命中的规则。",
+  "connectionsRuleHintAction": "设为 Info",
+  "connectionsRuleHintApplied": "内核日志级别已设为 Info — 重新连接后生效",
+  "connectionsRuleDefault": "无规则（默认动作）",
+  "connectionsVerdictProxy": "代理",
+  "connectionsVerdictDirect": "直连",
+  "connectionsVerdictBlock": "已阻止",
+  "subscriptionsExpiredOn": "订阅已于 {date} 到期",
+  "@subscriptionsExpiredOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionsExpiredHint": "服务商已不再更新服务器列表。请续订以继续使用。",
+  "subscriptionsExpiredNotifTitle": "订阅已到期",
+  "subscriptionsExpiredNotifBody": "“{name}”已于 {date} 到期。服务商已停止更新服务器列表 — 请续订以保持服务器可用。",
+  "@subscriptionsExpiredNotifBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  }
 }

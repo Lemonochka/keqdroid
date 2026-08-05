@@ -20,6 +20,7 @@ class StorageService {
   static const _kHwid          = 'keqdis_hwid';
   static const _kWindowBounds  = 'keqdis_window_bounds';
   static const _kSortModes     = 'keqdis_server_sort_modes';
+  static const _kExpiryNotified = 'keqdis_subscription_expiry_notified';
 
   final SharedPreferences _prefs;
   StorageService(this._prefs);
@@ -351,4 +352,24 @@ class StorageService {
 
   Future<void> setServerSortModes(Map<String, String> modes) =>
       _serial(() => _prefs.setString(_kSortModes, jsonEncode(modes)));
+
+  // уведомления об истёкших подписках
+
+  /// Для каких подписок уже показали «подписка истекла»: id → дата окончания,
+  /// по которой уведомили. Дата в ключе, а не голый флаг: провайдер продлевает
+  /// подписку — expiresAt меняется — и следующее истечение нужно показать снова.
+  Map<String, String> getExpiryNotified() {
+    final raw = _prefs.getString(_kExpiryNotified);
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return {};
+      return decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> setExpiryNotified(Map<String, String> byId) =>
+      _serial(() => _prefs.setString(_kExpiryNotified, jsonEncode(byId)));
 }

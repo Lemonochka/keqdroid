@@ -62,7 +62,11 @@ _stage_lib() {
   local name="$1" src dep
   case "$_seen" in *" $name "*) return 0 ;; esac
   _seen="$_seen$name "
-  src="$(ldconfig -p | awk -v n="$name" '$1==n {print $NF; exit}')"
+  # No early `exit` in awk: it closes the pipe while ldconfig is still writing,
+  # ldconfig dies on SIGPIPE, and `set -o pipefail` turns that into a fatal 141
+  # for the whole script. Whether it happens is a race on ldconfig's output
+  # timing, so it fails only sometimes. Read all input, keep the first match.
+  src="$(ldconfig -p | awk -v n="$name" '$1 == n && !found { print $NF; found = 1 }')"
   if [ -z "$src" ] || [ ! -f "$src" ]; then echo "  WARN: $name not found on host"; return 0; fi
   cp -Lu "$src" "$PL_LIB/$name"
   patchelf --set-rpath '$ORIGIN' "$PL_LIB/$name" 2>/dev/null || true

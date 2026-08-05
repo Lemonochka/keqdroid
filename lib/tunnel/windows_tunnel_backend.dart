@@ -39,8 +39,13 @@ class WindowsTunnelBackend implements TunnelBackend {
   // keqrnel: единое ядро (sing-box host + встроенный xray) — заменяет связку
   // _xrayProcess + _singboxProcess. null когда неактивно.
   Process? _keqrnelProcess;
-  // Порт clash_api keqrnel в proxy-режиме — из него читаем кумулятивный трафик.
+  // Порт clash_api keqrnel — из него читаем кумулятивный трафик (proxy-режим)
+  // и список соединений для дебаг-экрана (оба режима).
   int? _keqrnelClashPort;
+
+  /// Порт clash_api активной сессии keqrnel; null — сессии нет или API не поднят
+  /// (цепочка xray+sing-box его не даёт). Читает [ConnectionsService].
+  int? get clashApiPort => _keqrnelClashPort;
   Directory? _sessionDir;
   ({String username, String password})? _pendingCreds;
   ConnectionMode? _activeMode;
@@ -220,6 +225,7 @@ class WindowsTunnelBackend implements TunnelBackend {
       socksPort: request.socksPort,
       httpPort: request.httpPort,
       clashPort: clashPort,
+      findProcess: request.debugMode,
     );
     _keqrnelClashPort = clashPort;
     final configFile = File('${_sessionDir!.path}/keqrnel.json');
@@ -292,11 +298,14 @@ class WindowsTunnelBackend implements TunnelBackend {
       );
     }
 
+    final clashPort = await _freePort();
     final merged = KeqrnelConfig.fromChain(
       singboxConfig: singConfig,
       xrayConfig: request.xrayConfig,
       windows: true,
+      clashApiPort: clashPort,
     );
+    _keqrnelClashPort = clashPort;
     final configFile = File('${_sessionDir!.path}/keqrnel.json');
     await configFile.writeAsString(merged);
 

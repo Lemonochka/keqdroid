@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
+import '../l10n/app_localizations.dart';
 import '../models/app_info.dart';
 import '../models/app_settings.dart';
 import '../models/ping_test_config.dart';
@@ -14,6 +15,7 @@ import '../models/routing_rule.dart';
 import '../models/server_item.dart';
 import '../models/subscription.dart';
 import '../services/geo_asset_service.dart';
+import '../services/notification_service.dart';
 import '../services/ping_service.dart';
 import '../services/storage_service.dart';
 import '../services/subscription_service.dart';
@@ -23,9 +25,11 @@ import '../services/vpn_engine.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../tunnel/app_routing_mode.dart';
 import '../tunnel/vpn_backend.dart';
+import '../utils/app_locale.dart';
 import '../utils/awg_profile.dart';
 import '../utils/config_gen.dart';
 import '../utils/error_messages.dart';
+import '../utils/geo_asset_index.dart';
 import '../utils/local_vpn_proxy.dart';
 import '../utils/process_name_utils.dart';
 import '../utils/routing_rules_fold.dart';
@@ -126,6 +130,16 @@ final systemAccentColorProvider = FutureProvider<Color?>((ref) async {
   return argb == null ? null : Color(argb);
 });
 
+/// Коды, которые реально лежат в поставляемых geoip.dat/geosite.dat.
+///
+/// Нужен экрану роутинга: правило с кодом, которого нет в базе, ядро не
+/// игнорирует — оно роняет весь конфиг, поэтому такие токены выкидываются перед
+/// стартом. Раньше молча, теперь их видно в UI. Индекс кэширован в
+/// [GeoAssetService] на процесс, так что провайдер дешёвый.
+final geoAssetIndexProvider = FutureProvider<GeoAssetIndex>((ref) async {
+  return GeoAssetService.index();
+});
+
 final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
   // периодический ре-чек; таймер перевзводится на каждый ре-ран провайдера
   final timer = Timer(_updateRecheckInterval, ref.invalidateSelf);
@@ -203,7 +217,11 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       _syncTimer = null;
     });
 
-    return ref.read(storageProvider).getSubscriptions();
+    final subs = await ref.read(storageProvider).getSubscriptions();
+    // Проверяем сразу на старте: подписка могла истечь, пока приложение не
+    // запускали, и тогда никакого обновления, которое бы это заметило, не будет.
+    unawaited(notifyExpired(subs));
+    return subs;
   }
 
   Future<void> _syncSubscriptionsFromStorage() async {
@@ -224,6 +242,65 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       state = AsyncData(latest);
       await ref.read(serversProvider.notifier).reloadPreservingActive();
     }
+    await notifyExpired(latest);
+  }
+
+  /// Разовое уведомление по каждой истёкшей подписке.
+  ///
+  /// Панель после окончания срока обычно продолжает отдавать те же серверы (или
+  /// просто перестаёт обновлять список) и НЕ сообщает клиенту, что подписка
+  /// кончилась — обновление молча «ничего не меняет». Пользователь узнавал об
+  /// этом только когда серверы отваливались, поэтому говорим сами: один раз на
+  /// каждую дату окончания (продлили → expiresAt поменялся → скажем снова).
+  Future<void> notifyExpired(List<Subscription> subs) async {
+    final expired = subs
+        .where((s) => s.expiresAt != null && s.isExpired)
+        .toList();
+    if (expired.isEmpty) return;
+
+    final storage = ref.read(storageProvider);
+    final notified = storage.getExpiryNotified();
+    final pending = expired
+        .where((s) => notified[s.id] != s.expiresAt!.toIso8601String())
+        .toList();
+    if (pending.isEmpty) return;
+
+    final l10n = await _resolveLocalizations();
+    for (final sub in pending) {
+      final expiredAt = sub.expiresAt!;
+      await NotificationService.showSubscriptionExpired(
+        subscriptionId: sub.id,
+        title: l10n.subscriptionsExpiredNotifTitle,
+        body: l10n.subscriptionsExpiredNotifBody(
+          sub.name,
+          '${expiredAt.day.toString().padLeft(2, '0')}.'
+              '${expiredAt.month.toString().padLeft(2, '0')}.'
+              '${expiredAt.year}',
+        ),
+      );
+      notified[sub.id] = expiredAt.toIso8601String();
+      AppLogger.instance.info(
+        'Subscription "${sub.name}" expired at $expiredAt — user notified',
+      );
+    }
+    await storage.setExpiryNotified(notified);
+  }
+
+  /// Локализация вне дерева виджетов: уведомление уходит из провайдера, где
+  /// BuildContext'а нет. Язык — из настроек, иначе системный, иначе английский.
+  Future<AppLocalizations> _resolveLocalizations() async {
+    final settings = await ref.read(storageProvider).getSettings();
+    final candidates = <Locale>[
+      if (localeFromSettings(settings) != null) localeFromSettings(settings)!,
+      WidgetsBinding.instance.platformDispatcher.locale,
+      const Locale('en'),
+    ];
+    for (final locale in candidates) {
+      if (AppLocalizations.delegate.isSupported(locale)) {
+        return AppLocalizations.delegate.load(locale);
+      }
+    }
+    return AppLocalizations.delegate.load(const Locale('en'));
   }
 
   Future<void> _runInAppAutoUpdateTick({bool force = false}) async {
@@ -259,6 +336,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       final latest = await ref.read(storageProvider).getSubscriptions();
       state = AsyncData(latest);
       await ref.read(serversProvider.notifier).reloadPreservingActive();
+      await notifyExpired(latest);
     } finally {
       _autoUpdateRunning = false;
     }
@@ -312,6 +390,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
           .toList();
       state = AsyncData(subs);
       await ref.read(serversProvider.notifier).reloadPreservingActive();
+      await notifyExpired(subs);
     } else {
       throw SubscriptionFetchException(
         result.error ?? 'Unknown error',

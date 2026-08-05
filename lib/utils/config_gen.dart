@@ -694,8 +694,24 @@ class ConfigGeneratorV2 {
           }
         : core.buildDnsBlock(directDomains: directDomains);
 
+    // `ruleTag` — имя правила в логах ядра: xray печатает «Hit route rule:
+    // [tag] so taking detour [proxy] for [tcp:host:443]» (уровень логов Info),
+    // и по нему дебаг-экран «Соединения» показывает, ПО КАКОМУ правилу ушло
+    // соединение. В ping-режиме теги не нужны (там log level none).
     final rules = <Map<String, dynamic>>[];
-    rules.add({'type': 'field', 'ip': ['169.254.0.0/16', '224.0.0.0/4', '255.255.255.255/32'], 'outboundTag': 'block'});
+    Map<String, dynamic> rule(
+      String tag,
+      Map<String, dynamic> fields,
+    ) => {
+          'type': 'field',
+          ...fields,
+          if (!isPingMode) 'ruleTag': tag,
+        };
+
+    rules.add(rule('block-special', {
+      'ip': ['169.254.0.0/16', '224.0.0.0/4', '255.255.255.255/32'],
+      'outboundTag': 'block',
+    }));
 
     if (isPingMode) {
       final isServerIp = _isIpLiteral(serverAddress);
@@ -717,8 +733,7 @@ class ConfigGeneratorV2 {
       });
     } else {
     if (!isPingMode && settings.lanSharing) {
-      rules.add({
-        'type': 'field',
+      rules.add(rule('lan-allow', {
         'inboundTag': ['socks-lan', 'http-lan'],
         'source': [
           '10.0.0.0/8',
@@ -728,53 +743,72 @@ class ConfigGeneratorV2 {
           '127.0.0.0/8',
         ],
         'outboundTag': 'proxy',
-      });
-      rules.add({
-        'type': 'field',
+      }));
+      rules.add(rule('lan-deny', {
         'inboundTag': ['socks-lan', 'http-lan'],
         'network': 'tcp,udp',
         'outboundTag': 'block',
-      });
+      }));
     }
     if (blockedDomains.isNotEmpty) {
-      rules.add({'type': 'field', 'domain': blockedDomains, 'outboundTag': 'block'});
+      rules.add(rule('block-domains',
+          {'domain': blockedDomains, 'outboundTag': 'block'}));
     }
     if (blockedGeoip.isNotEmpty) {
       // xray has no top-level `geoip` rule field; geoip codes ride the `ip`
       // field as `geoip:xx` tokens. A bare `geoip` key is silently dropped and
       // the core aborts with "this rule has no effective fields".
-      rules.add({'type': 'field', 'ip': blockedGeoip.map((c) => 'geoip:$c').toList(), 'outboundTag': 'block'});
+      rules.add(rule('block-geoip', {
+        'ip': blockedGeoip.map((c) => 'geoip:$c').toList(),
+        'outboundTag': 'block',
+      }));
     }
     if (blockedIps.isNotEmpty) {
-      rules.add({'type': 'field', 'ip': blockedIps, 'outboundTag': 'block'});
+      rules.add(rule('block-ips', {'ip': blockedIps, 'outboundTag': 'block'}));
     }
     final isServerIp = _isIpLiteral(serverAddress);
     if (isServerIp) {
-      rules.add({'type': 'field', 'ip': [serverAddress], 'outboundTag': 'direct'});
+      rules.add(rule('server-ip',
+          {'ip': [serverAddress], 'outboundTag': 'direct'}));
     }
     if (!_isIpLiteral(originalServerAddress)) {
-      rules.add({'type': 'field', 'domain': ['full:$originalServerAddress'], 'outboundTag': 'direct'});
+      rules.add(rule('server-domain', {
+        'domain': ['full:$originalServerAddress'],
+        'outboundTag': 'direct',
+      }));
     } else if (!isServerIp) {
-      rules.add({'type': 'field', 'ip': [originalServerAddress], 'outboundTag': 'direct'});
+      rules.add(rule('server-address',
+          {'ip': [originalServerAddress], 'outboundTag': 'direct'}));
     }
     if (directDomains.isNotEmpty) {
-      rules.add({'type': 'field', 'domain': directDomains, 'outboundTag': 'direct'});
+      rules.add(rule('direct-domains',
+          {'domain': directDomains, 'outboundTag': 'direct'}));
     }
     if (directGeoip.isNotEmpty) {
-      rules.add({'type': 'field', 'ip': directGeoip.map((c) => 'geoip:$c').toList(), 'outboundTag': 'direct'});
+      rules.add(rule('direct-geoip', {
+        'ip': directGeoip.map((c) => 'geoip:$c').toList(),
+        'outboundTag': 'direct',
+      }));
     }
-    rules.add({'type': 'field', 'ip': [
-      ...extraDirectIps,
-      ..._basePrivateRanges,
-    ], 'outboundTag': 'direct'});
+    rules.add(rule('direct-private', {
+      'ip': [
+        ...extraDirectIps,
+        ..._basePrivateRanges,
+      ],
+      'outboundTag': 'direct',
+    }));
     if (proxyDomains.isNotEmpty) {
-      rules.add({'type': 'field', 'domain': proxyDomains, 'outboundTag': 'proxy'});
+      rules.add(rule('proxy-domains',
+          {'domain': proxyDomains, 'outboundTag': 'proxy'}));
     }
     if (proxyGeoip.isNotEmpty) {
-      rules.add({'type': 'field', 'ip': proxyGeoip.map((c) => 'geoip:$c').toList(), 'outboundTag': 'proxy'});
+      rules.add(rule('proxy-geoip', {
+        'ip': proxyGeoip.map((c) => 'geoip:$c').toList(),
+        'outboundTag': 'proxy',
+      }));
     }
     if (proxyIps.isNotEmpty) {
-      rules.add({'type': 'field', 'ip': proxyIps, 'outboundTag': 'proxy'});
+      rules.add(rule('proxy-ips', {'ip': proxyIps, 'outboundTag': 'proxy'}));
     }
 
     // kill switch здесь не нужен: catch-all ниже и так шлёт всё в proxy,
@@ -792,7 +826,7 @@ class ConfigGeneratorV2 {
             AppSettings.finalOutboundBlock => 'block',
             _ => 'proxy',
           };
-    rules.add({'type': 'field', 'outboundTag': finalTag, 'network': 'tcp,udp'});
+    rules.add(rule('final', {'outboundTag': finalTag, 'network': 'tcp,udp'}));
 
     final socksPort = pingSocksPort ?? settings.localPort;
     final useNoAuthInbound = isPingMode || localInboundsNoAuth;

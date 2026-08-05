@@ -23,6 +23,11 @@ class TunnelSessionRequest {
   /// Ядро: `chain` (xray → sing-box) или `keqrnel` (единое ядро). Дефолт `chain`.
   final String coreEngine;
 
+  /// Дебаг-режим приложения. Включает то, что стоит денег в рантайме и нужно
+  /// только для диагностики: поиск процесса-владельца соединения в sing-box
+  /// (`find_process`) для дебаг-экрана «Соединения».
+  final bool debugMode;
+
   const TunnelSessionRequest({
     required this.mode,
     this.vpnBackend = VpnBackend.xray,
@@ -39,6 +44,7 @@ class TunnelSessionRequest {
     this.systemProxy = true,
     this.killSwitch = false,
     this.coreEngine = 'chain',
+    this.debugMode = false,
   });
 
   Map<String, dynamic> toMethodChannelArgs({

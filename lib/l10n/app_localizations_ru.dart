@@ -277,7 +277,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsRoutingBlockDesc => 'Домены и IP из этого списка блокируются и не подключаются.';
 
   @override
-  String get settingsRoutingSyntaxHint => 'Каждое поле принимает домены и IP вместе, через запятую или с новой строки:\n• ru — любой хост *.ru (слово без точки = суффикс домена)\n• vk.com — этот домен и его поддомены\n• .example.com — только поддомены\n• 10.0.0.0/8 или 1.2.3.4 — IP-адрес или диапазон CIDR\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite (только режим Proxy)\nПриватные IP локальной сети и ваш сервер всегда идут напрямую автоматически.';
+  String get settingsRoutingSyntaxHint => 'Каждое поле принимает домены и IP вместе, через запятую или с новой строки:\n• ru — любой хост *.ru (слово без точки = суффикс домена)\n• vk.com — этот домен и его поддомены\n• .example.com — только поддомены\n• 10.0.0.0/8 или 1.2.3.4 — IP-адрес или диапазон CIDR\n• geoip:ru / geosite:refilter — коды GeoIP/Geosite из поставляемых баз\nПриватные IP локальной сети и ваш сервер всегда идут напрямую автоматически.';
 
   @override
   String get settingsRoutingValuesHint => 'По одному в строке или через запятую';
@@ -1812,4 +1812,123 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tunRememberFailed => 'Не удалось изменить авторизацию TUN';
+
+  @override
+  String get settingsRoutingPresetTelegramGeoTitle => 'Telegram (GeoIP+GeoSite) — через VPN';
+
+  @override
+  String get settingsRoutingPresetTelegramGeoDesc => 'Telegram по доменам и по диапазонам IP (MTProto ходит на голые IP)';
+
+  @override
+  String get settingsRoutingPresetRefilterTitle => 'Заблокировано в РФ (Re-filter) — через VPN';
+
+  @override
+  String get settingsRoutingPresetRefilterDesc => 'Домены и IP, заблокированные в России, идут через VPN, остальное — напрямую';
+
+  @override
+  String get settingsRoutingGeoUnknownTitle => 'Нет в гео-базах — будет проигнорировано';
+
+  @override
+  String get settingsRoutingGeoUnknownHint => 'На неизвестном гео-коде ядро роняет весь конфиг, поэтому такие записи выкидываются перед подключением. Выберите существующий код кнопкой с глобусом выше.';
+
+  @override
+  String get settingsRoutingGeoPickerTooltip => 'Вставить гео-код';
+
+  @override
+  String get settingsRoutingGeoPickerTitle => 'Гео-коды из поставляемых баз';
+
+  @override
+  String get settingsRoutingGeoPickerSearchHint => 'Поиск, например telegram';
+
+  @override
+  String get settingsRoutingGeoPickerEmpty => 'Ничего не найдено';
+
+  @override
+  String get settingsRoutingGeoPickerGeosite => 'Домены (geosite)';
+
+  @override
+  String get settingsRoutingGeoPickerGeoip => 'Диапазоны IP (geoip)';
+
+  @override
+  String get settingsOpenConnections => 'Соединения';
+
+  @override
+  String get settingsConnectionsTitle => 'Соединения';
+
+  @override
+  String get connectionsEmpty => 'Соединений пока не видно.';
+
+  @override
+  String get connectionsUnavailable => 'Список соединений недоступен.';
+
+  @override
+  String get connectionsFilterHint => 'Фильтр по домену, IP, процессу или правилу';
+
+  @override
+  String connectionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count соединений',
+      few: '$count соединения',
+      one: '1 соединение',
+      zero: 'нет соединений',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get connectionsPause => 'Приостановить обновление';
+
+  @override
+  String get connectionsResume => 'Продолжить обновление';
+
+  @override
+  String get connectionsPaused => 'Пауза';
+
+  @override
+  String get connectionsSourceApi => 'живой снимок ядра';
+
+  @override
+  String get connectionsSourceLog => 'из лога ядра';
+
+  @override
+  String get connectionsSourceUnavailable => 'нет источника';
+
+  @override
+  String get connectionsRuleHint => 'Ядро пишет, какое правило сработало, только на уровне логов Info.';
+
+  @override
+  String get connectionsRuleHintAction => 'Включить Info';
+
+  @override
+  String get connectionsRuleHintApplied => 'Уровень логов ядра — Info. Переподключитесь, чтобы применить';
+
+  @override
+  String get connectionsRuleDefault => 'без правила (действие по умолчанию)';
+
+  @override
+  String get connectionsVerdictProxy => 'ПРОКСИ';
+
+  @override
+  String get connectionsVerdictDirect => 'НАПРЯМУЮ';
+
+  @override
+  String get connectionsVerdictBlock => 'БЛОК';
+
+  @override
+  String subscriptionsExpiredOn(String date) {
+    return 'Подписка истекла $date';
+  }
+
+  @override
+  String get subscriptionsExpiredHint => 'Провайдер больше не обновляет список серверов. Продлите подписку, чтобы она продолжала работать.';
+
+  @override
+  String get subscriptionsExpiredNotifTitle => 'Подписка истекла';
+
+  @override
+  String subscriptionsExpiredNotifBody(String name, String date) {
+    return '«$name» истекла $date. Провайдер перестал обновлять список серверов — продлите подписку, чтобы серверы продолжали работать.';
+  }
 }

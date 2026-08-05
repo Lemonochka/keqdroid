@@ -83,6 +83,15 @@ class _DebugModeCard extends ConsumerWidget {
               icon: const Icon(Icons.terminal),
               label: Text(l10n.settingsOpenXrayLogs),
             ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const _ConnectionsScreen()),
+              ),
+              icon: const Icon(Icons.lan_outlined),
+              label: Text(l10n.settingsOpenConnections),
+            ),
           ],
         ],
       ),

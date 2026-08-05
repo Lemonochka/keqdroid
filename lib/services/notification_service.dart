@@ -17,6 +17,13 @@ class NotificationService {
   static const _channelName = 'VPN Control';
   static const _notifId     = 1338;
 
+  // Отдельный канал для подписок: у VPN-канала importance low и без звука
+  // (он для тихого статуса в шторке), а «подписка истекла» пользователь должен
+  // увидеть — иначе клиент так и молчит про окончание срока.
+  static const _subsChannelId   = 'keqdis_subscriptions';
+  static const _subsChannelName = 'Subscriptions';
+  static const _subsNotifIdBase = 2400;
+
   FlutterLocalNotificationsPlugin? _plugin;
   bool _initialized = false;
 
@@ -86,6 +93,44 @@ class NotificationService {
 
   static Future<void> updateStatus(VpnState state, {String? serverName}) async {
     await showNotification(state: state, serverName: serverName);
+  }
+
+  /// Разовое уведомление «подписка истекла».
+  ///
+  /// Панель после окончания срока обычно продолжает отдавать те же серверы (или
+  /// просто перестаёт обновлять список), и без этого клиент не сообщал ничего —
+  /// пользователь узнавал об окончании только когда серверы отваливались.
+  /// [subscriptionId] задаёт id уведомления, чтобы разные подписки не
+  /// перезаписывали друг друга.
+  static Future<void> showSubscriptionExpired({
+    required String subscriptionId,
+    required String title,
+    required String body,
+  }) async {
+    final ns = instance;
+    // На десктопе init() не зовётся вовсе (уведомления только на Android) —
+    // это не ошибка, там про истечение говорит баннер в списке подписок.
+    if (!ns._initialized || ns._plugin == null) return;
+
+    final details = AndroidNotificationDetails(
+      _subsChannelId,
+      _subsChannelName,
+      channelDescription: 'Subscription expiry and quota warnings',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      icon: '@mipmap/ic_launcher',
+      autoCancel: true,
+      styleInformation: BigTextStyleInformation(body),
+    );
+
+    await ns._plugin!.show(
+      // hashCode подписки в диапазон id: стабильно для одной подписки и
+      // различается между ними.
+      id: _subsNotifIdBase + (subscriptionId.hashCode.abs() % 100),
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(android: details),
+    );
   }
 
   /// убрать из шторки
