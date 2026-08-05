@@ -13,6 +13,12 @@
 # rewrites v2fly country data.
 #
 # Sources are downloaded fresh every run, which makes the result idempotent.
+#
+# The result is copied into assets/bin/linux/ as well: the Linux CMakeLists
+# installs the whole assets/bin/linux/ directory, so a database left only under
+# assets/bin/windows/ never reaches a Linux build. That divergence is exactly how
+# Linux packages ended up shipping months-old geo data.
+#
 # ASCII only: non-ASCII in this file breaks release builds (cp1251 vs UTF-8).
 
 $ErrorActionPreference = 'Stop'
@@ -59,6 +65,16 @@ try {
     Merge-Codes $geoip $loyalGeoip 'telegram,google,netflix,twitter,facebook,cloudflare,cloudfront,fastly,tor'
     Merge-Codes $geoip $refilterGeoip 'refilter'
     Merge-Codes $geosite $refilterGeosite 'refilter'
+
+    # 4. mirror into the Linux asset dir (installed wholesale by linux/CMakeLists.txt)
+    $linuxDir = Join-Path $root 'assets\bin\linux'
+    if (Test-Path -LiteralPath $linuxDir) {
+        Copy-Item -LiteralPath $geoip -Destination (Join-Path $linuxDir 'geoip.dat') -Force
+        Copy-Item -LiteralPath $geosite -Destination (Join-Path $linuxDir 'geosite.dat') -Force
+        Write-Host "Mirrored both databases to $linuxDir"
+    } else {
+        Write-Host "WARN: $linuxDir missing - Linux builds will keep their old geo data" -ForegroundColor Yellow
+    }
 
     Write-Host ''
     Write-Host ("geoip.dat   {0} KiB" -f [math]::Round((Get-Item $geoip).Length / 1KB))

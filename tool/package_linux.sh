@@ -35,6 +35,28 @@ if [ ! -x "$BUNDLE/$APP" ]; then
   bash "$REPO_DIR/tool/build_linux_wsl.sh"
 fi
 
+# --- geo data sanity (fail closed) ------------------------------------------
+# The bundle's root-level geoip.dat/geosite.dat come from assets/bin/linux/,
+# which linux/CMakeLists.txt installs wholesale — the flutter_assets copy under
+# assets/bin/windows/ is pruned below. A stale bundle therefore ships old routing
+# data while producing a perfectly valid sha256, which is how Linux packages
+# silently kept months-old geo databases.
+log "checking geo databases in the bundle"
+for geo in geoip.dat geosite.dat; do
+  [ -f "$BUNDLE/$geo" ] || { echo "  ERROR: $geo missing from the bundle"; exit 1; }
+  src="$REPO_DIR/assets/bin/linux/$geo"
+  if [ -f "$src" ]; then
+    src_size="$(stat -c%s "$src")"
+    out_size="$(stat -c%s "$BUNDLE/$geo")"
+    if [ "$src_size" != "$out_size" ]; then
+      echo "  ERROR: $geo is stale ($out_size bytes in bundle vs $src_size in assets/bin/linux)"
+      echo "         re-run tool/build_linux_wsl.sh so CMake re-installs it"
+      exit 1
+    fi
+  fi
+  echo "  $geo OK ($(du -h "$BUNDLE/$geo" | cut -f1))"
+done
+
 OUT="$REPO_DIR/release/$VERSION"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK" 2>/dev/null || true' EXIT
