@@ -70,8 +70,13 @@ class LinuxTunnelBackend implements TunnelBackend {
 
   int? _awgInfoPort;
   String? _xrayBinPath;
-  // Порт clash_api keqrnel в proxy-режиме — из него читаем кумулятивный трафик.
+  // Порт clash_api keqrnel — из него читаем кумулятивный трафик (proxy-режим)
+  // и список соединений для дебаг-экрана (оба режима).
   int? _keqrnelClashPort;
+
+  /// Порт clash_api активной сессии keqrnel; null — сессии нет или API не поднят.
+  /// Читает [ConnectionsService].
+  int? get clashApiPort => _keqrnelClashPort;
 
   // true пока идёт штатный stopSession — чтобы вотчдог не принял наш же
   // kill за внезапную смерть ядра.
@@ -216,6 +221,7 @@ class LinuxTunnelBackend implements TunnelBackend {
       socksPort: request.socksPort,
       httpPort: request.httpPort,
       clashPort: clashPort,
+      findProcess: request.debugMode,
     );
     _keqrnelClashPort = clashPort;
     final configFile = File(p.join(_sessionDir!.path, 'keqrnel.json'));
@@ -270,11 +276,14 @@ class LinuxTunnelBackend implements TunnelBackend {
     if (singConfig == null || singConfig.isEmpty) {
       throw const VpnStartException('singboxConfig is required for TUN mode');
     }
+    final clashPort = await _freePort();
     final merged = KeqrnelConfig.fromChain(
       singboxConfig: singConfig,
       xrayConfig: request.xrayConfig,
       windows: false,
+      clashApiPort: clashPort,
     );
+    _keqrnelClashPort = clashPort;
     await _runKeqrnelAsRoot(merged);
   }
 

@@ -122,6 +122,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         'ads_geosite' => l10n.settingsRoutingPresetAdsGeositeTitle,
         'streaming' => l10n.settingsRoutingPresetStreamingTitle,
         'messengers' => l10n.settingsRoutingPresetMessengersTitle,
+        'telegram_geo' => l10n.settingsRoutingPresetTelegramGeoTitle,
+        'refilter' => l10n.settingsRoutingPresetRefilterTitle,
         _ => id,
       };
 
@@ -135,6 +137,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         'ads_geosite' => l10n.settingsRoutingPresetAdsGeositeDesc,
         'streaming' => l10n.settingsRoutingPresetStreamingDesc,
         'messengers' => l10n.settingsRoutingPresetMessengersDesc,
+        'telegram_geo' => l10n.settingsRoutingPresetTelegramGeoDesc,
+        'refilter' => l10n.settingsRoutingPresetRefilterDesc,
         _ => '',
       };
 
@@ -148,6 +152,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         'ads_geosite' => Icons.block_flipped,
         'streaming' => Icons.play_circle_outline,
         'messengers' => Icons.chat_bubble_outline,
+        'telegram_geo' => Icons.send_outlined,
+        'refilter' => Icons.shield_outlined,
         _ => Icons.tune,
       };
 
@@ -178,6 +184,11 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         (a) => a.value?.finalOutbound ?? AppSettings.finalOutboundProxy,
       ),
     );
+    // Коды из поставляемых geo-баз: по ним подсвечиваем несуществующие токены
+    // (ядро на таком коде роняет весь конфиг, поэтому они выкидываются перед
+    // подключением) и наполняем пикер кодов.
+    final geoIndex =
+        ref.watch(geoAssetIndexProvider).value ?? GeoAssetIndex.empty;
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
       appBar: AppBar(
@@ -226,6 +237,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             controller: _directRules,
             hint: 'ru, vk.com, .example.com, 10.0.0.0/8',
             l10n: l10n,
+            field: RoutingField.direct,
+            geoIndex: geoIndex,
           ),
           const SizedBox(height: 12),
           _section(
@@ -237,6 +250,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             controller: _proxyRules,
             hint: 'youtube.com, discord.com, 1.1.1.1',
             l10n: l10n,
+            field: RoutingField.proxy,
+            geoIndex: geoIndex,
           ),
           const SizedBox(height: 12),
           _section(
@@ -248,6 +263,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             controller: _blockedRules,
             hint: 'doubleclick.net, 0.0.0.0/8',
             l10n: l10n,
+            field: RoutingField.blocked,
+            geoIndex: geoIndex,
           ),
           const SizedBox(height: 16),
           _advancedRulesCard(context, l10n),
@@ -872,8 +889,11 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     required TextEditingController controller,
     required String hint,
     required AppLocalizations l10n,
+    required RoutingField field,
+    required GeoAssetIndex geoIndex,
   }) {
     final count = _countEntries(controller.text);
+    final unknown = unknownGeoTokens(controller.text, geoIndex);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -922,6 +942,15 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                   ),
                 ),
               ),
+              if (!geoIndex.isEmpty)
+                IconButton(
+                  tooltip: l10n.settingsRoutingGeoPickerTooltip,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Icon(Icons.travel_explore, size: 18, color: color),
+                  onPressed: () => _showGeoCodePicker(field, geoIndex),
+                ),
             ],
           ),
           const SizedBox(height: 6),
@@ -966,7 +995,290 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             ),
             onChanged: (_) => _scheduleSave(),
           ),
+          if (unknown.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _unknownGeoWarning(context, l10n, unknown),
+          ],
         ],
+      ),
+    );
+  }
+
+  /// Токены, которых нет в поставляемых базах. Ядро на неизвестном geo-коде не
+  /// игнорирует правило, а падает на разборе всего конфига, поэтому такие записи
+  /// выкидываются перед подключением — раньше молча, из-за чего «geoip:telegram»
+  /// выглядел рабочим и вопрос «почему ТГ не учитывается» был без ответа.
+  Widget _unknownGeoWarning(
+    BuildContext context,
+    AppLocalizations l10n,
+    List<String> tokens,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.orange(context).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: AppTheme.orange(context).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.warning_amber_rounded,
+                  size: 16, color: AppTheme.orange(context)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.settingsRoutingGeoUnknownTitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.orange(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            tokens.join(', '),
+            style: TextStyle(
+              fontSize: 11.5,
+              fontFamily: 'monospace',
+              color: AppTheme.text(context),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.settingsRoutingGeoUnknownHint,
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.35,
+              color: AppTheme.textLight(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Пикер кодов из реальных баз: 1500+ geosite и 260+ geoip кодов руками не
+  /// вспомнишь, а опечатка молча ломает правило.
+  Future<void> _showGeoCodePicker(
+    RoutingField field,
+    GeoAssetIndex index,
+  ) async {
+    final token = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.card(context),
+      builder: (_) => _GeoCodePickerSheet(index: index),
+    );
+    if (token == null || token.isEmpty) return;
+    final ctrl = _controllerFor(field);
+    ctrl.text = RoutingPresets.mergeValues(ctrl.text, [token]);
+    await _persist();
+    if (!mounted) return;
+    setState(() {});
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.settingsRoutingPresetApplied(token))),
+    );
+  }
+}
+
+/// Список доступных geo-кодов с поиском. Возвращает через `Navigator.pop`
+/// готовый токен (`geosite:telegram` / `geoip:ru`).
+class _GeoCodePickerSheet extends StatefulWidget {
+  const _GeoCodePickerSheet({required this.index});
+
+  final GeoAssetIndex index;
+
+  @override
+  State<_GeoCodePickerSheet> createState() => _GeoCodePickerSheetState();
+}
+
+class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
+  final _search = TextEditingController();
+  String _query = '';
+  bool _geosite = true;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  List<String> get _codes {
+    final source =
+        _geosite ? widget.index.geositeCodes : widget.index.geoipCodes;
+    final needle = _query.trim().toLowerCase();
+    final list = source
+        .where((c) => needle.isEmpty || c.contains(needle))
+        .toList()
+      ..sort();
+    return list;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final codes = _codes;
+    final prefix = _geosite ? 'geosite:' : 'geoip:';
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+        ),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.travel_explore,
+                      size: 18, color: AppTheme.accent(context)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.settingsRoutingGeoPickerTitle,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.text(context),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    l10n.settingsRoutingItemCount(codes.length),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: AppTheme.textLight(context),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _typeTab(
+                      context,
+                      label: l10n.settingsRoutingGeoPickerGeosite,
+                      selected: _geosite,
+                      onTap: () => setState(() => _geosite = true),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _typeTab(
+                      context,
+                      label: l10n.settingsRoutingGeoPickerGeoip,
+                      selected: !_geosite,
+                      onTap: () => setState(() => _geosite = false),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _search,
+                autofocus: true,
+                style: TextStyle(fontSize: 13, color: AppTheme.text(context)),
+                decoration: InputDecoration(
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.search, size: 18),
+                  hintText: l10n.settingsRoutingGeoPickerSearchHint,
+                  hintStyle: TextStyle(color: AppTheme.textLight(context)),
+                  filled: true,
+                  fillColor: AppTheme.inset(context),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppTheme.divider(context)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppTheme.divider(context)),
+                  ),
+                ),
+                onChanged: (v) => setState(() => _query = v),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: codes.isEmpty
+                    ? Center(
+                        child: Text(
+                          l10n.settingsRoutingGeoPickerEmpty,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: AppTheme.textLight(context),
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: codes.length,
+                        itemBuilder: (_, i) {
+                          final code = codes[i];
+                          return ListTile(
+                            dense: true,
+                            title: Text(
+                              '$prefix$code',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontFamily: 'monospace',
+                                color: AppTheme.text(context),
+                              ),
+                            ),
+                            trailing: Icon(Icons.add,
+                                size: 16, color: AppTheme.accent(context)),
+                            onTap: () =>
+                                Navigator.of(context).pop('$prefix$code'),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _typeTab(
+    BuildContext context, {
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final color = AppTheme.accent(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? color.withValues(alpha: 0.14) : AppTheme.bg(context),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? color : AppTheme.divider(context),
+            width: selected ? 1.6 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            color: selected ? color : AppTheme.text(context),
+          ),
+        ),
       ),
     );
   }

@@ -132,7 +132,7 @@
   "settingsRoutingProxyDesc": "Domains und IPs hier gehen immer über das VPN.",
   "settingsRoutingBlockTitle": "Blockiert",
   "settingsRoutingBlockDesc": "Domains und IPs hier werden verworfen und verbinden nie.",
-  "settingsRoutingSyntaxHint": "Jede Liste akzeptiert Domains und IPs zusammen, durch Komma oder Zeilenumbruch getrennt:\n• ru — jeder *.ru-Host (ein Wort ohne Punkt = Domain-Suffix)\n• vk.com — diese Domain und ihre Subdomains\n• .example.com — nur Subdomains\n• 10.0.0.0/8 oder 1.2.3.4 — IP-Adresse oder CIDR-Bereich\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite (nur Proxy-Modus)\nPrivate/LAN-IPs und dein Server bleiben automatisch direkt.",
+  "settingsRoutingSyntaxHint": "Jede Liste akzeptiert Domains und IPs zusammen, durch Komma oder Zeilenumbruch getrennt:\n• ru — jeder *.ru-Host (ein Wort ohne Punkt = Domain-Suffix)\n• vk.com — diese Domain und ihre Subdomains\n• .example.com — nur Subdomains\n• 10.0.0.0/8 oder 1.2.3.4 — IP-Adresse oder CIDR-Bereich\n• geoip:ru / geosite:refilter — GeoIP/Geosite-Codes aus den mitgelieferten Datenbanken\nPrivate/LAN-IPs und dein Server bleiben automatisch direkt.",
   "settingsRoutingValuesHint": "Eine pro Zeile oder durch Komma getrennt",
   "settingsRoutingFinalTitle": "Übriger Datenverkehr",
   "settingsRoutingFinalDesc": "Standardaktion für Verkehr außerhalb der Regeln.",
@@ -804,5 +804,64 @@
   "tunRememberEnable": "Aktivieren",
   "tunRememberNotNow": "Nicht jetzt",
   "tunRememberInstalled": "TUN ohne Passwort aktiviert",
-  "tunRememberFailed": "TUN-Autorisierung konnte nicht geändert werden"
+  "tunRememberFailed": "TUN-Autorisierung konnte nicht geändert werden",
+  "settingsRoutingPresetTelegramGeoTitle": "Telegram (GeoIP+GeoSite) — Proxy",
+  "settingsRoutingPresetTelegramGeoDesc": "Telegram über Domains und IP-Bereiche (MTProto nutzt reine IPs)",
+  "settingsRoutingPresetRefilterTitle": "In Russland gesperrt (Re-filter) — Proxy",
+  "settingsRoutingPresetRefilterDesc": "In Russland gesperrte Domains und IPs laufen über das VPN, alles andere direkt",
+  "settingsRoutingGeoUnknownTitle": "Nicht in den Geo-Datenbanken — wird ignoriert",
+  "settingsRoutingGeoUnknownHint": "Bei einem unbekannten Geo-Code bricht der Core die gesamte Konfiguration ab, daher werden solche Einträge vor dem Verbinden entfernt. Wähle oben per Globus-Button einen vorhandenen Code.",
+  "settingsRoutingGeoPickerTooltip": "Geo-Code einfügen",
+  "settingsRoutingGeoPickerTitle": "Geo-Codes der mitgelieferten Datenbanken",
+  "settingsRoutingGeoPickerSearchHint": "Suche, z. B. telegram",
+  "settingsRoutingGeoPickerEmpty": "Keine Codes gefunden",
+  "settingsRoutingGeoPickerGeosite": "Domains (geosite)",
+  "settingsRoutingGeoPickerGeoip": "IP-Bereiche (geoip)",
+  "settingsOpenConnections": "Verbindungen",
+  "settingsConnectionsTitle": "Verbindungen",
+  "connectionsEmpty": "Noch keine Verbindungen erfasst.",
+  "connectionsUnavailable": "Verbindungsliste ist nicht verfügbar.",
+  "connectionsFilterHint": "Filter nach Domain, IP, Prozess oder Regel",
+  "connectionsCount": "{count, plural, =0{keine Verbindungen} =1{1 Verbindung} other{{count} Verbindungen}}",
+  "@connectionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectionsPause": "Aktualisierung pausieren",
+  "connectionsResume": "Aktualisierung fortsetzen",
+  "connectionsPaused": "Pausiert",
+  "connectionsSourceApi": "live aus dem Core",
+  "connectionsSourceLog": "aus dem Core-Log",
+  "connectionsSourceUnavailable": "keine Quelle",
+  "connectionsRuleHint": "Der Core protokolliert die zutreffende Regel nur bei Log-Level Info.",
+  "connectionsRuleHintAction": "Info setzen",
+  "connectionsRuleHintApplied": "Core-Log-Level auf Info gesetzt — neu verbinden zum Übernehmen",
+  "connectionsRuleDefault": "keine Regel (Standardaktion)",
+  "connectionsVerdictProxy": "PROXY",
+  "connectionsVerdictDirect": "DIREKT",
+  "connectionsVerdictBlock": "GESPERRT",
+  "subscriptionsExpiredOn": "Abo am {date} abgelaufen",
+  "@subscriptionsExpiredOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionsExpiredHint": "Der Anbieter aktualisiert die Serverliste nicht mehr. Verlängere das Abo, damit es weiter funktioniert.",
+  "subscriptionsExpiredNotifTitle": "Abo abgelaufen",
+  "subscriptionsExpiredNotifBody": "„{name}“ ist am {date} abgelaufen. Der Anbieter aktualisiert die Serverliste nicht mehr — verlängere das Abo, damit die Server weiter funktionieren.",
+  "@subscriptionsExpiredNotifBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  }
 }

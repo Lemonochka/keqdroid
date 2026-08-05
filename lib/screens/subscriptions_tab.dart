@@ -687,6 +687,58 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 ],
               ),
             ),
+            // Истёкшая подписка — всегда на виду, вне сворачиваемой части:
+            // провайдер о конце срока клиенту не сообщает, а панель обычно
+            // продолжает отдавать те же серверы, поэтому раньше «просто не
+            // обновляется» выглядело как баг приложения.
+            if (sub.isExpired)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: redColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: redColor.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.timer_off_outlined, size: 15, color: redColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              sub.expiresAt != null
+                                  ? l10n.subscriptionsExpiredOn(
+                                      _formatDate(sub.expiresAt!),
+                                    )
+                                  : l10n.subscriptionsExpired,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: redColor,
+                              ),
+                            ),
+                            Text(
+                              l10n.subscriptionsExpiredHint,
+                              style: TextStyle(
+                                fontSize: 11,
+                                height: 1.3,
+                                color: textLightColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 220),
               crossFadeState: collapsed

@@ -277,7 +277,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsRoutingBlockDesc => 'Domains und IPs hier werden verworfen und verbinden nie.';
 
   @override
-  String get settingsRoutingSyntaxHint => 'Jede Liste akzeptiert Domains und IPs zusammen, durch Komma oder Zeilenumbruch getrennt:\n• ru — jeder *.ru-Host (ein Wort ohne Punkt = Domain-Suffix)\n• vk.com — diese Domain und ihre Subdomains\n• .example.com — nur Subdomains\n• 10.0.0.0/8 oder 1.2.3.4 — IP-Adresse oder CIDR-Bereich\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite (nur Proxy-Modus)\nPrivate/LAN-IPs und dein Server bleiben automatisch direkt.';
+  String get settingsRoutingSyntaxHint => 'Jede Liste akzeptiert Domains und IPs zusammen, durch Komma oder Zeilenumbruch getrennt:\n• ru — jeder *.ru-Host (ein Wort ohne Punkt = Domain-Suffix)\n• vk.com — diese Domain und ihre Subdomains\n• .example.com — nur Subdomains\n• 10.0.0.0/8 oder 1.2.3.4 — IP-Adresse oder CIDR-Bereich\n• geoip:ru / geosite:refilter — GeoIP/Geosite-Codes aus den mitgelieferten Datenbanken\nPrivate/LAN-IPs und dein Server bleiben automatisch direkt.';
 
   @override
   String get settingsRoutingValuesHint => 'Eine pro Zeile oder durch Komma getrennt';
@@ -1810,4 +1810,122 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get tunRememberFailed => 'TUN-Autorisierung konnte nicht geändert werden';
+
+  @override
+  String get settingsRoutingPresetTelegramGeoTitle => 'Telegram (GeoIP+GeoSite) — Proxy';
+
+  @override
+  String get settingsRoutingPresetTelegramGeoDesc => 'Telegram über Domains und IP-Bereiche (MTProto nutzt reine IPs)';
+
+  @override
+  String get settingsRoutingPresetRefilterTitle => 'In Russland gesperrt (Re-filter) — Proxy';
+
+  @override
+  String get settingsRoutingPresetRefilterDesc => 'In Russland gesperrte Domains und IPs laufen über das VPN, alles andere direkt';
+
+  @override
+  String get settingsRoutingGeoUnknownTitle => 'Nicht in den Geo-Datenbanken — wird ignoriert';
+
+  @override
+  String get settingsRoutingGeoUnknownHint => 'Bei einem unbekannten Geo-Code bricht der Core die gesamte Konfiguration ab, daher werden solche Einträge vor dem Verbinden entfernt. Wähle oben per Globus-Button einen vorhandenen Code.';
+
+  @override
+  String get settingsRoutingGeoPickerTooltip => 'Geo-Code einfügen';
+
+  @override
+  String get settingsRoutingGeoPickerTitle => 'Geo-Codes der mitgelieferten Datenbanken';
+
+  @override
+  String get settingsRoutingGeoPickerSearchHint => 'Suche, z. B. telegram';
+
+  @override
+  String get settingsRoutingGeoPickerEmpty => 'Keine Codes gefunden';
+
+  @override
+  String get settingsRoutingGeoPickerGeosite => 'Domains (geosite)';
+
+  @override
+  String get settingsRoutingGeoPickerGeoip => 'IP-Bereiche (geoip)';
+
+  @override
+  String get settingsOpenConnections => 'Verbindungen';
+
+  @override
+  String get settingsConnectionsTitle => 'Verbindungen';
+
+  @override
+  String get connectionsEmpty => 'Noch keine Verbindungen erfasst.';
+
+  @override
+  String get connectionsUnavailable => 'Verbindungsliste ist nicht verfügbar.';
+
+  @override
+  String get connectionsFilterHint => 'Filter nach Domain, IP, Prozess oder Regel';
+
+  @override
+  String connectionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Verbindungen',
+      one: '1 Verbindung',
+      zero: 'keine Verbindungen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get connectionsPause => 'Aktualisierung pausieren';
+
+  @override
+  String get connectionsResume => 'Aktualisierung fortsetzen';
+
+  @override
+  String get connectionsPaused => 'Pausiert';
+
+  @override
+  String get connectionsSourceApi => 'live aus dem Core';
+
+  @override
+  String get connectionsSourceLog => 'aus dem Core-Log';
+
+  @override
+  String get connectionsSourceUnavailable => 'keine Quelle';
+
+  @override
+  String get connectionsRuleHint => 'Der Core protokolliert die zutreffende Regel nur bei Log-Level Info.';
+
+  @override
+  String get connectionsRuleHintAction => 'Info setzen';
+
+  @override
+  String get connectionsRuleHintApplied => 'Core-Log-Level auf Info gesetzt — neu verbinden zum Übernehmen';
+
+  @override
+  String get connectionsRuleDefault => 'keine Regel (Standardaktion)';
+
+  @override
+  String get connectionsVerdictProxy => 'PROXY';
+
+  @override
+  String get connectionsVerdictDirect => 'DIREKT';
+
+  @override
+  String get connectionsVerdictBlock => 'GESPERRT';
+
+  @override
+  String subscriptionsExpiredOn(String date) {
+    return 'Abo am $date abgelaufen';
+  }
+
+  @override
+  String get subscriptionsExpiredHint => 'Der Anbieter aktualisiert die Serverliste nicht mehr. Verlängere das Abo, damit es weiter funktioniert.';
+
+  @override
+  String get subscriptionsExpiredNotifTitle => 'Abo abgelaufen';
+
+  @override
+  String subscriptionsExpiredNotifBody(String name, String date) {
+    return '„$name“ ist am $date abgelaufen. Der Anbieter aktualisiert die Serverliste nicht mehr — verlängere das Abo, damit die Server weiter funktionieren.';
+  }
 }

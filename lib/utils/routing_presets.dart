@@ -167,6 +167,23 @@ class RoutingPresets {
     'whatsapp.net',
   ];
 
+  /// Re-filter: домены и IP, заблокированные в РФ (1andrevich/Re-filter-lists,
+  /// домержено в поставляемые базы через tool/fetch_xray_geo.ps1). Ровно то, что
+  /// людям нужно от VPN по умолчанию: заблокированное — через туннель, остальное
+  /// мимо. Оба кода вместе: часть сервисов ходит по IP без домена.
+  static const List<String> reFilter = [
+    'geosite:refilter',
+    'geoip:refilter',
+  ];
+
+  /// Telegram по домену и по IP. `geoip:telegram` нет в базе v2fly (там только
+  /// страны), поэтому он тоже домержен: MTProto ходит на IP-литералы, и без
+  /// geoip доменного правила не хватает.
+  static const List<String> telegram = [
+    'geosite:telegram',
+    'geoip:telegram',
+  ];
+
   static const List<RoutingPreset> all = [
     RoutingPreset(
       id: 'ru',
@@ -218,6 +235,16 @@ class RoutingPresets {
       id: 'messengers',
       field: RoutingField.proxy,
       values: messengers,
+    ),
+    RoutingPreset(
+      id: 'telegram_geo',
+      field: RoutingField.proxy,
+      values: telegram,
+    ),
+    RoutingPreset(
+      id: 'refilter',
+      field: RoutingField.proxy,
+      values: reFilter,
     ),
   ];
 

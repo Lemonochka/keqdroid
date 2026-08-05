@@ -606,7 +606,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingSyntaxHint.
   ///
   /// In en, this message translates to:
-  /// **'Each list accepts domains and IPs together, comma- or line-separated:\n• ru — every *.ru host (a bare word = domain suffix)\n• vk.com — that domain and its subdomains\n• .example.com — subdomains only\n• 10.0.0.0/8 or 1.2.3.4 — IP address or CIDR range\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite (Proxy mode only)\nPrivate/LAN IPs and your server always stay direct automatically.'**
+  /// **'Each list accepts domains and IPs together, comma- or line-separated:\n• ru — every *.ru host (a bare word = domain suffix)\n• vk.com — that domain and its subdomains\n• .example.com — subdomains only\n• 10.0.0.0/8 or 1.2.3.4 — IP address or CIDR range\n• geoip:ru / geosite:refilter — GeoIP/Geosite codes from the bundled databases\nPrivate/LAN IPs and your server always stay direct automatically.'**
   String get settingsRoutingSyntaxHint;
 
   /// No description provided for @settingsRoutingValuesHint.
@@ -3530,6 +3530,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not change TUN authorization'**
   String get tunRememberFailed;
+
+  /// No description provided for @settingsRoutingPresetTelegramGeoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Telegram (GeoIP+GeoSite) — Proxy'**
+  String get settingsRoutingPresetTelegramGeoTitle;
+
+  /// No description provided for @settingsRoutingPresetTelegramGeoDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Telegram by domains and by IP ranges (MTProto uses bare IPs)'**
+  String get settingsRoutingPresetTelegramGeoDesc;
+
+  /// No description provided for @settingsRoutingPresetRefilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked in Russia (Re-filter) — Proxy'**
+  String get settingsRoutingPresetRefilterTitle;
+
+  /// No description provided for @settingsRoutingPresetRefilterDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Domains and IPs blocked in Russia go through the VPN, everything else stays direct'**
+  String get settingsRoutingPresetRefilterDesc;
+
+  /// No description provided for @settingsRoutingGeoUnknownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing from the geo databases — will be ignored'**
+  String get settingsRoutingGeoUnknownTitle;
+
+  /// No description provided for @settingsRoutingGeoUnknownHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The core aborts the whole config on an unknown geo code, so these entries are dropped before connecting. Pick an existing code with the globe button above.'**
+  String get settingsRoutingGeoUnknownHint;
+
+  /// No description provided for @settingsRoutingGeoPickerTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert a geo code'**
+  String get settingsRoutingGeoPickerTooltip;
+
+  /// No description provided for @settingsRoutingGeoPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Geo codes in the bundled databases'**
+  String get settingsRoutingGeoPickerTitle;
+
+  /// No description provided for @settingsRoutingGeoPickerSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search, e.g. telegram'**
+  String get settingsRoutingGeoPickerSearchHint;
+
+  /// No description provided for @settingsRoutingGeoPickerEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No codes match'**
+  String get settingsRoutingGeoPickerEmpty;
+
+  /// No description provided for @settingsRoutingGeoPickerGeosite.
+  ///
+  /// In en, this message translates to:
+  /// **'Domains (geosite)'**
+  String get settingsRoutingGeoPickerGeosite;
+
+  /// No description provided for @settingsRoutingGeoPickerGeoip.
+  ///
+  /// In en, this message translates to:
+  /// **'IP ranges (geoip)'**
+  String get settingsRoutingGeoPickerGeoip;
+
+  /// No description provided for @settingsOpenConnections.
+  ///
+  /// In en, this message translates to:
+  /// **'Connections'**
+  String get settingsOpenConnections;
+
+  /// No description provided for @settingsConnectionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connections'**
+  String get settingsConnectionsTitle;
+
+  /// No description provided for @connectionsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No connections captured yet.'**
+  String get connectionsEmpty;
+
+  /// No description provided for @connectionsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection list is unavailable.'**
+  String get connectionsUnavailable;
+
+  /// No description provided for @connectionsFilterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by domain, IP, process or rule'**
+  String get connectionsFilterHint;
+
+  /// No description provided for @connectionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{no connections} =1{1 connection} other{{count} connections}}'**
+  String connectionsCount(int count);
+
+  /// No description provided for @connectionsPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause updates'**
+  String get connectionsPause;
+
+  /// No description provided for @connectionsResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume updates'**
+  String get connectionsResume;
+
+  /// No description provided for @connectionsPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get connectionsPaused;
+
+  /// No description provided for @connectionsSourceApi.
+  ///
+  /// In en, this message translates to:
+  /// **'live from core'**
+  String get connectionsSourceApi;
+
+  /// No description provided for @connectionsSourceLog.
+  ///
+  /// In en, this message translates to:
+  /// **'from core log'**
+  String get connectionsSourceLog;
+
+  /// No description provided for @connectionsSourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'no source'**
+  String get connectionsSourceUnavailable;
+
+  /// No description provided for @connectionsRuleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The core only logs which rule matched at log level Info.'**
+  String get connectionsRuleHint;
+
+  /// No description provided for @connectionsRuleHintAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Info'**
+  String get connectionsRuleHintAction;
+
+  /// No description provided for @connectionsRuleHintApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Core log level set to Info — reconnect to apply'**
+  String get connectionsRuleHintApplied;
+
+  /// No description provided for @connectionsRuleDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'no rule (default action)'**
+  String get connectionsRuleDefault;
+
+  /// No description provided for @connectionsVerdictProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'PROXY'**
+  String get connectionsVerdictProxy;
+
+  /// No description provided for @connectionsVerdictDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'DIRECT'**
+  String get connectionsVerdictDirect;
+
+  /// No description provided for @connectionsVerdictBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'BLOCKED'**
+  String get connectionsVerdictBlock;
+
+  /// No description provided for @subscriptionsExpiredOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription expired on {date}'**
+  String subscriptionsExpiredOn(String date);
+
+  /// No description provided for @subscriptionsExpiredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The provider no longer updates the server list. Renew the subscription to keep it working.'**
+  String get subscriptionsExpiredHint;
+
+  /// No description provided for @subscriptionsExpiredNotifTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription expired'**
+  String get subscriptionsExpiredNotifTitle;
+
+  /// No description provided for @subscriptionsExpiredNotifBody.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" expired on {date}. The provider has stopped updating the server list — renew it to keep the servers working.'**
+  String subscriptionsExpiredNotifBody(String name, String date);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

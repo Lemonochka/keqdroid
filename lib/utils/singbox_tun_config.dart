@@ -94,8 +94,11 @@ class SingBoxTunConfigGen {
           continue;
         }
         if (cleaned.startsWith('geosite:')) {
-          final v = cleaned.substring('geosite:'.length).trim();
-          if (v.isNotEmpty) suffix.add(v);
+          // sing-box (1.11+) не умеет читать v2fly .dat вообще, а прежний
+          // перевод `geosite:telegram` → `domain_suffix: telegram` давал
+          // мёртвое правило: суффиксу «telegram» не соответствует ни
+          // telegram.org, ни t.me — так geosite молча не работал в TUN.
+          // Такие токены оставляем встроенному xray (см. needsXrayForGeo).
           continue;
         }
         if (cleaned.startsWith('.')) {
@@ -155,21 +158,35 @@ class SingBoxTunConfigGen {
       return ipV6.hasMatch(v) || cidrV6.hasMatch(v);
     }
 
-    // sing-box has no built-in geoip db here, so keep only literal ip/cidr
-    // (plus geoip:private which it understands) and drop other geoip: codes.
+    // sing-box has no built-in geoip db here, so keep only literal ip/cidr and
+    // leave every geoip: code (including geoip:private) to the embedded xray.
+    // `ip_cidr` accepts nothing but a prefix or a bare address — sing-box's
+    // NewIPCIDRItem rejects anything else and the core then exits on config
+    // load, so a stray `geoip:private` used to kill the whole connection.
     List<String> ipsForSingBox(List<String> ips) => ips
-        .where(
-          (entry) =>
-              isIPv4OrCidr(entry) ||
-              isIPv6OrCidr(entry) ||
-              entry.trim().toLowerCase() == 'geoip:private',
-        )
+        .where((entry) => isIPv4OrCidr(entry) || isIPv6OrCidr(entry))
         .map((e) => e.trim())
         .toList();
 
     final directIpsForSingBox = ipsForSingBox(directSplit.ips);
     final proxyIpsForSingBox = ipsForSingBox(proxySplit.ips);
     final blockedIpsForSingBox = ipsForSingBox(blockedSplit.ips);
+
+    // geo-токен, который умеет вычислить только xray (у sing-box нет .dat).
+    bool isGeoToken(String value) {
+      final v = value.trim().toLowerCase();
+      return v.startsWith('geosite:') || v.startsWith('geoip:');
+    }
+
+    // Есть ли geo-правила, которые ДОЛЖНЫ отправить трафик в прокси/блок.
+    // Их применяет встроенный xray — но только если соединение вообще доехало
+    // до аутбаунда `proxy`; см. финальное действие ниже.
+    final needsXrayForGeo = [
+      ...proxySplit.domains,
+      ...proxySplit.ips,
+      ...blockedSplit.domains,
+      ...blockedSplit.ips,
+    ].any(isGeoToken);
 
     const tunInboundTag = 'tun-in';
 
@@ -319,6 +336,19 @@ class SingBoxTunConfigGen {
         'outbound': 'proxy',
       });
       routeFinal = 'block';
+    }
+
+    // Финал ≠ proxy + geo-правила: не совпавшее с правилами sing-box уходило
+    // мимо xray, и `geosite:telegram → proxy` при финале «обход» не работал
+    // вообще (жалоба «геосайты не учитываются / не грузит ниче»). Отдаём остаток
+    // встроенному xray: он вычислит geo-правила, а его собственный catch-all —
+    // тот же finalOutbound, так что для не-geo трафика решение не меняется.
+    // Только в режиме allProxy: при пер-аппном сплите финал несёт смысл
+    // «невыбранные приложения идут напрямую», и его подменять нельзя.
+    if (needsXrayForGeo &&
+        routingMode == AppRoutingMode.allProxy &&
+        routeFinal != 'proxy') {
+      routeFinal = 'proxy';
     }
 
     final proxyOutbound = <String, dynamic>{

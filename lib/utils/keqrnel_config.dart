@@ -11,13 +11,27 @@ class KeqrnelConfig {
   /// [singboxConfig] — результат `SingBoxTunConfigGen.generate` (desktop TUN).
   /// [xrayConfig] — обычный xray-конфиг сервера (его `outbounds` исполнит
   /// встроенный xray). [windows] управляет именем процесса в bypass-правиле.
+  /// [clashApiPort] — порт clash_api sing-box-части. Нужен дебаг-экрану
+  /// «Соединения» (`GET /connections` отдаёт процесс, домен, правило и байты) и
+  /// подсчёту трафика. null — не поднимать API вовсе.
   static String fromChain({
     required String singboxConfig,
     required String xrayConfig,
     required bool windows,
+    int? clashApiPort,
   }) {
     final box = jsonDecode(singboxConfig) as Map<String, dynamic>;
     final xray = jsonDecode(xrayConfig) as Map<String, dynamic>;
+
+    if (clashApiPort != null) {
+      final experimental = Map<String, dynamic>.from(
+        (box['experimental'] as Map<String, dynamic>?) ?? const {},
+      );
+      experimental['clash_api'] = {
+        'external_controller': '127.0.0.1:$clashApiPort',
+      };
+      box['experimental'] = experimental;
+    }
 
     // 1. Подменяем socks-`proxy` на встроенный xray-движок.
     final outbounds = box['outbounds'] as List;
@@ -126,11 +140,16 @@ class KeqrnelConfig {
   /// убираем все inbounds: loopback-листенеры sing-box поднимает сам, а
   /// LAN-инбаунды (socks-lan/http-lan) переезжают на его сторону вместе с
   /// кредами; вход в них, как и в xray-роутинге, только с частных адресов.
+  /// [findProcess] включает поиск процесса-владельца соединения: clash_api тогда
+  /// отдаёт `processPath` для дебаг-экрана «Соединения». В proxy-режиме своих
+  /// process-правил нет, поэтому без флага sing-box процесс не ищет вовсе.
+  /// Включаем только в дебаг-режиме — это syscall на каждое соединение.
   static String proxyWithStats({
     required String xrayConfig,
     required int socksPort,
     required int httpPort,
     required int clashPort,
+    bool findProcess = false,
   }) {
     final xray = jsonDecode(xrayConfig) as Map<String, dynamic>;
     // Loopback-инбаунды xray не переносим — их порты уже держат socks-in/http-in.
@@ -166,6 +185,7 @@ class KeqrnelConfig {
         if (lanTags.isNotEmpty) {'type': 'block', 'tag': 'block'},
       ],
       'route': {
+        if (findProcess) 'find_process': true,
         // Зеркало source-правил xray-роутинга (ConfigGeneratorV2): LAN-инбаунды
         // доступны только с частных адресов, прочие источники — block.
         if (lanTags.isNotEmpty)

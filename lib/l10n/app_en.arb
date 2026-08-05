@@ -132,7 +132,7 @@
   "settingsRoutingProxyDesc": "Domains and IPs here always go through the VPN.",
   "settingsRoutingBlockTitle": "Blocked",
   "settingsRoutingBlockDesc": "Domains and IPs here are dropped and never connect.",
-  "settingsRoutingSyntaxHint": "Each list accepts domains and IPs together, comma- or line-separated:\n• ru — every *.ru host (a bare word = domain suffix)\n• vk.com — that domain and its subdomains\n• .example.com — subdomains only\n• 10.0.0.0/8 or 1.2.3.4 — IP address or CIDR range\n• geoip:ru / geosite:category-ads-all — GeoIP/Geosite (Proxy mode only)\nPrivate/LAN IPs and your server always stay direct automatically.",
+  "settingsRoutingSyntaxHint": "Each list accepts domains and IPs together, comma- or line-separated:\n• ru — every *.ru host (a bare word = domain suffix)\n• vk.com — that domain and its subdomains\n• .example.com — subdomains only\n• 10.0.0.0/8 or 1.2.3.4 — IP address or CIDR range\n• geoip:ru / geosite:refilter — GeoIP/Geosite codes from the bundled databases\nPrivate/LAN IPs and your server always stay direct automatically.",
   "settingsRoutingValuesHint": "One per line, or comma separated",
   "settingsRoutingFinalTitle": "Unmatched traffic",
   "settingsRoutingFinalDesc": "Default action for traffic outside the rules.",
@@ -804,5 +804,64 @@
   "tunRememberEnable": "Enable",
   "tunRememberNotNow": "Not now",
   "tunRememberInstalled": "Passwordless TUN enabled",
-  "tunRememberFailed": "Could not change TUN authorization"
+  "tunRememberFailed": "Could not change TUN authorization",
+  "settingsRoutingPresetTelegramGeoTitle": "Telegram (GeoIP+GeoSite) — Proxy",
+  "settingsRoutingPresetTelegramGeoDesc": "Telegram by domains and by IP ranges (MTProto uses bare IPs)",
+  "settingsRoutingPresetRefilterTitle": "Blocked in Russia (Re-filter) — Proxy",
+  "settingsRoutingPresetRefilterDesc": "Domains and IPs blocked in Russia go through the VPN, everything else stays direct",
+  "settingsRoutingGeoUnknownTitle": "Missing from the geo databases — will be ignored",
+  "settingsRoutingGeoUnknownHint": "The core aborts the whole config on an unknown geo code, so these entries are dropped before connecting. Pick an existing code with the globe button above.",
+  "settingsRoutingGeoPickerTooltip": "Insert a geo code",
+  "settingsRoutingGeoPickerTitle": "Geo codes in the bundled databases",
+  "settingsRoutingGeoPickerSearchHint": "Search, e.g. telegram",
+  "settingsRoutingGeoPickerEmpty": "No codes match",
+  "settingsRoutingGeoPickerGeosite": "Domains (geosite)",
+  "settingsRoutingGeoPickerGeoip": "IP ranges (geoip)",
+  "settingsOpenConnections": "Connections",
+  "settingsConnectionsTitle": "Connections",
+  "connectionsEmpty": "No connections captured yet.",
+  "connectionsUnavailable": "Connection list is unavailable.",
+  "connectionsFilterHint": "Filter by domain, IP, process or rule",
+  "connectionsCount": "{count, plural, =0{no connections} =1{1 connection} other{{count} connections}}",
+  "@connectionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectionsPause": "Pause updates",
+  "connectionsResume": "Resume updates",
+  "connectionsPaused": "Paused",
+  "connectionsSourceApi": "live from core",
+  "connectionsSourceLog": "from core log",
+  "connectionsSourceUnavailable": "no source",
+  "connectionsRuleHint": "The core only logs which rule matched at log level Info.",
+  "connectionsRuleHintAction": "Set Info",
+  "connectionsRuleHintApplied": "Core log level set to Info — reconnect to apply",
+  "connectionsRuleDefault": "no rule (default action)",
+  "connectionsVerdictProxy": "PROXY",
+  "connectionsVerdictDirect": "DIRECT",
+  "connectionsVerdictBlock": "BLOCKED",
+  "subscriptionsExpiredOn": "Subscription expired on {date}",
+  "@subscriptionsExpiredOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionsExpiredHint": "The provider no longer updates the server list. Renew the subscription to keep it working.",
+  "subscriptionsExpiredNotifTitle": "Subscription expired",
+  "subscriptionsExpiredNotifBody": "\"{name}\" expired on {date}. The provider has stopped updating the server list — renew it to keep the servers working.",
+  "@subscriptionsExpiredNotifBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  }
 }
