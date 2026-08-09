@@ -341,6 +341,14 @@ class XrayAccessLogParser {
     caseSensitive: false,
   );
 
+  /// `app/proxyman/inbound: connection ends > …` — соединение закрылось.
+  /// Хвост строки это причина закрытия, она не нужна; важен сам факт и
+  /// идентификатор сессии перед ним.
+  static final _sessionEnded = RegExp(
+    r'connection ends',
+    caseSensitive: false,
+  );
+
   /// Решения роутинга по назначению: `network:host:port` → правило и аутбаунд.
   ///
   /// Ядро печатает их на каждое соединение (уровень логов Info) и в том числе
@@ -396,6 +404,10 @@ class XrayAccessLogParser {
       );
       final rest = match.group(2)!;
 
+      if (_sessionEnded.hasMatch(rest)) {
+        trace.closed = true;
+        continue;
+      }
       final sniffed = _sessionSniffed.firstMatch(rest);
       if (sniffed != null) {
         trace.domain = sniffed.group(1)!.trim();
@@ -489,10 +501,17 @@ class XrayAccessLogParser {
             : (rulesByTarget[target] ?? ''),
         startedAt: _parseTimestamp(line),
         rejected: rejected,
+        closed: trace?.closed ?? false,
       );
     }
 
-    final list = entries.values.toList().reversed.toList();
+    // Живое наверх, закрытое вниз — внутри групп порядок прежний, свежие
+    // первыми. Лог помнит и вчерашнее, и без этого оно перемешано с текущим.
+    final seen = entries.values.toList().reversed;
+    final list = [
+      ...seen.where((e) => !e.closed),
+      ...seen.where((e) => e.closed),
+    ];
     return ConnectionsSnapshot(
       entries: list,
       source: ConnectionsSource.coreLog,
@@ -584,6 +603,9 @@ class XraySessionTrace {
   /// Тег сработавшего правила и выбранный аутбаунд.
   String rule = '';
   String outbound = '';
+
+  /// Ядро сообщило о закрытии соединения.
+  bool closed = false;
 }
 
 /// Решение роутинга ядра для одного назначения.

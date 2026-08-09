@@ -37,6 +37,10 @@ const _log = '''
 08-09 22:45:44 2026/08/09 18:45:44.659734 [Info] [947926533] transport/internet/udp: establishing new connection for udp:216.58.198.182:443
 08-09 22:45:44 2026/08/09 18:45:44.659902 [Info] [947926533] app/dispatcher: Hit route rule: [final] so taking detour [proxy] for [udp:216.58.198.182:443]
 08-09 22:45:44 2026/08/09 18:45:44.660038 from udp:127.0.0.1:55933 accepted udp:216.58.198.182:443 [socks-in -> proxy]
+08-09 22:43:40 2026/08/09 18:43:40.303020 [Info] [1257203973] proxy/socks: client UDP connection from udp:127.0.0.1:36948
+08-09 22:43:40 2026/08/09 18:43:40.303075 [Info] [1257203973] transport/internet/udp: establishing new connection for udp:8.8.8.8:53
+08-09 22:43:40 2026/08/09 18:43:40.303438 from udp:127.0.0.1:36948 accepted udp:8.8.8.8:53 [socks-in -> proxy]
+08-09 22:44:40 2026/08/09 18:44:40.555023 [Info] [1257203973] app/proxyman/inbound: connection ends > read udp 127.0.0.1:42870: use of closed network connection
 ''';
 
 ConnectionEntry _find(ConnectionsSnapshot snapshot, String target) =>
@@ -124,6 +128,34 @@ void main() {
 
       expect(entry.destIp, '216.58.198.162');
       expect(entry.startedAt, DateTime(2026, 8, 9, 18, 43, 40));
+    });
+  });
+
+  group('closed connections', () {
+    test('`connection ends` marks the connection closed', () {
+      final snapshot = XrayAccessLogParser.parse(_log);
+      final closed = _find(snapshot, '8.8.8.8:53');
+
+      expect(closed.closed, isTrue);
+      // Порт в строке закрытия свой (42870), с клиентским (36948) он не
+      // совпадает — связь только через идентификатор сессии.
+      expect(closed.source, 'udp:127.0.0.1:36948');
+    });
+
+    test('connections without such a line are not marked', () {
+      final snapshot = XrayAccessLogParser.parse(_log);
+
+      expect(_find(snapshot, 's.youtube.com:443').closed, isFalse);
+      expect(_find(snapshot, 'googleads.g.doubleclick.net:443').closed, isFalse);
+    });
+
+    test('closed ones sink below the live ones', () {
+      final snapshot = XrayAccessLogParser.parse(_log);
+      final firstClosed = snapshot.entries.indexWhere((e) => e.closed);
+      final lastLive = snapshot.entries.lastIndexWhere((e) => !e.closed);
+
+      expect(firstClosed, greaterThan(-1));
+      expect(firstClosed, greaterThan(lastLive));
     });
   });
 

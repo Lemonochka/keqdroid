@@ -1942,6 +1942,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get connectionsVerdictBlock => '已阻止';
 
   @override
+  String get connectionsClosed => '已关闭';
+
+  @override
   String subscriptionsExpiredOn(String date) {
     return '订阅已于 $date 到期';
   }

@@ -1943,6 +1943,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get connectionsVerdictBlock => 'GESPERRT';
 
   @override
+  String get connectionsClosed => 'geschlossen';
+
+  @override
   String subscriptionsExpiredOn(String date) {
     return 'Abo am $date abgelaufen';
   }

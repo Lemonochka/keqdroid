@@ -860,6 +860,7 @@
   "connectionsVerdictProxy": "PROXY",
   "connectionsVerdictDirect": "DIRECT",
   "connectionsVerdictBlock": "BLOCKED",
+  "connectionsClosed": "closed",
   "subscriptionsExpiredOn": "Subscription expired on {date}",
   "@subscriptionsExpiredOn": {
     "placeholders": {

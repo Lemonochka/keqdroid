@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_connect_short">Verbinden</string>
+    <string name="shortcut_connect_long">VPN verbinden</string>
+    <string name="shortcut_disconnect_short">Trennen</string>
+    <string name="shortcut_disconnect_long">VPN trennen</string>
+</resources>

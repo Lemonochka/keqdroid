@@ -859,6 +859,7 @@
   "connectionsVerdictProxy": "ПРОКСИ",
   "connectionsVerdictDirect": "НАПРЯМУЮ",
   "connectionsVerdictBlock": "БЛОК",
+  "connectionsClosed": "закрыто",
   "subscriptionsExpiredOn": "Подписка истекла {date}",
   "@subscriptionsExpiredOn": {
     "placeholders": {

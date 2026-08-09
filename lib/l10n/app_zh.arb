@@ -859,6 +859,7 @@
   "connectionsVerdictProxy": "代理",
   "connectionsVerdictDirect": "直连",
   "connectionsVerdictBlock": "已阻止",
+  "connectionsClosed": "已关闭",
   "subscriptionsExpiredOn": "订阅已于 {date} 到期",
   "@subscriptionsExpiredOn": {
     "placeholders": {

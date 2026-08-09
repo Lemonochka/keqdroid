@@ -118,6 +118,8 @@ class ConnectionTile extends StatelessWidget {
             spacing: 12,
             runSpacing: 4,
             children: [
+              if (entry.closed)
+                _meta(context, Icons.link_off, l10n.connectionsClosed),
               if (showProcess && process.isNotEmpty)
                 _meta(context, Icons.apps, process),
               if (rule.isNotEmpty) _meta(context, Icons.rule, rule),
