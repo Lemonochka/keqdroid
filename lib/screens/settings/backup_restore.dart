@@ -127,9 +127,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
     return showModalBottomSheet<Set<BackupSection>>(
       context: context,
       backgroundColor: AppTheme.bg(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      showDragHandle: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) {
           Widget checkbox({

@@ -21,6 +21,7 @@ class ConnectionEntry {
     this.upload,
     this.download,
     this.rejected = false,
+    this.decidedByCore = false,
   });
 
   /// Стабильный ключ для списка: source+dest у одного соединения не меняются.
@@ -61,15 +62,52 @@ class ConnectionEntry {
   /// Соединение отклонено ядром (`rejected` в access-логе).
   final bool rejected;
 
+  /// Соединение отдано встроенному движку, и чем оно кончилось — неизвестно.
+  ///
+  /// На десктопе sing-box-часть keqrnel в proxy-режиме вообще не имеет доменных
+  /// правил: её `route.final` — это аутбаунд `proxy`, то есть встроенный xray.
+  /// Сплит (direct/proxy/block по спискам пользователя) решается уже внутри
+  /// него, и clash_api об этом не знает — он честно отвечает «final → proxy».
+  /// Показывать это как «ушло через прокси» нельзя: ru-домен по правилу Direct
+  /// уходит напрямую, а экран рисовал PROXY. Настоящий вердикт достаётся из
+  /// лога ядра (уровень Info), до тех пор — вот этот флаг.
+  final bool decidedByCore;
+
   /// Куда ушло соединение — для раскраски: прокси/напрямую/блок.
   ConnectionVerdict get verdict {
     if (rejected) return ConnectionVerdict.blocked;
+    if (decidedByCore) return ConnectionVerdict.viaCore;
     final tag = outbound.toLowerCase();
     if (tag.contains('block')) return ConnectionVerdict.blocked;
     if (tag.contains('direct')) return ConnectionVerdict.direct;
     if (tag.isEmpty) return ConnectionVerdict.unknown;
     return ConnectionVerdict.proxied;
   }
+
+  /// Копия с уточнённым решением роутинга: clash_api знает только свой слой,
+  /// а настоящее правило приходит из лога встроенного движка.
+  ConnectionEntry withRouting({
+    required String rule,
+    required String outbound,
+    required bool decidedByCore,
+  }) =>
+      ConnectionEntry(
+        id: id,
+        network: network,
+        host: host,
+        destPort: destPort,
+        destIp: destIp,
+        source: source,
+        process: process,
+        inbound: inbound,
+        outbound: outbound,
+        rule: rule,
+        startedAt: startedAt,
+        upload: upload,
+        download: download,
+        rejected: rejected,
+        decidedByCore: decidedByCore,
+      );
 
   /// `host:port`, как это привычно видеть в логах.
   String get target => '$host:$destPort';
@@ -79,7 +117,15 @@ class ConnectionEntry {
       '$host $destIp $process $rule $outbound $inbound $source'.toLowerCase();
 }
 
-enum ConnectionVerdict { proxied, direct, blocked, unknown }
+enum ConnectionVerdict {
+  proxied,
+  direct,
+  blocked,
+
+  /// Отдано встроенному движку — он и решает, см. [ConnectionEntry.decidedByCore].
+  viaCore,
+  unknown,
+}
 
 /// Откуда взят снимок соединений — экран сообщает это пользователю, потому что
 /// от источника зависит полнота данных.

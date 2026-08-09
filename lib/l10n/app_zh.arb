@@ -358,6 +358,14 @@
       }
     }
   },
+  "subscriptionsIntervalShort": "{hours} 小时",
+  "@subscriptionsIntervalShort": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "subscriptionsJustNow": "刚刚",
   "subscriptionsMinutesAgo": "{minutes} 分钟前",
   "@subscriptionsMinutesAgo": {
@@ -445,6 +453,7 @@
   "settingsOpenXrayLogs": "打开 Xray 日志",
   "settingsXrayCoreLogs": "Xray 内核日志",
   "settingsRefresh": "刷新",
+  "settingsCopyLogs": "复制日志",
   "settingsAppVersion": "应用版本",
   "settingsChecking": "正在检查...",
   "settingsCheckFailed": "检查失败",
@@ -765,6 +774,11 @@
   "serverEditorServerMissing": "服务器已被删除",
   "appearanceTabGeneral": "常规",
   "appearanceTabThemes": "主题",
+  "appearanceAmoled": "纯黑 (AMOLED)",
+  "appearanceAmoledSubtitle": "深色主题使用纯黑背景，在 OLED 屏幕上更省电",
+  "appearanceAmoledNeedsDark": "需要开启深色主题",
+  "appearanceHaptics": "触感反馈",
+  "appearanceHapticsSubtitle": "连接、切换标签页和选择服务器时振动",
   "appearanceShowTraffic": "显示流量",
   "appearanceShowTrafficSubtitle": "连接按钮下方的速度和流量信息",
   "appearanceShowTime": "显示连接时长",
@@ -840,6 +854,8 @@
   "connectionsRuleHintAction": "设为 Info",
   "connectionsRuleHintApplied": "内核日志级别已设为 Info — 重新连接后生效",
   "connectionsRuleDefault": "无规则（默认动作）",
+  "connectionsRuleViaCore": "由内核决定（需要 Info 日志）",
+  "connectionsVerdictCore": "内核",
   "connectionsVerdictProxy": "代理",
   "connectionsVerdictDirect": "直连",
   "connectionsVerdictBlock": "已阻止",

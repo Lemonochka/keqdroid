@@ -294,7 +294,6 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.card(ctx),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Icon(Icons.lock_open_outlined, color: AppTheme.accent(ctx), size: 26),

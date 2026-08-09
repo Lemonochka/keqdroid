@@ -141,6 +141,16 @@ class _XrayLogsScreenState extends ConsumerState<_XrayLogsScreen> {
     }
   }
 
+  /// Лог целиком в буфер: выделять руками несколько сотен строк на телефоне
+  /// невозможно, а именно они и нужны, когда разбираешься, что решило ядро.
+  Future<void> _copyLogs(AppLocalizations l10n) async {
+    await Clipboard.setData(ClipboardData(text: _logs));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.serversCopiedToClipboard)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -150,6 +160,11 @@ class _XrayLogsScreenState extends ConsumerState<_XrayLogsScreen> {
         backgroundColor: AppTheme.bg(context),
         title: Text(l10n.settingsXrayCoreLogs),
         actions: [
+          IconButton(
+            tooltip: l10n.settingsCopyLogs,
+            onPressed: _logs.isEmpty ? null : () => _copyLogs(l10n),
+            icon: const Icon(Icons.copy_all),
+          ),
           IconButton(
             tooltip: l10n.settingsRefresh,
             onPressed: _refreshLogs,

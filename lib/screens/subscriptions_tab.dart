@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -51,11 +52,9 @@ class SubscriptionsTab extends ConsumerWidget {
                     ),
                     child: Text(
                       l10n.subscriptionsTitle,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
+                      style: Theme.of(context).textTheme
+                          .emphasized(Theme.of(context).textTheme.titleLarge)
+                          ?.copyWith(color: textColor),
                     ),
                   ),
                   Expanded(
@@ -212,7 +211,8 @@ class SubscriptionsTab extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             l10n.subscriptionsEmptyHint,
-            style: TextStyle(fontSize: 12, color: textLightColor),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: textLightColor),
           ),
         ],
       ),
@@ -237,9 +237,10 @@ class SubscriptionsTab extends ConsumerWidget {
       context: context,
       backgroundColor: bgColor,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      // Настоящая ручка вместо нарисованной: прежняя была просто Container
+      // внутри содержимого — выглядела как ручка, но тянуть за неё было
+      // нельзя, и шторка закрывалась только тапом мимо неё.
+      showDragHandle: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
           padding: EdgeInsets.fromLTRB(
@@ -447,21 +448,16 @@ class _SubsErrorView extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               AppLocalizations.of(context)!.errorSubscriptionTitle,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: textColor,
-              ),
+              style: Theme.of(context).textTheme
+                  .emphasized(Theme.of(context).textTheme.titleMedium)
+                  ?.copyWith(color: textColor),
             ),
             const SizedBox(height: 8),
             Text(
               _humanMessage(context, error),
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: textLightColor,
-                height: 1.4,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: textLightColor),
             ),
             const SizedBox(height: 24),
             TextButton.icon(
@@ -611,11 +607,11 @@ class _SubItemState extends ConsumerState<_SubItem> {
                                 .update((m) => {...m, sub.id: !collapsed}),
                             child: Text(
                               sub.name,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: textColor,
-                              ),
+                              style: Theme.of(context).textTheme
+                                  .emphasized(
+                                    Theme.of(context).textTheme.titleMedium,
+                                  )
+                                  ?.copyWith(color: textColor),
                             ),
                           ),
                         ),
@@ -718,19 +714,16 @@ class _SubItemState extends ConsumerState<_SubItem> {
                                       _formatDate(sub.expiresAt!),
                                     )
                                   : l10n.subscriptionsExpired,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: redColor,
-                              ),
+                              style: Theme.of(context).textTheme
+                                  .emphasized(
+                                    Theme.of(context).textTheme.labelMedium,
+                                  )
+                                  ?.copyWith(color: redColor),
                             ),
                             Text(
                               l10n.subscriptionsExpiredHint,
-                              style: TextStyle(
-                                fontSize: 11,
-                                height: 1.3,
-                                color: textLightColor,
-                              ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: textLightColor),
                             ),
                           ],
                         ),
@@ -751,7 +744,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   children: [
                     Text(
                       sub.url,
-                      style: TextStyle(fontSize: 11, color: textLightColor),
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: textLightColor),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -864,84 +858,115 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       ),
                     ],
                     const SizedBox(height: 10),
+                    // Wrap, а не Row со Spacer: по-русски «Автообновление»
+                    // заметно шире английского, и строка переполнялась
+                    // полосатой лентой. Теперь чипы переносятся на вторую
+                    // строку, а срок годности остаётся прижат вправо.
                     Row(
                       children: [
-                        Icon(Icons.update, size: 14, color: textLightColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          l10n.subscriptionsAutoUpdate,
-                          style: TextStyle(fontSize: 12, color: textLightColor),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => ref
-                              .read(subscriptionsProvider.notifier)
-                              .toggleAutoUpdate(sub.id),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: sub.autoUpdate
-                                  ? greenColor.withValues(alpha: 0.2)
-                                  : textLightColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              sub.autoUpdate
-                                  ? l10n.subscriptionsOn
-                                  : l10n.subscriptionsOff,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: sub.autoUpdate
-                                    ? greenColor
-                                    : textLightColor,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (sub.autoUpdate) ...[
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () => _showIntervalPicker(context, sub),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: accentColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
+                        Expanded(
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    l10n.subscriptionsCurrentInterval(
-                                      sub.updateIntervalHours,
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: accentColor,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 3),
                                   Icon(
-                                    Icons.edit,
-                                    size: 11,
-                                    color: accentColor,
+                                    Icons.update,
+                                    size: 14,
+                                    color: textLightColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    l10n.subscriptionsAutoUpdate,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(color: textLightColor),
                                   ),
                                 ],
                               ),
-                            ),
+                              GestureDetector(
+                                onTap: () => ref
+                                    .read(subscriptionsProvider.notifier)
+                                    .toggleAutoUpdate(sub.id),
+                                child: AnimatedContainer(
+                                  duration: ExpressiveMotion.durationFast,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: sub.autoUpdate
+                                        ? greenColor.withValues(alpha: 0.2)
+                                        : textLightColor.withValues(alpha: 0.1),
+                                    borderRadius: ExpressiveShape.radius(
+                                      ExpressiveShape.small,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    sub.autoUpdate
+                                        ? l10n.subscriptionsOn
+                                        : l10n.subscriptionsOff,
+                                    style: Theme.of(context).textTheme
+                                        .emphasized(
+                                          Theme.of(context)
+                                              .textTheme
+                                              .labelSmall,
+                                        )
+                                        ?.copyWith(
+                                          color: sub.autoUpdate
+                                              ? greenColor
+                                              : textLightColor,
+                                        ),
+                                  ),
+                                ),
+                              ),
+                              if (sub.autoUpdate)
+                                GestureDetector(
+                                  onTap: () => _showIntervalPicker(context, sub),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: accentColor.withValues(alpha: 0.15),
+                                      borderRadius: ExpressiveShape.radius(
+                                        ExpressiveShape.small,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          // Короткая форма без «каждые»: в
+                                          // строке рядом с «Обновление ВКЛ» и
+                                          // сроком годности полная фраза не
+                                          // помещалась и уезжала на перенос.
+                                          l10n.subscriptionsIntervalShort(
+                                            sub.updateIntervalHours,
+                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall
+                                              ?.copyWith(color: accentColor),
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Icon(
+                                          Icons.edit,
+                                          size: 11,
+                                          color: accentColor,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                        ],
+                        ),
                         if (sub.expiresAt != null) ...[
-                          const Spacer(),
+                          const SizedBox(width: 8),
                           Icon(
                             Icons.timer_outlined,
                             size: 13,
@@ -952,10 +977,12 @@ class _SubItemState extends ConsumerState<_SubItem> {
                             sub.isExpired
                                 ? l10n.subscriptionsExpired
                                 : _formatExpiry(sub.expiresAt!),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: sub.isExpired ? redColor : textLightColor,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: sub.isExpired
+                                      ? redColor
+                                      : textLightColor,
+                                ),
                           ),
                         ],
                       ],
@@ -1010,9 +1037,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
       context: context,
       backgroundColor: bgColor,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      // Настоящая ручка вместо нарисованной: прежняя была просто Container
+      // внутри содержимого — выглядела как ручка, но тянуть за неё было
+      // нельзя, и шторка закрывалась только тапом мимо неё.
+      showDragHandle: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) {
           Widget inputField(
@@ -1066,17 +1094,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: textLightColor.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
                 Text(
                   l10n.subscriptionsEditSubscription,
                   style: TextStyle(
@@ -1254,9 +1271,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
       context: context,
       backgroundColor: AppTheme.bg(context),
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      showDragHandle: true,
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(
           24,
@@ -1267,17 +1282,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.textLight(ctx).withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
             Text(
               sub.name,
               style: TextStyle(
@@ -1378,9 +1382,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
       context: context,
       isScrollControlled: true,
       backgroundColor: bgColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      showDragHandle: true,
       builder: (ctx) {
         final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
         return SafeArea(
@@ -1390,18 +1392,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
               shrinkWrap: true,
               padding: const EdgeInsets.only(bottom: 12),
               children: [
-                const SizedBox(height: 12),
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: textLightColor.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
                 Text(
                   l10n.subscriptionsAutoUpdateInterval,
                   textAlign: TextAlign.center,
@@ -1465,7 +1455,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: redColor, size: 28),

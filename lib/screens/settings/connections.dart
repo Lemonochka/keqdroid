@@ -93,10 +93,11 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
         (a) => a.value?.xrayCore.logLevel ?? 'warning',
       ),
     );
-    // Подсказка про уровень логов актуальна только там, где правило берётся из
-    // лога (Android) и уровень ниже Info.
+    // Правило ядро печатает только на уровне Info — и когда оно само инбаунд
+    // (Android), и когда работает встроенным движком за sing-box (десктоп):
+    // там clash_api знает лишь «отдал движку».
     final showLogLevelHint = !_snapshot.ruleInfoAvailable &&
-        _snapshot.source == ConnectionsSource.coreLog &&
+        _snapshot.source != ConnectionsSource.unavailable &&
         logLevel != 'info' &&
         logLevel != 'debug';
 
@@ -183,7 +184,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                           padding: const EdgeInsets.fromLTRB(12, 6, 12, 24),
                           itemCount: entries.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 8),
-                          itemBuilder: (_, i) => _ConnectionTile(
+                          itemBuilder: (_, i) => ConnectionTile(
                             entry: entries[i],
                             showProcess: ConnectionsService.supportsProcessNames,
                             ruleInfoAvailable: _snapshot.ruleInfoAvailable,
@@ -322,184 +323,4 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
       ),
     );
   }
-}
-
-class _ConnectionTile extends StatelessWidget {
-  const _ConnectionTile({
-    required this.entry,
-    required this.showProcess,
-    required this.ruleInfoAvailable,
-  });
-
-  final ConnectionEntry entry;
-  final bool showProcess;
-
-  /// false — источник вообще не знает правил (access-лог ниже уровня Info):
-  /// пустое правило тогда значит «неизвестно», а не «сработал catch-all».
-  final bool ruleInfoAvailable;
-
-  Color _verdictColor(BuildContext context) => switch (entry.verdict) {
-        ConnectionVerdict.proxied => AppTheme.accent(context),
-        ConnectionVerdict.direct => AppTheme.green(context),
-        ConnectionVerdict.blocked => AppTheme.red(context),
-        ConnectionVerdict.unknown => AppTheme.textLight(context),
-      };
-
-  String _verdictLabel(AppLocalizations l10n) => switch (entry.verdict) {
-        ConnectionVerdict.proxied => l10n.connectionsVerdictProxy,
-        ConnectionVerdict.direct => l10n.connectionsVerdictDirect,
-        ConnectionVerdict.blocked => l10n.connectionsVerdictBlock,
-        ConnectionVerdict.unknown => '—',
-      };
-
-  static String _bytes(int value) {
-    if (value < 1024) return '$value B';
-    if (value < 1024 * 1024) return '${(value / 1024).toStringAsFixed(1)} KB';
-    if (value < 1024 * 1024 * 1024) {
-      return '${(value / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(value / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-  }
-
-  /// Только имя исполняемого файла: полный путь съедает всю строку.
-  static String _processName(String raw) {
-    if (raw.isEmpty) return '';
-    final normalized = raw.replaceAll('\\', '/');
-    final slash = normalized.lastIndexOf('/');
-    return slash >= 0 ? normalized.substring(slash + 1) : normalized;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final color = _verdictColor(context);
-    final process = _processName(entry.process);
-    final rule = switch (entry.rule) {
-      '' => ruleInfoAvailable && entry.outbound.isNotEmpty
-          ? l10n.connectionsRuleDefault
-          : '',
-      final r when XrayAccessLogParser.isDefaultRoute(r) =>
-        l10n.connectionsRuleDefault,
-      final r => r,
-    };
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(14),
-        border: Border(
-          left: BorderSide(color: color, width: 3),
-          top: BorderSide(color: AppTheme.divider(context)),
-          right: BorderSide(color: AppTheme.divider(context)),
-          bottom: BorderSide(color: AppTheme.divider(context)),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: SelectableText(
-                  entry.target,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.text(context),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _chip(context, entry.network.toUpperCase(),
-                  AppTheme.textLight(context)),
-              const SizedBox(width: 6),
-              _chip(context, _verdictLabel(l10n), color),
-            ],
-          ),
-          if (entry.destIp.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(
-              entry.destIp,
-              style: TextStyle(
-                fontSize: 11,
-                fontFamily: 'monospace',
-                color: AppTheme.textLight(context),
-              ),
-            ),
-          ],
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            runSpacing: 4,
-            children: [
-              if (showProcess && process.isNotEmpty)
-                _meta(context, Icons.apps, process),
-              if (rule.isNotEmpty) _meta(context, Icons.rule, rule),
-              if (entry.outbound.isNotEmpty)
-                _meta(context, Icons.call_split, entry.outbound),
-              if (entry.inbound.isNotEmpty)
-                _meta(context, Icons.login, entry.inbound),
-              if (entry.source.isNotEmpty)
-                _meta(context, Icons.computer, entry.source),
-              if (entry.download != null || entry.upload != null)
-                _meta(
-                  context,
-                  Icons.swap_vert,
-                  '↓ ${_bytes(entry.download ?? 0)}  ↑ ${_bytes(entry.upload ?? 0)}',
-                ),
-              if (entry.startedAt != null)
-                _meta(
-                  context,
-                  Icons.schedule,
-                  _formatTime(entry.startedAt!),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  static String _formatTime(DateTime t) =>
-      '${t.hour.toString().padLeft(2, '0')}:'
-      '${t.minute.toString().padLeft(2, '0')}:'
-      '${t.second.toString().padLeft(2, '0')}';
-
-  Widget _chip(BuildContext context, String label, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(7),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
-        ),
-      );
-
-  Widget _meta(BuildContext context, IconData icon, String text) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: AppTheme.textLight(context)),
-          const SizedBox(width: 4),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 260),
-            child: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                color: AppTheme.textLight(context),
-              ),
-            ),
-          ),
-        ],
-      );
 }

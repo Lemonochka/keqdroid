@@ -326,7 +326,7 @@
   "subscriptionsSave": "Сохранить",
   "subscriptionsMoveUp": "Переместить вверх",
   "subscriptionsMoveDown": "Переместить вниз",
-  "subscriptionsAutoUpdate": "Автообновление",
+  "subscriptionsAutoUpdate": "Обновление",
   "subscriptionsOn": "ВКЛ",
   "subscriptionsOff": "ВЫКЛ",
   "subscriptionsExpired": "Истекла",
@@ -352,6 +352,14 @@
   "subscriptionsAutoUpdateInterval": "Интервал автообновления",
   "subscriptionsCurrentInterval": "каждые {hours}ч",
   "@subscriptionsCurrentInterval": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsIntervalShort": "{hours}ч",
+  "@subscriptionsIntervalShort": {
     "placeholders": {
       "hours": {
         "type": "int"
@@ -445,6 +453,7 @@
   "settingsOpenXrayLogs": "Открыть логи ядра",
   "settingsXrayCoreLogs": "Логи ядра",
   "settingsRefresh": "Обновить",
+  "settingsCopyLogs": "Скопировать логи",
   "settingsAppVersion": "Версия приложения",
   "settingsChecking": "Проверка...",
   "settingsCheckFailed": "Ошибка проверки",
@@ -765,6 +774,11 @@
   "serverEditorServerMissing": "Сервер уже удалён",
   "appearanceTabGeneral": "Общие",
   "appearanceTabThemes": "Темы",
+  "appearanceAmoled": "Чистый чёрный (AMOLED)",
+  "appearanceAmoledSubtitle": "По-настоящему чёрный фон в тёмной теме — экономит заряд на OLED-экранах",
+  "appearanceAmoledNeedsDark": "Доступно при включённой тёмной теме",
+  "appearanceHaptics": "Тактильная отдача",
+  "appearanceHapticsSubtitle": "Вибрация при подключении, смене вкладки и выборе сервера",
   "appearanceShowTraffic": "Показывать трафик",
   "appearanceShowTrafficSubtitle": "Чипы скорости и объёма трафика под кнопкой подключения",
   "appearanceShowTime": "Показывать время подключения",
@@ -840,6 +854,8 @@
   "connectionsRuleHintAction": "Включить Info",
   "connectionsRuleHintApplied": "Уровень логов ядра — Info. Переподключитесь, чтобы применить",
   "connectionsRuleDefault": "без правила (действие по умолчанию)",
+  "connectionsRuleViaCore": "решает ядро (нужны логи Info)",
+  "connectionsVerdictCore": "ЯДРО",
   "connectionsVerdictProxy": "ПРОКСИ",
   "connectionsVerdictDirect": "НАПРЯМУЮ",
   "connectionsVerdictBlock": "БЛОК",
