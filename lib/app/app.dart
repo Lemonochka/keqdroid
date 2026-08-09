@@ -7,6 +7,8 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import '../models/app_font.dart';
 import '../models/app_settings.dart';
 import '../providers/providers.dart';
+import '../shared/ui/expressive.dart';
+import '../shared/ui/haptics.dart';
 import '../shared/ui/kawaii_decorations.dart';
 import '../utils/app_locale.dart';
 
@@ -127,46 +129,74 @@ ColorScheme buildPresetScheme(ThemePreset preset, Brightness brightness) {
   );
 }
 
+/// Чёрный AMOLED-фон поверх любой тёмной схемы.
+///
+/// На OLED выключенный пиксель не светится, поэтому чистый чёрный экономит
+/// заряд и даёт настоящую бесконечную глубину. Светлую схему не трогаем —
+/// белым по белому смотреть нечего.
+///
+/// Чернеет ТОЛЬКО фон. Уровни surfaceContainer остаются как в обычной тёмной
+/// теме — на них держится вся иерархия M3 (карточка над фоном, шторка над
+/// карточкой, вставка внутри карточки).
+///
+/// Первая версия тянула к чёрному и лестницу тоже, «чтобы было темнее». Это
+/// ошибка: разница между карточкой и фоном схлопывалась до едва заметного
+/// оттенка, и карточки сливались с фоном. Фон опускается, а карточки стоят на
+/// месте — значит контраст между ними не падает, а РАСТЁТ по сравнению с
+/// обычной тёмной темой. Ради этого AMOLED-режим и включают.
+ColorScheme applyAmoledBlack(ColorScheme scheme) {
+  if (scheme.brightness != Brightness.dark) return scheme;
+  return scheme.copyWith(
+    surface: Colors.black,
+    // surfaceDim — тот же фон в «приглушённом» состоянии, иначе он остался бы
+    // светлее самого фона.
+    surfaceDim: Colors.black,
+  );
+}
+
 ThemeData buildAppTheme(
   ColorScheme scheme, {
   bool flair = false,
   String? fontFamily,
 }) {
+  // Токены M3 Expressive: шкала форм, выразительные веса типографики и
+  // компонентные темы. Экраны, пока живущие на хардкоде, от этого не ломаются —
+  // они просто ещё не переехали (см. миграцию по этапам).
+  final components = buildExpressiveComponentThemes(scheme);
+  final expressiveText = buildExpressiveTextTheme(scheme.brightness);
+
   return ThemeData(
     colorScheme: scheme,
     useMaterial3: true,
+    textTheme: fontFamily == null
+        ? expressiveText
+        : expressiveText.apply(fontFamily: fontFamily),
+    chipTheme: components.chip,
+    filledButtonTheme: components.filledButton,
+    outlinedButtonTheme: components.outlinedButton,
+    textButtonTheme: components.textButton,
+    floatingActionButtonTheme: components.fab,
+    listTileTheme: components.listTile,
     // Шрифт приходит из выбора пользователя (см. _ThemedApp): flair-пресеты по
     // умолчанию несут Comfortaa, но пользователь может сменить его в любой теме.
     // Прочие «финтифлюшки» (усиленные скругления) остаются привязаны к flair.
     fontFamily: fontFamily,
+    // flair поднимает скругления на шаг вверх по той же шкале — не произвольные
+    // числа, как было, а следующий токен формы.
     cardTheme: flair
-        ? CardThemeData(
-            surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
+        ? components.card.copyWith(
+            shape: ExpressiveShape.border(ExpressiveShape.largeIncreased),
           )
-        : const CardThemeData(surfaceTintColor: Colors.transparent),
+        : components.card,
     appBarTheme: const AppBarTheme(surfaceTintColor: Colors.transparent),
-    navigationBarTheme:
-        const NavigationBarThemeData(surfaceTintColor: Colors.transparent),
-    bottomSheetTheme:
-        const BottomSheetThemeData(surfaceTintColor: Colors.transparent),
+    navigationBarTheme: components.navigationBar,
+    bottomSheetTheme: components.sheet,
     dialogTheme: flair
-        ? DialogThemeData(
-            surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(26),
-            ),
+        ? components.dialog.copyWith(
+            shape: ExpressiveShape.border(ExpressiveShape.extraLargeIncreased),
           )
-        : const DialogThemeData(surfaceTintColor: Colors.transparent),
-    snackBarTheme: flair
-        ? SnackBarThemeData(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          )
-        : null,
+        : components.dialog,
+    snackBarTheme: components.snackBar,
   );
 }
 
@@ -225,9 +255,14 @@ class _ThemedApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings =
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
+    // Единственная точка синхронизации флага отдачи: присваивание идемпотентно
+    // и ничего не перестраивает, зато обработчикам нажатий не нужен ref.
+    AppHaptics.enabled = settings.hapticFeedback;
     final preset = resolveThemePreset(settings.themePresetId);
     final customLight = buildPresetScheme(preset, Brightness.light);
     final customDark = buildPresetScheme(preset, Brightness.dark);
+    ColorScheme dark(ColorScheme scheme) =>
+        settings.amoledBlack ? applyAmoledBlack(scheme) : scheme;
     final useSystem = settings.followSystemTheme;
     // Финтифлюшки только когда пресет реально применён (системные цвета
     // выключены): следуем той же логике, что и палитра.
@@ -246,7 +281,7 @@ class _ThemedApp extends ConsumerWidget {
       themeMode: settings.darkTheme ? ThemeMode.dark : ThemeMode.light,
       theme: buildAppTheme(useSystem ? lightScheme : customLight,
           flair: flair, fontFamily: fontFamily),
-      darkTheme: buildAppTheme(useSystem ? darkScheme : customDark,
+      darkTheme: buildAppTheme(dark(useSystem ? darkScheme : customDark),
           flair: flair, fontFamily: fontFamily),
       builder: (context, child) {
         final content = (!flair || child == null)

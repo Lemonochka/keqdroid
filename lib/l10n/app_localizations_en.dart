@@ -805,6 +805,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String subscriptionsIntervalShort(int hours) {
+    return '${hours}h';
+  }
+
+  @override
   String get subscriptionsJustNow => 'just now';
 
   @override
@@ -950,6 +955,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsRefresh => 'Refresh';
+
+  @override
+  String get settingsCopyLogs => 'Copy logs';
 
   @override
   String get settingsAppVersion => 'App version';
@@ -1692,6 +1700,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceTabThemes => 'Themes';
 
   @override
+  String get appearanceAmoled => 'Pure black (AMOLED)';
+
+  @override
+  String get appearanceAmoledSubtitle => 'True black background in the dark theme — saves power on OLED screens';
+
+  @override
+  String get appearanceAmoledNeedsDark => 'Available with the dark theme on';
+
+  @override
+  String get appearanceHaptics => 'Haptic feedback';
+
+  @override
+  String get appearanceHapticsSubtitle => 'Vibrate on connect, tab and server taps';
+
+  @override
   String get appearanceShowTraffic => 'Show traffic';
 
   @override
@@ -1903,6 +1926,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get connectionsRuleDefault => 'no rule (default action)';
+
+  @override
+  String get connectionsRuleViaCore => 'decided inside the core (needs Info logs)';
+
+  @override
+  String get connectionsVerdictCore => 'CORE';
 
   @override
   String get connectionsVerdictProxy => 'PROXY';

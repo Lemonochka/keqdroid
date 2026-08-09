@@ -645,9 +645,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       backgroundColor: AppTheme.card(context),
       isScrollControlled: true,
       showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) => ConstrainedBox(
         constraints:
             BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.85),
@@ -1075,6 +1072,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.card(context),
+      showDragHandle: true,
       builder: (_) => _GeoCodePickerSheet(index: index),
     );
     if (token == null || token.isEmpty) return;

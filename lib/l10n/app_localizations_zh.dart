@@ -805,6 +805,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String subscriptionsIntervalShort(int hours) {
+    return '$hours 小时';
+  }
+
+  @override
   String get subscriptionsJustNow => '刚刚';
 
   @override
@@ -950,6 +955,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsRefresh => '刷新';
+
+  @override
+  String get settingsCopyLogs => '复制日志';
 
   @override
   String get settingsAppVersion => '应用版本';
@@ -1692,6 +1700,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceTabThemes => '主题';
 
   @override
+  String get appearanceAmoled => '纯黑 (AMOLED)';
+
+  @override
+  String get appearanceAmoledSubtitle => '深色主题使用纯黑背景，在 OLED 屏幕上更省电';
+
+  @override
+  String get appearanceAmoledNeedsDark => '需要开启深色主题';
+
+  @override
+  String get appearanceHaptics => '触感反馈';
+
+  @override
+  String get appearanceHapticsSubtitle => '连接、切换标签页和选择服务器时振动';
+
+  @override
   String get appearanceShowTraffic => '显示流量';
 
   @override
@@ -1902,6 +1925,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get connectionsRuleDefault => '无规则（默认动作）';
+
+  @override
+  String get connectionsRuleViaCore => '由内核决定（需要 Info 日志）';
+
+  @override
+  String get connectionsVerdictCore => '内核';
 
   @override
   String get connectionsVerdictProxy => '代理';

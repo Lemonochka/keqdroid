@@ -91,6 +91,7 @@ class _ServerTile extends ConsumerWidget {
     final textColor = AppTheme.text(context);
     final accentColor = AppTheme.accent(context);
     final textLightColor = AppTheme.textLight(context);
+    final textTheme = Theme.of(context).textTheme;
 
     // Фон плитки. В сетке из двух колонок подсветка активного сервера не
     // обрывается резкой линией по середине карточки, а мягко растворяется
@@ -158,12 +159,13 @@ class _ServerTile extends ConsumerWidget {
                     Flexible(
                       child: Text(
                         titleText,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight:
-                              isActive ? FontWeight.w700 : FontWeight.w600,
-                          color: textColor,
-                        ),
+                        // Активный сервер отличается ВЕСОМ, а не размером: у
+                        // M3E это и есть роль усиленного варианта.
+                        style:
+                            (isActive
+                                    ? textTheme.emphasized(textTheme.titleSmall)
+                                    : textTheme.titleSmall)
+                                ?.copyWith(color: textColor),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -181,17 +183,17 @@ class _ServerTile extends ConsumerWidget {
                         ),
                         decoration: BoxDecoration(
                           color: protocolColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: ExpressiveShape.radius(
+                            ExpressiveShape.extraSmall,
+                          ),
                         ),
                         child: Text(
                           server.protocol.toUpperCase(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: protocolColor,
-                          ),
+                          style: textTheme
+                              .emphasized(textTheme.labelSmall)
+                              ?.copyWith(color: protocolColor),
                         ),
                       ),
                     ),
@@ -201,8 +203,9 @@ class _ServerTile extends ConsumerWidget {
                         pingMs != null
                             ? PingService.formatPingValue(pingMs, pingColorType)
                             : (lastTestedAt != null ? 'N/A' : '- ms'),
-                        style: TextStyle(
-                          fontSize: 12,
+                        // Пинг — числовой показатель, у M3 это роль label, а
+                        // не body: плотнее и заметнее при том же кегле.
+                        style: textTheme.labelMedium?.copyWith(
                           color: pingMs != null
                               ? _pingColor(pingMs, context, pingColorType)
                               : textLightColor,
@@ -246,7 +249,10 @@ class _ServerTile extends ConsumerWidget {
             child: Material(
               type: MaterialType.transparency,
               child: InkWell(
-                onTap: onTap,
+                onTap: () {
+                  AppHaptics.selection();
+                  onTap();
+                },
                 onLongPress: () => _showOptions(context, ref),
                 // на десктопе правый клик открывает то же меню
                 onSecondaryTap: () => _showOptions(context, ref),
@@ -330,45 +336,31 @@ class _ServerTile extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.bg(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      // Настоящая ручка вместо нарисованной. Прежняя была просто Container
+      // внутри прокручиваемого содержимого: выглядела как ручка, но тянуть за
+      // неё было нельзя — жест уходил в скролл, и шторка не закрывалась.
+      showDragHandle: true,
       builder: (_) => SafeArea(
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.textLight(context).withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
               Text(
                 ServerNameUtils.formatForDisplay(
                   ServerNameUtils.cleanDisplayName(server.displayName),
                 ),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.text(context),
-                ),
+                style: Theme.of(context).textTheme
+                    .emphasized(Theme.of(context).textTheme.titleMedium)
+                    ?.copyWith(color: AppTheme.text(context)),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
               ),
-              Text(
-                '${server.address}:${server.port}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textLight(context),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              // Адрес и есть кнопка копирования: отдельный пункт списка занимал
+              // целую строку меню ради того, что уже написано здесь.
+              _CopyableAddress(
+                text: '${server.address}:${server.port}',
+                onCopied: () => Navigator.pop(context),
               ),
               const SizedBox(height: 16),
               ListTile(
@@ -390,24 +382,6 @@ class _ServerTile extends ConsumerWidget {
                       ),
                     );
                   }
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  Icons.health_and_safety_outlined,
-                  color: AppTheme.text(context),
-                ),
-                title: Text(AppLocalizations.of(context)!.serversHealthCheck),
-                subtitle: Text(
-                  AppLocalizations.of(context)!.serversHealthCheckDesc,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.textLight(context),
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showHealthCheckSheet(context);
                 },
               ),
               ListTile(
@@ -477,23 +451,6 @@ class _ServerTile extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.copy, color: AppTheme.text(context)),
-                title: Text(AppLocalizations.of(context)!.serversCopyAddress),
-                onTap: () {
-                  Clipboard.setData(
-                    ClipboardData(text: '${server.address}:${server.port}'),
-                  );
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        AppLocalizations.of(context)!.serversCopiedToClipboard,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
                 leading: Icon(Icons.link, color: AppTheme.text(context)),
                 title: Text(AppLocalizations.of(context)!.serversCopyConfig),
                 subtitle: Text(
@@ -554,7 +511,6 @@ class _ServerTile extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Icon(Icons.drive_file_rename_outline, color: accentColor, size: 26),
@@ -675,7 +631,6 @@ class _ServerTile extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: redColor, size: 28),
@@ -723,234 +678,6 @@ class _ServerTile extends ConsumerWidget {
     );
   }
 
-  Future<void> _showHealthCheckSheet(BuildContext context) {
-    return showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppTheme.bg(context),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) =>
-          FutureBuilder<List<({String name, bool ok, String details})>>(
-            future: _runHealthCheck(AppLocalizations.of(ctx)!),
-            builder: (ctx, snapshot) {
-              final loading = snapshot.connectionState != ConnectionState.done;
-              final checks =
-                  snapshot.data ??
-                  const <({String name, bool ok, String details})>[];
-              final successCount = checks.where((c) => c.ok).length;
-
-              return SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: AppTheme.textLight(
-                              context,
-                            ).withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        context.l10n.serversHealthCheck,
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.text(context),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        ServerNameUtils.formatForDisplay(
-                          ServerNameUtils.cleanDisplayName(server.displayName),
-                        ),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textLight(context),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      if (loading)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: AppTheme.accent(context),
-                            ),
-                          ),
-                        )
-                      else ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: successCount == checks.length
-                                ? AppTheme.green(
-                                    context,
-                                  ).withValues(alpha: 0.12)
-                                : AppTheme.orange(
-                                    context,
-                                  ).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: successCount == checks.length
-                                  ? AppTheme.green(
-                                      context,
-                                    ).withValues(alpha: 0.35)
-                                  : AppTheme.orange(
-                                      context,
-                                    ).withValues(alpha: 0.35),
-                            ),
-                          ),
-                          child: Text(
-                            context.l10n.healthCheckChecksPassed(
-                              successCount,
-                              checks.length,
-                            ),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.text(context),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        ...checks.map(
-                          (c) => Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppTheme.card(context),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: c.ok
-                                    ? AppTheme.green(
-                                        context,
-                                      ).withValues(alpha: 0.35)
-                                    : AppTheme.red(
-                                        context,
-                                      ).withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  c.ok
-                                      ? Icons.check_circle
-                                      : Icons.error_outline,
-                                  size: 16,
-                                  color: c.ok
-                                      ? AppTheme.green(context)
-                                      : AppTheme.red(context),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        c.name,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.text(context),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        c.details,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: AppTheme.textLight(context),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-    );
-  }
-
-  Future<List<({String name, bool ok, String details})>> _runHealthCheck(
-    AppLocalizations l10n,
-  ) async {
-    final checks = <({String name, bool ok, String details})>[];
-    checks.add((
-      name: l10n.healthCheckServerFields,
-      ok:
-          server.address.trim().isNotEmpty &&
-          server.port > 0 &&
-          server.port <= 65535,
-      details: '${server.address}:${server.port}',
-    ));
-
-    try {
-      final addresses = await InternetAddress.lookup(
-        server.address,
-      ).timeout(const Duration(seconds: 5));
-      checks.add((
-        name: l10n.healthCheckDnsResolve,
-        ok: addresses.isNotEmpty,
-        details: addresses.isNotEmpty
-            ? addresses.first.address
-            : l10n.healthCheckNoIpResolved,
-      ));
-    } catch (e) {
-      checks.add((
-        name: l10n.healthCheckDnsResolve,
-        ok: false,
-        details: l10n.healthCheckDnsFailed('$e'),
-      ));
-    }
-
-    final ping = await PingService.pingTcp(server, timeoutSeconds: 6);
-    checks.add((
-      name: l10n.healthCheckTcpHandshake,
-      ok: ping.success,
-      details: ping.success ? '${ping.latencyMs} ms' : ping.error,
-    ));
-
-    final hasConfig = server.config.trim().isNotEmpty;
-    final hasScheme = RegExp(
-      r'^[a-zA-Z0-9+.-]+://',
-    ).hasMatch(server.config.trim());
-    checks.add((
-      name: l10n.healthCheckConfigFormat,
-      ok: hasConfig && hasScheme,
-      details: hasConfig
-          ? (hasScheme
-              ? l10n.healthCheckUriFormat
-              : l10n.healthCheckMissingScheme)
-          : l10n.healthCheckConfigEmpty,
-    ));
-
-    return checks;
-  }
-
   Color _protocolColor(String p, BuildContext ctx) => switch (p) {
     'vless' => const Color(0xFF4A90D9),
     'awg' => const Color(0xFF2E7D32),
@@ -983,6 +710,63 @@ String _friendlyErrorDetailed(Object e, [BuildContext? context]) {
   final l10n = AppLocalizations.of(context)!;
   final localized = explainErrorLocalized(e, l10n);
   return '${localized.title}\n${localized.message}\n${l10n.errorActionLabel(localized.action)}';
+}
+
+/// Адрес сервера в шапке меню, он же кнопка копирования.
+///
+/// Раньше рядом жил отдельный пункт списка «скопировать адрес» — целая строка
+/// меню ради значения, которое тут же и написано. Теперь копирует сам адрес:
+/// иконка показывает, что он нажимается, state layer подтверждает нажатие.
+class _CopyableAddress extends StatelessWidget {
+  final String text;
+
+  /// Меню закрывается до снек-бара: он живёт на Scaffold под модальной шторкой
+  /// и иначе оказался бы за ней.
+  final VoidCallback onCopied;
+
+  const _CopyableAddress({required this.text, required this.onCopied});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final textLight = AppTheme.textLight(context);
+    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: textLight,
+        );
+
+    return Tooltip(
+      message: l10n.serversCopyAddress,
+      child: InkWell(
+        onTap: () {
+          Clipboard.setData(ClipboardData(text: text));
+          final messenger = ScaffoldMessenger.of(context);
+          onCopied();
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.serversCopiedToClipboard)),
+          );
+        },
+        customBorder: ExpressiveShape.border(ExpressiveShape.full),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  text,
+                  style: style,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(Icons.copy_rounded, size: 14, color: textLight),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 String _vpnErrorStatusLabel(String? errorMessage, BuildContext context) {

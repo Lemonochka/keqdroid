@@ -914,9 +914,48 @@ final serversProvider = NotifierProvider<ServersNotifier, ServersState>(
   ServersNotifier.new,
 );
 
+/// Что делать с состоянием из натива, пока идёт НАША попытка подключения.
+enum ConnectInFlightAction {
+  /// Не трогать состояние: сообщение ничего не говорит об исходе попытки.
+  ignore,
+
+  /// Применить, попытка продолжается.
+  apply,
+
+  /// Применить и считать попытку завершённой.
+  applyAndFinish,
+}
+
+/// Правило отсечки для [VpnStateNotifier].
+///
+/// Ключевой случай — `disconnected` до старта сессии. Между тапом и запуском
+/// сервиса стрим и полутрасекундный поллинг успевают доложить «отключено»,
+/// потому что сервис ещё не поднят. Принять этот ответ за исход попытки —
+/// значит погасить UI на полпути: connecting → disconnected → connected.
+/// Особенно заметно на первом подключении, когда сервис холодный.
+ConnectInFlightAction connectInFlightAction(
+  VpnStatus status, {
+  required bool awaitingSessionStart,
+}) {
+  if (awaitingSessionStart && status == VpnStatus.disconnected) {
+    return ConnectInFlightAction.ignore;
+  }
+  return switch (status) {
+    VpnStatus.connected ||
+    VpnStatus.disconnected =>
+      ConnectInFlightAction.applyAndFinish,
+    VpnStatus.error => ConnectInFlightAction.apply,
+    _ => ConnectInFlightAction.ignore,
+  };
+}
+
 class VpnStateNotifier extends AsyncNotifier<VpnState> {
   StreamSubscription<VpnState>? _sub;
   bool _connectInFlight = false;
+  // Окно от тапа до фактического старта сессии. Всё это время нативный сервис
+  // ещё не поднят и честно отвечает `disconnected` — принимать этот ответ за
+  // исход НАШЕЙ попытки нельзя.
+  bool _awaitingSessionStart = false;
   bool _serverSwitchInProgress = false;
   // Пользователь отменил попытку подключения (тап по кругу в connecting) —
   // connect-in-flight сворачивается в disconnected вместо error/connected.
@@ -931,14 +970,19 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     _restoreSocksCredentialsIfNeeded(s);
     if (_serverSwitchInProgress && s.status == VpnStatus.error) return;
     if (_connectInFlight) {
-      if (s.status == VpnStatus.error ||
-          s.status == VpnStatus.connected ||
-          s.status == VpnStatus.disconnected) {
-        state = AsyncData(s);
-        if (s.status == VpnStatus.connected ||
-            s.status == VpnStatus.disconnected) {
+      // Реальный неуспех попытки ловит _awaitNativeConnectOutcome, поэтому
+      // отсечка ничего не теряет.
+      switch (connectInFlightAction(
+        s.status,
+        awaitingSessionStart: _awaitingSessionStart,
+      )) {
+        case ConnectInFlightAction.ignore:
+          break;
+        case ConnectInFlightAction.apply:
+          state = AsyncData(s);
+        case ConnectInFlightAction.applyAndFinish:
+          state = AsyncData(s);
           _connectInFlight = false;
-        }
       }
       return;
     }
@@ -1085,6 +1129,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
     _connectInFlight = true;
     _cancelRequested = false;
+    _awaitingSessionStart = true;
 
     try {
       final isAwg = AwgProfile.isAwgConfig(server.config);
@@ -1100,6 +1145,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         return;
       }
       if (native.status == VpnStatus.connecting) {
+        // Сервис уже поднимается (плитка QS / уведомление) — «отключено» из
+        // стрима с этого момента говорит о нашей же сессии, отсечку снимаем.
+        _awaitingSessionStart = false;
         state = AsyncData(native);
         final settled = await _awaitNativeConnectOutcome(engine);
         state = AsyncData(settled);
@@ -1234,6 +1282,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         modeOverride: connectionMode,
       );
       await engine.startSession(session);
+      _awaitingSessionStart = false;
 
       if (_cancelRequested) {
         // Отмена пришла, пока сессия поднималась — гасим её и выходим тихо.
@@ -1284,6 +1333,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       Error.throwWithStackTrace(e, st);
     } finally {
       _connectInFlight = false;
+      _awaitingSessionStart = false;
     }
   }
 
@@ -1296,6 +1346,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       return;
     }
     _cancelRequested = true;
+    // Отмена — «отключено» из стрима снова значимо, даже если сессия ещё не
+    // успела стартовать.
+    _awaitingSessionStart = false;
     state = const AsyncData(VpnState(status: VpnStatus.disconnecting));
     try {
       await ref.read(vpnEngineProvider).stopVpn();

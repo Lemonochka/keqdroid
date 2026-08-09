@@ -24,6 +24,7 @@ import 'package:keqdroid/services/settings_backup_service.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
 import 'package:keqdroid/services/windows_desktop_service.dart';
 import 'package:keqdroid/app/app.dart';
+import 'package:keqdroid/screens/settings/connection_tile.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:keqdroid/services/update_service.dart';
@@ -382,7 +383,6 @@ Future<bool> _confirmReset(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
           Icon(Icons.warning_amber_rounded, color: redColor, size: 28),

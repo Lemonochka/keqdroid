@@ -11,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/extensions/build_context_l10n.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/haptics.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
 import '../core/app_logger.dart';
@@ -29,10 +31,12 @@ import '../utils/clipboard_import.dart';
 import '../utils/error_messages.dart';
 import 'qr_scan_screen.dart';
 import 'servers/server_config_editor.dart';
+import 'servers/wave_window.dart';
 
 part 'servers/server_groups.dart';
 part 'servers/server_tile.dart';
 part 'servers/connection_stats.dart';
+part 'servers/connect_button.dart';
 part 'servers/wave_header.dart';
 
 class ServersTab extends ConsumerStatefulWidget {
@@ -49,8 +53,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
   late final AnimationController _waveCtrl;
   late final AnimationController _stateCtrl;
 
-  final _headerKey = GlobalKey();
-  double _headerHeight = 0;
   bool _handlingLaunchAction = false;
   bool _appInForeground = true;
 
@@ -92,20 +94,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
         unawaited(_checkPendingDeepLink());
       }
       _syncHeaderAnimations();
-      _scheduleHeaderMeasure();
-    });
-  }
-
-  void _scheduleHeaderMeasure() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final ctx = _headerKey.currentContext;
-      if (ctx != null) {
-        final h = ctx.size?.height ?? 0;
-        if (h > 0 && h != _headerHeight) {
-          setState(() => _headerHeight = h);
-        }
-      }
     });
   }
 
@@ -348,7 +336,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
           } else {
             _stateCtrl.reverse();
           }
-          _scheduleHeaderMeasure();
         });
       }
 
@@ -403,26 +390,19 @@ class _ServersTabState extends ConsumerState<ServersTab>
         vpnStatus == VpnStatus.connecting ||
         vpnStatus == VpnStatus.disconnecting;
 
-    final isActive = isConnected || isConnecting;
-
     final isDesktop = PlatformBootstrap.isDesktop;
-    // волна ниже на connecting/connected, чтобы хедер не разрастался при подключении
-    final waveHeight = isDesktop
-        ? (isActive ? 32.0 : 40.0)
-        : (isActive ? 28.0 : 36.0);
+    // Высота волны ПОСТОЯННА. Раньше она ужималась на connecting/connected,
+    // чтобы шапка не разрасталась от чипов трафика, но менялась мгновенно —
+    // и всё выше списка прыгало и слегка уменьшалось в момент подключения.
+    // Единственное, что теперь меняет высоту шапки, — появление чипов, а его
+    // плавно разводит AnimatedSize ниже.
+    final waveHeight = isDesktop ? 40.0 : 36.0;
     final topPad = isDesktop ? 20.0 : MediaQuery.of(context).padding.top + 24;
 
-    final connectHeader = NotificationListener<SizeChangedLayoutNotification>(
-      onNotification: (_) {
-        _scheduleHeaderMeasure();
-        return false;
-      },
-      child: SizeChangedLayoutNotifier(
-        child: Padding(
-          key: _headerKey,
-          padding: EdgeInsets.fromLTRB(24, topPad, 24, 8),
-          child: Column(
-            children: [
+    final connectHeader = Padding(
+      padding: EdgeInsets.fromLTRB(24, topPad, 24, 8),
+      child: Column(
+        children: [
               // При connected «дыхание» и blur-тень перерисовываются каждый
               // кадр — boundary не даёт им тянуть перерисовку всего хедера.
               RepaintBoundary(
@@ -430,94 +410,35 @@ class _ServersTabState extends ConsumerState<ServersTab>
                   scale: (isConnected || isConnecting)
                       ? _breathAnim
                       : const AlwaysStoppedAnimation(1.0),
-                  child: GestureDetector(
+                  child: _ConnectButton(
+                    isConnected: isConnected,
+                    isConnecting: isConnecting,
                     // connecting остаётся тапабельным — это отмена попытки;
                     // блокируем только disconnecting (гасить уже нечего).
                     onTap: vpnStatus == VpnStatus.disconnecting
                         ? null
                         : () => _toggleVpn(vpnStatus),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 400),
-                      width: 130,
-                      height: 130,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isConnected
-                            ? AppTheme.accentContainer(context)
-                            : isConnecting
-                            ? AppTheme.accent(context).withValues(alpha: 0.18)
-                            : AppTheme.card(context),
-                        border: (!isConnected && !isConnecting)
-                            ? Border.all(
-                                color: AppTheme.divider(context),
-                                width: 1,
-                              )
-                            : Border.all(
-                                color: AppTheme.accent(
-                                  context,
-                                ).withValues(alpha: 0.45),
-                                width: 2,
-                              ),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                (isConnected || isConnecting
-                                        ? AppTheme.accent(context)
-                                        : AppTheme.card(context))
-                                    .withValues(alpha: 0.35),
-                            blurRadius: 30,
-                            spreadRadius: 6,
-                          ),
-                        ],
-                      ),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        transitionBuilder: (child, animation) => FadeTransition(
-                          opacity: animation,
-                          child: ScaleTransition(
-                            scale: Tween<double>(
-                              begin: 0.7,
-                              end: 1.0,
-                            ).animate(animation),
-                            child: child,
-                          ),
-                        ),
-                        child: isConnecting
-                            ? Padding(
-                                key: const ValueKey('spinner'),
-                                padding: const EdgeInsets.all(36),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 3,
-                                  color: AppTheme.accent(context),
-                                ),
-                              )
-                            : Icon(
-                                isConnected ? Icons.pause : Icons.play_arrow,
-                                key: ValueKey(isConnected ? 'pause' : 'play'),
-                                size: 52,
-                                color: isConnected
-                                    ? AppTheme.onAccentContainer(context)
-                                    : AppTheme.text(context),
-                              ),
-                      ),
-                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 18),
-              Container(
-                constraints: const BoxConstraints(minHeight: 36, maxHeight: 56),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: _statusText(
-                    serverSwitchInProgress && vpnStatus == VpnStatus.error
-                        ? VpnStatus.connecting
-                        : vpnStatus,
-                    serverSwitchInProgress ? null : vpnErrorMessage,
-                    activeServer,
+              SizedBox(
+                // Высота под статус ФИКСИРОВАНА и рассчитана на две строки.
+                // Имена серверов разной длины занимают то одну строку, то две,
+                // и шапка меняла высоту при переключении сервера — волна и
+                // список под ней подпрыгивали.
+                height: _statusAreaHeight(context),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: AnimatedSwitcher(
+                    duration: ExpressiveMotion.durationFast,
+                    child: _statusText(
+                      serverSwitchInProgress && vpnStatus == VpnStatus.error
+                          ? VpnStatus.connecting
+                          : vpnStatus,
+                      serverSwitchInProgress ? null : vpnErrorMessage,
+                      activeServer,
+                    ),
                   ),
                 ),
               ),
@@ -567,15 +488,14 @@ class _ServersTabState extends ConsumerState<ServersTab>
                         ),
                 ),
               ),
-              SizedBox(height: isActive ? 12 : 20),
-              _WavePaintWidget(
-                waveCtrl: _waveCtrl,
-                stateCtrl: _stateCtrl,
-                height: waveHeight,
-              ),
-            ],
+          // Отступ до волны тоже постоянный — он прыгал вместе с её высотой.
+          const SizedBox(height: 20),
+          _WavePaintWidget(
+            waveCtrl: _waveCtrl,
+            stateCtrl: _stateCtrl,
+            height: waveHeight,
           ),
-        ),
+        ],
       ),
     );
 
@@ -583,10 +503,43 @@ class _ServersTabState extends ConsumerState<ServersTab>
       children: [
         connectHeader,
         Expanded(
-          child: _ServersListPanel(
-            topPadding: _listTopFadeHeight - _listTopFadeTileOverlap,
-            onSelectServer: _selectServer,
-            emptyState: _emptyState(),
+          // Градиент лежит в этой же колонке, а не в общем Stack по измеренной
+          // высоте шапки. Замер делался после кадра, поэтому пока шапка меняла
+          // высоту (подключение убирает часть отступов и укорачивает волну),
+          // градиент отставал на кадр — и из-под волны на мгновение выглядывал
+          // список. Здесь верх Stack и есть низ шапки, всегда в том же кадре.
+          child: Stack(
+            fit: StackFit.expand,
+            clipBehavior: Clip.none,
+            children: [
+              _ServersListPanel(
+                topPadding: _listTopFadeHeight - _listTopFadeTileOverlap,
+                onSelectServer: _selectServer,
+                emptyState: _emptyState(),
+              ),
+              Positioned(
+                top: -_listTopFadeUpExtension,
+                left: 0,
+                right: 0,
+                height: _listTopFadeOverlayHeight,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppTheme.bg(context),
+                          AppTheme.bg(context).withValues(alpha: 1.0),
+                          AppTheme.bg(context).withValues(alpha: 0.0),
+                        ],
+                        stops: const [0.0, _listTopFadeSolidStop, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -609,30 +562,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
             fit: StackFit.expand,
             children: [
               body,
-
-              if (_headerHeight > 0)
-                Positioned(
-                  top: _headerHeight - _listTopFadeUpExtension,
-                  left: 0,
-                  right: 0,
-                  height: _listTopFadeOverlayHeight,
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppTheme.bg(context),
-                            AppTheme.bg(context).withValues(alpha: 1.0),
-                            AppTheme.bg(context).withValues(alpha: 0.0),
-                          ],
-                          stops: const [0.0, _listTopFadeSolidStop, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
 
               Positioned(
                 left: 0,
@@ -681,9 +610,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
     showModalBottomSheet<void>(
       context: ctx,
       backgroundColor: AppTheme.bg(ctx),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      showDragHandle: true,
       builder: (ctx2) => Padding(
         padding: const EdgeInsets.fromLTRB(8, 12, 8, 24),
         child: Column(
@@ -902,9 +829,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
       context: ctx,
       backgroundColor: AppTheme.bg(ctx),
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      showDragHandle: true,
       builder: (ctx2) => StatefulBuilder(
         builder: (ctx2, setModalState) => Padding(
           padding: EdgeInsets.fromLTRB(
@@ -1044,12 +969,37 @@ class _ServersTabState extends ConsumerState<ServersTab>
     );
   }
 
+  /// Рамка (1.5×2) и вертикальные отступы (6×2) чипа «подключено». В отличие от
+  /// текста они не масштабируются вместе со шрифтом.
+  static const double _statusChipChrome = 15;
+
+  /// Высота области статуса: столько занимают две строки самого высокого из
+  /// двух вариантов — обычной подписи и чипа «подключено».
+  ///
+  /// Считаем из ролей темы, а не подбираем число: при системном увеличении
+  /// шрифта две строки становятся выше, и фиксированная константа их обрезала
+  /// бы. Роли берём те же, что использует [_statusText].
+  static double _statusAreaHeight(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final scaler = MediaQuery.textScalerOf(context);
+    double twoLines(TextStyle? style) {
+      final size = style?.fontSize ?? 14;
+      return scaler.scale(size) * (style?.height ?? 1.2) * 2;
+    }
+
+    return max(
+      twoLines(textTheme.bodyMedium),
+      twoLines(textTheme.labelMedium) + _statusChipChrome,
+    );
+  }
+
   Widget _statusText(
     VpnStatus status,
     String? errorMessage,
     ServerItem? activeServer,
   ) {
     final l10n = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
     if (status == VpnStatus.connected && activeServer != null) {
       final cleanName = ServerNameUtils.formatForDisplay(
         ServerNameUtils.cleanDisplayName(activeServer.displayName),
@@ -1062,18 +1012,14 @@ class _ServersTabState extends ConsumerState<ServersTab>
             color: AppTheme.accent(context).withValues(alpha: 0.5),
             width: 1.5,
           ),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
         ),
         child: Text(
           l10n.vpnConnectedTo(cleanName),
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.text(context),
-          ),
+          style: textTheme.labelMedium?.copyWith(color: AppTheme.text(context)),
         ),
       );
     } else {
@@ -1106,7 +1052,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
         textAlign: TextAlign.center,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: 14, color: AppTheme.textLight(context)),
+        style: textTheme.bodyMedium?.copyWith(
+          color: AppTheme.textLight(context),
+        ),
       );
     }
   }

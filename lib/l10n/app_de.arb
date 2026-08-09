@@ -326,7 +326,7 @@
   "subscriptionsSave": "Speichern",
   "subscriptionsMoveUp": "Nach oben",
   "subscriptionsMoveDown": "Nach unten",
-  "subscriptionsAutoUpdate": "Automatische Aktualisierung",
+  "subscriptionsAutoUpdate": "Auto-Update",
   "subscriptionsOn": "EIN",
   "subscriptionsOff": "AUS",
   "subscriptionsExpired": "Abgelaufen",
@@ -352,6 +352,14 @@
   "subscriptionsAutoUpdateInterval": "Aktualisierungsintervall",
   "subscriptionsCurrentInterval": "alle {hours} Std.",
   "@subscriptionsCurrentInterval": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionsIntervalShort": "{hours} Std.",
+  "@subscriptionsIntervalShort": {
     "placeholders": {
       "hours": {
         "type": "int"
@@ -445,6 +453,7 @@
   "settingsOpenXrayLogs": "Xray-Logs öffnen",
   "settingsXrayCoreLogs": "Xray-Kern-Logs",
   "settingsRefresh": "Aktualisieren",
+  "settingsCopyLogs": "Logs kopieren",
   "settingsAppVersion": "App-Version",
   "settingsChecking": "Wird geprüft...",
   "settingsCheckFailed": "Prüfung fehlgeschlagen",
@@ -765,6 +774,11 @@
   "serverEditorServerMissing": "Server existiert nicht mehr",
   "appearanceTabGeneral": "Allgemein",
   "appearanceTabThemes": "Designs",
+  "appearanceAmoled": "Reines Schwarz (AMOLED)",
+  "appearanceAmoledSubtitle": "Echt schwarzer Hintergrund im dunklen Design — spart Strom auf OLED-Displays",
+  "appearanceAmoledNeedsDark": "Verfügbar bei aktiviertem dunklen Design",
+  "appearanceHaptics": "Haptisches Feedback",
+  "appearanceHapticsSubtitle": "Vibration beim Verbinden sowie bei Tab- und Serverauswahl",
   "appearanceShowTraffic": "Datenverkehr anzeigen",
   "appearanceShowTrafficSubtitle": "Chips für Geschwindigkeit und Datenvolumen unter dem Verbindungsknopf",
   "appearanceShowTime": "Verbindungsdauer anzeigen",
@@ -840,6 +854,8 @@
   "connectionsRuleHintAction": "Info setzen",
   "connectionsRuleHintApplied": "Core-Log-Level auf Info gesetzt — neu verbinden zum Übernehmen",
   "connectionsRuleDefault": "keine Regel (Standardaktion)",
+  "connectionsRuleViaCore": "entscheidet der Core (benötigt Info-Logs)",
+  "connectionsVerdictCore": "CORE",
   "connectionsVerdictProxy": "PROXY",
   "connectionsVerdictDirect": "DIREKT",
   "connectionsVerdictBlock": "GESPERRT",

@@ -768,7 +768,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get subscriptionsMoveDown => 'Переместить вниз';
 
   @override
-  String get subscriptionsAutoUpdate => 'Автообновление';
+  String get subscriptionsAutoUpdate => 'Обновление';
 
   @override
   String get subscriptionsOn => 'ВКЛ';
@@ -804,6 +804,11 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String subscriptionsCurrentInterval(int hours) {
     return 'каждые $hoursч';
+  }
+
+  @override
+  String subscriptionsIntervalShort(int hours) {
+    return '$hoursч';
   }
 
   @override
@@ -952,6 +957,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsRefresh => 'Обновить';
+
+  @override
+  String get settingsCopyLogs => 'Скопировать логи';
 
   @override
   String get settingsAppVersion => 'Версия приложения';
@@ -1694,6 +1702,21 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceTabThemes => 'Темы';
 
   @override
+  String get appearanceAmoled => 'Чистый чёрный (AMOLED)';
+
+  @override
+  String get appearanceAmoledSubtitle => 'По-настоящему чёрный фон в тёмной теме — экономит заряд на OLED-экранах';
+
+  @override
+  String get appearanceAmoledNeedsDark => 'Доступно при включённой тёмной теме';
+
+  @override
+  String get appearanceHaptics => 'Тактильная отдача';
+
+  @override
+  String get appearanceHapticsSubtitle => 'Вибрация при подключении, смене вкладки и выборе сервера';
+
+  @override
   String get appearanceShowTraffic => 'Показывать трафик';
 
   @override
@@ -1906,6 +1929,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get connectionsRuleDefault => 'без правила (действие по умолчанию)';
+
+  @override
+  String get connectionsRuleViaCore => 'решает ядро (нужны логи Info)';
+
+  @override
+  String get connectionsVerdictCore => 'ЯДРО';
 
   @override
   String get connectionsVerdictProxy => 'ПРОКСИ';

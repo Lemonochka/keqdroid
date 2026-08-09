@@ -358,6 +358,15 @@
       }
     }
   },
+  "subscriptionsIntervalShort": "{hours}h",
+  "@subscriptionsIntervalShort": {
+    "description": "Compact interval label for the chip on the subscription card",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "subscriptionsJustNow": "just now",
   "subscriptionsMinutesAgo": "{minutes}m ago",
   "@subscriptionsMinutesAgo": {
@@ -445,6 +454,7 @@
   "settingsOpenXrayLogs": "Open core logs",
   "settingsXrayCoreLogs": "Core logs",
   "settingsRefresh": "Refresh",
+  "settingsCopyLogs": "Copy logs",
   "settingsAppVersion": "App version",
   "settingsChecking": "Checking...",
   "settingsCheckFailed": "Check failed",
@@ -765,6 +775,11 @@
   "serverEditorServerMissing": "Server no longer exists",
   "appearanceTabGeneral": "General",
   "appearanceTabThemes": "Themes",
+  "appearanceAmoled": "Pure black (AMOLED)",
+  "appearanceAmoledSubtitle": "True black background in the dark theme — saves power on OLED screens",
+  "appearanceAmoledNeedsDark": "Available with the dark theme on",
+  "appearanceHaptics": "Haptic feedback",
+  "appearanceHapticsSubtitle": "Vibrate on connect, tab and server taps",
   "appearanceShowTraffic": "Show traffic",
   "appearanceShowTrafficSubtitle": "Speed and data usage chips under the connect button",
   "appearanceShowTime": "Show connection time",
@@ -840,6 +855,8 @@
   "connectionsRuleHintAction": "Set Info",
   "connectionsRuleHintApplied": "Core log level set to Info — reconnect to apply",
   "connectionsRuleDefault": "no rule (default action)",
+  "connectionsRuleViaCore": "decided inside the core (needs Info logs)",
+  "connectionsVerdictCore": "CORE",
   "connectionsVerdictProxy": "PROXY",
   "connectionsVerdictDirect": "DIRECT",
   "connectionsVerdictBlock": "BLOCKED",

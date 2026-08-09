@@ -455,12 +455,12 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                   Expanded(
                                     child: Text(
                                       title,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: textLightColor,
-                                        letterSpacing: 0.2,
-                                      ),
+                                      // Заголовок группы — роль подзаголовка
+                                      // списка в M3, а не свой кегль 13.
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(color: textLightColor),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -477,26 +477,30 @@ class _SubCardState extends ConsumerState<_SubCard> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (sub != null && sub.autoUpdate) ...[
-                                GestureDetector(
-                                  onTap: () =>
-                                      _showIntervalPicker(context, sub),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
+                                // InkWell, а не GestureDetector: чип нажимается,
+                                // и до сих пор об этом ничем не сообщал.
+                                Material(
+                                  color: accentColor.withValues(alpha: 0.18),
+                                  shape: ExpressiveShape.border(
+                                    ExpressiveShape.small,
+                                  ),
+                                  child: InkWell(
+                                    onTap: () =>
+                                        _showIntervalPicker(context, sub),
+                                    customBorder: ExpressiveShape.border(
+                                      ExpressiveShape.small,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: accentColor.withValues(
-                                        alpha: 0.18,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
                                       ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      '${sub.updateIntervalHours}h',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: accentColor,
+                                      child: Text(
+                                        '${sub.updateIntervalHours}h',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(color: accentColor),
                                       ),
                                     ),
                                   ),
@@ -744,24 +748,12 @@ class _SubCardState extends ConsumerState<_SubCard> {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppTheme.bg(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      showDragHandle: true,
       builder: (ctx) {
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: textLight.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                 child: Align(
@@ -816,9 +808,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
       context: context,
       isScrollControlled: true,
       backgroundColor: AppTheme.bg(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      showDragHandle: true,
       builder: (ctx) {
         final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
         return SafeArea(
@@ -828,18 +818,6 @@ class _SubCardState extends ConsumerState<_SubCard> {
               shrinkWrap: true,
               padding: const EdgeInsets.only(bottom: 12),
               children: [
-                const SizedBox(height: 12),
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppTheme.textLight(context).withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
                 Text(
                   context.l10n.subscriptionsAutoUpdateInterval,
                   textAlign: TextAlign.center,

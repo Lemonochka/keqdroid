@@ -1605,6 +1605,12 @@ abstract class AppLocalizations {
   /// **'every {hours}h'**
   String subscriptionsCurrentInterval(int hours);
 
+  /// Compact interval label for the chip on the subscription card
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h'**
+  String subscriptionsIntervalShort(int hours);
+
   /// No description provided for @subscriptionsJustNow.
   ///
   /// In en, this message translates to:
@@ -1874,6 +1880,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Refresh'**
   String get settingsRefresh;
+
+  /// No description provided for @settingsCopyLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy logs'**
+  String get settingsCopyLogs;
 
   /// No description provided for @settingsAppVersion.
   ///
@@ -3291,6 +3303,36 @@ abstract class AppLocalizations {
   /// **'Themes'**
   String get appearanceTabThemes;
 
+  /// No description provided for @appearanceAmoled.
+  ///
+  /// In en, this message translates to:
+  /// **'Pure black (AMOLED)'**
+  String get appearanceAmoled;
+
+  /// No description provided for @appearanceAmoledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'True black background in the dark theme — saves power on OLED screens'**
+  String get appearanceAmoledSubtitle;
+
+  /// No description provided for @appearanceAmoledNeedsDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Available with the dark theme on'**
+  String get appearanceAmoledNeedsDark;
+
+  /// No description provided for @appearanceHaptics.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptic feedback'**
+  String get appearanceHaptics;
+
+  /// No description provided for @appearanceHapticsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrate on connect, tab and server taps'**
+  String get appearanceHapticsSubtitle;
+
   /// No description provided for @appearanceShowTraffic.
   ///
   /// In en, this message translates to:
@@ -3698,6 +3740,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'no rule (default action)'**
   String get connectionsRuleDefault;
+
+  /// No description provided for @connectionsRuleViaCore.
+  ///
+  /// In en, this message translates to:
+  /// **'decided inside the core (needs Info logs)'**
+  String get connectionsRuleViaCore;
+
+  /// No description provided for @connectionsVerdictCore.
+  ///
+  /// In en, this message translates to:
+  /// **'CORE'**
+  String get connectionsVerdictCore;
 
   /// No description provided for @connectionsVerdictProxy.
   ///

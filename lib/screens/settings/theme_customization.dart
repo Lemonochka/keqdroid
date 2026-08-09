@@ -124,6 +124,33 @@ class _AppearanceGeneralTab extends StatelessWidget {
             subtitle: Text(l10n.serversTwoColumnsSubtitle),
           ),
           SwitchListTile(
+            value: current.amoledBlack,
+            onChanged: current.darkTheme
+                ? (v) => onSave(current.copyWith(amoledBlack: v))
+                : null,
+            activeThumbColor: controlsAccent,
+            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
+            secondary: Icon(Icons.contrast, color: controlsAccent),
+            title: Text(l10n.appearanceAmoled),
+            // Переключатель гасим на светлой теме, а не прячем: иначе он
+            // «пропадает» и его ищут.
+            subtitle: Text(
+              current.darkTheme
+                  ? l10n.appearanceAmoledSubtitle
+                  : l10n.appearanceAmoledNeedsDark,
+            ),
+          ),
+          if (!PlatformBootstrap.isDesktop)
+            SwitchListTile(
+              value: current.hapticFeedback,
+              onChanged: (v) => onSave(current.copyWith(hapticFeedback: v)),
+              activeThumbColor: controlsAccent,
+              activeTrackColor: controlsAccent.withValues(alpha: 0.32),
+              secondary: Icon(Icons.vibration, color: controlsAccent),
+              title: Text(l10n.appearanceHaptics),
+              subtitle: Text(l10n.appearanceHapticsSubtitle),
+            ),
+          SwitchListTile(
             value: current.showTrafficStats,
             onChanged: (v) => onSave(current.copyWith(showTrafficStats: v)),
             activeThumbColor: controlsAccent,

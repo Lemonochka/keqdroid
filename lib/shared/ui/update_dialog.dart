@@ -107,7 +107,6 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
         notes != null && notes.isNotEmpty ? sanitizeReleaseNotes(notes) : null;
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
           Container(

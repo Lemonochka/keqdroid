@@ -766,7 +766,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get subscriptionsMoveDown => 'Nach unten';
 
   @override
-  String get subscriptionsAutoUpdate => 'Automatische Aktualisierung';
+  String get subscriptionsAutoUpdate => 'Auto-Update';
 
   @override
   String get subscriptionsOn => 'EIN';
@@ -802,6 +802,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String subscriptionsCurrentInterval(int hours) {
     return 'alle $hours Std.';
+  }
+
+  @override
+  String subscriptionsIntervalShort(int hours) {
+    return '$hours Std.';
   }
 
   @override
@@ -950,6 +955,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsRefresh => 'Aktualisieren';
+
+  @override
+  String get settingsCopyLogs => 'Logs kopieren';
 
   @override
   String get settingsAppVersion => 'App-Version';
@@ -1692,6 +1700,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appearanceTabThemes => 'Designs';
 
   @override
+  String get appearanceAmoled => 'Reines Schwarz (AMOLED)';
+
+  @override
+  String get appearanceAmoledSubtitle => 'Echt schwarzer Hintergrund im dunklen Design — spart Strom auf OLED-Displays';
+
+  @override
+  String get appearanceAmoledNeedsDark => 'Verfügbar bei aktiviertem dunklen Design';
+
+  @override
+  String get appearanceHaptics => 'Haptisches Feedback';
+
+  @override
+  String get appearanceHapticsSubtitle => 'Vibration beim Verbinden sowie bei Tab- und Serverauswahl';
+
+  @override
   String get appearanceShowTraffic => 'Datenverkehr anzeigen';
 
   @override
@@ -1903,6 +1926,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get connectionsRuleDefault => 'keine Regel (Standardaktion)';
+
+  @override
+  String get connectionsRuleViaCore => 'entscheidet der Core (benötigt Info-Logs)';
+
+  @override
+  String get connectionsVerdictCore => 'CORE';
 
   @override
   String get connectionsVerdictProxy => 'PROXY';

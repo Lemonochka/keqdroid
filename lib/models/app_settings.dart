@@ -60,6 +60,11 @@ class AppSettings {
   final Map<String, String> hotkeys;
   /// Список серверов в две колонки.
   final bool serversTwoColumns;
+  /// Чёрный AMOLED-фон в тёмной теме: на OLED-экране выключенный пиксель не
+  /// светится вовсе. На светлую тему не влияет.
+  final bool amoledBlack;
+  /// Тактильная отдача на нажатия. На десктопе значения не имеет.
+  final bool hapticFeedback;
   /// Чипы скорости и объёма трафика под кнопкой подключения.
   final bool showTrafficStats;
   /// Чип времени подключения под кнопкой подключения.
@@ -107,6 +112,8 @@ class AppSettings {
     this.coreEngine = coreEngineKeqrnel,
     this.hotkeys = const {},
     this.serversTwoColumns = false,
+    this.amoledBlack = false,
+    this.hapticFeedback = true,
     this.showTrafficStats = true,
     this.showConnectionTime = true,
     this.showSpeedInNotification = true,
@@ -148,6 +155,8 @@ class AppSettings {
     'coreEngine': coreEngine,
     'hotkeys': hotkeys,
     'serversTwoColumns': serversTwoColumns,
+    'amoledBlack': amoledBlack,
+    'hapticFeedback': hapticFeedback,
     'showTrafficStats': showTrafficStats,
     'showConnectionTime': showConnectionTime,
     'showSpeedInNotification': showSpeedInNotification,
@@ -217,6 +226,8 @@ class AppSettings {
       coreEngine: normalizeCoreEngine(json['coreEngine'] as String?),
       hotkeys: _readHotkeys(json['hotkeys']),
       serversTwoColumns: json['serversTwoColumns'] as bool? ?? false,
+      amoledBlack: json['amoledBlack'] as bool? ?? false,
+      hapticFeedback: json['hapticFeedback'] as bool? ?? true,
       showTrafficStats: json['showTrafficStats'] as bool? ?? true,
       showConnectionTime: json['showConnectionTime'] as bool? ?? true,
       showSpeedInNotification: json['showSpeedInNotification'] as bool? ?? true,
@@ -344,6 +355,8 @@ class AppSettings {
     String? coreEngine,
     Map<String, String>? hotkeys,
     bool? serversTwoColumns,
+    bool? amoledBlack,
+    bool? hapticFeedback,
     bool? showTrafficStats,
     bool? showConnectionTime,
     bool? showSpeedInNotification,
@@ -384,6 +397,8 @@ class AppSettings {
         coreEngine: coreEngine ?? this.coreEngine,
         hotkeys: hotkeys ?? this.hotkeys,
         serversTwoColumns: serversTwoColumns ?? this.serversTwoColumns,
+        amoledBlack: amoledBlack ?? this.amoledBlack,
+        hapticFeedback: hapticFeedback ?? this.hapticFeedback,
         showTrafficStats: showTrafficStats ?? this.showTrafficStats,
         showConnectionTime: showConnectionTime ?? this.showConnectionTime,
         showSpeedInNotification:
@@ -432,6 +447,8 @@ class AppSettings {
               launchAtStartup == other.launchAtStartup &&
               coreEngine == other.coreEngine &&
               serversTwoColumns == other.serversTwoColumns &&
+              amoledBlack == other.amoledBlack &&
+              hapticFeedback == other.hapticFeedback &&
               showTrafficStats == other.showTrafficStats &&
               showConnectionTime == other.showConnectionTime &&
               showSpeedInNotification == other.showSpeedInNotification &&
@@ -482,6 +499,8 @@ class AppSettings {
     launchAtStartup,
     coreEngine,
     serversTwoColumns,
+    amoledBlack,
+    hapticFeedback,
     showTrafficStats,
     showConnectionTime,
     showSpeedInNotification,
