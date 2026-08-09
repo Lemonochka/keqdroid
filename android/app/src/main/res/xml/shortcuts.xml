@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Статические ярлыки долгого тапа по иконке приложения. Оба открывают
+     MainActivity с EXTRA_LAUNCH_ACTION ("action"), который разбирает Dart
+     (servers_tab._checkLaunchAction): подключение требует диалога согласия
+     VpnService, так что запускать сервис в обход активности всё равно нельзя. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:shortcutId="connect"
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_monochrome"
+        android:shortcutShortLabel="@string/shortcut_connect_short"
+        android:shortcutLongLabel="@string/shortcut_connect_long">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="com.keqdroid.keqdroid"
+            android:targetClass="com.keqdroid.keqdroid.MainActivity">
+            <extra
+                android:name="action"
+                android:value="connect_from_notification" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="disconnect"
+        android:enabled="true"
+        android:icon="@drawable/ic_launcher_monochrome"
+        android:shortcutShortLabel="@string/shortcut_disconnect_short"
+        android:shortcutLongLabel="@string/shortcut_disconnect_long">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="com.keqdroid.keqdroid"
+            android:targetClass="com.keqdroid.keqdroid.MainActivity">
+            <extra
+                android:name="action"
+                android:value="disconnect_from_shortcut" />
+        </intent>
+    </shortcut>
+
+</shortcuts>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only launcher-shortcut labels live here: the app label stays hardcoded in
+     AndroidManifest.xml, and every other user-facing string comes from Flutter
+     l10n (lib/l10n). shortcutShortLabel/LongLabel must be resources, so static
+     shortcuts cannot reuse the Dart translations. -->
+<resources>
+    <string name="shortcut_connect_short">Connect</string>
+    <string name="shortcut_connect_long">Connect to VPN</string>
+    <string name="shortcut_disconnect_short">Disconnect</string>
+    <string name="shortcut_disconnect_long">Disconnect VPN</string>
+</resources>

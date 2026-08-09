@@ -22,6 +22,7 @@ class ConnectionEntry {
     this.download,
     this.rejected = false,
     this.decidedByCore = false,
+    this.closed = false,
   });
 
   /// Стабильный ключ для списка: source+dest у одного соединения не меняются.
@@ -61,6 +62,14 @@ class ConnectionEntry {
 
   /// Соединение отклонено ядром (`rejected` в access-логе).
   final bool rejected;
+
+  /// Ядро сообщило, что соединение закрылось (`connection ends` в логе).
+  ///
+  /// На Android список строится по логу, а лог помнит и то, что давно умерло:
+  /// без этой пометки вчерашние соединения выглядели как идущие прямо сейчас.
+  /// Обратное неверно — отсутствие пометки не доказывает, что соединение живо:
+  /// строка о закрытии могла не поместиться в прочитанный хвост лога.
+  final bool closed;
 
   /// Соединение отдано встроенному движку, и чем оно кончилось — неизвестно.
   ///
@@ -107,6 +116,7 @@ class ConnectionEntry {
         download: download,
         rejected: rejected,
         decidedByCore: decidedByCore,
+        closed: closed,
       );
 
   /// `host:port`, как это привычно видеть в логах.

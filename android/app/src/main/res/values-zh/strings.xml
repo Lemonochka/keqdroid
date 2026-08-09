@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_connect_short">连接</string>
+    <string name="shortcut_connect_long">连接 VPN</string>
+    <string name="shortcut_disconnect_short">断开</string>
+    <string name="shortcut_disconnect_long">断开 VPN</string>
+</resources>

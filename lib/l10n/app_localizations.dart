@@ -3771,6 +3771,12 @@ abstract class AppLocalizations {
   /// **'BLOCKED'**
   String get connectionsVerdictBlock;
 
+  /// No description provided for @connectionsClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'closed'**
+  String get connectionsClosed;
+
   /// No description provided for @subscriptionsExpiredOn.
   ///
   /// In en, this message translates to:

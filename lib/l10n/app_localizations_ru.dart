@@ -1946,6 +1946,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get connectionsVerdictBlock => 'БЛОК';
 
   @override
+  String get connectionsClosed => 'закрыто';
+
+  @override
   String subscriptionsExpiredOn(String date) {
     return 'Подписка истекла $date';
   }

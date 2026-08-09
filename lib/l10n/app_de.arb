@@ -859,6 +859,7 @@
   "connectionsVerdictProxy": "PROXY",
   "connectionsVerdictDirect": "DIREKT",
   "connectionsVerdictBlock": "GESPERRT",
+  "connectionsClosed": "geschlossen",
   "subscriptionsExpiredOn": "Abo am {date} abgelaufen",
   "@subscriptionsExpiredOn": {
     "placeholders": {

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_connect_short">Подключить</string>
+    <string name="shortcut_connect_long">Подключить VPN</string>
+    <string name="shortcut_disconnect_short">Отключить</string>
+    <string name="shortcut_disconnect_long">Отключить VPN</string>
+</resources>
