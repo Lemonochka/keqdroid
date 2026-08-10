@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -85,7 +86,7 @@ void _toast(BuildContext context, String msg) {
     SnackBar(
       content: Text(msg),
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
     ),
   );
 }

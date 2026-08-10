@@ -20,13 +20,7 @@ class _WindowsDesktopSettingsScreen extends ConsumerWidget {
       required bool value,
       required ValueChanged<bool>? onChanged,
     }) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.card(context),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.divider(context), width: 1),
-        ),
+      return ExpressiveCard(
         child: Row(
           children: [
             Expanded(

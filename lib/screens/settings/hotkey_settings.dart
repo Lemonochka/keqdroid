@@ -181,7 +181,7 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppTheme.accent(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
                     border: Border.all(
                       color: AppTheme.accent(context).withValues(alpha: 0.3),
                     ),
@@ -275,16 +275,9 @@ class _HotkeyRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = AppTheme.accent(context);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: recording ? accent.withValues(alpha: 0.6) : AppTheme.divider(context),
-          width: recording ? 1.5 : 1,
-        ),
-      ),
+    // Обводка только на время записи хоткея — это состояние, а не украшение.
+    return ExpressiveCard(
+      outline: recording ? accent.withValues(alpha: 0.6) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -346,7 +339,7 @@ class _HotkeyRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: accent.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
             border: Border.all(color: accent, width: 1.5),
           ),
           child: Text(
@@ -365,7 +358,7 @@ class _HotkeyRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: AppTheme.inset(context),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
             border: Border.all(color: AppTheme.divider(context)),
           ),
           child: Text(
@@ -396,7 +389,7 @@ class _HotkeyRow extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               decoration: BoxDecoration(
                 color: AppTheme.inset(context),
-                borderRadius: BorderRadius.circular(7),
+                borderRadius: BorderRadius.circular(ExpressiveShape.small),
                 border: Border.all(color: AppTheme.divider(context)),
                 boxShadow: [
                   BoxShadow(
@@ -416,7 +409,7 @@ class _HotkeyRow extends StatelessWidget {
             message: clearTooltip,
             child: InkWell(
               onTap: onClear,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
               child: Padding(
                 padding: const EdgeInsets.all(4),
                 child: Icon(

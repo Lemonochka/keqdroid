@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:keqdroid/shared/ui/expressive.dart';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show mapEquals;
@@ -334,7 +335,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
               backgroundColor: AppTheme.accentContainer(ctx),
               foregroundColor: AppTheme.onAccentContainer(ctx),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
@@ -621,10 +622,10 @@ class _SidebarTile extends StatelessWidget {
           message: label,
           child: Material(
             color: bg,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
             child: InkWell(
               onTap: onTap,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
               child: SizedBox(
                 height: 48,
                 child: Icon(icon, color: fg),
@@ -639,10 +640,10 @@ class _SidebarTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: Material(
         color: bg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(

@@ -281,7 +281,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: AppTheme.orange(context).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
       ),
       child: Row(
         children: [
@@ -323,13 +323,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
 
   Widget _finalOutboundCard(
       BuildContext context, AppLocalizations l10n, String current) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
+    return ExpressiveCard(
+      child:Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -394,7 +389,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
         decoration: BoxDecoration(
           color: selected ? color.withValues(alpha: 0.14) : AppTheme.bg(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           border: Border.all(
             color: selected ? color : AppTheme.divider(context),
             width: selected ? 2 : 1,
@@ -450,13 +445,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     final rules = (rulesAsync.value ?? const <RoutingRule>[])
         .where((r) => r.type != RuleType.processName)
         .toList();
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
+    return ExpressiveCard(
+      child:Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -521,7 +511,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
       decoration: BoxDecoration(
         color: AppTheme.bg(context),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
         border: Border.all(color: AppTheme.divider(context)),
       ),
       child: Row(
@@ -591,7 +581,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(ExpressiveShape.small),
         ),
         child: Text(
           text,
@@ -643,7 +633,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
   void _showCheatSheet(BuildContext context, AppLocalizations l10n) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.card(context),
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx) => ConstrainedBox(
@@ -704,13 +693,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
   }
 
   Widget _syntaxLegend(BuildContext context, AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
+    return ExpressiveCard(
+      child:Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(Icons.help_outline, size: 18, color: AppTheme.textLight(context)),
@@ -734,7 +718,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppTheme.accent(context).withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(ExpressiveShape.large),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -755,14 +739,60 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     );
   }
 
-  Widget _presetsCard(BuildContext context, AppLocalizations l10n) {
+  /// Строка пресета в выпадающем списке.
+  ///
+  /// `DropdownButton` текущее значение никак не помечает — он просто
+  /// прокручивает к нему список. Из-за этого меню читалось как набор подписей,
+  /// по которым непонятно, выбор ли это вообще и что уже выбрано. Выбранный
+  /// пункт берёт secondaryContainer и галочку — тот же язык, что у активного
+  /// сервера и чипа статуса.
+  Widget _presetMenuRow(
+    BuildContext context,
+    AppLocalizations l10n,
+    RoutingPreset preset, {
+    required bool selected,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final color = _presetColor(context, preset.field);
+
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(16),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: selected
+          ? BoxDecoration(
+              color: scheme.secondaryContainer,
+              borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
+            )
+          : null,
+      child: Row(
+        children: [
+          Icon(_presetIcon(preset.id), size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _presetTitle(l10n, preset.id),
+              overflow: TextOverflow.ellipsis,
+              style:
+                  (selected
+                          ? textTheme.emphasized(textTheme.bodyMedium)
+                          : textTheme.bodyMedium)
+                      ?.copyWith(
+                        color: selected
+                            ? scheme.onSecondaryContainer
+                            : AppTheme.text(context),
+                      ),
+            ),
+          ),
+          if (selected)
+            Icon(Icons.check, size: 18, color: scheme.onSecondaryContainer),
+        ],
       ),
-      child: Column(
+    );
+  }
+
+  Widget _presetsCard(BuildContext context, AppLocalizations l10n) {
+    return ExpressiveCard(
+      child:Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -806,14 +836,17 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: AppTheme.bg(context),
-                  borderRadius: BorderRadius.circular(12),
+                  // Поле стоит внутри карточки, поэтому берёт уровень ВЫШЕ неё.
+                  // Здесь был AppTheme.bg — в AMOLED это чистый чёрный, и поле
+                  // сливалось в дыру без намёка на то, что по нему жмут.
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     isExpanded: true,
                     value: _selectedPresetId,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
                     hint: Text(
                       l10n.settingsRoutingPresetChoose,
                       style: Theme.of(context)
@@ -826,28 +859,47 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                       Icons.arrow_drop_down,
                       color: AppTheme.textLight(context),
                     ),
-                    items: RoutingPresets.all.map((preset) {
-                      final color = _presetColor(context, preset.field);
-                      return DropdownMenuItem<String>(
-                        value: preset.id,
-                        child: Row(
-                          children: [
-                            Icon(_presetIcon(preset.id), size: 18, color: color),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                _presetTitle(l10n, preset.id),
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(color: AppTheme.text(context)),
-                              ),
+                    // Закрытое поле — без обёртки подсветки: её отступы не
+                    // влезают в высоту кнопки и обрезают строку снизу.
+                    selectedItemBuilder: (context) => RoutingPresets.all
+                        .map(
+                          (preset) => Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _presetIcon(preset.id),
+                                  size: 18,
+                                  color: _presetColor(context, preset.field),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    _presetTitle(l10n, preset.id),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: Theme.of(context).textTheme.bodyMedium
+                                        ?.copyWith(color: AppTheme.text(context)),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
+                          ),
+                        )
+                        .toList(),
+                    items: RoutingPresets.all
+                        .map(
+                          (preset) => DropdownMenuItem<String>(
+                            value: preset.id,
+                            child: _presetMenuRow(
+                              context,
+                              l10n,
+                              preset,
+                              selected: preset.id == _selectedPresetId,
+                            ),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (id) => setState(() => _selectedPresetId = id),
                   ),
                 ),
@@ -894,13 +946,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
   }) {
     final count = _countEntries(controller.text);
     final unknown = unknownGeoTokens(controller.text, geoIndex);
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
+    return ExpressiveCard(
+      child:Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -909,7 +956,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                 ),
                 child: Icon(icon, size: 17, color: color),
               ),
@@ -930,7 +977,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                 ),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.small),
                 ),
                 child: Text(
                   l10n.settingsRoutingItemCount(count),
@@ -985,15 +1032,15 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
               // Явная граница: заливки мало, когда тона поверхностей близки —
               // тогда поле выглядело как текст без рамки (видно было только на ПК).
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                 borderSide: BorderSide(color: AppTheme.divider(context)),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                 borderSide: BorderSide(color: AppTheme.divider(context)),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                 borderSide: BorderSide(color: AppTheme.accent(context), width: 1.5),
               ),
             ),
@@ -1021,7 +1068,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: AppTheme.orange(context).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
         border: Border.all(
           color: AppTheme.orange(context).withValues(alpha: 0.35),
         ),
@@ -1075,7 +1122,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     final token = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.card(context),
       showDragHandle: true,
       builder: (_) => _GeoCodePickerSheet(index: index),
     );
@@ -1204,11 +1250,11 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                   filled: true,
                   fillColor: AppTheme.inset(context),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                     borderSide: BorderSide(color: AppTheme.divider(context)),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                     borderSide: BorderSide(color: AppTheme.divider(context)),
                   ),
                 ),
@@ -1271,7 +1317,7 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? color.withValues(alpha: 0.14) : AppTheme.bg(context),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           border: Border.all(
             color: selected ? color : AppTheme.divider(context),
             width: selected ? 1.6 : 1,

@@ -92,26 +92,35 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
     final accent = AppTheme.accent(context);
     final granted = _notifEnabled == true;
     return [
-      // Уведомления — единственное разрешение с реальным статусом/запросом.
-      ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-        leading: Icon(Icons.notifications_active_outlined, color: accent),
-        title: Text(l10n.settingsPermNotifTitle),
-        subtitle: Text(l10n.settingsPermNotifDesc),
-        trailing: _statusChip(granted),
-        onTap: granted ? _openAppSettings : _requestNotif,
-      ),
-      _PermissionInfoTile(
-        icon: Icons.qr_code_scanner_outlined,
-        title: l10n.settingsPermCameraTitle,
-        subtitle: l10n.settingsPermCameraDesc,
-        onTap: _openAppSettings,
-      ),
-      _PermissionInfoTile(
-        icon: Icons.system_update_outlined,
-        title: l10n.settingsPermInstallTitle,
-        subtitle: l10n.settingsPermInstallDesc,
-        onTap: _openAppSettings,
+      // Строки разрешений — в контейнере, как везде в настройках: голыми на
+      // фоне этот экран выпадал из общей раскладки.
+      ExpressiveCard(
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            // Уведомления — единственное разрешение с реальным статусом/запросом.
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              leading: Icon(Icons.notifications_active_outlined, color: accent),
+              title: Text(l10n.settingsPermNotifTitle),
+              subtitle: Text(l10n.settingsPermNotifDesc),
+              trailing: _statusChip(granted),
+              onTap: granted ? _openAppSettings : _requestNotif,
+            ),
+            _PermissionInfoTile(
+              icon: Icons.qr_code_scanner_outlined,
+              title: l10n.settingsPermCameraTitle,
+              subtitle: l10n.settingsPermCameraDesc,
+              onTap: _openAppSettings,
+            ),
+            _PermissionInfoTile(
+              icon: Icons.system_update_outlined,
+              title: l10n.settingsPermInstallTitle,
+              subtitle: l10n.settingsPermInstallDesc,
+              onTap: _openAppSettings,
+            ),
+          ],
+        ),
       ),
       const SizedBox(height: 8),
       Align(
@@ -135,23 +144,17 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
 
   List<Widget> _linuxPermissions(AppLocalizations l10n) {
     return [
-      if (Platform.isAndroid) ...[
-        const SizedBox(height: 8),
-        Divider(color: AppTheme.divider(context)),
-        const SizedBox(height: 8),
-      ],
+      // Разделителя между платформами больше нет: секцию отбивает её
+      // собственный заголовок, ровно как на остальных экранах настроек.
       _sectionHeader(l10n.settingsPermTunHeader),
-      const _LinuxTunPasswordlessTile(),
+      const ExpressiveCard(
+        padding: EdgeInsets.zero,
+        child: _LinuxTunPasswordlessTile(),
+      ),
     ];
   }
 
-  Widget _sectionHeader(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-        child: Text(
-          text,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.textLight(context)),
-        ),
-      );
+  Widget _sectionHeader(String text) => ExpressiveSectionHeader(text);
 
   Widget _statusChip(bool granted) {
     final l10n = AppLocalizations.of(context)!;
@@ -160,7 +163,7 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
@@ -186,7 +189,7 @@ class _PermissionInfoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
       leading: Icon(icon, color: AppTheme.textLight(context)),
       title: Text(title),
       subtitle: Text(subtitle),

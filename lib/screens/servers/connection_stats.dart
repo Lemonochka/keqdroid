@@ -107,7 +107,7 @@ class _ConnectionStats extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(ExpressiveShape.small),
         border: Border.all(color: AppTheme.divider(context)),
       ),
       child: Row(

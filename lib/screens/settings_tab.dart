@@ -27,6 +27,7 @@ import 'package:keqdroid/app/app.dart';
 import 'package:keqdroid/screens/settings/connection_tile.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:keqdroid/services/update_service.dart';
 import 'package:keqdroid/shared/ui/update_dialog.dart';
@@ -88,49 +89,72 @@ class SettingsTab extends ConsumerWidget {
                   children: [
                   Text(
                     l10n.settingsTitle,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.text(context)),
+                    // Заголовок экрана — headline, а не title: у M3E крупный
+                    // заголовок и есть якорь иерархии страницы.
+                    style: Theme.of(context).textTheme
+                        .emphasized(Theme.of(context).textTheme.headlineMedium)
+                        ?.copyWith(color: AppTheme.text(context)),
                   ),
                   const SizedBox(height: 20),
-                  _ThemeCustomizationCard(settingsAsync: settingsAsync),
-                  const SizedBox(height: 12),
-                  _LanSharingCard(settingsAsync: settingsAsync),
-                  const SizedBox(height: 12),
-                  const _SplitTunnelingSettingsCard(),
-                  if (Platform.isWindows) ...[
-                    const SizedBox(height: 12),
-                    _SettingsCard(
-                      title: l10n.settingsDesktopTitle,
-                      subtitle: l10n.settingsDesktopSubtitle,
-                      icon: Icons.desktop_windows_outlined,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const _WindowsDesktopSettingsScreen(),
+                  // Containment: пункты собраны в группы по смыслу — «как
+                  // выглядит», «как ходит трафик», «данные». Прежние шесть
+                  // одинаковых карточек с равными зазорами не говорили о
+                  // связях между пунктами вообще.
+                  ExpressiveGroup(
+                    children: [
+                      _ThemeCustomizationCard(settingsAsync: settingsAsync),
+                      _LanguageSettingsCard(settingsAsync: settingsAsync),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ExpressiveGroup(
+                    children: [
+                      _LanSharingCard(settingsAsync: settingsAsync),
+                      const _SplitTunnelingSettingsCard(),
+                      if (Platform.isWindows)
+                        _SettingsCard(
+                          title: l10n.settingsDesktopTitle,
+                          subtitle: l10n.settingsDesktopSubtitle,
+                          icon: Icons.desktop_windows_outlined,
+                          accent: ExpressiveAccent.secondary,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const _WindowsDesktopSettingsScreen(),
+                            ),
+                          ),
+                        ),
+                      _SettingsCard(
+                        title: l10n.settingsAdvanced,
+                        subtitle: l10n.settingsAdvancedSubtitle,
+                        icon: Icons.tune,
+                        accent: ExpressiveAccent.primary,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const _AdvancedSettingsScreen(),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  _SettingsCard(
-                    title: l10n.settingsAdvanced,
-                    subtitle: l10n.settingsAdvancedSubtitle,
-                    icon: Icons.tune,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const _AdvancedSettingsScreen()),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _LanguageSettingsCard(settingsAsync: settingsAsync),
-                  const SizedBox(height: 12),
-                  _SettingsCard(
-                    title: l10n.settingsBackupRestore,
-                    subtitle: l10n.settingsBackupRestoreSubtitle,
-                    icon: Icons.cloud_upload_outlined,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const _BackupRestoreScreen()),
-                    ),
+                  const SizedBox(height: 16),
+                  ExpressiveGroup(
+                    children: [
+                      _SettingsCard(
+                        title: l10n.settingsBackupRestore,
+                        subtitle: l10n.settingsBackupRestoreSubtitle,
+                        icon: Icons.cloud_upload_outlined,
+                        accent: ExpressiveAccent.secondary,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const _BackupRestoreScreen(),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -170,13 +194,14 @@ class _LanguageSettingsCard extends ConsumerWidget {
       title: l10n.settingsLanguageTitle,
       subtitle: l10n.settingsLanguageSubtitle(label),
       icon: Icons.translate,
+      accent: ExpressiveAccent.tertiary,
       onTap: () => _showLanguageSheet(context, ref, settings),
     );
   }
 
   void _showLanguageSheet(BuildContext context, WidgetRef ref, AppSettings current) {
     final l10n = AppLocalizations.of(context)!;
-    final accent = AppTheme.accent(context);
+    final textTheme = Theme.of(context).textTheme;
     final options = <(String code, String label)>[
       ('system', l10n.settingsLanguageSystem),
       ('en', l10n.settingsLanguageEnglish),
@@ -196,11 +221,14 @@ class _LanguageSettingsCard extends ConsumerWidget {
           minChildSize: 0.32,
           maxChildSize: 0.72,
           builder: (_, scrollCtrl) {
+            // Прозрачный фон здесь намеренный: DraggableScrollableSheet тянется
+            // за палец и рисует свой контейнер сам. Но цвет и форма обязаны
+            // совпадать с теми, что тема даёт остальным шторкам, иначе
+            // единственная «тянущаяся» шторка выглядит чужой.
             return Container(
               decoration: BoxDecoration(
-                color: AppTheme.card(context),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                border: Border.all(color: AppTheme.divider(context).withValues(alpha: 0.4)),
+                color: Theme.of(context).colorScheme.surfaceContainerLow,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(ExpressiveShape.extraLarge)),
               ),
               child: Column(
                 children: [
@@ -210,7 +238,7 @@ class _LanguageSettingsCard extends ConsumerWidget {
                     height: 4,
                     decoration: BoxDecoration(
                       color: AppTheme.divider(context),
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(ExpressiveShape.full),
                     ),
                   ),
                   Padding(
@@ -228,15 +256,25 @@ class _LanguageSettingsCard extends ConsumerWidget {
                       itemBuilder: (_, i) {
                         final (code, label) = options[i];
                         final selected = current.appLanguageCode == code;
+                        final scheme = Theme.of(context).colorScheme;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
+                          // Пункты — на уровень ВЫШЕ шторки, а не на фоне
+                          // страницы. Здесь стоял AppTheme.bg, то есть surface,
+                          // а в AMOLED-режиме это чистый чёрный: карточки
+                          // оказывались темнее собственного родителя (перевёрнутая
+                          // тональная иерархия M3) и попадали в ту полосу яркости,
+                          // где OLED-панель сильнее всего смазывает движение и
+                          // уводит почти-чёрный в фиолетовый. Заодно уходит
+                          // полупрозрачная заливка выбранного: альфа поверх
+                          // чёрного этот же эффект усиливает.
                           child: Material(
                             color: selected
-                                ? accent.withValues(alpha: 0.12)
-                                : AppTheme.bg(context),
-                            borderRadius: BorderRadius.circular(16),
+                                ? scheme.secondaryContainer
+                                : scheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(ExpressiveShape.large),
                             child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(ExpressiveShape.large),
                               onTap: () async {
                                 await ref
                                     .read(settingsNotifierProvider.notifier)
@@ -253,14 +291,23 @@ class _LanguageSettingsCard extends ConsumerWidget {
                                     Expanded(
                                       child: Text(
                                         label,
-                                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: selected
-                                              ? FontWeight.w700
-                                              : FontWeight.w500, color: AppTheme.text(context)),
+                                        // Вес — из шкалы, а не руками: у
+                                        // выбранного усиленный вариант роли.
+                                        style: (selected
+                                                ? textTheme.emphasized(
+                                                    textTheme.bodyLarge)
+                                                : textTheme.bodyLarge)
+                                            ?.copyWith(
+                                          color: selected
+                                              ? scheme.onSecondaryContainer
+                                              : AppTheme.text(context),
+                                        ),
                                       ),
                                     ),
                                     if (selected)
                                       Icon(Icons.check_circle,
-                                          color: accent, size: 22),
+                                          color: scheme.onSecondaryContainer,
+                                          size: 22),
                                   ],
                                 ),
                               ),
@@ -296,6 +343,7 @@ class _SplitTunnelingSettingsCard extends ConsumerWidget {
       title: l10n.settingsSplitTitle,
       subtitle: l10n.settingsSplitConfigured(packageCount),
       icon: Icons.alt_route,
+      accent: ExpressiveAccent.tertiary,
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => SplitTunnelingScreen()),
@@ -304,10 +352,17 @@ class _SplitTunnelingSettingsCard extends ConsumerWidget {
   }
 }
 
+/// Пункт настроек — сегмент [ExpressiveGroup].
+///
+/// Форму берёт от группы (крупные внешние углы, почти квадратные стыки), цвет
+/// иконки — от [accent]: у M3E раскрашенная иконка-контейнер и есть то, что
+/// позволяет находить нужный пункт «в четыре раза быстрее», а не читать список
+/// сверху вниз.
 class _SettingsCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
+  final ExpressiveAccent accent;
   final VoidCallback onTap;
 
   const _SettingsCard({
@@ -315,48 +370,50 @@ class _SettingsCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.onTap,
+    this.accent = ExpressiveAccent.primary,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return ExpressiveGroupTile(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.card(context),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.divider(context), width: 1),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.accent(context).withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 20, color: AppTheme.text(context)),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: accent.container(scheme),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.text(context),
-                    ),
+            child: Icon(icon, size: 20, color: accent.onContainer(scheme)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text(context),
                   ),
-                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context))),
-                ],
-              ),
+                ),
+                Text(
+                  subtitle,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textLight(context),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            Icon(Icons.chevron_right, color: AppTheme.textLight(context)),
-          ],
-        ),
+          ),
+          Icon(Icons.chevron_right, color: AppTheme.textLight(context)),
+        ],
       ),
     );
   }
@@ -407,7 +464,7 @@ Future<bool> _confirmReset(
             backgroundColor: redColor,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           ),
@@ -497,7 +554,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
             ),
             backgroundColor: AppTheme.green(context),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -515,7 +572,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
           ),
           backgroundColor: AppTheme.red(context),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -581,7 +638,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
                     border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                   ),
                   child: Row(
@@ -630,7 +687,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                   constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                   style: IconButton.styleFrom(
                     backgroundColor: AppTheme.inset(context),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
                   ),
                 ),
               ],
@@ -643,7 +700,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
               border: Border.all(color: accent.withValues(alpha: 0.3)),
             ),
             child: Row(
@@ -671,7 +728,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                   style: FilledButton.styleFrom(
                     backgroundColor: accent,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
                   ),
                 ),
               ],

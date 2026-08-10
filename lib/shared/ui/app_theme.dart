@@ -17,6 +17,15 @@ class AppTheme {
   static Color divider(BuildContext ctx) => _cs(ctx).outlineVariant;
   static Color accentContainer(BuildContext ctx) => _cs(ctx).primaryContainer;
   static Color onAccentContainer(BuildContext ctx) => _cs(ctx).onPrimaryContainer;
-  static Color green(BuildContext ctx) => _kGreen.harmonizeWith(_cs(ctx).primary);
-  static Color orange(BuildContext ctx) => _kOrange.harmonizeWith(_cs(ctx).primary);
+  static Color green(BuildContext ctx) => harmonize(ctx, _kGreen);
+  static Color orange(BuildContext ctx) => harmonize(ctx, _kOrange);
+
+  /// Подтягивает произвольный цвет к текущей схеме.
+  ///
+  /// M3 требует «designing with roles, never raw hexes». Там, где цвет несёт
+  /// собственный смысл и ролью не заменяется (протоколы, статусы), спека
+  /// разрешает свой цвет — но гармонизированный, иначе на цветной динамической
+  /// теме он читается как чужеродный.
+  static Color harmonize(BuildContext ctx, Color color) =>
+      color.harmonizeWith(_cs(ctx).primary);
 }

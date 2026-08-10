@@ -96,15 +96,15 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     );
     final ip = _localIp ?? '...';
 
-    return Container(
+    final scheme = Theme.of(context).colorScheme;
+    // Включённое состояние показываем цветом иконки-контейнера, а не рамкой:
+    // у M3E `tertiary` — это ровно роль «обратите внимание, тут что-то
+    // изменилось», а группа сама держит форму сегмента.
+    final iconAccent =
+        isLan ? ExpressiveAccent.tertiary : ExpressiveAccent.secondary;
+
+    return ExpressiveGroupTile(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(18),
-        border: isLan
-            ? Border.all(color: AppTheme.accent(context).withValues(alpha: 0.5), width: 1.5)
-            : Border.all(color: AppTheme.divider(context), width: 1),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -113,13 +113,13 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppTheme.accent(context).withValues(alpha: 0.2),
+                  color: iconAccent.container(scheme),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.lan_outlined,
                   size: 20,
-                  color: isLan ? AppTheme.accent(context) : AppTheme.text(context),
+                  color: iconAccent.onContainer(scheme),
                 ),
               ),
               const SizedBox(width: 14),
@@ -128,10 +128,10 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.settingsLanProxyTitle,
-                        style: textTheme.titleSmall?.copyWith(color: AppTheme.text(context))),
+                        style: textTheme.titleMedium?.copyWith(color: AppTheme.text(context))),
                     Text(
                       isLan ? l10n.settingsLanSharingOnIp(ip) : l10n.settingsOff,
-                      style: textTheme.bodySmall?.copyWith(
+                      style: textTheme.bodyMedium?.copyWith(
                         color: isLan ? AppTheme.accent(context) : AppTheme.textLight(context),
                       ),
                     ),
@@ -152,7 +152,7 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppTheme.inset(context),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,13 +297,13 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
         labelStyle:
             Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           borderSide: BorderSide(color: AppTheme.textLight(context).withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           borderSide: BorderSide(color: AppTheme.accent(context)),
         ),
         suffixIcon: obscurable
@@ -333,13 +333,13 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
         labelStyle:
             Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           borderSide: BorderSide(color: AppTheme.textLight(context).withValues(alpha: 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           borderSide: BorderSide(color: AppTheme.accent(context)),
         ),
         isDense: true,

@@ -880,6 +880,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAdvancedSubtitle => 'Kerneinstellungen, Ping, Routing, HWID und Debug';
 
   @override
+  String get settingsAdvancedGroupTraffic => 'Datenverkehr und Kern';
+
+  @override
+  String get settingsAdvancedGroupSystem => 'System';
+
+  @override
+  String get settingsAdvancedGroupDiagnostics => 'Diagnose';
+
+  @override
   String get settingsBackupRestore => 'Sichern & wiederherstellen';
 
   @override

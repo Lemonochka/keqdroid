@@ -156,7 +156,7 @@ class ConnectionTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(ExpressiveShape.small),
         ),
         child: Text(
           label,

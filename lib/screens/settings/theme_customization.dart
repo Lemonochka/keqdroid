@@ -20,6 +20,7 @@ class _ThemeCustomizationCard extends ConsumerWidget {
       title: AppLocalizations.of(context)!.settingsThemeTitle,
       subtitle: subtitle,
       icon: isDesktop ? Icons.desktop_windows_outlined : Icons.palette_outlined,
+      accent: ExpressiveAccent.primary,
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => _ThemeCustomizationScreen(settings: settings)),
@@ -113,7 +114,14 @@ class _AppearanceGeneralTab extends StatelessWidget {
             currentFontId: current.fontId,
             onSelect: (id) => onSave(current.copyWith(fontId: id)),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          // Переключатели живут в контейнере, а не голыми на фоне: на верхнем
+          // уровне настроек всё собрано в группы, и экран без контейнеров
+          // выпадал из общего языка сильнее всего.
+          ExpressiveCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
           SwitchListTile(
             value: current.serversTwoColumns,
             onChanged: (v) => onSave(current.copyWith(serversTwoColumns: v)),
@@ -168,16 +176,14 @@ class _AppearanceGeneralTab extends StatelessWidget {
             title: Text(l10n.appearanceShowTime),
             subtitle: Text(l10n.appearanceShowTimeSubtitle),
           ),
-          const SizedBox(height: 8),
-          Divider(color: AppTheme.divider(context)),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
-            child: Text(
-              l10n.appearanceNotifSectionTitle,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.textLight(context)),
+              ],
             ),
           ),
+          ExpressiveSectionHeader(l10n.appearanceNotifSectionTitle),
+          ExpressiveCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
           SwitchListTile(
             value: current.showSpeedInNotification,
             onChanged: (v) =>
@@ -208,6 +214,9 @@ class _AppearanceGeneralTab extends StatelessWidget {
             title: Text(l10n.appearanceNotifSubUpdatesTitle),
             subtitle: Text(l10n.appearanceNotifSubUpdatesSubtitle),
           ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -228,17 +237,10 @@ class _FontPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(Icons.text_fields, size: 20, color: accent),
-            const SizedBox(width: 8),
-            Text(
-              l10n.appearanceFontTitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
-            ),
-          ],
+        ExpressiveSectionHeader(
+          l10n.appearanceFontTitle,
+          icon: Icons.text_fields,
         ),
-        const SizedBox(height: 10),
         SizedBox(
           height: 88,
           child: ListView.separated(
@@ -290,7 +292,7 @@ class _FontCard extends StatelessWidget {
           color: selected
               ? accent.withValues(alpha: 0.12)
               : AppTheme.inset(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(ExpressiveShape.large),
           border: Border.all(
             color: selected ? accent : AppTheme.divider(context),
             width: selected ? 2 : 1,
@@ -448,7 +450,7 @@ class _LightDarkThemeSlider extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(ExpressiveShape.extraLarge),
         border: Border.all(color: border),
       ),
       child: LayoutBuilder(
@@ -471,7 +473,7 @@ class _LightDarkThemeSlider extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       color: thumb,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(ExpressiveShape.extraLarge),
                     ),
                   ),
                 ),
@@ -510,7 +512,7 @@ class _LightDarkThemeSlider extends StatelessWidget {
       }) {
     return Expanded(
       child: InkWell(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(ExpressiveShape.extraLarge),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -562,7 +564,7 @@ class _ThemePreviewCard extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           border: Border.all(
             color: selected ? scheme.primary : scheme.outlineVariant,
             width: selected ? 2 : 1,
@@ -622,7 +624,7 @@ class _ThemePreviewCard extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(ExpressiveShape.large),
         border: Border.all(
           color: selected ? scheme.primary : scheme.outlineVariant,
           width: selected ? 2 : 1,
@@ -652,7 +654,7 @@ class _ThemePreviewCard extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                 color: scheme.onSurfaceVariant.withValues(alpha: 0.42),
-                borderRadius: BorderRadius.circular(99),
+                borderRadius: BorderRadius.circular(ExpressiveShape.full),
               ),
             ),
           ),
@@ -660,7 +662,7 @@ class _ThemePreviewCard extends StatelessWidget {
           Container(
             height: 2,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(ExpressiveShape.full),
               gradient: LinearGradient(
                 colors: [
                   scheme.secondary.withValues(alpha: 0.0),
@@ -691,7 +693,7 @@ class _ThemePreviewCard extends StatelessWidget {
             height: 18,
             decoration: BoxDecoration(
               color: card,
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(ExpressiveShape.full),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -737,7 +739,7 @@ class _ThemePreviewCard extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(ExpressiveShape.small),
           border: Border.all(color: border),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -758,7 +760,7 @@ class _ThemePreviewCard extends StatelessWidget {
                 height: 2,
                 decoration: BoxDecoration(
                   color: text.withValues(alpha: 0.75),
-                  borderRadius: BorderRadius.circular(99),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.full),
                 ),
               ),
             ),
@@ -779,7 +781,7 @@ class _ThemePreviewCard extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(ExpressiveShape.small),
           border: Border.all(color: border),
         ),
         child: Column(
@@ -799,7 +801,7 @@ class _ThemePreviewCard extends StatelessWidget {
                     height: 2,
                     decoration: BoxDecoration(
                       color: text.withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(99),
+                      borderRadius: BorderRadius.circular(ExpressiveShape.full),
                     ),
                   ),
                   const Spacer(),
@@ -816,7 +818,7 @@ class _ThemePreviewCard extends StatelessWidget {
               height: 13,
               decoration: BoxDecoration(
                 color: subText.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(ExpressiveShape.extraSmall),
               ),
               child: Row(
                 children: [
@@ -832,7 +834,7 @@ class _ThemePreviewCard extends StatelessWidget {
                     height: 2,
                     decoration: BoxDecoration(
                       color: text.withValues(alpha: 0.78),
-                      borderRadius: BorderRadius.circular(99),
+                      borderRadius: BorderRadius.circular(ExpressiveShape.full),
                     ),
                   ),
                   const SizedBox(width: 3),
@@ -841,7 +843,7 @@ class _ThemePreviewCard extends StatelessWidget {
                     height: 1.8,
                     decoration: BoxDecoration(
                       color: subText.withValues(alpha: 0.72),
-                      borderRadius: BorderRadius.circular(99),
+                      borderRadius: BorderRadius.circular(ExpressiveShape.full),
                     ),
                   ),
                   const Spacer(),

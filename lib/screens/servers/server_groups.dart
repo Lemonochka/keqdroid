@@ -389,7 +389,9 @@ class _SubCardState extends ConsumerState<_SubCard> {
     return DecoratedSliver(
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(22),
+        // Группа серверов — «поверхность», а не карточка: extraLarge, чтобы
+        // читался контраст с формой поднятого активного тайла внутри.
+        borderRadius: ExpressiveShape.radius(ExpressiveShape.extraLarge),
         border: Border.all(color: dividerColor, width: 1),
         boxShadow: [
           BoxShadow(
@@ -694,10 +696,10 @@ class _SubCardState extends ConsumerState<_SubCard> {
                   index.isEven ? _TileInnerEdge.right : _TileInnerEdge.left,
               radius: BorderRadius.only(
                 bottomLeft: inLastRow && index.isEven
-                    ? const Radius.circular(22)
+                    ? const Radius.circular(ExpressiveShape.extraLarge)
                     : Radius.zero,
                 bottomRight: inLastRow && index.isOdd
-                    ? const Radius.circular(22)
+                    ? const Radius.circular(ExpressiveShape.extraLarge)
                     : Radius.zero,
               ),
               onTap: () => widget.onSelectServer(server),
@@ -743,50 +745,38 @@ class _SubCardState extends ConsumerState<_SubCard> {
     String collapseKey,
     ServerSortMode current,
   ) {
-    final accent = AppTheme.accent(context);
-    final textColor = AppTheme.text(context);
-    final textLight = AppTheme.textLight(context);
     final l10n = context.l10n;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppTheme.bg(context),
       showDragHandle: true,
       builder: (ctx) {
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              ExpressiveSectionHeader(l10n.serversSortTitle),
+              // Это выбор, а не список действий: текущий режим виден заливкой
+              // и галочкой, а не только чуть более жирной подписью.
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    l10n.serversSortTitle,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(color: textLight, letterSpacing: 0.2),
-                  ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ExpressiveGroup(
+                  children: [
+                    for (final mode in ServerSortMode.values)
+                      ExpressiveActionTile(
+                        icon: mode.icon,
+                        title: mode.label(l10n),
+                        selected: mode == current,
+                        onTap: () {
+                          ref.read(serverSortModesProvider.notifier).update(
+                                (m) => {...m, collapseKey: mode.name},
+                              );
+                          Navigator.of(ctx).pop();
+                        },
+                      ),
+                  ],
                 ),
               ),
-              for (final mode in ServerSortMode.values)
-                ListTile(
-                  leading: Icon(
-                    mode.icon,
-                    color: mode == current ? accent : textLight,
-                  ),
-                  title: Text(
-                    mode.label(l10n),
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: textColor, fontWeight: mode == current ? FontWeight.w600 : FontWeight.w400),
-                  ),
-                  trailing: mode == current
-                      ? Icon(Icons.check, color: accent, size: 20)
-                      : null,
-                  onTap: () {
-                    ref.read(serverSortModesProvider.notifier).update(
-                          (m) => {...m, collapseKey: mode.name},
-                        );
-                    Navigator.of(ctx).pop();
-                  },
-                ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
             ],
           ),
         );
@@ -799,7 +789,6 @@ class _SubCardState extends ConsumerState<_SubCard> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.bg(context),
       showDragHandle: true,
       builder: (ctx) {
         final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:keqdroid/shared/ui/expressive.dart';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -467,7 +468,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Material(
                   color: AppTheme.orange(context).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                   child: Padding(
                     padding: const EdgeInsets.all(10),
                     child: Row(
@@ -495,7 +496,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Material(
                   color: AppTheme.orange(context).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                   child: Padding(
                     padding: const EdgeInsets.all(10),
                     child: Text(
@@ -619,7 +620,7 @@ class _ModeSelector extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(ExpressiveShape.largeIncreased),
         border: Border.all(
           color: AppTheme.divider(context).withValues(alpha: 0.5),
           width: 1,
@@ -649,7 +650,7 @@ class _ModeSelector extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     color: AppTheme.accent(context),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
                     boxShadow:[
                       BoxShadow(
                         color: AppTheme.accent(context).withValues(alpha: 0.3),
@@ -722,7 +723,7 @@ class _SearchBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(ExpressiveShape.large),
           boxShadow:[
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -749,15 +750,15 @@ class _SearchBar extends StatelessWidget {
             fillColor: AppTheme.card(context),
             contentPadding: const EdgeInsets.symmetric(vertical: 10),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(ExpressiveShape.large),
               borderSide: BorderSide(color: AppTheme.divider(context).withValues(alpha: 0.5), width: 1),
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(ExpressiveShape.large),
               borderSide: BorderSide(color: AppTheme.divider(context).withValues(alpha: 0.5), width: 1),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(ExpressiveShape.large),
               borderSide: BorderSide(color: AppTheme.accent(context), width: 1.5),
             ),
           ),
@@ -849,7 +850,7 @@ class _AppTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(16);
+    final radius = BorderRadius.circular(ExpressiveShape.large);
 
     return Material(
       color: checked ? AppTheme.accent(context).withValues(alpha: 0.1) : AppTheme.card(context),
@@ -902,7 +903,7 @@ class _AppTile extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: AppTheme.green(context)
                                   .withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(ExpressiveShape.small),
                             ),
                             child: Text(
                               '●',
@@ -1032,7 +1033,7 @@ class _AppIconState extends ConsumerState<_AppIcon> {
   Widget build(BuildContext context) {
     if (_bytes != null) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
         child: Image.memory(
           _bytes!,
           width: 42, height: 42,
@@ -1052,7 +1053,7 @@ class _AppIconState extends ConsumerState<_AppIcon> {
     width: 42, height: 42,
     decoration: BoxDecoration(
       color: AppTheme.accent(context).withValues(alpha: 0.3),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(ExpressiveShape.medium),
     ),
     child: Center(
       child: Text(

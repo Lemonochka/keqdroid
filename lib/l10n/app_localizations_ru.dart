@@ -882,6 +882,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsAdvancedSubtitle => 'Настройки ядра, пинг, маршрутизация, HWID и отладка';
 
   @override
+  String get settingsAdvancedGroupTraffic => 'Трафик и ядро';
+
+  @override
+  String get settingsAdvancedGroupSystem => 'Система';
+
+  @override
+  String get settingsAdvancedGroupDiagnostics => 'Диагностика';
+
+  @override
   String get settingsBackupRestore => 'Резервное копирование';
 
   @override

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -53,8 +54,10 @@ class SubscriptionsTab extends ConsumerWidget {
                     ),
                     child: Text(
                       l10n.subscriptionsTitle,
+                      // Заголовок экрана — headline: та же роль, что и на
+                      // остальных вкладках, иначе иерархия страниц разъезжается.
                       style: Theme.of(context).textTheme
-                          .emphasized(Theme.of(context).textTheme.titleLarge)
+                          .emphasized(Theme.of(context).textTheme.headlineMedium)
                           ?.copyWith(color: textColor),
                     ),
                   ),
@@ -131,7 +134,7 @@ class SubscriptionsTab extends ConsumerWidget {
                                               elevation: 8,
                                               shadowColor: Colors.black26,
                                               borderRadius:
-                                                  BorderRadius.circular(18),
+                                                  BorderRadius.circular(ExpressiveShape.largeIncreased),
                                               child: child,
                                             ),
                                           );
@@ -229,14 +232,12 @@ class SubscriptionsTab extends ConsumerWidget {
     // скрыт за модальным барьером, а закрытие шторки теряло бы введённый URL.
     String? sheetError;
 
-    final bgColor = AppTheme.bg(context);
     final textColor = AppTheme.text(context);
     final accentContainerColor = AppTheme.accentContainer(context);
     final onAccentContainerColor = AppTheme.onAccentContainer(context);
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: bgColor,
       isScrollControlled: true,
       // Настоящая ручка вместо нарисованной: прежняя была просто Container
       // внутри содержимого — выглядела как ручка, но тянуть за неё было
@@ -254,12 +255,15 @@ class SubscriptionsTab extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                l10n.subscriptionsAddSubscription,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(color: textColor),
+              SizedBox(
+                width: double.infinity,
+                child: Text(
+                  l10n.subscriptionsAddSubscription,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme
+                      .emphasized(Theme.of(context).textTheme.titleLarge)
+                      ?.copyWith(color: textColor),
+                ),
               ),
               const SizedBox(height: 20),
               _inputField(
@@ -313,14 +317,13 @@ class SubscriptionsTab extends ConsumerWidget {
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
+                height: 56,
+                // Как и в шторке редактирования: FilledButton вместо
+                // ElevatedButton, форма-пилюля из темы.
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
                     backgroundColor: accentContainerColor,
                     foregroundColor: onAccentContainerColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
                   ),
                   onPressed: loading
                       ? null
@@ -384,30 +387,35 @@ class SubscriptionsTab extends ConsumerWidget {
     final textColor = AppTheme.text(context);
     final textLightColor = AppTheme.textLight(context);
     final cardColor = AppTheme.card(context);
-    final dividerColor = AppTheme.divider(context);
     final accentColor = AppTheme.accent(context);
 
     return TextField(
       controller: ctrl,
-      style: TextStyle(color: textColor),
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: textColor),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         suffixIcon: suffix,
         labelStyle: TextStyle(color: textLightColor),
         hintStyle: TextStyle(color: textLightColor.withValues(alpha: 0.5)),
+        // Заливка ИЛИ обводка: у filled-поля рамки нет, её роль играет сама
+        // заливка. Обводка остаётся индикатором фокуса.
         filled: true,
         fillColor: cardColor,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: dividerColor, width: 1.5),
+          borderRadius: BorderRadius.circular(ExpressiveShape.large),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: dividerColor, width: 1.5),
+          borderRadius: BorderRadius.circular(ExpressiveShape.large),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(ExpressiveShape.large),
           borderSide: BorderSide(color: accentColor, width: 2),
         ),
       ),
@@ -549,7 +557,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
       child: Container(
         decoration: BoxDecoration(
           color: cardColor,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(ExpressiveShape.largeIncreased),
           boxShadow: [
             BoxShadow(
               color: accentColor.withValues(alpha: 0.12),
@@ -697,7 +705,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   ),
                   decoration: BoxDecoration(
                     color: redColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                     border: Border.all(color: redColor.withValues(alpha: 0.35)),
                   ),
                   child: Row(
@@ -814,7 +822,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     if (pct != null) ...[
                       const SizedBox(height: 8),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(ExpressiveShape.extraSmall),
                         child: LinearProgressIndicator(
                           value: pct,
                           minHeight: 5,
@@ -838,7 +846,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         ),
                         decoration: BoxDecoration(
                           color: redColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(ExpressiveShape.small),
                           border: Border.all(
                             color: redColor.withValues(alpha: 0.3),
                           ),
@@ -1033,18 +1041,15 @@ class _SubItemState extends ConsumerState<_SubItem> {
     // snackbar был бы скрыт за модальным барьером.
     String? editError;
 
-    final bgColor = AppTheme.bg(context);
     final cardColor = AppTheme.card(context);
     final textColor = AppTheme.text(context);
     final textLightColor = AppTheme.textLight(context);
-    final dividerColor = AppTheme.divider(context);
     final accentColor = AppTheme.accent(context);
     final accentContainerColor = AppTheme.accentContainer(context);
     final onAccentContainerColor = AppTheme.onAccentContainer(context);
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: bgColor,
       isScrollControlled: true,
       // Настоящая ручка вместо нарисованной: прежняя была просто Container
       // внутри содержимого — выглядела как ручка, но тянуть за неё было
@@ -1072,22 +1077,25 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: textLightColor.withValues(alpha: 0.5),
                     ),
+                // Заливка ИЛИ обводка, а не то и другое разом: у M3 filled-поле
+                // рамки не носит, её роль там играет сама заливка. Обводка
+                // остаётся только на фокусе — как индикатор, а не как контур.
                 filled: true,
                 fillColor: cardColor,
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
+                  horizontal: 16,
+                  vertical: 14,
                 ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: dividerColor, width: 1.5),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                  borderSide: BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: dividerColor, width: 1.5),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                  borderSide: BorderSide.none,
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.large),
                   borderSide: BorderSide(color: accentColor, width: 2),
                 ),
               ),
@@ -1105,14 +1113,19 @@ class _SubItemState extends ConsumerState<_SubItem> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l10n.subscriptionsEditSubscription,
-                  style: Theme.of(ctx)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(color: textColor),
+                // Заголовок как в остальных шторках: по центру и в усиленном
+                // варианте роли — раньше он один был выключен влево и без веса.
+                SizedBox(
+                  width: double.infinity,
+                  child: Text(
+                    l10n.subscriptionsEditSubscription,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(ctx).textTheme
+                        .emphasized(Theme.of(ctx).textTheme.titleLarge)
+                        ?.copyWith(color: textColor),
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 inputField(nameCtrl, l10n.subscriptionNameLabel, sub.name),
                 const SizedBox(height: 10),
                 inputField(urlCtrl, l10n.subscriptionUrlLabel, sub.url, maxLines: 2),
@@ -1130,19 +1143,15 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: textColor,
-                          side: BorderSide(color: dividerColor),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        icon: const Icon(Icons.copy, size: 16),
+                      // Форму НЕ задаём: у M3E кнопка — пилюля, и тема её уже
+                      // даёт. Локальный shape перебивал её на прямоугольник —
+                      // это и делало шторку чужой на фоне остального.
+                      child: FilledButton.tonalIcon(
+                        icon: const Icon(Icons.copy, size: 18),
                         label: Text(
                           l10n.subscriptionsCopyUrl,
-                          style: Theme.of(context).textTheme.labelLarge,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: sub.url));
@@ -1152,7 +1161,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                               backgroundColor: textColor,
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                               ),
                               duration: const Duration(seconds: 2),
                             ),
@@ -1202,35 +1211,23 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: textColor,
-                      side: BorderSide(color: dividerColor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
+                  child: FilledButton.tonalIcon(
                     icon: const Icon(Icons.qr_code_2, size: 18),
-                    label: Text(
-                      l10n.subscriptionsShareButton,
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
+                    label: Text(l10n.subscriptionsShareButton),
                     onPressed: () => _showShareSheet(context),
                   ),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
+                  height: 56,
+                  // Главное действие — FilledButton, а не ElevatedButton:
+                  // у M3 приподнятая кнопка с тенью это отдельная, куда более
+                  // скромная роль. Форма снова из темы.
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
                       backgroundColor: accentContainerColor,
                       foregroundColor: onAccentContainerColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
                     ),
                     onPressed: () async {
                       final newName = nameCtrl.text.trim();
@@ -1278,7 +1275,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final qrKey = GlobalKey();
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.bg(context),
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx) => Padding(
@@ -1333,7 +1329,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   backgroundColor: AppTheme.accentContainer(ctx),
                   foregroundColor: AppTheme.onAccentContainer(ctx),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
                   ),
                 ),
                 icon: const Icon(Icons.share, size: 18),
@@ -1384,15 +1380,12 @@ class _SubItemState extends ConsumerState<_SubItem> {
 
   void _showIntervalPicker(BuildContext context, Subscription sub) {
     const options = [1, 3, 6, 12, 24, 48, 72];
-    final bgColor = AppTheme.bg(context);
     final textLightColor = AppTheme.textLight(context);
     final textColor = AppTheme.text(context);
-    final accentColor = AppTheme.accent(context);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: bgColor,
       showDragHandle: true,
       builder: (ctx) {
         final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
@@ -1420,33 +1413,34 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       .bodySmall
                       ?.copyWith(color: textLightColor),
                 ),
-                const SizedBox(height: 8),
-                ...options.map(
-                  (h) => ListTile(
-                    title: Text(
-                      h == 1
-                          ? l10n.subscriptionsEveryHour
-                          : h < 24
-                          ? l10n.subscriptionsEveryHours(h)
-                          : h == 24
-                          ? l10n.subscriptionsEveryDay
-                          : l10n.subscriptionsEveryDays(h ~/ 24),
-                      style: TextStyle(
-                        color: textColor,
-                        fontWeight: h == sub.updateIntervalHours
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    trailing: h == sub.updateIntervalHours
-                        ? Icon(Icons.check, color: accentColor)
-                        : null,
-                    onTap: () {
-                      ref
-                          .read(subscriptionsProvider.notifier)
-                          .updateInterval(sub.id, h);
-                      Navigator.pop(ctx);
-                    },
+                const SizedBox(height: 12),
+                // Это выбор, а не список действий: текущий интервал виден
+                // заливкой сегмента, а не только жирной подписью с галочкой.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: ExpressiveGroup(
+                    children: [
+                      for (final h in options)
+                        ExpressiveActionTile(
+                          icon: h < 24
+                              ? Icons.schedule
+                              : Icons.calendar_today_outlined,
+                          title: h == 1
+                              ? l10n.subscriptionsEveryHour
+                              : h < 24
+                              ? l10n.subscriptionsEveryHours(h)
+                              : h == 24
+                              ? l10n.subscriptionsEveryDay
+                              : l10n.subscriptionsEveryDays(h ~/ 24),
+                          selected: h == sub.updateIntervalHours,
+                          onTap: () {
+                            ref
+                                .read(subscriptionsProvider.notifier)
+                                .updateInterval(sub.id, h);
+                            Navigator.pop(ctx);
+                          },
+                        ),
+                    ],
                   ),
                 ),
               ],
@@ -1498,7 +1492,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
               backgroundColor: redColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
@@ -1549,24 +1543,20 @@ class _ReorderButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = AppTheme.card(context);
-    final textColor = AppTheme.text(context);
-    final dividerColor = AppTheme.divider(context);
+    final scheme = Theme.of(context).colorScheme;
 
+    // Тональная кнопка-пилюля рядом с такими же «Скопировать»/«Поделиться»:
+    // раньше это был квадрат 42×42 с рамкой 1.5 — единственная прямоугольная
+    // форма во всей шторке.
     return Tooltip(
       message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: dividerColor, width: 1.5),
-          ),
-          child: Icon(icon, size: 22, color: textColor),
+      child: IconButton.filledTonal(
+        onPressed: onTap,
+        icon: Icon(icon, size: 22),
+        style: IconButton.styleFrom(
+          backgroundColor: scheme.secondaryContainer,
+          foregroundColor: scheme.onSecondaryContainer,
+          minimumSize: const Size(48, 48),
         ),
       ),
     );

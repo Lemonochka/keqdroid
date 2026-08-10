@@ -12,6 +12,7 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/extensions/build_context_l10n.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
@@ -592,7 +593,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                   foregroundColor: AppTheme.onAccentContainer(context),
                   elevation: 2,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
                   ),
                   onPressed: () => _showAddServerDialog(context),
                   child: const Icon(Icons.add, size: 26),
@@ -607,71 +608,59 @@ class _ServersTabState extends ConsumerState<ServersTab>
     final l10n = AppLocalizations.of(ctx)!;
     showModalBottomSheet<void>(
       context: ctx,
-      backgroundColor: AppTheme.bg(ctx),
       showDragHandle: true,
       builder: (ctx2) => Padding(
-        padding: const EdgeInsets.fromLTRB(8, 12, 8, 24),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              l10n.serversAddServer,
-              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(color: AppTheme.text(ctx)),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                l10n.serversAddServer,
+                textAlign: TextAlign.center,
+                style: Theme.of(ctx).textTheme
+                    .emphasized(Theme.of(ctx).textTheme.titleLarge)
+                    ?.copyWith(color: AppTheme.text(ctx)),
+              ),
             ),
-            const SizedBox(height: 8),
-            ListTile(
-              leading: Icon(Icons.link, color: AppTheme.accent(ctx)),
-              title: Text(
-                l10n.serversPasteLinks,
-                style: TextStyle(color: AppTheme.text(ctx)),
-              ),
-              subtitle: Text(
-                'vless, vmess, trojan, ss, hysteria2, hy2',
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
-              ),
-              onTap: () {
-                Navigator.pop(ctx2);
-                _showPasteLinksSheet(ctx);
-              },
+            ExpressiveGroup(
+              children: [
+                ExpressiveActionTile(
+                  icon: Icons.link,
+                  title: l10n.serversPasteLinks,
+                  subtitle: 'vless, vmess, trojan, ss, hysteria2, hy2',
+                  accent: ExpressiveAccent.primary,
+                  onTap: () {
+                    Navigator.pop(ctx2);
+                    _showPasteLinksSheet(ctx);
+                  },
+                ),
+                ExpressiveActionTile(
+                  icon: Icons.description_outlined,
+                  title: l10n.serversImportFile,
+                  subtitle: 'AmneziaWG (.conf)',
+                  accent: ExpressiveAccent.secondary,
+                  onTap: () {
+                    Navigator.pop(ctx2);
+                    _importConfigFile(ctx);
+                  },
+                ),
+                // у mobile_scanner нет имплементации под Windows/Linux
+                if (!PlatformBootstrap.isDesktop)
+                  ExpressiveActionTile(
+                    icon: Icons.qr_code_scanner,
+                    title: l10n.qrScanTitle,
+                    subtitle: l10n.serversScanQrHint,
+                    accent: ExpressiveAccent.tertiary,
+                    onTap: () {
+                      Navigator.pop(ctx2);
+                      _scanQrAndImport(ctx);
+                    },
+                  ),
+              ],
             ),
-            ListTile(
-              leading: Icon(
-                Icons.description_outlined,
-                color: AppTheme.accent(ctx),
-              ),
-              title: Text(
-                l10n.serversImportFile,
-                style: TextStyle(color: AppTheme.text(ctx)),
-              ),
-              subtitle: Text(
-                'AmneziaWG (.conf)',
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
-              ),
-              onTap: () {
-                Navigator.pop(ctx2);
-                _importConfigFile(ctx);
-              },
-            ),
-            // у mobile_scanner нет имплементации под Windows/Linux
-            if (!PlatformBootstrap.isDesktop)
-              ListTile(
-                leading: Icon(
-                  Icons.qr_code_scanner,
-                  color: AppTheme.accent(ctx),
-                ),
-                title: Text(
-                  l10n.qrScanTitle,
-                  style: TextStyle(color: AppTheme.text(ctx)),
-                ),
-                subtitle: Text(
-                  l10n.serversScanQrHint,
-                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx2);
-                  _scanQrAndImport(ctx);
-                },
-              ),
           ],
         ),
       ),
@@ -788,7 +777,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
         content: Text(_friendlyError(e, ctx)),
         backgroundColor: AppTheme.red(ctx),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
         duration: const Duration(seconds: 5),
       ),
     );
@@ -806,7 +795,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
         content: Text('$summary\n${_friendlyError(error, ctx)}'),
         backgroundColor: added > 0 ? AppTheme.orange(ctx) : AppTheme.red(ctx),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
         duration: const Duration(seconds: 5),
       ),
     );
@@ -821,7 +810,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
     String? sheetError;
     showModalBottomSheet(
       context: ctx,
-      backgroundColor: AppTheme.bg(ctx),
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx2) => StatefulBuilder(
@@ -859,11 +847,11 @@ class _ServersTabState extends ConsumerState<ServersTab>
                   filled: true,
                   fillColor: AppTheme.card(ctx),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
                     borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
                     borderSide: BorderSide(
                       color: AppTheme.accent(ctx),
                       width: 2,
@@ -887,7 +875,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                     backgroundColor: AppTheme.accentContainer(ctx),
                     foregroundColor: AppTheme.onAccentContainer(ctx),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(ExpressiveShape.large),
                     ),
                   ),
                   onPressed: loading
@@ -959,9 +947,19 @@ class _ServersTabState extends ConsumerState<ServersTab>
     );
   }
 
-  /// Рамка (1.5×2) и вертикальные отступы (6×2) чипа «подключено». В отличие от
-  /// текста они не масштабируются вместе со шрифтом.
-  static const double _statusChipChrome = 15;
+  /// Вертикальный отступ чипа «подключено». В отличие от текста он не
+  /// масштабируется вместе со шрифтом, поэтому в расчёт высоты области входит
+  /// отдельным слагаемым.
+  static const double _statusChipVerticalPadding = 8;
+  static const double _statusChipChrome = _statusChipVerticalPadding * 2;
+
+  /// Стиль надписи в чипе — один и тот же и в разметке, и в расчёте высоты.
+  ///
+  /// Держать его здесь обязательно: когда чип переехал на `labelLarge`, а
+  /// расчёт высоты остался на `labelMedium`, области не хватило 9 px и вторая
+  /// строка длинного имени сервера обрезалась по нижнему краю.
+  static TextStyle? _statusChipTextStyle(TextTheme textTheme) =>
+      textTheme.emphasized(textTheme.labelLarge);
 
   /// Высота области статуса: столько занимают две строки самого высокого из
   /// двух вариантов — обычной подписи и чипа «подключено».
@@ -979,7 +977,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
     return max(
       twoLines(textTheme.bodyMedium),
-      twoLines(textTheme.labelMedium) + _statusChipChrome,
+      twoLines(_statusChipTextStyle(textTheme)) + _statusChipChrome,
     );
   }
 
@@ -994,22 +992,28 @@ class _ServersTabState extends ConsumerState<ServersTab>
       final cleanName = ServerNameUtils.formatForDisplay(
         ServerNameUtils.cleanDisplayName(activeServer.displayName),
       );
+      final scheme = Theme.of(context).colorScheme;
+      // Тональный чип-пилюля вместо обводки: у M3E это штатный вид «активного»
+      // статуса, и он же даёт главному экрану второй цветовой акцент после
+      // кнопки. Тот же secondaryContainer носит активный сервер в списке —
+      // цвет читается как «вот это выбрано» на обоих экранах.
       return Container(
         key: const ValueKey('connected'),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: _statusChipVerticalPadding,
+        ),
         decoration: BoxDecoration(
-          border: Border.all(
-            color: AppTheme.accent(context).withValues(alpha: 0.5),
-            width: 1.5,
-          ),
-          borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
+          color: scheme.secondaryContainer,
+          borderRadius: ExpressiveShape.radius(ExpressiveShape.full),
         ),
         child: Text(
           l10n.vpnConnectedTo(cleanName),
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: textTheme.labelMedium?.copyWith(color: AppTheme.text(context)),
+          style: _statusChipTextStyle(textTheme)
+              ?.copyWith(color: scheme.onSecondaryContainer),
         ),
       );
     } else {
@@ -1163,7 +1167,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
         content: Text(msg),
         backgroundColor: AppTheme.text(context),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
       ),
     );
   }

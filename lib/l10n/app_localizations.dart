@@ -1733,6 +1733,24 @@ abstract class AppLocalizations {
   /// **'Core settings, ping, routing, HWID and debug'**
   String get settingsAdvancedSubtitle;
 
+  /// No description provided for @settingsAdvancedGroupTraffic.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic and core'**
+  String get settingsAdvancedGroupTraffic;
+
+  /// No description provided for @settingsAdvancedGroupSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get settingsAdvancedGroupSystem;
+
+  /// No description provided for @settingsAdvancedGroupDiagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics'**
+  String get settingsAdvancedGroupDiagnostics;
+
   /// No description provided for @settingsBackupRestore.
   ///
   /// In en, this message translates to:

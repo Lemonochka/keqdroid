@@ -144,13 +144,13 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
         isDense: true,
         filled: true,
         fillColor: AppTheme.bg(context).withValues(alpha: 0.45),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           borderSide: BorderSide(color: AppTheme.divider(context)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           borderSide: BorderSide(color: AppTheme.accent(context)),
         ),
       ),
