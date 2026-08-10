@@ -1,5 +1,8 @@
 part of '../settings_tab.dart';
 
+/// Заголовок секции с иконкой — тонкая обёртка над общим
+/// [ExpressiveSectionHeader]. Собственного вида у него больше нет: раньше он
+/// расходился с остальными настройками и цветом, и ролью текста.
 class _XrayCoreSectionHeader extends StatelessWidget {
   const _XrayCoreSectionHeader({
     required this.icon,
@@ -10,34 +13,8 @@ class _XrayCoreSectionHeader extends StatelessWidget {
   final String title;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8, top: 12),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: AppTheme.accent(context).withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 17, color: AppTheme.accent(context)),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            title,
-            style: Theme.of(context)
-                .textTheme
-                .emphasized(Theme.of(context).textTheme.titleSmall)
-                ?.copyWith(
-                  color: AppTheme.text(context),
-                  letterSpacing: 0.2,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      ExpressiveSectionHeader(title, icon: icon);
 }
 
 Widget _xraySettingsDivider(BuildContext context) => Padding(
@@ -45,20 +22,13 @@ Widget _xraySettingsDivider(BuildContext context) => Padding(
       child: Divider(height: 1, color: AppTheme.divider(context)),
     );
 
-// Цвет и рамка на Material, а не на BoxDecoration: Switch/RadioListTile
-// рисуют ink-сплэши на ближайшем Material-предке, и цветной DecoratedBox
-// между ними прятал рипл (debug-спам «ListTile background color or ink
-// splashes may be invisible»).
 Widget _xraySettingsCard(BuildContext context, {required List<Widget> children}) =>
     Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: AppTheme.card(context),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(color: AppTheme.divider(context)),
-        ),
-        clipBehavior: Clip.antiAlias,
+      // Отступ карточка задаёт нулевой: содержимое здесь — ListTile'ы, они
+      // приносят свои внутренние поля сами.
+      child: ExpressiveCard(
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: children,
@@ -187,7 +157,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
             margin: const EdgeInsets.only(bottom: 4),
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(ExpressiveShape.largeIncreased),
               border: Border.all(color: accent.withValues(alpha: 0.22)),
             ),
             child: Row(
@@ -348,7 +318,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           color: AppTheme.bg(context).withValues(alpha: 0.45),
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(ExpressiveShape.large),
                           border: Border.all(color: AppTheme.divider(context)),
                         ),
                         child: Padding(
@@ -783,7 +753,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
               side: BorderSide(color: AppTheme.divider(context)),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(ExpressiveShape.large),
               ),
             ),
           ),
@@ -876,11 +846,11 @@ class _DnsServersFieldState extends State<_DnsServersField> {
         filled: true,
         fillColor: AppTheme.bg(context).withValues(alpha: 0.55),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           borderSide: BorderSide(color: AppTheme.divider(context)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
           borderSide: BorderSide(color: AppTheme.divider(context)),
         ),
       ),
@@ -950,9 +920,9 @@ class _XrayCoreTextFieldState extends State<_XrayCoreTextField> {
           filled: true,
           fillColor: AppTheme.card(context),
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
             borderSide: BorderSide(color: AppTheme.divider(context)),
           ),
         ),

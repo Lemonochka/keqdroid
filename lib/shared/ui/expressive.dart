@@ -42,14 +42,61 @@ abstract final class ExpressiveShape {
   /// Морфинг делаем интерполяцией между двумя ShapeBorder — Flutter умеет
   /// лерпить RoundedRectangleBorder, отдельный shape-morph API не нужен.
   static ShapeBorder pressedMorph(double corner, double t) =>
-      ShapeBorder.lerp(border(corner), border(_pressedCorner(corner)), t)!;
+      ShapeBorder.lerp(border(corner), border(pressedCorner(corner)), t)!;
 
-  static double _pressedCorner(double corner) {
-    if (corner >= extraExtraLarge) return extraLarge;
-    if (corner >= extraLarge) return largeIncreased;
-    if (corner >= large) return medium;
-    return small;
-  }
+  /// Углы нажатого состояния — всегда на шаг «квадратнее» исходных.
+  ///
+  /// Пилюлю не морфим: лерп от 9999 к конечному радиусу почти всю анимацию
+  /// остаётся визуально круглым, а потом схлопывается рывком.
+  static double pressedCorner(double corner) => switch (corner) {
+        full => full,
+        >= extraLarge => largeIncreased,
+        >= large => medium,
+        >= small => extraSmall,
+        // 0 и 4 уже предельно «квадратные», морфить некуда
+        _ => corner,
+      };
+
+  /// Поугловой вариант [pressedCorner] для сегментов группы, у которых
+  /// скругления по углам разные.
+  static BorderRadius pressedRadius(BorderRadius base) => BorderRadius.only(
+        topLeft: Radius.circular(pressedCorner(base.topLeft.x)),
+        topRight: Radius.circular(pressedCorner(base.topRight.x)),
+        bottomLeft: Radius.circular(pressedCorner(base.bottomLeft.x)),
+        bottomRight: Radius.circular(pressedCorner(base.bottomRight.x)),
+      );
+}
+
+/// Контейнерные роли цвета для «раскрашенных» элементов.
+///
+/// Спека делит их по назначению, а не по красоте: `secondary` — организующая
+/// группировка (выбранный пункт, тональные кнопки, чипы), `tertiary` —
+/// контрастный акцент, который должен выбиваться (теги, категории, «что-то
+/// изменилось»), `primary` — основное действие.
+///
+/// Нужна эта ротация ровно затем, чтобы экран не был стеной нейтрального
+/// серого: у M3E иерархию несёт цвет контейнера, а не оттенок тени.
+enum ExpressiveAccent {
+  primary,
+  secondary,
+  tertiary;
+
+  /// Роли по кругу — для списков однородных пунктов, где смысловой разницы
+  /// между ними нет, а визуальная нужна.
+  static ExpressiveAccent cycle(int index) =>
+      values[index % values.length];
+
+  Color container(ColorScheme scheme) => switch (this) {
+        ExpressiveAccent.primary => scheme.primaryContainer,
+        ExpressiveAccent.secondary => scheme.secondaryContainer,
+        ExpressiveAccent.tertiary => scheme.tertiaryContainer,
+      };
+
+  Color onContainer(ColorScheme scheme) => switch (this) {
+        ExpressiveAccent.primary => scheme.onPrimaryContainer,
+        ExpressiveAccent.secondary => scheme.onSecondaryContainer,
+        ExpressiveAccent.tertiary => scheme.onTertiaryContainer,
+      };
 }
 
 /// Пружинная схема движения M3 Expressive.
@@ -118,45 +165,60 @@ abstract final class ExpressiveMotion {
       );
 }
 
-/// Типографика M3 Expressive: та же шкала ролей, что у M3, но с усиленными
-/// весами — именно вес, а не размер, делает интерфейс «экспрессивным».
+/// Типографика M3 Expressive: та же шкала ролей, что у M3, но у каждой роли
+/// есть усиленный вариант — именно вес, а не размер, делает интерфейс
+/// «экспрессивным».
 ///
-/// [emphasized] отдаёт усиленный вариант роли: у M3E он есть у каждой.
+/// Ключевая деталь спеки, которую легко потерять: выразительность живёт в
+/// **дельте** между базой и акцентом, а не в поднятой базе. Поэтому база здесь
+/// лёгкая (`TypeScaleTokens`: headline и titleLarge — Regular), а вес набирает
+/// только [emphasized]. Если поднять базу, дельта схлопывается в один шаг и
+/// экран снова читается «одним весом».
 extension ExpressiveText on TextTheme {
+  /// Усиленный вариант роли по `TypeScaleTokens`.
+  ///
+  /// Роль угадывать не нужно: у всей шкалы M3E правило одно — Regular→Medium,
+  /// Medium→Bold. Совпадения по кеглю не мешают (titleSmall и labelLarge оба
+  /// 14sp/Medium и оба усиливаются до Bold).
   TextStyle? emphasized(TextStyle? style) => style?.copyWith(
         fontWeight: switch (style.fontWeight) {
           FontWeight.w400 || null => FontWeight.w500,
-          FontWeight.w500 => FontWeight.w600,
           _ => FontWeight.w700,
         },
-        letterSpacing: (style.letterSpacing ?? 0) - 0.1,
+        // Три роли меняют и трекинг: displayLarge −0.2→0, оба 16sp →0.15,
+        // bodyMedium 0.2→0.25. Остальные оставляют свой.
+        letterSpacing: switch ((style.fontSize, style.fontWeight)) {
+          (57, _) => 0,
+          (16, _) => 0.15,
+          (14, FontWeight.w400 || null) => 0.25,
+          _ => style.letterSpacing,
+        },
       );
 }
 
-/// Шкала M3 с выразительными весами. Размеры — стандартные роли M3, веса
-/// подняты по духу Expressive (заголовки тяжелее, лейблы плотнее).
+/// Шкала M3 Expressive. Размеры, интерлиньяж, трекинг и веса — по
+/// `TypeScaleTokens` из androidx.compose.material3.
 TextTheme buildExpressiveTextTheme(Brightness brightness) {
-  const displayW = FontWeight.w400;
-  const headlineW = FontWeight.w600;
-  const titleW = FontWeight.w600;
-  const labelW = FontWeight.w600;
+  // База: display/headline/titleLarge/body — Regular; title/label — Medium.
+  const regular = FontWeight.w400;
+  const medium = FontWeight.w500;
 
   return const TextTheme(
-    displayLarge: TextStyle(fontSize: 57, height: 64 / 57, letterSpacing: -0.25, fontWeight: displayW),
-    displayMedium: TextStyle(fontSize: 45, height: 52 / 45, fontWeight: displayW),
-    displaySmall: TextStyle(fontSize: 36, height: 44 / 36, fontWeight: displayW),
-    headlineLarge: TextStyle(fontSize: 32, height: 40 / 32, fontWeight: headlineW),
-    headlineMedium: TextStyle(fontSize: 28, height: 36 / 28, fontWeight: headlineW),
-    headlineSmall: TextStyle(fontSize: 24, height: 32 / 24, fontWeight: headlineW),
-    titleLarge: TextStyle(fontSize: 22, height: 28 / 22, fontWeight: titleW),
-    titleMedium: TextStyle(fontSize: 16, height: 24 / 16, letterSpacing: 0.15, fontWeight: titleW),
-    titleSmall: TextStyle(fontSize: 14, height: 20 / 14, letterSpacing: 0.1, fontWeight: titleW),
-    bodyLarge: TextStyle(fontSize: 16, height: 24 / 16, letterSpacing: 0.5),
-    bodyMedium: TextStyle(fontSize: 14, height: 20 / 14, letterSpacing: 0.25),
-    bodySmall: TextStyle(fontSize: 12, height: 16 / 12, letterSpacing: 0.4),
-    labelLarge: TextStyle(fontSize: 14, height: 20 / 14, letterSpacing: 0.1, fontWeight: labelW),
-    labelMedium: TextStyle(fontSize: 12, height: 16 / 12, letterSpacing: 0.5, fontWeight: labelW),
-    labelSmall: TextStyle(fontSize: 11, height: 16 / 11, letterSpacing: 0.5, fontWeight: labelW),
+    displayLarge: TextStyle(fontSize: 57, height: 64 / 57, letterSpacing: -0.2, fontWeight: regular),
+    displayMedium: TextStyle(fontSize: 45, height: 52 / 45, letterSpacing: 0, fontWeight: regular),
+    displaySmall: TextStyle(fontSize: 36, height: 44 / 36, letterSpacing: 0, fontWeight: regular),
+    headlineLarge: TextStyle(fontSize: 32, height: 40 / 32, letterSpacing: 0, fontWeight: regular),
+    headlineMedium: TextStyle(fontSize: 28, height: 36 / 28, letterSpacing: 0, fontWeight: regular),
+    headlineSmall: TextStyle(fontSize: 24, height: 32 / 24, letterSpacing: 0, fontWeight: regular),
+    titleLarge: TextStyle(fontSize: 22, height: 28 / 22, letterSpacing: 0, fontWeight: regular),
+    titleMedium: TextStyle(fontSize: 16, height: 24 / 16, letterSpacing: 0.2, fontWeight: medium),
+    titleSmall: TextStyle(fontSize: 14, height: 20 / 14, letterSpacing: 0.1, fontWeight: medium),
+    bodyLarge: TextStyle(fontSize: 16, height: 24 / 16, letterSpacing: 0.5, fontWeight: regular),
+    bodyMedium: TextStyle(fontSize: 14, height: 20 / 14, letterSpacing: 0.2, fontWeight: regular),
+    bodySmall: TextStyle(fontSize: 12, height: 16 / 12, letterSpacing: 0.4, fontWeight: regular),
+    labelLarge: TextStyle(fontSize: 14, height: 20 / 14, letterSpacing: 0.1, fontWeight: medium),
+    labelMedium: TextStyle(fontSize: 12, height: 16 / 12, letterSpacing: 0.5, fontWeight: medium),
+    labelSmall: TextStyle(fontSize: 11, height: 16 / 11, letterSpacing: 0.5, fontWeight: medium),
   );
 }
 
@@ -174,6 +236,7 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
   FloatingActionButtonThemeData fab,
   NavigationBarThemeData navigationBar,
   ListTileThemeData listTile,
+  PopupMenuThemeData popupMenu,
 }) buildExpressiveComponentThemes(ColorScheme scheme) {
   // Кнопки у M3E — пилюли: это самая заметная форма всего языка.
   final buttonShape = ExpressiveShape.border(ExpressiveShape.full);
@@ -248,6 +311,14 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
     listTile: ListTileThemeData(
       shape: ExpressiveShape.border(ExpressiveShape.large),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    ),
+    // Всплывающее меню — отдельная поверхность, а не «текст поверх экрана»:
+    // без своего контейнера пункты не читались как выбор.
+    popupMenu: PopupMenuThemeData(
+      color: scheme.surfaceContainer,
+      surfaceTintColor: Colors.transparent,
+      elevation: 3,
+      shape: ExpressiveShape.border(ExpressiveShape.medium),
     ),
   );
 }

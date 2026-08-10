@@ -84,25 +84,47 @@ class _ServerTile extends ConsumerWidget {
 
     final radius = this.radius ??
         BorderRadius.vertical(
-          bottom: isLast ? const Radius.circular(22) : Radius.zero,
+          bottom: isLast
+              ? const Radius.circular(ExpressiveShape.extraLarge)
+              : Radius.zero,
         );
 
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final textColor = AppTheme.text(context);
     final accentColor = AppTheme.accent(context);
     final textLightColor = AppTheme.textLight(context);
-    final textTheme = Theme.of(context).textTheme;
+    final textTheme = theme.textTheme;
+
+    // Активный сервер «поднимается» из группы отдельным сегментом: свои
+    // скругления, отступ от краёв и заливка secondaryContainer.
+    //
+    // Это подход M3E к выбранному пункту списка — форма плюс цветной
+    // контейнер. Прежняя подсветка (accent на 13% альфы) отличала активный
+    // сервер только чуть более светлым фоном, а на AMOLED-чёрном не читалась
+    // почти никак. В две колонки приём не работает — там подсветка обязана
+    // растворяться к середине карточки, поэтому режим остаётся градиентным.
+    // Подниматься умеет только одноколоночный список: в сетке подсветка обязана
+    // растворяться к середине карточки, а не обрываться формой сегмента.
+    final canLift = innerEdge == null;
+    final isLifted = isActive && canLift;
+    final liftedRadius = ExpressiveShape.radius(ExpressiveShape.largeIncreased);
+    const liftedInset = EdgeInsets.symmetric(horizontal: 6, vertical: 3);
+    final onSegment = isLifted ? scheme.onSecondaryContainer : textColor;
 
     // Фон плитки. В сетке из двух колонок подсветка активного сервера не
     // обрывается резкой линией по середине карточки, а мягко растворяется
     // градиентом к внутреннему краю плитки (несколько стоп приближают
     // ease-out, чтобы не было видимого излома). Полупрозрачные цвета ложатся
     // на фон DecoratedSliver карточки — так же, как сплошная подсветка.
-    final Decoration tileDecoration;
-    if (isActive && innerEdge != null) {
+    final BoxDecoration activeDecoration;
+    if (canLift) {
+      activeDecoration = BoxDecoration(color: scheme.secondaryContainer);
+    } else {
       Color glow(double f) => accentColor.withValues(alpha: 0.13 * f);
       final toRight = innerEdge == _TileInnerEdge.right;
-      tileDecoration = BoxDecoration(
+      activeDecoration = BoxDecoration(
         gradient: LinearGradient(
           begin: toRight ? Alignment.centerLeft : Alignment.centerRight,
           end: toRight ? Alignment.centerRight : Alignment.centerLeft,
@@ -110,14 +132,18 @@ class _ServerTile extends ConsumerWidget {
           stops: const [0.0, 0.45, 0.7, 0.88, 1.0],
         ),
       );
-    } else {
-      tileDecoration = BoxDecoration(
-        color: isActive
-            ? accentColor.withValues(alpha: 0.13)
-            : AppTheme.card(context),
-      );
     }
+    final restDecoration = BoxDecoration(color: AppTheme.card(context));
+    // Цвет протокола — идентичность сервера, и на выбранной строке его терять
+    // нельзя. Но полупрозрачная подложка поверх secondaryContainer сводит тон
+    // бейджа с тоном контейнера, и надпись проваливается по контрасту. Поэтому
+    // на поднятом сегменте бейдж встаёт на собственную непрозрачную подложку —
+    // ту же, на которой живут бейджи остальных строк, так что выглядит он
+    // ровно как у соседей.
     final protocolColor = _protocolColor(server.protocol, context);
+    final badgeBg = isLifted
+        ? AppTheme.card(context)
+        : protocolColor.withValues(alpha: 0.15);
 
     final titleText = ServerNameUtils.formatForDisplay(
       ServerNameUtils.cleanDisplayName(server.displayName),
@@ -152,7 +178,7 @@ class _ServerTile extends ConsumerWidget {
                           child: Icon(
                             Icons.push_pin,
                             size: 13,
-                            color: accentColor,
+                            color: isLifted ? onSegment : accentColor,
                           ),
                         ),
                       ),
@@ -165,7 +191,7 @@ class _ServerTile extends ConsumerWidget {
                             (isActive
                                     ? textTheme.emphasized(textTheme.titleSmall)
                                     : textTheme.titleSmall)
-                                ?.copyWith(color: textColor),
+                                ?.copyWith(color: onSegment),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -182,7 +208,7 @@ class _ServerTile extends ConsumerWidget {
                           vertical: 1,
                         ),
                         decoration: BoxDecoration(
-                          color: protocolColor.withValues(alpha: 0.15),
+                          color: badgeBg,
                           borderRadius: ExpressiveShape.radius(
                             ExpressiveShape.extraSmall,
                           ),
@@ -211,7 +237,9 @@ class _ServerTile extends ConsumerWidget {
                         style: textTheme.labelMedium?.copyWith(
                           color: pingMs != null
                               ? _pingColor(pingMs, context, pingColorType)
-                              : textLightColor,
+                              : (isLifted
+                                  ? onSegment.withValues(alpha: 0.7)
+                                  : textLightColor),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -236,19 +264,49 @@ class _ServerTile extends ConsumerWidget {
       ),
     );
 
-    final tileBody = SizedBox(height: _subCardRowHeight, child: rowBody);
-
     // Один семантический узел на тайл (имя + протокол + пинг + tap). Сервис
     // доступности/autofill включает семантику реально, а её геометрия
     // пересчитывается на каждом кадре свайпа — чем меньше узлов, тем дешевле.
+    //
+    // Высота строки задаётся снаружи отступа сегмента: у поднятого тайла
+    // отступ съедает часть высоты, а шаг списка обязан остаться прежним —
+    // иначе сетка в две колонки и `mainAxisExtent` разъедутся.
     return RepaintBoundary(
       child: MergeSemantics(
-        child: ClipRRect(
-          borderRadius: radius,
-          clipBehavior: Clip.antiAlias,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: tileDecoration,
+        child: SizedBox(
+          height: _subCardRowHeight,
+          // Отступ, форма и заливка едут от ОДНОГО значения.
+          //
+          // Раньше это были три независимые implicit-анимации (AnimatedPadding
+          // + TweenAnimationBuilder + AnimatedContainer). Каждая при перебивке
+          // стартует со своего текущего значения, и на быстром переборе
+          // серверов они расходились: радиус успевал дойти до квадрата, пока
+          // отступ и подсветка ещё ехали, — отсюда квадратные обводки. Один
+          // контроллер такой рассинхрон исключает по построению.
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(end: isActive ? 1 : 0),
+            duration: ExpressiveMotion.durationFast,
+            curve: ExpressiveMotion.emphasized,
+            builder: (context, t, child) {
+              // Подъём — только там, где он вообще применяется; заливка едет
+              // всегда, в том числе у градиента в две колонки.
+              final lift = canLift ? t : 0.0;
+              return Padding(
+                padding: EdgeInsets.lerp(EdgeInsets.zero, liftedInset, lift)!,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.lerp(radius, liftedRadius, lift)!,
+                  clipBehavior: Clip.antiAlias,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration.lerp(
+                      restDecoration,
+                      activeDecoration,
+                      t,
+                    )!,
+                    child: child,
+                  ),
+                ),
+              );
+            },
             child: Material(
               type: MaterialType.transparency,
               child: InkWell(
@@ -261,7 +319,7 @@ class _ServerTile extends ConsumerWidget {
                 onSecondaryTap: () => _showOptions(context, ref),
                 splashColor: accentColor.withValues(alpha: 0.2),
                 highlightColor: accentColor.withValues(alpha: 0.08),
-                child: tileBody,
+                child: rowBody,
               ),
             ),
           ),
@@ -336,9 +394,12 @@ class _ServerTile extends ConsumerWidget {
   }
 
   void _showOptions(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.bg(context),
+      // Цвет НЕ задаём: из темы шторка берёт surfaceContainerLow. Здесь стоял
+      // AppTheme.bg — ровно фон страницы, поэтому шторка не отделялась от неё
+      // ничем, кроме затемнения, и читалась плоской.
       // Настоящая ручка вместо нарисованной. Прежняя была просто Container
       // внутри прокручиваемого содержимого: выглядела как ручка, но тянуть за
       // неё было нельзя — жест уходил в скролл, и шторка не закрывалась.
@@ -366,123 +427,117 @@ class _ServerTile extends ConsumerWidget {
                 onCopied: () => Navigator.pop(context),
               ),
               const SizedBox(height: 16),
-              ListTile(
-                leading: Icon(
-                  Icons.network_ping,
-                  color: AppTheme.text(context),
-                ),
-                title: Text(AppLocalizations.of(context)!.serversPingServer),
-                onTap: () async {
-                  Navigator.pop(context);
-                  try {
-                    await onPing();
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(_friendlyError(e)),
-                        backgroundColor: AppTheme.red(context),
-                      ),
-                    );
-                  }
-                },
-              ),
-              ListTile(
-                leading: Transform.rotate(
-                  angle: server.isPinned ? 0 : 45 * pi / 180,
-                  child: Icon(
-                    server.isPinned
-                        ? Icons.push_pin_outlined
-                        : Icons.push_pin,
-                    color: server.isPinned
-                        ? AppTheme.textLight(context)
-                        : AppTheme.accent(context),
-                  ),
-                ),
-                title: Text(
-                  server.isPinned
-                      ? AppLocalizations.of(context)!.serversUnpin
-                      : AppLocalizations.of(context)!.serversPin,
-                ),
-                subtitle: server.isPinned
-                    ? null
-                    : Text(
-                        AppLocalizations.of(context)!.serversPinDesc,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-                      ),
-                onTap: () {
-                  Navigator.pop(context);
-                  unawaited(
-                    ref.read(serversProvider.notifier).togglePin(server.id),
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  Icons.drive_file_rename_outline,
-                  color: AppTheme.text(context),
-                ),
-                title: Text(AppLocalizations.of(context)!.serversRename),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showRenameDialog(context, ref);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.tune, color: AppTheme.text(context)),
-                title: Text(AppLocalizations.of(context)!.serversEditConfig),
-                subtitle: Text(
-                  AppLocalizations.of(context)!.serversEditConfigDesc,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      fullscreenDialog: true,
-                      builder: (_) => ServerConfigEditorScreen(
-                        serverId: server.id,
-                      ),
+              // Пункты собраны в группы: «проверить/закрепить», «править» и
+              // отдельно удаление. Прежде это был плоский список ListTile —
+              // без границ и без подсказки, куда именно жать.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ExpressiveGroup(
+                  children: [
+                    ExpressiveActionTile(
+                      icon: Icons.network_ping,
+                      title: l10n.serversPingServer,
+                      accent: ExpressiveAccent.primary,
+                      onTap: () async {
+                        Navigator.pop(context);
+                        try {
+                          await onPing();
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(_friendlyError(e)),
+                              backgroundColor: AppTheme.red(context),
+                            ),
+                          );
+                        }
+                      },
                     ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.link, color: AppTheme.text(context)),
-                title: Text(AppLocalizations.of(context)!.serversCopyConfig),
-                subtitle: Text(
-                  server.protocol.toUpperCase(),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-                ),
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: server.config));
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        AppLocalizations.of(context)!.serversConfigCopied,
-                      ),
+                    ExpressiveActionTile(
+                      icon: server.isPinned
+                          ? Icons.push_pin_outlined
+                          : Icons.push_pin,
+                      title: server.isPinned
+                          ? l10n.serversUnpin
+                          : l10n.serversPin,
+                      subtitle: server.isPinned ? null : l10n.serversPinDesc,
+                      accent: ExpressiveAccent.tertiary,
+                      onTap: () {
+                        Navigator.pop(context);
+                        unawaited(
+                          ref
+                              .read(serversProvider.notifier)
+                              .togglePin(server.id),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  Icons.delete_outline,
-                  color: AppTheme.red(context),
+                  ],
                 ),
-                title: Text(
-                  AppLocalizations.of(context)!.serversDeleteServer,
-                  style: TextStyle(color: AppTheme.red(context)),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Подтверждение как у удаления подписки: пункт стоит сразу
-                  // под безобидными «копировать», промахнуться слишком легко.
-                  _showDeleteConfirmation(context);
-                },
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ExpressiveGroup(
+                  children: [
+                    ExpressiveActionTile(
+                      icon: Icons.drive_file_rename_outline,
+                      title: l10n.serversRename,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showRenameDialog(context, ref);
+                      },
+                    ),
+                    ExpressiveActionTile(
+                      icon: Icons.tune,
+                      title: l10n.serversEditConfig,
+                      subtitle: l10n.serversEditConfigDesc,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            fullscreenDialog: true,
+                            builder: (_) => ServerConfigEditorScreen(
+                              serverId: server.id,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    ExpressiveActionTile(
+                      icon: Icons.link,
+                      title: l10n.serversCopyConfig,
+                      subtitle: server.protocol.toUpperCase(),
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: server.config));
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.serversConfigCopied)),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Удаление — отдельной группой и в роли error: рядом с
+              // безобидным «скопировать» по нему промахивались.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ExpressiveGroup(
+                  children: [
+                    ExpressiveActionTile(
+                      icon: Icons.delete_outline,
+                      title: l10n.serversDeleteServer,
+                      danger: true,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showDeleteConfirmation(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -534,11 +589,11 @@ class _ServerTile extends ConsumerWidget {
                 filled: true,
                 fillColor: AppTheme.bg(ctx),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                   borderSide: BorderSide.none,
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                   borderSide: BorderSide(color: accentColor, width: 2),
                 ),
               ),
@@ -585,7 +640,7 @@ class _ServerTile extends ConsumerWidget {
               backgroundColor: AppTheme.accentContainer(ctx),
               foregroundColor: AppTheme.onAccentContainer(ctx),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
@@ -654,7 +709,7 @@ class _ServerTile extends ConsumerWidget {
               backgroundColor: redColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
@@ -672,15 +727,20 @@ class _ServerTile extends ConsumerWidget {
     );
   }
 
+  /// Цвет бейджа протокола.
+  ///
+  /// Оттенки свои (протокол — это идентичность, роль схемы её не выражает), но
+  /// гармонизированные: на динамической теме сырой `0xFF4A90D9` выпадал из
+  /// палитры, потому что не имел к сиду никакого отношения.
   Color _protocolColor(String p, BuildContext ctx) => switch (p) {
-    'vless' => const Color(0xFF4A90D9),
-    'awg' => const Color(0xFF2E7D32),
-    'vmess' => const Color(0xFF7B68EE),
-    'trojan' => const Color(0xFFE53935),
-    'ss' => const Color(0xFF43A047),
-    'hysteria' => const Color(0xFF00897B),
-    'hysteria2' => const Color(0xFF00695C),
-    'hy2' => const Color(0xFF004D40),
+    'vless' => AppTheme.harmonize(ctx, const Color(0xFF4A90D9)),
+    'awg' => AppTheme.harmonize(ctx, const Color(0xFF2E7D32)),
+    'vmess' => AppTheme.harmonize(ctx, const Color(0xFF7B68EE)),
+    'trojan' => AppTheme.harmonize(ctx, const Color(0xFFE53935)),
+    'ss' => AppTheme.harmonize(ctx, const Color(0xFF43A047)),
+    'hysteria' => AppTheme.harmonize(ctx, const Color(0xFF00897B)),
+    'hysteria2' => AppTheme.harmonize(ctx, const Color(0xFF00695C)),
+    'hy2' => AppTheme.harmonize(ctx, const Color(0xFF004D40)),
     _ => AppTheme.textLight(ctx),
   };
 

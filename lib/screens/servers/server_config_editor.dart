@@ -506,7 +506,7 @@ class _ServerConfigEditorScreenState
       SnackBar(
         content: Text(msg),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
       ),
     );
   }
@@ -617,7 +617,7 @@ class _ServerConfigEditorScreenState
                 backgroundColor: AppTheme.accentContainer(context),
                 foregroundColor: AppTheme.onAccentContainer(context),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.large),
                 ),
                 elevation: 0,
               ),
@@ -705,7 +705,7 @@ class _ServerConfigEditorScreenState
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -766,7 +766,7 @@ class _ServerConfigEditorScreenState
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: AppTheme.red(context).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
       ),
       child: Text(
         _error!,
@@ -1122,7 +1122,7 @@ class _ServerConfigEditorScreenState
                     content: Text(l10n.serversConfigCopied),
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                     ),
                     duration: const Duration(seconds: 2),
                   ),
@@ -1143,7 +1143,7 @@ class _ServerConfigEditorScreenState
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       decoration: BoxDecoration(
         color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(ExpressiveShape.large),
         border: Border.all(color: AppTheme.divider(context)),
       ),
       child: Column(
@@ -1182,15 +1182,15 @@ class _ServerConfigEditorScreenState
       fillColor: AppTheme.bg(context),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
         borderSide: BorderSide(color: AppTheme.divider(context)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
         borderSide: BorderSide(color: AppTheme.divider(context)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
         borderSide: BorderSide(color: AppTheme.accent(context), width: 2),
       ),
     );
@@ -1233,6 +1233,45 @@ class _ServerConfigEditorScreenState
     final isText = textFallbackId != null;
     final current = isText ? _v(textFallbackId) : (_drop[id] ?? '');
 
+    // Строка пункта выпадающего списка. `DropdownButton` текущее значение никак
+    // не помечает — просто прокручивает к нему, поэтому меню читалось как набор
+    // подписей, по которым непонятно, что уже выбрано. Выбранный пункт берёт
+    // secondaryContainer и галочку — как везде в приложении.
+    Widget dropdownRow(BuildContext ctx, String text, {required bool selected}) {
+      final scheme = Theme.of(ctx).colorScheme;
+      final textTheme = Theme.of(ctx).textTheme;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: selected
+            ? BoxDecoration(
+                color: scheme.secondaryContainer,
+                borderRadius: ExpressiveShape.radius(ExpressiveShape.small),
+              )
+            : null,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                text,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    (selected
+                            ? textTheme.emphasized(textTheme.bodyMedium)
+                            : textTheme.bodyMedium)
+                        ?.copyWith(
+                          color: selected
+                              ? scheme.onSecondaryContainer
+                              : AppTheme.text(ctx),
+                        ),
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check, size: 16, color: scheme.onSecondaryContainer),
+          ],
+        ),
+      );
+    }
+
     var opts = options;
     if (isText) {
       opts = const [
@@ -1269,13 +1308,28 @@ class _ServerConfigEditorScreenState
           color: AppTheme.textLight(context),
         ),
         decoration: _inputDecoration(label: label),
+        // Закрытое поле — голый текст, без обёртки подсветки: её вертикальные
+        // отступы не влезали в высоту, отведённую InputDecorator'ом, и строка
+        // обрезалась снизу. Выделение живёт только в раскрытом списке.
+        selectedItemBuilder: (context) => [
+          for (final o in opts)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                o.isEmpty ? '—' : o,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+        ],
         items: [
           for (final o in opts)
             DropdownMenuItem(
               value: o,
-              child: Text(
+              child: dropdownRow(
+                context,
                 o.isEmpty ? '—' : o,
-                overflow: TextOverflow.ellipsis,
+                selected: o == current,
               ),
             ),
         ],

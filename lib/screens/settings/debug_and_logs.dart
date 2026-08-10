@@ -14,16 +14,10 @@ class _DebugModeCard extends ConsumerWidget {
       await ref.read(settingsNotifierProvider.notifier).save(settings.copyWith(debugMode: value));
     }
 
-    return Container(
+    final textTheme = Theme.of(context).textTheme;
+
+    return ExpressiveGroupTile(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: enabled ? AppTheme.orange(context).withValues(alpha: 0.55) : AppTheme.divider(context),
-          width: enabled ? 1.4 : 1,
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -44,14 +38,13 @@ class _DebugModeCard extends ConsumerWidget {
                   children: [
                     Text(
                       l10n.settingsDebugMode,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
+                      style: textTheme.titleMedium?.copyWith(
                         color: AppTheme.text(context),
                       ),
                     ),
                     Text(
                       enabled ? l10n.settingsDebugModeOn : l10n.settingsDebugModeOff,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: enabled ? AppTheme.orange(context) : AppTheme.textLight(context)),
+                      style: textTheme.bodyMedium?.copyWith(color: enabled ? AppTheme.orange(context) : AppTheme.textLight(context)),
                     ),
                   ],
                 ),
@@ -178,7 +171,7 @@ class _XrayLogsScreenState extends ConsumerState<_XrayLogsScreen> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: AppTheme.inset(context),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(ExpressiveShape.large),
             border: Border.all(color: AppTheme.divider(context)),
           ),
           child: SingleChildScrollView(

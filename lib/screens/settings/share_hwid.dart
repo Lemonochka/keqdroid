@@ -15,15 +15,15 @@ class _ShareHwidCard extends ConsumerWidget {
       await ref.read(settingsNotifierProvider.notifier).save(settings.copyWith(shareDeviceHwid: value));
     }
 
-    return Container(
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    // Включённое состояние — цветом иконки, как у LAN-прокси: рамка вокруг
+    // карточки внутри группы обрезалась бы её же формой.
+    final iconAccent =
+        enabled ? ExpressiveAccent.tertiary : ExpressiveAccent.secondary;
+
+    return ExpressiveGroupTile(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(18),
-        border: enabled
-            ? Border.all(color: AppTheme.accent(context).withValues(alpha: 0.5), width: 1.5)
-            : Border.all(color: AppTheme.divider(context), width: 1),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -32,13 +32,13 @@ class _ShareHwidCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppTheme.accent(context).withValues(alpha: 0.2),
+                  color: iconAccent.container(scheme),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.fingerprint,
                   size: 20,
-                  color: enabled ? AppTheme.accent(context) : AppTheme.text(context),
+                  color: iconAccent.onContainer(scheme),
                 ),
               ),
               const SizedBox(width: 14),
@@ -48,14 +48,13 @@ class _ShareHwidCard extends ConsumerWidget {
                   children: [
                     Text(
                       'Share device HWID',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
+                      style: textTheme.titleMedium?.copyWith(
                         color: AppTheme.text(context),
                       ),
                     ),
                     Text(
                       enabled ? 'HWID will be sent with subscription requests' : 'HWID not shared',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: enabled ? AppTheme.accent(context) : AppTheme.textLight(context)),
+                      style: textTheme.bodyMedium?.copyWith(color: enabled ? AppTheme.accent(context) : AppTheme.textLight(context)),
                     ),
                   ],
                 ),

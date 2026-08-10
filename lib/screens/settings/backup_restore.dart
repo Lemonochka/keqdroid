@@ -56,7 +56,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
           content: Text(l10n.settingsBackupSaved),
           backgroundColor: AppTheme.green(context),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
         ),
       );
     } catch (e) {
@@ -126,7 +126,6 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
 
     return showModalBottomSheet<Set<BackupSection>>(
       context: context,
-      backgroundColor: AppTheme.bg(context),
       showDragHandle: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) {
@@ -195,7 +194,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.accentContainer(context),
                         foregroundColor: AppTheme.onAccentContainer(context),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: () => Navigator.pop(ctx, current()),
@@ -225,19 +224,8 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
           controller: controller,
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          // Material вместо цветного Container: SwitchListTile рисует ink на
-          // ближайшем Material-предке, и цветной DecoratedBox прятал рипл
-          // (debug-спам «ink splashes may be invisible»)
-          Material(
-            color: AppTheme.card(context),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-              side: BorderSide(color: AppTheme.divider(context), width: 1),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
+          ExpressiveCard(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -278,7 +266,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.accentContainer(context),
                       foregroundColor: AppTheme.onAccentContainer(context),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: _busy ? null : _export,
@@ -297,16 +285,9 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                 ),
               ],
             ),
-            ),
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.card(context),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppTheme.divider(context), width: 1),
-            ),
+          ExpressiveCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -326,7 +307,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.text(context),
                       side: BorderSide(color: AppTheme.divider(context)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: _busy ? null : _import,

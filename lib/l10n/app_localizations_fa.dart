@@ -880,6 +880,15 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsAdvancedSubtitle => 'تنظیمات هسته، پینگ، مسیریابی، HWID و اشکال‌زدایی';
 
   @override
+  String get settingsAdvancedGroupTraffic => 'ترافیک و هسته';
+
+  @override
+  String get settingsAdvancedGroupSystem => 'سیستم';
+
+  @override
+  String get settingsAdvancedGroupDiagnostics => 'تشخیص';
+
+  @override
   String get settingsBackupRestore => 'پشتیبان‌گیری و بازیابی';
 
   @override

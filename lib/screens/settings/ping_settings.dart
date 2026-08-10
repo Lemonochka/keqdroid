@@ -55,32 +55,12 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
       _customUrlCtrl.text = settings.pingTestUrlCustom;
     }
 
-    Widget sectionTitle(String title) => Padding(
-          padding: const EdgeInsets.only(bottom: 8, top: 4),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.textLight(context), letterSpacing: 0.4),
-          ),
-        );
-
-    // Цвет и рамка на Material, а не на BoxDecoration: ListTile рисует
-    // ink-сплэши на ближайшем Material-предке, и цветной DecoratedBox между
-    // ними прятал рипл (debug-спам «ListTile background color or ink
-    // splashes may be invisible» при каждом билде тайла).
-    Widget card({required List<Widget> children}) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Material(
-            color: AppTheme.card(context),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-              side: BorderSide(color: AppTheme.divider(context)),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Column(children: children),
-            ),
-          ),
+    // Заголовок секции и карточка — общие на все подэкраны настроек
+    // (`ExpressiveSectionHeader` / `ExpressiveCard`), локальных вариантов
+    // больше нет: раньше каждый экран объявлял свои и они разъезжались.
+    Widget card({required List<Widget> children}) => ExpressiveCard(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Column(children: children),
         );
 
     return Scaffold(
@@ -93,9 +73,9 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
       body: SmoothScroll(
         builder: (context, controller) => ListView(
           controller: controller,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         children: [
-          sectionTitle(l10n.settingsPingMethodTitle),
+          ExpressiveSectionHeader(l10n.settingsPingMethodTitle),
           card(
             children: [
               RadioGroup<String>(
@@ -135,7 +115,7 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
             ],
           ),
           if (isUrl) ...[
-            sectionTitle(l10n.settingsPingTargetTitle),
+            ExpressiveSectionHeader(l10n.settingsPingTargetTitle),
             card(
               children: [
                 RadioGroup<String>(
@@ -177,7 +157,7 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
                         labelText: l10n.settingsPingCustomUrl,
                         hintText: 'https://example.com/generate_204',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                         ),
                       ),
                       onSubmitted: (v) {

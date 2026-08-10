@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:keqdroid/shared/ui/expressive.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -149,7 +150,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
                 constraints: const BoxConstraints(maxHeight: 140),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                 ),
                 padding: const EdgeInsets.all(10),
                 child: SingleChildScrollView(
@@ -178,7 +179,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
               const SizedBox(height: 16),
               LinearProgressIndicator(
                 value: _applying || _progress <= 0 ? null : _progress,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(ExpressiveShape.extraSmall),
               ),
               const SizedBox(height: 6),
               Text(
@@ -216,7 +217,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
           onPressed: _downloading ? null : _downloadAndInstall,
           style: FilledButton.styleFrom(
             backgroundColor: accent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
           ),
           child: Text(
             _downloading

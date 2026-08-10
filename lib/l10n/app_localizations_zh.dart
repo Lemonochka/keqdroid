@@ -880,6 +880,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAdvancedSubtitle => '内核设置、Ping、路由、HWID 和调试';
 
   @override
+  String get settingsAdvancedGroupTraffic => '流量与内核';
+
+  @override
+  String get settingsAdvancedGroupSystem => '系统';
+
+  @override
+  String get settingsAdvancedGroupDiagnostics => '诊断';
+
+  @override
   String get settingsBackupRestore => '备份与恢复';
 
   @override

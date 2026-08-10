@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -118,7 +119,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                       color: AppTheme.accent(context).withValues(alpha: 0.9),
                       width: 3,
                     ),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.extraLarge),
                   ),
                 ),
                 const SizedBox(height: 24),

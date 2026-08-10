@@ -181,12 +181,12 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                           filled: true,
                           fillColor: AppTheme.inset(context),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                             borderSide:
                                 BorderSide(color: AppTheme.divider(context)),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
                             borderSide:
                                 BorderSide(color: AppTheme.divider(context)),
                           ),
@@ -245,7 +245,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(ExpressiveShape.small),
           ),
           child: Text(
             label,
@@ -282,7 +282,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: AppTheme.orange(context).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
       ),
       child: Row(
         children: [
@@ -319,7 +319,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: tint.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
       ),
       child: Row(
         children: [

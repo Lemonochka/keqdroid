@@ -190,6 +190,7 @@ ThemeData buildAppTheme(
         : components.card,
     appBarTheme: const AppBarTheme(surfaceTintColor: Colors.transparent),
     navigationBarTheme: components.navigationBar,
+    popupMenuTheme: components.popupMenu,
     bottomSheetTheme: components.sheet,
     dialogTheme: flair
         ? components.dialog.copyWith(
