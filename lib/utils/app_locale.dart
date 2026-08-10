@@ -9,6 +9,7 @@ String appLanguageLabel(AppSettings settings, {required String systemLabel}) {
     'ru' => 'Русский',
     'de' => 'Deutsch',
     'zh' => '中文',
+    'fa' => 'فارسی',
     _ => systemLabel,
   };
 }
@@ -19,6 +20,7 @@ Locale? localeFromSettings(AppSettings settings) {
     'ru' => const Locale('ru'),
     'de' => const Locale('de'),
     'zh' => const Locale('zh'),
+    'fa' => const Locale('fa'),
     _ => null,
   };
 }

@@ -290,11 +290,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           Expanded(
             child: Text(
               l10n.splitTunnelingReconnectHint,
-              style: TextStyle(
-                fontSize: 11.5,
-                height: 1.35,
-                color: AppTheme.text(context),
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    height: 1.35,
+                    color: AppTheme.text(context),
+                  ),
             ),
           ),
         ],
@@ -340,11 +339,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
               Expanded(
                 child: Text(
                   l10n.settingsRoutingFinalTitle,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.text(context),
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .emphasized(Theme.of(context).textTheme.titleMedium)
+                      ?.copyWith(color: AppTheme.text(context)),
                 ),
               ),
             ],
@@ -352,7 +350,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           const SizedBox(height: 2),
           Text(
             l10n.settingsRoutingFinalDesc,
-            style: TextStyle(fontSize: 11.5, color: AppTheme.textLight(context)),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppTheme.textLight(context)),
           ),
           const SizedBox(height: 12),
           Row(
@@ -409,11 +410,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? color : AppTheme.text(context),
-              ),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? color : AppTheme.text(context),
+                  ),
             ),
           ],
         ),
@@ -466,11 +466,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
               Expanded(
                 child: Text(
                   l10n.settingsRoutingAdvancedTitle,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.text(context),
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .emphasized(Theme.of(context).textTheme.titleMedium)
+                      ?.copyWith(color: AppTheme.text(context)),
                 ),
               ),
             ],
@@ -478,7 +477,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           const SizedBox(height: 2),
           Text(
             l10n.settingsRoutingAdvancedHint,
-            style: TextStyle(fontSize: 11.5, color: AppTheme.textLight(context)),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppTheme.textLight(context)),
           ),
           const SizedBox(height: 12),
           if (rules.isEmpty)
@@ -487,8 +489,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
               child: Center(
                 child: Text(
                   l10n.settingsRoutingAdvancedEmpty,
-                  style: TextStyle(
-                      fontSize: 12.5, color: AppTheme.textLight(context)),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppTheme.textLight(context)),
                 ),
               ),
             )
@@ -496,7 +500,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             for (final rule in rules) _ruleTile(context, l10n, rule),
           const SizedBox(height: 8),
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: FilledButton.tonalIcon(
               onPressed: () => _openRuleEditor(l10n, null),
               icon: const Icon(Icons.add, size: 18),
@@ -535,13 +539,11 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                             : rule.name.trim(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: rule.enabled
-                              ? AppTheme.text(context)
-                              : AppTheme.textLight(context),
-                        ),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: rule.enabled
+                                  ? AppTheme.text(context)
+                                  : AppTheme.textLight(context),
+                            ),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -557,10 +559,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                     valuesPreview,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textLight(context),
-                    ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: AppTheme.textLight(context)),
                   ),
                 ],
               ],
@@ -593,8 +595,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         ),
         child: Text(
           text,
-          style: TextStyle(
-              fontSize: 10, fontWeight: FontWeight.w600, color: color),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color),
         ),
       );
 
@@ -655,11 +656,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             children: [
               Text(
                 l10n.routingCheatSheetTitle,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.text(context),
-                ),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(color: AppTheme.text(context)),
               ),
               const SizedBox(height: 10),
               ..._cheatLines(context, l10n.routingCheatSheetBody),
@@ -686,17 +686,17 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         child: Text(
           isHeader ? raw.substring(3) : raw,
           style: isHeader
-              ? TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.3,
-                  color: AppTheme.accent(context),
-                )
-              : TextStyle(
-                  fontSize: 13.5,
-                  height: 1.45,
-                  color: AppTheme.text(context),
-                ),
+              ? Theme.of(context)
+                  .textTheme
+                  .emphasized(Theme.of(context).textTheme.labelLarge)
+                  ?.copyWith(
+                    letterSpacing: 0.3,
+                    color: AppTheme.accent(context),
+                  )
+              : Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    height: 1.45,
+                    color: AppTheme.text(context),
+                  ),
         ),
       ));
     }
@@ -718,11 +718,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           Expanded(
             child: Text(
               l10n.settingsRoutingSyntaxHint,
-              style: TextStyle(
-                fontSize: 11.5,
-                height: 1.5,
-                color: AppTheme.textLight(context),
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    height: 1.5,
+                    color: AppTheme.textLight(context),
+                  ),
             ),
           ),
         ],
@@ -745,11 +744,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           Expanded(
             child: Text(
               l10n.settingsRoutingHeaderDesc,
-              style: TextStyle(
-                fontSize: 12.5,
-                height: 1.35,
-                color: AppTheme.text(context),
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    height: 1.35,
+                    color: AppTheme.text(context),
+                  ),
             ),
           ),
         ],
@@ -769,16 +767,18 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         children: [
           Text(
             l10n.settingsRoutingPresetsTitle,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.text(context),
-            ),
+            style: Theme.of(context)
+                .textTheme
+                .emphasized(Theme.of(context).textTheme.titleMedium)
+                ?.copyWith(color: AppTheme.text(context)),
           ),
           const SizedBox(height: 2),
           Text(
             l10n.settingsRoutingPresetsHint,
-            style: TextStyle(fontSize: 11.5, color: AppTheme.textLight(context)),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppTheme.textLight(context)),
           ),
           const SizedBox(height: 12),
           _presetDropdown(context, l10n),
@@ -816,10 +816,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                     borderRadius: BorderRadius.circular(14),
                     hint: Text(
                       l10n.settingsRoutingPresetChoose,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        color: AppTheme.textLight(context),
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: AppTheme.textLight(context)),
                     ),
                     dropdownColor: AppTheme.card(context),
                     icon: Icon(
@@ -838,10 +838,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                               child: Text(
                                 _presetTitle(l10n, preset.id),
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  color: AppTheme.text(context),
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(color: AppTheme.text(context)),
                               ),
                             ),
                           ],
@@ -870,7 +870,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           const SizedBox(height: 8),
           Text(
             _presetDesc(l10n, selected.id),
-            style: TextStyle(fontSize: 11.5, color: AppTheme.textLight(context)),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppTheme.textLight(context)),
           ),
         ],
       ],
@@ -914,11 +917,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.text(context),
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .emphasized(Theme.of(context).textTheme.titleSmall)
+                      ?.copyWith(color: AppTheme.text(context)),
                 ),
               ),
               Container(
@@ -932,11 +934,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                 ),
                 child: Text(
                   l10n.settingsRoutingItemCount(count),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelSmall
+                      ?.copyWith(color: color),
                 ),
               ),
               if (!geoIndex.isEmpty)
@@ -953,23 +954,29 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           const SizedBox(height: 6),
           Text(
             desc,
-            style: TextStyle(fontSize: 11.5, color: AppTheme.textLight(context)),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppTheme.textLight(context)),
           ),
           const SizedBox(height: 10),
           TextField(
             controller: controller,
             minLines: 2,
             maxLines: 8,
-            style: TextStyle(fontSize: 13, color: AppTheme.text(context)),
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: AppTheme.text(context)),
             decoration: InputDecoration(
               isDense: true,
               hintText: hint,
               hintStyle: TextStyle(color: AppTheme.textLight(context)),
               helperText: l10n.settingsRoutingValuesHint,
-              helperStyle: TextStyle(
-                fontSize: 10.5,
-                color: AppTheme.textLight(context),
-              ),
+              helperStyle: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: AppTheme.textLight(context)),
               filled: true,
               // inset (surfaceContainerLowest) заметно контрастнее карточки, чем
               // bg/surface — на дынамик-тёмных темах, где surface ≈
@@ -1030,11 +1037,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
               Expanded(
                 child: Text(
                   l10n.settingsRoutingGeoUnknownTitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.orange(context),
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .emphasized(Theme.of(context).textTheme.labelMedium)
+                      ?.copyWith(color: AppTheme.orange(context)),
                 ),
               ),
             ],
@@ -1042,20 +1048,18 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           const SizedBox(height: 6),
           Text(
             tokens.join(', '),
-            style: TextStyle(
-              fontSize: 11.5,
-              fontFamily: 'monospace',
-              color: AppTheme.text(context),
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                  color: AppTheme.text(context),
+                ),
           ),
           const SizedBox(height: 4),
           Text(
             l10n.settingsRoutingGeoUnknownHint,
-            style: TextStyle(
-              fontSize: 11,
-              height: 1.35,
-              color: AppTheme.textLight(context),
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  height: 1.35,
+                  color: AppTheme.textLight(context),
+                ),
           ),
         ],
       ),
@@ -1147,19 +1151,18 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                   Expanded(
                     child: Text(
                       l10n.settingsRoutingGeoPickerTitle,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.text(context),
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .emphasized(Theme.of(context).textTheme.titleMedium)
+                          ?.copyWith(color: AppTheme.text(context)),
                     ),
                   ),
                   Text(
                     l10n.settingsRoutingItemCount(codes.length),
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: AppTheme.textLight(context),
-                    ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: AppTheme.textLight(context)),
                   ),
                 ],
               ),
@@ -1189,7 +1192,10 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
               TextField(
                 controller: _search,
                 autofocus: true,
-                style: TextStyle(fontSize: 13, color: AppTheme.text(context)),
+                style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: AppTheme.text(context)),
                 decoration: InputDecoration(
                   isDense: true,
                   prefixIcon: const Icon(Icons.search, size: 18),
@@ -1214,10 +1220,10 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                     ? Center(
                         child: Text(
                           l10n.settingsRoutingGeoPickerEmpty,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: AppTheme.textLight(context),
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: AppTheme.textLight(context)),
                         ),
                       )
                     : ListView.builder(
@@ -1228,11 +1234,13 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                             dense: true,
                             title: Text(
                               '$prefix$code',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontFamily: 'monospace',
-                                color: AppTheme.text(context),
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    fontFamily: 'monospace',
+                                    color: AppTheme.text(context),
+                                  ),
                             ),
                             trailing: Icon(Icons.add,
                                 size: 16, color: AppTheme.accent(context)),
@@ -1271,11 +1279,10 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
         ),
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected ? color : AppTheme.text(context),
-          ),
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? color : AppTheme.text(context),
+              ),
         ),
       ),
     );
@@ -1420,7 +1427,10 @@ class _RuleEditorDialogState extends State<_RuleEditorDialog> {
               controller: _values,
               minLines: 2,
               maxLines: 5,
-              style: TextStyle(color: AppTheme.text(context), fontSize: 13),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppTheme.text(context)),
               decoration: InputDecoration(
                 isDense: true,
                 labelText: l10n.settingsRoutingRuleValues,
@@ -1431,10 +1441,10 @@ class _RuleEditorDialogState extends State<_RuleEditorDialog> {
             const SizedBox(height: 16),
             Text(
               l10n.settingsRoutingRuleMatchBy,
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textLight(context)),
+              style: Theme.of(context)
+                  .textTheme
+                  .labelMedium
+                  ?.copyWith(color: AppTheme.textLight(context)),
             ),
             const SizedBox(height: 6),
             Wrap(
@@ -1447,22 +1457,21 @@ class _RuleEditorDialogState extends State<_RuleEditorDialog> {
                     selected: _type == t,
                     onSelected: (_) => setState(() => _type = t),
                     selectedColor: accent.withValues(alpha: 0.18),
-                    labelStyle: TextStyle(
-                      fontSize: 12.5,
-                      color: _type == t ? accent : AppTheme.text(context),
-                      fontWeight:
-                          _type == t ? FontWeight.w700 : FontWeight.w500,
-                    ),
+                    labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: _type == t ? accent : AppTheme.text(context),
+                          fontWeight:
+                              _type == t ? FontWeight.w700 : FontWeight.w500,
+                        ),
                   ),
               ],
             ),
             const SizedBox(height: 16),
             Text(
               l10n.settingsRoutingRuleAction,
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textLight(context)),
+              style: Theme.of(context)
+                  .textTheme
+                  .labelMedium
+                  ?.copyWith(color: AppTheme.textLight(context)),
             ),
             const SizedBox(height: 6),
             Wrap(
@@ -1476,14 +1485,13 @@ class _RuleEditorDialogState extends State<_RuleEditorDialog> {
                     onSelected: (_) => setState(() => _action = a),
                     selectedColor:
                         _actionColor(context, a).withValues(alpha: 0.18),
-                    labelStyle: TextStyle(
-                      fontSize: 12.5,
-                      color: _action == a
-                          ? _actionColor(context, a)
-                          : AppTheme.text(context),
-                      fontWeight:
-                          _action == a ? FontWeight.w700 : FontWeight.w500,
-                    ),
+                    labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: _action == a
+                              ? _actionColor(context, a)
+                              : AppTheme.text(context),
+                          fontWeight:
+                              _action == a ? FontWeight.w700 : FontWeight.w500,
+                        ),
                   ),
               ],
             ),

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_fa.dart';
 import 'app_localizations_ru.dart';
 import 'app_localizations_zh.dart';
 
@@ -95,6 +96,7 @@ abstract class AppLocalizations {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
     Locale('en'),
+    Locale('fa'),
     Locale('ru'),
     Locale('zh')
   ];
@@ -2223,6 +2225,12 @@ abstract class AppLocalizations {
   /// **'中文'**
   String get settingsLanguageChinese;
 
+  /// No description provided for @settingsLanguageFarsi.
+  ///
+  /// In en, this message translates to:
+  /// **'فارسی'**
+  String get settingsLanguageFarsi;
+
   /// No description provided for @settingsLanguageSheetTitle.
   ///
   /// In en, this message translates to:
@@ -3777,6 +3785,18 @@ abstract class AppLocalizations {
   /// **'closed'**
   String get connectionsClosed;
 
+  /// No description provided for @connectionsAppNamesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'App names appear after reconnecting: the tunnel starts its detailed log together with debug mode.'**
+  String get connectionsAppNamesHint;
+
+  /// No description provided for @connectionsSplitTunnelNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps kept out of the tunnel are not listed here: Android routes them past it, so their traffic never reaches the core.'**
+  String get connectionsSplitTunnelNote;
+
   /// No description provided for @subscriptionsExpiredOn.
   ///
   /// In en, this message translates to:
@@ -3811,7 +3831,7 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['de', 'en', 'ru', 'zh'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['de', 'en', 'fa', 'ru', 'zh'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -3824,6 +3844,7 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'de': return AppLocalizationsDe();
     case 'en': return AppLocalizationsEn();
+    case 'fa': return AppLocalizationsFa();
     case 'ru': return AppLocalizationsRu();
     case 'zh': return AppLocalizationsZh();
   }

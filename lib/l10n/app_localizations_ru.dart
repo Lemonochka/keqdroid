@@ -1142,6 +1142,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsLanguageChinese => '中文';
 
   @override
+  String get settingsLanguageFarsi => 'فارسی';
+
+  @override
   String get settingsLanguageSheetTitle => 'Выберите язык';
 
   @override
@@ -1947,6 +1950,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get connectionsClosed => 'закрыто';
+
+  @override
+  String get connectionsAppNamesHint => 'Названия приложений появятся после переподключения: подробный лог туннеля включается при старте вместе с дебаг-режимом.';
+
+  @override
+  String get connectionsSplitTunnelNote => 'Приложения, выведенные из туннеля, здесь не появятся: Android пускает их мимо, и до ядра их трафик не доходит.';
 
   @override
   String subscriptionsExpiredOn(String date) {

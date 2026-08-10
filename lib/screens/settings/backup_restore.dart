@@ -162,16 +162,12 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                 children: [
                   Text(
                     l10n.settingsImportBackup,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.text(context),
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     l10n.settingsChooseWhatToImport,
-                    style: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
                   ),
                   const SizedBox(height: 10),
                   checkbox(
@@ -246,16 +242,12 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
               children: [
                 Text(
                   l10n.settingsExport,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.text(context),
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   l10n.settingsCreateFileToSave,
-                  style: TextStyle(fontSize: 12, color: AppTheme.textLight(context), height: 1.35),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context), height: 1.35),
                 ),
                 const SizedBox(height: 10),
                 SwitchListTile(
@@ -320,16 +312,12 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
               children: [
                 Text(
                   l10n.settingsImport,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.text(context),
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   l10n.settingsPickExportedFile,
-                  style: TextStyle(fontSize: 12, color: AppTheme.textLight(context), height: 1.35),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context), height: 1.35),
                 ),
                 const SizedBox(height: 10),
                 SizedBox(

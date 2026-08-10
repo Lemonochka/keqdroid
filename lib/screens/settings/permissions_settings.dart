@@ -115,7 +115,7 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
       ),
       const SizedBox(height: 8),
       Align(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: TextButton.icon(
           onPressed: _openAppSettings,
           icon: const Icon(Icons.open_in_new, size: 18),
@@ -127,7 +127,7 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
         child: Text(
           l10n.settingsPermRevokeHint,
-          style: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
         ),
       ),
     ];
@@ -149,11 +149,7 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
         child: Text(
           text,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.textLight(context),
-          ),
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.textLight(context)),
         ),
       );
 
@@ -169,11 +165,7 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
       ),
       child: Text(
         granted ? l10n.settingsPermStatusGranted : l10n.settingsPermStatusDenied,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color),
       ),
     );
   }

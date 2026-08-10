@@ -136,17 +136,13 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
             const SizedBox(height: 4),
             Text(
               context.l10n.updateSizeLabel(widget.info.formattedSize),
-              style: TextStyle(fontSize: 13, color: subtitleColor),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: subtitleColor),
             ),
             if (sanitizedNotes != null && sanitizedNotes.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
                 context.l10n.updateWhatsNew,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                  color: textColor,
-                ),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(color: textColor),
               ),
               const SizedBox(height: 6),
               Container(
@@ -163,48 +159,16 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
                     softLineBreak: true,
                     selectable: true,
                     styleSheet: MarkdownStyleSheet(
-                      p: TextStyle(
-                        fontSize: 12,
-                        color: subtitleColor,
-                        height: 1.4,
-                      ),
-                      h1: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: textColor,
-                      ),
-                      h2: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: textColor,
-                      ),
-                      h3: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                      ),
-                      listBullet: TextStyle(
-                        fontSize: 12,
-                        color: subtitleColor,
-                        height: 1.4,
-                      ),
+                      p: Theme.of(context).textTheme.bodySmall?.copyWith(color: subtitleColor, height: 1.4),
+                      h1: Theme.of(context).textTheme.titleSmall?.copyWith(color: textColor),
+                      h2: Theme.of(context).textTheme.titleSmall?.copyWith(color: textColor),
+                      h3: Theme.of(context).textTheme.labelMedium?.copyWith(color: textColor),
+                      listBullet: Theme.of(context).textTheme.bodySmall?.copyWith(color: subtitleColor, height: 1.4),
                       listIndent: 16,
-                      strong: TextStyle(
-                        fontSize: 12,
-                        color: subtitleColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      em: TextStyle(
-                        fontSize: 12,
-                        color: subtitleColor,
-                        fontStyle: FontStyle.italic,
-                      ),
+                      strong: Theme.of(context).textTheme.labelMedium?.copyWith(color: subtitleColor),
+                      em: Theme.of(context).textTheme.bodySmall?.copyWith(color: subtitleColor, fontStyle: FontStyle.italic),
                       a: TextStyle(color: accent),
-                      code: TextStyle(
-                        fontSize: 11,
-                        color: subtitleColor,
-                        fontFamily: 'monospace',
-                      ),
+                      code: Theme.of(context).textTheme.bodySmall?.copyWith(color: subtitleColor, fontFamily: 'monospace'),
                     ),
                   ),
                 ),
@@ -219,7 +183,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
               const SizedBox(height: 6),
               Text(
                 _statusLabel(context),
-                style: TextStyle(fontSize: 12, color: subtitleColor),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: subtitleColor),
               ),
             ],
           ],

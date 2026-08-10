@@ -18,6 +18,7 @@ import '../platform/platform_bootstrap.dart';
 import '../providers/providers.dart';
 import 'qr_scan_screen.dart';
 import '../ui/responsive/desktop_page_layout.dart';
+import '../utils/bidi.dart';
 import '../utils/error_messages.dart';
 
 class SubscriptionsTab extends ConsumerWidget {
@@ -255,11 +256,10 @@ class SubscriptionsTab extends ConsumerWidget {
             children: [
               Text(
                 l10n.subscriptionsAddSubscription,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(color: textColor),
               ),
               const SizedBox(height: 20),
               _inputField(
@@ -304,10 +304,10 @@ class SubscriptionsTab extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   sheetError!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.red(context),
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppTheme.red(context)),
                 ),
               ],
               const SizedBox(height: 24),
@@ -569,7 +569,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     ReorderableDragStartListener(
                       index: widget.listIndex,
                       child: Padding(
-                        padding: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsetsDirectional.only(end: 6),
                         child: Icon(
                           Icons.drag_handle,
                           size: 22,
@@ -744,6 +744,9 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   children: [
                     Text(
                       sub.url,
+                      // URL целиком латинский: своё направление, иначе в
+                      // RTL-локали обрезка ставит многоточие не с того конца.
+                      textDirection: TextDirection.ltr,
                       style: Theme.of(context).textTheme.bodySmall
                           ?.copyWith(color: textLightColor),
                       maxLines: 1,
@@ -759,10 +762,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
                             Expanded(
                               child: Text(
                                 l10n.subInsecureHttpWarning,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: orangeColor,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: orangeColor),
                               ),
                             ),
                             TextButton(
@@ -775,10 +778,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
                               ),
                               child: Text(
                                 l10n.subSwitchToHttps,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: accentColor,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: accentColor),
                               ),
                             ),
                           ],
@@ -790,17 +793,20 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         Icon(Icons.data_usage, size: 14, color: textLightColor),
                         const SizedBox(width: 4),
                         Text(
-                          sub.usageLabel,
-                          style: TextStyle(fontSize: 12, color: textLightColor),
+                          ltrIsolate(sub.usageLabel),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: textLightColor),
                         ),
                         if (sub.lastUpdatedAt != null) ...[
                           const Spacer(),
                           Text(
                             _formatDate(sub.lastUpdatedAt!),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: textLightColor,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: textLightColor),
                           ),
                         ],
                       ],
@@ -848,7 +854,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
                             Expanded(
                               child: Text(
                                 refreshError,
-                                style: TextStyle(fontSize: 11, color: redColor),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: redColor),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1052,15 +1061,17 @@ class _SubItemState extends ConsumerState<_SubItem> {
             return TextField(
               controller: ctrl,
               maxLines: maxLines,
-              style: TextStyle(color: textColor, fontSize: 14),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: textColor),
               decoration: InputDecoration(
                 labelText: label,
                 hintText: hint,
                 labelStyle: TextStyle(color: textLightColor),
-                hintStyle: TextStyle(
-                  color: textLightColor.withValues(alpha: 0.5),
-                  fontSize: 12,
-                ),
+                hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: textLightColor.withValues(alpha: 0.5),
+                    ),
                 filled: true,
                 fillColor: cardColor,
                 contentPadding: const EdgeInsets.symmetric(
@@ -1096,11 +1107,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
               children: [
                 Text(
                   l10n.subscriptionsEditSubscription,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
+                  style: Theme.of(ctx)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(color: textColor),
                 ),
                 const SizedBox(height: 16),
                 inputField(nameCtrl, l10n.subscriptionNameLabel, sub.name),
@@ -1110,10 +1120,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   const SizedBox(height: 8),
                   Text(
                     editError!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.red(ctx),
-                    ),
+                    style: Theme.of(ctx)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: AppTheme.red(ctx)),
                   ),
                 ],
                 const SizedBox(height: 16),
@@ -1132,7 +1142,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         icon: const Icon(Icons.copy, size: 16),
                         label: Text(
                           l10n.subscriptionsCopyUrl,
-                          style: const TextStyle(fontSize: 13),
+                          style: Theme.of(context).textTheme.labelLarge,
                         ),
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: sub.url));
@@ -1204,7 +1214,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     icon: const Icon(Icons.qr_code_2, size: 18),
                     label: Text(
                       l10n.subscriptionsShareButton,
-                      style: const TextStyle(fontSize: 13),
+                      style: Theme.of(context).textTheme.labelLarge,
                     ),
                     onPressed: () => _showShareSheet(context),
                   ),
@@ -1246,10 +1256,9 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     },
                     child: Text(
                       l10n.subscriptionsSave,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
+                      style: Theme.of(ctx)
+                          .textTheme
+                          .emphasized(Theme.of(ctx).textTheme.labelLarge),
                     ),
                   ),
                 ),
@@ -1284,11 +1293,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
           children: [
             Text(
               sub.name,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.text(ctx),
-              ),
+              style: Theme.of(ctx)
+                  .textTheme
+                  .emphasized(Theme.of(ctx).textTheme.titleMedium)
+                  ?.copyWith(color: AppTheme.text(ctx)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1311,7 +1319,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
               sub.url,
               textAlign: TextAlign.center,
               maxLines: 3,
-              style: TextStyle(fontSize: 11, color: AppTheme.textLight(ctx)),
+              style: Theme.of(ctx)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: AppTheme.textLight(ctx)),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -1395,17 +1406,19 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 Text(
                   l10n.subscriptionsAutoUpdateInterval,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
+                  style: Theme.of(ctx)
+                      .textTheme
+                      .emphasized(Theme.of(ctx).textTheme.titleMedium)
+                      ?.copyWith(color: textColor),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   l10n.subscriptionsCurrentInterval(sub.updateIntervalHours),
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: textLightColor),
+                  style: Theme.of(ctx)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: textLightColor),
                 ),
                 const SizedBox(height: 8),
                 ...options.map(
@@ -1461,7 +1474,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
             const SizedBox(width: 12),
             Text(
               l10n.subscriptionsDeleteSubscription,
-              style: TextStyle(color: textColor, fontSize: 18),
+              style: Theme.of(ctx)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(color: textColor),
             ),
           ],
         ),

@@ -98,10 +98,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                     Text(
                       error.errorCode.name,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white54),
                     ),
                   ],
                 ),
@@ -127,7 +124,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                 const SizedBox(height: 24),
                 Text(
                   l10n.qrScanHint,
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                 ),
               ],
             ),

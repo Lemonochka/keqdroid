@@ -4,6 +4,7 @@ import 'package:keqdroid/models/connection_entry.dart';
 import 'package:keqdroid/services/connections_service.dart';
 import 'package:keqdroid/shared/ui/accent_edge_card.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/expressive.dart';
 
 /// Одна строка экрана «Соединения»: куда идёт трафик, каким инбаундом пришёл,
 /// по какому правилу ушёл и чем это кончилось.
@@ -88,11 +89,10 @@ class ConnectionTile extends StatelessWidget {
                 child: SelectableText(
                   entry.target,
                   maxLines: 1,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.text(context),
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(color: AppTheme.text(context)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -106,11 +106,10 @@ class ConnectionTile extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               entry.destIp,
-              style: TextStyle(
-                fontSize: 11,
-                fontFamily: 'monospace',
-                color: AppTheme.textLight(context),
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontFamily: 'monospace',
+                    color: AppTheme.textLight(context),
+                  ),
             ),
           ],
           const SizedBox(height: 8),
@@ -161,11 +160,10 @@ class ConnectionTile extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
+          style: Theme.of(context)
+              .textTheme
+              .emphasized(Theme.of(context).textTheme.labelSmall)
+              ?.copyWith(color: color),
         ),
       );
 
@@ -180,10 +178,10 @@ class ConnectionTile extends StatelessWidget {
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11,
-                color: AppTheme.textLight(context),
-              ),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: AppTheme.textLight(context)),
             ),
           ),
         ],

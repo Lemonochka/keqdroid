@@ -55,10 +55,7 @@ class _ShareHwidCard extends ConsumerWidget {
                     ),
                     Text(
                       enabled ? 'HWID will be sent with subscription requests' : 'HWID not shared',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: enabled ? AppTheme.accent(context) : AppTheme.textLight(context),
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: enabled ? AppTheme.accent(context) : AppTheme.textLight(context)),
                     ),
                   ],
                 ),
@@ -74,7 +71,7 @@ class _ShareHwidCard extends ConsumerWidget {
           Text(
             'When enabled, your device\'s unique ID (HWID) is sent to subscription servers. '
             'Required by some providers for HWID binding. Disable to increase privacy.',
-            style: TextStyle(fontSize: 12, color: AppTheme.textLight(context), height: 1.35),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context), height: 1.35),
           ),
         ],
       ),

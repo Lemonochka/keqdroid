@@ -43,11 +43,7 @@ class _WindowsDesktopSettingsScreen extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textLight(context),
-                      height: 1.35,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context), height: 1.35),
                   ),
                 ],
               ),
@@ -105,10 +101,7 @@ class _WindowsDesktopSettingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
               child: Text(
                 l10n.settingsAutoConnectRequiresAutostart,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textLight(context),
-                ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
               ),
             ),
         ],

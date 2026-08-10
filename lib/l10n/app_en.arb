@@ -541,6 +541,7 @@
   "settingsLanguageRussian": "Русский",
   "settingsLanguageGerman": "Deutsch",
   "settingsLanguageChinese": "中文",
+  "settingsLanguageFarsi": "فارسی",
   "settingsLanguageSheetTitle": "Choose language",
   "splitAddApp": "Add app",
   "splitAddAppTitle": "Add application",
@@ -861,6 +862,8 @@
   "connectionsVerdictDirect": "DIRECT",
   "connectionsVerdictBlock": "BLOCKED",
   "connectionsClosed": "closed",
+  "connectionsAppNamesHint": "App names appear after reconnecting: the tunnel starts its detailed log together with debug mode.",
+  "connectionsSplitTunnelNote": "Apps kept out of the tunnel are not listed here: Android routes them past it, so their traffic never reaches the core.",
   "subscriptionsExpiredOn": "Subscription expired on {date}",
   "@subscriptionsExpiredOn": {
     "placeholders": {

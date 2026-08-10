@@ -1140,6 +1140,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLanguageChinese => '中文';
 
   @override
+  String get settingsLanguageFarsi => 'فارسی';
+
+  @override
   String get settingsLanguageSheetTitle => '选择语言';
 
   @override
@@ -1943,6 +1946,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get connectionsClosed => '已关闭';
+
+  @override
+  String get connectionsAppNamesHint => '重新连接后才会显示应用名称：隧道的详细日志随调试模式一同启动。';
+
+  @override
+  String get connectionsSplitTunnelNote => '被排除在隧道之外的应用不会列出：Android 让它们绕过隧道，其流量根本不会到达内核。';
 
   @override
   String subscriptionsExpiredOn(String date) {

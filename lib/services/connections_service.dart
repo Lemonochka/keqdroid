@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../models/connection_entry.dart';
+import '../platform/vpn_native_bridge.dart';
 import '../tunnel/linux_tunnel_backend.dart';
 import '../tunnel/windows_tunnel_backend.dart';
 import 'debug_log_service.dart';
@@ -38,10 +39,12 @@ class ConnectionsService {
     );
   }
 
-  /// true — источник в принципе умеет отдавать процесс (clash_api ядра на
-  /// десктопе). На Android xray не знает приложение-владельца сокета, и колонку
-  /// процесса показывать нечем.
-  static bool get supportsProcessNames => Platform.isWindows || Platform.isLinux;
+  /// true — источник в принципе умеет отдавать владельца соединения: на
+  /// десктопе это процесс из clash_api, на Android — приложение, найденное по
+  /// сокету через систему. Имя всё равно бывает пустым (на Android нужен
+  /// дебаг-режим и живое соединение), и тогда плитка просто его не рисует.
+  static bool get supportsProcessNames =>
+      Platform.isWindows || Platform.isLinux || Platform.isAndroid;
 
   // ── desktop: clash_api ────────────────────────────────────────────────────
 
@@ -256,7 +259,100 @@ class ConnectionsService {
         note: 'Core log is empty. Connect first.',
       );
     }
-    return XrayAccessLogParser.parse(text);
+    final snapshot = XrayAccessLogParser.parse(text);
+    if (!Platform.isAndroid) return snapshot;
+    return withAppNames(
+      snapshot,
+      peers: Tun2SocksLogParser.parse(await VpnNativeBridge.getTun2SocksLogs()),
+      resolve: VpnNativeBridge.resolveConnectionOwners,
+      cache: _appNames,
+    );
+  }
+
+  /// Копия снимка с пометкой, что владельцев определить нечем.
+  static ConnectionsSnapshot _withoutAppNames(ConnectionsSnapshot s) =>
+      ConnectionsSnapshot(
+        entries: s.entries,
+        source: s.source,
+        note: s.note,
+        ruleInfoAvailable: s.ruleInfoAvailable,
+        appNamesAvailable: false,
+      );
+
+  /// Дополняет соединения именами приложений-владельцев.
+  ///
+  /// Связка двухступенчатая: лог tun2socks даёт по назначению сокет
+  /// приложения, а система по паре сокетов — uid и имя. Закрытые соединения не
+  /// спрашиваем вовсе: система ищет их в живой таблице сокетов и на закрытые
+  /// отвечает «владельца нет».
+  /// Найденные имена, чтобы не спрашивать систему об одном и том же каждые две
+  /// секунды: экран опрашивается по таймеру, а соединение живёт дольше.
+  static final Map<String, String> _appNames = {};
+  static const _appNamesLimit = 300;
+
+  static Future<ConnectionsSnapshot> withAppNames(
+    ConnectionsSnapshot snapshot, {
+    required Map<String, Tun2SocksPeer> peers,
+    required Future<List<String>> Function(List<Map<String, Object?>>) resolve,
+    Map<String, String>? cache,
+  }) async {
+    if (peers.isEmpty) {
+      // Лога tun2socks нет вовсе — туннель поднимали без дебаг-режима.
+      return snapshot.entries.isEmpty
+          ? snapshot
+          : _withoutAppNames(snapshot);
+    }
+
+    final entries = [...snapshot.entries];
+    final indexes = <int>[];
+    final requests = <Map<String, Object?>>[];
+    for (var i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+      final known = cache?[entry.id];
+      if (known != null && known.isNotEmpty) {
+        entries[i] = entry.withProcess(known);
+        continue;
+      }
+      if (entry.closed) continue;
+      // Спрашиваем по IP: host к этому моменту мог смениться на домен.
+      final ip = entry.destIp.isNotEmpty ? entry.destIp : entry.host;
+      final peer = peers[Tun2SocksLogParser.keyFor(
+        entry.network,
+        ip,
+        entry.destPort,
+      )];
+      if (peer == null) continue;
+      indexes.add(i);
+      requests.add({
+        'protocol': entry.network,
+        'srcIp': peer.ip,
+        'srcPort': peer.port,
+        'dstIp': ip,
+        'dstPort': entry.destPort,
+      });
+    }
+    final names = requests.isEmpty
+        ? const <String>[]
+        : await resolve(requests);
+    for (var i = 0; i < indexes.length && i < names.length; i++) {
+      final name = names[i];
+      if (name.isEmpty) continue;
+      final index = indexes[i];
+      entries[index] = entries[index].withProcess(name);
+      if (cache != null) {
+        cache[entries[index].id] = name;
+        while (cache.length > _appNamesLimit) {
+          cache.remove(cache.keys.first);
+        }
+      }
+    }
+    return ConnectionsSnapshot(
+      entries: entries,
+      source: snapshot.source,
+      note: snapshot.note,
+      ruleInfoAvailable: snapshot.ruleInfoAvailable,
+      appNamesAvailable: snapshot.appNamesAvailable,
+    );
   }
 }
 
@@ -606,6 +702,49 @@ class XraySessionTrace {
 
   /// Ядро сообщило о закрытии соединения.
   bool closed = false;
+}
+
+/// Адрес приложения на TUN — второй конец соединения, тот, что ищет система.
+class Tun2SocksPeer {
+  const Tun2SocksPeer({required this.ip, required this.port});
+  final String ip;
+  final int port;
+}
+
+/// Разбор лога tun2socks: `[TCP] 10.0.0.2:41234 <-> 216.58.198.162:443`.
+///
+/// Это единственное место, где виден исходный сокет приложения. В access-лог
+/// xray попадает уже наш собственный сокет со стороны SOCKS (`127.0.0.1:…`),
+/// принадлежащий tun2socks, — спрашивать систему про него бессмысленно, она
+/// честно ответит, что владелец keqdroid.
+class Tun2SocksLogParser {
+  Tun2SocksLogParser._();
+
+  /// Префикс строки и формат времени у tun2socks свои и от версии к версии
+  /// меняются, поэтому цепляемся только за саму пару адресов.
+  static final _line = RegExp(
+    r'\[(TCP|UDP)\]\s+(\S+):(\d+)\s+<->\s+(\S+):(\d+)',
+    caseSensitive: false,
+  );
+
+  static String keyFor(String network, String ip, int port) =>
+      '${network.toLowerCase()}:${ip.trim().toLowerCase()}:$port';
+
+  /// Назначение → адрес приложения. Последняя запись выигрывает: к одному
+  /// адресу ходят по многу раз, и свежая связка вернее старой.
+  static Map<String, Tun2SocksPeer> parse(String log) {
+    final byTarget = <String, Tun2SocksPeer>{};
+    for (final line in log.split('\n')) {
+      final m = _line.firstMatch(line);
+      if (m == null) continue;
+      final port = int.tryParse(m.group(5)!);
+      final srcPort = int.tryParse(m.group(3)!);
+      if (port == null || srcPort == null) continue;
+      byTarget[keyFor(m.group(1)!, m.group(4)!, port)] =
+          Tun2SocksPeer(ip: m.group(2)!, port: srcPort);
+    }
+    return byTarget;
+  }
 }
 
 /// Решение роутинга ядра для одного назначения.

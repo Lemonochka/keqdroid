@@ -15,11 +15,13 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
+import android.system.OsConstants
 import android.util.Base64
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -31,6 +33,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 
@@ -341,6 +344,15 @@ class MainActivity : FlutterFragmentActivity() {
                         "getXrayLogs" -> {
                             val maxLines = call.argument<Int>("maxLines") ?: 300
                             getXrayLogs(maxLines, result)
+                        }
+                        "getTun2SocksLogs" -> {
+                            val maxLines = call.argument<Int>("maxLines") ?: 300
+                            getTun2SocksLogs(maxLines, result)
+                        }
+                        "resolveConnectionOwners" -> {
+                            val items = call.argument<List<Map<String, Any?>>>("connections")
+                                ?: emptyList()
+                            resolveConnectionOwners(items, result)
                         }
                         "toggleVpn" -> {
                             try {
@@ -951,6 +963,89 @@ class MainActivity : FlutterFragmentActivity() {
             }
             result.success(logs)
         }
+    }
+
+    /**
+     * Лог tun2socks. Пишется только в дебаг-режиме (см. KeqdisVpnService), и
+     * только в нём видно, какому приложению принадлежит соединение: строка
+     * `[TCP] 10.0.0.2:41234 <-> 216.58.198.162:443`, где первый адрес —
+     * сокет самого приложения на TUN. В логе xray на его месте уже наш
+     * собственный сокет со стороны SOCKS.
+     */
+    private fun getTun2SocksLogs(maxLines: Int, result: MethodChannel.Result) {
+        mainScope.launch {
+            val logs = withContext(Dispatchers.IO) {
+                val capped = maxLines.coerceIn(50, 4000)
+                runCatching {
+                    val f = File(filesDir, KeqdisVpnService.TUN2SOCKS_LOG_FILE)
+                    if (f.exists() && f.length() > 0L)
+                        f.readLines().takeLast(capped).joinToString("\n")
+                    else ""
+                }.getOrDefault("")
+            }
+            result.success(logs)
+        }
+    }
+
+    // uid → отображаемое имя приложения. Держим отдельно от списка приложений
+    // для сплит-туннеля: тот грузится целиком и редко, а здесь запросы идут
+    // каждые пару секунд по одному-двум uid.
+    private val uidLabelCache = HashMap<Int, String>()
+
+    /**
+     * Кто владеет соединением. Работает только у активного VPN-приложения —
+     * ровно наш случай, — и только пока соединение живо: `getConnectionOwnerUid`
+     * ищет его в таблице сокетов системы, для закрытых вернёт INVALID_UID.
+     *
+     * Отвечает списком имён, выровненным по входному: пустая строка — не
+     * определилось (закрылось, Android младше 10, чужой uid без пакетов).
+     */
+    private fun resolveConnectionOwners(
+        items: List<Map<String, Any?>>,
+        result: MethodChannel.Result,
+    ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || items.isEmpty()) {
+            result.success(items.map { "" })
+            return
+        }
+        mainScope.launch {
+            val names = withContext(Dispatchers.IO) {
+                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                items.map { item ->
+                    runCatching {
+                        val udp = (item["protocol"] as? String)?.lowercase() == "udp"
+                        val proto =
+                            if (udp) OsConstants.IPPROTO_UDP else OsConstants.IPPROTO_TCP
+                        val local = InetSocketAddress(
+                            InetAddress.getByName(item["srcIp"] as String),
+                            (item["srcPort"] as Number).toInt(),
+                        )
+                        val remote = InetSocketAddress(
+                            InetAddress.getByName(item["dstIp"] as String),
+                            (item["dstPort"] as Number).toInt(),
+                        )
+                        val uid = cm.getConnectionOwnerUid(proto, local, remote)
+                        if (uid == android.os.Process.INVALID_UID) "" else labelForUid(uid)
+                    }.getOrDefault("")
+                }
+            }
+            result.success(names)
+        }
+    }
+
+    private fun labelForUid(uid: Int): String {
+        uidLabelCache[uid]?.let { return it }
+        val label = runCatching {
+            val pkgs = packageManager.getPackagesForUid(uid)
+            if (pkgs.isNullOrEmpty()) {
+                ""
+            } else {
+                val info = packageManager.getApplicationInfo(pkgs[0], 0)
+                packageManager.getApplicationLabel(info).toString()
+            }
+        }.getOrDefault("")
+        uidLabelCache[uid] = label
+        return label
     }
 
     // Звать только из Dispatchers.IO. Пробрасывает IOException — ошибки

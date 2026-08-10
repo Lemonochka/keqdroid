@@ -59,12 +59,7 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
           padding: const EdgeInsets.only(bottom: 8, top: 4),
           child: Text(
             title,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textLight(context),
-              letterSpacing: 0.4,
-            ),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.textLight(context), letterSpacing: 0.4),
           ),
         );
 
@@ -160,10 +155,7 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
                             title: Text(_pingTargetLabel(l10n, target)),
                             subtitle: Text(
                               PingTestConfig.presetUrls[target] ?? '',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textLight(context),
-                              ),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
                             ),
                           ),
                       RadioListTile<String>(
@@ -180,10 +172,7 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: TextField(
                       controller: _customUrlCtrl,
-                      style: TextStyle(
-                        color: AppTheme.text(context),
-                        fontSize: 13,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
                       decoration: InputDecoration(
                         labelText: l10n.settingsPingCustomUrl,
                         hintText: 'https://example.com/generate_204',

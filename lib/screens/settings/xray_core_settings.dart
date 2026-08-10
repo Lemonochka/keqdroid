@@ -26,12 +26,13 @@ class _XrayCoreSectionHeader extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.text(context),
-              letterSpacing: 0.2,
-            ),
+            style: Theme.of(context)
+                .textTheme
+                .emphasized(Theme.of(context).textTheme.titleSmall)
+                ?.copyWith(
+                  color: AppTheme.text(context),
+                  letterSpacing: 0.2,
+                ),
           ),
         ],
       ),
@@ -65,11 +66,11 @@ Widget _xraySettingsCard(BuildContext context, {required List<Widget> children})
       ),
     );
 
-TextStyle _xrayTileSubtitleStyle(BuildContext context) => TextStyle(
-      fontSize: 12,
-      color: AppTheme.textLight(context),
-      height: 1.35,
-    );
+TextStyle? _xrayTileSubtitleStyle(BuildContext context) =>
+    Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: AppTheme.textLight(context),
+          height: 1.35,
+        );
 
 class _XrayCoreSettingsScreen extends ConsumerStatefulWidget {
   const _XrayCoreSettingsScreen();
@@ -135,7 +136,13 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
       dense: true,
       visualDensity: VisualDensity.compact,
       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-      title: Text(title, style: TextStyle(fontSize: 14, color: AppTheme.text(context))),
+      title: Text(
+        title,
+        style: Theme.of(context)
+            .textTheme
+            .bodyMedium
+            ?.copyWith(color: AppTheme.text(context)),
+      ),
       subtitle: subtitle != null
           ? Text(subtitle, style: _xrayTileSubtitleStyle(context))
           : null,
@@ -162,7 +169,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
             onPressed: () => _resetDefaults(settings),
             child: Text(
               l10n.settingsXrayResetDefaults,
-              style: TextStyle(color: accent, fontSize: 13),
+              style: Theme.of(context)
+                  .textTheme
+                  .labelLarge
+                  ?.copyWith(color: accent),
             ),
           ),
         ],
@@ -195,11 +205,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                 Expanded(
                   child: Text(
                     l10n.settingsXrayCoreIntro,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.text(context),
-                      height: 1.4,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.text(context),
+                          height: 1.4,
+                        ),
                   ),
                 ),
               ],
@@ -261,11 +270,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Text(
                   l10n.settingsXrayDnsQueryStrategy,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.text(context),
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(color: AppTheme.text(context)),
                 ),
               ),
               RadioGroup<String>(
@@ -322,11 +330,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                         children: [
                           Text(
                             l10n.settingsXrayXmuxParamsTitle,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.text(context),
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(color: AppTheme.text(context)),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -467,11 +474,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Text(
                   l10n.settingsXrayLogLevel,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.text(context),
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(color: AppTheme.text(context)),
                 ),
               ),
               RadioGroup<String>(
@@ -496,11 +502,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Text(
                   l10n.settingsXrayDomainStrategy,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.text(context),
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(color: AppTheme.text(context)),
                 ),
               ),
               RadioGroup<String>(
@@ -580,11 +585,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                   child: Text(
                     l10n.settingsTunStackTitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.text(context),
-                    ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(color: AppTheme.text(context)),
                   ),
                 ),
                 RadioGroup<String>(
@@ -690,11 +694,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: Text(
                     l10n.settingsTunStrictRouteTitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.text(context),
-                    ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(color: AppTheme.text(context)),
                   ),
                 ),
                 Padding(
@@ -862,7 +865,10 @@ class _DnsServersFieldState extends State<_DnsServersField> {
       controller: _ctrl,
       focusNode: _focus,
       maxLines: 4,
-      style: TextStyle(color: AppTheme.text(context), fontSize: 13),
+      style: Theme.of(context)
+          .textTheme
+          .bodyMedium
+          ?.copyWith(color: AppTheme.text(context)),
       decoration: InputDecoration(
         labelText: widget.label,
         hintText: 'https+local://1.1.1.1/dns-query',
@@ -933,7 +939,10 @@ class _XrayCoreTextFieldState extends State<_XrayCoreTextField> {
       child: TextField(
         controller: _ctrl,
         keyboardType: widget.keyboardType,
-        style: TextStyle(color: AppTheme.text(context), fontSize: 13),
+        style: Theme.of(context)
+          .textTheme
+          .bodyMedium
+          ?.copyWith(color: AppTheme.text(context)),
         decoration: InputDecoration(
           labelText: widget.label,
           hintText: widget.hint,

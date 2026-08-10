@@ -540,6 +540,7 @@
   "settingsLanguageRussian": "Русский",
   "settingsLanguageGerman": "Deutsch",
   "settingsLanguageChinese": "中文",
+  "settingsLanguageFarsi": "فارسی",
   "settingsLanguageSheetTitle": "Sprache wählen",
   "splitAddApp": "App hinzufügen",
   "splitAddAppTitle": "Anwendung hinzufügen",
@@ -860,6 +861,8 @@
   "connectionsVerdictDirect": "DIREKT",
   "connectionsVerdictBlock": "GESPERRT",
   "connectionsClosed": "geschlossen",
+  "connectionsAppNamesHint": "App-Namen erscheinen nach dem erneuten Verbinden: Das ausführliche Tunnel-Log startet zusammen mit dem Debug-Modus.",
+  "connectionsSplitTunnelNote": "Apps außerhalb des Tunnels stehen hier nicht: Android leitet sie daran vorbei, ihr Datenverkehr erreicht den Core nie.",
   "subscriptionsExpiredOn": "Abo am {date} abgelaufen",
   "@subscriptionsExpiredOn": {
     "placeholders": {

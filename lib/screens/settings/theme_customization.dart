@@ -175,11 +175,7 @@ class _AppearanceGeneralTab extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
             child: Text(
               l10n.appearanceNotifSectionTitle,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textLight(context),
-              ),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.textLight(context)),
             ),
           ),
           SwitchListTile(
@@ -238,11 +234,7 @@ class _FontPicker extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               l10n.appearanceFontTitle,
-              style: TextStyle(
-                color: AppTheme.text(context),
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
             ),
           ],
         ),
@@ -312,12 +304,7 @@ class _FontCard extends StatelessWidget {
               'Aa Яя',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: fontFamily,
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.text(context),
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontFamily: fontFamily, color: AppTheme.text(context)),
             ),
             Row(
               children: [
@@ -326,12 +313,7 @@ class _FontCard extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: fontFamily,
-                      fontSize: 13,
-                      color: selected ? accent : AppTheme.textLight(context),
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontFamily: fontFamily, color: selected ? accent : AppTheme.textLight(context), fontWeight: selected ? FontWeight.w600 : FontWeight.w400),
                   ),
                 ),
                 if (selected) Icon(Icons.check_circle, size: 16, color: accent),
@@ -390,7 +372,7 @@ class _AppearanceThemesTab extends StatelessWidget {
             current.followSystemTheme
                 ? (isDesktop ? l10n.themeSystemPaletteHint : l10n.themeDynamicPaletteHint)
                 : l10n.themeCustomPaletteHint,
-            style: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
           ),
           const SizedBox(height: 14),
           Text(l10n.themeColorThemesTitle,
@@ -477,7 +459,12 @@ class _LightDarkThemeSlider extends StatelessWidget {
               AnimatedAlign(
                 duration: const Duration(milliseconds: 150),
                 curve: Curves.easeOutCubic,
-                alignment: isDark ? Alignment.centerRight : Alignment.centerLeft,
+                // Directional: подписи «светлая/тёмная» зеркалятся в RTL, и
+                // бегунок должен ехать вместе с ними, а не по физическим
+                // сторонам экрана.
+                alignment: isDark
+                    ? AlignmentDirectional.centerEnd
+                    : AlignmentDirectional.centerStart,
                 child: RepaintBoundary(
                   child: Container(
                     width: thumbW,
@@ -591,11 +578,7 @@ class _ThemePreviewCard extends StatelessWidget {
                     name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: scheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurface),
                   ),
                 ),
                 Icon(
@@ -721,7 +704,7 @@ class _ThemePreviewCard extends StatelessWidget {
           ),
           const SizedBox(height: 5),
           Align(
-            alignment: Alignment.centerRight,
+            alignment: AlignmentDirectional.centerEnd,
             child: Container(
               width: 28,
               height: 28,
