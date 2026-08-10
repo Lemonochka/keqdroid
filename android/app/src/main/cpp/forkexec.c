@@ -147,10 +147,34 @@ static pid_t double_fork_exec(const char *binPath, char *const argv[], const cha
 JNIEXPORT jint JNICALL
 Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
         JNIEnv *env, jclass clazz,
-        jint tunFd, jstring jBinPath, jstring jProxyUrl) {
+        jint tunFd, jstring jBinPath, jstring jProxyUrl,
+        jstring jLogLevel, jstring jLogPath) {
 
     const char *binPath  = (*env)->GetStringUTFChars(env, jBinPath,  NULL);
     const char *proxyUrl = (*env)->GetStringUTFChars(env, jProxyUrl, NULL);
+
+    /*
+     * Уровень логов и файл для них. На `info` tun2socks печатает каждое
+     * соединение строкой `[TCP] <адрес приложения> <-> <назначение>` — это
+     * единственное место, где виден исходный сокет приложения (в лог xray
+     * попадает уже наш собственный, со стороны SOCKS). По нему экран
+     * «Соединения» и определяет владельца через getConnectionOwnerUid.
+     *
+     * Пустой logPath (обычный режим) — пайп не создаётся вовсе, путь
+     * исполнения ровно такой же, как до появления этой возможности.
+     */
+    char logLevel[16] = "warning";
+    if (jLogLevel) {
+        const char *lvl = (*env)->GetStringUTFChars(env, jLogLevel, NULL);
+        if (lvl && lvl[0]) snprintf(logLevel, sizeof(logLevel), "%s", lvl);
+        if (lvl) (*env)->ReleaseStringUTFChars(env, jLogLevel, lvl);
+    }
+    char logpath[1024] = "";
+    if (jLogPath) {
+        const char *lp = (*env)->GetStringUTFChars(env, jLogPath, NULL);
+        if (lp && lp[0]) snprintf(logpath, sizeof(logpath), "%s", lp);
+        if (lp) (*env)->ReleaseStringUTFChars(env, jLogPath, lp);
+    }
 
     /* Снимаем FD_CLOEXEC — fd должен пережить execv */
     fcntl(tunFd, F_SETFD, fcntl(tunFd, F_GETFD) & ~FD_CLOEXEC);
@@ -162,14 +186,22 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
             (char *)binPath,
             "--device",  fdStr,
             "--proxy",   (char *)proxyUrl,
-            "--loglevel","warning",
+            "--loglevel",logLevel,
             NULL
     };
+
+    /* Пайп для stdout/stderr нужен только когда лог просят в файл. */
+    int pipefd[2] = { -1, -1 };
+    if (logpath[0] && pipe(pipefd) != 0) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "startTun2Socks: logpipe failed errno=%d", errno);
+        pipefd[0] = pipefd[1] = -1;
+    }
 
     /* pidpipe — передаём pid2 родителю */
     int pidpipe[2];
     if (pipe(pidpipe) != 0) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "startTun2Socks: pidpipe failed errno=%d", errno);
+        if (pipefd[0] >= 0) { close(pipefd[0]); close(pipefd[1]); }
         (*env)->ReleaseStringUTFChars(env, jBinPath,  binPath);
         (*env)->ReleaseStringUTFChars(env, jProxyUrl, proxyUrl);
         return -1;
@@ -185,6 +217,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
     if (pipe(diagpipe) != 0) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "startTun2Socks: diagpipe failed errno=%d", errno);
         close(pidpipe[0]); close(pidpipe[1]);
+        if (pipefd[0] >= 0) { close(pipefd[0]); close(pipefd[1]); }
         (*env)->ReleaseStringUTFChars(env, jBinPath,  binPath);
         (*env)->ReleaseStringUTFChars(env, jProxyUrl, proxyUrl);
         return -1;
@@ -197,6 +230,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
         __android_log_print(ANDROID_LOG_ERROR, TAG, "startTun2Socks: first fork failed errno=%d", errno);
         close(pidpipe[0]); close(pidpipe[1]);
         close(diagpipe[0]); close(diagpipe[1]);
+        if (pipefd[0] >= 0) { close(pipefd[0]); close(pipefd[1]); }
         (*env)->ReleaseStringUTFChars(env, jBinPath,  binPath);
         (*env)->ReleaseStringUTFChars(env, jProxyUrl, proxyUrl);
         return -1;
@@ -206,6 +240,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
         /* ── промежуточный ── */
         close(pidpipe[0]);
         close(diagpipe[0]);
+        if (pipefd[0] >= 0) close(pipefd[0]);
         setsid();
         prctl(PR_SET_PDEATHSIG, 0);
 
@@ -215,6 +250,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
             write(pidpipe[1], &err, sizeof(err));
             close(pidpipe[1]);
             close(diagpipe[1]);
+            if (pipefd[1] >= 0) close(pipefd[1]);
             _exit(1);
         }
 
@@ -222,6 +258,13 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
             /* ── внук: tun2socks ── */
             close(pidpipe[1]);
             prctl(PR_SET_PDEATHSIG, 0);
+
+            /* Вывод в пайп — до закрытия остальных fd, иначе закроем сам pipefd[1] */
+            if (pipefd[1] >= 0) {
+                dup2(pipefd[1], STDOUT_FILENO);
+                dup2(pipefd[1], STDERR_FILENO);
+                close(pipefd[1]);
+            }
 
             /* Закрываем всё кроме stdin/stdout/stderr, tunFd и diagpipe[1] */
             int max = (int)sysconf(_SC_OPEN_MAX);
@@ -240,6 +283,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
 
         /* промежуточный: отправляем pid2 и умираем */
         close(diagpipe[1]); /* промежуточный не пишет в diagpipe */
+        if (pipefd[1] >= 0) close(pipefd[1]);
         write(pidpipe[1], &pid2, sizeof(pid2));
         close(pidpipe[1]);
         _exit(0);
@@ -248,6 +292,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
     /* ── родитель (JVM) ── */
     close(pidpipe[1]);
     close(diagpipe[1]); /* закрываем write-конец — читаем только read-конец */
+    if (pipefd[1] >= 0) close(pipefd[1]);
 
     waitpid(pid1, NULL, 0);
 
@@ -260,6 +305,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
 
     if (pid2 <= 0) {
         close(diagpipe[0]);
+        if (pipefd[0] >= 0) close(pipefd[0]);
         __android_log_print(ANDROID_LOG_ERROR, TAG, "startTun2Socks: second fork failed");
         return -1;
     }
@@ -286,6 +332,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
                                     "startTun2Socks: execv failed errno=%d (%s) path=%s",
                                     diag_errno, strerror(diag_errno), binPath);
                 close(diagpipe[0]);
+                if (pipefd[0] >= 0) close(pipefd[0]);
                 /* Убиваем внука если он как-то выжил */
                 kill(pid2, SIGKILL);
                 return -1;
@@ -308,7 +355,34 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
             else if (WIFSIGNALED(wstatus))
                 __android_log_print(ANDROID_LOG_ERROR, TAG,
                                     "startTun2Socks: process killed signal=%d", WTERMSIG(wstatus));
+            if (pipefd[0] >= 0) close(pipefd[0]);
             return -1;
+        }
+    }
+
+    /* Читатель лога — тот же, что у ядра: дублирует вывод в файл. */
+    if (pipefd[0] >= 0) {
+        xray_log_arg *targ = malloc(sizeof(xray_log_arg));
+        if (targ) {
+            targ->fd = pipefd[0];
+            snprintf(targ->logpath, sizeof(targ->logpath), "%s", logpath);
+
+            pthread_t thr;
+            pthread_attr_t attr;
+            pthread_attr_init(&attr);
+            pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+            int rc = pthread_create(&thr, &attr, xray_log_reader, targ);
+            pthread_attr_destroy(&attr);
+
+            if (rc != 0) {
+                __android_log_print(ANDROID_LOG_WARN, TAG,
+                                    "startTun2Socks: failed to start log reader thread rc=%d", rc);
+                free(targ);
+                close(pipefd[0]);
+            }
+        } else {
+            close(pipefd[0]);
         }
     }
 

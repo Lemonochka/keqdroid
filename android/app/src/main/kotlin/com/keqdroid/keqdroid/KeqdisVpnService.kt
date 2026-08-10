@@ -48,6 +48,9 @@ class KeqdisVpnService : VpnService() {
         const val CORE_ENGINE_KEQRNEL  = "keqrnel"
         // Файл логов ядра в filesDir; читается getXrayLogs (надёжнее logcat на Android 13+).
         const val CORE_LOG_FILE        = "core_logs.txt"
+        // Лог tun2socks; пишется только в дебаг-режиме. Нужен экрану «Соединения»:
+        // исходный сокет приложения виден больше нигде.
+        const val TUN2SOCKS_LOG_FILE   = "tun2socks_logs.txt"
         // AmneziaWG: ядро amneziawg-go само владеет TUN, конфиг приходит из .conf.
         const val EXTRA_AWG_UAPI        = "awg_uapi"
         const val EXTRA_AWG_ADDRESSES   = "awg_addresses"
@@ -723,9 +726,23 @@ class KeqdisVpnService : VpnService() {
             "socks5://$socksUsername:$socksPassword@127.0.0.1:$socksPort"
         }
 
-        android.util.Log.i("KEQDIS", "Starting tun2socks: fd=$tunRawFd bin=${bin.absolutePath}")
+        // В дебаг-режиме поднимаем уровень до info и пишем вывод в файл: только
+        // там видно, какому приложению принадлежит соединение (строка
+        // `[TCP] <сокет приложения> <-> <назначение>`). В обычном режиме всё как
+        // раньше — warning и без файла.
+        val debug = readDebugMode()
+        val logPath = if (debug) File(filesDir, TUN2SOCKS_LOG_FILE).absolutePath else ""
+        val logLevel = if (debug) "info" else "warning"
 
-        val pid = NativeHelper.startTun2Socks(tunRawFd, bin.absolutePath, proxyUrl)
+        android.util.Log.i("KEQDIS", "Starting tun2socks: fd=$tunRawFd bin=${bin.absolutePath} log=$logLevel")
+
+        val pid = NativeHelper.startTun2Socks(
+            tunRawFd,
+            bin.absolutePath,
+            proxyUrl,
+            logLevel,
+            logPath,
+        )
         if (pid <= 0) throw IllegalStateException("fork() failed (pid=$pid)")
 
         tun2socksPid = pid
@@ -906,6 +923,18 @@ class KeqdisVpnService : VpnService() {
     // работает для всех путей старта (Dart, плитка, кнопка уведомления), без
     // прокидывания extra через Intent.
     private data class NotifBodyPrefs(val showUptime: Boolean, val showSpeed: Boolean)
+
+    // Дебаг-режим приложения. Он гейтит подробный лог tun2socks: тот пишет
+    // строку на каждое соединение, и держать это включённым всегда незачем.
+    private fun readDebugMode(): Boolean {
+        return try {
+            val raw = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                .getString("flutter.keqdis_settings", null) ?: return false
+            org.json.JSONObject(raw).optBoolean("debugMode", false)
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     private fun readNotifBodyPrefs(): NotifBodyPrefs {
         return try {

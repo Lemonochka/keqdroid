@@ -200,11 +200,7 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
                           HotkeyService.isGlobal
                               ? l10n.hotkeysHintGlobal
                               : l10n.hotkeysHintInApp,
-                          style: TextStyle(
-                            fontSize: 12,
-                            height: 1.4,
-                            color: AppTheme.textLight(context),
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.4, color: AppTheme.textLight(context)),
                         ),
                       ),
                     ],
@@ -317,11 +313,7 @@ class _HotkeyRow extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textLight(context),
-                        height: 1.3,
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context), height: 1.3),
                     ),
                   ],
                 ),
@@ -334,12 +326,9 @@ class _HotkeyRow extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               recordingHint,
-              style: TextStyle(
-                fontSize: 11,
-                color: needsModifier
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: needsModifier
                     ? AppTheme.red(context)
-                    : AppTheme.textLight(context),
-              ),
+                    : AppTheme.textLight(context)),
             ),
           ],
         ],
@@ -362,11 +351,7 @@ class _HotkeyRow extends StatelessWidget {
           ),
           child: Text(
             pressKeysLabel,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: accent,
-            ),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(color: accent),
           ),
         ),
       );
@@ -385,10 +370,7 @@ class _HotkeyRow extends StatelessWidget {
           ),
           child: Text(
             notSetLabel,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.textLight(context),
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
           ),
         ),
       );
@@ -407,10 +389,7 @@ class _HotkeyRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 3),
                 child: Text(
                   '+',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.textLight(context),
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
                 ),
               ),
             Container(
@@ -428,11 +407,7 @@ class _HotkeyRow extends StatelessWidget {
               ),
               child: Text(
                 parts[i],
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.text(context),
-                ),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppTheme.text(context)),
               ),
             ),
           ],

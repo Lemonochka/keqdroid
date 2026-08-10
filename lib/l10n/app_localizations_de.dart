@@ -1140,6 +1140,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsLanguageChinese => '中文';
 
   @override
+  String get settingsLanguageFarsi => 'فارسی';
+
+  @override
   String get settingsLanguageSheetTitle => 'Sprache wählen';
 
   @override
@@ -1944,6 +1947,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get connectionsClosed => 'geschlossen';
+
+  @override
+  String get connectionsAppNamesHint => 'App-Namen erscheinen nach dem erneuten Verbinden: Das ausführliche Tunnel-Log startet zusammen mit dem Debug-Modus.';
+
+  @override
+  String get connectionsSplitTunnelNote => 'Apps außerhalb des Tunnels stehen hier nicht: Android leitet sie daran vorbei, ihr Datenverkehr erreicht den Core nie.';
 
   @override
   String subscriptionsExpiredOn(String date) {

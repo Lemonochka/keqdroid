@@ -100,6 +100,17 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
         _snapshot.source != ConnectionsSource.unavailable &&
         logLevel != 'info' &&
         logLevel != 'debug';
+    // Владельца соединения на Android ищем по логу tun2socks, а он включается
+    // при старте туннеля. Дебаг включили после подключения — колонка будет
+    // пустой до переподключения, и молчать об этом нельзя: выглядит поломкой.
+    final showAppNamesHint =
+        Platform.isAndroid && !_snapshot.appNamesAvailable;
+    // Сплит-туннель на Android делает система: исключённые приложения идут
+    // мимо TUN, их трафик не видит ни tun2socks, ни ядро. В списке их поэтому
+    // не бывает никогда — и это не пропажа, а как раз то, о чём просили.
+    final split = ref.watch(splitTunnelingProvider);
+    final showSplitNote = Platform.isAndroid &&
+        (split.excludePackages.isNotEmpty || split.includePackages.isNotEmpty);
 
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
@@ -137,13 +148,30 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                         const SizedBox(height: 10),
                         _logLevelHint(context, l10n),
                       ],
+                      if (showAppNamesHint) ...[
+                        const SizedBox(height: 10),
+                        _noticeBox(
+                          context,
+                          Icons.apps,
+                          l10n.connectionsAppNamesHint,
+                        ),
+                      ],
+                      if (showSplitNote) ...[
+                        const SizedBox(height: 10),
+                        _noticeBox(
+                          context,
+                          Icons.call_split,
+                          l10n.connectionsSplitTunnelNote,
+                          color: AppTheme.textLight(context),
+                        ),
+                      ],
                       const SizedBox(height: 10),
                       TextField(
                         controller: _filterCtrl,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.text(context),
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(color: AppTheme.text(context)),
                         decoration: InputDecoration(
                           isDense: true,
                           prefixIcon: const Icon(Icons.search, size: 18),
@@ -221,31 +249,29 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
           ),
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
+            style: Theme.of(context)
+                .textTheme
+                .labelSmall
+                ?.copyWith(color: color),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             l10n.connectionsCount(shown),
-            style: TextStyle(
-              fontSize: 11.5,
-              color: AppTheme.textLight(context),
-            ),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppTheme.textLight(context)),
           ),
         ),
         if (_paused)
           Text(
             l10n.connectionsPaused,
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.orange(context),
-            ),
+            style: Theme.of(context)
+                .textTheme
+                .labelMedium
+                ?.copyWith(color: AppTheme.orange(context)),
           ),
       ],
     );
@@ -265,17 +291,48 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
           Expanded(
             child: Text(
               l10n.connectionsRuleHint,
-              style: TextStyle(
-                fontSize: 11.5,
-                height: 1.35,
-                color: AppTheme.text(context),
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    height: 1.35,
+                    color: AppTheme.text(context),
+                  ),
             ),
           ),
           const SizedBox(width: 6),
           TextButton(
             onPressed: _enableInfoLogs,
             child: Text(l10n.connectionsRuleHintAction),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Плашка-объяснение без действия: сделать за пользователя тут нечего.
+  Widget _noticeBox(
+    BuildContext context,
+    IconData icon,
+    String text, {
+    Color? color,
+  }) {
+    final tint = color ?? AppTheme.orange(context);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: tint),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    height: 1.35,
+                    color: AppTheme.text(context),
+                  ),
+            ),
           ),
         ],
       ),
@@ -301,21 +358,20 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                   ? l10n.connectionsUnavailable
                   : l10n.connectionsEmpty,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.text(context),
-              ),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppTheme.text(context)),
             ),
             if (note.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
                 note,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: AppTheme.textLight(context),
-                ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontFamily: 'monospace',
+                      color: AppTheme.textLight(context),
+                    ),
               ),
             ],
           ],

@@ -135,10 +135,10 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
       focusNode: focus,
       enabled: enabled,
       keyboardType: TextInputType.number,
-      style: TextStyle(fontSize: 14, color: AppTheme.text(context)),
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+        labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         isDense: true,
@@ -236,10 +236,7 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
                     const SizedBox(height: 8),
                     Text(
                       l10n.settingsTurnOffToChange,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.orange(context),
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.orange(context)),
                     ),
                   ],
                 ],

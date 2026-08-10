@@ -540,6 +540,7 @@
   "settingsLanguageRussian": "Русский",
   "settingsLanguageGerman": "Deutsch",
   "settingsLanguageChinese": "中文",
+  "settingsLanguageFarsi": "فارسی",
   "settingsLanguageSheetTitle": "Выберите язык",
   "splitAddApp": "Добавить",
   "splitAddAppTitle": "Добавить приложение",
@@ -860,6 +861,8 @@
   "connectionsVerdictDirect": "НАПРЯМУЮ",
   "connectionsVerdictBlock": "БЛОК",
   "connectionsClosed": "закрыто",
+  "connectionsAppNamesHint": "Названия приложений появятся после переподключения: подробный лог туннеля включается при старте вместе с дебаг-режимом.",
+  "connectionsSplitTunnelNote": "Приложения, выведенные из туннеля, здесь не появятся: Android пускает их мимо, и до ядра их трафик не доходит.",
   "subscriptionsExpiredOn": "Подписка истекла {date}",
   "@subscriptionsExpiredOn": {
     "placeholders": {

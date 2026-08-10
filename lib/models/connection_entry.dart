@@ -119,6 +119,27 @@ class ConnectionEntry {
         closed: closed,
       );
 
+  /// Копия с именем приложения-владельца: на Android оно приходит отдельно,
+  /// от системы, уже после разбора лога.
+  ConnectionEntry withProcess(String process) => ConnectionEntry(
+        id: id,
+        network: network,
+        host: host,
+        destPort: destPort,
+        destIp: destIp,
+        source: source,
+        process: process,
+        inbound: inbound,
+        outbound: outbound,
+        rule: rule,
+        startedAt: startedAt,
+        upload: upload,
+        download: download,
+        rejected: rejected,
+        decidedByCore: decidedByCore,
+        closed: closed,
+      );
+
   /// `host:port`, как это привычно видеть в логах.
   String get target => '$host:$destPort';
 
@@ -157,6 +178,7 @@ class ConnectionsSnapshot {
     required this.source,
     this.note = '',
     this.ruleInfoAvailable = true,
+    this.appNamesAvailable = true,
   });
 
   static const empty = ConnectionsSnapshot(
@@ -173,4 +195,10 @@ class ConnectionsSnapshot {
   /// false — источник в принципе не может сказать, какое правило сработало
   /// (access-лог при уровне логов ниже Info).
   final bool ruleInfoAvailable;
+
+  /// false — владельца соединения определить нечем: на Android нужен лог
+  /// tun2socks, а он включается при старте туннеля вместе с дебаг-режимом.
+  /// Включили дебаг уже после подключения — до переподключения имён не будет,
+  /// и об этом честнее сказать, чем показывать пустую колонку.
+  final bool appNamesAvailable;
 }

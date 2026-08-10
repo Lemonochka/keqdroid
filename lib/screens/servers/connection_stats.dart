@@ -118,20 +118,12 @@ class _ConnectionStats extends ConsumerWidget {
           else
             Text(
               label ?? '',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color),
             ),
           const SizedBox(width: 4),
           Text(
             value,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: color,
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
           ),
         ],
       ),

@@ -257,10 +257,12 @@ Widget _countryFlagCircle({
               child: Center(
                 child: Text(
                   protocol.isNotEmpty ? protocol[0].toUpperCase() : '?',
+                  // Роль темы взять неоткуда: helper без BuildContext, а
+                  // ради одной буквы на аватарке протаскивать его не стоит.
                   style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -373,7 +375,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
       serversProvider.select((s) => s.activeServerId),
     );
     final title = sub != null
-        ? '${sub.name}  |  ${sub.usageLabel}'
+        ? '${sub.name}  |  ${ltrIsolate(sub.usageLabel)}'
         : context.l10n.serversManualGroup;
 
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
@@ -472,7 +474,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                         ),
 
                         Padding(
-                          padding: const EdgeInsets.only(left: 6),
+                          padding: const EdgeInsetsDirectional.only(start: 6),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -658,7 +660,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
           child: Text(
             context.l10n.serversEmptyGroupHint,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: textLightColor),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: textLightColor),
           ),
         ),
       );
@@ -757,15 +759,10 @@ class _SubCardState extends ConsumerState<_SubCard> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                 child: Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   child: Text(
                     l10n.serversSortTitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: textLight,
-                      letterSpacing: 0.2,
-                    ),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(color: textLight, letterSpacing: 0.2),
                   ),
                 ),
               ),
@@ -777,12 +774,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                   ),
                   title: Text(
                     mode.label(l10n),
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: textColor,
-                      fontWeight:
-                          mode == current ? FontWeight.w600 : FontWeight.w400,
-                    ),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: textColor, fontWeight: mode == current ? FontWeight.w600 : FontWeight.w400),
                   ),
                   trailing: mode == current
                       ? Icon(Icons.check, color: accent, size: 20)
@@ -821,11 +813,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                 Text(
                   context.l10n.subscriptionsAutoUpdateInterval,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.text(context),
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -833,10 +821,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                     sub.updateIntervalHours,
                   ),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textLight(context),
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
                 ),
                 const SizedBox(height: 8),
                 ...options.map(

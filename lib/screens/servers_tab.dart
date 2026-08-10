@@ -28,6 +28,7 @@ import '../platform/vpn_native_bridge.dart';
 import '../ui/responsive/desktop_page_layout.dart';
 import '../utils/awg_profile.dart';
 import '../utils/clipboard_import.dart';
+import '../utils/bidi.dart';
 import '../utils/error_messages.dart';
 import 'qr_scan_screen.dart';
 import 'servers/server_config_editor.dart';
@@ -452,10 +453,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                     textAlign: TextAlign.center,
                     maxLines: 5,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.red(context),
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.red(context)),
                   ),
                 ),
               // Скорость/трафик/время. Появление плавное: AnimatedSize
@@ -618,11 +616,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
           children: [
             Text(
               l10n.serversAddServer,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.text(ctx),
-              ),
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(color: AppTheme.text(ctx)),
             ),
             const SizedBox(height: 8),
             ListTile(
@@ -633,7 +627,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
               ),
               subtitle: Text(
                 'vless, vmess, trojan, ss, hysteria2, hy2',
-                style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx)),
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
               ),
               onTap: () {
                 Navigator.pop(ctx2);
@@ -651,7 +645,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
               ),
               subtitle: Text(
                 'AmneziaWG (.conf)',
-                style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx)),
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
               ),
               onTap: () {
                 Navigator.pop(ctx2);
@@ -671,7 +665,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 ),
                 subtitle: Text(
                   l10n.serversScanQrHint,
-                  style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx)),
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
                 ),
                 onTap: () {
                   Navigator.pop(ctx2);
@@ -844,23 +838,19 @@ class _ServersTabState extends ConsumerState<ServersTab>
             children: [
               Text(
                 l10n.serversAddServerTitle,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.text(ctx),
-                ),
+                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(color: AppTheme.text(ctx)),
               ),
               const SizedBox(height: 6),
               Text(
                 l10n.serversPasteVlessHint,
-                style: TextStyle(fontSize: 12, color: AppTheme.textLight(ctx)),
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx)),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: ctrl,
                 autofocus: true,
                 maxLines: 4,
-                style: TextStyle(color: AppTheme.text(ctx), fontSize: 13),
+                style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(color: AppTheme.text(ctx)),
                 decoration: InputDecoration(
                   hintText: l10n.serversPasteHint,
                   hintStyle: TextStyle(
@@ -885,7 +875,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 const SizedBox(height: 8),
                 Text(
                   sheetError!,
-                  style: TextStyle(fontSize: 12, color: AppTheme.red(ctx)),
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.red(ctx)),
                 ),
               ],
               const SizedBox(height: 16),
@@ -1079,7 +1069,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
           Text(
             l10n.serversEmptyHint,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
           ),
           const SizedBox(height: 20),
           FilledButton.icon(

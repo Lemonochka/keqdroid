@@ -84,6 +84,7 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
     final settings = widget.settingsAsync.value ?? const AppSettings();
     final isLan = settings.lanSharing;
     final isConnected = ref.watch(
@@ -127,11 +128,10 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(l10n.settingsLanProxyTitle,
-                        style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.text(context))),
+                        style: textTheme.titleSmall?.copyWith(color: AppTheme.text(context))),
                     Text(
                       isLan ? l10n.settingsLanSharingOnIp(ip) : l10n.settingsOff,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: textTheme.bodySmall?.copyWith(
                         color: isLan ? AppTheme.accent(context) : AppTheme.textLight(context),
                       ),
                     ),
@@ -158,15 +158,13 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(l10n.settingsDeviceIpListTitle,
-                      style: TextStyle(fontSize: 12, color: AppTheme.textLight(context))),
+                      style: textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context))),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Text(
                         ip,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                        style: textTheme.titleMedium?.copyWith(
                           fontFamily: 'monospace',
                           color: AppTheme.text(context),
                         ),
@@ -185,7 +183,7 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
                   ),
                   const SizedBox(height: 8),
                   Text(l10n.settingsSetupAnotherDeviceTitle,
-                      style: TextStyle(fontSize: 12, color: AppTheme.textLight(context))),
+                      style: textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context))),
                   const SizedBox(height: 4),
                   _proxyLine(context, 'SOCKS5', ip, settings.lanSocksPort),
                   const SizedBox(height: 2),
@@ -241,14 +239,14 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
             const SizedBox(height: 6),
             Text(
               l10n.settingsLanAuthHint,
-              style: TextStyle(fontSize: 11, color: AppTheme.textLight(context)),
+              style: textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
             ),
           ],
           if (isConnected && isLan)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(l10n.settingsTurnOffToChange,
-                  style: TextStyle(fontSize: 11, color: AppTheme.orange(context))),
+                  style: textTheme.bodySmall?.copyWith(color: AppTheme.orange(context))),
             ),
         ],
       ),
@@ -257,15 +255,19 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
 
   Widget _proxyLine(BuildContext context, String label, String ip, int port) {
     final l10n = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
     final text = '$ip:$port';
     return Row(
       children: [
-        SizedBox(width: 52, child: Text(label, style: TextStyle(fontSize: 11, color: AppTheme.textLight(context)))),
+        SizedBox(
+          width: 52,
+          child: Text(label,
+              style: textTheme.labelSmall?.copyWith(color: AppTheme.textLight(context))),
+        ),
         Expanded(
           child: Text(
             text,
-            style: TextStyle(
-              fontSize: 13,
+            style: textTheme.bodyMedium?.copyWith(
               fontFamily: 'monospace',
               fontWeight: FontWeight.w500,
               color: AppTheme.text(context),
@@ -289,10 +291,11 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     return TextField(
       controller: ctrl,
       obscureText: obscurable && !_lanPassVisible,
-      style: TextStyle(fontSize: 14, color: AppTheme.text(context)),
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+        labelStyle:
+            Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
@@ -324,10 +327,11 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     return TextField(
       controller: ctrl,
       keyboardType: TextInputType.number,
-      style: TextStyle(fontSize: 14, color: AppTheme.text(context)),
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+        labelStyle:
+            Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(

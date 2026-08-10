@@ -32,7 +32,7 @@ class _SplitTunnelingScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
               child: Text(
                 '${splitState.excludePackages.length} apps bypass VPN',
-                style: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
               ),
             ),
             Expanded(
@@ -46,10 +46,10 @@ class _SplitTunnelingScreen extends ConsumerWidget {
                       backgroundColor: AppTheme.card(context),
                       child: Text(app.appName[0], style: TextStyle(color: AppTheme.text(context))),
                     ),
-                    title: Text(app.appName, style: TextStyle(color: AppTheme.text(context), fontSize: 14)),
+                    title: Text(app.appName, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context))),
                     subtitle: Text(
                       app.packageName,
-                      style: TextStyle(color: AppTheme.textLight(context), fontSize: 11),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

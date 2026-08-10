@@ -26,10 +26,12 @@ import 'package:keqdroid/services/windows_desktop_service.dart';
 import 'package:keqdroid/app/app.dart';
 import 'package:keqdroid/screens/settings/connection_tile.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:keqdroid/services/update_service.dart';
 import 'package:keqdroid/shared/ui/update_dialog.dart';
 import 'package:keqdroid/utils/app_locale.dart';
+import 'package:keqdroid/utils/bidi.dart';
 import 'package:keqdroid/utils/awg_profile.dart';
 import 'package:keqdroid/utils/local_vpn_proxy.dart';
 import 'package:keqdroid/utils/geo_asset_index.dart';
@@ -86,7 +88,7 @@ class SettingsTab extends ConsumerWidget {
                   children: [
                   Text(
                     l10n.settingsTitle,
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.text(context)),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.text(context)),
                   ),
                   const SizedBox(height: 20),
                   _ThemeCustomizationCard(settingsAsync: settingsAsync),
@@ -181,6 +183,7 @@ class _LanguageSettingsCard extends ConsumerWidget {
       ('ru', l10n.settingsLanguageRussian),
       ('de', l10n.settingsLanguageGerman),
       ('zh', l10n.settingsLanguageChinese),
+      ('fa', l10n.settingsLanguageFarsi),
     ];
 
     showModalBottomSheet<void>(
@@ -214,11 +217,7 @@ class _LanguageSettingsCard extends ConsumerWidget {
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                     child: Text(
                       l10n.settingsLanguageSheetTitle,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.text(context),
-                      ),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.text(context)),
                     ),
                   ),
                   Expanded(
@@ -254,13 +253,9 @@ class _LanguageSettingsCard extends ConsumerWidget {
                                     Expanded(
                                       child: Text(
                                         label,
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: selected
+                                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: selected
                                               ? FontWeight.w700
-                                              : FontWeight.w500,
-                                          color: AppTheme.text(context),
-                                        ),
+                                              : FontWeight.w500, color: AppTheme.text(context)),
                                       ),
                                     ),
                                     if (selected)
@@ -355,7 +350,7 @@ class _SettingsCard extends StatelessWidget {
                       color: AppTheme.text(context),
                     ),
                   ),
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: AppTheme.textLight(context))),
+                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context))),
                 ],
               ),
             ),
@@ -390,7 +385,7 @@ Future<bool> _confirmReset(
           Expanded(
             child: Text(
               l10n.settingsResetConfirmTitle,
-              style: TextStyle(color: textColor, fontSize: 18),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: textColor),
             ),
           ),
         ],
@@ -573,8 +568,8 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                     style: TextStyle(fontWeight: FontWeight.w600, color: textColor),
                   ),
                   Text(
-                    'v$_version',
-                    style: TextStyle(fontSize: 12, color: subtitleColor),
+                    ltrIsolate('v$_version'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: subtitleColor),
                   ),
                 ],
               ),
@@ -614,11 +609,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                                     : l10n.settingsUpToDate,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: statusColor,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: statusColor),
                       ),
                     ],
                   ),
@@ -663,16 +654,12 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                     children: [
                       Text(
                         l10n.settingsNewVersionAvailable,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                          color: textColor,
-                        ),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(color: textColor),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'v${updateInfo.displayLatestVersion} (${updateInfo.formattedSize})',
-                        style: TextStyle(fontSize: 12, color: subtitleColor),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: subtitleColor),
                       ),
                     ],
                   ),

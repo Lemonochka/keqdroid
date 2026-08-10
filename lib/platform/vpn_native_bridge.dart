@@ -50,6 +50,45 @@ class VpnNativeBridge {
     }
   }
 
+  /// Лог tun2socks. Пишется только в дебаг-режиме: там на каждое соединение
+  /// печатается сокет самого приложения, а больше его взять негде — в лог xray
+  /// попадает уже наш собственный, со стороны SOCKS.
+  static Future<String> getTun2SocksLogs({int maxLines = 600}) async {
+    if (!Platform.isAndroid) return '';
+    try {
+      final text = await channel.invokeMethod<String>(
+        'getTun2SocksLogs',
+        {'maxLines': maxLines},
+      );
+      return text ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// Имена приложений-владельцев соединений, по одному на каждый элемент
+  /// [connections] (`protocol`, `srcIp`, `srcPort`, `dstIp`, `dstPort`).
+  ///
+  /// Пустая строка — не определилось: соединение уже закрылось (система ищет
+  /// его в живой таблице сокетов), Android младше 10 или у uid нет пакетов.
+  static Future<List<String>> resolveConnectionOwners(
+    List<Map<String, Object?>> connections,
+  ) async {
+    if (!Platform.isAndroid || connections.isEmpty) {
+      return List.filled(connections.length, '');
+    }
+    try {
+      final names = await channel.invokeListMethod<Object?>(
+        'resolveConnectionOwners',
+        {'connections': connections},
+      );
+      if (names == null) return List.filled(connections.length, '');
+      return [for (final n in names) n?.toString() ?? ''];
+    } catch (_) {
+      return List.filled(connections.length, '');
+    }
+  }
+
   static void registerLaunchHandler(
     Future<void> Function(MethodCall call)? handler,
   ) {

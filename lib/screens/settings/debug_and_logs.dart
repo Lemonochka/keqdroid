@@ -51,10 +51,7 @@ class _DebugModeCard extends ConsumerWidget {
                     ),
                     Text(
                       enabled ? l10n.settingsDebugModeOn : l10n.settingsDebugModeOff,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: enabled ? AppTheme.orange(context) : AppTheme.textLight(context),
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: enabled ? AppTheme.orange(context) : AppTheme.textLight(context)),
                     ),
                   ],
                 ),
@@ -71,7 +68,7 @@ class _DebugModeCard extends ConsumerWidget {
             PlatformBootstrap.isDesktop
                 ? l10n.settingsDebugHintDesktop
                 : l10n.settingsDebugHintMobile,
-            style: TextStyle(fontSize: 12, color: AppTheme.textLight(context), height: 1.35),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context), height: 1.35),
           ),
           if (enabled) ...[
             const SizedBox(height: 12),
@@ -187,12 +184,7 @@ class _XrayLogsScreenState extends ConsumerState<_XrayLogsScreen> {
           child: SingleChildScrollView(
             child: SelectableText(
               _logs,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 11.5,
-                color: AppTheme.text(context),
-                height: 1.35,
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace', color: AppTheme.text(context), height: 1.35),
             ),
           ),
         ),

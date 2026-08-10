@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/expressive.dart';
 
 import '../../models/server_item.dart';
 import '../../models/server_name_utils.dart';
@@ -632,10 +633,9 @@ class _ServerConfigEditorScreenState
                     )
                   : Text(
                       l10n.subscriptionsSave,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .emphasized(Theme.of(context).textTheme.labelLarge),
                     ),
             ),
           ),
@@ -662,20 +662,19 @@ class _ServerConfigEditorScreenState
           children: [
             Text(
               l10n.serverEditorTitle,
-              style: TextStyle(
-                color: AppTheme.text(context),
-                fontWeight: FontWeight.w700,
-                fontSize: 17,
-              ),
+              style: Theme.of(context)
+                  .textTheme
+                  .emphasized(Theme.of(context).textTheme.titleMedium)
+                  ?.copyWith(color: AppTheme.text(context)),
             ),
             Text(
               '${server.protocol.toUpperCase()} · $name',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppTheme.textLight(context),
-                fontSize: 11,
-              ),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: AppTheme.textLight(context)),
             ),
           ],
         ),
@@ -724,14 +723,17 @@ class _ServerConfigEditorScreenState
                   overridden
                       ? l10n.serverEditorOverriddenNote
                       : l10n.serverEditorSubscriptionNote,
-                  style: TextStyle(fontSize: 12, color: AppTheme.text(context)),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppTheme.text(context)),
                 ),
               ),
             ],
           ),
           if (overridden)
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: TextButton.icon(
                 onPressed: () {
                   final srv = _server!;
@@ -746,7 +748,10 @@ class _ServerConfigEditorScreenState
                 icon: Icon(Icons.restore, size: 16, color: color),
                 label: Text(
                   l10n.serverEditorRevert,
-                  style: TextStyle(fontSize: 12, color: color),
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(color: color),
                 ),
               ),
             ),
@@ -765,7 +770,10 @@ class _ServerConfigEditorScreenState
       ),
       child: Text(
         _error!,
-        style: TextStyle(fontSize: 12, color: AppTheme.red(context)),
+        style: Theme.of(context)
+            .textTheme
+            .bodySmall
+            ?.copyWith(color: AppTheme.red(context)),
       ),
     );
   }
@@ -778,11 +786,10 @@ class _ServerConfigEditorScreenState
           controller: _rawCtrl,
           maxLines: 10,
           minLines: 4,
-          style: TextStyle(
-            color: AppTheme.text(context),
-            fontSize: 12,
-            fontFamily: 'monospace',
-          ),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.text(context),
+                fontFamily: 'monospace',
+              ),
           onChanged: (_) => setState(() {}),
           decoration: _inputDecoration(),
         ),
@@ -1073,7 +1080,10 @@ class _ServerConfigEditorScreenState
         activeTrackColor: AppTheme.accent(context).withValues(alpha: 0.32),
         title: Text(
           l10n.serverEditorAllowInsecure,
-          style: TextStyle(fontSize: 13, color: AppTheme.text(context)),
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(color: AppTheme.text(context)),
         ),
         onChanged: (v) => setState(() => _toggle['insecure'] = v),
       ),
@@ -1096,11 +1106,10 @@ class _ServerConfigEditorScreenState
             Expanded(
               child: SelectableText(
                 preview,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: AppTheme.textLight(context),
-                ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontFamily: 'monospace',
+                      color: AppTheme.textLight(context),
+                    ),
               ),
             ),
             IconButton(
@@ -1142,12 +1151,13 @@ class _ServerConfigEditorScreenState
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
-              color: AppTheme.textLight(context),
-            ),
+            style: Theme.of(context)
+                .textTheme
+                .emphasized(Theme.of(context).textTheme.labelMedium)
+                ?.copyWith(
+                  letterSpacing: 0.3,
+                  color: AppTheme.textLight(context),
+                ),
           ),
           const SizedBox(height: 10),
           ...children,
@@ -1160,11 +1170,13 @@ class _ServerConfigEditorScreenState
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
-      hintStyle: TextStyle(
-        fontSize: 12,
-        color: AppTheme.textLight(context).withValues(alpha: 0.4),
-      ),
+      labelStyle: Theme.of(context)
+          .textTheme
+          .bodySmall
+          ?.copyWith(color: AppTheme.textLight(context)),
+      hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppTheme.textLight(context).withValues(alpha: 0.4),
+          ),
       isDense: true,
       filled: true,
       fillColor: AppTheme.bg(context),
@@ -1196,11 +1208,10 @@ class _ServerConfigEditorScreenState
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: _ctrl(id),
-        style: TextStyle(
-          color: AppTheme.text(context),
-          fontSize: 13,
-          fontFamily: obscurable ? 'monospace' : null,
-        ),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.text(context),
+              fontFamily: obscurable ? 'monospace' : null,
+            ),
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         onChanged: (_) => setState(() {}),
@@ -1248,7 +1259,10 @@ class _ServerConfigEditorScreenState
         initialValue: current,
         isExpanded: true,
         dropdownColor: AppTheme.card(context),
-        style: TextStyle(color: AppTheme.text(context), fontSize: 13),
+        style: Theme.of(context)
+            .textTheme
+            .bodyMedium
+            ?.copyWith(color: AppTheme.text(context)),
         icon: Icon(
           Icons.expand_more,
           size: 18,

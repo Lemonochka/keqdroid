@@ -257,11 +257,7 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
                     server.protocol.isNotEmpty
                         ? server.protocol[0].toUpperCase()
                         : '?',
-                    style: TextStyle(
-                      color: cs.onPrimary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onPrimary),
                   ),
                 ),
               ),
@@ -423,7 +419,6 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
                       statusLabel,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: itemFg,
-                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -543,12 +538,7 @@ class _TrayGroupHeader extends StatelessWidget {
         title.toUpperCase(),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: color,
-          letterSpacing: 0.4,
-        ),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color, letterSpacing: 0.4),
       ),
     );
   }
@@ -602,11 +592,7 @@ class _TrayItem extends StatelessWidget {
                     label,
                     maxLines: maxLines,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: fg,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: fg, fontWeight: selected ? FontWeight.w600 : FontWeight.w400),
                   ),
                 ),
                 if (selected && accentColor != null)

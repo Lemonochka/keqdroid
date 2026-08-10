@@ -234,7 +234,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
             if (_isDesktop) ...[
               const SizedBox(height: 12),
               Align(
-                alignment: Alignment.centerLeft,
+                alignment: AlignmentDirectional.centerStart,
                 child: TextButton.icon(
                   onPressed: () async {
                     final r = await FilePicker.pickFiles(
@@ -482,11 +482,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
                           child: Text(
                             AppLocalizations.of(context)!
                                 .splitTunnelingReconnectHint,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              height: 1.35,
-                              color: AppTheme.text(context),
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.35, color: AppTheme.text(context)),
                           ),
                         ),
                       ],
@@ -504,11 +500,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
                     padding: const EdgeInsets.all(10),
                     child: Text(
                       AppLocalizations.of(context)!.splitProxyModeWarning,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        height: 1.35,
-                        color: AppTheme.text(context),
-                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.35, color: AppTheme.text(context)),
                     ),
                   ),
                 ),
@@ -561,10 +553,10 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(l10n.splitTunnelingTitle,
-              style: TextStyle(color: AppTheme.text(context), fontWeight: FontWeight.w700, fontSize: 17)),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.text(context))),
           if (checked > 0 && _mode != TunnelMode.all)
             Text(l10n.splitSelectedAppsCount(checked),
-                style: TextStyle(color: AppTheme.textLight(context), fontSize: 11)),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context))),
         ],
       ),
       actions: [
@@ -600,7 +592,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
                 ref.read(splitTunnelingProvider.notifier).clearExcludes();
               }
             },
-            child: Text(l10n.splitClear, style: TextStyle(color: AppTheme.textLight(context), fontSize: 13)),
+            child: Text(l10n.splitClear, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight(context))),
           ),
       ],
     );
@@ -644,7 +636,11 @@ class _ModeSelector extends StatelessWidget {
         child: Stack(
           children:[
             AnimatedAlign(
-              alignment: Alignment(alignmentX, 0),
+              // Directional, а не Alignment: подсветка позиционируется по
+              // индексу режима, а Row с подписями сам зеркалится в RTL. С
+              // обычным Alignment (-1 всегда физически слева) они разъезжались,
+              // и в персидской локали подсветка стояла под чужой подписью.
+              alignment: AlignmentDirectional(alignmentX, 0),
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeOutCubic,
               child: FractionallySizedBox(
@@ -686,8 +682,11 @@ class _ModeSelector extends StatelessWidget {
                           const SizedBox(height: 3),
                           AnimatedDefaultTextStyle(
                             duration: const Duration(milliseconds: 200),
-                            style: TextStyle(
-                              fontSize: 10,
+                            // AnimatedDefaultTextStyle требует не-null стиль,
+                            // поэтому роль берём с fallback, а не через `?.`.
+                            style: (Theme.of(context).textTheme.labelSmall ??
+                                    const TextStyle())
+                                .copyWith(
                               fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                               color: active ? onPrimary : AppTheme.textLight(context),
                             ),
@@ -734,10 +733,10 @@ class _SearchBar extends StatelessWidget {
         ),
         child: TextField(
           controller: controller,
-          style: TextStyle(color: AppTheme.text(context), fontSize: 14),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
           decoration: InputDecoration(
             hintText: l10n.splitSearchHint,
-            hintStyle: TextStyle(color: AppTheme.textLight(context).withValues(alpha: 0.6), fontSize: 14),
+            hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight(context).withValues(alpha: 0.6)),
             prefixIcon: Icon(Icons.search, color: AppTheme.textLight(context), size: 20),
             suffixIcon: controller.text.isNotEmpty
                 ? IconButton(
@@ -801,7 +800,7 @@ class _AppList extends StatelessWidget {
             Icon(Icons.search_off, size: 40, color: AppTheme.accent(context).withValues(alpha: 0.4)),
             const SizedBox(height: 10),
             Text(l10n.splitNoAppsFound,
-                style: TextStyle(color: AppTheme.textLight(context), fontSize: 14)),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight(context))),
           ],
         ),
       );
@@ -888,12 +887,7 @@ class _AppTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             app.appName,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight:
-                                  checked ? FontWeight.w700 : FontWeight.w600,
-                              color: AppTheme.text(context),
-                            ),
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.text(context), fontWeight: checked ? FontWeight.w700 : FontWeight.w600),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -912,10 +906,7 @@ class _AppTile extends StatelessWidget {
                             ),
                             child: Text(
                               '●',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: AppTheme.green(context),
-                              ),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.green(context)),
                             ),
                           ),
                         ],
@@ -924,7 +915,7 @@ class _AppTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       app.installPath ?? app.packageName,
-                      style: TextStyle(fontSize: 12, color: AppTheme.textLight(context)),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1066,8 +1057,7 @@ class _AppIconState extends ConsumerState<_AppIcon> {
     child: Center(
       child: Text(
         widget.appName.isNotEmpty ? widget.appName[0].toUpperCase() : '?',
-        style: TextStyle(
-            color: AppTheme.text(context), fontSize: 18, fontWeight: FontWeight.bold),
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.text(context)),
       ),
     ),
   );

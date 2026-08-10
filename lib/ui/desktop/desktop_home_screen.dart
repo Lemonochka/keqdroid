@@ -301,7 +301,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
             Expanded(
               child: Text(
                 l10n.tunRememberTitle,
-                style: TextStyle(color: AppTheme.text(ctx), fontSize: 18),
+                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(color: AppTheme.text(ctx)),
               ),
             ),
           ],
@@ -317,11 +317,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
             const SizedBox(height: 12),
             Text(
               l10n.tunRememberWarning,
-              style: TextStyle(
-                color: AppTheme.textLight(ctx),
-                fontSize: 12,
-                height: 1.4,
-              ),
+              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx), height: 1.4),
             ),
           ],
         ),
@@ -719,7 +715,7 @@ class _ConnectionModeChip extends ConsumerWidget {
       children: [
         Text(
           AppLocalizations.of(context)!.desktopModeShort,
-          style: TextStyle(fontSize: 11, color: AppTheme.textLight(context)),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
         ),
         const SizedBox(height: 6),
         SegmentedButton<ConnectionMode>(

@@ -215,7 +215,10 @@ class _NavItem extends StatelessWidget {
                   constraints: BoxConstraints(maxWidth: maxLabelWidth),
                   child: ClipRect(
                     child: Align(
-                      alignment: Alignment.centerLeft,
+                      // Подпись выезжает от иконки, а иконка в RTL стоит
+                      // справа — с физическим centerLeft она бы выползала
+                      // не с той стороны.
+                      alignment: AlignmentDirectional.centerStart,
                       widthFactor: tc,
                       // heightFactor обязателен: без него Align растёт в высоту
                       // до максимума ограничений, а bottomNavigationBar
@@ -224,7 +227,7 @@ class _NavItem extends StatelessWidget {
                       child: Opacity(
                         opacity: tc,
                         child: Padding(
-                          padding: const EdgeInsets.only(left: 8),
+                          padding: const EdgeInsetsDirectional.only(start: 8),
                           child: Text(
                             label,
                             style: theme.textTheme.labelLarge

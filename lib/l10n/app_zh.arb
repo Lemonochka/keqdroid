@@ -540,6 +540,7 @@
   "settingsLanguageRussian": "Русский",
   "settingsLanguageGerman": "Deutsch",
   "settingsLanguageChinese": "中文",
+  "settingsLanguageFarsi": "فارسی",
   "settingsLanguageSheetTitle": "选择语言",
   "splitAddApp": "添加应用",
   "splitAddAppTitle": "添加应用程序",
@@ -860,6 +861,8 @@
   "connectionsVerdictDirect": "直连",
   "connectionsVerdictBlock": "已阻止",
   "connectionsClosed": "已关闭",
+  "connectionsAppNamesHint": "重新连接后才会显示应用名称：隧道的详细日志随调试模式一同启动。",
+  "connectionsSplitTunnelNote": "被排除在隧道之外的应用不会列出：Android 让它们绕过隧道，其流量根本不会到达内核。",
   "subscriptionsExpiredOn": "订阅已于 {date} 到期",
   "@subscriptionsExpiredOn": {
     "placeholders": {

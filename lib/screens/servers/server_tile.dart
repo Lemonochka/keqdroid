@@ -144,7 +144,7 @@ class _ServerTile extends ConsumerWidget {
                   children: [
                     if (server.isPinned)
                       Padding(
-                        padding: const EdgeInsets.only(right: 4),
+                        padding: const EdgeInsetsDirectional.only(end: 4),
                         child: Transform.rotate(
                           // слегка наклонённая канцелярская кнопка — как
                           // «приколотый» пин в мессенджерах
@@ -200,9 +200,12 @@ class _ServerTile extends ConsumerWidget {
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        pingMs != null
-                            ? PingService.formatPingValue(pingMs, pingColorType)
-                            : (lastTestedAt != null ? 'N/A' : '- ms'),
+                        ltrIsolate(
+                          pingMs != null
+                              ? PingService.formatPingValue(
+                                  pingMs, pingColorType)
+                              : (lastTestedAt != null ? 'N/A' : '- ms'),
+                        ),
                         // Пинг — числовой показатель, у M3 это роль label, а
                         // не body: плотнее и заметнее при том же кегле.
                         style: textTheme.labelMedium?.copyWith(
@@ -405,10 +408,7 @@ class _ServerTile extends ConsumerWidget {
                     ? null
                     : Text(
                         AppLocalizations.of(context)!.serversPinDesc,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textLight(context),
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
                       ),
                 onTap: () {
                   Navigator.pop(context);
@@ -433,10 +433,7 @@ class _ServerTile extends ConsumerWidget {
                 title: Text(AppLocalizations.of(context)!.serversEditConfig),
                 subtitle: Text(
                   AppLocalizations.of(context)!.serversEditConfigDesc,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.textLight(context),
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -455,10 +452,7 @@ class _ServerTile extends ConsumerWidget {
                 title: Text(AppLocalizations.of(context)!.serversCopyConfig),
                 subtitle: Text(
                   server.protocol.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.textLight(context),
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
                 ),
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: server.config));
@@ -518,7 +512,7 @@ class _ServerTile extends ConsumerWidget {
             Expanded(
               child: Text(
                 l10n.serversRenameTitle,
-                style: TextStyle(color: textColor, fontSize: 18),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: textColor),
               ),
             ),
           ],
@@ -531,7 +525,7 @@ class _ServerTile extends ConsumerWidget {
               controller: ctrl,
               autofocus: true,
               maxLines: 1,
-              style: TextStyle(color: textColor, fontSize: 14),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: textColor),
               decoration: InputDecoration(
                 hintText: l10n.serversRenameHint,
                 hintStyle: TextStyle(
@@ -558,7 +552,7 @@ class _ServerTile extends ConsumerWidget {
                     ServerNameUtils.cleanDisplayName(server.derivedName),
                   ),
                 ),
-                style: TextStyle(fontSize: 11, color: textLightColor),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: textLightColor),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -638,7 +632,7 @@ class _ServerTile extends ConsumerWidget {
             Expanded(
               child: Text(
                 l10n.serversDeleteServer,
-                style: TextStyle(color: textColor, fontSize: 18),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: textColor),
               ),
             ),
           ],
