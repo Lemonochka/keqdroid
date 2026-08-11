@@ -414,7 +414,7 @@
   "serversImportFile": "Import file",
   "serversNotSupported": "Not supported in this build",
   "serversAddServerTitle": "Add Server",
-  "serversPasteVlessHint": "Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line)",
+  "serversPasteVlessHint": "Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line), or a whole Xray JSON config",
   "serversPasteHint": "vless://… or hy2://host:port?auth=…",
   "serversAdd": "Add",
   "serversManualServers": "Manual servers",

@@ -3,6 +3,8 @@ import 'dart:io' show InternetAddress;
 
 import '../models/app_settings.dart';
 import '../models/xray_core_settings.dart';
+import '../utils/custom_xray_config.dart';
+import '../utils/geo_asset_index.dart';
 import '../utils/hysteria_uri.dart';
 import '../utils/routing_entry.dart';
 import '../utils/socks5_credentials.dart';
@@ -17,6 +19,10 @@ class ConfigGeneratorV2 {
     String? resolvedServerIp,
     /// windows system proxy can't pass socks5 creds — use noauth on localhost.
     bool localInboundsNoAuth = false,
+    /// Индекс поставляемых geo-баз. Нужен только готовым (custom) конфигам: их
+    /// правила приходят от провайдера, а неизвестный `geosite:`-код роняет
+    /// разбор всего конфига. Для ссылок списки чистит GeoAssetService заранее.
+    GeoAssetIndex? geoIndex,
   }) {
     return const JsonEncoder.withIndent('  ').convert(
       _buildXrayConfig(
@@ -24,6 +30,7 @@ class ConfigGeneratorV2 {
         settings,
         resolvedServerIp: resolvedServerIp,
         localInboundsNoAuth: localInboundsNoAuth,
+        geoIndex: geoIndex,
       ),
     );
   }
@@ -145,8 +152,25 @@ class ConfigGeneratorV2 {
     int? pingSocksPort,
     bool pingHttpInbound = false,
     bool localInboundsNoAuth = false,
+    GeoAssetIndex? geoIndex,
   }) {
     final trimmed = input.trim();
+
+    // Готовый конфиг ядра вместо ссылки: аутбаунды/роутинг/dns берём авторские,
+    // подменяем только инбаунды (их порты и креды диктует приложение).
+    final custom = CustomXrayConfig.tryParse(trimmed);
+    if (custom != null) {
+      return _buildCustomConfig(
+        custom,
+        settings,
+        resolvedServerIp: resolvedServerIp,
+        pingSocksPort: pingSocksPort,
+        pingHttpInbound: pingHttpInbound,
+        localInboundsNoAuth: localInboundsNoAuth,
+        geoIndex: geoIndex,
+      );
+    }
+
     final bool isVmess = trimmed.toLowerCase().startsWith('vmess://');
     final lowerTrimmed = trimmed.toLowerCase();
     final bool isHysteria = lowerTrimmed.startsWith('hysteria://') ||
@@ -222,6 +246,175 @@ class ConfigGeneratorV2 {
       pingHttpInbound: pingHttpInbound,
       localInboundsNoAuth: localInboundsNoAuth,
     );
+  }
+
+  /// Тег freedom-аутбаунда, который мы дописываем в конфиг пробы: собственного
+  /// `direct` у автора может не быть, а правила «сервер и приватные сети —
+  /// напрямую» пингу нужны.
+  static const _pingDirectTag = 'keq-ping-direct';
+
+  /// Тег blackhole-аутбаунда для запрета входа в LAN-инбаунды: в авторском
+  /// конфиге blackhole тоже бывает не заведён.
+  static const _customBlockTag = 'keq-block';
+
+  /// Готовый конфиг ядра в роли сервера.
+  ///
+  /// Что меняем и почему:
+  ///  - инбаунды — на свои (см. [_buildInbounds]);
+  ///  - `log.loglevel` — из настроек: на уровне ниже `info` ядро не печатает
+  ///    решения роутинга, и экран «Соединения» остаётся без правил;
+  ///  - при включённом LAN-шаринге первыми идут правила «в наши LAN-инбаунды
+  ///    только с частных адресов»: у автора правил для этих тегов нет, а
+  ///    инбаунд слушает 0.0.0.0;
+  ///  - `geoip:`/`geosite:`-коды, которых нет в поставляемых базах, вычищаем —
+  ///    один такой код роняет разбор всего конфига.
+  ///
+  /// Роутинг, dns и цепочки аутбаундов остаются авторскими: в этом весь смысл
+  /// такого сервера («сервера с готовым роутингом» в подписках провайдеров).
+  static Map<String, dynamic> _buildCustomConfig(
+    CustomXrayConfig custom,
+    AppSettings settings, {
+    String? resolvedServerIp,
+    int? pingSocksPort,
+    bool pingHttpInbound = false,
+    bool localInboundsNoAuth = false,
+    GeoAssetIndex? geoIndex,
+  }) {
+    final inbounds = _buildInbounds(
+      settings,
+      pingSocksPort: pingSocksPort,
+      pingHttpInbound: pingHttpInbound,
+      localInboundsNoAuth: localInboundsNoAuth,
+    );
+
+    if (pingSocksPort != null) {
+      final serverAddress = resolvedServerIp?.trim().isNotEmpty == true
+          ? resolvedServerIp!.trim()
+          : custom.address;
+      final config = custom.buildPingConfig(
+        inbounds: inbounds,
+        rules: _customPingRules(
+          serverAddress: serverAddress,
+          originalAddress: custom.address,
+          proxyTag: custom.primaryOutboundTag,
+        ),
+      );
+      // Свой freedom, чтобы direct-правила пробы точно во что-то указывали.
+      config['outbounds'] = [
+        ...(config['outbounds'] as List),
+        {'protocol': 'freedom', 'tag': _pingDirectTag},
+      ];
+      return config;
+    }
+
+    final lanRules = <Map<String, dynamic>>[];
+    var blockTag = _existingOutboundTag(custom, 'blackhole');
+    if (settings.lanSharing) {
+      blockTag ??= _customBlockTag;
+      lanRules.addAll([
+        {
+          'type': 'field',
+          'ruleTag': 'lan-allow',
+          'inboundTag': ['socks-lan', 'http-lan'],
+          'source': [
+            '10.0.0.0/8',
+            '172.16.0.0/12',
+            '192.168.0.0/16',
+            '169.254.0.0/16',
+            '127.0.0.0/8',
+          ],
+          'outboundTag': custom.primaryOutboundTag,
+        },
+        {
+          'type': 'field',
+          'ruleTag': 'lan-deny',
+          'inboundTag': ['socks-lan', 'http-lan'],
+          'network': 'tcp,udp',
+          'outboundTag': blockTag,
+        },
+      ]);
+    }
+
+    final config = custom.buildSessionConfig(
+      inbounds: inbounds,
+      logLevel: settings.xrayCore.logLevel,
+      lanRules: lanRules,
+      geoIndex: geoIndex,
+    );
+
+    if (blockTag == _customBlockTag) {
+      config['outbounds'] = [
+        ...(config['outbounds'] as List),
+        {'protocol': 'blackhole', 'tag': _customBlockTag},
+      ];
+    }
+    return config;
+  }
+
+  /// Тег первого аутбаунда с указанным протоколом — чтобы не дописывать свой,
+  /// когда у автора он уже есть.
+  static String? _existingOutboundTag(
+    CustomXrayConfig custom,
+    String protocol,
+  ) {
+    final outbounds = custom.json['outbounds'];
+    if (outbounds is! List) return null;
+    for (final item in outbounds) {
+      if (item is! Map) continue;
+      if (item['protocol']?.toString().toLowerCase() != protocol) continue;
+      final tag = item['tag']?.toString().trim() ?? '';
+      if (tag.isNotEmpty) return tag;
+    }
+    return null;
+  }
+
+  /// Роутинг конфига пробы: сам сервер и приватные сети — мимо туннеля,
+  /// остальное — в основной аутбаунд (иначе авторское правило могло бы увести
+  /// пробу напрямую, и «пинг сервера» мерил бы вовсе не сервер).
+  static List<Map<String, dynamic>> _customPingRules({
+    required String serverAddress,
+    required String originalAddress,
+    required String proxyTag,
+  }) {
+    final rules = <Map<String, dynamic>>[];
+    final isServerIp =
+        serverAddress.isNotEmpty && _isIpLiteral(serverAddress);
+    if (isServerIp) {
+      rules.add({
+        'type': 'field',
+        'ip': [serverAddress],
+        'outboundTag': _pingDirectTag,
+      });
+    }
+    if (originalAddress.isNotEmpty) {
+      if (!_isIpLiteral(originalAddress)) {
+        rules.add({
+          'type': 'field',
+          'domain': ['full:$originalAddress'],
+          'outboundTag': _pingDirectTag,
+        });
+      } else if (!isServerIp) {
+        rules.add({
+          'type': 'field',
+          'ip': [originalAddress],
+          'outboundTag': _pingDirectTag,
+        });
+      }
+    }
+    rules.add({
+      'type': 'field',
+      'ip': [
+        '0.0.0.0/8', '10.0.0.0/8', '127.0.0.0/8', '172.16.0.0/12',
+        '192.168.0.0/16', '::1/128', 'fc00::/7', 'fe80::/10',
+      ],
+      'outboundTag': _pingDirectTag,
+    });
+    rules.add({
+      'type': 'field',
+      'outboundTag': proxyTag,
+      'network': 'tcp,udp',
+    });
+    return rules;
   }
 
   /// client-side xhttp extras (xmux) and similar stream options.
@@ -828,9 +1021,47 @@ class ConfigGeneratorV2 {
           };
     rules.add(rule('final', {'outboundTag': finalTag, 'network': 'tcp,udp'}));
 
+    final inbounds = _buildInbounds(
+      settings,
+      pingSocksPort: pingSocksPort,
+      pingHttpInbound: pingHttpInbound,
+      localInboundsNoAuth: localInboundsNoAuth,
+    );
+
+    return {
+      'log': {'loglevel': isPingMode ? 'none' : core.logLevel},
+      'dns': dns,
+      'inbounds': inbounds,
+      'outbounds': [
+        outbound,
+        {'protocol': 'freedom', 'tag': 'direct'},
+        {'protocol': 'blackhole', 'tag': 'block'},
+      ],
+      'routing': {
+        'domainStrategy': isPingMode ? 'AsIs' : effectiveDomainStrategy,
+        'rules': rules,
+      },
+    };
+  }
+
+  /// Инбаунды приложения: локальные SOCKS/HTTP (и опционально LAN).
+  ///
+  /// Общие для сгенерированных и готовых (custom) конфигов: их порты и креды
+  /// ждёт нативная часть — на Android в них ходит tun2socks, на десктопе
+  /// sing-box внутри keqrnel поднимает listener'ы по этому же списку
+  /// (см. KeqrnelConfig). Поэтому у готового конфига авторские инбаунды
+  /// заменяются на эти, а не дополняются ими.
+  static List<Map<String, dynamic>> _buildInbounds(
+    AppSettings settings, {
+    int? pingSocksPort,
+    bool pingHttpInbound = false,
+    bool localInboundsNoAuth = false,
+  }) {
+    final core = settings.xrayCore;
+    final isPingMode = pingSocksPort != null;
     final socksPort = pingSocksPort ?? settings.localPort;
     final useNoAuthInbound = isPingMode || localInboundsNoAuth;
-    final inbounds = <Map<String, dynamic>>[
+    return <Map<String, dynamic>>[
       if (isPingMode && pingHttpInbound)
         // Desktop ping listens over HTTP, not SOCKS: the Dart probe uses dart:io
         // HttpClient, whose findProxy supports only 'PROXY host:port' (HTTP CONNECT)
@@ -936,20 +1167,5 @@ class ConfigGeneratorV2 {
       ],
       ],
     ];
-
-    return {
-      'log': {'loglevel': isPingMode ? 'none' : core.logLevel},
-      'dns': dns,
-      'inbounds': inbounds,
-      'outbounds': [
-        outbound,
-        {'protocol': 'freedom', 'tag': 'direct'},
-        {'protocol': 'blackhole', 'tag': 'block'},
-      ],
-      'routing': {
-        'domainStrategy': isPingMode ? 'AsIs' : effectiveDomainStrategy,
-        'rules': rules,
-      },
-    };
   }
 }

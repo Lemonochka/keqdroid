@@ -741,6 +741,9 @@ class _ServerTile extends ConsumerWidget {
     'hysteria' => AppTheme.harmonize(ctx, const Color(0xFF00897B)),
     'hysteria2' => AppTheme.harmonize(ctx, const Color(0xFF00695C)),
     'hy2' => AppTheme.harmonize(ctx, const Color(0xFF004D40)),
+    // Готовый конфиг ядра: протокол внутри может быть любым, поэтому цвет
+    // отдельный — «это конфиг целиком, со своим роутингом».
+    'custom' => AppTheme.harmonize(ctx, const Color(0xFFF9A825)),
     _ => AppTheme.textLight(ctx),
   };
 

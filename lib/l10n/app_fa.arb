@@ -264,7 +264,7 @@
   "serversImportFile": "وارد کردن از فایل",
   "serversNotSupported": "در این نسخه پشتیبانی نمی‌شود",
   "serversAddServerTitle": "افزودن سرور",
-  "serversPasteVlessHint": "لینک vless://، vmess://، trojan://، ss://، hysteria2:// یا hy2:// را بچسبانید (هر کدام در یک خط)",
+  "serversPasteVlessHint": "لینک vless://، vmess://، trojan://، ss://، hysteria2:// یا hy2:// را بچسبانید (هر کدام در یک خط)، یا یک کانفیگ کامل JSON برای Xray",
   "serversPasteHint": "…//:vless یا …?hy2://host:port=auth",
   "serversAdd": "افزودن",
   "serversManualServers": "سرورهای دستی",

@@ -23,6 +23,7 @@ class ConnectionEntry {
     this.rejected = false,
     this.decidedByCore = false,
     this.closed = false,
+    this.count = 1,
   });
 
   /// Стабильный ключ для списка: source+dest у одного соединения не меняются.
@@ -82,6 +83,14 @@ class ConnectionEntry {
   /// лога ядра (уровень Info), до тех пор — вот этот флаг.
   final bool decidedByCore;
 
+  /// Сколько соединений свёрнуто в эту строку.
+  ///
+  /// Браузер открывает к одному хосту десяток сокетов, и каждый — отдельное
+  /// соединение ядра. Показывать их по строке значит утопить экран в копиях
+  /// одного и того же, поэтому одинаковые (сеть, адрес, порт, владелец, исход)
+  /// сводятся в одну строку со счётчиком, см. [ConnectionsTracker].
+  final int count;
+
   /// Куда ушло соединение — для раскраски: прокси/напрямую/блок.
   ConnectionVerdict get verdict {
     if (rejected) return ConnectionVerdict.blocked;
@@ -100,45 +109,58 @@ class ConnectionEntry {
     required String outbound,
     required bool decidedByCore,
   }) =>
-      ConnectionEntry(
-        id: id,
-        network: network,
-        host: host,
-        destPort: destPort,
-        destIp: destIp,
-        source: source,
-        process: process,
-        inbound: inbound,
-        outbound: outbound,
+      copyWith(
         rule: rule,
-        startedAt: startedAt,
-        upload: upload,
-        download: download,
-        rejected: rejected,
+        outbound: outbound,
         decidedByCore: decidedByCore,
-        closed: closed,
       );
 
   /// Копия с именем приложения-владельца: на Android оно приходит отдельно,
   /// от системы, уже после разбора лога.
-  ConnectionEntry withProcess(String process) => ConnectionEntry(
-        id: id,
+  ConnectionEntry withProcess(String process) => copyWith(process: process);
+
+  ConnectionEntry copyWith({
+    String? id,
+    String? host,
+    String? destIp,
+    String? source,
+    String? process,
+    String? inbound,
+    String? outbound,
+    String? rule,
+    DateTime? startedAt,
+    int? upload,
+    int? download,
+    bool? rejected,
+    bool? decidedByCore,
+    bool? closed,
+    int? count,
+  }) =>
+      ConnectionEntry(
+        id: id ?? this.id,
         network: network,
-        host: host,
+        host: host ?? this.host,
         destPort: destPort,
-        destIp: destIp,
-        source: source,
-        process: process,
-        inbound: inbound,
-        outbound: outbound,
-        rule: rule,
-        startedAt: startedAt,
-        upload: upload,
-        download: download,
-        rejected: rejected,
-        decidedByCore: decidedByCore,
-        closed: closed,
+        destIp: destIp ?? this.destIp,
+        source: source ?? this.source,
+        process: process ?? this.process,
+        inbound: inbound ?? this.inbound,
+        outbound: outbound ?? this.outbound,
+        rule: rule ?? this.rule,
+        startedAt: startedAt ?? this.startedAt,
+        upload: upload ?? this.upload,
+        download: download ?? this.download,
+        rejected: rejected ?? this.rejected,
+        decidedByCore: decidedByCore ?? this.decidedByCore,
+        closed: closed ?? this.closed,
+        count: count ?? this.count,
       );
+
+  /// Ключ, по которому соединения сворачиваются в одну строку: то же
+  /// назначение, тот же владелец, тот же исход. Правило и байты в ключ не
+  /// входят — правило у одинаковых соединений одно, а байты суммируются.
+  String get groupKey => '$network|${host.toLowerCase()}|$destPort'
+      '|${destIp.toLowerCase()}|${process.toLowerCase()}|${verdict.name}';
 
   /// `host:port`, как это привычно видеть в логах.
   String get target => '$host:$destPort';

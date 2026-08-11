@@ -413,7 +413,7 @@
   "serversImportFile": "导入文件",
   "serversNotSupported": "此版本不支持",
   "serversAddServerTitle": "添加服务器",
-  "serversPasteVlessHint": "粘贴 vless://、vmess://、trojan://、ss://、hysteria2:// 或 hy2://（每行一个）",
+  "serversPasteVlessHint": "粘贴 vless://、vmess://、trojan://、ss://、hysteria2:// 或 hy2://（每行一个），或整份 Xray JSON 配置",
   "serversPasteHint": "vless://… 或 hy2://host:port?auth=…",
   "serversAdd": "添加",
   "serversManualServers": "手动服务器",

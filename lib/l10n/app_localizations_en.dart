@@ -856,7 +856,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversAddServerTitle => 'Add Server';
 
   @override
-  String get serversPasteVlessHint => 'Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line)';
+  String get serversPasteVlessHint => 'Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line), or a whole Xray JSON config';
 
   @override
   String get serversPasteHint => 'vless://… or hy2://host:port?auth=…';

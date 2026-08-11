@@ -305,6 +305,68 @@ void main() {
       expect(names, containsAll(<String>['name one', 'name two']));
     });
   });
+
+  group('SubscriptionService._parseBody with ready-made core configs', () {
+    // Провайдеры отдают не только списки ссылок, но и «сервера с готовым
+    // роутингом» — конфиг xray целиком, имя в корневом `remarks` (v2rayNG).
+    const custom = '{"remarks": "🇳🇱 Обход - Нидерланды", '
+        '"routing": {"rules": [{"type": "field", "protocol": ["bittorrent"], '
+        '"outboundTag": "direct"}]}, '
+        '"outbounds": [{"tag": "proxy", "protocol": "vless", "settings": '
+        '{"vnext": [{"address": "nl1.example.com", "port": 443}]}}]}';
+
+    test('takes a whole json config as one server', () {
+      final configs = SubscriptionService.parseBodyForTest(custom);
+      expect(configs.length, 1);
+
+      final server = ServerItem.fromRaw(configs.single);
+      expect(server.protocol, 'custom');
+      expect(server.displayName, '🇳🇱 Обход - Нидерланды');
+      expect(server.address, 'nl1.example.com');
+      // Авторский роутинг доезжает до сервера как есть — в нём весь смысл.
+      expect(server.config, contains('bittorrent'));
+    });
+
+    test('takes a json array as several servers', () {
+      final configs = SubscriptionService.parseBodyForTest('[$custom,$custom]');
+      expect(configs.length, 2);
+    });
+
+    test('unwraps a base64 payload with a json config', () {
+      final body = base64.encode(utf8.encode(custom));
+      final configs = SubscriptionService.parseBodyForTest(body);
+      expect(configs.length, 1);
+      expect(ServerItem.fromRaw(configs.single).protocol, 'custom');
+    });
+
+    test('handles a mixed payload: links and per-line json configs', () {
+      final body = [
+        'vless://aaaaaaaa-1111-2222-3333-444444444444@1.2.3.4:443#link',
+        base64.encode(utf8.encode(custom)),
+      ].join('\n');
+
+      final configs = SubscriptionService.parseBodyForTest(body);
+      expect(configs.length, 2);
+      final protocols =
+          configs.map((c) => ServerItem.fromRaw(c).protocol).toSet();
+      expect(protocols, containsAll(<String>['vless', 'custom']));
+    });
+
+    test('still refuses sing-box json, and says which format it is', () {
+      const singbox = '{"inbounds": [{"type": "tun"}], "outbounds": '
+          '[{"type": "vless", "server": "nl1.example.com", "server_port": 443}]}';
+      expect(
+        () => SubscriptionService.parseBodyForTest(singbox),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            contains('sing-box'),
+          ),
+        ),
+      );
+    });
+  });
 }
 
 /// payload — только UA, прошедшим [isAllowed]; остальным 502 (nginx-заглушка).

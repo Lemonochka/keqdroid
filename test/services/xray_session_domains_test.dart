@@ -149,6 +149,29 @@ void main() {
       expect(_find(snapshot, 'googleads.g.doubleclick.net:443').closed, isFalse);
     });
 
+    test('closing one connection does not close the neighbour to the same host',
+        () {
+      // Два TCP-соединения к одному адресу: закрылось второе. Access-строка
+      // идентификатора сессии не несёт, и «последняя сессия этого назначения
+      // выигрывает» помечала закрытыми оба — живое соединение выглядело
+      // мёртвым и уезжало из списка.
+      const log = '''
+08-09 22:50:01 2026/08/09 18:50:01.000000 [Info] [1000] proxy/socks: TCP Connect request to tcp:5.5.5.5:443
+08-09 22:50:01 2026/08/09 18:50:01.100000 from tcp:127.0.0.1:40001 accepted tcp:5.5.5.5:443 [socks-in -> proxy]
+08-09 22:50:02 2026/08/09 18:50:02.000000 [Info] [1001] proxy/socks: TCP Connect request to tcp:5.5.5.5:443
+08-09 22:50:02 2026/08/09 18:50:02.100000 from tcp:127.0.0.1:40002 accepted tcp:5.5.5.5:443 [socks-in -> proxy]
+08-09 22:50:03 2026/08/09 18:50:03.000000 [Info] [1001] app/proxyman/inbound: connection ends > EOF
+''';
+      final snapshot = XrayAccessLogParser.parse(log);
+      final bySource = {
+        for (final e in snapshot.entries) e.source: e,
+      };
+
+      expect(bySource.length, 2);
+      expect(bySource['tcp:127.0.0.1:40001']!.closed, isFalse);
+      expect(bySource['tcp:127.0.0.1:40002']!.closed, isTrue);
+    });
+
     test('closed ones sink below the live ones', () {
       final snapshot = XrayAccessLogParser.parse(_log);
       final firstClosed = snapshot.entries.indexWhere((e) => e.closed);

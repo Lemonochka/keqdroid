@@ -856,7 +856,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serversAddServerTitle => 'Server hinzufügen';
 
   @override
-  String get serversPasteVlessHint => 'Füge vless://, vmess://, trojan://, ss://, hysteria2:// oder hy2:// ein (eine pro Zeile)';
+  String get serversPasteVlessHint => 'Füge vless://, vmess://, trojan://, ss://, hysteria2:// oder hy2:// ein (eine pro Zeile) oder eine komplette Xray-JSON-Konfiguration';
 
   @override
   String get serversPasteHint => 'vless://… oder hy2://host:port?auth=…';

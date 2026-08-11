@@ -858,7 +858,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversAddServerTitle => 'Добавить сервер';
 
   @override
-  String get serversPasteVlessHint => 'Вставьте vless://, vmess://, trojan://, ss://, hysteria2:// или hy2:// (по одному на строку)';
+  String get serversPasteVlessHint => 'Вставьте vless://, vmess://, trojan://, ss://, hysteria2:// или hy2:// (по одному на строку) либо готовый JSON-конфиг Xray';
 
   @override
   String get serversPasteHint => 'vless://… или hy2://host:port?auth=…';

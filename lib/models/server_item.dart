@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 import '../utils/awg_profile.dart';
+import '../utils/custom_xray_config.dart';
 import 'server_name_utils.dart';
 
 enum ServerItemType { manual, subscription }
@@ -40,6 +41,8 @@ class ServerItem {
   int? _cachedPort;
   Map<String, dynamic>? _cachedVmessPayload;
   bool _vmessPayloadParsed = false;
+  CustomXrayConfig? _cachedCustom;
+  bool _customParsed = false;
 
   ServerItem({
     required this.id,
@@ -163,6 +166,15 @@ class ServerItem {
   String get derivedName {
     if (_cachedDerivedName != null) return _cachedDerivedName!;
     try {
+      if (protocol == 'custom') {
+        final custom = customConfig!;
+        final remarks = custom.remarks;
+        return _cachedDerivedName = _sanitizeUtf16(
+          remarks.isNotEmpty
+              ? remarks
+              : (custom.address.isNotEmpty ? custom.address : 'Custom config'),
+        );
+      }
       if (protocol == 'awg') {
         final profile = AwgProfile.parse(config);
         final remark = profile.remark;
@@ -240,6 +252,9 @@ class ServerItem {
 
   String _computeAddress() {
     try {
+      if (protocol == 'custom') {
+        return customConfig!.address;
+      }
       if (protocol == 'awg') {
         return AwgProfile.parse(config).endpointHost;
       }
@@ -260,6 +275,9 @@ class ServerItem {
 
   int _computePort() {
     try {
+      if (protocol == 'custom') {
+        return customConfig!.port;
+      }
       if (protocol == 'awg') {
         return AwgProfile.parse(config).endpointPort;
       }
@@ -272,7 +290,20 @@ class ServerItem {
     }
   }
 
-  /// Протокол ('vless', 'vmess', 'trojan', 'ss', 'ssr', 'hysteria', 'hy2', 'awg', 'unknown')
+  /// Готовый xray-конфиг вместо ссылки (сервер «CUSTOM»): роутинг и dns в нём
+  /// авторские. null — конфиг не такой. Разбор кэшируется: [protocol] дёргают
+  /// на каждую перерисовку плитки.
+  CustomXrayConfig? get customConfig {
+    if (_customParsed) return _cachedCustom;
+    _customParsed = true;
+    if (CustomXrayConfig.looksLikeJson(config)) {
+      _cachedCustom = CustomXrayConfig.tryParse(config);
+    }
+    return _cachedCustom;
+  }
+
+  /// Протокол ('vless', 'vmess', 'trojan', 'ss', 'ssr', 'hysteria', 'hy2',
+  /// 'awg', 'custom', 'unknown')
   String get protocol {
     final lower = config.toLowerCase();
     if (lower.startsWith('vless://')) return 'vless';
@@ -284,6 +315,7 @@ class ServerItem {
     if (lower.startsWith('hysteria2://')) return 'hysteria2';
     if (lower.startsWith('hysteria://')) return 'hysteria';
     if (AwgProfile.isAwgConfig(config)) return 'awg';
+    if (customConfig != null) return 'custom';
     return 'unknown';
   }
 
