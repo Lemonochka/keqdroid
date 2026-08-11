@@ -413,7 +413,7 @@
   "serversImportFile": "Datei importieren",
   "serversNotSupported": "In diesem Build nicht unterstützt",
   "serversAddServerTitle": "Server hinzufügen",
-  "serversPasteVlessHint": "Füge vless://, vmess://, trojan://, ss://, hysteria2:// oder hy2:// ein (eine pro Zeile)",
+  "serversPasteVlessHint": "Füge vless://, vmess://, trojan://, ss://, hysteria2:// oder hy2:// ein (eine pro Zeile) oder eine komplette Xray-JSON-Konfiguration",
   "serversPasteHint": "vless://… oder hy2://host:port?auth=…",
   "serversAdd": "Hinzufügen",
   "serversManualServers": "Manuelle Server",

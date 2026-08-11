@@ -87,6 +87,11 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // Туннель переподняли — соединения прошлой сессии ядра к новой отношения не
+    // имеют, накопленное трекером выкидываем.
+    ref.listen(vpnStateProvider.select((s) => s.value?.status), (_, _) {
+      ConnectionsService.resetTracker();
+    });
     final entries = _visible;
     final logLevel = ref.watch(
       settingsNotifierProvider.select(

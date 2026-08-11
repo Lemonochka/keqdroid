@@ -413,7 +413,7 @@
   "serversImportFile": "Импорт из файла",
   "serversNotSupported": "Не поддерживается в этой сборке",
   "serversAddServerTitle": "Добавить сервер",
-  "serversPasteVlessHint": "Вставьте vless://, vmess://, trojan://, ss://, hysteria2:// или hy2:// (по одному на строку)",
+  "serversPasteVlessHint": "Вставьте vless://, vmess://, trojan://, ss://, hysteria2:// или hy2:// (по одному на строку) либо готовый JSON-конфиг Xray",
   "serversPasteHint": "vless://… или hy2://host:port?auth=…",
   "serversAdd": "Добавить",
   "serversManualServers": "Ручные серверы",

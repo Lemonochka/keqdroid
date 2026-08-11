@@ -28,6 +28,7 @@ import '../tunnel/vpn_backend.dart';
 import '../utils/app_locale.dart';
 import '../utils/awg_profile.dart';
 import '../utils/config_gen.dart';
+import '../utils/custom_xray_config.dart';
 import '../utils/error_messages.dart';
 import '../utils/geo_asset_index.dart';
 import '../utils/local_vpn_proxy.dart';
@@ -665,6 +666,12 @@ class ServersNotifier extends Notifier<ServersState> {
       return null;
     }
 
+    // Готовый конфиг ядра целиком (провайдеры отдают такие «сервера с готовым
+    // роутингом»): проверяем, что это именно xray-конфиг с аутбаундами.
+    if (CustomXrayConfig.looksLikeJson(rawConfig)) {
+      return CustomXrayConfig.describeProblem(rawConfig);
+    }
+
     final lower = rawConfig.toLowerCase();
     if (!(lower.startsWith('vless://') ||
         lower.startsWith('vmess://') ||
@@ -1259,6 +1266,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
               settings,
               resolvedServerIp: serverIp,
               localInboundsNoAuth: desktopProxyNoAuth,
+              // Готовый конфиг несёт свои geo-правила: неизвестный ядру код
+              // уронил бы разбор целиком (для списков настроек это уже сделал
+              // GeoAssetService.sanitizeRules выше).
+              geoIndex: server.protocol == 'custom'
+                  ? await GeoAssetService.index()
+                  : null,
             );
 
       final session = TunnelSessionBuilder.build(

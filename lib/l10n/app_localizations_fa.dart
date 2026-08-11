@@ -856,7 +856,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversAddServerTitle => 'افزودن سرور';
 
   @override
-  String get serversPasteVlessHint => 'لینک vless://، vmess://، trojan://، ss://، hysteria2:// یا hy2:// را بچسبانید (هر کدام در یک خط)';
+  String get serversPasteVlessHint => 'لینک vless://، vmess://، trojan://، ss://، hysteria2:// یا hy2:// را بچسبانید (هر کدام در یک خط)، یا یک کانفیگ کامل JSON برای Xray';
 
   @override
   String get serversPasteHint => '…//:vless یا …?hy2://host:port=auth';

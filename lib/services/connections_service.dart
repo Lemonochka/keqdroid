@@ -5,6 +5,7 @@ import '../models/connection_entry.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../tunnel/linux_tunnel_backend.dart';
 import '../tunnel/windows_tunnel_backend.dart';
+import 'connections_tracker.dart';
 import 'debug_log_service.dart';
 
 /// Снимок активных соединений ядра для дебаг-экрана.
@@ -21,7 +22,26 @@ class ConnectionsService {
   /// соединений: больше незачем, файл кольцуется на 512 КБ.
   static const _androidLogLines = 1200;
 
+  /// Память между опросами: держит живые соединения и сводит одинаковые.
+  static final ConnectionsTracker _tracker = ConnectionsTracker();
+
+  /// Другая сессия ядра — накопленное больше не про неё. Дёргает экран, когда
+  /// меняется состояние туннеля.
+  static void resetTracker() {
+    _tracker.reset();
+    _appNames.clear();
+    _decisions.clear();
+    _decisionsPort = null;
+  }
+
   static Future<ConnectionsSnapshot> snapshot() async {
+    final raw = await _rawSnapshot();
+    return _tracker.merge(raw, sessionToken: _sessionToken(raw));
+  }
+
+  /// Что источник отдал прямо сейчас — до свёртки и без памяти о предыдущих
+  /// опросах.
+  static Future<ConnectionsSnapshot> _rawSnapshot() async {
     if (Platform.isWindows || Platform.isLinux) {
       final api = await _fromClashApi();
       if (api.source == ConnectionsSource.coreApi) return api;
@@ -38,6 +58,12 @@ class ConnectionsService {
       note: 'Connections view is not supported on this platform.',
     );
   }
+
+  /// Метка сессии для трекера: смена источника или порта clash_api означает
+  /// другое ядро. На Android постоянна — там сессию сбрасывает экран по
+  /// состоянию туннеля ([resetTracker]).
+  static String _sessionToken(ConnectionsSnapshot snapshot) =>
+      '${snapshot.source.name}:${_activeClashPort() ?? ''}';
 
   /// true — источник в принципе умеет отдавать владельца соединения: на
   /// десктопе это процесс из clash_api, на Android — приложение, найденное по
@@ -545,15 +571,22 @@ class XrayAccessLogParser {
 
     // Два способа найти сессию по access-строке. Адрес клиента точен (он у
     // каждого соединения свой), но ядро называет его только для UDP; для TCP
-    // остаётся адрес назначения, и там соединения к одному IP:порту делят одну
-    // запись — выигрывает последняя.
+    // остаётся адрес назначения, а к одному IP:порту соединений бывает много.
+    // Поэтому сессии одного назначения храним списком в порядке лога и
+    // раздаём по одной: k-я access-строка получает k-ю сессию. «Выигрывает
+    // последняя» вешало закрытие последнего соединения на все остальные — живое
+    // соединение к тому же хосту выглядело закрытым.
     final sessions = parseSessions(log);
     final byClient = <String, XraySessionTrace>{};
-    final byDest = <String, XraySessionTrace>{};
+    final byDest = <String, List<XraySessionTrace>>{};
     for (final trace in sessions.values) {
       if (trace.clientKey.isNotEmpty) byClient[trace.clientKey] = trace;
-      if (trace.destKey.isNotEmpty) byDest[trace.destKey] = trace;
+      if (trace.destKey.isNotEmpty) {
+        byDest.putIfAbsent(trace.destKey, () => []).add(trace);
+      }
     }
+    // Сколько сессий этого назначения уже разобрано.
+    final destCursor = <String, int>{};
 
     final lines = log.split('\n');
 
@@ -573,7 +606,8 @@ class XrayAccessLogParser {
       final detourField = m.group(6)?.trim() ?? '';
       final (inbound, outbound) = _splitDetour(detourField);
       final target = _targetKey(network, host, '$port');
-      final trace = byClient[source.toLowerCase()] ?? byDest[target];
+      final trace = byClient[source.toLowerCase()] ??
+          _nextTraceForDest(byDest[target], target, destCursor);
 
       // Домен — в заголовок, IP уезжает строкой ниже: по одному IP гугла
       // ходит десяток разных сервисов, и понять по нему ничего нельзя.
@@ -615,6 +649,20 @@ class XrayAccessLogParser {
       // просто не печатает. Экран должен предложить это исправить, а не молчать.
       ruleInfoAvailable: sawRoutingLines,
     );
+  }
+
+  /// Очередная сессия этого назначения: соединений к одному адресу много, и
+  /// каждой access-строке достаётся своя. Когда сессий меньше, чем строк
+  /// (часть уехала из хвоста лога), остаток делит последнюю — правило и домен у
+  /// них общие, а вот закрытие лучше не приписывать чужому соединению.
+  static XraySessionTrace? _nextTraceForDest(
+    List<XraySessionTrace>? traces,
+    String target,
+    Map<String, int> cursor,
+  ) {
+    if (traces == null || traces.isEmpty) return null;
+    final index = cursor.update(target, (v) => v + 1, ifAbsent: () => 0);
+    return index < traces.length ? traces[index] : traces.last;
   }
 
   /// Маркер «правило не совпало, сработало финальное действие».

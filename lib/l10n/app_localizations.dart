@@ -1688,7 +1688,7 @@ abstract class AppLocalizations {
   /// No description provided for @serversPasteVlessHint.
   ///
   /// In en, this message translates to:
-  /// **'Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line)'**
+  /// **'Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line), or a whole Xray JSON config'**
   String get serversPasteVlessHint;
 
   /// No description provided for @serversPasteHint.

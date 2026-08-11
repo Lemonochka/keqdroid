@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../models/subscription.dart';
 import '../providers/providers.dart';
-import 'awg_profile.dart';
 import 'error_messages.dart';
+import 'import_payload.dart';
 
 /// Ctrl/Cmd+V helpers shared by the subscriptions and servers screens. Kept as
 /// free functions so the desktop home (which owns the keyboard focus across the
@@ -49,15 +49,9 @@ Future<void> pasteServersFromClipboard(
   final raw = data?.text?.trim() ?? '';
   if (raw.isEmpty || !context.mounted) return;
   final l10n = AppLocalizations.of(context)!;
-  // AmneziaWG .conf — единый многострочный блок (addManual принимает его
-  // целиком, как и шторка вставки); иначе список ссылок построчно.
-  final configs = AwgProfile.isAwgConfig(raw)
-      ? [raw]
-      : raw
-          .split('\n')
-          .map((l) => l.trim())
-          .where((l) => l.isNotEmpty)
-          .toList();
+  // AmneziaWG .conf и готовый json-конфиг ядра — единые многострочные блоки
+  // (addManual принимает их целиком); иначе список ссылок построчно.
+  final configs = splitServerImportPayload(raw);
   if (configs.isEmpty) return;
   // Каждую строку добавляем независимо (как _addConfigsResilient в
   // servers_tab): первый же дубликат не должен обрывать импорт и молча

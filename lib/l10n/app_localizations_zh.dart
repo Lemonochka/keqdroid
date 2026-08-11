@@ -856,7 +856,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversAddServerTitle => '添加服务器';
 
   @override
-  String get serversPasteVlessHint => '粘贴 vless://、vmess://、trojan://、ss://、hysteria2:// 或 hy2://（每行一个）';
+  String get serversPasteVlessHint => '粘贴 vless://、vmess://、trojan://、ss://、hysteria2:// 或 hy2://（每行一个），或整份 Xray JSON 配置';
 
   @override
   String get serversPasteHint => 'vless://… 或 hy2://host:port?auth=…';

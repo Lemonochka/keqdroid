@@ -27,10 +27,10 @@ import '../services/vpn_engine.dart';
 import '../platform/platform_bootstrap.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../ui/responsive/desktop_page_layout.dart';
-import '../utils/awg_profile.dart';
 import '../utils/clipboard_import.dart';
 import '../utils/bidi.dart';
 import '../utils/error_messages.dart';
+import '../utils/import_payload.dart';
 import 'qr_scan_screen.dart';
 import 'servers/server_config_editor.dart';
 import 'servers/wave_window.dart';
@@ -688,13 +688,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
       return;
     }
 
-    final configs = AwgProfile.isAwgConfig(raw)
-        ? [raw]
-        : raw
-              .split('\n')
-              .map((l) => l.trim())
-              .where((l) => l.isNotEmpty)
-              .toList();
+    final configs = splitServerImportPayload(raw);
     final result = await _addConfigsResilient(configs);
     if (!ctx.mounted) return;
     if (result.firstError != null) {
@@ -732,14 +726,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
     final raw = content.trim();
     if (raw.isEmpty) return;
 
-    // AmneziaWG .conf — единый многострочный блок; иначе список ссылок построчно.
-    final configs = AwgProfile.isAwgConfig(raw)
-        ? [raw]
-        : raw
-              .split('\n')
-              .map((l) => l.trim())
-              .where((l) => l.isNotEmpty)
-              .toList();
+    // AmneziaWG .conf и готовый json-конфиг ядра — единые многострочные блоки;
+    // иначе список ссылок построчно.
+    final configs = splitServerImportPayload(raw);
 
     // Каждую строку добавляем независимо: если первый же дубликат/битая
     // ссылка обрывает импорт, остальные валидные строки молча теряются.
@@ -887,13 +876,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                             loading = true;
                             sheetError = null;
                           });
-                          final configs = AwgProfile.isAwgConfig(raw)
-                              ? [raw]
-                              : raw
-                                    .split('\n')
-                                    .map((line) => line.trim())
-                                    .where((line) => line.isNotEmpty)
-                                    .toList();
+                          final configs = splitServerImportPayload(raw);
                           // Строки добавляются независимо, чтобы первый же
                           // дубликат не обрывал импорт (шторка закрылась бы,
                           // потеряв вставленный текст).

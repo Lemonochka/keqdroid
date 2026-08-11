@@ -13,6 +13,7 @@ import '../core/app_logger.dart';
 import '../models/server_item.dart';
 import '../models/subscription.dart';
 import '../services/storage_service.dart';
+import '../utils/custom_xray_config.dart';
 import '../core/exceptions.dart';
 
 class UpdateResult {
@@ -160,6 +161,17 @@ class SubscriptionService {
   /// если распарсить не вышло — fallback на host+port.
   static String _stableKey(String rawConfig) {
     try {
+      // Готовый конфиг ядра: сам json провайдер переписывает (ключи reality,
+      // порядок правил), стабильны имя и адрес основного аутбаунда.
+      if (CustomXrayConfig.looksLikeJson(rawConfig)) {
+        final custom = CustomXrayConfig.tryParse(rawConfig);
+        if (custom != null) {
+          final endpoint = custom.endpoint;
+          return 'custom:${custom.remarks.toLowerCase()}'
+              '@${endpoint.address.toLowerCase()}:${endpoint.port}';
+        }
+      }
+
       final uri = Uri.parse(rawConfig);
       final host = uri.host.toLowerCase();
       final port = uri.port.toString();
@@ -959,7 +971,12 @@ class SubscriptionService {
       }
           .where((c) => !_isMetadataConfig(c))
           .toList();
-      if (extractedLinks.isNotEmpty) return extractedLinks;
+      // Готовые конфиги ядра идут вперёд ссылок, но не вместо них: payload
+      // бывает смешанным (часть серверов ссылками, часть — конфигом целиком).
+      final customConfigs = _extractCustomConfigs(candidate);
+      if (extractedLinks.isNotEmpty || customConfigs.isNotEmpty) {
+        return [...customConfigs, ...extractedLinks];
+      }
 
       final structured = _extractConfigsFromStructuredContent(candidate);
       if (structured.isNotEmpty) return structured;
@@ -999,6 +1016,38 @@ class SubscriptionService {
       'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2:// or hy2://',
     );
   }
+
+  /// Готовые конфиги ядра из payload подписки: тело целиком (json-объект или
+  /// массив объектов) либо по одному конфигу в строке, в том числе в base64.
+  ///
+  /// Так провайдеры отдают «сервера с готовым роутингом» — в v2rayNG это
+  /// CUSTOM-сервер: не ссылка, а конфиг xray со своими правилами и dns.
+  static List<String> _extractCustomConfigs(String content) {
+    final whole = CustomXrayConfig.extractConfigs(content);
+    if (whole.isNotEmpty) {
+      return whole.where((c) => !_isMetadataConfig(c)).toList();
+    }
+
+    final out = <String>[];
+    for (final raw in LineSplitter.split(content)) {
+      final line = raw.trim();
+      if (line.isEmpty || _isValidConfig(line)) continue;
+      if (CustomXrayConfig.looksLikeJson(line)) {
+        out.addAll(CustomXrayConfig.extractConfigs(line));
+        continue;
+      }
+      // Строка целиком в base64 — распространённый вид json-подписки. Гоняем
+      // декод только на то, что вообще похоже на base64: на списке из сотен
+      // ссылок это иначе лишний проход по каждой строке.
+      if (line.length < 40 || !_base64Line.hasMatch(line)) continue;
+      final decoded = _tryDecodeBase64Flexible(line);
+      if (decoded == null) continue;
+      out.addAll(CustomXrayConfig.extractConfigs(decoded));
+    }
+    return out.where((c) => !_isMetadataConfig(c)).toList();
+  }
+
+  static final _base64Line = RegExp(r'^[A-Za-z0-9+/_=-]+$');
 
   static List<String> _collectTextVariants(String input) {
     // лимиты на обход: в release r8 даже итеративный код жрёт стек из-за base64+regex
@@ -1088,7 +1137,11 @@ class SubscriptionService {
         if (parsed is Map<String, dynamic>) {
           final keys = parsed.keys.map((k) => k.toLowerCase()).toSet();
           if (keys.contains('outbounds') || keys.contains('inbounds') || keys.contains('proxies')) {
-            return 'Unsupported subscription format: sing-box/V2Ray JSON';
+            // Конфиг xray сюда уже не доходит — его забирает
+            // _extractCustomConfigs. Значит остался sing-box (аутбаунды через
+            // `type`) или clash: их наше ядро не исполняет.
+            return 'Unsupported subscription format: sing-box/Clash JSON '
+                '(only Xray JSON configs are supported)';
           }
         } else if (parsed is List && parsed.isNotEmpty) {
           return 'Unsupported subscription format: JSON array config';
@@ -1819,6 +1872,12 @@ class SubscriptionService {
 
   static String? _extractConfigName(String raw) {
     try {
+      // Готовый конфиг ядра: имя лежит в корневом `remarks` (как в v2rayNG).
+      if (CustomXrayConfig.looksLikeJson(raw)) {
+        final remarks = CustomXrayConfig.tryParse(raw)?.remarks ?? '';
+        return remarks.isEmpty ? null : remarks;
+      }
+
       if (raw.startsWith('vmess://')) {
         final payload = raw.substring('vmess://'.length).trim();
         final decoded = _tryDecodeBase64Flexible(payload);

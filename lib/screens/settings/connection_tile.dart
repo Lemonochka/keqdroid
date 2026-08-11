@@ -96,6 +96,12 @@ class ConnectionTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
+              // Сколько соединений свёрнуто в строку: к одному хосту их разом
+              // бывает десяток, и по строке на каждое экран читать невозможно.
+              if (entry.count > 1) ...[
+                _chip(context, '×${entry.count}', AppTheme.accent(context)),
+                const SizedBox(width: 6),
+              ],
               _chip(context, entry.network.toUpperCase(),
                   AppTheme.textLight(context)),
               const SizedBox(width: 6),
