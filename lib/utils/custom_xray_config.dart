@@ -353,17 +353,27 @@ List<String> stripUnknownGeoFromConfig(
           keptRules.add(rule);
           continue;
         }
+        var lostCondition = false;
         for (final field in const ['domain', 'ip']) {
-          final cleaned = clean(rule[field]);
+          final original = rule[field];
+          final cleaned = clean(original);
           if (cleaned == null) continue;
           if (cleaned.isEmpty) {
             rule.remove(field);
+            if (original is List && original.isNotEmpty) lostCondition = true;
           } else {
             rule[field] = cleaned;
           }
         }
-        // Условий не осталось — правило стало «пустым», ядро на таком падает.
-        if (_ruleHasCondition(rule)) keptRules.add(rule);
+        // Условие вычистилось ЦЕЛИКОМ — правило удаляем, даже если другие
+        // условия в нём остались: без вычищенного оно стало ШИРЕ задуманного.
+        // `{ip: [geoip:sberbank], port: 443 → direct}` иначе превратилось бы в
+        // «весь трафик на 443 напрямую». Урезать правило можно, расширять — нет.
+        //
+        // Правило вообще без условий тоже выкидываем: xray на таком выходит
+        // с «this rule has no effective fields».
+        if (lostCondition || !_ruleHasCondition(rule)) continue;
+        keptRules.add(rule);
       }
       routing['rules'] = keptRules;
     }
@@ -384,15 +394,21 @@ List<String> stripUnknownGeoFromConfig(
         // запросов и подменил бы авторский порядок. Такой выкидываем целиком.
         if (domains != null && domains.isEmpty) continue;
         if (domains != null) server['domains'] = domains;
+        // То же и с фильтром ответов: убрать пустой `expectIPs` значит принимать
+        // от этого сервера любой адрес — шире, чем хотел автор.
+        var lostFilter = false;
         for (final field in const ['expectIPs', 'expectedIPs']) {
-          final ips = clean(server[field]);
+          final original = server[field];
+          final ips = clean(original);
           if (ips == null) continue;
           if (ips.isEmpty) {
             server.remove(field);
+            if (original is List && original.isNotEmpty) lostFilter = true;
           } else {
             server[field] = ips;
           }
         }
+        if (lostFilter) continue;
         keptServers.add(server);
       }
       dns['servers'] = keptServers;

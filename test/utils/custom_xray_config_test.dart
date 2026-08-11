@@ -169,6 +169,43 @@ void main() {
       expect(rules.last['outboundTag'], 'proxy');
     });
 
+    test('never widens a rule: a fully stripped condition drops it', () {
+      // Самое опасное место чистки. `ip` тут после выброса неизвестного кода
+      // пустеет, а `port` остаётся — оставить такое правило значит отправить
+      // напрямую ВЕСЬ трафик на 443 вместо одного geo-набора.
+      final config = _decode('''
+{
+  "routing": {"rules": [
+    {"type": "field", "ip": ["geoip:sberbank"], "port": "443", "outboundTag": "direct"},
+    {"type": "field", "domain": ["geosite:sberbank"], "network": "tcp", "outboundTag": "block"},
+    {"type": "field", "ip": ["geoip:ru"], "port": "443", "outboundTag": "direct"}
+  ]},
+  "outbounds": [{"protocol": "freedom"}]
+}''');
+      stripUnknownGeoFromConfig(config, index);
+
+      final rules = _rules(config);
+      expect(rules.length, 1);
+      expect(rules.single['ip'], ['geoip:ru']);
+      expect(rules.single['port'], '443');
+    });
+
+    test('a dns server that lost its expectIPs filter goes with it', () {
+      final config = _decode('''
+{
+  "dns": {"servers": [
+    {"address": "8.8.8.8", "expectIPs": ["geoip:sberbank"]},
+    {"address": "9.9.9.9", "expectIPs": ["geoip:ru", "geoip:sberbank"]}
+  ]},
+  "outbounds": [{"protocol": "freedom"}]
+}''');
+      stripUnknownGeoFromConfig(config, index);
+
+      final servers = (config['dns'] as Map)['servers'] as List;
+      expect(servers.length, 1);
+      expect((servers.single as Map)['expectIPs'], ['geoip:ru']);
+    });
+
     test('keeps everything when the geo index is empty', () {
       final config = _decode(_customConfig);
       expect(stripUnknownGeoFromConfig(config, GeoAssetIndex.empty), isEmpty);

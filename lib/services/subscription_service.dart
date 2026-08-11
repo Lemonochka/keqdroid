@@ -1007,10 +1007,14 @@ class SubscriptionService {
       }
     }
 
-    final sample = candidates.last;
-    final unsupported = _detectUnsupportedFormat(sample);
-    if (unsupported != null) {
-      throw FormatException(unsupported);
+    // Формат ищем по всем вариантам, а не только по последнему: у json-тела
+    // вариантов обычно один, но у завёрнутого в base64 распознаваемым будет
+    // именно распакованный — иначе диагноз подменялся общим «ссылок не нашли».
+    for (final candidate in candidates) {
+      final unsupported = _detectUnsupportedFormat(candidate);
+      if (unsupported != null) {
+        throw FormatException(unsupported);
+      }
     }
     throw const FormatException(
       'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2:// or hy2://',
@@ -1025,7 +1029,7 @@ class SubscriptionService {
   static List<String> _extractCustomConfigs(String content) {
     final whole = CustomXrayConfig.extractConfigs(content);
     if (whole.isNotEmpty) {
-      return whole.where((c) => !_isMetadataConfig(c)).toList();
+      return whole.where(_isUsableCustomConfig).toList();
     }
 
     final out = <String>[];
@@ -1044,7 +1048,21 @@ class SubscriptionService {
       if (decoded == null) continue;
       out.addAll(CustomXrayConfig.extractConfigs(decoded));
     }
-    return out.where((c) => !_isMetadataConfig(c)).toList();
+    return out.where(_isUsableCustomConfig).toList();
+  }
+
+  /// Годится ли готовый конфиг из подписки в качестве сервера.
+  ///
+  /// Кроме служебных заглушек по имени ([_isMetadataConfig]) отсекаем конфиги
+  /// без адреса сервера: панели отдают такую болванку (только `freedom`, пустой
+  /// `vnext`), когда подписка истекла или не привязан HWID. Формально это
+  /// валидный конфиг ядра, и без проверки он превращался бы в молчаливо
+  /// нерабочий сервер — весь трафик мимо туннеля, пинг никакой. Внятная ошибка
+  /// обновления полезнее (её текст даёт [_detectUnsupportedFormat]).
+  static bool _isUsableCustomConfig(String config) {
+    if (_isMetadataConfig(config)) return false;
+    final custom = CustomXrayConfig.tryParse(config);
+    return custom != null && custom.address.isNotEmpty;
   }
 
   static final _base64Line = RegExp(r'^[A-Za-z0-9+/_=-]+$');
@@ -1137,9 +1155,15 @@ class SubscriptionService {
         if (parsed is Map<String, dynamic>) {
           final keys = parsed.keys.map((k) => k.toLowerCase()).toSet();
           if (keys.contains('outbounds') || keys.contains('inbounds') || keys.contains('proxies')) {
-            // Конфиг xray сюда уже не доходит — его забирает
-            // _extractCustomConfigs. Значит остался sing-box (аутбаунды через
-            // `type`) или clash: их наше ядро не исполняет.
+            // Рабочий конфиг xray сюда не доходит — его забирает
+            // _extractCustomConfigs. Значит либо это болванка без адреса
+            // сервера (истёкшая подписка, непривязанный HWID), либо sing-box /
+            // clash, которых наше ядро не исполняет.
+            if (CustomXrayConfig.tryParse(text) != null) {
+              return 'Subscription returned an Xray config without a server address. '
+                  'This is usually a provider stub: check subscription status and '
+                  'HWID binding in the provider panel.';
+            }
             return 'Unsupported subscription format: sing-box/Clash JSON '
                 '(only Xray JSON configs are supported)';
           }
@@ -1540,11 +1564,19 @@ class SubscriptionService {
   static List<String> _parseBodyNoRecursion(String content) {
     final original = content.trim();
 
+    // Готовый конфиг ядра. Сюда payload приходит из html-ветки (панель отдаёт
+    // подписку страницей, конфиг лежит в <pre>/<script>/js-переменной), а по
+    // одним ссылкам её экстрактор конфиг найти не мог.
+    final custom = _extractCustomConfigs(original);
+    if (custom.isNotEmpty) return custom;
+
     // одинарный base64
     final singleDecoded = _tryDecodeBase64Flexible(original);
     if (singleDecoded != null && singleDecoded.trim().isNotEmpty) {
       final configs = _extractUrisDirectly(singleDecoded);
       if (configs.isNotEmpty) return configs;
+      final customDecoded = _extractCustomConfigs(singleDecoded);
+      if (customDecoded.isNotEmpty) return customDecoded;
     }
 
     // double-decode (base64 в base64)

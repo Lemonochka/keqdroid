@@ -91,8 +91,14 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 | Shadowsocks | `ss://` |
 | Hysteria 2 | `hysteria2://`, `hy2://` |
 | AmneziaWG | `.conf` |
+| Ready-made Xray config | whole `.json` config (paste, file, subscription) |
 
 Hysteria v1 is not supported.
+
+A ready-made config is used as its author wrote it — routing, DNS and outbound
+chains included; only the inbounds are replaced with the app's own. The name is
+read from the config's root `remarks`. The app's own routing lists and final
+action do not apply to such a server.
 
 ---
 
@@ -263,8 +269,14 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 | Shadowsocks | `ss://` |
 | Hysteria 2 | `hysteria2://`, `hy2://` |
 | AmneziaWG | `.conf` |
+| Готовый конфиг Xray | `.json` целиком (вставка, файл, подписка) |
 
 Hysteria v1 не поддерживается.
+
+Готовый конфиг исполняется так, как его написал автор: роутинг, DNS и цепочки
+аутбаундов остаются его, подменяются только инбаунды на собственные. Имя берётся
+из корневого `remarks`. Списки роутинга и финальное действие приложения на такой
+сервер не влияют.
 
 ---
 
