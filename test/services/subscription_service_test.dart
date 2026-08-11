@@ -352,6 +352,33 @@ void main() {
       expect(protocols, containsAll(<String>['vless', 'custom']));
     });
 
+    test('refuses a provider stub instead of adding a dead server', () {
+      // Панель отдаёт валидный конфиг ядра без сервера (истёкшая подписка,
+      // непривязанный HWID). Такой «сервер» подключался бы молча мимо туннеля,
+      // поэтому обновление должно падать, и падать понятно.
+      const stub = '{"remarks": "Subscription", "outbounds": '
+          '[{"tag": "direct", "protocol": "freedom"}]}';
+      expect(
+        () => SubscriptionService.parseBodyForTest(stub),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('without a server address'), contains('stub')),
+          ),
+        ),
+      );
+    });
+
+    test('an outbound with an empty vnext is a stub too', () {
+      const stub = '{"outbounds": [{"tag": "proxy", "protocol": "vless", '
+          '"settings": {"vnext": []}}]}';
+      expect(
+        () => SubscriptionService.parseBodyForTest(stub),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
     test('still refuses sing-box json, and says which format it is', () {
       const singbox = '{"inbounds": [{"type": "tun"}], "outbounds": '
           '[{"type": "vless", "server": "nl1.example.com", "server_port": 443}]}';
@@ -365,6 +392,34 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('digs a json config out of a subscription served as an HTML page',
+        () async {
+      // Часть панелей отдаёт подписку страницей, а payload лежит в <pre>. Из
+      // html доставались только ссылки, и конфиг целиком терялся.
+      const custom = '{"remarks": "NL page", "outbounds": [{"tag": "proxy", '
+          '"protocol": "vless", "settings": {"vnext": [{"address": '
+          '"nl1.example.com", "port": 443}]}}]}';
+      final dio = Dio();
+      dio.httpClientAdapter = _FakeAdapter(
+        statusCode: 200,
+        body: '<html><body><h1>Subscription</h1><pre>$custom</pre></body></html>',
+        headers: {'content-type': ['text/html; charset=utf-8']},
+      );
+      service = SubscriptionService(storage, dio: dio);
+
+      when(() => storage.getSettings()).thenAnswer((_) async => const AppSettings());
+      when(() => storage.getHwid()).thenReturn(null);
+      when(() => storage.setHwid(any())).thenAnswer((_) async {});
+
+      final result = await service.fetchRaw('https://example.com/sub');
+      expect(result.configs.length, 1);
+
+      final server = ServerItem.fromRaw(result.configs.single);
+      expect(server.protocol, 'custom');
+      expect(server.displayName, 'NL page');
+      expect(server.address, 'nl1.example.com');
     });
   });
 }
