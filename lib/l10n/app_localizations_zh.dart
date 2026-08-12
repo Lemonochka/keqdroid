@@ -880,6 +880,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAdvancedSubtitle => '内核设置、Ping、路由、HWID 和调试';
 
   @override
+  String get serverEditorJsonValid => '有效的 Xray 配置';
+
+  @override
+  String get serverEditorJsonFormat => '格式化';
+
+  @override
+  String get subscriptionsCardMenu => '更多';
+
+  @override
+  String get subscriptionsAutoUpdateOff => '不自动更新';
+
+  @override
+  String get subscriptionsProviderPage => '订阅页面';
+
+  @override
+  String get subscriptionsSupport => '客服支持';
+
+  @override
+  String get subscriptionsLinkOpenFailed => '无法打开链接';
+
+  @override
   String get settingsAdvancedGroupTraffic => '流量与内核';
 
   @override

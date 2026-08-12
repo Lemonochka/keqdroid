@@ -880,6 +880,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAdvancedSubtitle => 'Core settings, ping, routing, HWID and debug';
 
   @override
+  String get serverEditorJsonValid => 'Valid Xray config';
+
+  @override
+  String get serverEditorJsonFormat => 'Format';
+
+  @override
+  String get subscriptionsCardMenu => 'More';
+
+  @override
+  String get subscriptionsAutoUpdateOff => 'Do not update automatically';
+
+  @override
+  String get subscriptionsProviderPage => 'Subscription page';
+
+  @override
+  String get subscriptionsSupport => 'Support';
+
+  @override
+  String get subscriptionsLinkOpenFailed => 'Could not open the link';
+
+  @override
   String get settingsAdvancedGroupTraffic => 'Traffic and core';
 
   @override

@@ -31,6 +31,7 @@ Future<void> pasteSubscriptionFromClipboard(
     final sub = Subscription.create(
       name: uri.host.isNotEmpty ? uri.host : text,
       url: text,
+      nameIsAuto: true,
     );
     await ref.read(subscriptionsProvider.notifier).add(sub);
     if (context.mounted) {

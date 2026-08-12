@@ -677,7 +677,13 @@ class _ServersTabState extends ConsumerState<ServersTab>
     final asUri = Uri.tryParse(raw);
     if (asUri != null && (asUri.scheme == 'http' || asUri.scheme == 'https')) {
       try {
-        final sub = Subscription.create(name: asUri.host, url: raw);
+        // Имя выведено из URL, а не задано — пусть его заменит название от
+        // провайдера, когда оно придёт заголовком.
+        final sub = Subscription.create(
+          name: asUri.host,
+          url: raw,
+          nameIsAuto: true,
+        );
         await ref.read(subscriptionsProvider.notifier).add(sub);
         if (ctx.mounted) {
           _showSnack(AppLocalizations.of(ctx)!.qrSubscriptionAdded(asUri.host));

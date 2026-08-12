@@ -12,6 +12,7 @@ import '../../models/server_item.dart';
 import '../../models/server_name_utils.dart';
 import '../../providers/providers.dart';
 import '../../services/vpn_engine.dart';
+import '../../utils/custom_xray_config.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/raw_share_uri.dart';
 
@@ -778,14 +779,45 @@ class _ServerConfigEditorScreenState
     );
   }
 
+  /// Приводит JSON к читаемому виду с отступами.
+  ///
+  /// Готовый конфиг почти всегда приходит одной строкой — из подписки или из
+  /// буфера обмена, — и править его в таком виде невозможно.
+  void _formatRawJson() {
+    final text = _rawCtrl.text.trim();
+    try {
+      final decoded = jsonDecode(text);
+      final pretty = const JsonEncoder.withIndent('  ').convert(decoded);
+      setState(() {
+        _rawCtrl.value = TextEditingValue(
+          text: pretty,
+          selection: TextSelection.collapsed(offset: pretty.length),
+        );
+      });
+    } on Object {
+      // Кнопка гаснет на невалидном JSON, но состояние могло смениться между
+      // кадром и нажатием — молча ничего не делаем, а не роняем экран.
+    }
+  }
+
   Widget _rawSection(AppLocalizations l10n) {
+    final raw = _rawCtrl.text;
+    // Готовый конфиг Xray — это JSON в сотни строк, и окно на 10 строк без
+    // проверки синтаксиса делало правку формальной возможностью, а не рабочей.
+    final isJson = CustomXrayConfig.looksLikeJson(raw);
+    final problem = isJson ? CustomXrayConfig.describeProblem(raw) : null;
+    final green = AppTheme.green(context);
+    final red = AppTheme.red(context);
+
     return _section(
       l10n.serverEditorRawConfig,
       [
         TextField(
           controller: _rawCtrl,
-          maxLines: 10,
-          minLines: 4,
+          // JSON редактируется во весь доступный экран, share-ссылка — нет:
+          // ей хватает пары строк.
+          maxLines: isJson ? 26 : 10,
+          minLines: isJson ? 14 : 4,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppTheme.text(context),
                 fontFamily: 'monospace',
@@ -793,8 +825,49 @@ class _ServerConfigEditorScreenState
           onChanged: (_) => setState(() {}),
           decoration: _inputDecoration(),
         ),
+        if (isJson) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(
+                problem == null ? Icons.check_circle_outline : Icons.error_outline,
+                size: 16,
+                color: problem == null ? green : red,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  problem ?? l10n.serverEditorJsonValid,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: problem == null ? green : red,
+                      ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Форматирование доступно, пока JSON вообще разбирается: чинить
+              // отступы полезно и в конфиге, который ещё не полон.
+              TextButton.icon(
+                onPressed: _rawJsonParses(raw) ? _formatRawJson : null,
+                icon: const Icon(Icons.format_align_left, size: 16),
+                label: Text(l10n.serverEditorJsonFormat),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
+  }
+
+  static bool _rawJsonParses(String raw) {
+    try {
+      jsonDecode(raw.trim());
+      return true;
+    } on Object {
+      return false;
+    }
   }
 
   List<Widget> _formSections(AppLocalizations l10n) {

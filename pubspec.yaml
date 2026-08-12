@@ -2,7 +2,7 @@ name: keqdroid
 description: "KEQDIS proxy/VPN client for Android and Windows."
 publish_to: 'none'
 
-version: 0.8.7+30
+version: 0.8.8+31
 
 environment:
   sdk: ^3.11.3
@@ -30,6 +30,7 @@ dependencies:
   firebase_crashlytics: ^5.2.3
   intl: ^0.20.2
   open_filex: ^4.5.0
+  url_launcher: ^6.3.1
   package_info_plus: ^10.1.0
   flutter_markdown_plus: ^1.0.7
   window_manager: ^0.5.1

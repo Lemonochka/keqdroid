@@ -689,11 +689,6 @@ class _SubCardState extends ConsumerState<_SubCard> {
               isActive: server.id == activeServerId,
               isFirst: index < 2,
               isLast: inLastRow,
-              // Внутренний край (к середине карточки): подсветка активного
-              // сервера растворяется к нему градиентом, а не обрывается
-              // резкой линией на стыке колонок.
-              innerEdge:
-                  index.isEven ? _TileInnerEdge.right : _TileInnerEdge.left,
               radius: BorderRadius.only(
                 bottomLeft: inLastRow && index.isEven
                     ? const Radius.circular(ExpressiveShape.extraLarge)
@@ -802,7 +797,9 @@ class _SubCardState extends ConsumerState<_SubCard> {
                 Text(
                   context.l10n.subscriptionsAutoUpdateInterval,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
+                  style: Theme.of(context).textTheme
+                      .emphasized(Theme.of(context).textTheme.titleLarge)
+                      ?.copyWith(color: AppTheme.text(context)),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -812,33 +809,54 @@ class _SubCardState extends ConsumerState<_SubCard> {
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
                 ),
-                const SizedBox(height: 8),
-                ...options.map(
-                  (h) => ListTile(
-                    title: Text(
-                      h == 1
-                          ? context.l10n.subscriptionsEveryHour
-                          : h < 24
-                          ? context.l10n.subscriptionsEveryHours(h)
-                          : h == 24
-                          ? context.l10n.subscriptionsEveryDay
-                          : context.l10n.subscriptionsEveryDays(h ~/ 24),
-                      style: TextStyle(
-                        color: AppTheme.text(context),
-                        fontWeight: h == sub.updateIntervalHours
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                const SizedBox(height: 12),
+                // Тот же вид, что у пикера интервала в карточке подписки:
+                // выбор, а не список действий, поэтому текущее значение
+                // заливается сегментом, а не отличается жирной подписью.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: ExpressiveGroup(
+                    children: [
+                      // «Выключить» есть и здесь: пикер тот же самый, и
+                      // расходиться со шторкой из карточки подписки он не
+                      // должен.
+                      ExpressiveActionTile(
+                        icon: Icons.update_disabled,
+                        title: context.l10n.subscriptionsAutoUpdateOff,
+                        selected: !sub.autoUpdate,
+                        onTap: () {
+                          ref
+                              .read(subscriptionsProvider.notifier)
+                              .setUpdateSchedule(sub.id, autoUpdate: false);
+                          Navigator.of(ctx).pop();
+                        },
                       ),
-                    ),
-                    trailing: h == sub.updateIntervalHours
-                        ? Icon(Icons.check, color: AppTheme.accent(context))
-                        : null,
-                    onTap: () {
-                      ref
-                          .read(subscriptionsProvider.notifier)
-                          .updateInterval(sub.id, h);
-                      Navigator.pop(ctx);
-                    },
+                      for (final h in options)
+                        ExpressiveActionTile(
+                          icon: h < 24
+                              ? Icons.schedule
+                              : Icons.calendar_today_outlined,
+                          title: h == 1
+                              ? context.l10n.subscriptionsEveryHour
+                              : h < 24
+                              ? context.l10n.subscriptionsEveryHours(h)
+                              : h == 24
+                              ? context.l10n.subscriptionsEveryDay
+                              : context.l10n.subscriptionsEveryDays(h ~/ 24),
+                          selected:
+                              sub.autoUpdate && h == sub.updateIntervalHours,
+                          onTap: () {
+                            ref
+                                .read(subscriptionsProvider.notifier)
+                                .setUpdateSchedule(
+                                  sub.id,
+                                  autoUpdate: true,
+                                  hours: h,
+                                );
+                            Navigator.pop(ctx);
+                          },
+                        ),
+                    ],
                   ),
                 ),
               ],

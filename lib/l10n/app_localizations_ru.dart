@@ -882,6 +882,27 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsAdvancedSubtitle => 'Настройки ядра, пинг, маршрутизация, HWID и отладка';
 
   @override
+  String get serverEditorJsonValid => 'Корректный конфиг Xray';
+
+  @override
+  String get serverEditorJsonFormat => 'Формат';
+
+  @override
+  String get subscriptionsCardMenu => 'Ещё';
+
+  @override
+  String get subscriptionsAutoUpdateOff => 'Не обновлять автоматически';
+
+  @override
+  String get subscriptionsProviderPage => 'Страница подписки';
+
+  @override
+  String get subscriptionsSupport => 'Поддержка';
+
+  @override
+  String get subscriptionsLinkOpenFailed => 'Не удалось открыть ссылку';
+
+  @override
   String get settingsAdvancedGroupTraffic => 'Трафик и ядро';
 
   @override

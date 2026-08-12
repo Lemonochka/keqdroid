@@ -594,7 +594,14 @@ class _DesktopTabHost extends StatelessWidget {
   }
 }
 
-class _SidebarTile extends StatelessWidget {
+/// Пункт боковой навигации.
+///
+/// Переключение идёт пружиной, как в нижней панели на телефоне
+/// (`lib/shared/ui/bottom_nav.dart`), и по той же механике: цвет пилюли, её
+/// отступы и цвет содержимого считаются от ОДНОГО значения покадрово. Раньше
+/// здесь всё переключалось мгновенно, и панель ощущалась мёртвой рядом с
+/// телефонной.
+class _SidebarTile extends StatefulWidget {
   final IconData icon;
   final String label;
   final bool selected;
@@ -610,61 +617,109 @@ class _SidebarTile extends StatelessWidget {
   });
 
   @override
+  State<_SidebarTile> createState() => _SidebarTileState();
+}
+
+class _SidebarTileState extends State<_SidebarTile>
+    with SingleTickerProviderStateMixin {
+  /// Unbounded — пружина M3E недодемпфирована и обязана перелетать за цель.
+  late final AnimationController _ctrl = AnimationController.unbounded(
+    vsync: this,
+    value: widget.selected ? 1 : 0,
+  );
+
+  @override
+  void didUpdateWidget(_SidebarTile old) {
+    super.didUpdateWidget(old);
+    if (old.selected == widget.selected) return;
+    ExpressiveMotion.springTo(
+      _ctrl,
+      widget.selected ? 1 : 0,
+      spring: ExpressiveMotion.spatialFast,
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final fg = selected ? colorScheme.onSecondaryContainer : colorScheme.onSurfaceVariant;
-    final bg = selected ? colorScheme.secondaryContainer : Colors.transparent;
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    // Пункт навигации у M3E — пилюля, как и в нижней панели. Здесь стояло
+    // скругление 12, и панель читалась как список прямоугольников.
+    final shape = BorderRadius.circular(ExpressiveShape.full);
 
-    if (compact) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: Tooltip(
-          message: label,
-          child: Material(
-            color: bg,
-            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-              child: SizedBox(
-                height: 48,
-                child: Icon(icon, color: fg),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, _) {
+        // Перелёт пружины нужен геометрии, но не цвету: там он читается как
+        // мигание.
+        final t = _ctrl.value;
+        final tc = t.clamp(0.0, 1.0);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      child: Material(
-        color: bg,
-        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                Icon(icon, color: fg, size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: fg,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+        final bg = Color.lerp(Colors.transparent, scheme.secondaryContainer, tc)!;
+        final fg = Color.lerp(
+          scheme.onSurfaceVariant,
+          scheme.onSecondaryContainer,
+          tc,
+        )!;
+        // Выбранная пилюля «набухает»: поля вокруг неё поджимаются, и она
+        // раздаётся в стороны — то же движение, что раскрытие пункта внизу.
+        final outerInset = 10.0 - 4.0 * tc;
+
+        final pill = Material(
+          color: bg,
+          borderRadius: shape,
+          // Цвет ведём пружиной покадрово — неявная 200-миллисекундная
+          // анимация Material тянулась бы следом и отставала от отступов.
+          animationDuration: Duration.zero,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: shape,
+            child: widget.compact
+                ? SizedBox(
+                    height: 48,
+                    child: Icon(widget.icon, color: fg),
+                  )
+                : Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12 + 2 * tc,
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    child: Row(
+                      children: [
+                        Icon(widget.icon, color: fg, size: 22),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            widget.label,
+                            // Вес из шкалы: у выбранного усиленный вариант роли.
+                            style:
+                                (widget.selected
+                                        ? textTheme.emphasized(
+                                            textTheme.labelLarge)
+                                        : textTheme.labelLarge)
+                                    ?.copyWith(color: fg),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
           ),
-        ),
-      ),
+        );
+
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: outerInset, vertical: 4),
+          child: widget.compact
+              ? Tooltip(message: widget.label, child: pill)
+              : pill,
+        );
+      },
     );
   }
 }
@@ -714,11 +769,16 @@ class _ConnectionModeChip extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          AppLocalizations.of(context)!.desktopModeShort,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            AppLocalizations.of(context)!.desktopModeShort,
+            // Тот же вид, что у заголовков секций в настройках.
+            style: Theme.of(context).textTheme
+                .emphasized(Theme.of(context).textTheme.labelLarge)
+                ?.copyWith(color: Theme.of(context).colorScheme.primary),
+          ),
         ),
-        const SizedBox(height: 6),
         SegmentedButton<ConnectionMode>(
           segments: const [
             ButtonSegment(
