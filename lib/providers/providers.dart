@@ -437,6 +437,31 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     state = AsyncData(newList);
   }
 
+  /// Ставит расписание автообновления одной записью.
+  ///
+  /// Раньше выбор интервала при выключенном автообновлении делался парой
+  /// вызовов `toggleAutoUpdate` + `updateInterval`. Оба читают список из
+  /// состояния, меняют элемент и пишут обратно; без ожидания между ними второй
+  /// успевал прочитать список ДО записи первого и затирал включение — интервал
+  /// вставал, а подписка оставалась выключенной. Одна операция такую гонку
+  /// исключает по построению.
+  Future<void> setUpdateSchedule(
+    String id, {
+    required bool autoUpdate,
+    int? hours,
+  }) async {
+    final subs = state.value ?? [];
+    final idx = subs.indexWhere((s) => s.id == id);
+    if (idx == -1) return;
+    final updated = subs[idx].copyWith(
+      autoUpdate: autoUpdate,
+      updateIntervalHours: hours,
+    );
+    await ref.read(storageProvider).upsertSubscription(updated);
+    final newList = [...subs]..[idx] = updated;
+    state = AsyncData(newList);
+  }
+
   Future<void> toggleAutoUpdate(String id) async {
     final subs = state.value ?? [];
     final idx = subs.indexWhere((s) => s.id == id);
@@ -473,7 +498,15 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
   }
 
   /// меняет имя/URL подписки, серверы не трогаем
-  Future<void> editMeta(String id, {String? name, String? url}) async {
+  /// [resetName] — поле имени очистили: это не «не менять», а «вернуть
+  /// автоматическое». Отдельный флаг нужен потому, что `name: null` уже занято
+  /// смыслом «не трогать» — без него очистка поля молча ничего не делала.
+  Future<void> editMeta(
+    String id, {
+    String? name,
+    String? url,
+    bool resetName = false,
+  }) async {
     final subs = state.value ?? [];
     final idx = subs.indexWhere((s) => s.id == id);
     if (idx == -1) return;
@@ -488,9 +521,20 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       }
       urlChanged = newUrl != _normalizeSubscriptionUrl(subs[idx].url);
     }
-    final updated = subs[idx].copyWith(
-      name: name ?? subs[idx].name,
-      url: url ?? subs[idx].url,
+    final current = subs[idx];
+    final effectiveUrl = url ?? current.url;
+    // Сброшенное имя сразу занимает название провайдера, если оно известно;
+    // иначе — хост, как при добавлении подписки.
+    final autoName = current.providerTitle?.trim().isNotEmpty == true
+        ? current.providerTitle!.trim()
+        : (Uri.tryParse(effectiveUrl)?.host ?? current.name);
+    final updated = current.copyWith(
+      name: resetName ? autoName : (name ?? current.name),
+      url: url ?? current.url,
+      // Имя, введённое руками, перестаёт быть автоматическим: с этого момента
+      // название от провайдера его больше не перетирает. Очистка поля —
+      // обратный переход.
+      nameIsAuto: resetName ? true : (name != null ? false : null),
     );
     await ref.read(storageProvider).upsertSubscription(updated);
     final newList = [...subs]..[idx] = updated;

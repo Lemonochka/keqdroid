@@ -1,11 +1,5 @@
 part of '../servers_tab.dart';
 
-/// Внутренний край плитки в сетке из двух колонок — край, обращённый к
-/// середине карточки. Подсветка активного сервера мягко растворяется к нему
-/// градиентом, чтобы граница между соседями в ряду была плавной, а не резкой
-/// вертикальной линией.
-enum _TileInnerEdge { left, right }
-
 class _ServerTile extends ConsumerWidget {
   final ServerItem server;
   final bool isActive;
@@ -15,9 +9,6 @@ class _ServerTile extends ConsumerWidget {
   /// (одноколоночный список); сетка в две колонки передаёт своё (у нижнего
   /// ряда скругляется только внешний угол каждой колонки).
   final BorderRadius? radius;
-  /// Внутренний край плитки в режиме двух колонок; null — одноколоночный
-  /// список, подсветка активного сервера сплошная на всю ширину.
-  final _TileInnerEdge? innerEdge;
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final Future<void> Function() onPing;
@@ -29,7 +20,6 @@ class _ServerTile extends ConsumerWidget {
     required this.isFirst,
     required this.isLast,
     this.radius,
-    this.innerEdge,
     required this.onTap,
     required this.onDelete,
     required this.onPing,
@@ -105,34 +95,20 @@ class _ServerTile extends ConsumerWidget {
     // сервер только чуть более светлым фоном, а на AMOLED-чёрном не читалась
     // почти никак. В две колонки приём не работает — там подсветка обязана
     // растворяться к середине карточки, поэтому режим остаётся градиентным.
-    // Подниматься умеет только одноколоночный список: в сетке подсветка обязана
-    // растворяться к середине карточки, а не обрываться формой сегмента.
-    final canLift = innerEdge == null;
-    final isLifted = isActive && canLift;
+    // Активный сервер «поднимается» из группы отдельным сегментом — и в одну
+    // колонку, и в сетке.
+    //
+    // В сетке раньше стоял градиент, растворявший подсветку к середине
+    // карточки: сплошная заливка на всю ширину плитки давала жёсткую
+    // вертикальную линию на стыке колонок. Поднятый сегмент отступает от краёв
+    // со всех сторон, поэтому стыка нет вовсе — приём решает исходную задачу
+    // прямее, чем обходной градиент.
+    final isLifted = isActive;
     final liftedRadius = ExpressiveShape.radius(ExpressiveShape.largeIncreased);
     const liftedInset = EdgeInsets.symmetric(horizontal: 6, vertical: 3);
     final onSegment = isLifted ? scheme.onSecondaryContainer : textColor;
 
-    // Фон плитки. В сетке из двух колонок подсветка активного сервера не
-    // обрывается резкой линией по середине карточки, а мягко растворяется
-    // градиентом к внутреннему краю плитки (несколько стоп приближают
-    // ease-out, чтобы не было видимого излома). Полупрозрачные цвета ложатся
-    // на фон DecoratedSliver карточки — так же, как сплошная подсветка.
-    final BoxDecoration activeDecoration;
-    if (canLift) {
-      activeDecoration = BoxDecoration(color: scheme.secondaryContainer);
-    } else {
-      Color glow(double f) => accentColor.withValues(alpha: 0.13 * f);
-      final toRight = innerEdge == _TileInnerEdge.right;
-      activeDecoration = BoxDecoration(
-        gradient: LinearGradient(
-          begin: toRight ? Alignment.centerLeft : Alignment.centerRight,
-          end: toRight ? Alignment.centerRight : Alignment.centerLeft,
-          colors: [glow(1), glow(1), glow(0.55), glow(0.18), glow(0)],
-          stops: const [0.0, 0.45, 0.7, 0.88, 1.0],
-        ),
-      );
-    }
+    final activeDecoration = BoxDecoration(color: scheme.secondaryContainer);
     final restDecoration = BoxDecoration(color: AppTheme.card(context));
     // Цвет протокола — идентичность сервера, и на выбранной строке его терять
     // нельзя. Но полупрозрачная подложка поверх secondaryContainer сводит тон
@@ -288,13 +264,10 @@ class _ServerTile extends ConsumerWidget {
             duration: ExpressiveMotion.durationFast,
             curve: ExpressiveMotion.emphasized,
             builder: (context, t, child) {
-              // Подъём — только там, где он вообще применяется; заливка едет
-              // всегда, в том числе у градиента в две колонки.
-              final lift = canLift ? t : 0.0;
               return Padding(
-                padding: EdgeInsets.lerp(EdgeInsets.zero, liftedInset, lift)!,
+                padding: EdgeInsets.lerp(EdgeInsets.zero, liftedInset, t)!,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.lerp(radius, liftedRadius, lift)!,
+                  borderRadius: BorderRadius.lerp(radius, liftedRadius, t)!,
                   clipBehavior: Clip.antiAlias,
                   child: DecoratedBox(
                     decoration: BoxDecoration.lerp(

@@ -21,6 +21,7 @@ import 'qr_scan_screen.dart';
 import '../ui/responsive/desktop_page_layout.dart';
 import '../utils/bidi.dart';
 import '../utils/error_messages.dart';
+import '../utils/external_link.dart';
 
 class SubscriptionsTab extends ConsumerWidget {
   const SubscriptionsTab({super.key});
@@ -334,11 +335,16 @@ class SubscriptionsTab extends ConsumerWidget {
                             sheetError = null;
                           });
                           try {
+                            // Поле имени пустое — подставляем хост, но помечаем
+                            // имя автоматическим: придёт profile-title от
+                            // панели, и он его заменит.
+                            final typedName = nameCtrl.text.trim();
                             final sub = Subscription.create(
-                              name: nameCtrl.text.trim().isEmpty
+                              name: typedName.isEmpty
                                   ? Uri.parse(urlCtrl.text.trim()).host
-                                  : nameCtrl.text.trim(),
+                                  : typedName,
                               url: urlCtrl.text.trim(),
+                              nameIsAuto: typedName.isEmpty,
                             );
                             await ref
                                 .read(subscriptionsProvider.notifier)
@@ -548,7 +554,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final textColor = AppTheme.text(context);
     final textLightColor = AppTheme.textLight(context);
     final accentColor = AppTheme.accent(context);
-    final greenColor = AppTheme.green(context);
     final redColor = AppTheme.red(context);
     final orangeColor = AppTheme.orange(context);
     final isDesktop = PlatformBootstrap.isDesktop;
@@ -613,13 +618,34 @@ class _SubItemState extends ConsumerState<_SubItem> {
                                   collapsedSubscriptionCardsProvider.notifier,
                                 )
                                 .update((m) => {...m, sub.id: !collapsed}),
-                            child: Text(
-                              sub.name,
-                              style: Theme.of(context).textTheme
-                                  .emphasized(
-                                    Theme.of(context).textTheme.titleMedium,
-                                  )
-                                  ?.copyWith(color: textColor),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  sub.name,
+                                  style: Theme.of(context).textTheme
+                                      .emphasized(
+                                        Theme.of(context).textTheme.titleMedium,
+                                      )
+                                      ?.copyWith(color: textColor),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                // Чей это сервис на самом деле — показываем,
+                                // только если имя карточки задано своё и от
+                                // названия провайдера отличается.
+                                if (sub.providerSubtitle != null)
+                                  Text(
+                                    sub.providerSubtitle!,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(color: textLightColor),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                              ],
                             ),
                           ),
                         ),
@@ -627,18 +653,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     ),
                   ),
                   SizedBox(width: isDesktop ? 12 : 4),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20),
-                    color: textLightColor,
-                    onPressed: () => _showEditDialog(context),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                  ),
-                  SizedBox(width: isDesktop ? 10 : 4),
                   IconButton(
                     icon: isRefreshing
                         ? SizedBox(
@@ -676,11 +690,18 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       minHeight: 36,
                     ),
                   ),
-                  SizedBox(width: isDesktop ? 10 : 8),
+                  SizedBox(width: isDesktop ? 10 : 4),
+                  // Правка, «поделиться» и удаление ушли под одну кнопку.
+                  //
+                  // Три иконки в шапке конкурировали с именем и делили место с
+                  // ним же, а нужны они редко — в отличие от обновления, оно
+                  // осталось снаружи. Удаление заодно перестало стоять в один
+                  // ряд с безобидной правкой.
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    color: redColor,
-                    onPressed: () => _showDeleteConfirmation(context),
+                    icon: const Icon(Icons.more_vert, size: 20),
+                    color: textLightColor,
+                    tooltip: l10n.subscriptionsCardMenu,
+                    onPressed: () => _showCardMenu(context),
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(
@@ -695,6 +716,53 @@ class _SubItemState extends ConsumerState<_SubItem> {
             // провайдер о конце срока клиенту не сообщает, а панель обычно
             // продолжает отдавать те же серверы, поэтому раньше «просто не
             // обновляется» выглядело как баг приложения.
+            // Объявление провайдера: техработы, смена адреса и подобное.
+            // Роль tertiary — «обратите внимание», ровно её назначение; красный
+            // здесь был бы неверен, это не ошибка. Свёрнутая карточка режет
+            // текст до двух строк, раскрытая показывает целиком — отдельного
+            // органа управления заводить не пришлось, чевron уже есть.
+            if (sub.announce != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.tertiaryContainer,
+                    borderRadius: ExpressiveShape.radius(
+                      ExpressiveShape.medium,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.campaign_outlined,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onTertiaryContainer,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          sub.announce!,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onTertiaryContainer,
+                              ),
+                          maxLines: collapsed ? 2 : null,
+                          overflow: collapsed
+                              ? TextOverflow.ellipsis
+                              : TextOverflow.clip,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             if (sub.isExpired)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -750,16 +818,34 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      sub.url,
-                      // URL целиком латинский: своё направление, иначе в
-                      // RTL-локали обрезка ставит многоточие не с того конца.
-                      textDirection: TextDirection.ltr,
-                      style: Theme.of(context).textTheme.bodySmall
-                          ?.copyWith(color: textLightColor),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    // ЯКОРЬ карточки: сколько потрачено, крупно.
+                    //
+                    // Раньше всё содержимое было набрано одним мелким кеглем —
+                    // URL, трафик, срок, интервал, — и глазу не за что было
+                    // зацепиться, приходилось читать подряд. Размер здесь и
+                    // делает иерархию: у M3E это один из пяти механизмов
+                    // наравне с цветом и формой.
+                    if (sub.usedDisplay != null)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            ltrIsolate(sub.usedDisplay!),
+                            style: Theme.of(context).textTheme
+                                .emphasized(
+                                  Theme.of(context).textTheme.headlineSmall,
+                                )
+                                ?.copyWith(color: textColor),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            ltrIsolate('/ ${sub.limitDisplay}'),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: textLightColor),
+                          ),
+                        ],
+                      ),
                     if (_isInsecureHttp)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
@@ -795,32 +881,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
                           ],
                         ),
                       ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Icon(Icons.data_usage, size: 14, color: textLightColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          ltrIsolate(sub.usageLabel),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: textLightColor),
-                        ),
-                        if (sub.lastUpdatedAt != null) ...[
-                          const Spacer(),
-                          Text(
-                            _formatDate(sub.lastUpdatedAt!),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: textLightColor),
-                          ),
-                        ],
-                      ],
-                    ),
                     if (pct != null) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(ExpressiveShape.extraSmall),
                         child: LinearProgressIndicator(
@@ -874,127 +936,27 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 10),
-                    // Wrap, а не Row со Spacer: по-русски «Автообновление»
-                    // заметно шире английского, и строка переполнялась
-                    // полосатой лентой. Теперь чипы переносятся на вторую
-                    // строку, а срок годности остаётся прижат вправо.
+                    const SizedBox(height: 12),
+                    // МЕТА: факты второго плана — одной тихой строкой.
+                    //
+                    // Раньше срок годности стоял в ряду с чипами управления, а
+                    // «когда обновлялось» — этажом выше рядом с трафиком. Два
+                    // однородных факта в разных местах и разных ролях; теперь
+                    // они вместе и оба `labelMedium`.
                     Row(
                       children: [
-                        Expanded(
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.update,
-                                    size: 14,
-                                    color: textLightColor,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    l10n.subscriptionsAutoUpdate,
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(color: textLightColor),
-                                  ),
-                                ],
-                              ),
-                              GestureDetector(
-                                onTap: () => ref
-                                    .read(subscriptionsProvider.notifier)
-                                    .toggleAutoUpdate(sub.id),
-                                child: AnimatedContainer(
-                                  duration: ExpressiveMotion.durationFast,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: sub.autoUpdate
-                                        ? greenColor.withValues(alpha: 0.2)
-                                        : textLightColor.withValues(alpha: 0.1),
-                                    borderRadius: ExpressiveShape.radius(
-                                      ExpressiveShape.small,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    sub.autoUpdate
-                                        ? l10n.subscriptionsOn
-                                        : l10n.subscriptionsOff,
-                                    style: Theme.of(context).textTheme
-                                        .emphasized(
-                                          Theme.of(context)
-                                              .textTheme
-                                              .labelSmall,
-                                        )
-                                        ?.copyWith(
-                                          color: sub.autoUpdate
-                                              ? greenColor
-                                              : textLightColor,
-                                        ),
-                                  ),
-                                ),
-                              ),
-                              if (sub.autoUpdate)
-                                GestureDetector(
-                                  onTap: () => _showIntervalPicker(context, sub),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: accentColor.withValues(alpha: 0.15),
-                                      borderRadius: ExpressiveShape.radius(
-                                        ExpressiveShape.small,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          // Короткая форма без «каждые»: в
-                                          // строке рядом с «Обновление ВКЛ» и
-                                          // сроком годности полная фраза не
-                                          // помещалась и уезжала на перенос.
-                                          l10n.subscriptionsIntervalShort(
-                                            sub.updateIntervalHours,
-                                          ),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .labelSmall
-                                              ?.copyWith(color: accentColor),
-                                        ),
-                                        const SizedBox(width: 3),
-                                        Icon(
-                                          Icons.edit,
-                                          size: 11,
-                                          color: accentColor,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
                         if (sub.expiresAt != null) ...[
-                          const SizedBox(width: 8),
                           Icon(
                             Icons.timer_outlined,
-                            size: 13,
+                            size: 14,
                             color: sub.isExpired ? redColor : textLightColor,
                           ),
-                          const SizedBox(width: 3),
+                          const SizedBox(width: 4),
                           Text(
                             sub.isExpired
                                 ? l10n.subscriptionsExpired
                                 : _formatExpiry(sub.expiresAt!),
-                            style: Theme.of(context).textTheme.labelSmall
+                            style: Theme.of(context).textTheme.labelMedium
                                 ?.copyWith(
                                   color: sub.isExpired
                                       ? redColor
@@ -1002,6 +964,58 @@ class _SubItemState extends ConsumerState<_SubItem> {
                                 ),
                           ),
                         ],
+                        if (sub.lastUpdatedAt != null) ...[
+                          const Spacer(),
+                          Text(
+                            _formatDate(sub.lastUpdatedAt!),
+                            style: Theme.of(context).textTheme.labelMedium
+                                ?.copyWith(color: textLightColor),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // УПРАВЛЕНИЕ: чипы одного вида в одном ряду.
+                    //
+                    // Автообновление было тремя элементами — подпись, значок
+                    // ON/OFF и интервал с карандашом — ради одной настройки, и
+                    // переключалось скрытым тапом по значку. Теперь это один
+                    // чип: он же показывает состояние, он же открывает выбор,
+                    // где «Выключить» стоит первым пунктом.
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        // Настройка приложения — primary; ссылки провайдера —
+                        // secondary и tertiary. Три роли, три разных чипа: ряд
+                        // перестаёт быть однородной полосой.
+                        _CardChip(
+                          icon: Icons.update,
+                          label: sub.autoUpdate
+                              ? l10n.subscriptionsIntervalShort(
+                                  sub.updateIntervalHours,
+                                )
+                              : l10n.subscriptionsOff,
+                          accent: ExpressiveAccent.primary,
+                          muted: !sub.autoUpdate,
+                          onTap: () => _showIntervalPicker(context, sub),
+                        ),
+                        if (sub.webPageUrl != null)
+                          _CardChip(
+                            icon: Icons.open_in_new,
+                            label: l10n.subscriptionsProviderPage,
+                            accent: ExpressiveAccent.secondary,
+                            onTap: () =>
+                                _openProviderLink(context, sub.webPageUrl!),
+                          ),
+                        if (sub.supportUrl != null)
+                          _CardChip(
+                            icon: Icons.support_agent_outlined,
+                            label: l10n.subscriptionsSupport,
+                            accent: ExpressiveAccent.tertiary,
+                            onTap: () =>
+                                _openProviderLink(context, sub.supportUrl!),
+                          ),
                       ],
                     ),
                   ],
@@ -1239,6 +1253,9 @@ class _SubItemState extends ConsumerState<_SubItem> {
                             .editMeta(
                               sub.id,
                               name: newName.isNotEmpty ? newName : null,
+                              // Очистили поле — просим вернуть автоматическое
+                              // имя, а не «оставить как было».
+                              resetName: newName.isEmpty,
                               url: newUrl,
                             );
                       } catch (e) {
@@ -1264,6 +1281,92 @@ class _SubItemState extends ConsumerState<_SubItem> {
           );
         },
       ),
+    );
+  }
+
+  /// Меню карточки подписки.
+  ///
+  /// Шторка, а не `PopupMenuButton`: все прочие меню действий в приложении
+  /// (долгое нажатие на сервер, добавление конфигов, сортировка) уже сделаны
+  /// этим компонентом, и всплывающее меню оставалось единственным местом с
+  /// чужой анатомией — оттого и выглядело «обычным».
+  void _showCardMenu(BuildContext context) {
+    final sub = widget.sub;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  sub.name,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(ctx).textTheme
+                      .emphasized(Theme.of(ctx).textTheme.titleLarge)
+                      ?.copyWith(color: AppTheme.text(ctx)),
+                ),
+              ),
+              ExpressiveGroup(
+                children: [
+                  ExpressiveActionTile(
+                    icon: Icons.edit_outlined,
+                    title: l10n.subscriptionsEditSubscription,
+                    accent: ExpressiveAccent.primary,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showEditDialog(context);
+                    },
+                  ),
+                  ExpressiveActionTile(
+                    icon: Icons.qr_code_2,
+                    title: l10n.subscriptionsShareButton,
+                    accent: ExpressiveAccent.secondary,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showShareSheet(context);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Удаление — отдельной группой и в роли error, как в меню сервера.
+              ExpressiveGroup(
+                children: [
+                  ExpressiveActionTile(
+                    icon: Icons.delete_outline,
+                    title: l10n.subscriptionsDelete,
+                    danger: true,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showDeleteConfirmation(context);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Открывает ссылку провайдера, а если открыть нечем — говорит об этом,
+  /// вместо того чтобы молча ничего не сделать.
+  Future<void> _openProviderLink(BuildContext context, String url) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final ok = await openExternalLink(url);
+    if (ok) return;
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.subscriptionsLinkOpenFailed)),
     );
   }
 
@@ -1401,7 +1504,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   textAlign: TextAlign.center,
                   style: Theme.of(ctx)
                       .textTheme
-                      .emphasized(Theme.of(ctx).textTheme.titleMedium)
+                      .emphasized(Theme.of(ctx).textTheme.titleLarge)
                       ?.copyWith(color: textColor),
                 ),
                 const SizedBox(height: 4),
@@ -1420,6 +1523,20 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: ExpressiveGroup(
                     children: [
+                      // Выключение живёт здесь, а не отдельным значком в
+                      // карточке: это одна настройка, и орган управления у неё
+                      // должен быть один.
+                      ExpressiveActionTile(
+                        icon: Icons.update_disabled,
+                        title: l10n.subscriptionsAutoUpdateOff,
+                        selected: !sub.autoUpdate,
+                        onTap: () {
+                          ref
+                              .read(subscriptionsProvider.notifier)
+                              .setUpdateSchedule(sub.id, autoUpdate: false);
+                          Navigator.pop(ctx);
+                        },
+                      ),
                       for (final h in options)
                         ExpressiveActionTile(
                           icon: h < 24
@@ -1432,11 +1549,18 @@ class _SubItemState extends ConsumerState<_SubItem> {
                               : h == 24
                               ? l10n.subscriptionsEveryDay
                               : l10n.subscriptionsEveryDays(h ~/ 24),
-                          selected: h == sub.updateIntervalHours,
+                          selected:
+                              sub.autoUpdate && h == sub.updateIntervalHours,
                           onTap: () {
+                            // Выбор интервала означает «включить и поставить
+                            // его» — одной операцией, а не двумя подряд.
                             ref
                                 .read(subscriptionsProvider.notifier)
-                                .updateInterval(sub.id, h);
+                                .setUpdateSchedule(
+                                  sub.id,
+                                  autoUpdate: true,
+                                  hours: h,
+                                );
                             Navigator.pop(ctx);
                           },
                         ),
@@ -1527,6 +1651,70 @@ class _SubItemState extends ConsumerState<_SubItem> {
     if (diff.inDays >= 1) return l10n.subscriptionsInDays(diff.inDays);
     if (diff.inHours >= 1) return l10n.subscriptionsInHours(diff.inHours);
     return l10n.subscriptionsSoon;
+  }
+}
+
+/// Ссылка провайдера в карточке подписки.
+///
+/// Ровно та же анатомия, что у чипа интервала рядом: тональная заливка,
+/// радиус `small`, роль `label`. Отличается только тем, что несёт иконку и
+/// рипл — рипл здесь и говорит, что по чипу жмут.
+/// Чип в карточке подписки.
+///
+/// Цвет несёт смысл, а не украшает: пока все чипы сидели на одном акценте с
+/// одинаковой альфой, ряд читался как сплошная полоса и глаз в ней терялся.
+/// Роли разведены по назначению — `primary` у настройки самого приложения,
+/// `secondary` и `tertiary` у ссылок провайдера, — то есть тем же способом,
+/// которым раскрашены иконки в настройках.
+class _CardChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final ExpressiveAccent accent;
+
+  /// Выключенное состояние: чип остаётся на месте и нажимается, но уходит в
+  /// нейтральный тон и перестаёт звать цветом.
+  final bool muted;
+
+  const _CardChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.accent = ExpressiveAccent.primary,
+    this.muted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bg = muted ? scheme.surfaceContainerHighest : accent.container(scheme);
+    final fg = muted ? scheme.onSurfaceVariant : accent.onContainer(scheme);
+    final shape = ExpressiveShape.radius(ExpressiveShape.small);
+
+    return Material(
+      color: bg,
+      borderRadius: shape,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: fg),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: fg,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

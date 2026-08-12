@@ -880,6 +880,27 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsAdvancedSubtitle => 'تنظیمات هسته، پینگ، مسیریابی، HWID و اشکال‌زدایی';
 
   @override
+  String get serverEditorJsonValid => 'پیکربندی معتبر Xray';
+
+  @override
+  String get serverEditorJsonFormat => 'قالب‌بندی';
+
+  @override
+  String get subscriptionsCardMenu => 'بیشتر';
+
+  @override
+  String get subscriptionsAutoUpdateOff => 'به‌روزرسانی خودکار نشود';
+
+  @override
+  String get subscriptionsProviderPage => 'صفحه اشتراک';
+
+  @override
+  String get subscriptionsSupport => 'پشتیبانی';
+
+  @override
+  String get subscriptionsLinkOpenFailed => 'باز کردن پیوند ممکن نشد';
+
+  @override
   String get settingsAdvancedGroupTraffic => 'ترافیک و هسته';
 
   @override

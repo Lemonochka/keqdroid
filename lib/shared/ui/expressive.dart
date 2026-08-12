@@ -237,6 +237,7 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
   NavigationBarThemeData navigationBar,
   ListTileThemeData listTile,
   PopupMenuThemeData popupMenu,
+  SegmentedButtonThemeData segmentedButton,
 }) buildExpressiveComponentThemes(ColorScheme scheme) {
   // Кнопки у M3E — пилюли: это самая заметная форма всего языка.
   final buttonShape = ExpressiveShape.border(ExpressiveShape.full);
@@ -311,6 +312,18 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
     listTile: ListTileThemeData(
       shape: ExpressiveShape.border(ExpressiveShape.large),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    ),
+    // Переключатель-сегменты: снаружи пилюля, выбранный сегмент —
+    // secondaryContainer, тем же цветом, что выбранное во всём приложении.
+    segmentedButton: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        shape: buttonShape,
+        side: BorderSide(color: scheme.outlineVariant),
+        selectedBackgroundColor: scheme.secondaryContainer,
+        selectedForegroundColor: scheme.onSecondaryContainer,
+        foregroundColor: scheme.onSurfaceVariant,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      ),
     ),
     // Всплывающее меню — отдельная поверхность, а не «текст поверх экрана»:
     // без своего контейнера пункты не читались как выбор.

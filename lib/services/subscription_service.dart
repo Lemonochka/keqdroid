@@ -16,6 +16,35 @@ import '../services/storage_service.dart';
 import '../utils/custom_xray_config.dart';
 import '../core/exceptions.dart';
 
+/// Косметика, которую панель отдаёт заголовками ответа на запрос подписки.
+///
+/// Отдельный класс, а не поля в record'е результата: их пять, а record с
+/// десятком позиций пришлось бы переписывать в каждом месте возврата.
+class SubscriptionProfileHeaders {
+  final String? title;
+  final String? announce;
+  final String? supportUrl;
+  final String? webPageUrl;
+  final int? updateIntervalHours;
+
+  const SubscriptionProfileHeaders({
+    this.title,
+    this.announce,
+    this.supportUrl,
+    this.webPageUrl,
+    this.updateIntervalHours,
+  });
+
+  static const empty = SubscriptionProfileHeaders();
+
+  bool get isEmpty =>
+      title == null &&
+      announce == null &&
+      supportUrl == null &&
+      webPageUrl == null &&
+      updateIntervalHours == null;
+}
+
 class UpdateResult {
   final bool success;
   final int serverCount;
@@ -222,7 +251,7 @@ class SubscriptionService {
   /// качает подписку и отдаёт список raw-конфигов.
   /// заодно парсит X-Subscription-Userinfo для трафика. при сетевой ошибке один retry через 2с.
   /// [userAgent] — сохранённый рабочий UA подписки: первый запрос идёт с ним.
-  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent})>
+  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent, SubscriptionProfileHeaders profile})>
   fetchRaw(String url, {CancelToken? cancelToken, String? userAgent}) async {
     if (!isSafeUrl(url)) {
       // http выделяем в отдельное сообщение: у него в UI точечный фикс
@@ -259,6 +288,7 @@ class SubscriptionService {
         totalBytes: result.totalBytes,
         expiresAt: result.expiresAt,
         usedUserAgent: result.usedUserAgent,
+        profile: result.profile,
       );
     } on Object catch (e, st) {
       AppLogger.instance.warn(
@@ -283,7 +313,7 @@ class SubscriptionService {
     }
   }
 
-  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent})>
+  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent, SubscriptionProfileHeaders profile})>
   _fetchWithRetry(
     String url, {
     CancelToken? cancelToken,
@@ -293,6 +323,7 @@ class SubscriptionService {
     String? savedUserAgent,
   }) async {
     String? usedUserAgent;
+    var profile = SubscriptionProfileHeaders.empty;
     // первый запрос: сохранённый рабочий UA подписки, иначе UA приложения.
     // если он перестал работать (html/4xx/5xx) — перебор ниже, без него
     final initialUa = (savedUserAgent != null && savedUserAgent.isNotEmpty)
@@ -321,6 +352,7 @@ class SubscriptionService {
       DateTime? expiresAt;
 
       final headerMetaInitial = _parseUserInfoHeader(response.headers);
+      profile = _parseProfileHeaders(response.headers);
       usedBytes = headerMetaInitial.usedBytes;
       totalBytes = headerMetaInitial.totalBytes;
       expiresAt = headerMetaInitial.expiresAt;
@@ -349,6 +381,7 @@ class SubscriptionService {
           // часть панелей отдаёт userinfo только под клиентским User-Agent
           if (usedBytes == null || totalBytes == null || expiresAt == null) {
             final headerMetaUa = _parseUserInfoHeader(uaResponse.headers);
+            profile = _parseProfileHeaders(uaResponse.headers);
             usedBytes ??= headerMetaUa.usedBytes;
             totalBytes ??= headerMetaUa.totalBytes;
             expiresAt ??= headerMetaUa.expiresAt;
@@ -393,6 +426,7 @@ class SubscriptionService {
       totalBytes: totalBytes,
       expiresAt: expiresAt,
       usedUserAgent: usedUserAgent,
+      profile: profile,
       );
     } on DioException catch (e) {
       // некоторые бэкенды отдают не-200 (502 и т.п.), но в body уже валидный payload.
@@ -467,7 +501,7 @@ class SubscriptionService {
     }
   }
 
-  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent})?>
+  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent, SubscriptionProfileHeaders profile})?>
   _tryParseFromErrorResponse(DioException e) async {
     final response = e.response;
     if (response == null) {
@@ -497,13 +531,14 @@ class SubscriptionService {
         totalBytes: headerMeta.totalBytes,
         expiresAt: headerMeta.expiresAt,
         usedUserAgent: null,
+        profile: _parseProfileHeaders(response.headers),
       );
     } on Object {
       return null;
     }
   }
 
-  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent})?>
+  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent, SubscriptionProfileHeaders profile})?>
   _tryParseWithClientUserAgents(
     String url, {
     CancelToken? cancelToken,
@@ -545,10 +580,11 @@ class SubscriptionService {
       totalBytes: headerMeta.totalBytes ?? bodyMeta.totalBytes,
       expiresAt: headerMeta.expiresAt ?? bodyMeta.expiresAt,
       usedUserAgent: response.requestOptions.headers['User-Agent'] as String?,
+      profile: _parseProfileHeaders(response.headers),
     );
   }
 
-  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent})?>
+  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent, SubscriptionProfileHeaders profile})?>
   _tryFetchWithHttpClientFallback(
     String url, {
     required String? hwid,
@@ -646,6 +682,7 @@ class SubscriptionService {
           totalBytes: headerMeta.totalBytes ?? bodyMeta.totalBytes,
           expiresAt: headerMeta.expiresAt ?? bodyMeta.expiresAt,
           usedUserAgent: null,
+          profile: _parseProfileHeaders(dioLikeHeaders),
         );
       } on Object catch (e, st) {
         if (e is FormatException) {
@@ -857,6 +894,86 @@ class SubscriptionService {
 
   void _logRemnawaveHwidHeaders(Headers headers, {required String source}) {
     // пока не логируем
+  }
+
+  /// Косметические заголовки подписки по [XTLS Subscription Standards].
+  ///
+  /// `profile-title` и `announce` спека предписывает слать с префиксом
+  /// `base64:`; часть панелей шлёт голый текст, поэтому декодируем только то,
+  /// что действительно похоже на base64 (см. [_decodeHeaderText]).
+  @visibleForTesting
+  static SubscriptionProfileHeaders parseProfileHeadersForTest(Headers headers) =>
+      _parseProfileHeaders(headers);
+
+  static SubscriptionProfileHeaders _parseProfileHeaders(Headers headers) {
+    String? pick(List<String> names) {
+      for (final n in names) {
+        final v = headers.value(n)?.trim();
+        if (v != null && v.isNotEmpty) return v;
+      }
+      return null;
+    }
+
+    final interval = int.tryParse(
+      pick(['profile-update-interval', 'update-interval']) ?? '',
+    );
+
+    return SubscriptionProfileHeaders(
+      title: _decodeHeaderText(pick(['profile-title', 'profile_title'])),
+      announce: _decodeHeaderText(pick(['announce', 'profile-announce'])),
+      supportUrl: _sanitizeUrl(pick(['support-url', 'profile-support-url'])),
+      webPageUrl: _sanitizeUrl(pick(['profile-web-page-url', 'profile-webpage-url'])),
+      // Отрицательный или нулевой интервал — мусор, а не «обновлять всегда».
+      updateIntervalHours: (interval != null && interval > 0) ? interval : null,
+    );
+  }
+
+  /// Текст заголовка: `base64:...` по спеке, иначе как есть.
+  ///
+  /// Голый base64 без префикса встречается у старых панелей, поэтому пробуем и
+  /// его — но только когда строка целиком укладывается в алфавит base64 и
+  /// раскодировалась в осмысленный UTF-8. Иначе обычное слово вроде `Announce`
+  /// (валидный base64!) превратилось бы в мусор.
+  static String? _decodeHeaderText(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+
+    String? tryDecode(String s) {
+      var normalized = s.replaceAll(RegExp(r'\s'), '').replaceAll('-', '+').replaceAll('_', '/');
+      if (normalized.isEmpty) return null;
+      final pad = normalized.length % 4;
+      if (pad != 0) normalized = normalized.padRight(normalized.length + (4 - pad), '=');
+      try {
+        final bytes = base64.decode(normalized);
+        if (bytes.isEmpty) return null;
+        final text = utf8.decode(bytes, allowMalformed: false).trim();
+        if (text.isEmpty) return null;
+        // управляющие символы = раскодировали не то
+        if (text.runes.any((r) => r < 0x20 && r != 0x0A && r != 0x09)) return null;
+        return text;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    const prefix = 'base64:';
+    if (raw.toLowerCase().startsWith(prefix)) {
+      return tryDecode(raw.substring(prefix.length)) ?? raw.substring(prefix.length);
+    }
+    if (raw.length >= 8 && RegExp(r'^[A-Za-z0-9+/_=-]+$').hasMatch(raw)) {
+      final decoded = tryDecode(raw);
+      if (decoded != null) return decoded;
+    }
+    return raw;
+  }
+
+  /// Пускаем только http(s): заголовок приходит с чужого сервера, а ссылка
+  /// потом открывается в браузере пользовательницы.
+  static String? _sanitizeUrl(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final uri = Uri.tryParse(raw);
+    if (uri == null || !uri.hasScheme || !uri.hasAuthority) return null;
+    if (uri.scheme != 'http' && uri.scheme != 'https') return null;
+    return uri.toString();
   }
 
   static ({int? usedBytes, int? totalBytes, DateTime? expiresAt}) _parseUserInfoHeader(
@@ -2100,15 +2217,28 @@ class SubscriptionService {
         }
       }
 
-      final updated = sub.copyWith(
-        lastUpdatedAt: DateTime.now(),
-        usedBytes: result.usedBytes,
-        totalBytes: result.totalBytes,
-        expiresAt: result.expiresAt,
-        serverCount: servers.length,
-        // null (payload пришёл фолбэком без UA-перебора) не затирает сохранённый
-        userAgent: result.usedUserAgent,
-      );
+      final wasFirstFetch = sub.lastUpdatedAt == null;
+      final updated = sub
+          .copyWith(
+            lastUpdatedAt: DateTime.now(),
+            usedBytes: result.usedBytes,
+            totalBytes: result.totalBytes,
+            expiresAt: result.expiresAt,
+            serverCount: servers.length,
+            // null (payload пришёл фолбэком без UA-перебора) не затирает сохранённый
+            userAgent: result.usedUserAgent,
+          )
+          .withProfileHeaders(
+            title: result.profile.title,
+            announce: result.profile.announce,
+            supportUrl: result.profile.supportUrl,
+            webPageUrl: result.profile.webPageUrl,
+            // Предложенный панелью интервал берём только на первой загрузке:
+            // дальше это уже выбор пользовательницы, и перетирать его на
+            // каждом обновлении нельзя.
+            updateIntervalHours:
+                wasFirstFetch ? result.profile.updateIntervalHours : null,
+          );
       await _storage.upsertSubscription(updated);
 
       return UpdateResult(

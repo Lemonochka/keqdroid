@@ -191,6 +191,7 @@ ThemeData buildAppTheme(
     appBarTheme: const AppBarTheme(surfaceTintColor: Colors.transparent),
     navigationBarTheme: components.navigationBar,
     popupMenuTheme: components.popupMenu,
+    segmentedButtonTheme: components.segmentedButton,
     bottomSheetTheme: components.sheet,
     dialogTheme: flair
         ? components.dialog.copyWith(

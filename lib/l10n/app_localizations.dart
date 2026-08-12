@@ -1733,6 +1733,48 @@ abstract class AppLocalizations {
   /// **'Core settings, ping, routing, HWID and debug'**
   String get settingsAdvancedSubtitle;
 
+  /// No description provided for @serverEditorJsonValid.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid Xray config'**
+  String get serverEditorJsonValid;
+
+  /// No description provided for @serverEditorJsonFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Format'**
+  String get serverEditorJsonFormat;
+
+  /// No description provided for @subscriptionsCardMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get subscriptionsCardMenu;
+
+  /// No description provided for @subscriptionsAutoUpdateOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Do not update automatically'**
+  String get subscriptionsAutoUpdateOff;
+
+  /// No description provided for @subscriptionsProviderPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription page'**
+  String get subscriptionsProviderPage;
+
+  /// No description provided for @subscriptionsSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get subscriptionsSupport;
+
+  /// No description provided for @subscriptionsLinkOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the link'**
+  String get subscriptionsLinkOpenFailed;
+
   /// No description provided for @settingsAdvancedGroupTraffic.
   ///
   /// In en, this message translates to:
