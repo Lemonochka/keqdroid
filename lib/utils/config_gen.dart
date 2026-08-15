@@ -6,6 +6,7 @@ import '../models/xray_core_settings.dart';
 import '../utils/custom_xray_config.dart';
 import '../utils/geo_asset_index.dart';
 import '../utils/hysteria_uri.dart';
+import '../utils/proxy_chain.dart';
 import '../utils/routing_entry.dart';
 import '../utils/socks5_credentials.dart';
 
@@ -156,6 +157,19 @@ class ConfigGeneratorV2 {
   }) {
     final trimmed = input.trim();
 
+    // Цепочка серверов вместо одного: аутбаунды всех узлов + dialerProxy.
+    final chain = ProxyChainConfig.tryParse(trimmed);
+    if (chain != null) {
+      return _buildChainConfig(
+        chain,
+        settings,
+        resolvedServerIp: resolvedServerIp,
+        pingSocksPort: pingSocksPort,
+        pingHttpInbound: pingHttpInbound,
+        localInboundsNoAuth: localInboundsNoAuth,
+      );
+    }
+
     // Готовый конфиг ядра вместо ссылки: аутбаунды/роутинг/dns берём авторские,
     // подменяем только инбаунды (их порты и креды диктует приложение).
     final custom = CustomXrayConfig.tryParse(trimmed);
@@ -171,6 +185,25 @@ class ConfigGeneratorV2 {
       );
     }
 
+    final link = _buildLinkOutbound(trimmed, settings);
+
+    return _wrapConfig(
+      [link.outbound],
+      settings,
+      resolvedServerIp ?? link.address,
+      link.port,
+      originalServerAddress: link.address,
+      pingSocksPort: pingSocksPort,
+      pingHttpInbound: pingHttpInbound,
+      localInboundsNoAuth: localInboundsNoAuth,
+    );
+  }
+
+  /// Аутбаунд одной серверной ссылки (`vless://`, `vmess://`, …) плюс её
+  /// адрес и порт. Общая часть для одиночного сервера и для узла цепочки.
+  /// Тег всегда `proxy` — вызывающий переименовывает его под своё место.
+  static ({Map<String, dynamic> outbound, String address, int port})
+      _buildLinkOutbound(String trimmed, AppSettings settings) {
     final bool isVmess = trimmed.toLowerCase().startsWith('vmess://');
     final lowerTrimmed = trimmed.toLowerCase();
     final bool isHysteria = lowerTrimmed.startsWith('hysteria://') ||
@@ -236,22 +269,126 @@ class ConfigGeneratorV2 {
 
     _applyXrayStreamExtras(outbound, settings.xrayCore);
 
+    return (outbound: outbound, address: address, port: port);
+  }
+
+  /// Префикс тегов промежуточных узлов цепочки. Выходной узел остаётся
+  /// `proxy` — на этот тег смотрят все правила роутинга и sing-box-часть.
+  static const String _chainHopTagPrefix = 'chain-';
+
+  /// Цепочка серверов в роли одного «сервера».
+  ///
+  /// Каждому узлу — свой аутбаунд; узел `i` дозванивается до своего сервера
+  /// через узел `i-1` (`streamSettings.sockopt.dialerProxy`). Роутинг про
+  /// внутренние звенья не знает и знать не должен: он направляет трафик в
+  /// `proxy` (выходной узел), а тот уже сам тянет за собой всю цепочку.
+  /// Подробнее про выбор dialerProxy — в [ProxyChainConfig].
+  ///
+  /// Наружу из процесса уходит только соединение до ВХОДНОГО узла — поэтому
+  /// [resolvedServerIp] относится к нему, и обход туннеля строится по нему же.
+  static Map<String, dynamic> _buildChainConfig(
+    ProxyChainConfig chain,
+    AppSettings settings, {
+    String? resolvedServerIp,
+    int? pingSocksPort,
+    bool pingHttpInbound = false,
+    bool localInboundsNoAuth = false,
+  }) {
+    if (chain.hops.isEmpty) {
+      throw ArgumentError('Proxy chain has no nodes');
+    }
+
+    final built = [
+      for (final hop in chain.hops) _buildLinkOutbound(hop.config, settings),
+    ];
+
+    final outbounds = <Map<String, dynamic>>[];
+    for (var i = 0; i < built.length; i++) {
+      final isExit = i == built.length - 1;
+      final outbound = built[i].outbound;
+      outbound['tag'] = isExit ? 'proxy' : '$_chainHopTagPrefix$i';
+      if (i > 0) {
+        _applyDialerProxy(outbound, '$_chainHopTagPrefix${i - 1}');
+      }
+      outbounds.add(outbound);
+    }
+
+    // Выходной узел — первым: в xray первый аутбаунд считается основным, и
+    // всё, что не попало ни в одно правило, уходит именно в него.
+    final exit = outbounds.removeLast();
+
     return _wrapConfig(
-      outbound,
+      [exit, ...outbounds],
       settings,
-      resolvedServerIp ?? address,
-      port,
-      originalServerAddress: address,
+      resolvedServerIp ?? built.first.address,
+      built.first.port,
+      originalServerAddress: built.first.address,
+      // Адреса остальных узлов: правило «сам сервер — мимо туннеля» должно
+      // накрывать всю цепочку, иначе обращение к адресу промежуточного узла
+      // (тот же адрес панели провайдера) закольцуется через неё же.
+      extraServerAddresses: [
+        for (var i = 1; i < built.length; i++) built[i].address,
+      ],
       pingSocksPort: pingSocksPort,
       pingHttpInbound: pingHttpInbound,
       localInboundsNoAuth: localInboundsNoAuth,
     );
   }
 
+  /// Подключает аутбаунд к предыдущему узлу цепочки.
+  static void _applyDialerProxy(Map<String, dynamic> outbound, String tag) {
+    final stream = Map<String, dynamic>.from(
+      (outbound['streamSettings'] as Map<String, dynamic>?) ??
+          const <String, dynamic>{},
+    );
+    final sockopt = Map<String, dynamic>.from(
+      (stream['sockopt'] as Map<String, dynamic>?) ?? const <String, dynamic>{},
+    );
+    sockopt['dialerProxy'] = tag;
+    stream['sockopt'] = sockopt;
+
+    // Перебор портов hysteria (`mport`) работает только на самом внешнем узле:
+    // получив от dialerProxy готовый поток, ядро отвечает «udphop requires
+    // being at the outermost level» и коннект падает целиком. Роняем перебор,
+    // а не соединение — базовый порт из ссылки остаётся рабочим.
+    final hysteria = stream['hysteriaSettings'];
+    if (hysteria is Map) hysteria.remove('udphop');
+
+    outbound['streamSettings'] = stream;
+  }
+
+  /// Разделители списков правил — и запятая, и перевод строки: UI обещает «по
+  /// одному в строке или через запятую», а сплит только по ',' склеивал
+  /// построчные записи в один несрабатывающий токен.
+  static List<String> _parseRuleList(String s) => s
+      .split(RegExp(r'[\r\n,]+'))
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
+
+  /// Пользовательская запись домена → форма, понятная роутингу xray.
+  static List<String> _normalizeDomains(List<String> domains) =>
+      domains.map((d) {
+        final c = d.trim().toLowerCase();
+        if (c.startsWith('domain:') ||
+            c.startsWith('full:') ||
+            c.startsWith('regexp:') ||
+            c.startsWith('geosite:')) {
+          return c;
+        }
+        if (!c.contains('.')) return 'regexp:.*\\.$c\$';
+        if (c.startsWith('.')) return 'domain:${c.substring(1)}';
+        return 'domain:$c';
+      }).toList();
+
   /// Тег freedom-аутбаунда, который мы дописываем в конфиг пробы: собственного
   /// `direct` у автора может не быть, а правила «сервер и приватные сети —
   /// напрямую» пингу нужны.
   static const _pingDirectTag = 'keq-ping-direct';
+
+  /// Тег freedom-аутбаунда для пользовательских direct-правил в готовом
+  /// конфиге — на случай, если своего freedom у автора нет.
+  static const _customDirectTag = 'keq-direct';
 
   /// Тег blackhole-аутбаунда для запрета входа в LAN-инбаунды: в авторском
   /// конфиге blackhole тоже бывает не заведён.
@@ -335,20 +472,123 @@ class ConfigGeneratorV2 {
       ]);
     }
 
+    // Пользовательские списки роутинга — ПЕРЕД авторскими правилами.
+    //
+    // Раньше готовый конфиг забирал роутинг целиком, и настройки приложения
+    // («обход», «прокси», «блок») на таком сервере молча не работали — самая
+    // частая жалоба на custom-конфиги. Порядок именно такой: то, что человек
+    // назвал руками, важнее заготовки провайдера, а всё неназванное по-прежнему
+    // решает авторский роутинг — ради него такой сервер и берут.
+    final directTag =
+        _existingOutboundTag(custom, 'freedom') ?? _customDirectTag;
+    final userRules = _customUserRules(
+      settings,
+      directTag: directTag,
+      proxyTag: custom.primaryOutboundTag,
+      blockTag: blockTag ?? _customBlockTag,
+    );
+
+    // Финальное правило — в самый конец. У автора почти всегда есть свой
+    // catch-all, и тогда наше не сработает вовсе; но если его нет, «остальной
+    // трафик» из настроек должен решать он, а не молчаливый дефолт ядра
+    // («первый аутбаунд в списке»).
+    final finalTag = switch (settings.finalOutbound) {
+      AppSettings.finalOutboundDirect => directTag,
+      AppSettings.finalOutboundBlock => blockTag ?? _customBlockTag,
+      _ => custom.primaryOutboundTag,
+    };
+    final appendRules = <Map<String, dynamic>>[
+      {
+        'type': 'field',
+        'ruleTag': 'final',
+        'network': 'tcp,udp',
+        'outboundTag': finalTag,
+      },
+    ];
+
+    final usedTags = <String>{
+      for (final rule in [...userRules, ...appendRules])
+        rule['outboundTag'] as String,
+      if (settings.lanSharing) blockTag ?? _customBlockTag,
+    };
+
     final config = custom.buildSessionConfig(
       inbounds: inbounds,
       logLevel: settings.xrayCore.logLevel,
-      lanRules: lanRules,
+      prependRules: [...lanRules, ...userRules],
+      appendRules: appendRules,
       geoIndex: geoIndex,
     );
 
-    if (blockTag == _customBlockTag) {
+    // Дописываем только те аутбаунды, на которые реально кто-то ссылается:
+    // правило с несуществующим тегом роняет разбор всего конфига.
+    final extraOutbounds = <Map<String, dynamic>>[
+      if (usedTags.contains(_customBlockTag))
+        {'protocol': 'blackhole', 'tag': _customBlockTag},
+      if (usedTags.contains(_customDirectTag))
+        {'protocol': 'freedom', 'tag': _customDirectTag},
+    ];
+    if (extraOutbounds.isNotEmpty) {
       config['outbounds'] = [
         ...(config['outbounds'] as List),
-        {'protocol': 'blackhole', 'tag': _customBlockTag},
+        ...extraOutbounds,
       ];
     }
     return config;
+  }
+
+  /// Правила из пользовательских списков для готового (custom) конфига.
+  ///
+  /// Порядок тот же, что и в сгенерированном конфиге ([_wrapConfig]): блок,
+  /// обход, прокси — иначе одно и то же правило вело бы себя по-разному в
+  /// зависимости от типа сервера. Приватные диапазоны сюда НЕ добавляем: у
+  /// автора для них своё правило, а наше перебило бы его.
+  static List<Map<String, dynamic>> _customUserRules(
+    AppSettings settings, {
+    required String directTag,
+    required String proxyTag,
+    required String blockTag,
+  }) {
+    final rules = <Map<String, dynamic>>[];
+
+    void addGroup(String source, String outboundTag, String tagPrefix) {
+      final split = splitDomainsAndIps(_parseRuleList(source));
+      final geo = splitGeoipTokens(split.ips);
+      final domains = _normalizeDomains(split.domains);
+      final ips = geo.plainIps
+          .where((e) => !e.trim().toLowerCase().startsWith('geoip:'))
+          .toList();
+
+      if (domains.isNotEmpty) {
+        rules.add({
+          'type': 'field',
+          'ruleTag': '$tagPrefix-domains',
+          'domain': domains,
+          'outboundTag': outboundTag,
+        });
+      }
+      if (geo.geoipCodes.isNotEmpty) {
+        rules.add({
+          'type': 'field',
+          'ruleTag': '$tagPrefix-geoip',
+          'ip': geo.geoipCodes.map((c) => 'geoip:$c').toList(),
+          'outboundTag': outboundTag,
+        });
+      }
+      if (ips.isNotEmpty) {
+        rules.add({
+          'type': 'field',
+          'ruleTag': '$tagPrefix-ips',
+          'ip': ips,
+          'outboundTag': outboundTag,
+        });
+      }
+    }
+
+    addGroup(settings.blockedRules, blockTag, 'user-block');
+    addGroup(settings.directRules, directTag, 'user-direct');
+    addGroup(settings.proxyRules, proxyTag, 'user-proxy');
+    return rules;
   }
 
   /// Тег первого аутбаунда с указанным протоколом — чтобы не дописывать свой,
@@ -415,6 +655,42 @@ class ConfigGeneratorV2 {
       'network': 'tcp,udp',
     });
     return rules;
+  }
+
+  /// Блок `xhttpSettings.extra` из share-ссылки.
+  ///
+  /// У xray это НЕ «дополнительные поля»: в `SplitHTTPConfig.Build` объект из
+  /// `extra` ЗАМЕЩАЕТ собой весь блок XHTTP, и от внешнего остаются только
+  /// `host`, `path` и `mode`. Панели (xray 25+) кладут туда всё остальное —
+  /// `xPaddingBytes`, `scMaxEachPostBytes`, `noGRPCHeader`, `headers`, `xmux`,
+  /// `downloadSettings`. Пока мы этот параметр выбрасывали, сервер получал
+  /// клиента с дефолтными настройками XHTTP вместо своих.
+  ///
+  /// [paddingBytes] — старая плоская форма (`x_padding_bytes=92-1412`) для
+  /// ссылок без `extra`; при конфликте выигрывает то, что author положил в
+  /// сам `extra`.
+  ///
+  /// Битый json не роняет разбор ссылки: сервер без padding-настроек всё же
+  /// лучше, чем сервер, который вообще не добавился.
+  static Map<String, dynamic>? _xhttpExtra(String raw, String paddingBytes) {
+    Map<String, dynamic>? extra;
+    final trimmed = raw.trim();
+    if (trimmed.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is Map) {
+          extra = Map<String, dynamic>.from(decoded);
+        }
+      } on FormatException {
+        // не наша забота чинить чужую ссылку — молча игнорируем
+      }
+    }
+    final padding = paddingBytes.trim();
+    if (padding.isNotEmpty) {
+      extra ??= <String, dynamic>{};
+      extra.putIfAbsent('xPaddingBytes', () => padding);
+    }
+    return (extra == null || extra.isEmpty) ? null : extra;
   }
 
   /// client-side xhttp extras (xmux) and similar stream options.
@@ -800,6 +1076,10 @@ class ConfigGeneratorV2 {
           'path': getParam('path', '/'),
           'host': host.isNotEmpty ? host : sni,
           if (getParam('mode').isNotEmpty) 'mode': getParam('mode'),
+          'extra': ?_xhttpExtra(
+            getParam('extra'),
+            getParam('x_padding_bytes', getParam('xPaddingBytes')),
+          ),
         };
       case 'httpupgrade':
         stream['httpupgradeSettings'] = {'path': getParam('path', '/'), 'host': getParam('host', sni)};
@@ -812,39 +1092,30 @@ class ConfigGeneratorV2 {
   }
 
   // обёртка конфига
+  //
+  // [proxyOutbounds] — аутбаунды сервера: у одиночного он один, у цепочки это
+  // выходной узел (тег `proxy`, всегда первым) и остальные звенья.
+  // [extraServerAddresses] — адреса промежуточных узлов цепочки: для них тоже
+  // нужно правило «мимо туннеля».
   static Map<String, dynamic> _wrapConfig(
-      Map<String, dynamic> outbound, AppSettings settings, String serverAddress, int serverPort,
-      {String? originalServerAddress, int? pingSocksPort, bool pingHttpInbound = false, bool localInboundsNoAuth = false}) {
+      List<Map<String, dynamic>> proxyOutbounds, AppSettings settings, String serverAddress, int serverPort,
+      {String? originalServerAddress, List<String> extraServerAddresses = const [], int? pingSocksPort, bool pingHttpInbound = false, bool localInboundsNoAuth = false}) {
 
     originalServerAddress ??= serverAddress;
     final isPingMode = pingSocksPort != null;
 
-    // Разделители — и запятая, и перевод строки: UI обещает «по одному в
-    // строке или через запятую», сплит только по ',' склеивал построчные
-    // записи в один несрабатывающий токен.
-    List<String> parseList(String s) =>
-        s.split(RegExp(r'[\r\n,]+')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-
-    List<String> normalizeDomains(List<String> domains) => domains.map((d) {
-      final c = d.trim().toLowerCase();
-      if (c.startsWith('domain:') || c.startsWith('full:') || c.startsWith('regexp:') || c.startsWith('geosite:')) return c;
-      if (!c.contains('.')) return 'regexp:.*\\.$c\$';
-      if (c.startsWith('.')) return 'domain:${c.substring(1)}';
-      return 'domain:$c';
-    }).toList();
-
     // each list is mixed (domains + ip/cidr + geoip:); split per kind.
-    final directSplit  = splitDomainsAndIps(parseList(settings.directRules));
-    final proxySplit   = splitDomainsAndIps(parseList(settings.proxyRules));
-    final blockedSplit = splitDomainsAndIps(parseList(settings.blockedRules));
+    final directSplit  = splitDomainsAndIps(_parseRuleList(settings.directRules));
+    final proxySplit   = splitDomainsAndIps(_parseRuleList(settings.proxyRules));
+    final blockedSplit = splitDomainsAndIps(_parseRuleList(settings.blockedRules));
 
     final directGeo    = splitGeoipTokens(directSplit.ips);
     final proxyGeo     = splitGeoipTokens(proxySplit.ips);
     final blockedGeo   = splitGeoipTokens(blockedSplit.ips);
 
-    final directDomains  = normalizeDomains(directSplit.domains);
-    final blockedDomains = normalizeDomains(blockedSplit.domains);
-    final proxyDomains   = normalizeDomains(proxySplit.domains);
+    final directDomains  = _normalizeDomains(directSplit.domains);
+    final blockedDomains = _normalizeDomains(blockedSplit.domains);
+    final proxyDomains   = _normalizeDomains(proxySplit.domains);
     final directIps      = directGeo.plainIps
         .where((e) => !e.trim().toLowerCase().startsWith('geoip:'))
         .toList();
@@ -906,6 +1177,23 @@ class ConfigGeneratorV2 {
       'outboundTag': 'block',
     }));
 
+    // «Мимо туннеля» для промежуточных узлов цепочки — той же формы правило,
+    // что и для самого сервера выше. Сама цепочка через роутинг не проходит
+    // (dialerProxy отдаёт соединение хендлеру напрямую), так что правило
+    // защищает пользовательские обращения к этим адресам от закольцовывания.
+    void addChainHopDirectRules() {
+      for (var i = 0; i < extraServerAddresses.length; i++) {
+        final addr = extraServerAddresses[i].trim();
+        if (addr.isEmpty) continue;
+        rules.add(rule(
+          'chain-hop-$i',
+          _isIpLiteral(addr)
+              ? {'ip': [addr], 'outboundTag': 'direct'}
+              : {'domain': ['full:$addr'], 'outboundTag': 'direct'},
+        ));
+      }
+    }
+
     if (isPingMode) {
       final isServerIp = _isIpLiteral(serverAddress);
       if (isServerIp) {
@@ -916,6 +1204,7 @@ class ConfigGeneratorV2 {
       } else if (!isServerIp) {
         rules.add({'type': 'field', 'ip': [originalServerAddress], 'outboundTag': 'direct'});
       }
+      addChainHopDirectRules();
       rules.add({
         'type': 'field',
         'ip': [
@@ -973,6 +1262,7 @@ class ConfigGeneratorV2 {
       rules.add(rule('server-address',
           {'ip': [originalServerAddress], 'outboundTag': 'direct'}));
     }
+    addChainHopDirectRules();
     if (directDomains.isNotEmpty) {
       rules.add(rule('direct-domains',
           {'domain': directDomains, 'outboundTag': 'direct'}));
@@ -1033,7 +1323,7 @@ class ConfigGeneratorV2 {
       'dns': dns,
       'inbounds': inbounds,
       'outbounds': [
-        outbound,
+        ...proxyOutbounds,
         {'protocol': 'freedom', 'tag': 'direct'},
         {'protocol': 'blackhole', 'tag': 'block'},
       ],

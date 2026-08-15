@@ -826,25 +826,36 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     // делает иерархию: у M3E это один из пяти механизмов
                     // наравне с цветом и формой.
                     if (sub.usedDisplay != null)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            ltrIsolate(sub.usedDisplay!),
-                            style: Theme.of(context).textTheme
-                                .emphasized(
-                                  Theme.of(context).textTheme.headlineSmall,
-                                )
-                                ?.copyWith(color: textColor),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            ltrIsolate('/ ${sub.limitDisplay}'),
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: textLightColor),
-                          ),
-                        ],
+                      // «Потрачено / лимит» — одно значение из двух виджетов, и
+                      // порядок в нём держит LtrBlock, а не изолят: в персидской
+                      // локали Row зеркалился, и вместо `621.8 GiB / 100 GiB`
+                      // на экране получалось `/ 100 GiB 621.8 GiB`. Изолят чинил
+                      // каждый кусок по отдельности и на порядок детей не влиял.
+                      LtrBlock(
+                        child: Row(
+                          // Row обязан обжимать содержимое: растянутый на всю
+                          // ширину, он утащил бы блок к левому краю, а по-
+                          // персидски он должен стоять у правого.
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              sub.usedDisplay!,
+                              style: Theme.of(context).textTheme
+                                  .emphasized(
+                                    Theme.of(context).textTheme.headlineSmall,
+                                  )
+                                  ?.copyWith(color: textColor),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '/ ${sub.limitDisplay}',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: textLightColor),
+                            ),
+                          ],
+                        ),
                       ),
                     if (_isInsecureHttp)
                       Padding(

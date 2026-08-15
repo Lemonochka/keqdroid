@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:country_flags/country_flags.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +13,7 @@ import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
+import 'package:keqdroid/shared/ui/server_row.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
 import '../core/app_logger.dart';
@@ -31,7 +31,10 @@ import '../utils/clipboard_import.dart';
 import '../utils/bidi.dart';
 import '../utils/error_messages.dart';
 import '../utils/import_payload.dart';
+import '../utils/proxy_chain.dart';
+import '../utils/server_sort.dart';
 import 'qr_scan_screen.dart';
+import 'servers/chain_editor.dart';
 import 'servers/server_config_editor.dart';
 import 'servers/wave_window.dart';
 
@@ -604,6 +607,14 @@ class _ServersTabState extends ConsumerState<ServersTab>
         );
   }
 
+  /// Сколько серверов годятся узлом цепочки — по этому числу решаем,
+  /// показывать ли пункт «собрать цепочку».
+  int get _chainCandidateCount => ref
+      .read(serversProvider)
+      .servers
+      .where((s) => ProxyChainConfig.canBeHop(s.protocol))
+      .length;
+
   void _showAddServerDialog(BuildContext ctx) {
     final l10n = AppLocalizations.of(ctx)!;
     showModalBottomSheet<void>(
@@ -657,6 +668,25 @@ class _ServersTabState extends ConsumerState<ServersTab>
                     onTap: () {
                       Navigator.pop(ctx2);
                       _scanQrAndImport(ctx);
+                    },
+                  ),
+                // Цепочка собирается из УЖЕ добавленных серверов, поэтому она
+                // последняя в списке и появляется, только когда есть из чего
+                // собирать — иначе первый же экран приложения обещал бы то,
+                // чего в нём пока нельзя сделать.
+                if (_chainCandidateCount >= 2)
+                  ExpressiveActionTile(
+                    icon: Icons.route,
+                    title: l10n.chainCreate,
+                    subtitle: l10n.chainCreateDesc,
+                    onTap: () {
+                      Navigator.pop(ctx2);
+                      Navigator.of(ctx).push(
+                        MaterialPageRoute<void>(
+                          fullscreenDialog: true,
+                          builder: (_) => const ChainEditorScreen(),
+                        ),
+                      );
                     },
                   ),
               ],

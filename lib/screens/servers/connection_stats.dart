@@ -122,7 +122,9 @@ class _ConnectionStats extends ConsumerWidget {
             ),
           const SizedBox(width: 4),
           Text(
-            value,
+            // `1.5 MB/s`, `1h 30m` — цифры и латиница вокруг нейтрального
+            // пробела: в персидском абзаце они переставляются в `MB/s 1.5`.
+            ltrIsolate(value),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
           ),
         ],

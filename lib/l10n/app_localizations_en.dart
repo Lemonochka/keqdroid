@@ -1999,4 +1999,95 @@ class AppLocalizationsEn extends AppLocalizations {
   String subscriptionsExpiredNotifBody(String name, String date) {
     return '\"$name\" expired on $date. The provider has stopped updating the server list — renew it to keep the servers working.';
   }
+
+  @override
+  String get chainTitle => 'Proxy chain';
+
+  @override
+  String get chainNew => 'New chain';
+
+  @override
+  String get chainCreate => 'Build a chain';
+
+  @override
+  String get chainCreateDesc => 'Send traffic through several servers in a row';
+
+  @override
+  String get chainGroupTitle => 'Chains';
+
+  @override
+  String get chainNameLabel => 'Chain name';
+
+  @override
+  String get chainNameHint => 'Leave empty to name it by the route';
+
+  @override
+  String get chainHint => 'Traffic goes top to bottom. The first node is the one this device connects to; the last one is the address sites see.';
+
+  @override
+  String get chainDeviceNode => 'This device';
+
+  @override
+  String get chainInternetNode => 'Internet';
+
+  @override
+  String get chainAddNode => 'Add node';
+
+  @override
+  String get chainRemoveNode => 'Remove node';
+
+  @override
+  String get chainExitNodeHint => 'Exit node — sites see this address';
+
+  @override
+  String get chainNodeMissing => 'Server is gone — using the saved copy';
+
+  @override
+  String get chainSave => 'Save chain';
+
+  @override
+  String get chainNeedsTwoNodes => 'A chain needs at least two nodes';
+
+  @override
+  String get chainPickNode => 'Choose a server';
+
+  @override
+  String get chainPickSearch => 'Search servers';
+
+  @override
+  String get chainPickEmpty => 'No servers can be a chain node here. VLESS, VMess, Trojan, Shadowsocks and Hysteria2 work; AmneziaWG and ready-made JSON configs do not.';
+
+  @override
+  String get chainEdit => 'Edit chain';
+
+  @override
+  String get chainDuplicate => 'Duplicate chain';
+
+  @override
+  String get chainDelete => 'Delete chain';
+
+  @override
+  String get chainRouteLabel => 'Route';
+
+  @override
+  String chainMaxNodes(int max) {
+    return 'A chain holds at most $max nodes';
+  }
+
+  @override
+  String chainDeleteConfirm(String name) {
+    return 'Delete the chain \"$name\"? The servers it uses stay in the list.';
+  }
+
+  @override
+  String chainNodesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count nodes',
+      one: '1 node',
+      zero: 'no nodes',
+    );
+    return '$_temp0';
+  }
 }

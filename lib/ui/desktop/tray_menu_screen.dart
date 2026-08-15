@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +11,7 @@ import '../../models/server_item.dart';
 import '../../providers/providers.dart';
 import '../../services/vpn_engine.dart';
 import '../../services/windows_desktop_service.dart';
+import '../../shared/ui/server_avatar.dart';
 import 'desktop_connection_mode.dart';
 
 /// Минималистичное меню трея (как Discord): узкая колонка, тема приложения.
@@ -234,36 +234,18 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
     await applyDesktopConnectionMode(context, ref, settings, next);
   }
 
-  Widget _flagCircle(ServerItem server, ColorScheme cs) {
-    final code = server.countryCode;
-    const size = 20.0;
-    return SizedBox(
-      width: size,
-      height: size,
-      child: ClipOval(
-        clipBehavior: Clip.antiAlias,
-        child: code != null
-            ? FittedBox(
-                fit: BoxFit.cover,
-                child: CountryFlag.fromCountryCode(
-                  code,
-                  theme: const ImageTheme(width: 30, height: 20),
-                ),
-              )
-            : ColoredBox(
-                color: cs.primary,
-                child: Center(
-                  child: Text(
-                    server.protocol.isNotEmpty
-                        ? server.protocol[0].toUpperCase()
-                        : '?',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onPrimary),
-                  ),
-                ),
-              ),
-      ),
-    );
-  }
+  /// Тот же кругляш, что в списке серверов: флажок любого вида, а без него —
+  /// буква протокола. Свой вариант тут раньше умел только страновые флаги.
+  /// У цепочки во флажке страна выхода, а значок показывает число узлов —
+  /// иначе в трее она неотличима от обычного сервера той же страны.
+  Widget _flagCircle(ServerItem server) => ServerAvatar(
+        flag: server.flag,
+        protocol: server.protocol,
+        size: 20,
+        chainHops: server.protocol == 'chain'
+            ? server.chainConfig!.hops.length
+            : null,
+      );
 
   /// Серверы, сгруппированные по подпискам (ручные — отдельной группой).
   List<Widget> _buildGroupedServers({
@@ -276,7 +258,6 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
     required AppLocalizations l10n,
     required Map<String, String> subNames,
   }) {
-    final cs = Theme.of(context).colorScheme;
     final manual = <ServerItem>[];
     final subOrder = <String>[];
     final bySub = <String, List<ServerItem>>{};
@@ -308,7 +289,7 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
       for (final s in sorted) {
         widgets.add(_TrayItem(
           label: s.cleanName,
-          leading: _flagCircle(s, cs),
+          leading: _flagCircle(s),
           enabled: !isVpnBusy,
           selected: s.id == active?.id,
           indent: showHeaders ? 8 : 0,
@@ -452,7 +433,7 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
               const _TrayDivider(),
               _TrayItem(
                 label: active?.cleanName ?? l10n.trayPickServer,
-                leading: active != null ? _flagCircle(active, colorScheme) : null,
+                leading: active != null ? _flagCircle(active) : null,
                 enabled: !isVpnBusy && servers.isNotEmpty,
                 trailing: servers.length > 1
                     ? Icon(

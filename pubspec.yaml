@@ -2,7 +2,7 @@ name: keqdroid
 description: "KEQDIS proxy/VPN client for Android and Windows."
 publish_to: 'none'
 
-version: 0.8.8+31
+version: 0.8.9+32
 
 environment:
   sdk: ^3.11.3
@@ -26,6 +26,9 @@ dependencies:
   flutter_local_notifications: ^22.0.0
   dynamic_color: ^1.8.1
   country_flags: ^4.1.2
+  # Рисуем флаги из ассетов country_flags сами: его виджет не умеет часть
+  # положенных в пакет картинок (🇪🇺, 🇺🇳, флаги субъектов). См. FlagArt.
+  jovial_svg: ^1.1.30
   firebase_core: ^4.10.0
   firebase_crashlytics: ^5.2.3
   intl: ^0.20.2

@@ -4,4 +4,7 @@
     <string name="shortcut_connect_long">VPN verbinden</string>
     <string name="shortcut_disconnect_short">Trennen</string>
     <string name="shortcut_disconnect_long">VPN trennen</string>
+    <string name="tile_connecting">Verbindung…</string>
+    <string name="tile_error_start">VPN konnte nicht über die Schnelleinstellungen gestartet werden — Keqdis öffnen</string>
+    <string name="tile_error_open_app">Keqdis konnte nicht geöffnet werden — App manuell starten</string>
 </resources>

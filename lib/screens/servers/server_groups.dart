@@ -25,8 +25,13 @@ class _ServersListPanel extends ConsumerWidget {
       return emptyState;
     }
 
+    // Цепочки живут в списке обычными серверами, но своей группой: у них своя
+    // логика («маршрут», а не «сервер»), и в куче с ручными они бы потерялись.
+    final chains = serversState.servers
+        .where((s) => s.protocol == 'chain')
+        .toList();
     final manual = serversState.servers
-        .where((s) => s.subscriptionId == null)
+        .where((s) => s.subscriptionId == null && s.protocol != 'chain')
         .toList();
     final bySubId = <String, List<ServerItem>>{};
     for (final s in serversState.servers.where(
@@ -36,6 +41,19 @@ class _ServersListPanel extends ConsumerWidget {
     }
 
     final groups = <_ServerGroupEntry>[];
+    if (chains.isNotEmpty) {
+      groups.add(
+        _ServerGroupEntry(
+          key: const ValueKey('server-group-chains'),
+          subscription: null,
+          servers: chains,
+          groupKey: ServersNotifier.chainsGroupKey,
+          groupTitle: context.l10n.chainGroupTitle,
+          onRefresh: null,
+          onPingAll: () => ref.read(serversProvider.notifier).pingChains(),
+        ),
+      );
+    }
     for (final sub in subs) {
       final servers = bySubId[sub.id] ?? [];
       if (servers.isEmpty) continue;
@@ -95,6 +113,8 @@ class _ServersListPanel extends ConsumerWidget {
                 key: groups[index].key,
                 subscription: groups[index].subscription,
                 servers: groups[index].servers,
+                groupKey: groups[index].groupKey,
+                groupTitle: groups[index].groupTitle,
                 twoColumns: twoColumns,
                 onSelectServer: onSelectServer,
                 onRefresh: groups[index].onRefresh,
@@ -130,6 +150,13 @@ class _ServerGroupEntry {
   final Key key;
   final Subscription? subscription;
   final List<ServerItem> servers;
+
+  /// Ключ группы для сворачивания/сортировки/пинга. null — считается из
+  /// подписки (`sub.id`, либо `__manual__`).
+  final String? groupKey;
+
+  /// Заголовок вместо выведенного из подписки.
+  final String? groupTitle;
   final Future<void> Function()? onRefresh;
   final Future<void> Function() onPingAll;
 
@@ -137,81 +164,11 @@ class _ServerGroupEntry {
     required this.key,
     required this.subscription,
     required this.servers,
+    this.groupKey,
+    this.groupTitle,
     this.onRefresh,
     required this.onPingAll,
   });
-}
-
-/// Режим сортировки серверов внутри группы (по долгому нажатию на шапку).
-enum ServerSortMode {
-  defaultOrder,
-  ping,
-  speed,
-  name;
-
-  static ServerSortMode fromName(String? n) {
-    for (final m in values) {
-      if (m.name == n) return m;
-    }
-    return ServerSortMode.defaultOrder;
-  }
-
-  String label(AppLocalizations l10n) => switch (this) {
-        ServerSortMode.defaultOrder => l10n.serversSortDefault,
-        ServerSortMode.ping => l10n.serversSortPing,
-        ServerSortMode.speed => l10n.serversSortSpeed,
-        ServerSortMode.name => l10n.serversSortName,
-      };
-
-  IconData get icon => switch (this) {
-        ServerSortMode.defaultOrder => Icons.format_list_bulleted,
-        ServerSortMode.ping => Icons.network_check,
-        ServerSortMode.speed => Icons.speed,
-        ServerSortMode.name => Icons.sort_by_alpha,
-      };
-}
-
-/// Возвращает копию [servers], отсортированную по [mode] (для defaultOrder
-/// без закреплённых — исходный порядок без копии). Закреплённые серверы всегда
-/// первыми (в порядке закрепления), независимо от режима сортировки; остальные
-/// сортируются по [mode], серверы без нужной метрики уходят в конец.
-List<ServerItem> _sortServersBy(List<ServerItem> servers, ServerSortMode mode) {
-  final hasPinned = servers.any((s) => s.isPinned);
-  if (mode == ServerSortMode.defaultOrder && !hasPinned) return servers;
-
-  final pinned = <ServerItem>[];
-  final rest = <ServerItem>[];
-  for (final s in servers) {
-    (s.isPinned ? pinned : rest).add(s);
-  }
-  pinned.sort((a, b) => a.pinnedAt!.compareTo(b.pinnedAt!));
-
-  switch (mode) {
-    case ServerSortMode.name:
-      rest.sort((a, b) =>
-          a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
-    case ServerSortMode.ping:
-      rest.sort((a, b) => _pingSortKey(a).compareTo(_pingSortKey(b)));
-    case ServerSortMode.speed:
-      rest.sort((a, b) => _speedSortKey(b).compareTo(_speedSortKey(a)));
-    case ServerSortMode.defaultOrder:
-      break;
-  }
-  return [...pinned, ...rest];
-}
-
-// Латентность (url/tcp/icmp), меньше — лучше. Нет данных или это speed-результат
-// (pingMs хранит kbps) → максимум, чтобы уйти в конец.
-int _pingSortKey(ServerItem s) {
-  if (s.pingMs == null || s.lastPingType == 'speed') return 1 << 30;
-  return s.pingMs!;
-}
-
-// Скорость (kbps; lastPingType=='speed'), больше — лучше. Иначе -1 → в конец
-// (при сортировке по убыванию).
-int _speedSortKey(ServerItem s) {
-  if (s.pingMs == null || s.lastPingType != 'speed') return -1;
-  return s.pingMs!;
 }
 
 /// высота градиента-затухания над списком серверов
@@ -229,47 +186,7 @@ const _listTopFadeSolidStop =
     _listTopFadeOverlayHeight;
 
 /// высота строки группы совпадает с высотой [_ServerTile]
-const _subCardRowHeight = 76.0;
-
-/// флаг в круге: масштабируем asset через BoxFit.cover, без искажения пропорций
-Widget _countryFlagCircle({
-  required String? countryCode,
-  required Color protocolColor,
-  required String protocol,
-  double size = 40,
-}) {
-  return SizedBox(
-    width: size,
-    height: size,
-    child: ClipOval(
-      clipBehavior: Clip.antiAlias,
-      child: countryCode != null
-          ? FittedBox(
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              child: CountryFlag.fromCountryCode(
-                countryCode,
-                theme: const ImageTheme(width: 60, height: 40),
-              ),
-            )
-          : ColoredBox(
-              color: protocolColor,
-              child: Center(
-                child: Text(
-                  protocol.isNotEmpty ? protocol[0].toUpperCase() : '?',
-                  // Роль темы взять неоткуда: helper без BuildContext, а
-                  // ради одной буквы на аватарке протаскивать его не стоит.
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-    ),
-  );
-}
+const _subCardRowHeight = ServerRow.height;
 
 const _subCardHeaderIconSize = 32.0;
 const _subCardHeaderActionGap = 8.0;
@@ -304,6 +221,10 @@ Widget _subCardHeaderIconButton({
 class _SubCard extends ConsumerStatefulWidget {
   final Subscription? subscription;
   final List<ServerItem> servers;
+  /// Своя пара «ключ + заголовок» для групп, которых нет среди подписок
+  /// (цепочки). null — берётся из подписки, как раньше.
+  final String? groupKey;
+  final String? groupTitle;
   /// Раскладка списка приходит параметром сверху (см. _ServersListPanel):
   /// вотч настройки внутри карточки сломал бы кросс-фейд смены колонок.
   final bool twoColumns;
@@ -315,6 +236,8 @@ class _SubCard extends ConsumerStatefulWidget {
     super.key,
     required this.subscription,
     required this.servers,
+    this.groupKey,
+    this.groupTitle,
     required this.twoColumns,
     required this.onSelectServer,
     required this.onRefresh,
@@ -339,13 +262,14 @@ class _SubCardState extends ConsumerState<_SubCard> {
     }
     _sortedSource = source;
     _sortedMode = mode;
-    return _sortedCache = _sortServersBy(source, mode);
+    return _sortedCache = sortServersBy(source, mode);
   }
 
   @override
   Widget build(BuildContext context) {
     final sub = widget.subscription;
-    final collapseKey = sub?.id ?? '__manual__';
+    final collapseKey =
+        widget.groupKey ?? sub?.id ?? ServersNotifier.manualGroupKey;
     final collapsed = ref.watch(
       collapsedServerGroupsProvider.select((m) => m[collapseKey] ?? false),
     );
@@ -367,16 +291,17 @@ class _SubCardState extends ConsumerState<_SubCard> {
             (m) => m.containsKey(sub.id),
           ),
         );
-    final pingScope = sub?.id ?? '__manual__';
+    final pingScope = collapseKey;
     final isPingingAll = ref.watch(
       pingingScopesProvider.select((scopes) => scopes.contains(pingScope)),
     );
     final activeServerId = ref.watch(
       serversProvider.select((s) => s.activeServerId),
     );
-    final title = sub != null
-        ? '${sub.name}  |  ${ltrIsolate(sub.usageLabel)}'
-        : context.l10n.serversManualGroup;
+    final title = widget.groupTitle ??
+        (sub != null
+            ? '${sub.name}  |  ${ltrIsolate(sub.usageLabel)}'
+            : context.l10n.serversManualGroup);
 
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
     final cardColor = AppTheme.card(context);

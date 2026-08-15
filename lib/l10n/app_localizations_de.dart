@@ -1999,4 +1999,95 @@ class AppLocalizationsDe extends AppLocalizations {
   String subscriptionsExpiredNotifBody(String name, String date) {
     return '„$name“ ist am $date abgelaufen. Der Anbieter aktualisiert die Serverliste nicht mehr — verlängere das Abo, damit die Server weiter funktionieren.';
   }
+
+  @override
+  String get chainTitle => 'Proxy-Kette';
+
+  @override
+  String get chainNew => 'Neue Kette';
+
+  @override
+  String get chainCreate => 'Kette bauen';
+
+  @override
+  String get chainCreateDesc => 'Datenverkehr nacheinander über mehrere Server schicken';
+
+  @override
+  String get chainGroupTitle => 'Ketten';
+
+  @override
+  String get chainNameLabel => 'Name der Kette';
+
+  @override
+  String get chainNameHint => 'Leer lassen — dann benennt die Route sie';
+
+  @override
+  String get chainHint => 'Der Verkehr läuft von oben nach unten. Der erste Knoten ist der, mit dem sich dieses Gerät verbindet; der letzte ist die Adresse, die Webseiten sehen.';
+
+  @override
+  String get chainDeviceNode => 'Dieses Gerät';
+
+  @override
+  String get chainInternetNode => 'Internet';
+
+  @override
+  String get chainAddNode => 'Knoten hinzufügen';
+
+  @override
+  String get chainRemoveNode => 'Knoten entfernen';
+
+  @override
+  String get chainExitNodeHint => 'Ausgangsknoten — diese Adresse sehen Webseiten';
+
+  @override
+  String get chainNodeMissing => 'Server ist weg — die gespeicherte Kopie wird verwendet';
+
+  @override
+  String get chainSave => 'Kette speichern';
+
+  @override
+  String get chainNeedsTwoNodes => 'Eine Kette braucht mindestens zwei Knoten';
+
+  @override
+  String get chainPickNode => 'Server auswählen';
+
+  @override
+  String get chainPickSearch => 'Server suchen';
+
+  @override
+  String get chainPickEmpty => 'Kein Server taugt hier als Kettenknoten. VLESS, VMess, Trojan, Shadowsocks und Hysteria2 gehen; AmneziaWG und fertige JSON-Konfigurationen nicht.';
+
+  @override
+  String get chainEdit => 'Kette bearbeiten';
+
+  @override
+  String get chainDuplicate => 'Kette duplizieren';
+
+  @override
+  String get chainDelete => 'Kette löschen';
+
+  @override
+  String get chainRouteLabel => 'Route';
+
+  @override
+  String chainMaxNodes(int max) {
+    return 'Eine Kette fasst höchstens $max Knoten';
+  }
+
+  @override
+  String chainDeleteConfirm(String name) {
+    return 'Kette „$name“ löschen? Die verwendeten Server bleiben in der Liste.';
+  }
+
+  @override
+  String chainNodesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Knoten',
+      one: '1 Knoten',
+      zero: 'keine Knoten',
+    );
+    return '$_temp0';
+  }
 }

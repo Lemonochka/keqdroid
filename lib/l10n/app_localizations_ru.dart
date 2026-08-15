@@ -2002,4 +2002,97 @@ class AppLocalizationsRu extends AppLocalizations {
   String subscriptionsExpiredNotifBody(String name, String date) {
     return '«$name» истекла $date. Провайдер перестал обновлять список серверов — продлите подписку, чтобы серверы продолжали работать.';
   }
+
+  @override
+  String get chainTitle => 'Цепочка прокси';
+
+  @override
+  String get chainNew => 'Новая цепочка';
+
+  @override
+  String get chainCreate => 'Собрать цепочку';
+
+  @override
+  String get chainCreateDesc => 'Пустить трафик через несколько серверов подряд';
+
+  @override
+  String get chainGroupTitle => 'Цепочки';
+
+  @override
+  String get chainNameLabel => 'Название цепочки';
+
+  @override
+  String get chainNameHint => 'Пусто — назовём по маршруту';
+
+  @override
+  String get chainHint => 'Трафик идёт сверху вниз. Первый узел — тот, к кому подключается это устройство; последний — тот, чей адрес видят сайты.';
+
+  @override
+  String get chainDeviceNode => 'Это устройство';
+
+  @override
+  String get chainInternetNode => 'Интернет';
+
+  @override
+  String get chainAddNode => 'Добавить узел';
+
+  @override
+  String get chainRemoveNode => 'Убрать узел';
+
+  @override
+  String get chainExitNodeHint => 'Выходной узел — его адрес видят сайты';
+
+  @override
+  String get chainNodeMissing => 'Сервера больше нет — работаем по сохранённой копии';
+
+  @override
+  String get chainSave => 'Сохранить цепочку';
+
+  @override
+  String get chainNeedsTwoNodes => 'В цепочке нужно хотя бы два узла';
+
+  @override
+  String get chainPickNode => 'Выберите сервер';
+
+  @override
+  String get chainPickSearch => 'Поиск по серверам';
+
+  @override
+  String get chainPickEmpty => 'Нет серверов, которые могут быть узлом цепочки. Подходят VLESS, VMess, Trojan, Shadowsocks и Hysteria2; AmneziaWG и готовые JSON-конфиги — нет.';
+
+  @override
+  String get chainEdit => 'Изменить цепочку';
+
+  @override
+  String get chainDuplicate => 'Дублировать цепочку';
+
+  @override
+  String get chainDelete => 'Удалить цепочку';
+
+  @override
+  String get chainRouteLabel => 'Маршрут';
+
+  @override
+  String chainMaxNodes(int max) {
+    return 'В цепочке не больше $max узлов';
+  }
+
+  @override
+  String chainDeleteConfirm(String name) {
+    return 'Удалить цепочку «$name»? Серверы из неё останутся в списке.';
+  }
+
+  @override
+  String chainNodesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count узла',
+      many: '$count узлов',
+      few: '$count узла',
+      one: '1 узел',
+      zero: 'нет узлов',
+    );
+    return '$_temp0';
+  }
 }

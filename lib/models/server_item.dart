@@ -4,6 +4,8 @@ import 'package:uuid/uuid.dart';
 
 import '../utils/awg_profile.dart';
 import '../utils/custom_xray_config.dart';
+import '../utils/proxy_chain.dart';
+import 'server_flag.dart';
 import 'server_name_utils.dart';
 
 enum ServerItemType { manual, subscription }
@@ -36,13 +38,16 @@ class ServerItem {
 
   // кэш чтобы не парсить uri каждый раз
   String? _cachedDerivedName;
-  String? _cachedCountryCode;
+  ServerFlag? _cachedFlag;
+  bool _flagParsed = false;
   String? _cachedAddress;
   int? _cachedPort;
   Map<String, dynamic>? _cachedVmessPayload;
   bool _vmessPayloadParsed = false;
   CustomXrayConfig? _cachedCustom;
   bool _customParsed = false;
+  ProxyChainConfig? _cachedChain;
+  bool _chainParsed = false;
 
   ServerItem({
     required this.id,
@@ -166,6 +171,13 @@ class ServerItem {
   String get derivedName {
     if (_cachedDerivedName != null) return _cachedDerivedName!;
     try {
+      if (protocol == 'chain') {
+        final chain = chainConfig!;
+        final title = chain.name.trim();
+        return _cachedDerivedName = _sanitizeUtf16(
+          title.isNotEmpty ? title : _chainRouteLabel(chain),
+        );
+      }
       if (protocol == 'custom') {
         final custom = customConfig!;
         final remarks = custom.remarks;
@@ -210,17 +222,58 @@ class ServerItem {
   }
 
 
+  /// Автоимя цепочки без своего названия: «DE-1 → NL-2 → JP-3».
+  static String _chainRouteLabel(ProxyChainConfig chain) {
+    final parts = [
+      for (final hop in chain.hops)
+        ServerNameUtils.cleanDisplayName(hop.name).trim(),
+    ].where((e) => e.isNotEmpty).toList();
+    if (parts.isEmpty) return 'Chain';
+    return parts.join(' → ');
+  }
+
   /// Имя сервера без флаг-эмодзи и кода страны в начале.
   String get cleanName => ServerNameUtils.cleanDisplayName(displayName);
 
-  /// ISO alpha-2 код страны. Сначала из отображаемого имени; если пользователь
+  /// Флажок сервера. Сначала из отображаемого имени; если пользователь
   /// переименовал сервер без страновых меток — фолбэк на имя из конфига,
   /// чтобы флаг не пропадал после переименования.
-  String? get countryCode {
-    _cachedCountryCode ??= ServerNameUtils.extractCountryCode(displayName) ??
-        ServerNameUtils.extractCountryCode(derivedName);
-    return _cachedCountryCode;
+  ///
+  /// У цепочки это флаг ВЫХОДНОГО узла: именно его страну видят сайты, и
+  /// именно её ждёшь увидеть в кружке сервера.
+  ServerFlag? get flag {
+    if (!_flagParsed) {
+      _flagParsed = true;
+      if (protocol == 'chain') {
+        // Автоимя цепочки («DE → NL → JP») начинается с ВХОДНОГО флага, так что
+        // по displayName здесь брать нельзя — в кружке ждут страну выхода.
+        // Явное переименование всё же главнее: его и просили показать.
+        _cachedFlag = ServerNameUtils.extractFlag(customName ?? '') ??
+            ServerNameUtils.extractFlag(chainConfig!.exit.name);
+      } else {
+        _cachedFlag = ServerNameUtils.extractFlag(displayName) ??
+            ServerNameUtils.extractFlag(derivedName);
+      }
+    }
+    return _cachedFlag;
   }
+
+  /// Флаги узлов цепочки по порядку (вход → выход). Пусто, если сервер не
+  /// цепочка. Элементы могут быть null: у узла без страновой метки флага нет.
+  List<ServerFlag?> get chainFlags {
+    final chain = chainConfig;
+    if (chain == null) return const [];
+    return [
+      for (final hop in chain.hops) ServerNameUtils.extractFlag(hop.name),
+    ];
+  }
+
+  /// ISO alpha-2 код региона — только если у флажка такой код есть (у 🏴‍☠️
+  /// и 🏁 его нет).
+  String? get countryCode => switch (flag) {
+        FlagArt(:final countryCode) => countryCode,
+        _ => null,
+      };
 
   /// vmess://BASE64(JSON) — реальные host/port лежат внутри payload, а не в
   /// authority URI. Декодируем из СЫРОЙ строки конфига: Uri.parse лоуэркейсит
@@ -252,6 +305,13 @@ class ServerItem {
 
   String _computeAddress() {
     try {
+      if (protocol == 'chain') {
+        // Адрес цепочки — ВХОДНОЙ узел: только к нему подключается само
+        // устройство. Отсюда его резолвят перед коннектом и по нему строят
+        // обход туннеля (direct-правило xray, ip_cidr в sing-box) — остальные
+        // звенья набираются уже внутри цепочки и наружу не выходят.
+        return _hopItem(chainConfig!.entry.config).address;
+      }
       if (protocol == 'custom') {
         return customConfig!.address;
       }
@@ -275,6 +335,9 @@ class ServerItem {
 
   int _computePort() {
     try {
+      if (protocol == 'chain') {
+        return _hopItem(chainConfig!.entry.config).port;
+      }
       if (protocol == 'custom') {
         return customConfig!.port;
       }
@@ -302,10 +365,48 @@ class ServerItem {
     return _cachedCustom;
   }
 
+  /// Цепочка серверов вместо одиночного сервера. null — конфиг не такой.
+  /// Разбор кэшируется: [protocol] дёргают на каждую перерисовку тайла.
+  ProxyChainConfig? get chainConfig {
+    if (_chainParsed) return _cachedChain;
+    _chainParsed = true;
+    if (ProxyChainConfig.looksLikeChain(config)) {
+      _cachedChain = ProxyChainConfig.tryParse(config);
+    }
+    return _cachedChain;
+  }
+
+  /// Узел цепочки как самостоятельный сервер — чтобы разбор адреса/имени/флага
+  /// шёл ровно теми же геттерами, что и у обычного сервера, без второй копии
+  /// логики. Объект одноразовый: свои кэши он заполняет сам.
+  static ServerItem _hopItem(String hopConfig) => ServerItem(
+        id: '',
+        config: hopConfig,
+        type: ServerItemType.manual,
+      );
+
+  /// Узлы цепочки как серверы (вход → выход). Пусто, если сервер не цепочка.
+  List<ServerItem> get chainHopItems {
+    final chain = chainConfig;
+    if (chain == null) return const [];
+    return [
+      for (final hop in chain.hops)
+        _hopItem(hop.config).copyWith(
+          customName: hop.name.isEmpty ? null : hop.name,
+        ),
+    ];
+  }
+
   /// Протокол ('vless', 'vmess', 'trojan', 'ss', 'ssr', 'hysteria', 'hy2',
-  /// 'awg', 'custom', 'unknown')
+  /// 'awg', 'custom', 'chain', 'unknown')
   String get protocol {
     final lower = config.toLowerCase();
+    if (lower.startsWith('${ProxyChainConfig.scheme}://')) {
+      // Битую ссылку цепочкой не считаем: иначе chainConfig! ниже по коду
+      // разыменовывал бы null. Такой конфиг останется 'unknown' — его видно
+      // в списке и можно удалить.
+      return chainConfig != null ? 'chain' : 'unknown';
+    }
     if (lower.startsWith('vless://')) return 'vless';
     if (lower.startsWith('vmess://')) return 'vmess';
     if (lower.startsWith('trojan://')) return 'trojan';
