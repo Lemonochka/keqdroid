@@ -33,6 +33,7 @@ import '../utils/error_messages.dart';
 import '../utils/geo_asset_index.dart';
 import '../utils/local_vpn_proxy.dart';
 import '../utils/process_name_utils.dart';
+import '../utils/proxy_chain.dart';
 import '../utils/routing_rules_fold.dart';
 import '../utils/socks5_credentials.dart';
 import '../utils/split_tunnel_routing.dart';
@@ -603,9 +604,100 @@ class ServersNotifier extends Notifier<ServersState> {
 
   Future<void> _load() async {
     final storage = ref.read(storageProvider);
-    final servers = await storage.getServers();
+    final servers = await _syncChains(storage, await storage.getServers());
     final activeId = storage.getActiveServerId();
     state = ServersState(servers: servers, activeServerId: activeId);
+  }
+
+  /// Подтягивает в цепочки свежие ссылки их узлов.
+  ///
+  /// Обновление подписки переписывает ссылки серверов (ротация
+  /// reality-параметров, смена порта), а цепочка хранит их снимок — без этого
+  /// шага она молча оставалась бы на протухшем конфиге. Узлы, которых в списке
+  /// уже нет, остаются на снимке: цепочка продолжает работать по последней
+  /// известной ссылке, а не разваливается.
+  ///
+  /// Пишем только реально изменившиеся цепочки — обычная загрузка списка не
+  /// должна дёргать хранилище.
+  Future<List<ServerItem>> _syncChains(
+    StorageService storage,
+    List<ServerItem> servers,
+  ) async {
+    final chains = servers.where((s) => s.protocol == 'chain').toList();
+    if (chains.isEmpty) return servers;
+
+    final live = <String, ({String config, String name})>{
+      for (final s in servers)
+        if (s.protocol != 'chain')
+          s.id: (config: s.config, name: s.displayName),
+    };
+
+    var result = servers;
+    for (final chain in chains) {
+      final refreshed = chain.chainConfig!.refreshed(live);
+      if (identical(refreshed, chain.chainConfig)) continue;
+      final updated = chain.copyWith(config: refreshed.encode());
+      try {
+        await storage.upsertServer(updated);
+      } catch (e, st) {
+        AppLogger.instance.warn(
+          'Failed to refresh proxy chain nodes',
+          error: e,
+          stackTrace: st,
+        );
+        continue;
+      }
+      result = [
+        for (final s in result) s.id == updated.id ? updated : s,
+      ];
+    }
+    return result;
+  }
+
+  /// Создаёт цепочку из выбранных серверов (порядок — от входного узла к
+  /// выходному) и кладёт её в список обычным сервером.
+  Future<ServerItem> saveChain({
+    String? id,
+    required String name,
+    required List<ServerItem> hops,
+  }) async {
+    if (hops.length < 2) {
+      throw Exception('A proxy chain needs at least two nodes');
+    }
+    if (hops.length > ProxyChainConfig.maxHops) {
+      throw Exception(
+        'A proxy chain holds at most ${ProxyChainConfig.maxHops} nodes',
+      );
+    }
+    for (final hop in hops) {
+      if (!ProxyChainConfig.canBeHop(hop.protocol)) {
+        throw Exception(
+          '${hop.displayName}: ${hop.protocol.toUpperCase()} cannot be a chain node',
+        );
+      }
+    }
+
+    final config = ProxyChainConfig(
+      name: name.trim(),
+      hops: [
+        for (final hop in hops)
+          ProxyChainHop(
+            serverId: hop.id,
+            name: hop.displayName,
+            config: hop.config,
+          ),
+      ],
+    ).encode();
+
+    if (id == null) {
+      final server = ServerItem.fromRaw(config);
+      await ref.read(storageProvider).upsertServer(server);
+      state = state.copyWith(servers: [...state.servers, server]);
+      return server;
+    }
+
+    await _updateServer(id, (s) => s.copyWith(config: config));
+    return state.servers.firstWhere((s) => s.id == id);
   }
 
   Future<void> reload() => _load();
@@ -700,6 +792,12 @@ class ServersNotifier extends Notifier<ServersState> {
 
   static String? validateServerConfig(String rawConfig) {
     if (rawConfig.isEmpty) return 'Configuration is empty';
+
+    // Цепочка серверов: собственный формат приложения, узлы внутри уже
+    // проверены при сборке — здесь только целостность ссылки.
+    if (ProxyChainConfig.looksLikeChain(rawConfig)) {
+      return ProxyChainConfig.describeProblem(rawConfig);
+    }
 
     if (AwgProfile.isAwgConfig(rawConfig)) {
       try {
@@ -887,12 +985,32 @@ class ServersNotifier extends Notifier<ServersState> {
   }
 
   /// пингует серверы одной подписки (или manual-серверы при subscriptionId == null)
-  Future<void> pingSubscription(String? subscriptionId) async {
-    final scopeKey = subscriptionId ?? '__manual__';
-    ref.read(pingingScopesProvider.notifier).update((set) => {...set, scopeKey});
+  ///
+  /// Цепочки в «ручную» группу не входят — у них своя ([pingChains]).
+  Future<void> pingSubscription(String? subscriptionId) {
     final servers = subscriptionId == null
-        ? state.servers.where((s) => s.subscriptionId == null).toList()
-        : state.servers.where((s) => s.subscriptionId == subscriptionId).toList();
+        ? state.servers
+            .where((s) => s.subscriptionId == null && s.protocol != 'chain')
+            .toList()
+        : state.servers
+            .where((s) => s.subscriptionId == subscriptionId)
+            .toList();
+    return _pingScoped(subscriptionId ?? manualGroupKey, servers);
+  }
+
+  /// Ключ скоупа группы цепочек — общий для пинга, сворачивания и сортировки.
+  static const String chainsGroupKey = '__chains__';
+
+  /// То же для серверов, добавленных руками (без подписки).
+  static const String manualGroupKey = '__manual__';
+
+  Future<void> pingChains() => _pingScoped(
+        chainsGroupKey,
+        state.servers.where((s) => s.protocol == 'chain').toList(),
+      );
+
+  Future<void> _pingScoped(String scopeKey, List<ServerItem> servers) async {
+    ref.read(pingingScopesProvider.notifier).update((set) => {...set, scopeKey});
     try {
       final results = await _pingServersWithBatchedUpdates(servers);
       if (results.isNotEmpty && results.every((r) => !r.success)) {

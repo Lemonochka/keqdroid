@@ -4,4 +4,7 @@
     <string name="shortcut_connect_long">Подключить VPN</string>
     <string name="shortcut_disconnect_short">Отключить</string>
     <string name="shortcut_disconnect_long">Отключить VPN</string>
+    <string name="tile_connecting">Подключение…</string>
+    <string name="tile_error_start">Не удалось запустить VPN из шторки — откройте Keqdis</string>
+    <string name="tile_error_open_app">Не удалось открыть Keqdis — запустите приложение вручную</string>
 </resources>

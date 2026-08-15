@@ -82,10 +82,8 @@ class _ServerTile extends ConsumerWidget {
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final textColor = AppTheme.text(context);
     final accentColor = AppTheme.accent(context);
     final textLightColor = AppTheme.textLight(context);
-    final textTheme = theme.textTheme;
 
     // Активный сервер «поднимается» из группы отдельным сегментом: свои
     // скругления, отступ от краёв и заливка secondaryContainer.
@@ -106,137 +104,36 @@ class _ServerTile extends ConsumerWidget {
     final isLifted = isActive;
     final liftedRadius = ExpressiveShape.radius(ExpressiveShape.largeIncreased);
     const liftedInset = EdgeInsets.symmetric(horizontal: 6, vertical: 3);
-    final onSegment = isLifted ? scheme.onSecondaryContainer : textColor;
 
     final activeDecoration = BoxDecoration(color: scheme.secondaryContainer);
     final restDecoration = BoxDecoration(color: AppTheme.card(context));
+
+    // Сам ряд — общий с выбором узлов цепочки (shared/ui/server_row.dart).
+    // Плитка добавляет к нему только подсветку активного, форму и жесты.
+    //
     // Цвет протокола — идентичность сервера, и на выбранной строке его терять
     // нельзя. Но полупрозрачная подложка поверх secondaryContainer сводит тон
     // бейджа с тоном контейнера, и надпись проваливается по контрасту. Поэтому
     // на поднятом сегменте бейдж встаёт на собственную непрозрачную подложку —
-    // ту же, на которой живут бейджи остальных строк, так что выглядит он
-    // ровно как у соседей.
-    final protocolColor = _protocolColor(server.protocol, context);
-    final badgeBg = isLifted
-        ? AppTheme.card(context)
-        : protocolColor.withValues(alpha: 0.15);
-
-    final titleText = ServerNameUtils.formatForDisplay(
-      ServerNameUtils.cleanDisplayName(server.displayName),
-    );
-
-    final rowBody = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _countryFlagCircle(
-            countryCode: server.countryCode,
-            protocolColor: protocolColor,
-            protocol: server.protocol,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    if (server.isPinned)
-                      Padding(
-                        padding: const EdgeInsetsDirectional.only(end: 4),
-                        child: Transform.rotate(
-                          // слегка наклонённая канцелярская кнопка — как
-                          // «приколотый» пин в мессенджерах
-                          angle: 45 * pi / 180,
-                          child: Icon(
-                            Icons.push_pin,
-                            size: 13,
-                            color: isLifted ? onSegment : accentColor,
-                          ),
-                        ),
-                      ),
-                    Flexible(
-                      child: Text(
-                        titleText,
-                        // Активный сервер отличается ВЕСОМ, а не размером: у
-                        // M3E это и есть роль усиленного варианта.
-                        style:
-                            (isActive
-                                    ? textTheme.emphasized(textTheme.titleSmall)
-                                    : textTheme.titleSmall)
-                                ?.copyWith(color: onSegment),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: badgeBg,
-                          borderRadius: ExpressiveShape.radius(
-                            ExpressiveShape.extraSmall,
-                          ),
-                        ),
-                        child: Text(
-                          server.protocol.toUpperCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme
-                              .emphasized(textTheme.labelSmall)
-                              ?.copyWith(color: protocolColor),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        ltrIsolate(
-                          pingMs != null
-                              ? PingService.formatPingValue(
-                                  pingMs, pingColorType)
-                              : (lastTestedAt != null ? 'N/A' : '- ms'),
-                        ),
-                        // Пинг — числовой показатель, у M3 это роль label, а
-                        // не body: плотнее и заметнее при том же кегле.
-                        style: textTheme.labelMedium?.copyWith(
-                          color: pingMs != null
-                              ? _pingColor(pingMs, context, pingColorType)
-                              : (isLifted
-                                  ? onSegment.withValues(alpha: 0.7)
-                                  : textLightColor),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          _buildTrailing(
-            context,
-            isConnected,
-            isConnecting,
-            isActive,
-            isPinging,
-            accentColor,
-            textLightColor,
-          ),
-        ],
+    // ту же, на которой живут бейджи остальных строк.
+    final rowBody = ServerRow(
+      server: server,
+      pingMs: pingMs,
+      lastTestedAt: lastTestedAt,
+      pingColorType: pingColorType,
+      foreground: isLifted ? scheme.onSecondaryContainer : null,
+      opaqueBadge: isLifted,
+      // Активный сервер отличается ВЕСОМ, а не размером: у M3E это и есть
+      // роль усиленного варианта.
+      emphasizeTitle: isActive,
+      trailing: _buildTrailing(
+        context,
+        isConnected,
+        isConnecting,
+        isActive,
+        isPinging,
+        accentColor,
+        textLightColor,
       ),
     );
 
@@ -393,12 +290,38 @@ class _ServerTile extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
               ),
-              // Адрес и есть кнопка копирования: отдельный пункт списка занимал
-              // целую строку меню ради того, что уже написано здесь.
-              _CopyableAddress(
-                text: '${server.address}:${server.port}',
-                onCopied: () => Navigator.pop(context),
-              ),
+              // У цепочки на месте адреса — её маршрут: адрес входного узла
+              // тут не главное, а копировать его незачем.
+              if (server.protocol == 'chain')
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ChainRouteStrip(
+                        hops: server.chainHopItems,
+                        arrowColor: AppTheme.textLight(context),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        l10n.chainNodesCount(server.chainConfig!.hops.length),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textLight(context),
+                            ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                // Адрес и есть кнопка копирования: отдельный пункт списка занимал
+                // целую строку меню ради того, что уже написано здесь.
+                _CopyableAddress(
+                  text: '${server.address}:${server.port}',
+                  onCopied: () => Navigator.pop(context),
+                ),
               const SizedBox(height: 16),
               // Пункты собраны в группы: «проверить/закрепить», «править» и
               // отдельно удаление. Прежде это был плоский список ListTile —
@@ -460,22 +383,40 @@ class _ServerTile extends ConsumerWidget {
                         _showRenameDialog(context, ref);
                       },
                     ),
-                    ExpressiveActionTile(
-                      icon: Icons.tune,
-                      title: l10n.serversEditConfig,
-                      subtitle: l10n.serversEditConfigDesc,
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            fullscreenDialog: true,
-                            builder: (_) => ServerConfigEditorScreen(
-                              serverId: server.id,
+                    if (server.protocol == 'chain')
+                      ExpressiveActionTile(
+                        icon: Icons.route,
+                        title: l10n.chainEdit,
+                        subtitle: l10n.chainRouteLabel,
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              fullscreenDialog: true,
+                              builder: (_) => ChainEditorScreen(
+                                serverId: server.id,
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      )
+                    else
+                      ExpressiveActionTile(
+                        icon: Icons.tune,
+                        title: l10n.serversEditConfig,
+                        subtitle: l10n.serversEditConfigDesc,
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              fullscreenDialog: true,
+                              builder: (_) => ServerConfigEditorScreen(
+                                serverId: server.id,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ExpressiveActionTile(
                       icon: Icons.link,
                       title: l10n.serversCopyConfig,
@@ -500,7 +441,9 @@ class _ServerTile extends ConsumerWidget {
                   children: [
                     ExpressiveActionTile(
                       icon: Icons.delete_outline,
-                      title: l10n.serversDeleteServer,
+                      title: server.protocol == 'chain'
+                          ? l10n.chainDelete
+                          : l10n.serversDeleteServer,
                       danger: true,
                       onTap: () {
                         Navigator.pop(context);
@@ -648,6 +591,7 @@ class _ServerTile extends ConsumerWidget {
     final name = ServerNameUtils.formatForDisplay(
       ServerNameUtils.cleanDisplayName(server.displayName),
     );
+    final isChain = server.protocol == 'chain';
 
     showDialog(
       context: context,
@@ -659,14 +603,18 @@ class _ServerTile extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                l10n.serversDeleteServer,
+                isChain ? l10n.chainDelete : l10n.serversDeleteServer,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(color: textColor),
               ),
             ),
           ],
         ),
         content: Text(
-          l10n.serversDeleteConfirm(name),
+          // У цепочки важно сказать, что серверы из неё останутся: иначе
+          // удаление маршрута выглядит как удаление всех его узлов.
+          isChain
+              ? l10n.chainDeleteConfirm(name)
+              : l10n.serversDeleteConfirm(name),
           style: TextStyle(color: textLightColor, height: 1.4),
         ),
         actions: [
@@ -700,33 +648,6 @@ class _ServerTile extends ConsumerWidget {
     );
   }
 
-  /// Цвет бейджа протокола.
-  ///
-  /// Оттенки свои (протокол — это идентичность, роль схемы её не выражает), но
-  /// гармонизированные: на динамической теме сырой `0xFF4A90D9` выпадал из
-  /// палитры, потому что не имел к сиду никакого отношения.
-  Color _protocolColor(String p, BuildContext ctx) => switch (p) {
-    'vless' => AppTheme.harmonize(ctx, const Color(0xFF4A90D9)),
-    'awg' => AppTheme.harmonize(ctx, const Color(0xFF2E7D32)),
-    'vmess' => AppTheme.harmonize(ctx, const Color(0xFF7B68EE)),
-    'trojan' => AppTheme.harmonize(ctx, const Color(0xFFE53935)),
-    'ss' => AppTheme.harmonize(ctx, const Color(0xFF43A047)),
-    'hysteria' => AppTheme.harmonize(ctx, const Color(0xFF00897B)),
-    'hysteria2' => AppTheme.harmonize(ctx, const Color(0xFF00695C)),
-    'hy2' => AppTheme.harmonize(ctx, const Color(0xFF004D40)),
-    // Готовый конфиг ядра: протокол внутри может быть любым, поэтому цвет
-    // отдельный — «это конфиг целиком, со своим роутингом».
-    'custom' => AppTheme.harmonize(ctx, const Color(0xFFF9A825)),
-    _ => AppTheme.textLight(ctx),
-  };
-
-  Color _pingColor(int ms, BuildContext ctx, PingType type) {
-    return switch (PingService.pingLatencyQuality(ms, type)) {
-      PingLatencyQuality.good => AppTheme.green(ctx),
-      PingLatencyQuality.fair => AppTheme.orange(ctx),
-      PingLatencyQuality.poor => AppTheme.red(ctx),
-    };
-  }
 }
 
 String _friendlyError(Object e, [BuildContext? context]) {
@@ -782,11 +703,18 @@ class _CopyableAddress extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Flexible(
-                child: Text(
-                  text,
-                  style: style,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                // Направлением, а не изолятом: эту же строку кладут в буфер
+                // обмена, и невидимые U+2066/U+2069 уехали бы туда вместе с
+                // адресом. Без фикса `nl.example.com:443` в персидской локали
+                // показывается как `443:nl.example.com` — двоеточие между
+                // латиницей и цифрами перестаёт быть частью числа.
+                child: LtrBlock(
+                  child: Text(
+                    text,
+                    style: style,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               const SizedBox(width: 6),

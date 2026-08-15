@@ -15,6 +15,7 @@ import android.os.Looper
 import android.net.VpnService
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import android.widget.Toast
 
 class VpnQuickTileService : TileService() {
 
@@ -24,6 +25,10 @@ class VpnQuickTileService : TileService() {
         // Тот же ресурс стоит в android:icon сервиса в манифесте, чтобы и в редакторе
         // плиток (где берётся манифестная иконка) показывался логотип, а не пустой круг.
         private val TILE_ICON_RES = R.drawable.ic_launcher_monochrome
+
+        // Статусы, при которых нажатие означает «выключить». connecting здесь не
+        // случайно: см. updateTileFromPrefs — плитка на нём остаётся нажимаемой.
+        private val ACTIVE_STATUSES = setOf("connected", "running", "connecting", "starting")
     }
 
     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -128,20 +133,35 @@ class VpnQuickTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
+        // onClick исполняется в фоновом процессе: вылетевшее отсюда исключение
+        // система гасит молча, без диалога и без следа на экране — для человека
+        // плитка просто «дёргается и не включается». Поэтому ни один шаг ниже не
+        // имеет права падать наружу, и каждая ветка пишется в лог.
+        runCatching { handleClick() }.onFailure { t ->
+            android.util.Log.e("KEQDIS_QS", "onClick failed: $t", t)
+            toast(R.string.tile_error_start)
+        }
+    }
 
+    private fun handleClick() {
         val prefs = getSharedPreferences(KeqdisVpnService.PREFS_QS, MODE_PRIVATE)
-        val status = prefs.getString(KeqdisVpnService.KEY_QS_STATUS, "disconnected") ?: "disconnected"
+        val status = (prefs.getString(KeqdisVpnService.KEY_QS_STATUS, "disconnected")
+            ?: "disconnected").lowercase()
+        android.util.Log.d("KEQDIS_QS", "onClick: status=$status")
 
-        // If VPN is running - stop it directly instead of toggle for reliability.
-        if (status.equals("connected", ignoreCase = true) || status.equals("running", ignoreCase = true)) {
+        // Работает (или залип на connecting) — глушим напрямую, без toggle.
+        if (status in ACTIVE_STATUSES) {
             startService(Intent(this, KeqdisVpnService::class.java).apply {
                 action = KeqdisVpnService.ACTION_STOP
             })
             return
         }
 
-        // If VPN permission is not granted - we must open the app (user consent screen).
+        // Согласие на VPN спрашивает только Activity (VpnService.prepare отдаёт
+        // интент, который обязан идти через startActivityForResult) — из шторки
+        // подключиться физически нельзя, открываем приложение.
         if (VpnService.prepare(this) != null) {
+            android.util.Log.i("KEQDIS_QS", "onClick: no VPN consent → opening app")
             openAppForConnect()
             return
         }
@@ -154,6 +174,7 @@ class VpnQuickTileService : TileService() {
 
         // AmneziaWG не хранит snapshot для быстрого реконнекта из плитки — открываем приложение.
         if (backend == KeqdisVpnService.VPN_BACKEND_AWG) {
+            android.util.Log.i("KEQDIS_QS", "onClick: backend=awg has no snapshot → opening app")
             openAppForConnect()
             return
         }
@@ -165,8 +186,14 @@ class VpnQuickTileService : TileService() {
         val exc = prefs.getStringSet(KeqdisVpnService.KEY_QS_LAST_EXCLUDE_PACKAGES, emptySet())?.toList() ?: emptyList()
         val inc = prefs.getStringSet(KeqdisVpnService.KEY_QS_LAST_INCLUDE_PACKAGES, emptySet())?.toList() ?: emptyList()
 
-        // If we do not have a valid "selected server snapshot" yet - fall back to the app.
-        if (xrayPath.isNullOrBlank() || user.isNullOrBlank() || pass.isNullOrBlank()) {
+        // Снапшот пишет только сам сервис при старте: пока человек ни разу не
+        // подключился из приложения, плитке нечем подключаться. Сам файл конфига
+        // тоже проверяем — после очистки данных путь в prefs переживает файл, и
+        // старт был бы обречён (ядро не поднимется, «Connecting…» → ошибка).
+        if (xrayPath.isNullOrBlank() || user.isNullOrBlank() || pass.isNullOrBlank() ||
+            !java.io.File(xrayPath).exists()
+        ) {
+            android.util.Log.i("KEQDIS_QS", "onClick: no usable server snapshot → opening app")
             openAppForConnect()
             return
         }
@@ -184,7 +211,17 @@ class VpnQuickTileService : TileService() {
             if (!serverName.isNullOrBlank()) putExtra(KeqdisVpnService.EXTRA_SERVER_NAME, serverName)
         }
 
-        if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+        try {
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+        } catch (e: Exception) {
+            // Android 12+ бросает ForegroundServiceStartNotAllowedException, если
+            // приложению запрещён фоновый старт сервиса («Ограничить фоновую
+            // активность», выключенный автозапуск на OEM-прошивках). Молча
+            // проглотить нельзя — уводим человека в приложение, оттуда старт
+            // разрешён всегда.
+            android.util.Log.e("KEQDIS_QS", "onClick: service start refused by system: $e")
+            openAppForConnect()
+        }
     }
 
     private fun openAppForConnect() {
@@ -196,22 +233,43 @@ class VpnQuickTileService : TileService() {
                 putExtra("action", "connect_from_notification")
             }
 
-        // Collapse QS panel and open the app.
-        if (Build.VERSION.SDK_INT >= 34) {
-            // Android 14+ - startActivityAndCollapse(Intent) is forbidden, must use PendingIntent
-            val pendingIntent = PendingIntent.getActivity(
-                this,
-                0,
-                launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            startActivityAndCollapse(pendingIntent)
-        } else if (Build.VERSION.SDK_INT >= 24) {
-            @Suppress("DEPRECATION")
-            startActivityAndCollapse(launchIntent)
-        } else {
-            startActivity(launchIntent)
+        val open = Runnable {
+            try {
+                // Collapse QS panel and open the app.
+                if (Build.VERSION.SDK_INT >= 34) {
+                    // Android 14+ - startActivityAndCollapse(Intent) is forbidden, must use PendingIntent
+                    val pendingIntent = PendingIntent.getActivity(
+                        this,
+                        0,
+                        launchIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    startActivityAndCollapse(pendingIntent)
+                } else if (Build.VERSION.SDK_INT >= 24) {
+                    @Suppress("DEPRECATION")
+                    startActivityAndCollapse(launchIntent)
+                } else {
+                    startActivity(launchIntent)
+                }
+            } catch (e: Exception) {
+                // Прошивки с урезанным фоновым запуском активностей (MIUI/HyperOS
+                // и родня) режут запуск из шторки. Пробуем напрямую, а если и это
+                // не проходит — говорим вслух, иначе нажатие выглядит как «ничего».
+                android.util.Log.e("KEQDIS_QS", "startActivityAndCollapse failed: $e")
+                runCatching { startActivity(launchIntent) }.onFailure {
+                    android.util.Log.e("KEQDIS_QS", "startActivity fallback failed: $it")
+                    toast(R.string.tile_error_open_app)
+                }
+            }
         }
+
+        // На заблокированном экране активность просто не покажется: система
+        // требует сначала снять блокировку и лишь потом выполнять действие.
+        if (Build.VERSION.SDK_INT >= 24 && isLocked) unlockAndRun(open) else open.run()
+    }
+
+    private fun toast(resId: Int) {
+        runCatching { Toast.makeText(this, resId, Toast.LENGTH_LONG).show() }
     }
 
     private fun updateTileFromPrefs() {
@@ -250,10 +308,19 @@ class VpnQuickTileService : TileService() {
             tileObj.icon = android.graphics.drawable.Icon.createWithResource(this, TILE_ICON_RES)
         }
         
-        tileObj.state = when (status) {
-            "connected", "running" -> Tile.STATE_ACTIVE
-            "connecting", "starting" -> Tile.STATE_UNAVAILABLE
+        // connecting раньше был STATE_UNAVAILABLE — «идёт подключение, не мешай».
+        // Беда в том, что нажатие по недоступной плитке система не доставляет
+        // вовсе: стоило процессу умереть на середине коннекта (агрессивные OEM-
+        // прошивки это делают), и в prefs навсегда оставался connecting — плитка
+        // отвечала на палец только анимацией. Держим её нажимаемой: клик на
+        // connecting = остановить, и залипшее состояние снимается руками.
+        val connecting = status == "connecting" || status == "starting"
+        tileObj.state = when {
+            status == "connected" || status == "running" || connecting -> Tile.STATE_ACTIVE
             else -> Tile.STATE_INACTIVE
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            tileObj.subtitle = if (connecting) getString(R.string.tile_connecting) else null
         }
         android.util.Log.d("KEQDIS_QS", "updateTileFromPrefs: new tile.state=${tileObj.state}")
         tileObj.updateTile()

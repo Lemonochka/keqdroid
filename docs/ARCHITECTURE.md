@@ -149,6 +149,7 @@ split-списки, `systemProxy`, `killSwitch`, `coreEngine`. На Android се
 | Файл | Что генерирует |
 |------|----------------|
 | `config_gen.dart` (`ConfigGeneratorV2`) | xray-конфиг из `vless://`/`vmess://`/`trojan://`/`ss://`/`hysteria2://`: outbound по протоколу, SOCKS/HTTP-инбаунды, DNS, routing rules |
+| `proxy_chain.dart` (`ProxyChainConfig`) | цепочка серверов: формат `keqchain://` и разбор узлов (§4.1) |
 | `singbox_tun_config.dart` | sing-box TUN-конфиг для десктопного TUN: TUN-inbound, sniffing, split tunnel по процессам |
 | `keqrnel_config.dart` | единый keqrnel-конфиг из chain |
 | `wireproxy_config.dart` | wireproxy-конфиг (AmneziaWG в proxy-режиме) |
@@ -156,6 +157,28 @@ split-списки, `systemProxy`, `killSwitch`, `coreEngine`. На Android се
 | `routing_presets.dart` | готовые списки direct/proxy/block |
 | `awg_profile.dart`, `hysteria_uri.dart` | парсинг AmneziaWG `.conf` и Hysteria-ссылок |
 | `subscription_url.dart`, `subscription_diff.dart` | нормализация URL подписок, дифф серверов между обновлениями |
+
+### 4.1. Цепочки прокси
+
+Цепочка — несколько серверов подряд: устройство подключается к первому узлу, он
+дотягивается до второго, и так до последнего; последний и есть тот, чей адрес
+видят сайты.
+
+В списке серверов цепочка лежит обычным `ServerItem`, у которого в `config`
+строка `keqchain://<base64url(json)>` со ссылками узлов и id серверов, из которых
+они скопированы (`protocol == 'chain'`). Так она бесплатно получает всё, что уже
+умеет список: выбор активного, закрепление, пинг, сортировку, меню трея,
+хранение. Ссылки узлов подтягиваются заново при каждой загрузке списка
+(`ServersNotifier._syncChains`) — иначе обновление подписки оставляло бы цепочку
+на протухшем конфиге; узел, которого в списке больше нет, живёт снимком.
+
+Исполняется цепочка **целиком внутри xray-части конфига**: каждому узлу свой
+outbound, узел `i` дозванивается до своего сервера через `i-1` полем
+`streamSettings.sockopt.dialerProxy`. Выходной узел сохраняет тег `proxy`,
+поэтому весь роутинг и sing-box-часть про цепочку вообще не знают. Отсюда же и
+одинаковость платформ: на Android конфиг исполняет libxray, на десктопе —
+встроенный в keqrnel xray-инстанс. Подводные камни (снифинг на промежуточном
+узле, `udphop` у hysteria) — в [PITFALLS.md](PITFALLS.md).
 
 Целевое ядро — **xray 26.x**, у него свои причуды, уже учтённые в `config_gen.dart`:
 пустой `fingerprint` отвергается, hysteria2 использует network `"hysteria"` (не `"quic"`),

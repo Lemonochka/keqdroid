@@ -163,9 +163,12 @@ class CustomXrayConfig {
   /// уровень логов.
   ///
   /// [inbounds] — инбаунды приложения (их уже собрал генератор конфига).
-  /// [lanRules] — правила, ограничивающие вход в LAN-инбаунды частными
-  /// адресами; идут первыми, иначе открытый на 0.0.0.0 инбаунд пускал бы
-  /// кого угодно (у автора конфига правил для наших тегов нет).
+  /// [prependRules] — правила, которые должны решать РАНЬШЕ авторских: защита
+  /// LAN-инбаундов (у автора правил для наших тегов нет, а инбаунд слушает
+  /// 0.0.0.0) и пользовательские списки обход/прокси/блок — без них настройки
+  /// роутинга в приложении на таком сервере просто не работают.
+  /// [appendRules] — правила после авторских: «остальной трафик» из настроек.
+  /// Сработает, только если у автора нет своего catch-all.
   /// [logLevel] — из настроек: без `info` ядро не печатает решения роутинга, и
   /// экран «Соединения» остаётся без правил.
   /// [geoIndex] — чем чистим `geoip:`/`geosite:`-коды, которых нет в
@@ -174,7 +177,8 @@ class CustomXrayConfig {
   Map<String, dynamic> buildSessionConfig({
     required List<Map<String, dynamic>> inbounds,
     required String logLevel,
-    List<Map<String, dynamic>> lanRules = const [],
+    List<Map<String, dynamic>> prependRules = const [],
+    List<Map<String, dynamic>> appendRules = const [],
     GeoAssetIndex? geoIndex,
   }) {
     final out = Map<String, dynamic>.from(json);
@@ -191,15 +195,15 @@ class CustomXrayConfig {
 
     out['inbounds'] = inbounds;
 
-    if (lanRules.isNotEmpty) {
+    if (prependRules.isNotEmpty || appendRules.isNotEmpty) {
       final routing = Map<String, dynamic>.from(
         (out['routing'] as Map?)?.cast<String, dynamic>() ?? const {},
       );
-      final rules = <Map<String, dynamic>>[
-        ...lanRules,
+      routing['rules'] = <Map<String, dynamic>>[
+        ...prependRules,
         ...?_rulesOf(routing),
+        ...appendRules,
       ];
-      routing['rules'] = rules;
       out['routing'] = routing;
     }
 

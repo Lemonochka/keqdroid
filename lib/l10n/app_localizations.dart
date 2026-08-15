@@ -3880,6 +3880,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'\"{name}\" expired on {date}. The provider has stopped updating the server list — renew it to keep the servers working.'**
   String subscriptionsExpiredNotifBody(String name, String date);
+
+  /// No description provided for @chainTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy chain'**
+  String get chainTitle;
+
+  /// No description provided for @chainNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New chain'**
+  String get chainNew;
+
+  /// No description provided for @chainCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Build a chain'**
+  String get chainCreate;
+
+  /// No description provided for @chainCreateDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Send traffic through several servers in a row'**
+  String get chainCreateDesc;
+
+  /// No description provided for @chainGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chains'**
+  String get chainGroupTitle;
+
+  /// No description provided for @chainNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Chain name'**
+  String get chainNameLabel;
+
+  /// No description provided for @chainNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave empty to name it by the route'**
+  String get chainNameHint;
+
+  /// No description provided for @chainHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic goes top to bottom. The first node is the one this device connects to; the last one is the address sites see.'**
+  String get chainHint;
+
+  /// No description provided for @chainDeviceNode.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get chainDeviceNode;
+
+  /// No description provided for @chainInternetNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet'**
+  String get chainInternetNode;
+
+  /// No description provided for @chainAddNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Add node'**
+  String get chainAddNode;
+
+  /// No description provided for @chainRemoveNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove node'**
+  String get chainRemoveNode;
+
+  /// No description provided for @chainExitNodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit node — sites see this address'**
+  String get chainExitNodeHint;
+
+  /// No description provided for @chainNodeMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Server is gone — using the saved copy'**
+  String get chainNodeMissing;
+
+  /// No description provided for @chainSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save chain'**
+  String get chainSave;
+
+  /// No description provided for @chainNeedsTwoNodes.
+  ///
+  /// In en, this message translates to:
+  /// **'A chain needs at least two nodes'**
+  String get chainNeedsTwoNodes;
+
+  /// No description provided for @chainPickNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a server'**
+  String get chainPickNode;
+
+  /// No description provided for @chainPickSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search servers'**
+  String get chainPickSearch;
+
+  /// No description provided for @chainPickEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No servers can be a chain node here. VLESS, VMess, Trojan, Shadowsocks and Hysteria2 work; AmneziaWG and ready-made JSON configs do not.'**
+  String get chainPickEmpty;
+
+  /// No description provided for @chainEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit chain'**
+  String get chainEdit;
+
+  /// No description provided for @chainDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate chain'**
+  String get chainDuplicate;
+
+  /// No description provided for @chainDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete chain'**
+  String get chainDelete;
+
+  /// No description provided for @chainRouteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Route'**
+  String get chainRouteLabel;
+
+  /// No description provided for @chainMaxNodes.
+  ///
+  /// In en, this message translates to:
+  /// **'A chain holds at most {max} nodes'**
+  String chainMaxNodes(int max);
+
+  /// No description provided for @chainDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the chain \"{name}\"? The servers it uses stay in the list.'**
+  String chainDeleteConfirm(String name);
+
+  /// No description provided for @chainNodesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{no nodes} =1{1 node} other{{count} nodes}}'**
+  String chainNodesCount(int count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -67,6 +67,11 @@ List<Map<String, dynamic>> _rules(Map<String, dynamic> config) => [
         (r as Map).cast<String, dynamic>(),
     ];
 
+List<String?> _outboundTags(Map<String, dynamic> config) => [
+      for (final o in config['outbounds'] as List)
+        (o as Map)['tag'] as String?,
+    ];
+
 void main() {
   group('CustomXrayConfig', () {
     test('parses a full xray config and reads its name', () {
@@ -303,8 +308,15 @@ void main() {
       expect(inbounds.map((i) => i['tag']), contains('socks-in'));
       expect(inbounds.any((i) => i['port'] == 10808), isFalse);
 
-      // Роутинг, dns и аутбаунды — авторские.
-      expect(_rules(config).length, 5);
+      // Авторские правила целы и в своём порядке: наши узнаются по ruleTag,
+      // у автора его нет.
+      final authorRules =
+          _rules(config).where((r) => r['ruleTag'] == null).toList();
+      expect(authorRules.length, 5);
+      expect(authorRules.first['ip'], ['185.73.195.0/24']);
+      expect(authorRules.last['outboundTag'], 'proxy');
+
+      // Dns и аутбаунды — авторские.
       expect((config['dns'] as Map)['servers'], ['1.1.1.1', '1.0.0.1']);
       expect(
         ((config['outbounds'] as List).first as Map)['streamSettings'],
@@ -348,7 +360,12 @@ void main() {
       expect(rules[1]['ruleTag'], 'lan-deny');
       // Автор завёл blackhole сам — свой дописывать незачем.
       expect(rules[1]['outboundTag'], 'block');
-      expect(rules.length, 7);
+      // Защита LAN идёт раньше всего остального, включая пользовательские
+      // списки: инбаунд слушает 0.0.0.0, и пускать в него кого попало нельзя.
+      expect(
+        rules.indexWhere((r) => r['ruleTag'] == 'user-direct-domains'),
+        greaterThan(1),
+      );
     });
 
     test('adds a blackhole for the LAN deny rule when the author has none', () {
@@ -361,10 +378,60 @@ void main() {
       );
       final rules = _rules(config);
       expect(rules[1]['outboundTag'], 'keq-block');
-      expect(
-        (config['outbounds'] as List).last,
-        {'protocol': 'blackhole', 'tag': 'keq-block'},
+      expect(_outboundTags(config), contains('keq-block'));
+    });
+
+    test('applies the user routing lists before the author rules', () {
+      final config = _decode(
+        ConfigGeneratorV2.generateConfig(
+          _customConfig,
+          settings.copyWith(
+            directRules: 'bypass.example.com',
+            proxyRules: 'via.example.net',
+            blockedRules: 'ads.example.org, 10.1.2.0/24',
+          ),
+        ),
       );
+      final rules = _rules(config);
+      final tags = rules.map((r) => r['ruleTag']).toList();
+
+      // Порядок тот же, что и у обычного сервера: блок → обход → прокси.
+      final block = tags.indexOf('user-block-domains');
+      final direct = tags.indexOf('user-direct-domains');
+      final proxy = tags.indexOf('user-proxy-domains');
+      final firstAuthor = rules.indexWhere((r) => r['ruleTag'] == null);
+      expect(block, isNonNegative);
+      expect(block, lessThan(direct));
+      expect(direct, lessThan(proxy));
+      // Названное руками важнее заготовки провайдера.
+      expect(proxy, lessThan(firstAuthor));
+
+      expect(rules[block]['domain'], ['domain:ads.example.org']);
+      expect(rules[block]['outboundTag'], 'block');
+      expect(rules[direct]['outboundTag'], 'direct');
+      expect(rules[tags.indexOf('user-block-ips')]['ip'], ['10.1.2.0/24']);
+      // Свои freedom/blackhole не нужны — у автора они уже есть.
+      expect(jsonEncode(config['outbounds']).contains('keq-'), isFalse);
+    });
+
+    test('unmatched traffic follows the app setting', () {
+      final config = _decode(
+        ConfigGeneratorV2.generateConfig(
+          '{"outbounds": [{"tag": "out", "protocol": "vless", "settings": '
+          '{"address": "f.example.com", "port": 443}}]}',
+          settings.copyWith(
+            directRules: '',
+            finalOutbound: AppSettings.finalOutboundBlock,
+          ),
+        ),
+      );
+      final rules = _rules(config);
+
+      expect(rules.last['ruleTag'], 'final');
+      expect(rules.last['outboundTag'], 'keq-block');
+      expect(_outboundTags(config), contains('keq-block'));
+      // freedom никто не просил — и его нет.
+      expect(_outboundTags(config), isNot(contains('keq-direct')));
     });
 
     test('ping config sends everything to the author primary outbound', () {

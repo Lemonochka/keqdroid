@@ -591,6 +591,10 @@ class PingService {
     // Всегда ICMP, независимо от выбранного в настройках типа.
     if (server.protocol == 'awg') return PingType.icmp;
     if (type == PingType.speed) return PingType.speed;
+    // У цепочки tcp/icmp померил бы только ВХОДНОЙ узел — цифра, не имеющая
+    // отношения к тому, как цепочка работает целиком. Реальный round-trip даёт
+    // только url-пинг: он поднимает временное ядро со всей цепочкой.
+    if (server.protocol == 'chain') return PingType.url;
     return shouldUseUrlPingForServer(server, type) ? PingType.url : type;
   }
 

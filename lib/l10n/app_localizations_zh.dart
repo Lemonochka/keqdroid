@@ -1998,4 +1998,94 @@ class AppLocalizationsZh extends AppLocalizations {
   String subscriptionsExpiredNotifBody(String name, String date) {
     return '“$name”已于 $date 到期。服务商已停止更新服务器列表 — 请续订以保持服务器可用。';
   }
+
+  @override
+  String get chainTitle => '代理链';
+
+  @override
+  String get chainNew => '新建代理链';
+
+  @override
+  String get chainCreate => '创建代理链';
+
+  @override
+  String get chainCreateDesc => '让流量依次经过多台服务器';
+
+  @override
+  String get chainGroupTitle => '代理链';
+
+  @override
+  String get chainNameLabel => '链名称';
+
+  @override
+  String get chainNameHint => '留空则按路线命名';
+
+  @override
+  String get chainHint => '流量自上而下。第一个节点是本设备直接连接的服务器，最后一个节点的地址才是网站看到的地址。';
+
+  @override
+  String get chainDeviceNode => '本设备';
+
+  @override
+  String get chainInternetNode => '互联网';
+
+  @override
+  String get chainAddNode => '添加节点';
+
+  @override
+  String get chainRemoveNode => '移除节点';
+
+  @override
+  String get chainExitNodeHint => '出口节点 — 网站看到的就是它的地址';
+
+  @override
+  String get chainNodeMissing => '服务器已不存在 — 使用已保存的副本';
+
+  @override
+  String get chainSave => '保存代理链';
+
+  @override
+  String get chainNeedsTwoNodes => '代理链至少需要两个节点';
+
+  @override
+  String get chainPickNode => '选择服务器';
+
+  @override
+  String get chainPickSearch => '搜索服务器';
+
+  @override
+  String get chainPickEmpty => '没有可作为链节点的服务器。支持 VLESS、VMess、Trojan、Shadowsocks 和 Hysteria2；AmneziaWG 和现成的 JSON 配置不支持。';
+
+  @override
+  String get chainEdit => '编辑代理链';
+
+  @override
+  String get chainDuplicate => '复制代理链';
+
+  @override
+  String get chainDelete => '删除代理链';
+
+  @override
+  String get chainRouteLabel => '路线';
+
+  @override
+  String chainMaxNodes(int max) {
+    return '代理链最多 $max 个节点';
+  }
+
+  @override
+  String chainDeleteConfirm(String name) {
+    return '删除代理链“$name”？其中使用的服务器仍会保留在列表中。';
+  }
+
+  @override
+  String chainNodesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个节点',
+      zero: '无节点',
+    );
+    return '$_temp0';
+  }
 }

@@ -893,5 +893,52 @@
         "type": "String"
       }
     }
+  },
+  "chainTitle": "代理链",
+  "chainNew": "新建代理链",
+  "chainCreate": "创建代理链",
+  "chainCreateDesc": "让流量依次经过多台服务器",
+  "chainGroupTitle": "代理链",
+  "chainNameLabel": "链名称",
+  "chainNameHint": "留空则按路线命名",
+  "chainHint": "流量自上而下。第一个节点是本设备直接连接的服务器，最后一个节点的地址才是网站看到的地址。",
+  "chainDeviceNode": "本设备",
+  "chainInternetNode": "互联网",
+  "chainAddNode": "添加节点",
+  "chainRemoveNode": "移除节点",
+  "chainExitNodeHint": "出口节点 — 网站看到的就是它的地址",
+  "chainNodeMissing": "服务器已不存在 — 使用已保存的副本",
+  "chainSave": "保存代理链",
+  "chainNeedsTwoNodes": "代理链至少需要两个节点",
+  "chainPickNode": "选择服务器",
+  "chainPickSearch": "搜索服务器",
+  "chainPickEmpty": "没有可作为链节点的服务器。支持 VLESS、VMess、Trojan、Shadowsocks 和 Hysteria2；AmneziaWG 和现成的 JSON 配置不支持。",
+  "chainEdit": "编辑代理链",
+  "chainDuplicate": "复制代理链",
+  "chainDelete": "删除代理链",
+  "chainRouteLabel": "路线",
+  "chainMaxNodes": "代理链最多 {max} 个节点",
+  "chainDeleteConfirm": "删除代理链“{name}”？其中使用的服务器仍会保留在列表中。",
+  "chainNodesCount": "{count, plural, =0{无节点} other{{count} 个节点}}",
+  "@chainMaxNodes": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "@chainDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@chainNodesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

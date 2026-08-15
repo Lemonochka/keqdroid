@@ -893,5 +893,52 @@
         "type": "String"
       }
     }
+  },
+  "chainTitle": "Proxy-Kette",
+  "chainNew": "Neue Kette",
+  "chainCreate": "Kette bauen",
+  "chainCreateDesc": "Datenverkehr nacheinander über mehrere Server schicken",
+  "chainGroupTitle": "Ketten",
+  "chainNameLabel": "Name der Kette",
+  "chainNameHint": "Leer lassen — dann benennt die Route sie",
+  "chainHint": "Der Verkehr läuft von oben nach unten. Der erste Knoten ist der, mit dem sich dieses Gerät verbindet; der letzte ist die Adresse, die Webseiten sehen.",
+  "chainDeviceNode": "Dieses Gerät",
+  "chainInternetNode": "Internet",
+  "chainAddNode": "Knoten hinzufügen",
+  "chainRemoveNode": "Knoten entfernen",
+  "chainExitNodeHint": "Ausgangsknoten — diese Adresse sehen Webseiten",
+  "chainNodeMissing": "Server ist weg — die gespeicherte Kopie wird verwendet",
+  "chainSave": "Kette speichern",
+  "chainNeedsTwoNodes": "Eine Kette braucht mindestens zwei Knoten",
+  "chainPickNode": "Server auswählen",
+  "chainPickSearch": "Server suchen",
+  "chainPickEmpty": "Kein Server taugt hier als Kettenknoten. VLESS, VMess, Trojan, Shadowsocks und Hysteria2 gehen; AmneziaWG und fertige JSON-Konfigurationen nicht.",
+  "chainEdit": "Kette bearbeiten",
+  "chainDuplicate": "Kette duplizieren",
+  "chainDelete": "Kette löschen",
+  "chainRouteLabel": "Route",
+  "chainMaxNodes": "Eine Kette fasst höchstens {max} Knoten",
+  "chainDeleteConfirm": "Kette „{name}“ löschen? Die verwendeten Server bleiben in der Liste.",
+  "chainNodesCount": "{count, plural, =0{keine Knoten} =1{1 Knoten} other{{count} Knoten}}",
+  "@chainMaxNodes": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "@chainDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@chainNodesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

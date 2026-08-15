@@ -893,5 +893,52 @@
         "type": "String"
       }
     }
+  },
+  "chainTitle": "Цепочка прокси",
+  "chainNew": "Новая цепочка",
+  "chainCreate": "Собрать цепочку",
+  "chainCreateDesc": "Пустить трафик через несколько серверов подряд",
+  "chainGroupTitle": "Цепочки",
+  "chainNameLabel": "Название цепочки",
+  "chainNameHint": "Пусто — назовём по маршруту",
+  "chainHint": "Трафик идёт сверху вниз. Первый узел — тот, к кому подключается это устройство; последний — тот, чей адрес видят сайты.",
+  "chainDeviceNode": "Это устройство",
+  "chainInternetNode": "Интернет",
+  "chainAddNode": "Добавить узел",
+  "chainRemoveNode": "Убрать узел",
+  "chainExitNodeHint": "Выходной узел — его адрес видят сайты",
+  "chainNodeMissing": "Сервера больше нет — работаем по сохранённой копии",
+  "chainSave": "Сохранить цепочку",
+  "chainNeedsTwoNodes": "В цепочке нужно хотя бы два узла",
+  "chainPickNode": "Выберите сервер",
+  "chainPickSearch": "Поиск по серверам",
+  "chainPickEmpty": "Нет серверов, которые могут быть узлом цепочки. Подходят VLESS, VMess, Trojan, Shadowsocks и Hysteria2; AmneziaWG и готовые JSON-конфиги — нет.",
+  "chainEdit": "Изменить цепочку",
+  "chainDuplicate": "Дублировать цепочку",
+  "chainDelete": "Удалить цепочку",
+  "chainRouteLabel": "Маршрут",
+  "chainMaxNodes": "В цепочке не больше {max} узлов",
+  "chainDeleteConfirm": "Удалить цепочку «{name}»? Серверы из неё останутся в списке.",
+  "chainNodesCount": "{count, plural, =0{нет узлов} =1{1 узел} few{{count} узла} many{{count} узлов} other{{count} узла}}",
+  "@chainMaxNodes": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "@chainDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@chainNodesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

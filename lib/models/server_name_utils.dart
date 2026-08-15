@@ -1,3 +1,5 @@
+import 'server_flag.dart';
+
 class ServerNameUtils {
   static const Map<String, String> _keywords = {
     'россия': 'RU',
@@ -274,86 +276,24 @@ class ServerNameUtils {
     'kwt': 'KW',
   };
 
-  static const Map<String, String> _emojiToCode = {
-    '🇷🇺': 'RU',
-    '🇩🇪': 'DE',
-    '🇳🇱': 'NL',
-    '🇪🇪': 'EE',
-    '🇫🇮': 'FI',
-    '🇫🇷': 'FR',
-    '🇵🇱': 'PL',
-    '🇸🇪': 'SE',
-    '🇳🇴': 'NO',
-    '🇩🇰': 'DK',
-    '🇦🇹': 'AT',
-    '🇨🇭': 'CH',
-    '🇧🇪': 'BE',
-    '🇨🇿': 'CZ',
-    '🇭🇺': 'HU',
-    '🇷🇴': 'RO',
-    '🇧🇬': 'BG',
-    '🇬🇷': 'GR',
-    '🇮🇹': 'IT',
-    '🇪🇸': 'ES',
-    '🇵🇹': 'PT',
-    '🇬🇧': 'GB',
-    '🇮🇪': 'IE',
-    '🇮🇸': 'IS',
-    '🇱🇻': 'LV',
-    '🇱🇹': 'LT',
-    '🇸🇰': 'SK',
-    '🇸🇮': 'SI',
-    '🇭🇷': 'HR',
-    '🇷🇸': 'RS',
-    '🇲🇩': 'MD',
-    '🇺🇦': 'UA',
-    '🇧🇾': 'BY',
-    '🇰🇿': 'KZ',
-    '🇹🇷': 'TR',
-    '🇮🇱': 'IL',
-    '🇦🇪': 'AE',
-    '🇮🇳': 'IN',
-    '🇨🇳': 'CN',
-    '🇯🇵': 'JP',
-    '🇰🇷': 'KR',
-    '🇸🇬': 'SG',
-    '🇭🇰': 'HK',
-    '🇹🇼': 'TW',
-    '🇦🇺': 'AU',
-    '🇳🇿': 'NZ',
-    '🇨🇦': 'CA',
-    '🇺🇸': 'US',
-    '🇧🇷': 'BR',
-    '🇦🇷': 'AR',
-    '🇲🇽': 'MX',
-    '🇨🇱': 'CL',
-    '🇨🇴': 'CO',
-    '🇵🇪': 'PE',
-    '🇿🇦': 'ZA',
-    '🇳🇬': 'NG',
-    '🇪🇬': 'EG',
-    '🇹🇭': 'TH',
-    '🇻🇳': 'VN',
-    '🇮🇩': 'ID',
-    '🇲🇾': 'MY',
-    '🇵🇰': 'PK',
-    '🇮🇷': 'IR',
-    '🇮🇶': 'IQ',
-    '🇸🇦': 'SA',
-    '🇶🇦': 'QA',
-    '🇰🇼': 'KW',
-  };
-
-  static String? extractCountryCode(String displayName) {
+  /// Флажок сервера: сначала настоящий флаг-эмодзи из имени (любого вида —
+  /// см. [ServerFlag]), и только если его нет — догадка по названию страны.
+  static ServerFlag? extractFlag(String displayName) {
     if (displayName.isEmpty) return null;
+    final emoji = firstFlagIn(displayName);
+    if (emoji != null) return emoji;
+    final code = _countryCodeFromKeywords(displayName);
+    return code == null ? null : FlagArt(code.toLowerCase());
+  }
 
-    final emojiCode = _countryCodeFromRegionalIndicatorFlag(displayName);
-    if (emojiCode != null) return emojiCode;
+  /// ISO alpha-2 код региона сервера, если у его флажка такой код есть.
+  static String? extractCountryCode(String displayName) =>
+      switch (extractFlag(displayName)) {
+        FlagArt(:final countryCode) => countryCode,
+        _ => null,
+      };
 
-    for (final entry in _emojiToCode.entries) {
-      if (displayName.contains(entry.key)) return entry.value;
-    }
-
+  static String? _countryCodeFromKeywords(String displayName) {
     final lower = displayName.toLowerCase();
 
     // Многословные названия ("hong kong", "united states", "южная африка")
@@ -382,27 +322,8 @@ class ServerNameUtils {
     return null;
   }
 
-  static String? _countryCodeFromRegionalIndicatorFlag(String value) {
-    const base = 0x1F1E6;
-    final runes = value.runes.toList(growable: false);
-    for (var i = 0; i + 1 < runes.length; i++) {
-      final first = runes[i];
-      final second = runes[i + 1];
-      if (first < base ||
-          first > base + 25 ||
-          second < base ||
-          second > base + 25) {
-        continue;
-      }
-      return String.fromCharCodes([0x41 + first - base, 0x41 + second - base]);
-    }
-    return null;
-  }
-
   static String cleanDisplayName(String displayName) {
-    var cleaned = displayName
-        .replaceAll(RegExp(r'[\u{1F1E6}-\u{1F1FF}]', unicode: true), '')
-        .trim();
+    final cleaned = stripFlags(displayName).trim();
     final match = RegExp(r'^[A-Z]{2}\s+(.+)$').firstMatch(cleaned);
     return match != null ? match.group(1)!.trim() : cleaned;
   }
