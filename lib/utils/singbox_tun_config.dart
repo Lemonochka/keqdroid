@@ -24,7 +24,14 @@ class SingBoxTunConfigGen {
     /// this app's own exe (e.g. keqdroid.exe). routed direct so our tcp/url ping
     /// sockets measure latency from the local pc, not through the active server.
     String appProcessName = '',
+    /// Целевая ОС. По умолчанию текущая — в бою иначе не бывает. Параметром она
+    /// стала ради golden-тестов: три места ниже читают `Platform.isWindows`, и
+    /// снятая на Windows фикстура падала на linux-раннере, ничего не сообщая о
+    /// генераторе. Ср. [TunSettings.strictRouteEnabled], где платформа уже входит
+    /// аргументом.
+    bool? windows,
   }) {
+    final isWindows = windows ?? Platform.isWindows;
     // Разделители — и запятая, и перевод строки: UI обещает «по одному в
     // строке или через запятую», сплит только по ',' склеивал построчные
     // записи в один несрабатывающий токен.
@@ -209,7 +216,7 @@ class SingBoxTunConfigGen {
     // Windows process names carry `.exe`; on Linux they are the bare binary
     // basename (sing-box's find_process matches the comm name). Keep Windows
     // output byte-identical by only appending the suffix there.
-    final exe = Platform.isWindows ? '.exe' : '';
+    final exe = isWindows ? '.exe' : '';
     final bypassProcessNames = <String>{
       'xray$exe',
       'sing-box$exe',
@@ -228,7 +235,7 @@ class SingBoxTunConfigGen {
           'tailscaled$exe',
           'wireguard$exe',
           'openvpn$exe',
-          if (Platform.isWindows) 'openvpn-gui.exe',
+          if (isWindows) 'openvpn-gui.exe',
         ],
         'outbound': 'direct',
       });
@@ -394,7 +401,7 @@ class SingBoxTunConfigGen {
       'auto_route': tun.autoRoute,
       // auto: on везде, кроме Windows — там strict_route breaks routing when
       // another vpn (e.g. tailscale) is active.
-      'strict_route': tun.strictRouteEnabled(windows: Platform.isWindows),
+      'strict_route': tun.strictRouteEnabled(windows: isWindows),
       'stack': tun.stack,
       // full-cone NAT считает только gvisor-netstack (в mixed он держит UDP)
       if (tun.endpointIndependentNat && tun.stack != TunSettings.stackSystem)
