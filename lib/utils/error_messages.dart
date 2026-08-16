@@ -182,13 +182,23 @@ UiErrorMessage explainError(Object error) {
 
 UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
   final base = explainError(error);
-  final title = switch (base.kind) {
-    UiErrorKind.permission => l10n.errorConnectionPermission,
-    UiErrorKind.network => l10n.errorConnectionNetwork,
-    UiErrorKind.config => l10n.errorConnectionConfig,
-    UiErrorKind.auth => l10n.errorConnectionAuth,
-    UiErrorKind.providerConfig => l10n.errorProviderConfigTitle,
-    UiErrorKind.unknown => l10n.errorConnectionGeneric,
+  // Заголовок ключуется по коду, а не по виду ошибки: видов шесть на
+  // одиннадцать кодов, и «Connection failed: auth» вместо «Device Limit
+  // Reached» отнимает у пользователя ровно ту подсказку, ради которой
+  // код и различали. Виды остались за vpnErrorStatusLabel — там короткая
+  // подпись статуса, и общая формулировка уместна.
+  final title = switch (base.code) {
+    UiErrorCode.tunAdmin => l10n.errorTunAdminTitle,
+    UiErrorCode.vpnPermission => l10n.errorVpnPermissionTitle,
+    UiErrorCode.hwidBind => l10n.errorHwidBindTitle,
+    UiErrorCode.deviceLimit => l10n.errorDeviceLimitTitle,
+    UiErrorCode.providerNoHosts => l10n.errorProviderNoHostsTitle,
+    UiErrorCode.configInvalid => l10n.errorConfigInvalidTitle,
+    UiErrorCode.authDenied => l10n.errorAuthDeniedTitle,
+    UiErrorCode.subUrlInvalid => l10n.errorSubUrlInvalidTitle,
+    UiErrorCode.subUrlInsecureHttp => l10n.errorSubInsecureHttpTitle,
+    UiErrorCode.network => l10n.errorNetworkTitle,
+    UiErrorCode.unknown => l10n.errorUnknownTitle,
   };
   final (message, action) = switch (base.code) {
     UiErrorCode.tunAdmin => (

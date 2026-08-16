@@ -1572,6 +1572,39 @@ class AppLocalizationsDe extends AppLocalizations {
   String get errorUnknownAction => 'Versuche es erneut. Tritt der Fehler weiterhin auf, prüfe Server und App-Einstellungen.';
 
   @override
+  String get errorTunAdminTitle => 'Berechtigung erforderlich';
+
+  @override
+  String get errorVpnPermissionTitle => 'Berechtigung erforderlich';
+
+  @override
+  String get errorHwidBindTitle => 'Gerätebindung erforderlich';
+
+  @override
+  String get errorDeviceLimitTitle => 'Gerätelimit erreicht';
+
+  @override
+  String get errorProviderNoHostsTitle => 'Anbieter-Konfiguration erforderlich';
+
+  @override
+  String get errorConfigInvalidTitle => 'Konfigurationsfehler';
+
+  @override
+  String get errorAuthDeniedTitle => 'Autorisierung fehlgeschlagen';
+
+  @override
+  String get errorSubUrlInvalidTitle => 'Abo-Link ungültig';
+
+  @override
+  String get errorSubInsecureHttpTitle => 'Unsicherer Abo-Link';
+
+  @override
+  String get errorNetworkTitle => 'Netzwerkfehler';
+
+  @override
+  String get errorUnknownTitle => 'Vorgang fehlgeschlagen';
+
+  @override
   String get serversPin => 'Server anheften';
 
   @override

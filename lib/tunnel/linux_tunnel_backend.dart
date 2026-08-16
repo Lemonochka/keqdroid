@@ -10,6 +10,7 @@ import '../services/ephemeral_xray_ping.dart';
 import '../utils/keqrnel_config.dart';
 import '../utils/wireproxy_config.dart';
 import 'connection_mode.dart';
+import 'desktop_traffic_stats.dart';
 import 'linux_core_paths.dart';
 import 'socks_credential_generator.dart';
 import 'tunnel_backend.dart';
@@ -39,7 +40,7 @@ Stream<void> get linuxTunRememberOffers => _linuxTunRememberController.stream;
 ///   a `tun` inbound that captures all traffic. Creating the TUN device and
 ///   editing routes needs root, so sing-box is launched via `pkexec` (a polkit
 ///   GUI prompt). Traffic counters are read from the tun interface sysfs stats.
-class LinuxTunnelBackend implements TunnelBackend {
+class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   static const tunInterfaceName = 'tun-keqdis';
 
   /// Куда root-обёртка pkexec редиректит stdout/stderr ядра (см.
@@ -65,6 +66,9 @@ class LinuxTunnelBackend implements TunnelBackend {
   File? _rootSentinel;
   Directory? _sessionDir;
   ConnectionMode? _activeMode;
+
+  @override
+  ConnectionMode? get activeMode => _activeMode;
   final StringBuffer _xrayLog = StringBuffer();
   final StringBuffer _singboxLog = StringBuffer();
 
@@ -82,24 +86,6 @@ class LinuxTunnelBackend implements TunnelBackend {
   // kill за внезапную смерть ядра.
   bool _stoppingSession = false;
 
-  Timer? _statsTimer;
-  DateTime? _sessionStartedAt;
-  int _prevInOctets = 0;
-  int _prevOutOctets = 0;
-  int _totalDownload = 0;
-  int _totalUpload = 0;
-  // false = окно скрыто (трей/свёрнуто): секундный опрос счётчиков приостановлен.
-  bool _statsPollingEnabled = true;
-  // Базовая отметка счётчиков снята. Отдельный флаг, а не «prev == 0»:
-  // 0 — легитимное значение на старте сессии, и с паузой опроса такое
-  // кодирование теряло бы весь скрытый период из тоталов.
-  bool _statsBaselineTaken = false;
-  // Первый опрос после паузы: скрытый период целиком попадает в тоталы, но как
-  // «скорость» его не показываем — иначе на секунду вспыхивает гигантское значение.
-  bool _resumeBaselinePending = false;
-  // Один keep-alive клиент на сессию вместо нового HttpClient (сокет+закрытие)
-  // на каждый секундный опрос clash_api/wireproxy.
-  HttpClient? _statsHttpClient;
 
   @override
   Stream<VpnState> get stateStream => _stateCtrl.stream;
@@ -143,7 +129,7 @@ class LinuxTunnelBackend implements TunnelBackend {
 
   @override
   Future<void> startSession(TunnelSessionRequest request) async {
-    _emit(VpnState(status: VpnStatus.connecting, activeMode: request.mode));
+    emit(VpnState(status: VpnStatus.connecting, activeMode: request.mode));
     _activeMode = request.mode;
     _xrayLog.clear();
     _singboxLog.clear();
@@ -174,8 +160,8 @@ class LinuxTunnelBackend implements TunnelBackend {
         }
       }
 
-      _startStatsLoop(request.mode);
-      _emitConnectedTelemetry(request.mode);
+      startStatsLoop(request.mode);
+      emitConnectedTelemetry(request.mode);
 
       // Смерть ядра посреди сессии без вотчдога оставляла UI в «Connected»,
       // а системный прокси (gsettings) — направленным на мёртвый порт.
@@ -190,7 +176,7 @@ class LinuxTunnelBackend implements TunnelBackend {
       );
       await _dumpLogsToFile();
       await _cleanupForRestart();
-      _emit(
+      emit(
         VpnState(
           status: VpnStatus.error,
           errorMessage: e.toString(),
@@ -858,7 +844,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       try {
         await stopSession();
       } catch (_) {}
-      _emit(VpnState(
+      emit(VpnState(
         status: VpnStatus.error,
         errorMessage:
             '$label stopped unexpectedly (exit code $code). Disconnected.',
@@ -890,8 +876,8 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
   }
 
   Future<void> _stopSessionInner({bool emitStates = true}) async {
-    _stopStatsLoop();
-    if (emitStates) _emit(const VpnState(status: VpnStatus.disconnecting));
+    stopStatsLoop();
+    if (emitStates) emit(const VpnState(status: VpnStatus.disconnecting));
 
     if (_singboxProcess != null ||
         _xrayProcess != null ||
@@ -926,7 +912,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
 
     _activeMode = null;
     if (identical(activeInstance, this)) activeInstance = null;
-    if (emitStates) _emit(VpnState.disconnected);
+    if (emitStates) emit(VpnState.disconnected);
   }
 
   @override
@@ -937,7 +923,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     if (_xrayProcess != null ||
         _wireproxyProcess != null ||
         _singboxProcess != null) {
-      return _buildConnectedState(_activeMode);
+      return buildConnectedState(_activeMode);
     }
     return VpnState.disconnected;
   }
@@ -1230,90 +1216,20 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     return text.isEmpty ? '(no process output)' : text;
   }
 
-  void _emit(VpnState state) {
+  @override
+  void emit(VpnState state) {
     if (!_stateCtrl.isClosed) _stateCtrl.add(state);
   }
 
-  void _startStatsLoop(ConnectionMode mode) {
-    _stopStatsLoop();
-    _sessionStartedAt = DateTime.now();
-    _prevInOctets = 0;
-    _prevOutOctets = 0;
-    _totalDownload = 0;
-    _totalUpload = 0;
-    _statsBaselineTaken = false;
-    if (_statsPollingEnabled) {
-      _startStatsTimer(mode);
-    } else {
-      // Окно скрыто (сессия из хоткея/автостарта в трее): цикл не заводим, но
-      // снимаем базовую отметку счётчиков — иначе трафик скрытого периода не
-      // попал бы в тоталы при возобновлении опроса.
-      unawaited(_takeHiddenBaseline(mode));
-    }
-  }
 
-  /// Разовая базовая отметка счётчиков для сессии, начатой при скрытом окне.
-  /// С ретраями: сразу после старта ядра эндпоинт статистики может ещё не
-  /// отвечать, а секундного цикла, который бы это добрал, в паузе нет.
-  Future<void> _takeHiddenBaseline(ConnectionMode mode) async {
-    final startedAt = _sessionStartedAt;
-    for (var i = 0; i < 5; i++) {
-      // Сессия сменилась/остановилась, опрос возобновился или база уже снята —
-      // дальше не наше дело.
-      if (!identical(_sessionStartedAt, startedAt) ||
-          _statsPollingEnabled ||
-          _statsBaselineTaken) {
-        return;
-      }
-      await _pollTrafficStats(mode, force: true);
-      if (_statsBaselineTaken) return;
-      await Future<void>.delayed(const Duration(seconds: 1));
-    }
-  }
 
-  void _startStatsTimer(ConnectionMode mode) {
-    _statsTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      unawaited(_pollTrafficStats(mode));
-    });
-    unawaited(_pollTrafficStats(mode));
-  }
 
   @override
-  void setTrafficStatsPollingEnabled(bool enabled) {
-    if (_statsPollingEnabled == enabled) return;
-    _statsPollingEnabled = enabled;
-    if (!enabled) {
-      // Только глушим таймер; сессионные поля (тоталы, started) не трогаем —
-      // при возобновлении кумулятивные счётчики ядра дадут корректные тоталы.
-      _statsTimer?.cancel();
-      _statsTimer = null;
-      _statsHttpClient?.close(force: true);
-      _statsHttpClient = null;
-      return;
-    }
-    final mode = _activeMode;
-    if (mode != null && _sessionStartedAt != null && _statsTimer == null) {
-      _resumeBaselinePending = true;
-      _startStatsTimer(mode);
-    }
-  }
 
-  void _stopStatsLoop() {
-    _statsTimer?.cancel();
-    _statsTimer = null;
-    _sessionStartedAt = null;
-    _prevInOctets = 0;
-    _prevOutOctets = 0;
-    _totalDownload = 0;
-    _totalUpload = 0;
-    _resumeBaselinePending = false;
-    _statsBaselineTaken = false;
-    _statsHttpClient?.close(force: true);
-    _statsHttpClient = null;
-  }
 
-  Future<void> _pollTrafficStats(ConnectionMode mode, {bool force = false}) async {
-    if (!_statsPollingEnabled && !force) return;
+  @override
+  Future<void> pollTrafficStats(ConnectionMode mode, {bool force = false}) async {
+    if (!statsPollingEnabled && !force) return;
     if (_xrayProcess == null &&
         _wireproxyProcess == null &&
         _singboxProcess == null) {
@@ -1328,24 +1244,24 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
         // (tx) and reads sing-box's downloaded replies from it (rx).
         final c = await _queryTunCounters();
         if (c == null) {
-          _emitConnectedTelemetry(mode);
+          emitConnectedTelemetry(mode);
           return;
         }
         inOctets = c.rx;
         outOctets = c.tx;
       } else if (_wireproxyProcess != null && _awgInfoPort != null) {
-        final m = await _queryWireproxyMetrics(_awgInfoPort!);
+        final m = await queryWireproxyMetrics(_awgInfoPort!);
         if (m == null) {
-          _emitConnectedTelemetry(mode);
+          emitConnectedTelemetry(mode);
           return;
         }
         inOctets = m.rx;
         outOctets = m.tx;
       } else if (_keqrnelClashPort != null) {
         // keqrnel proxy: кумулятивный трафик из clash_api sing-box.
-        final t = await _queryClashTraffic(_keqrnelClashPort!);
+        final t = await queryClashTraffic(_keqrnelClashPort!);
         if (t == null) {
-          _emitConnectedTelemetry(mode);
+          emitConnectedTelemetry(mode);
           return;
         }
         inOctets = t.down;
@@ -1363,27 +1279,27 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
         return;
       }
 
-      if (!_statsBaselineTaken) {
-        _statsBaselineTaken = true;
-        _prevInOctets = inOctets;
-        _prevOutOctets = outOctets;
-        _resumeBaselinePending = false;
-        _emitConnectedTelemetry(mode);
+      if (!statsBaselineTaken) {
+        statsBaselineTaken = true;
+        prevInOctets = inOctets;
+        prevOutOctets = outOctets;
+        resumeBaselinePending = false;
+        emitConnectedTelemetry(mode);
         return;
       }
 
-      final deltaIn = inOctets >= _prevInOctets ? inOctets - _prevInOctets : 0;
-      final deltaOut = outOctets >= _prevOutOctets
-          ? outOctets - _prevOutOctets
+      final deltaIn = inOctets >= prevInOctets ? inOctets - prevInOctets : 0;
+      final deltaOut = outOctets >= prevOutOctets
+          ? outOctets - prevOutOctets
           : 0;
-      _prevInOctets = inOctets;
-      _prevOutOctets = outOctets;
-      _totalDownload += deltaIn;
-      _totalUpload += deltaOut;
+      prevInOctets = inOctets;
+      prevOutOctets = outOctets;
+      totalDownload += deltaIn;
+      totalUpload += deltaOut;
 
-      final suppressSpeed = _resumeBaselinePending;
-      _resumeBaselinePending = false;
-      _emitConnectedTelemetry(
+      final suppressSpeed = resumeBaselinePending;
+      resumeBaselinePending = false;
+      emitConnectedTelemetry(
         mode,
         downloadSpeed: suppressSpeed ? null : deltaIn,
         uploadSpeed: suppressSpeed ? null : deltaOut,
@@ -1393,39 +1309,8 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     }
   }
 
-  /// keep-alive клиент для секундных опросов; после ошибки пересоздаётся
-  /// (см. [_resetStatsHttp]), чтобы зависший запрос не держал сокет.
-  HttpClient get _statsHttp =>
-      _statsHttpClient ??= HttpClient()
-        ..connectionTimeout = const Duration(seconds: 2);
 
-  void _resetStatsHttp() {
-    _statsHttpClient?.close(force: true);
-    _statsHttpClient = null;
-  }
 
-  /// Кумулятивный трафик из clash_api keqrnel (proxy-режим): GET /connections →
-  /// downloadTotal/uploadTotal. down = принято, up = отправлено.
-  Future<({int down, int up})?> _queryClashTraffic(int port) async {
-    try {
-      final req = await _statsHttp
-          .get('127.0.0.1', port, '/connections')
-          .timeout(const Duration(seconds: 2));
-      final resp = await req.close().timeout(const Duration(seconds: 2));
-      if (resp.statusCode != 200) {
-        await resp.drain<void>();
-        return null;
-      }
-      final body = await resp.transform(utf8.decoder).join();
-      final json = jsonDecode(body) as Map<String, dynamic>;
-      final down = (json['downloadTotal'] as num?)?.toInt() ?? 0;
-      final up = (json['uploadTotal'] as num?)?.toInt() ?? 0;
-      return (down: down, up: up);
-    } catch (_) {
-      _resetStatsHttp();
-      return null;
-    }
-  }
 
   /// Cumulative tun interface counters from sysfs (download = rx, upload = tx).
   Future<({int rx, int tx})?> _queryTunCounters() async {
@@ -1443,66 +1328,6 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     }
   }
 
-  Future<({int rx, int tx})?> _queryWireproxyMetrics(int port) async {
-    try {
-      final req = await _statsHttp
-          .get('127.0.0.1', port, '/metrics')
-          .timeout(const Duration(seconds: 2));
-      final resp = await req.close().timeout(const Duration(seconds: 2));
-      if (resp.statusCode != 200) {
-        await resp.drain<void>();
-        return null;
-      }
-      final body = await resp.transform(utf8.decoder).join();
-      var rx = 0;
-      var tx = 0;
-      for (final line in const LineSplitter().convert(body)) {
-        final i = line.indexOf('=');
-        if (i < 0) continue;
-        final key = line.substring(0, i).trim();
-        final value = int.tryParse(line.substring(i + 1).trim());
-        if (value == null) continue;
-        if (key == 'rx_bytes') {
-          rx += value;
-        } else if (key == 'tx_bytes') {
-          tx += value;
-        }
-      }
-      return (rx: rx, tx: tx);
-    } catch (_) {
-      _resetStatsHttp();
-      return null;
-    }
-  }
 
-  void _emitConnectedTelemetry(
-    ConnectionMode? mode, {
-    int? downloadSpeed,
-    int? uploadSpeed,
-  }) {
-    _emit(
-      _buildConnectedState(
-        mode,
-        downloadSpeed: downloadSpeed,
-        uploadSpeed: uploadSpeed,
-      ),
-    );
-  }
 
-  VpnState _buildConnectedState(
-    ConnectionMode? mode, {
-    int? downloadSpeed,
-    int? uploadSpeed,
-  }) {
-    final started = _sessionStartedAt;
-    return VpnState(
-      status: VpnStatus.connected,
-      activeMode: mode,
-      downloadSpeed: downloadSpeed,
-      uploadSpeed: uploadSpeed,
-      totalDownload: _totalDownload > 0 ? _totalDownload : null,
-      totalUpload: _totalUpload > 0 ? _totalUpload : null,
-      duration: started != null ? DateTime.now().difference(started) : null,
-    );
-  }
 }

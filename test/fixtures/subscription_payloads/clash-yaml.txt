@@ -1,0 +1,36 @@
+port: 7890
+socks-port: 7891
+allow-lan: false
+mode: rule
+log-level: info
+
+proxies:
+  - name: "YAML One"
+    type: vmess
+    server: 198.51.100.20
+    port: 443
+    uuid: 00000000-0000-4000-8000-000000000000
+    alterId: 0
+    cipher: auto
+    tls: true
+    network: ws
+    ws-opts:
+      path: /yaml
+      headers:
+        Host: yaml.example
+  - name: "YAML Two"
+    type: trojan
+    server: 198.51.100.21
+    port: 443
+    password: password
+    sni: yaml2.example
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies:
+      - YAML One
+      - YAML Two
+
+rules:
+  - MATCH,PROXY

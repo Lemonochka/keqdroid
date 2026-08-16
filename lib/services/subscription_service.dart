@@ -45,6 +45,35 @@ class SubscriptionProfileHeaders {
       updateIntervalHours == null;
 }
 
+/// Что вернула загрузка подписки: сами конфиги плюс всё, что панель сообщила
+/// о квоте и оформлении.
+///
+/// Все поля обязательны намеренно — раньше это был record, и он не позволял
+/// забыть ни одного; ветки фолбэков сетевого конвейера должны сказать про
+/// каждое поле явно, в том числе `null`.
+class SubscriptionFetchResult {
+  final List<String> configs;
+  final int? usedBytes;
+  final int? totalBytes;
+  final DateTime? expiresAt;
+
+  /// UA, на котором payload наконец приехал. `null` означает «перебора UA не
+  /// было» — тогда сохранённый в подписке UA не затирается, см.
+  /// [SubscriptionService.updateSubscription].
+  final String? usedUserAgent;
+
+  final SubscriptionProfileHeaders profile;
+
+  const SubscriptionFetchResult({
+    required this.configs,
+    required this.usedBytes,
+    required this.totalBytes,
+    required this.expiresAt,
+    required this.usedUserAgent,
+    required this.profile,
+  });
+}
+
 class UpdateResult {
   final bool success;
   final int serverCount;
@@ -251,7 +280,7 @@ class SubscriptionService {
   /// качает подписку и отдаёт список raw-конфигов.
   /// заодно парсит X-Subscription-Userinfo для трафика. при сетевой ошибке один retry через 2с.
   /// [userAgent] — сохранённый рабочий UA подписки: первый запрос идёт с ним.
-  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent, SubscriptionProfileHeaders profile})>
+  Future<SubscriptionFetchResult>
   fetchRaw(String url, {CancelToken? cancelToken, String? userAgent}) async {
     if (!isSafeUrl(url)) {
       // http выделяем в отдельное сообщение: у него в UI точечный фикс
@@ -282,7 +311,7 @@ class SubscriptionService {
         savedUserAgent: userAgent,
       );
 
-      return (
+      return SubscriptionFetchResult(
         configs: result.configs,
         usedBytes: result.usedBytes,
         totalBytes: result.totalBytes,
@@ -313,7 +342,7 @@ class SubscriptionService {
     }
   }
 
-  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent, SubscriptionProfileHeaders profile})>
+  Future<SubscriptionFetchResult>
   _fetchWithRetry(
     String url, {
     CancelToken? cancelToken,
@@ -335,7 +364,6 @@ class SubscriptionService {
         cancelToken: cancelToken,
         options: _hwidOptions({'User-Agent': initialUa, ...hwidHeaders}),
       );
-      _logRemnawaveHwidHeaders(response.headers, source: 'DIO');
       _throwIfRemnawaveHwidHeadersIndicateError(response.headers, url: url);
 
       if (response.statusCode != 200) {
@@ -420,13 +448,13 @@ class SubscriptionService {
         expiresAt ??= meta.expiresAt;
       }
 
-      return (
-      configs: configs,
-      usedBytes: usedBytes,
-      totalBytes: totalBytes,
-      expiresAt: expiresAt,
-      usedUserAgent: usedUserAgent,
-      profile: profile,
+      return SubscriptionFetchResult(
+        configs: configs,
+        usedBytes: usedBytes,
+        totalBytes: totalBytes,
+        expiresAt: expiresAt,
+        usedUserAgent: usedUserAgent,
+        profile: profile,
       );
     } on DioException catch (e) {
       // некоторые бэкенды отдают не-200 (502 и т.п.), но в body уже валидный payload.
@@ -501,7 +529,7 @@ class SubscriptionService {
     }
   }
 
-  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent, SubscriptionProfileHeaders profile})?>
+  Future<SubscriptionFetchResult?>
   _tryParseFromErrorResponse(DioException e) async {
     final response = e.response;
     if (response == null) {
@@ -525,7 +553,7 @@ class SubscriptionService {
         return null;
       }
       final headerMeta = _parseUserInfoHeader(response.headers);
-      return (
+      return SubscriptionFetchResult(
         configs: configs,
         usedBytes: headerMeta.usedBytes,
         totalBytes: headerMeta.totalBytes,
@@ -538,7 +566,7 @@ class SubscriptionService {
     }
   }
 
-  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent, SubscriptionProfileHeaders profile})?>
+  Future<SubscriptionFetchResult?>
   _tryParseWithClientUserAgents(
     String url, {
     CancelToken? cancelToken,
@@ -554,7 +582,6 @@ class SubscriptionService {
     if (response == null) {
       return null;
     }
-    _logRemnawaveHwidHeaders(response.headers, source: 'UA-RETRY');
     _throwIfRemnawaveHwidHeadersIndicateError(response.headers, url: url);
 
     final body = response.data ?? '';
@@ -574,7 +601,7 @@ class SubscriptionService {
 
     final headerMeta = _parseUserInfoHeader(response.headers);
     final bodyMeta = _extractMetaFromBody(body);
-    return (
+    return SubscriptionFetchResult(
       configs: configs,
       usedBytes: headerMeta.usedBytes ?? bodyMeta.usedBytes,
       totalBytes: headerMeta.totalBytes ?? bodyMeta.totalBytes,
@@ -584,7 +611,7 @@ class SubscriptionService {
     );
   }
 
-  Future<({List<String> configs, int? usedBytes, int? totalBytes, DateTime? expiresAt, String? usedUserAgent, SubscriptionProfileHeaders profile})?>
+  Future<SubscriptionFetchResult?>
   _tryFetchWithHttpClientFallback(
     String url, {
     required String? hwid,
@@ -622,10 +649,6 @@ class SubscriptionService {
         _throwIfRemnawaveHwidHeadersIndicateError(
           dioLikeHeaders,
           url: candidate,
-        );
-        _logRemnawaveHwidHeaders(
-          dioLikeHeaders,
-          source: 'HTTPCLIENT',
         );
         final bytes = await resp.fold<List<int>>(<int>[], (acc, chunk) {
           acc.addAll(chunk);
@@ -676,7 +699,7 @@ class SubscriptionService {
         if (configs.isEmpty) continue;
         final headerMeta = _parseUserInfoHeader(dioLikeHeaders);
         final bodyMeta = _extractMetaFromBody(body);
-        return (
+        return SubscriptionFetchResult(
           configs: configs,
           usedBytes: headerMeta.usedBytes ?? bodyMeta.usedBytes,
           totalBytes: headerMeta.totalBytes ?? bodyMeta.totalBytes,
@@ -890,10 +913,6 @@ class SubscriptionService {
         url: url,
       );
     }
-  }
-
-  void _logRemnawaveHwidHeaders(Headers headers, {required String source}) {
-    // пока не логируем
   }
 
   /// Косметические заголовки подписки по [XTLS Subscription Standards].

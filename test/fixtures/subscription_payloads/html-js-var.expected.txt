@@ -1,0 +1,2 @@
+vless://00000000-0000-4000-8000-000000000000@198.51.100.50:443?type=tcp&security=tls&sni=js.example#JS%20One
+trojan://password@198.51.100.51:443?security=tls&sni=js2.example#JS Two

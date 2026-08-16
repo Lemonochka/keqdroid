@@ -1,0 +1,3 @@
+vless://00000000-0000-4000-8000-000000000000@198.51.100.80:443?type=tcp&security=tls&sni=mixed.example#Mixed%20Link
+{"remarks":"Mixed Ready","outbounds":[{"tag":"proxy","protocol":"trojan","settings":{"servers":[{"address":"198.51.100.81","port":443,"password":"password"}]},"streamSettings":{"network":"tcp","security":"tls","tlsSettings":{"serverName":"mixed2.example"}}}]}
+trojan://password@198.51.100.82:443?security=tls&sni=mixed3.example#Mixed Trailing

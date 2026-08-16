@@ -1,0 +1,2 @@
+vless://00000000-0000-4000-8000-000000000000@0.0.0.0:0?type=tcp#Please enable HWID for this device
+vless://00000000-0000-4000-8000-000000000000@0.0.0.0:0?type=tcp#Bind HWID in the panel to continue

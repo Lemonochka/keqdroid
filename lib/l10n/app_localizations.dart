@@ -3053,6 +3053,72 @@ abstract class AppLocalizations {
   /// **'Retry operation. If issue repeats, check server and app settings.'**
   String get errorUnknownAction;
 
+  /// No description provided for @errorTunAdminTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permission Required'**
+  String get errorTunAdminTitle;
+
+  /// No description provided for @errorVpnPermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permission Required'**
+  String get errorVpnPermissionTitle;
+
+  /// No description provided for @errorHwidBindTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Device Binding Required'**
+  String get errorHwidBindTitle;
+
+  /// No description provided for @errorDeviceLimitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Device Limit Reached'**
+  String get errorDeviceLimitTitle;
+
+  /// No description provided for @errorProviderNoHostsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider Configuration Required'**
+  String get errorProviderNoHostsTitle;
+
+  /// No description provided for @errorConfigInvalidTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration Error'**
+  String get errorConfigInvalidTitle;
+
+  /// No description provided for @errorAuthDeniedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorization Failed'**
+  String get errorAuthDeniedTitle;
+
+  /// No description provided for @errorSubUrlInvalidTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription URL Invalid'**
+  String get errorSubUrlInvalidTitle;
+
+  /// No description provided for @errorSubInsecureHttpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Insecure Subscription URL'**
+  String get errorSubInsecureHttpTitle;
+
+  /// No description provided for @errorNetworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Network Error'**
+  String get errorNetworkTitle;
+
+  /// No description provided for @errorUnknownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Operation Failed'**
+  String get errorUnknownTitle;
+
   /// No description provided for @serversPin.
   ///
   /// In en, this message translates to:

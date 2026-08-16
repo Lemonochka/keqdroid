@@ -342,7 +342,7 @@ class _ServerTile extends ConsumerWidget {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(_friendlyError(e)),
+                              content: Text(_shortError(e)),
                               backgroundColor: AppTheme.red(context),
                             ),
                           );
@@ -650,17 +650,10 @@ class _ServerTile extends ConsumerWidget {
 
 }
 
-String _friendlyError(Object e, [BuildContext? context]) {
+String _shortError(Object e, [BuildContext? context]) {
   if (context == null) return explainError(e).short;
   final localized = explainErrorLocalized(e, AppLocalizations.of(context)!);
   return '${localized.title}: ${localized.message}';
-}
-
-String _friendlyErrorDetailed(Object e, [BuildContext? context]) {
-  if (context == null) return explainError(e).full;
-  final l10n = AppLocalizations.of(context)!;
-  final localized = explainErrorLocalized(e, l10n);
-  return '${localized.title}\n${localized.message}\n${l10n.errorActionLabel(localized.action)}';
 }
 
 /// Адрес сервера в шапке меню, он же кнопка копирования.

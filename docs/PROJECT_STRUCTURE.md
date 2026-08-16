@@ -67,8 +67,7 @@ lib/
 │   ├── notification_service.dart локальные уведомления (Android)
 │   ├── background_service.dart  WorkManager: фоновое обновление подписок (Android)
 │   ├── desktop_background_service.dart / linux_background_service.dart  десктоп-фон
-│   ├── windows_desktop_service.dart  окно/трей/автозапуск Windows
-│   └── firefox_proxy_helper.dart  правка Firefox user.js под системный прокси
+│   └── windows_desktop_service.dart  окно/трей/автозапуск Windows
 │
 ├── tunnel/              ← абстракция туннеля + платформенные реализации
 │   ├── tunnel_backend.dart        интерфейс TunnelBackend + константы спидтеста

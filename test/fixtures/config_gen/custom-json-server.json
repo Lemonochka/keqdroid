@@ -1,0 +1,102 @@
+{
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "freedom",
+      "settings": {}
+    },
+    {
+      "protocol": "blackhole",
+      "tag": "keq-block"
+    }
+  ],
+  "log": {
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "tag": "socks-in",
+      "port": 2080,
+      "listen": "127.0.0.1",
+      "protocol": "socks",
+      "settings": {
+        "auth": "password",
+        "udp": true,
+        "accounts": [
+          {
+            "user": "u",
+            "pass": "p"
+          }
+        ]
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls",
+          "quic"
+        ],
+        "routeOnly": true
+      }
+    },
+    {
+      "tag": "http-in",
+      "port": 2081,
+      "listen": "127.0.0.1",
+      "protocol": "http",
+      "settings": {
+        "allowTransparent": false,
+        "accounts": [
+          {
+            "user": "u",
+            "pass": "p"
+          }
+        ]
+      }
+    }
+  ],
+  "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "ruleTag": "user-block-domains",
+        "domain": [
+          "domain:ads.example",
+          "geosite:category-ads-all"
+        ],
+        "outboundTag": "keq-block"
+      },
+      {
+        "type": "field",
+        "ruleTag": "user-direct-domains",
+        "domain": [
+          "domain:direct.example"
+        ],
+        "outboundTag": "proxy"
+      },
+      {
+        "type": "field",
+        "ruleTag": "user-direct-ips",
+        "ip": [
+          "10.10.0.0/16"
+        ],
+        "outboundTag": "proxy"
+      },
+      {
+        "type": "field",
+        "ruleTag": "user-proxy-domains",
+        "domain": [
+          "domain:proxy.example",
+          "geosite:google"
+        ],
+        "outboundTag": "proxy"
+      },
+      {
+        "type": "field",
+        "ruleTag": "final",
+        "network": "tcp,udp",
+        "outboundTag": "proxy"
+      }
+    ]
+  }
+}

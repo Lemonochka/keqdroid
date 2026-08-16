@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Panel</title></head>
+<body>
+  <script>
+    // Регрессия: подстрока "ss://" внутри "wss://" однажды превращалась в
+    // фантомный shadowsocks-сервер. Живая ссылка в payload'е здесь одна.
+    var live = new WebSocket("wss://panel.example/socket");
+    var sub = "vless://00000000-0000-4000-8000-000000000000@198.51.100.60:443?type=tcp&security=tls&sni=wss.example#Only%20Real%20One";
+  </script>
+</body>
+</html>
