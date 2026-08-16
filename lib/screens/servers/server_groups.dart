@@ -477,7 +477,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                             ).showSnackBar(
                                               SnackBar(
                                                 content: Text(
-                                                  _friendlyError(e),
+                                                  _shortError(e),
                                                 ),
                                                 backgroundColor: AppTheme.red(
                                                   context,
@@ -520,7 +520,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                             context,
                                           ).showSnackBar(
                                             SnackBar(
-                                              content: Text(_friendlyError(e)),
+                                              content: Text(_shortError(e)),
                                               backgroundColor: AppTheme.red(
                                                 context,
                                               ),

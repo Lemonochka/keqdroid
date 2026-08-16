@@ -434,12 +434,6 @@ class _SubsErrorView extends StatelessWidget {
   final VoidCallback onRetry;
   const _SubsErrorView({required this.error, required this.onRetry});
 
-  String _humanMessage(BuildContext context, Object e) {
-    final l10n = AppLocalizations.of(context)!;
-    final details = explainErrorLocalized(e, l10n);
-    return '${details.title}\n${details.message}\n${l10n.errorActionLabel(details.action)}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -468,7 +462,7 @@ class _SubsErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              _humanMessage(context, error),
+              friendlyError(error, context),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium
                   ?.copyWith(color: textLightColor),

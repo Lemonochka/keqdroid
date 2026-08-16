@@ -1574,6 +1574,39 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorUnknownAction => 'Повторите операцию. Если ошибка повторяется, проверьте сервер и настройки приложения.';
 
   @override
+  String get errorTunAdminTitle => 'Требуется разрешение';
+
+  @override
+  String get errorVpnPermissionTitle => 'Требуется разрешение';
+
+  @override
+  String get errorHwidBindTitle => 'Требуется привязка устройства';
+
+  @override
+  String get errorDeviceLimitTitle => 'Достигнут лимит устройств';
+
+  @override
+  String get errorProviderNoHostsTitle => 'Требуется настройка у провайдера';
+
+  @override
+  String get errorConfigInvalidTitle => 'Ошибка конфигурации';
+
+  @override
+  String get errorAuthDeniedTitle => 'Ошибка авторизации';
+
+  @override
+  String get errorSubUrlInvalidTitle => 'Неверная ссылка подписки';
+
+  @override
+  String get errorSubInsecureHttpTitle => 'Небезопасная ссылка подписки';
+
+  @override
+  String get errorNetworkTitle => 'Ошибка сети';
+
+  @override
+  String get errorUnknownTitle => 'Не удалось выполнить';
+
+  @override
   String get serversPin => 'Закрепить сервер';
 
   @override

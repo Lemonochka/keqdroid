@@ -1572,6 +1572,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorUnknownAction => 'Retry operation. If issue repeats, check server and app settings.';
 
   @override
+  String get errorTunAdminTitle => 'Permission Required';
+
+  @override
+  String get errorVpnPermissionTitle => 'Permission Required';
+
+  @override
+  String get errorHwidBindTitle => 'Device Binding Required';
+
+  @override
+  String get errorDeviceLimitTitle => 'Device Limit Reached';
+
+  @override
+  String get errorProviderNoHostsTitle => 'Provider Configuration Required';
+
+  @override
+  String get errorConfigInvalidTitle => 'Configuration Error';
+
+  @override
+  String get errorAuthDeniedTitle => 'Authorization Failed';
+
+  @override
+  String get errorSubUrlInvalidTitle => 'Subscription URL Invalid';
+
+  @override
+  String get errorSubInsecureHttpTitle => 'Insecure Subscription URL';
+
+  @override
+  String get errorNetworkTitle => 'Network Error';
+
+  @override
+  String get errorUnknownTitle => 'Operation Failed';
+
+  @override
   String get serversPin => 'Pin server';
 
   @override

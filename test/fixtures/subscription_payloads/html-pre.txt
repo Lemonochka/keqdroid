@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Subscription</title>
+</head>
+<body>
+  <h1>Your nodes</h1>
+  <p>Copy the list below into your client.</p>
+  <pre>
+vless://00000000-0000-4000-8000-000000000000@198.51.100.40:443?type=tcp&amp;security=tls&amp;sni=pre.example#HTML%20One
+trojan://password@198.51.100.41:443?security=tls&amp;sni=pre2.example#HTML Two
+  </pre>
+  <footer>Support: support.example</footer>
+</body>
+</html>

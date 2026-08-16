@@ -453,7 +453,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Text(
-                    _friendlyErrorDetailed(vpnErrorMessage),
+                    friendlyError(vpnErrorMessage, context),
                     textAlign: TextAlign.center,
                     maxLines: 5,
                     overflow: TextOverflow.ellipsis,
@@ -799,7 +799,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
   void _showImportError(BuildContext ctx, Object e) {
     ScaffoldMessenger.of(ctx).showSnackBar(
       SnackBar(
-        content: Text(_friendlyError(e, ctx)),
+        content: Text(_shortError(e, ctx)),
         backgroundColor: AppTheme.red(ctx),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
@@ -817,7 +817,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
     final summary = AppLocalizations.of(ctx)!.serversImportedSummary(added, total);
     ScaffoldMessenger.of(ctx).showSnackBar(
       SnackBar(
-        content: Text('$summary\n${_friendlyError(error, ctx)}'),
+        content: Text('$summary\n${_shortError(error, ctx)}'),
         backgroundColor: added > 0 ? AppTheme.orange(ctx) : AppTheme.red(ctx),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
@@ -939,8 +939,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
                             setModalState(() {
                               loading = false;
                               sheetError = ctx.mounted
-                                  ? _friendlyError(result.firstError!, ctx)
-                                  : _friendlyError(result.firstError!);
+                                  ? _shortError(result.firstError!, ctx)
+                                  : _shortError(result.firstError!);
                             });
                           }
                         },
@@ -1138,7 +1138,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
         await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
       } catch (e) {
         if (!mounted) return;
-        _showSnack(_friendlyError(e, context));
+        _showSnack(_shortError(e, context));
       }
     }
   }
@@ -1149,7 +1149,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
         await ref.read(vpnStateProvider.notifier).disconnect();
       } catch (e) {
         if (!mounted) return;
-        _showSnack(_friendlyError(e, context));
+        _showSnack(_shortError(e, context));
       }
     } else if (status == VpnStatus.connecting) {
       // Тап по кругу во время подключения — отмена попытки, иначе мёртвый
@@ -1158,7 +1158,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
         await ref.read(vpnStateProvider.notifier).cancelConnect();
       } catch (e) {
         if (!mounted) return;
-        _showSnack(_friendlyError(e, context));
+        _showSnack(_shortError(e, context));
       }
     } else if (status == VpnStatus.disconnecting) {
       return;
@@ -1174,7 +1174,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
         // человекочитаемый текст вместо сырого e.toString(); после await
         // виджет мог быть демонтирован (сворачивание в трей)
         if (!mounted) return;
-        _showSnack(_friendlyError(e, context));
+        _showSnack(_shortError(e, context));
       }
     }
   }

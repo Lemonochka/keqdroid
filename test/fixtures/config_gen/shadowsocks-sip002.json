@@ -1,0 +1,166 @@
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "dns": {
+    "servers": [
+      {
+        "address": "localhost",
+        "domains": [
+          "domain:direct.example"
+        ],
+        "skipFallback": true
+      },
+      {
+        "address": "https+local://1.1.1.1/dns-query"
+      },
+      {
+        "address": "https+local://8.8.8.8/dns-query"
+      }
+    ],
+    "queryStrategy": "UseIPv4"
+  },
+  "inbounds": [
+    {
+      "tag": "socks-in",
+      "port": 2080,
+      "listen": "127.0.0.1",
+      "protocol": "socks",
+      "settings": {
+        "auth": "password",
+        "udp": true,
+        "accounts": [
+          {
+            "user": "u",
+            "pass": "p"
+          }
+        ]
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls",
+          "quic"
+        ],
+        "routeOnly": true
+      }
+    },
+    {
+      "tag": "http-in",
+      "port": 2081,
+      "listen": "127.0.0.1",
+      "protocol": "http",
+      "settings": {
+        "allowTransparent": false,
+        "accounts": [
+          {
+            "user": "u",
+            "pass": "p"
+          }
+        ]
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "shadowsocks",
+      "settings": {
+        "address": "198.51.100.15",
+        "port": 8388,
+        "method": "aes-256-gcm",
+        "password": "password",
+        "level": 0
+      },
+      "streamSettings": {
+        "network": "tcp"
+      }
+    },
+    {
+      "protocol": "freedom",
+      "tag": "direct"
+    },
+    {
+      "protocol": "blackhole",
+      "tag": "block"
+    }
+  ],
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "ip": [
+          "169.254.0.0/16",
+          "224.0.0.0/4",
+          "255.255.255.255/32"
+        ],
+        "outboundTag": "block",
+        "ruleTag": "block-special"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "domain:ads.example",
+          "geosite:category-ads-all"
+        ],
+        "outboundTag": "block",
+        "ruleTag": "block-domains"
+      },
+      {
+        "type": "field",
+        "ip": [
+          "198.51.100.15"
+        ],
+        "outboundTag": "direct",
+        "ruleTag": "server-ip"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "domain:direct.example"
+        ],
+        "outboundTag": "direct",
+        "ruleTag": "direct-domains"
+      },
+      {
+        "type": "field",
+        "ip": [
+          "10.10.0.0/16",
+          "0.0.0.0/8",
+          "10.0.0.0/8",
+          "100.64.0.0/10",
+          "127.0.0.0/8",
+          "169.254.0.0/16",
+          "172.16.0.0/12",
+          "172.19.0.0/30",
+          "192.0.0.0/24",
+          "192.168.0.0/16",
+          "198.51.100.0/24",
+          "203.0.113.0/24",
+          "::1/128",
+          "fc00::/7",
+          "fe80::/10"
+        ],
+        "outboundTag": "direct",
+        "ruleTag": "direct-private"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "domain:proxy.example",
+          "geosite:google"
+        ],
+        "outboundTag": "proxy",
+        "ruleTag": "proxy-domains"
+      },
+      {
+        "type": "field",
+        "outboundTag": "proxy",
+        "network": "tcp,udp",
+        "ruleTag": "final"
+      }
+    ]
+  }
+}

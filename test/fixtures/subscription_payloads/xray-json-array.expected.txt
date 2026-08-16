@@ -1,0 +1,52 @@
+{
+  "remarks": "Array Config One",
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "198.51.100.100",
+            "port": 443,
+            "users": [
+              {
+                "id": "00000000-0000-4000-8000-000000000000",
+                "encryption": "none"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "none"
+      }
+    }
+  ]
+}
+{
+  "remarks": "Array Config Two",
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "trojan",
+      "settings": {
+        "servers": [
+          {
+            "address": "198.51.100.101",
+            "port": 443,
+            "password": "password"
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "array2.example"
+        }
+      }
+    }
+  ]
+}

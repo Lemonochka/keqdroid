@@ -1572,6 +1572,39 @@ class AppLocalizationsFa extends AppLocalizations {
   String get errorUnknownAction => 'دوباره تلاش کنید. اگر تکرار شد، سرور و تنظیمات برنامه را بررسی کنید.';
 
   @override
+  String get errorTunAdminTitle => 'نیاز به مجوز';
+
+  @override
+  String get errorVpnPermissionTitle => 'نیاز به مجوز';
+
+  @override
+  String get errorHwidBindTitle => 'نیاز به اتصال دستگاه';
+
+  @override
+  String get errorDeviceLimitTitle => 'محدودیت دستگاه‌ها';
+
+  @override
+  String get errorProviderNoHostsTitle => 'نیاز به پیکربندی ارائه‌دهنده';
+
+  @override
+  String get errorConfigInvalidTitle => 'خطای پیکربندی';
+
+  @override
+  String get errorAuthDeniedTitle => 'احراز هویت ناموفق';
+
+  @override
+  String get errorSubUrlInvalidTitle => 'نشانی اشتراک نامعتبر';
+
+  @override
+  String get errorSubInsecureHttpTitle => 'نشانی اشتراک ناامن';
+
+  @override
+  String get errorNetworkTitle => 'خطای شبکه';
+
+  @override
+  String get errorUnknownTitle => 'عملیات ناموفق';
+
+  @override
   String get serversPin => 'سنجاق کردن سرور';
 
   @override

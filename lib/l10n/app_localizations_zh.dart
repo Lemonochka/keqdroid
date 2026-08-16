@@ -1572,6 +1572,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorUnknownAction => '请重试。若问题重复出现，请检查服务器和应用设置。';
 
   @override
+  String get errorTunAdminTitle => '需要授权';
+
+  @override
+  String get errorVpnPermissionTitle => '需要授权';
+
+  @override
+  String get errorHwidBindTitle => '需要绑定设备';
+
+  @override
+  String get errorDeviceLimitTitle => '已达设备上限';
+
+  @override
+  String get errorProviderNoHostsTitle => '需要服务商配置';
+
+  @override
+  String get errorConfigInvalidTitle => '配置错误';
+
+  @override
+  String get errorAuthDeniedTitle => '授权失败';
+
+  @override
+  String get errorSubUrlInvalidTitle => '订阅链接无效';
+
+  @override
+  String get errorSubInsecureHttpTitle => '订阅链接不安全';
+
+  @override
+  String get errorNetworkTitle => '网络错误';
+
+  @override
+  String get errorUnknownTitle => '操作失败';
+
+  @override
   String get serversPin => '置顶服务器';
 
   @override

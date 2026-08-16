@@ -1,0 +1,148 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "dns": {
+    "servers": [
+      {
+        "tag": "local-dns",
+        "type": "local"
+      },
+      {
+        "tag": "proxy-dns",
+        "type": "https",
+        "server": "1.1.1.1",
+        "detour": "proxy"
+      }
+    ],
+    "rules": [
+      {
+        "domain_suffix": [
+          "direct.example"
+        ],
+        "server": "local-dns"
+      }
+    ],
+    "strategy": "ipv4_only",
+    "final": "proxy-dns"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "mtu": 1400,
+      "address": [
+        "172.19.0.1/30"
+      ],
+      "auto_route": true,
+      "strict_route": false,
+      "stack": "system",
+      "interface_name": "tun-keqdis"
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "socks",
+      "tag": "proxy",
+      "server": "127.0.0.1",
+      "server_port": 2080,
+      "version": "5",
+      "username": "u",
+      "password": "p"
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "block",
+      "tag": "block"
+    }
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "find_process": true,
+    "default_domain_resolver": "proxy-dns",
+    "rules": [
+      {
+        "inbound": [
+          "tun-in"
+        ],
+        "action": "sniff"
+      },
+      {
+        "protocol": "dns",
+        "action": "hijack-dns"
+      },
+      {
+        "protocol": "icmp",
+        "outbound": "direct"
+      },
+      {
+        "ip_cidr": [
+          "172.19.0.0/30"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "process_name": [
+          "xray.exe",
+          "sing-box.exe",
+          "wireproxy.exe",
+          "keqdroid.exe"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "process_name": [
+          "tailscaled.exe",
+          "wireguard.exe",
+          "openvpn.exe",
+          "openvpn-gui.exe"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "domain_suffix": [
+          "ads.example"
+        ],
+        "outbound": "block"
+      },
+      {
+        "ip_cidr": [
+          "198.51.100.10/32"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "domain_suffix": [
+          "direct.example"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "ip_cidr": [
+          "10.10.0.0/16"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "ip_cidr": [
+          "10.0.0.0/8",
+          "172.16.0.0/12",
+          "192.168.0.0/16",
+          "127.0.0.0/8"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "domain_suffix": [
+          "proxy.example"
+        ],
+        "outbound": "proxy"
+      }
+    ],
+    "final": "proxy"
+  }
+}

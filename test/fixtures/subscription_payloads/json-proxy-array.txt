@@ -1,0 +1,21 @@
+[
+  {
+    "name": "JSON One",
+    "type": "vless",
+    "server": "198.51.100.30",
+    "port": 443,
+    "uuid": "00000000-0000-4000-8000-000000000000",
+    "tls": true,
+    "servername": "json.example",
+    "network": "ws",
+    "ws-opts": { "path": "/json" }
+  },
+  {
+    "name": "JSON Two",
+    "type": "trojan",
+    "server": "198.51.100.31",
+    "port": 443,
+    "password": "password",
+    "sni": "json2.example"
+  }
+]
