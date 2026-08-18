@@ -313,6 +313,22 @@
       "error": {}
     }
   },
+  "subscriptionIdentityTitle": "Идентичность устройства",
+  "subscriptionIdentityHint": "Каким панель видит клиента: HWID, User-Agent и device-заголовки. Действует только на эту подписку.",
+  "subscriptionIdentityEnable": "Своя идентичность",
+  "subscriptionIdentityAppDefault": "Как у приложения",
+  "subscriptionIdentityAppDefaultHint": "Слать настоящее значение устройства",
+  "subscriptionIdentityHwid": "HWID",
+  "subscriptionIdentityHwidOff": "В дополнительных настройках выключено «Делиться HWID устройства» — никакой HWID не уходит, в том числе подставной.",
+  "subscriptionIdentityUserAgent": "User-Agent",
+  "subscriptionIdentityDeviceOs": "ОС устройства",
+  "subscriptionIdentityDeviceModel": "Модель устройства",
+  "subscriptionIdentityOsVersion": "Версия ОС",
+  "subscriptionIdentitySectionUsed": "Уже используется",
+  "subscriptionIdentitySearchOrEnter": "Искать или вписать своё",
+  "subscriptionIdentityUseTyped": "Использовать это значение",
+  "subscriptionIdentityReset": "Сбросить",
+  "subscriptionIdentityApply": "Применить",
   "subscriptionsDeleteSubscription": "Удалить подписку",
   "subscriptionsDeleteConfirm": "Вы уверены, что хотите удалить \"{name}\"?\n\nЭто также удалит все связанные серверы.",
   "@subscriptionsDeleteConfirm": {

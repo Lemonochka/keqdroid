@@ -472,13 +472,16 @@ class ConfigGeneratorV2 {
       ]);
     }
 
-    // Пользовательские списки роутинга — ПЕРЕД авторскими правилами.
+    // Пользовательские списки роутинга — ПОСЛЕ авторских правил.
     //
-    // Раньше готовый конфиг забирал роутинг целиком, и настройки приложения
-    // («обход», «прокси», «блок») на таком сервере молча не работали — самая
-    // частая жалоба на custom-конфиги. Порядок именно такой: то, что человек
-    // назвал руками, важнее заготовки провайдера, а всё неназванное по-прежнему
-    // решает авторский роутинг — ради него такой сервер и берут.
+    // Готовый конфиг берут ровно ради его роутинга: провайдер уже разложил, что
+    // идёт напрямую (банки, госуслуги, локальные сервисы), а что в туннель.
+    // Когда наши списки решали раньше, дефолтный «обход» из настроек перебивал
+    // эту раскладку, и от кастомного конфига оставались одни аутбаунды.
+    //
+    // Своё при этом не пропадает: у авторов почти никогда нет catch-all, и всё,
+    // что провайдер не назвал, по-прежнему решают списки приложения. Если же
+    // catch-all у автора есть — он и должен побеждать, за этим сервер и брали.
     final directTag =
         _existingOutboundTag(custom, 'freedom') ?? _customDirectTag;
     final userRules = _customUserRules(
@@ -498,6 +501,7 @@ class ConfigGeneratorV2 {
       _ => custom.primaryOutboundTag,
     };
     final appendRules = <Map<String, dynamic>>[
+      ...userRules,
       {
         'type': 'field',
         'ruleTag': 'final',
@@ -507,15 +511,19 @@ class ConfigGeneratorV2 {
     ];
 
     final usedTags = <String>{
-      for (final rule in [...userRules, ...appendRules])
-        rule['outboundTag'] as String,
+      for (final rule in appendRules) rule['outboundTag'] as String,
       if (settings.lanSharing) blockTag ?? _customBlockTag,
     };
 
     final config = custom.buildSessionConfig(
       inbounds: inbounds,
       logLevel: settings.xrayCore.logLevel,
-      prependRules: [...lanRules, ...userRules],
+      // LAN-правила остаются ПЕРЕД авторскими, и это не вкусовщина: инбаунд
+      // LAN-прокси слушает 0.0.0.0, а `lan-deny` отсекает всё, что пришло в
+      // него не из локальной сети. Пропусти вперёд авторское правило — и любой
+      // запрос снаружи, попавший под него, уедет в туннель раньше запрета,
+      // то есть прокси станет открытым для интернета.
+      prependRules: lanRules,
       appendRules: appendRules,
       geoIndex: geoIndex,
     );

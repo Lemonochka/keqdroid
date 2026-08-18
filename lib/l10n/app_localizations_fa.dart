@@ -740,6 +740,54 @@ class AppLocalizationsFa extends AppLocalizations {
   }
 
   @override
+  String get subscriptionIdentityTitle => 'شناسه دستگاه';
+
+  @override
+  String get subscriptionIdentityHint => 'آنچه پنل می‌بیند: HWID، User-Agent و هدرهای دستگاه. فقط برای همین اشتراک اعمال می‌شود.';
+
+  @override
+  String get subscriptionIdentityEnable => 'استفاده از شناسه دلخواه';
+
+  @override
+  String get subscriptionIdentityAppDefault => 'پیش‌فرض برنامه';
+
+  @override
+  String get subscriptionIdentityAppDefaultHint => 'ارسال مقدار واقعی این دستگاه';
+
+  @override
+  String get subscriptionIdentityHwid => 'HWID';
+
+  @override
+  String get subscriptionIdentityHwidOff => 'در تنظیمات پیشرفته «اشتراک‌گذاری HWID دستگاه» خاموش است، بنابراین هیچ HWID‌ای ارسال نمی‌شود؛ حتی دلخواه.';
+
+  @override
+  String get subscriptionIdentityUserAgent => 'User-Agent';
+
+  @override
+  String get subscriptionIdentityDeviceOs => 'سیستم‌عامل دستگاه';
+
+  @override
+  String get subscriptionIdentityDeviceModel => 'مدل دستگاه';
+
+  @override
+  String get subscriptionIdentityOsVersion => 'نسخه سیستم‌عامل';
+
+  @override
+  String get subscriptionIdentitySectionUsed => 'در حال استفاده';
+
+  @override
+  String get subscriptionIdentitySearchOrEnter => 'جست‌وجو یا وارد کردن مقدار دلخواه';
+
+  @override
+  String get subscriptionIdentityUseTyped => 'استفاده از این مقدار';
+
+  @override
+  String get subscriptionIdentityReset => 'بازنشانی';
+
+  @override
+  String get subscriptionIdentityApply => 'اعمال';
+
+  @override
   String get subscriptionsDeleteSubscription => 'حذف اشتراک';
 
   @override

@@ -1,5 +1,96 @@
 import 'package:uuid/uuid.dart';
 
+/// Чем клиент представляется панели при загрузке ОДНОЙ подписки.
+///
+/// Панели с привязкой по HWID считают устройства по заголовкам запроса
+/// (`x-hwid`, `x-device-os`, `x-device-model`, `x-ver-os`) и по User-Agent.
+/// Здесь эти значения задаются на подписку, а не на приложение: у разных
+/// провайдеров разные требования, и общий на всех HWID означал бы, что ради
+/// одной подписки придётся ломать привязку остальных.
+///
+/// Пустое поле = «как у приложения»: подставится настоящее значение устройства.
+class SubscriptionFetchIdentity {
+  /// Подмена включена. Отдельно от заполненности полей: выключить её, не
+  /// потеряв набранные значения, — обычное дело при отладке привязки.
+  final bool enabled;
+
+  final String? hwid;
+  final String? userAgent;
+  final String? deviceModel;
+  final String? deviceOs;
+  final String? osVersion;
+
+  const SubscriptionFetchIdentity({
+    this.enabled = false,
+    this.hwid,
+    this.userAgent,
+    this.deviceModel,
+    this.deviceOs,
+    this.osVersion,
+  });
+
+  static const empty = SubscriptionFetchIdentity();
+
+  factory SubscriptionFetchIdentity.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return empty;
+    return SubscriptionFetchIdentity(
+      enabled: json['enabled'] as bool? ?? false,
+      hwid: _trimOrNull(json['hwid'] as String?),
+      userAgent: _trimOrNull(json['userAgent'] as String?),
+      deviceModel: _trimOrNull(json['deviceModel'] as String?),
+      deviceOs: _trimOrNull(json['deviceOs'] as String?),
+      osVersion: _trimOrNull(json['osVersion'] as String?),
+    );
+  }
+
+  static String? _trimOrNull(String? v) {
+    final t = v?.trim();
+    return t == null || t.isEmpty ? null : t;
+  }
+
+  Map<String, dynamic> toJson() => {
+        'enabled': enabled,
+        if (hwid != null) 'hwid': hwid,
+        if (userAgent != null) 'userAgent': userAgent,
+        if (deviceModel != null) 'deviceModel': deviceModel,
+        if (deviceOs != null) 'deviceOs': deviceOs,
+        if (osVersion != null) 'osVersion': osVersion,
+      };
+
+  /// Значения, которые реально уходят в запрос. Выключенная подмена не даёт
+  /// ничего, даже если поля заполнены.
+  String? get activeHwid => enabled ? hwid : null;
+  String? get activeUserAgent => enabled ? userAgent : null;
+  String? get activeDeviceOs => enabled ? deviceOs : null;
+  String? get activeDeviceModel => enabled ? deviceModel : null;
+  String? get activeOsVersion => enabled ? osVersion : null;
+
+  bool get hasCustomFields =>
+      hwid != null ||
+      userAgent != null ||
+      deviceModel != null ||
+      deviceOs != null ||
+      osVersion != null;
+
+  /// Подмена включена, но ни одно поле не задано — запрос уйдёт обычным.
+  bool get isActive => enabled && hasCustomFields;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SubscriptionFetchIdentity &&
+          enabled == other.enabled &&
+          hwid == other.hwid &&
+          userAgent == other.userAgent &&
+          deviceModel == other.deviceModel &&
+          deviceOs == other.deviceOs &&
+          osVersion == other.osVersion;
+
+  @override
+  int get hashCode =>
+      Object.hash(enabled, hwid, userAgent, deviceModel, deviceOs, osVersion);
+}
+
 class Subscription {
   final String id;
   final String name;
@@ -34,6 +125,9 @@ class Subscription {
   /// провайдера, а введённое пользовательницей — нельзя ни при каких условиях.
   final bool nameIsAuto;
 
+  /// Чем клиент представляется этой панели: HWID, User-Agent, device-заголовки.
+  final SubscriptionFetchIdentity fetchIdentity;
+
   const Subscription({
     required this.id,
     required this.name,
@@ -51,18 +145,21 @@ class Subscription {
     this.supportUrl,
     this.webPageUrl,
     this.nameIsAuto = false,
+    this.fetchIdentity = SubscriptionFetchIdentity.empty,
   });
 
   factory Subscription.create({
     required String name,
     required String url,
     bool nameIsAuto = false,
+    SubscriptionFetchIdentity fetchIdentity = SubscriptionFetchIdentity.empty,
   }) =>
       Subscription(
         id: const Uuid().v4(),
         name: name,
         url: url,
         nameIsAuto: nameIsAuto,
+        fetchIdentity: fetchIdentity,
       );
 
   factory Subscription.fromJson(Map<String, dynamic> json) {
@@ -93,6 +190,11 @@ class Subscription {
     // «имя автоматическое». Иначе оно введено руками и трогать его нельзя.
     nameIsAuto:
         json['nameIsAuto'] as bool? ?? (name == Uri.tryParse(url)?.host),
+    fetchIdentity: json['fetchIdentity'] is Map
+        ? SubscriptionFetchIdentity.fromJson(
+            (json['fetchIdentity'] as Map).cast<String, dynamic>(),
+          )
+        : SubscriptionFetchIdentity.empty,
   );
   }
 
@@ -114,6 +216,8 @@ class Subscription {
     if (supportUrl != null) 'supportUrl': supportUrl,
     if (webPageUrl != null) 'webPageUrl': webPageUrl,
     'nameIsAuto': nameIsAuto,
+    if (fetchIdentity.enabled || fetchIdentity.hasCustomFields)
+      'fetchIdentity': fetchIdentity.toJson(),
   };
 
   Subscription copyWith({
@@ -133,6 +237,7 @@ class Subscription {
     String? supportUrl,
     String? webPageUrl,
     bool? nameIsAuto,
+    SubscriptionFetchIdentity? fetchIdentity,
   }) =>
       Subscription(
         id: id ?? this.id,
@@ -151,6 +256,7 @@ class Subscription {
         supportUrl: supportUrl ?? this.supportUrl,
         webPageUrl: webPageUrl ?? this.webPageUrl,
         nameIsAuto: nameIsAuto ?? this.nameIsAuto,
+        fetchIdentity: fetchIdentity ?? this.fetchIdentity,
       );
 
   /// Записывает косметику из заголовков ответа панели.
@@ -189,6 +295,7 @@ class Subscription {
       supportUrl: supportUrl,
       webPageUrl: webPageUrl,
       nameIsAuto: nameIsAuto,
+      fetchIdentity: fetchIdentity,
     );
   }
 

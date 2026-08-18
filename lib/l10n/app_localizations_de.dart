@@ -740,6 +740,54 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get subscriptionIdentityTitle => 'Geräteidentität';
+
+  @override
+  String get subscriptionIdentityHint => 'Was das Panel sieht: HWID, User-Agent und Geräte-Header. Gilt nur für dieses Abonnement.';
+
+  @override
+  String get subscriptionIdentityEnable => 'Eigene Identität verwenden';
+
+  @override
+  String get subscriptionIdentityAppDefault => 'App-Standard';
+
+  @override
+  String get subscriptionIdentityAppDefaultHint => 'Echten Wert dieses Geräts senden';
+
+  @override
+  String get subscriptionIdentityHwid => 'HWID';
+
+  @override
+  String get subscriptionIdentityHwidOff => 'In den erweiterten Einstellungen ist „Geräte-HWID teilen“ aus — es wird gar keine HWID gesendet, auch keine eigene.';
+
+  @override
+  String get subscriptionIdentityUserAgent => 'User-Agent';
+
+  @override
+  String get subscriptionIdentityDeviceOs => 'Geräte-OS';
+
+  @override
+  String get subscriptionIdentityDeviceModel => 'Gerätemodell';
+
+  @override
+  String get subscriptionIdentityOsVersion => 'OS-Version';
+
+  @override
+  String get subscriptionIdentitySectionUsed => 'Bereits verwendet';
+
+  @override
+  String get subscriptionIdentitySearchOrEnter => 'Suchen oder eigenen Wert eingeben';
+
+  @override
+  String get subscriptionIdentityUseTyped => 'Diesen Wert verwenden';
+
+  @override
+  String get subscriptionIdentityReset => 'Zurücksetzen';
+
+  @override
+  String get subscriptionIdentityApply => 'Übernehmen';
+
+  @override
   String get subscriptionsDeleteSubscription => 'Abonnement löschen';
 
   @override

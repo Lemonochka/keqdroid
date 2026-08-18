@@ -740,6 +740,54 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get subscriptionIdentityTitle => 'Device identity';
+
+  @override
+  String get subscriptionIdentityHint => 'What this panel sees: HWID, User-Agent and device headers. Applies to this subscription only.';
+
+  @override
+  String get subscriptionIdentityEnable => 'Use a custom identity';
+
+  @override
+  String get subscriptionIdentityAppDefault => 'App default';
+
+  @override
+  String get subscriptionIdentityAppDefaultHint => 'Send this device\'s real value';
+
+  @override
+  String get subscriptionIdentityHwid => 'HWID';
+
+  @override
+  String get subscriptionIdentityHwidOff => 'Sharing the device HWID is turned off in Advanced settings, so no HWID is sent — custom or not.';
+
+  @override
+  String get subscriptionIdentityUserAgent => 'User-Agent';
+
+  @override
+  String get subscriptionIdentityDeviceOs => 'Device OS';
+
+  @override
+  String get subscriptionIdentityDeviceModel => 'Device model';
+
+  @override
+  String get subscriptionIdentityOsVersion => 'OS version';
+
+  @override
+  String get subscriptionIdentitySectionUsed => 'Already in use';
+
+  @override
+  String get subscriptionIdentitySearchOrEnter => 'Search or type your own';
+
+  @override
+  String get subscriptionIdentityUseTyped => 'Use this value';
+
+  @override
+  String get subscriptionIdentityReset => 'Reset';
+
+  @override
+  String get subscriptionIdentityApply => 'Apply';
+
+  @override
   String get subscriptionsDeleteSubscription => 'Delete subscription';
 
   @override

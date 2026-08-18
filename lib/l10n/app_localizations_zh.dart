@@ -740,6 +740,54 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get subscriptionIdentityTitle => '设备标识';
+
+  @override
+  String get subscriptionIdentityHint => '面板看到的信息：HWID、User-Agent 和设备请求头。仅对此订阅生效。';
+
+  @override
+  String get subscriptionIdentityEnable => '使用自定义标识';
+
+  @override
+  String get subscriptionIdentityAppDefault => '应用默认';
+
+  @override
+  String get subscriptionIdentityAppDefaultHint => '发送本设备的真实值';
+
+  @override
+  String get subscriptionIdentityHwid => 'HWID';
+
+  @override
+  String get subscriptionIdentityHwidOff => '高级设置中已关闭「共享设备 HWID」，因此不会发送任何 HWID，自定义的也不会。';
+
+  @override
+  String get subscriptionIdentityUserAgent => 'User-Agent';
+
+  @override
+  String get subscriptionIdentityDeviceOs => '设备系统';
+
+  @override
+  String get subscriptionIdentityDeviceModel => '设备型号';
+
+  @override
+  String get subscriptionIdentityOsVersion => '系统版本';
+
+  @override
+  String get subscriptionIdentitySectionUsed => '已在使用';
+
+  @override
+  String get subscriptionIdentitySearchOrEnter => '搜索或自行输入';
+
+  @override
+  String get subscriptionIdentityUseTyped => '使用此值';
+
+  @override
+  String get subscriptionIdentityReset => '重置';
+
+  @override
+  String get subscriptionIdentityApply => '应用';
+
+  @override
   String get subscriptionsDeleteSubscription => '删除订阅';
 
   @override

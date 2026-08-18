@@ -742,6 +742,54 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get subscriptionIdentityTitle => 'Идентичность устройства';
+
+  @override
+  String get subscriptionIdentityHint => 'Каким панель видит клиента: HWID, User-Agent и device-заголовки. Действует только на эту подписку.';
+
+  @override
+  String get subscriptionIdentityEnable => 'Своя идентичность';
+
+  @override
+  String get subscriptionIdentityAppDefault => 'Как у приложения';
+
+  @override
+  String get subscriptionIdentityAppDefaultHint => 'Слать настоящее значение устройства';
+
+  @override
+  String get subscriptionIdentityHwid => 'HWID';
+
+  @override
+  String get subscriptionIdentityHwidOff => 'В дополнительных настройках выключено «Делиться HWID устройства» — никакой HWID не уходит, в том числе подставной.';
+
+  @override
+  String get subscriptionIdentityUserAgent => 'User-Agent';
+
+  @override
+  String get subscriptionIdentityDeviceOs => 'ОС устройства';
+
+  @override
+  String get subscriptionIdentityDeviceModel => 'Модель устройства';
+
+  @override
+  String get subscriptionIdentityOsVersion => 'Версия ОС';
+
+  @override
+  String get subscriptionIdentitySectionUsed => 'Уже используется';
+
+  @override
+  String get subscriptionIdentitySearchOrEnter => 'Искать или вписать своё';
+
+  @override
+  String get subscriptionIdentityUseTyped => 'Использовать это значение';
+
+  @override
+  String get subscriptionIdentityReset => 'Сбросить';
+
+  @override
+  String get subscriptionIdentityApply => 'Применить';
+
+  @override
   String get subscriptionsDeleteSubscription => 'Удалить подписку';
 
   @override

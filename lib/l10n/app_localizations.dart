@@ -1493,6 +1493,102 @@ abstract class AppLocalizations {
   /// **'Could not share: {error}'**
   String subscriptionsShareFailed(Object error);
 
+  /// No description provided for @subscriptionIdentityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Device identity'**
+  String get subscriptionIdentityTitle;
+
+  /// No description provided for @subscriptionIdentityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What this panel sees: HWID, User-Agent and device headers. Applies to this subscription only.'**
+  String get subscriptionIdentityHint;
+
+  /// No description provided for @subscriptionIdentityEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a custom identity'**
+  String get subscriptionIdentityEnable;
+
+  /// No description provided for @subscriptionIdentityAppDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'App default'**
+  String get subscriptionIdentityAppDefault;
+
+  /// No description provided for @subscriptionIdentityAppDefaultHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Send this device\'s real value'**
+  String get subscriptionIdentityAppDefaultHint;
+
+  /// No description provided for @subscriptionIdentityHwid.
+  ///
+  /// In en, this message translates to:
+  /// **'HWID'**
+  String get subscriptionIdentityHwid;
+
+  /// No description provided for @subscriptionIdentityHwidOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing the device HWID is turned off in Advanced settings, so no HWID is sent — custom or not.'**
+  String get subscriptionIdentityHwidOff;
+
+  /// No description provided for @subscriptionIdentityUserAgent.
+  ///
+  /// In en, this message translates to:
+  /// **'User-Agent'**
+  String get subscriptionIdentityUserAgent;
+
+  /// No description provided for @subscriptionIdentityDeviceOs.
+  ///
+  /// In en, this message translates to:
+  /// **'Device OS'**
+  String get subscriptionIdentityDeviceOs;
+
+  /// No description provided for @subscriptionIdentityDeviceModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Device model'**
+  String get subscriptionIdentityDeviceModel;
+
+  /// No description provided for @subscriptionIdentityOsVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'OS version'**
+  String get subscriptionIdentityOsVersion;
+
+  /// No description provided for @subscriptionIdentitySectionUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Already in use'**
+  String get subscriptionIdentitySectionUsed;
+
+  /// No description provided for @subscriptionIdentitySearchOrEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Search or type your own'**
+  String get subscriptionIdentitySearchOrEnter;
+
+  /// No description provided for @subscriptionIdentityUseTyped.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this value'**
+  String get subscriptionIdentityUseTyped;
+
+  /// No description provided for @subscriptionIdentityReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get subscriptionIdentityReset;
+
+  /// No description provided for @subscriptionIdentityApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get subscriptionIdentityApply;
+
   /// No description provided for @subscriptionsDeleteSubscription.
   ///
   /// In en, this message translates to:

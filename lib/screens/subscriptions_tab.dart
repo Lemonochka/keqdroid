@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -22,6 +23,9 @@ import '../ui/responsive/desktop_page_layout.dart';
 import '../utils/bidi.dart';
 import '../utils/error_messages.dart';
 import '../utils/external_link.dart';
+import '../utils/identity_presets.dart';
+
+part 'subscriptions/identity_sheet.dart';
 
 class SubscriptionsTab extends ConsumerWidget {
   const SubscriptionsTab({super.key});
@@ -228,6 +232,10 @@ class SubscriptionsTab extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final nameCtrl = TextEditingController();
     final urlCtrl = TextEditingController();
+    // Идентичность задаётся ДО первой загрузки: панель с привязкой по HWID
+    // считает устройство уже на ней, и «добавить, а потом подменить» стоило бы
+    // лишнего слота привязки.
+    var identity = SubscriptionFetchIdentity.empty;
     bool loading = false;
     // Ошибки (скан QR, загрузка подписки) — в самой шторке: snackbar был бы
     // скрыт за модальным барьером, а закрытие шторки теряло бы введённый URL.
@@ -305,6 +313,16 @@ class SubscriptionsTab extends ConsumerWidget {
                         },
                       ),
               ),
+              const SizedBox(height: 12),
+              _IdentityTile(
+                identity: identity,
+                onTap: () async {
+                  final picked =
+                      await _showIdentitySheet(ctx, initial: identity);
+                  if (picked == null) return;
+                  setModalState(() => identity = picked);
+                },
+              ),
               if (sheetError != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -345,6 +363,7 @@ class SubscriptionsTab extends ConsumerWidget {
                                   : typedName,
                               url: urlCtrl.text.trim(),
                               nameIsAuto: typedName.isEmpty,
+                              fetchIdentity: identity,
                             );
                             await ref
                                 .read(subscriptionsProvider.notifier)
@@ -1056,6 +1075,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final sub = widget.sub;
     final nameCtrl = TextEditingController(text: sub.name);
     final urlCtrl = TextEditingController(text: sub.url);
+    var identity = sub.fetchIdentity;
     // Ошибка сохранения (например, дубликат URL) — показываем в самой шторке:
     // snackbar был бы скрыт за модальным барьером.
     String? editError;
@@ -1148,6 +1168,16 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 inputField(nameCtrl, l10n.subscriptionNameLabel, sub.name),
                 const SizedBox(height: 10),
                 inputField(urlCtrl, l10n.subscriptionUrlLabel, sub.url, maxLines: 2),
+                const SizedBox(height: 12),
+                _IdentityTile(
+                  identity: identity,
+                  onTap: () async {
+                    final picked =
+                        await _showIdentitySheet(ctx, initial: identity);
+                    if (picked == null) return;
+                    setSheet(() => identity = picked);
+                  },
+                ),
                 if (editError != null) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -1262,6 +1292,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                               // имя, а не «оставить как было».
                               resetName: newName.isEmpty,
                               url: newUrl,
+                              fetchIdentity: identity,
                             );
                       } catch (e) {
                         // например, дубликат URL: без catch ошибка молча уходит

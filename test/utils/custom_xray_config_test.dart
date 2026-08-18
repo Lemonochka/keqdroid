@@ -381,7 +381,7 @@ void main() {
       expect(_outboundTags(config), contains('keq-block'));
     });
 
-    test('applies the user routing lists before the author rules', () {
+    test('applies the user routing lists after the author rules', () {
       final config = _decode(
         ConfigGeneratorV2.generateConfig(
           _customConfig,
@@ -399,12 +399,13 @@ void main() {
       final block = tags.indexOf('user-block-domains');
       final direct = tags.indexOf('user-direct-domains');
       final proxy = tags.indexOf('user-proxy-domains');
-      final firstAuthor = rules.indexWhere((r) => r['ruleTag'] == null);
+      final lastAuthor = rules.lastIndexWhere((r) => r['ruleTag'] == null);
       expect(block, isNonNegative);
       expect(block, lessThan(direct));
       expect(direct, lessThan(proxy));
-      // Названное руками важнее заготовки провайдера.
-      expect(proxy, lessThan(firstAuthor));
+      // Заготовка провайдера важнее списков приложения: ради его раскладки
+      // такой сервер и берут. Наши списки решают то, что автор не назвал.
+      expect(lastAuthor, lessThan(block));
 
       expect(rules[block]['domain'], ['domain:ads.example.org']);
       expect(rules[block]['outboundTag'], 'block');
