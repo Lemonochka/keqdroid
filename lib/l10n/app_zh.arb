@@ -313,6 +313,22 @@
       "error": {}
     }
   },
+  "subscriptionIdentityTitle": "设备标识",
+  "subscriptionIdentityHint": "面板看到的信息：HWID、User-Agent 和设备请求头。仅对此订阅生效。",
+  "subscriptionIdentityEnable": "使用自定义标识",
+  "subscriptionIdentityAppDefault": "应用默认",
+  "subscriptionIdentityAppDefaultHint": "发送本设备的真实值",
+  "subscriptionIdentityHwid": "HWID",
+  "subscriptionIdentityHwidOff": "高级设置中已关闭「共享设备 HWID」，因此不会发送任何 HWID，自定义的也不会。",
+  "subscriptionIdentityUserAgent": "User-Agent",
+  "subscriptionIdentityDeviceOs": "设备系统",
+  "subscriptionIdentityDeviceModel": "设备型号",
+  "subscriptionIdentityOsVersion": "系统版本",
+  "subscriptionIdentitySectionUsed": "已在使用",
+  "subscriptionIdentitySearchOrEnter": "搜索或自行输入",
+  "subscriptionIdentityUseTyped": "使用此值",
+  "subscriptionIdentityReset": "重置",
+  "subscriptionIdentityApply": "应用",
   "subscriptionsDeleteSubscription": "删除订阅",
   "subscriptionsDeleteConfirm": "确定要删除“{name}”吗？\n\n这还会移除所有关联的服务器。",
   "@subscriptionsDeleteConfirm": {

@@ -313,6 +313,22 @@
       "error": {}
     }
   },
+  "subscriptionIdentityTitle": "Device identity",
+  "subscriptionIdentityHint": "What this panel sees: HWID, User-Agent and device headers. Applies to this subscription only.",
+  "subscriptionIdentityEnable": "Use a custom identity",
+  "subscriptionIdentityAppDefault": "App default",
+  "subscriptionIdentityAppDefaultHint": "Send this device's real value",
+  "subscriptionIdentityHwid": "HWID",
+  "subscriptionIdentityHwidOff": "Sharing the device HWID is turned off in Advanced settings, so no HWID is sent — custom or not.",
+  "subscriptionIdentityUserAgent": "User-Agent",
+  "subscriptionIdentityDeviceOs": "Device OS",
+  "subscriptionIdentityDeviceModel": "Device model",
+  "subscriptionIdentityOsVersion": "OS version",
+  "subscriptionIdentitySectionUsed": "Already in use",
+  "subscriptionIdentitySearchOrEnter": "Search or type your own",
+  "subscriptionIdentityUseTyped": "Use this value",
+  "subscriptionIdentityReset": "Reset",
+  "subscriptionIdentityApply": "Apply",
   "subscriptionsDeleteSubscription": "Delete subscription",
   "subscriptionsDeleteConfirm": "Are you sure you want to delete \"{name}\"?\n\nThis will also remove all associated servers.",
   "@subscriptionsDeleteConfirm": {

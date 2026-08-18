@@ -324,6 +324,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     String? name,
     String? url,
     bool resetName = false,
+    SubscriptionFetchIdentity? fetchIdentity,
   }) async {
     final subs = state.value ?? [];
     final idx = subs.indexWhere((s) => s.id == id);
@@ -346,6 +347,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     final autoName = current.providerTitle?.trim().isNotEmpty == true
         ? current.providerTitle!.trim()
         : (Uri.tryParse(effectiveUrl)?.host ?? current.name);
+    final identityChanged =
+        fetchIdentity != null && fetchIdentity != current.fetchIdentity;
     final updated = current.copyWith(
       name: resetName ? autoName : (name ?? current.name),
       url: url ?? current.url,
@@ -353,16 +356,18 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       // название от провайдера его больше не перетирает. Очистка поля —
       // обратный переход.
       nameIsAuto: resetName ? true : (name != null ? false : null),
+      fetchIdentity: fetchIdentity,
     );
     await ref.read(storageProvider).upsertSubscription(updated);
     final newList = [...subs]..[idx] = updated;
     state = AsyncData(newList);
 
-    // Сменили ссылку → перетягиваем серверы с нового URL. Иначе подписка
-    // молча оставалась со старыми серверами. Делаем в фоне (как ручной
-    // refresh): на карточке крутится спиннер, ошибка нового URL ложится в
-    // subscriptionRefreshErrorsProvider, а не роняет диалог редактирования.
-    if (urlChanged) {
+    // Сменили ссылку или идентичность → перетягиваем серверы заново: с нового
+    // URL, а под новой идентичностью панель и по старому может отдать другой
+    // набор. Иначе подписка молча оставалась со старыми серверами. Делаем в
+    // фоне (как ручной refresh): на карточке крутится спиннер, ошибка ложится
+    // в subscriptionRefreshErrorsProvider, а не роняет шторку редактирования.
+    if (urlChanged || identityChanged) {
       unawaited(refreshTracked(updated).catchError((_) {}));
     }
   }

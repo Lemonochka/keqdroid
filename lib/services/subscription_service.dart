@@ -14,6 +14,7 @@ import '../models/server_item.dart';
 import '../models/subscription.dart';
 import '../services/storage_service.dart';
 import '../utils/custom_xray_config.dart';
+import '../utils/identity_presets.dart';
 import '../core/exceptions.dart';
 
 /// Косметика, которую панель отдаёт заголовками ответа на запрос подписки.
@@ -99,6 +100,14 @@ class SubscriptionService {
   /// в переборе (часть cdn/waf отдаёт payload только браузеру)
   static const browserUserAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+  /// UA сторонних клиентов для перебора при отказе панели.
+  ///
+  /// Это намеренно короткий список, а не весь каталог из [ClientUaPresets]:
+  /// перебор делает по запросу на вариант, и полный каталог растянул бы
+  /// неудачную загрузку на десятки секунд. Ручной выбор в подписке берёт
+  /// каталог целиком.
+  static const clientUserAgents = ClientUaPresets.rotation;
 
   /// UA нашего клиента — им идёт первый запрос (если у подписки нет
   /// сохранённого рабочего UA) и он первый в переборе. Версия подтягивается
@@ -280,8 +289,14 @@ class SubscriptionService {
   /// качает подписку и отдаёт список raw-конфигов.
   /// заодно парсит X-Subscription-Userinfo для трафика. при сетевой ошибке один retry через 2с.
   /// [userAgent] — сохранённый рабочий UA подписки: первый запрос идёт с ним.
+  /// [identity] — подмена HWID/UA/device-заголовков для этой подписки.
   Future<SubscriptionFetchResult>
-  fetchRaw(String url, {CancelToken? cancelToken, String? userAgent}) async {
+  fetchRaw(
+    String url, {
+    CancelToken? cancelToken,
+    String? userAgent,
+    SubscriptionFetchIdentity identity = SubscriptionFetchIdentity.empty,
+  }) async {
     if (!isSafeUrl(url)) {
       // http выделяем в отдельное сообщение: у него в UI точечный фикс
       // («Исправить на https» в карточке подписки), а не generic Forbidden URL.
@@ -296,10 +311,22 @@ class SubscriptionService {
     // расходится с тумблером в фоновых изолятах (WorkManager, desktop-таймер)
     // и после перезапуска.
     final shareHwid = (await _storage.getSettings()).shareDeviceHwid;
-    final hwid = shareHwid ? await _getOrCreateHwid() : null;
+    // Тумблер приватности главнее подмены: выключённый «делиться HWID» значит
+    // «HWID с устройства не уходит», и подставной тоже. В шторке идентичности
+    // об этом сказано прямо, чтобы поле не выглядело работающим.
+    final hwid =
+        shareHwid ? await _getOrCreateHwid(override: identity.activeHwid) : null;
     final hwidHeaders = hwid != null
-        ? await _buildRemnawaveHeaders(hwid)
+        ? await _buildRemnawaveHeaders(
+            hwid,
+            overrideOs: identity.activeDeviceOs,
+            overrideModel: identity.activeDeviceModel,
+            overrideOsVersion: identity.activeOsVersion,
+          )
         : const <String, String>{};
+    // Закреплённый подпиской UA: перебор запасных при нём запрещён — иначе
+    // подмена молча схлопывается обратно в наш обычный клиентский UA.
+    final pinnedUserAgent = identity.activeUserAgent;
 
     try {
       final result = await _fetchWithRetry(
@@ -309,6 +336,7 @@ class SubscriptionService {
         hwid: hwid,
         hwidHeaders: hwidHeaders,
         savedUserAgent: userAgent,
+        pinnedUserAgent: pinnedUserAgent,
       );
 
       return SubscriptionFetchResult(
@@ -335,6 +363,7 @@ class SubscriptionService {
             hwid: hwid,
             hwidHeaders: hwidHeaders,
             savedUserAgent: userAgent,
+            pinnedUserAgent: pinnedUserAgent,
           );
         }
       }
@@ -350,14 +379,17 @@ class SubscriptionService {
     required String? hwid,
     required Map<String, String> hwidHeaders,
     String? savedUserAgent,
+    String? pinnedUserAgent,
   }) async {
     String? usedUserAgent;
     var profile = SubscriptionProfileHeaders.empty;
-    // первый запрос: сохранённый рабочий UA подписки, иначе UA приложения.
-    // если он перестал работать (html/4xx/5xx) — перебор ниже, без него
-    final initialUa = (savedUserAgent != null && savedUserAgent.isNotEmpty)
-        ? savedUserAgent
-        : await appUserAgent();
+    // первый запрос: закреплённый подпиской UA, иначе сохранённый рабочий,
+    // иначе UA приложения. если он перестал работать (html/4xx/5xx) — перебор
+    // ниже, но только когда UA не закреплён
+    final initialUa = pinnedUserAgent ??
+        ((savedUserAgent != null && savedUserAgent.isNotEmpty)
+            ? savedUserAgent
+            : await appUserAgent());
     try {
       Response<String> response = await _dio.get<String>(
         url,
@@ -396,6 +428,7 @@ class SubscriptionService {
           cancelToken: cancelToken,
           hwidHeaders: hwidHeaders,
           skipUserAgents: {initialUa},
+          pinnedUserAgent: pinnedUserAgent,
         );
         if (uaResponse != null) {
           response = uaResponse;
@@ -474,6 +507,7 @@ class SubscriptionService {
           cancelToken: cancelToken,
           hwidHeaders: hwidHeaders,
           skipUserAgents: {initialUa},
+          pinnedUserAgent: pinnedUserAgent,
         );
         if (parsedWithClientUa != null) {
           return parsedWithClientUa;
@@ -487,6 +521,7 @@ class SubscriptionService {
           url,
           hwid: hwid,
           hwidHeaders: hwidHeaders,
+          pinnedUserAgent: pinnedUserAgent,
         );
         if (parsedViaHttpClient != null) {
           return parsedViaHttpClient;
@@ -514,6 +549,7 @@ class SubscriptionService {
           hwid: hwid,
           hwidHeaders: hwidHeaders,
           savedUserAgent: savedUserAgent,
+          pinnedUserAgent: pinnedUserAgent,
         );
       }
 
@@ -572,12 +608,14 @@ class SubscriptionService {
     CancelToken? cancelToken,
     required Map<String, String> hwidHeaders,
     Set<String> skipUserAgents = const {},
+    String? pinnedUserAgent,
   }) async {
     final response = await _retryWithSubscriptionUserAgents(
       url,
       cancelToken: cancelToken,
       hwidHeaders: hwidHeaders,
       skipUserAgents: skipUserAgents,
+      pinnedUserAgent: pinnedUserAgent,
     );
     if (response == null) {
       return null;
@@ -616,6 +654,7 @@ class SubscriptionService {
     String url, {
     required String? hwid,
     Map<String, String>? hwidHeaders,
+    String? pinnedUserAgent,
   }) async {
     final effectiveHwidHeaders = hwidHeaders ??
         (hwid == null
@@ -630,7 +669,10 @@ class SubscriptionService {
           ..connectionTimeout = const Duration(seconds: 15);
         final uri = Uri.parse(candidate);
         final req = await client.getUrl(uri);
-        req.headers.set(HttpHeaders.userAgentHeader, browserUserAgent);
+        req.headers.set(
+          HttpHeaders.userAgentHeader,
+          pinnedUserAgent ?? browserUserAgent,
+        );
         req.headers.set(HttpHeaders.acceptHeader, '*/*');
         req.headers.set(HttpHeaders.acceptLanguageHeader, 'en-US,en;q=0.9');
         req.headers.set('Cache-Control', 'no-cache');
@@ -807,9 +849,15 @@ class SubscriptionService {
 
   Options _hwidOptions(Map<String, String> headers) => Options(headers: headers);
 
-  Future<String> _getOrCreateHwid() async {
+  /// [override] — HWID одной подписки. Возвращается как есть: ни в кэш, ни в
+  /// storage он не попадает, иначе подставной HWID стал бы настоящим HWID
+  /// устройства и утёк бы во все остальные подписки.
+  Future<String> _getOrCreateHwid({String? override}) async {
+    final custom = override?.trim().toLowerCase();
+    if (custom != null && custom.isNotEmpty) return custom;
+
     if (_cachedHwid != null && _cachedHwid!.isNotEmpty) return _cachedHwid!;
-    
+
     // android_id is the primary hwid source
     String? androidId;
     try {
@@ -843,21 +891,29 @@ class SubscriptionService {
     return created;
   }
 
-  Future<Map<String, String>> _buildRemnawaveHeaders(String hwid) async {
-    final os = Platform.isAndroid
-        ? 'Android'
-        : Platform.isIOS
-            ? 'iOS'
-            : Platform.isWindows
-                ? 'Windows'
-                : Platform.isMacOS
-                    ? 'macOS'
-                    : Platform.isLinux
-                        ? 'Linux'
-                        : Platform.operatingSystem;
-    final model = await _getDeviceModel();
-    final osVersion = Platform.operatingSystemVersion;
-    
+  /// `override*` — device-заголовки подписки. Пустое переопределение означает
+  /// «как на этом устройстве», поэтому каждое поле решается отдельно.
+  Future<Map<String, String>> _buildRemnawaveHeaders(
+    String hwid, {
+    String? overrideOs,
+    String? overrideModel,
+    String? overrideOsVersion,
+  }) async {
+    final os = _trimmedOrNull(overrideOs) ??
+        (Platform.isAndroid
+            ? 'Android'
+            : Platform.isIOS
+                ? 'iOS'
+                : Platform.isWindows
+                    ? 'Windows'
+                    : Platform.isMacOS
+                        ? 'macOS'
+                        : Platform.isLinux
+                            ? 'Linux'
+                            : Platform.operatingSystem);
+    final model = _trimmedOrNull(overrideModel) ?? await _getDeviceModel();
+    final osVersion =
+        _trimmedOrNull(overrideOsVersion) ?? Platform.operatingSystemVersion;
     return {
       'x-hwid': hwid, // required by remnawave
       // алиасы для панелей со строгой проверкой регистра/имени
@@ -870,6 +926,11 @@ class SubscriptionService {
       'x-device-model': model,
       'X-Device-Model': model,
     };
+  }
+
+  static String? _trimmedOrNull(String? value) {
+    final trimmed = value?.trim();
+    return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
   }
 
   Future<String> _getDeviceModel() async {
@@ -1038,18 +1099,16 @@ class SubscriptionService {
     CancelToken? cancelToken,
     required Map<String, String> hwidHeaders,
     Set<String> skipUserAgents = const {},
+    String? pinnedUserAgent,
   }) async {
+    // Подписка закрепила свой UA — перебирать нечего: любой другой сломал бы
+    // ровно ту подмену, ради которой UA и закрепляли.
+    if (pinnedUserAgent != null) return null;
     // [skipUserAgents] — уже опробованные (первый запрос), их не повторяем
     final userAgents = <String>[
       // свой UA первым — панели могут держать его в белом списке
       await appUserAgent(),
-      'v2rayNG/1.9.28',
-      'NekoBox/1.3.9',
-      'ClashMetaForAndroid/2.11.5',
-      'clash-verge/v2.2.2',
-      'sing-box',
-      'QuantumultX',
-      'Shadowrocket',
+      ...clientUserAgents,
       // браузерный — последний резерв
       browserUserAgent,
     ];
@@ -2170,6 +2229,7 @@ class SubscriptionService {
         sub.url,
         cancelToken: cancelToken,
         userAgent: sub.userAgent,
+        identity: sub.fetchIdentity,
       );
 
       final activeId = _storage.getActiveServerId();
@@ -2244,8 +2304,13 @@ class SubscriptionService {
             totalBytes: result.totalBytes,
             expiresAt: result.expiresAt,
             serverCount: servers.length,
-            // null (payload пришёл фолбэком без UA-перебора) не затирает сохранённый
-            userAgent: result.usedUserAgent,
+            // null (payload пришёл фолбэком без UA-перебора) не затирает сохранённый.
+            // Закреплённый идентичностью UA тоже не сохраняем: это выбор
+            // пользовательницы для подписки, а не «UA, который тут работает» —
+            // иначе после выключения подмены он остался бы действовать молча.
+            userAgent: sub.fetchIdentity.activeUserAgent != null
+                ? null
+                : result.usedUserAgent,
           )
           .withProfileHeaders(
             title: result.profile.title,

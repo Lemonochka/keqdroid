@@ -313,6 +313,22 @@
       "error": {}
     }
   },
+  "subscriptionIdentityTitle": "Geräteidentität",
+  "subscriptionIdentityHint": "Was das Panel sieht: HWID, User-Agent und Geräte-Header. Gilt nur für dieses Abonnement.",
+  "subscriptionIdentityEnable": "Eigene Identität verwenden",
+  "subscriptionIdentityAppDefault": "App-Standard",
+  "subscriptionIdentityAppDefaultHint": "Echten Wert dieses Geräts senden",
+  "subscriptionIdentityHwid": "HWID",
+  "subscriptionIdentityHwidOff": "In den erweiterten Einstellungen ist „Geräte-HWID teilen“ aus — es wird gar keine HWID gesendet, auch keine eigene.",
+  "subscriptionIdentityUserAgent": "User-Agent",
+  "subscriptionIdentityDeviceOs": "Geräte-OS",
+  "subscriptionIdentityDeviceModel": "Gerätemodell",
+  "subscriptionIdentityOsVersion": "OS-Version",
+  "subscriptionIdentitySectionUsed": "Bereits verwendet",
+  "subscriptionIdentitySearchOrEnter": "Suchen oder eigenen Wert eingeben",
+  "subscriptionIdentityUseTyped": "Diesen Wert verwenden",
+  "subscriptionIdentityReset": "Zurücksetzen",
+  "subscriptionIdentityApply": "Übernehmen",
   "subscriptionsDeleteSubscription": "Abonnement löschen",
   "subscriptionsDeleteConfirm": "Möchtest du \"{name}\" wirklich löschen?\n\nDadurch werden auch alle zugehörigen Server entfernt.",
   "@subscriptionsDeleteConfirm": {
