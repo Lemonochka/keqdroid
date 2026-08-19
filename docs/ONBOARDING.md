@@ -158,8 +158,8 @@ powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFi
 
 - версия и тег `vX.Y.Z` берутся из `version:` в `pubspec.yaml` — это единственный источник;
 - **каждый** ассет несёт сайдкар `<имя>.sha256` (ASCII без BOM): апдейтер fail-closed и без
-  совпавшего хеша обновление не поставит. `make_release.ps1` и `release/gen_sha256.ps1`
-  генерируют сайдкары сами; при ручной заливке — не забудь;
+  совпавшего хеша обновление не поставит. `tool/make_release.ps1` и
+  `tool/package_linux.sh` генерируют сайдкары сами; при ручной заливке — не забудь;
 - имена ассетов фиксированные: `keqdroid-<версия>-android.apk`,
   `keqdroid-windows-x64-<версия>.zip` (именно такой порядок слов),
   `keqdroid-<версия>-linux-x64.tar.gz`, `keqdroid_<версия>_amd64.deb`,
