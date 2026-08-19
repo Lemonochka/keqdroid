@@ -156,6 +156,8 @@ object EphemeralXrayPing {
 
         timeoutMs: Int,
 
+        keepAlive: Boolean = true,
+
     ): List<BatchResult> = lock.withLock {
 
         if (items.isEmpty()) return@withLock emptyList()
@@ -193,6 +195,8 @@ object EphemeralXrayPing {
                     timeoutMs = timeoutMs,
 
                     binary = binary,
+
+                    keepAlive = keepAlive,
 
                 ),
 
@@ -326,6 +330,8 @@ object EphemeralXrayPing {
 
         binary: File? = null,
 
+        keepAlive: Boolean = true,
+
     ): Result {
 
         val configFile = File(filesDir, "xray_ping_${UUID.randomUUID()}.json")
@@ -373,7 +379,7 @@ object EphemeralXrayPing {
 
 
 
-            return httpProbeViaSocks(testUrl, socksPort, timeoutMs)
+            return httpProbeViaSocks(testUrl, socksPort, timeoutMs, keepAlive)
 
         } finally {
 
@@ -564,7 +570,12 @@ object EphemeralXrayPing {
 
 
 
-    private fun httpProbeViaSocks(url: String, socksPort: Int, timeoutMs: Int): Result {
+    private fun httpProbeViaSocks(
+        url: String,
+        socksPort: Int,
+        timeoutMs: Int,
+        keepAlive: Boolean = true,
+    ): Result {
 
         val safeUrl = ensureHttps(url)
 
@@ -574,51 +585,50 @@ object EphemeralXrayPing {
 
         val connectTimeoutMs = min(timeoutMs, 6_000)
         val readTimeoutMs = min(timeoutMs, 8_000)
-        val useHead = safeUrl.contains("generate_204", ignoreCase = true) ||
-            safeUrl.contains("connecttest.txt", ignoreCase = true)
         return try {
-            val start = System.currentTimeMillis()
-            connection = (URL(safeUrl).openConnection(proxy) as HttpURLConnection).apply {
-                requestMethod = if (useHead) "HEAD" else "GET"
-                connectTimeout = connectTimeoutMs
-                readTimeout = readTimeoutMs
-
-                instanceFollowRedirects = true
-
-                setRequestProperty("User-Agent", "KEQDIS/1.0")
-
-                setRequestProperty("Connection", "close")
-
-            }
-
-            val code = connection.responseCode
-
-            val elapsed = (System.currentTimeMillis() - start).toInt()
-
-            if (!useHead && code != 204) {
-
-                connection.inputStream?.use { stream ->
-
-                    val buf = ByteArray(128)
-
-                    stream.read(buf)
-
+            // Два запроса, берём лучший. Первый оплачивает DNS, TLS-рукопожатие и
+            // прогрев цепочки — он меряет стоимость процедуры, а не сервер. Второй
+            // идёт по уже поднятому соединению (пул HttpURLConnection переиспользует
+            // его, пока никто не просил `Connection: close`) и показывает чистое
+            // время ответа.
+            var best: Result? = null
+            for (attempt in 0 until if (keepAlive) 2 else 1) {
+                val start = System.currentTimeMillis()
+                connection = (URL(safeUrl).openConnection(proxy) as HttpURLConnection).apply {
+                    // Всегда GET. Раньше на `generate_204` и `connecttest.txt` уходил
+                    // HEAD — то есть на два пресета из трёх (gstatic-дефолт и
+                    // Microsoft), и именно они у пользователей не отвечали, пока
+                    // Cloudflare с GET работал. Экономии от HEAD тут нет: 204 без
+                    // тела, connecttest.txt — 22 байта.
+                    requestMethod = "GET"
+                    connectTimeout = connectTimeoutMs
+                    readTimeout = readTimeoutMs
+                    instanceFollowRedirects = true
+                    setRequestProperty("User-Agent", "KEQDIS/1.0")
                 }
 
+                val code = connection.responseCode
+                val elapsed = (System.currentTimeMillis() - start).toInt()
+
+                // Тело дочитываем всегда: недочитанный ответ не возвращает
+                // соединение в пул, и второй запрос откроет новое — то есть
+                // померит ровно то же, что первый.
+                if (code != 204) {
+                    runCatching {
+                        connection.inputStream?.use { stream ->
+                            val buf = ByteArray(1024)
+                            while (stream.read(buf) >= 0) { /* до конца */ }
+                        }
+                    }
+                }
+
+                val ok = code in 200..399 || code == 204
+                if (!ok) return Result(false, elapsed, "HTTP $code", code)
+                if (best == null || elapsed < best.latencyMs!!) {
+                    best = Result(true, elapsed, null, code)
+                }
             }
-
-            val ok = code in 200..399 || code == 204
-
-            if (ok) {
-
-                Result(true, elapsed, null, code)
-
-            } else {
-
-                Result(false, elapsed, "HTTP $code", code)
-
-            }
-
+            best!!
         } catch (e: Exception) {
 
             Log.w(TAG, "httpProbeViaSocks failed: ${e.message}")

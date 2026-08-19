@@ -24,6 +24,12 @@ class AppSettings {
   /// [PingTestConfig.targetGstatic] | cloudflare | microsoft | custom
   final String pingTestTarget;
   final String pingTestUrlCustom;
+
+  /// Прокси-пинг делает два запроса по одному соединению и берёт лучший: первый
+  /// оплачивает DNS и TLS-рукопожатие, второй меряет чистое время ответа.
+  /// Выключенный — один запрос, то есть задержка вместе со стоимостью
+  /// установки соединения. Числа получаются в разы больше, зато привычнее.
+  final bool pingKeepAlive;
   final bool killSwitch;
   final bool darkTheme;
   final bool followSystemTheme;
@@ -87,9 +93,10 @@ class AppSettings {
     this.blockedRules = RoutingPresets.defaultBlockedRules,
     this.finalOutbound = finalOutboundProxy,
     this.autoConnectLastServer = false,
-    this.pingType = 'tcp',
+    this.pingType = 'url',
     this.pingTestTarget = PingTestConfig.targetGstatic,
     this.pingTestUrlCustom = '',
+    this.pingKeepAlive = true,
     this.killSwitch = false,
     this.darkTheme = false,
     this.followSystemTheme = true,
@@ -133,6 +140,7 @@ class AppSettings {
     'pingType': pingType,
     'pingTestTarget': pingTestTarget,
     'pingTestUrlCustom': pingTestUrlCustom,
+    'pingKeepAlive': pingKeepAlive,
     'killSwitch': killSwitch,
     'darkTheme': darkTheme,
     'followSystemTheme': followSystemTheme,
@@ -198,6 +206,7 @@ class AppSettings {
         json['pingTestTarget'] as String?,
       ),
       pingTestUrlCustom: json['pingTestUrlCustom'] as String? ?? '',
+      pingKeepAlive: json['pingKeepAlive'] as bool? ?? true,
       killSwitch: json['killSwitch'] as bool? ?? false,
       darkTheme: json['darkTheme'] as bool? ?? false,
       followSystemTheme: json['followSystemTheme'] as bool? ?? true,
@@ -319,7 +328,10 @@ class AppSettings {
     if (v == 'url' || v == 'http' || v == 'proxy') return 'url';
     if (v == 'speed' || v == 'download' || v == 'throughput') return 'speed';
     if (v == 'icmp' || v == 'ping') return 'icmp';
-    return 'tcp';
+    if (v == 'tcp') return 'tcp';
+    // Дефолт — прокси-пинг: он единственный меряет путь до сервера так, как им
+    // потом пойдёт трафик. Raw tcp вдобавок неизмерим при поднятом TUN.
+    return 'url';
   }
 
   AppSettings copyWith({
@@ -333,6 +345,7 @@ class AppSettings {
     String? pingType,
     String? pingTestTarget,
     String? pingTestUrlCustom,
+    bool? pingKeepAlive,
     bool? killSwitch,
     bool? darkTheme,
     bool? followSystemTheme,
@@ -375,6 +388,7 @@ class AppSettings {
         pingType: pingType ?? this.pingType,
         pingTestTarget: pingTestTarget ?? this.pingTestTarget,
         pingTestUrlCustom: pingTestUrlCustom ?? this.pingTestUrlCustom,
+        pingKeepAlive: pingKeepAlive ?? this.pingKeepAlive,
         killSwitch: killSwitch ?? this.killSwitch,
         darkTheme: darkTheme ?? this.darkTheme,
         followSystemTheme: followSystemTheme ?? this.followSystemTheme,
@@ -426,6 +440,7 @@ class AppSettings {
               pingType == other.pingType &&
               pingTestTarget == other.pingTestTarget &&
               pingTestUrlCustom == other.pingTestUrlCustom &&
+              pingKeepAlive == other.pingKeepAlive &&
               killSwitch == other.killSwitch &&
               darkTheme == other.darkTheme &&
               followSystemTheme == other.followSystemTheme &&
@@ -478,6 +493,7 @@ class AppSettings {
     pingType,
     pingTestTarget,
     pingTestUrlCustom,
+    pingKeepAlive,
     killSwitch,
     darkTheme,
     followSystemTheme,

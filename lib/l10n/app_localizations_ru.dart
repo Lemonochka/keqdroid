@@ -674,6 +674,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPingMethodUrlHint => 'Замеряет пинг через GET запрос к серверу';
 
   @override
+  String get settingsPingKeepAliveTitle => 'Способ замера';
+
+  @override
+  String get settingsPingKeepAlive => 'Keep-alive';
+
+  @override
+  String get settingsPingKeepAliveHint => 'Шлёт два запроса по одному соединению и берёт лучший: результат — время ответа сервера без стоимости установки соединения. Выключите, чтобы мерить запрос целиком, вместе с рукопожатием: числа будут больше и ближе к тому, сколько ждёт браузер.';
+
+  @override
   String get settingsPingMethodSpeed => 'Тест скорости';
 
   @override

@@ -739,6 +739,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     required int socksPort,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
+    bool keepAlive = true,
   }) async {
     if (items.isEmpty) return [];
     final raw = await EphemeralXrayPing.urlTestBatch(
@@ -748,6 +749,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       socksPort: socksPort,
       testUrl: testUrl,
       timeoutMs: timeoutMs,
+      keepAlive: keepAlive,
     );
     return raw
         .map(

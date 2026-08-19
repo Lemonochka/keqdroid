@@ -672,6 +672,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPingMethodUrlHint => '测量通过服务器的 GET 延迟';
 
   @override
+  String get settingsPingKeepAliveTitle => '测量方式';
+
+  @override
+  String get settingsPingKeepAlive => 'Keep-alive';
+
+  @override
+  String get settingsPingKeepAliveHint => '在同一连接上发送两次请求并取较优的一次：结果是服务器的响应时间，不含建立连接的开销。关闭后测量完整请求（含握手）——数值更大，更接近浏览器实际的等待时间。';
+
+  @override
   String get settingsPingMethodSpeed => '速度测试';
 
   @override

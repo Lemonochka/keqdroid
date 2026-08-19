@@ -437,12 +437,18 @@ class PingService {
   }) async {
     if (servers.isEmpty) return [];
 
-    final socksPort = ConfigGeneratorV2.ephemeralPingPort;
     final ips = resolvedIps ?? await _resolveServerIps(servers);
     final timeoutMs = timeoutSeconds * 1000;
     final results = <PingResult>[];
 
     for (final s in servers) {
+      // Порт на КАЖДЫЙ замер, а не общая константа. Готовность временного ядра
+      // проверяется коннектом на 127.0.0.1:<порт>, и кто там слушает — не
+      // проверяется. С общим портом это стреляло дважды: следующий сервер в
+      // батче попадал в ещё не отпущенный сокет предыдущего (гонка, зависящая
+      // от скорости машины), а два наложившихся замера уводили пробу в чужое
+      // ядро — то есть молча мерили не тот сервер.
+      final socksPort = await _freePort();
       final config = ConfigGeneratorV2.generatePingConfig(
         s.config,
         settings,
@@ -459,6 +465,7 @@ class PingService {
           socksPort: socksPort,
           testUrl: testUrl,
           timeoutMs: timeoutMs,
+          keepAlive: settings.pingKeepAlive,
         );
         result = PingResult(
           serverId: s.id,
@@ -495,12 +502,13 @@ class PingService {
   }) async {
     if (servers.isEmpty) return [];
 
-    final socksPort = ConfigGeneratorV2.ephemeralPingPort;
     final ips = resolvedIps ?? await _resolveServerIps(servers);
     final timeoutMs = timeoutSeconds * 1000;
     final results = <PingResult>[];
 
     for (final s in servers) {
+      // см. pingUrlBatch: порт на каждый замер, иначе соседние ядра путаются.
+      final socksPort = await _freePort();
       final config = ConfigGeneratorV2.generatePingConfig(
         s.config,
         settings,
@@ -539,6 +547,18 @@ class PingService {
     }
 
     return results;
+  }
+
+  /// Свободный порт под временное ядро замера. Тот же приём, что у туннельных
+  /// бэкендов: даём ОС выбрать, тут же отпускаем и сразу отдаём ядру. Окно
+  /// между отпусканием и стартом теоретически даёт гонку, но со случайным
+  /// портом она несравнимо менее вероятна, чем гарантированное столкновение на
+  /// общей константе.
+  static Future<int> _freePort() async {
+    final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final port = s.port;
+    await s.close();
+    return port;
   }
 
   static Future<Map<String, String>> _resolveServerIps(
@@ -606,11 +626,21 @@ class PingService {
     PingType base, {
     required bool vpnConnected,
     required bool tunMode,
+    /// платформа, где туннель всегда TUN; подменяется только в тестах
+    bool? platformAlwaysTun,
   }) {
+    // Android всегда TUN (VpnService), но [tunMode] туда не доезжает: его
+    // считают из vpnState.activeMode, а android_tunnel_backend это поле не
+    // заполняет вовсе — значит без явной поправки подмена на Android мертва,
+    // и пользователь видит 2-4 мс до любого сервера (пинг меряет локальный
+    // конец туннеля). Обычно собственный трафик приложения из туннеля
+    // исключён и raw tcp честен, но исключение молча отваливается — например
+    // в режиме «только выбранные», где addDisallowedApplication бросает.
+    final throughTun = tunMode || (platformAlwaysTun ?? Platform.isAndroid);
     // через tun неизмеримы raw tcp/icmp (закрывает локальный tun-стек / не проходит
     // tun2socks); url и speed идут через временный core в обход туннеля
     if (vpnConnected &&
-        tunMode &&
+        throughTun &&
         (base == PingType.tcp || base == PingType.icmp)) {
       return PingType.url;
     }

@@ -1016,6 +1016,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     required int socksPort,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
+    bool keepAlive = true,
   }) async {
     if (items.isEmpty) return [];
     // EphemeralXrayPing is Windows-only for now; on Linux this degrades to a
@@ -1025,6 +1026,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       socksPort: socksPort,
       testUrl: testUrl,
       timeoutMs: timeoutMs,
+      keepAlive: keepAlive,
     );
     return raw
         .map(

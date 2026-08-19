@@ -672,6 +672,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPingMethodUrlHint => 'Measures GET latency through the server';
 
   @override
+  String get settingsPingKeepAliveTitle => 'Measurement';
+
+  @override
+  String get settingsPingKeepAlive => 'Keep-alive';
+
+  @override
+  String get settingsPingKeepAliveHint => 'Sends two requests over one connection and keeps the better one, so the result is the server\'s response time without the cost of opening the connection. Turn it off to measure a full request, handshake included — larger numbers, closer to what a browser waits for.';
+
+  @override
   String get settingsPingMethodSpeed => 'Speed test';
 
   @override

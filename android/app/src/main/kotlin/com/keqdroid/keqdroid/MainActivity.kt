@@ -415,6 +415,7 @@ class MainActivity : FlutterFragmentActivity() {
                             val socksPort = call.argument<Int>("socksPort")
                             val testUrl = call.argument<String>("testUrl")
                             val timeoutMs = call.argument<Int>("timeoutMs") ?: 15_000
+                            val keepAlive = call.argument<Boolean>("keepAlive") ?: true
                             @Suppress("UNCHECKED_CAST")
                             val rawItems = call.argument<List<Map<String, Any?>>>("items")
                             if (socksPort == null || socksPort <= 0 || rawItems.isNullOrEmpty()) {
@@ -426,6 +427,7 @@ class MainActivity : FlutterFragmentActivity() {
                                 socksPort,
                                 testUrl ?: "https://connectivitycheck.gstatic.com/generate_204",
                                 timeoutMs,
+                                keepAlive,
                                 result,
                             )
                         }
@@ -768,6 +770,7 @@ class MainActivity : FlutterFragmentActivity() {
         socksPort: Int,
         testUrl: String,
         timeoutMs: Int,
+        keepAlive: Boolean,
         result: MethodChannel.Result,
     ) {
         mainScope.launch {
@@ -787,6 +790,7 @@ class MainActivity : FlutterFragmentActivity() {
                         items = items,
                         testUrl = testUrl,
                         timeoutMs = timeoutMs,
+                        keepAlive = keepAlive,
                     )
                 }.getOrElse { e ->
                     emptyList<EphemeralXrayPing.BatchResult>()

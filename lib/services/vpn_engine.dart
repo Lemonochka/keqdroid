@@ -96,12 +96,14 @@ class VpnEngine {
     required int socksPort,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
+    bool keepAlive = true,
   }) =>
       _backend.xrayUrlTestBatch(
         items: items,
         socksPort: socksPort,
         testUrl: testUrl,
         timeoutMs: timeoutMs,
+        keepAlive: keepAlive,
       );
 
   Future<({bool success, int? latencyMs, String error, int? httpStatus})>
@@ -110,12 +112,14 @@ class VpnEngine {
     required int socksPort,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
+    bool keepAlive = true,
   }) async {
     final batch = await xrayUrlTestBatch(
       items: [('single', xrayConfig)],
       socksPort: socksPort,
       testUrl: testUrl,
       timeoutMs: timeoutMs,
+      keepAlive: keepAlive,
     );
     if (batch.isEmpty) {
       return (success: false, latencyMs: null, error: 'null response', httpStatus: null);

@@ -222,7 +222,12 @@ class SingBoxTunConfigGen {
       'sing-box$exe',
       // wireproxy (AmneziaWG): его WG-UDP к серверу должен идти мимо туннеля
       'wireproxy$exe',
-      if (appProcessName.trim().isNotEmpty) appProcessName.trim().toLowerCase(),
+      // Через варианты, а не .toLowerCase(): sing-box сравнивает process_name
+      // map-lookup'ом, без приведения регистра. Заниженное имя не совпадёт с
+      // реальным (переименованный портативный `KEQDIS.exe`), правило молча
+      // промахнётся — и tcp-пинг начнёт мерить локальный конец туннеля вместо
+      // сервера. Пользовательские правила сплит-туннеля так и делают.
+      ...processNameMatchVariants(appProcessName.trim()),
     }.toList();
     rules.add({
       'process_name': bypassProcessNames,

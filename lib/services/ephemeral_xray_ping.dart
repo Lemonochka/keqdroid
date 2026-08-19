@@ -96,6 +96,7 @@ class EphemeralXrayPing {
     required int socksPort,
     required String testUrl,
     required int timeoutMs,
+    bool keepAlive = true,
   }) async {
     if (items.isEmpty) return [];
     return _runSerial(() async {
@@ -112,6 +113,7 @@ class EphemeralXrayPing {
           socksPort: socksPort,
           testUrl: testUrl,
           timeoutMs: timeoutMs,
+          keepAlive: keepAlive,
         );
         out.add((
           id: item.id,
@@ -166,6 +168,7 @@ class EphemeralXrayPing {
     required int socksPort,
     required String testUrl,
     required int timeoutMs,
+    bool keepAlive = true,
   }) async {
     if (!Platform.isWindows && !Platform.isLinux) {
       return (
@@ -221,6 +224,7 @@ class EphemeralXrayPing {
         testUrl: testUrl,
         socksPort: socksPort,
         timeoutMs: timeoutMs,
+        keepAlive: keepAlive,
       );
     } catch (e) {
       AppLogger.instance.debug('EphemeralXrayPing failed: $e');
@@ -369,10 +373,9 @@ class EphemeralXrayPing {
     required String testUrl,
     required int socksPort,
     required int timeoutMs,
+    bool keepAlive = true,
   }) async {
     final uri = _ensureHttps(testUrl);
-    final useHead = uri.contains('generate_204') ||
-        uri.contains('connecttest.txt');
 
     final client = HttpClient();
     try {
@@ -385,29 +388,44 @@ class EphemeralXrayPing {
       // «нарисовать» успешный пинг мёртвому/подменённому серверу.
       client.connectionTimeout = Duration(milliseconds: timeoutMs.clamp(1000, 6000));
 
-      final sw = Stopwatch()..start();
-      final request = await client.openUrl(
-        useHead ? 'HEAD' : 'GET',
-        Uri.parse(uri),
-      );
-      request.headers.set('User-Agent', 'KEQDIS/1.0');
-      request.headers.set('Connection', 'close');
-      final response = await request.close().timeout(
-        Duration(milliseconds: timeoutMs.clamp(1000, 8000)),
-      );
-      if (!useHead && response.statusCode != 204) {
+      // Два запроса по одному соединению, берём лучший. Первый оплачивает DNS,
+      // TLS-рукопожатие и прогрев цепочки — он меряет стоимость процедуры, а не
+      // сервер. Второй идёт по уже установленному соединению и показывает
+      // чистое время ответа, ради чего keep-alive и нужен: поэтому здесь
+      // НЕТ `Connection: close`, он бы рвал соединение после первого же ответа.
+      ({bool success, int? latencyMs, String error, int? httpStatus})? best;
+      final attempts = keepAlive ? 2 : 1;
+      for (var attempt = 0; attempt < attempts; attempt++) {
+        final sw = Stopwatch()..start();
+        // Всегда GET. Раньше на `generate_204` и `connecttest.txt` уходил HEAD —
+        // то есть ровно на два пресета из трёх (gstatic-дефолт и Microsoft), и
+        // именно они у пользователей не отвечали, пока Cloudflare с GET работал.
+        // Экономии от HEAD тут нет: 204 без тела, connecttest.txt — 22 байта.
+        final request = await client.openUrl('GET', Uri.parse(uri));
+        request.headers.set('User-Agent', 'KEQDIS/1.0');
+        final response = await request.close().timeout(
+          Duration(milliseconds: timeoutMs.clamp(1000, 8000)),
+        );
+        // Тело нужно дочитать даже когда оно не нужно: недочитанный ответ
+        // не отдаёт соединение обратно в пул, и второй запрос откроет новое —
+        // то есть померит то же самое, что первый.
         await response.drain<void>();
-      }
-      sw.stop();
+        sw.stop();
 
-      final code = response.statusCode;
-      final ok = (code >= 200 && code < 400) || code == 204;
-      return (
-        success: ok,
-        latencyMs: sw.elapsedMilliseconds,
-        error: ok ? '' : 'HTTP $code',
-        httpStatus: code,
-      );
+        final code = response.statusCode;
+        final ok = (code >= 200 && code < 400) || code == 204;
+        final result = (
+          success: ok,
+          latencyMs: sw.elapsedMilliseconds,
+          error: ok ? '' : 'HTTP $code',
+          httpStatus: code,
+        );
+        if (!ok) return result;
+        if (best == null || sw.elapsedMilliseconds < best.latencyMs!) {
+          best = result;
+        }
+      }
+      return best!;
     } on TimeoutException {
       return (
         success: false,

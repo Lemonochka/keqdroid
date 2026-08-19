@@ -1361,6 +1361,24 @@ abstract class AppLocalizations {
   /// **'Measures GET latency through the server'**
   String get settingsPingMethodUrlHint;
 
+  /// No description provided for @settingsPingKeepAliveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Measurement'**
+  String get settingsPingKeepAliveTitle;
+
+  /// No description provided for @settingsPingKeepAlive.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep-alive'**
+  String get settingsPingKeepAlive;
+
+  /// No description provided for @settingsPingKeepAliveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sends two requests over one connection and keeps the better one, so the result is the server\'s response time without the cost of opening the connection. Turn it off to measure a full request, handshake included — larger numbers, closer to what a browser waits for.'**
+  String get settingsPingKeepAliveHint;
+
   /// No description provided for @settingsPingMethodSpeed.
   ///
   /// In en, this message translates to:

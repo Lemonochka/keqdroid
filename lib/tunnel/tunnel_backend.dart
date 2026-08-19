@@ -47,6 +47,9 @@ abstract class TunnelBackend {
     required int socksPort,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
+    /// два запроса по одному соединению, берём лучший: первый оплачивает DNS и
+    /// TLS, второй меряет чистый ответ. Выключенный — один запрос, «как было».
+    bool keepAlive = true,
   });
 
   /// downloads a fixed payload through the core and reports kbps per server.
