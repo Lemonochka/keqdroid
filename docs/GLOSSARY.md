@@ -11,8 +11,8 @@
 | Ядро | Что делает | Где |
 |------|------------|-----|
 | **keqrnel** | единый бинарь: sing-box-хост со встроенным xray-движком. **Дефолтное ядро** (`coreEngine: keqrnel`) — один процесс вместо связки, меньше RAM. | Windows/Linux |
-| **xray** | прокси-движок: протоколы (VLESS/VMess/Trojan/SS/Hysteria2), локальный SOCKS/HTTP, маршрутизация по доменам/IP/geoip. Целевая версия — **26.x**. | все платформы (на Windows — внутри keqrnel; отдельный `xray.exe` в бандл не входит) |
-| **sing-box** | владеет TUN-устройством на десктопе: забирает системный трафик и отдаёт аплинку (SOCKS от xray). Используется в режиме `chain`. | Windows/Linux TUN |
+| **xray** | прокси-движок: протоколы (VLESS/VMess/Trojan/SS/Hysteria2), локальный SOCKS/HTTP, маршрутизация по доменам/IP/geoip. Целевая версия — **26.x**. | Android — отдельным `libxray.so`; на десктопе — только внутри keqrnel |
+| **sing-box** | владеет TUN-устройством на десктопе и считает трафик через `clash_api`. Отдельным бинарём не поставляется — только внутри keqrnel. | Windows/Linux |
 | **wireproxy** (`wireproxy-awg`) | реализует AmneziaWG и отдаёт его локальным SOCKS/HTTP (proxy-режим без админ-прав). | Windows/Linux |
 | **tun2socks** | на Android превращает TUN-трафик в SOCKS-запросы к xray. | Android (внутри VpnService) |
 | **geoip.dat / geosite.dat** | базы для правил `geoip:` / `geosite:` (страны IP / категории доменов). | рядом с ядром |
@@ -27,8 +27,9 @@
   всегда TUN.
 - **`ConnectionMode`** — `proxy` | `tun`.
 - **`VpnBackend`** — `xray` | `awg` (AmneziaWG идёт мимо xray-пайплайна).
-- **`coreEngine`** — `keqrnel` (дефолт, один процесс) | `chain` (два процесса:
-  xray → sing-box; на Windows требует докинуть бинарники — их нет в поставке).
+- **`coreEngine`** — поле в настройках со значениями `keqrnel` (дефолт) и `chain`.
+  Осталось от времён, когда десктоп гонял связку xray → sing-box двумя процессами;
+  сейчас его никто не читает, переключателя в UI нет, ядро всегда keqrnel.
 
 ## Протоколы
 

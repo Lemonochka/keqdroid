@@ -132,14 +132,15 @@ split-списки, `systemProxy`, `killSwitch`, `coreEngine`. На Android се
      **Android — всегда tun** (VpnService), выбора там нет.
 2. **`VpnBackend`**: `xray` | `awg`. AmneziaWG идёт мимо xray-пайплайна — ядро само
    владеет TUN/SOCKS.
-3. **`coreEngine`**: `keqrnel` (дефолт) | `chain`.
-   - **`keqrnel`** — единый бинарь: sing-box-хост со встроенным xray-движком.
-     `KeqrnelConfig.fromChain()` берёт sing-box TUN-конфиг и подменяет socks-outbound
-     `proxy` на `{"type":"xray","xray": <xrayConfig>}`. Один процесс вместо двух, меньше
-     RAM — ради этого ядра и слили.
-   - **`chain`** — классическая связка из двух процессов: `xray` (аплинк) → `sing-box`
-     (TUN). На Linux оба бинарника в бандле; на Windows в поставке их **нет** — chain
-     заработает, только если положить `xray.exe`/`sing-box.exe` рядом с приложением.
+3. **Ядро на десктопе** — всегда **keqrnel**: единый бинарь, sing-box-хост со
+   встроенным xray-движком. `KeqrnelConfig.fromChain()` берёт sing-box TUN-конфиг и
+   подменяет socks-outbound `proxy` на `{"type":"xray","xray": <xrayConfig>}`. Один
+   процесс вместо двух, меньше RAM — ради этого ядра и слили.
+
+   Поле `coreEngine` (`keqrnel` | `chain`) осталось от прежней связки из двух
+   процессов, `xray` → `sing-box`. Оно доезжает до `TunnelSessionRequest` и там
+   умирает: ни бэкенды, ни натив его не читают, переключателя в UI нет, отдельных
+   бинарников в поставке нет. Мёртвый код, который ждёт уборки.
 
 ## 4. Генерация конфигов (`lib/utils`)
 
@@ -151,7 +152,7 @@ split-списки, `systemProxy`, `killSwitch`, `coreEngine`. На Android се
 | `config_gen.dart` (`ConfigGeneratorV2`) | xray-конфиг из `vless://`/`vmess://`/`trojan://`/`ss://`/`hysteria2://`: outbound по протоколу, SOCKS/HTTP-инбаунды, DNS, routing rules |
 | `proxy_chain.dart` (`ProxyChainConfig`) | цепочка серверов: формат `keqchain://` и разбор узлов (§4.1) |
 | `singbox_tun_config.dart` | sing-box TUN-конфиг для десктопного TUN: TUN-inbound, sniffing, split tunnel по процессам |
-| `keqrnel_config.dart` | единый keqrnel-конфиг из chain |
+| `keqrnel_config.dart` | keqrnel-конфиг: sing-box TUN-конфиг со встроенным внутрь xray-фрагментом |
 | `wireproxy_config.dart` | wireproxy-конфиг (AmneziaWG в proxy-режиме) |
 | `routing_entry.dart` | разбор смешанных списков правил: домены / IP-CIDR / `geoip:` |
 | `routing_presets.dart` | готовые списки direct/proxy/block |

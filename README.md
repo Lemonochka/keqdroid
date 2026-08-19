@@ -97,8 +97,9 @@ Hysteria v1 is not supported.
 
 A ready-made config is used as its author wrote it — routing, DNS and outbound
 chains included; only the inbounds are replaced with the app's own. The name is
-read from the config's root `remarks`. The app's own routing lists and final
-action do not apply to such a server.
+read from the config's root `remarks`. The author's rules decide first; your own
+direct / proxy / block lists only see traffic those rules did not already match, and
+if the config ends with a catch-all — most do — they never come into play at all.
 
 ---
 
@@ -275,8 +276,9 @@ Hysteria v1 не поддерживается.
 
 Готовый конфиг исполняется так, как его написал автор: роутинг, DNS и цепочки
 аутбаундов остаются его, подменяются только инбаунды на собственные. Имя берётся
-из корневого `remarks`. Списки роутинга и финальное действие приложения на такой
-сервер не влияют.
+из корневого `remarks`. Первыми решают авторские правила, и до твоих списков
+обход/прокси/блок доходит только то, что они не поймали; а если конфиг кончается
+catch-all-правилом — так почти всегда — не доходит вовсе.
 
 ---
 
