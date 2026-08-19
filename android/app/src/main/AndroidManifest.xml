@@ -64,6 +64,18 @@
                 <data android:scheme="hysteria2" />
                 <data android:scheme="hy2" />
             </intent-filter>
+
+            <!-- Кнопка «добавить подписку» на странице панели (Remnawave и
+                 подобные): keqdroid://install-config?url=<адрес подписки>.
+                 Схема — часть внешнего контракта: она вписана в настройки
+                 панелей, поэтому переименование ломает уже сделанные кнопки. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="keqdroid" />
+                <data android:scheme="keqdis" />
+            </intent-filter>
         </activity>
 
         <service

@@ -64,20 +64,21 @@ flutter build windows --release
 Только на нативном Linux или в WSL. Скриптов два, роли разные:
 
 ```bash
-# первый раз: ставит GTK-тулчейн и нативный Linux-Flutter, потом собирает
+# сборка: ставит GTK-тулчейн и нативный Linux-Flutter (идемпотентно), потом
+# flutter build linux --release
 wsl -e bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/tool/build_linux_wsl.sh
 
-# повторные сборки/релиз (когда /opt/flutter в WSL уже есть): rsync проекта
-# на Linux-ФС + сборка + упаковка + копирование артефактов в release/
-wsl -d Ubuntu -u root bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/release/wsl_build_linux.sh
+# упаковка готового бандла: tar.gz + deb + AppImage + PKGBUILD + сайдкары
+wsl -e bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/tool/package_linux.sh
 ```
 
-- Сборка на `/mnt/c` (drvfs) не работает: медленно и ломаются симлинки Flutter — поэтому
-  релизный скрипт сначала копирует проект в `/root/keqdroid`.
-- Ядра — в `assets/bin/linux/`: `keqrnel`, `wireproxy` и geo-базы.
+- Из Git Bash так не запускай: он превратит `/mnt/c/...` в виндовый путь ещё до `wsl`,
+  и скрипт не найдётся. Запускай из PowerShell (или ставь `MSYS_NO_PATHCONV=1`).
+- Оба скрипта работают прямо в репозитории на `/mnt/c`, копий на Linux-ФС не делают —
+  поэтому Linux-сборку нельзя гонять параллельно с Windows или Android.
+- Ядра — в `assets/bin/linux/`: `keqrnel`, `wireproxy` и geo-базы. CMake кладёт их
+  рядом с бинарём бандла, не в `flutter_assets`.
 - Proxy работает без root; TUN запрашивает root через `pkexec` при подключении.
-- Упаковка: `release/build_linux.sh` делает tar.gz + deb + AppImage;
-  `tool/package_linux.sh` — то же + `PKGBUILD` для Arch.
 
 ## 4. Тесты и анализ
 

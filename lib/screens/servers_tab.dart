@@ -28,6 +28,7 @@ import '../platform/platform_bootstrap.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../ui/responsive/desktop_page_layout.dart';
 import '../utils/clipboard_import.dart';
+import '../utils/subscription_deep_link.dart';
 import '../utils/bidi.dart';
 import '../utils/error_messages.dart';
 import '../utils/import_payload.dart';
@@ -244,8 +245,29 @@ class _ServersTabState extends ConsumerState<ServersTab>
     }
   }
 
+  /// Добавление подписки по адресу — общий путь для QR и для deep link.
+  Future<void> _addSubscriptionFromUrl(BuildContext ctx, String url) async {
+    final host = Uri.tryParse(url)?.host ?? url;
+    try {
+      // Имя выведено из URL, а не задано — пусть его заменит название от
+      // провайдера, когда оно придёт заголовком.
+      final sub = Subscription.create(name: host, url: url, nameIsAuto: true);
+      await ref.read(subscriptionsProvider.notifier).add(sub);
+      if (ctx.mounted) {
+        _showSnack(AppLocalizations.of(ctx)!.qrSubscriptionAdded(host));
+      }
+    } catch (e) {
+      if (ctx.mounted) _showImportError(ctx, e);
+    }
+  }
+
   Future<void> _importDeepLink(String raw) async {
     if (!mounted) return;
+    final subUrl = subscriptionUrlFromDeepLink(raw);
+    if (subUrl != null) {
+      await _addSubscriptionFromUrl(context, subUrl);
+      return;
+    }
     // Тот же путь, что вставка/QR: дубликат или битая ссылка показываются
     // как ошибка импорта, а не роняют обработчик.
     final result = await _addConfigsResilient([raw]);
@@ -706,21 +728,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
     final asUri = Uri.tryParse(raw);
     if (asUri != null && (asUri.scheme == 'http' || asUri.scheme == 'https')) {
-      try {
-        // Имя выведено из URL, а не задано — пусть его заменит название от
-        // провайдера, когда оно придёт заголовком.
-        final sub = Subscription.create(
-          name: asUri.host,
-          url: raw,
-          nameIsAuto: true,
-        );
-        await ref.read(subscriptionsProvider.notifier).add(sub);
-        if (ctx.mounted) {
-          _showSnack(AppLocalizations.of(ctx)!.qrSubscriptionAdded(asUri.host));
-        }
-      } catch (e) {
-        if (ctx.mounted) _showImportError(ctx, e);
-      }
+      await _addSubscriptionFromUrl(ctx, raw);
       return;
     }
 

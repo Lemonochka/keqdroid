@@ -19,9 +19,9 @@
 ### Не собирай Windows и Android параллельно
 `flutter build windows` и `flutter build apk` в одной копии проекта гоняются за общими
 сгенерированными файлами: в `GeneratedPluginRegistrant.java` заезжает dev-only плагин, и
-assembleRelease падает с «package … does not exist». Собирай последовательно. Linux-сборку
-в WSL параллелить **можно** — `release/wsl_build_linux.sh` сначала копирует проект в
-`/root/keqdroid`.
+assembleRelease падает с «package … does not exist». Собирай последовательно — и
+Linux тоже: `tool/build_linux_wsl.sh` работает в той же рабочей копии, а не в отдельной,
+так что делит с остальными `.dart_tool` и сгенерированные файлы.
 
 ### Убитая Linux-сборка портит состояние CMake
 Если сборку в WSL прибили (SIGKILL), следующий `flutter build linux` печатает
@@ -34,9 +34,9 @@ Firebase (он Android-only и ломает линковку Windows). Обыч�
 в списке появиться не должен.
 
 ### Linux не собирается Windows-SDK
-Только нативный Linux или WSL (`tool/build_linux_wsl.sh` для первичной настройки,
-`release/wsl_build_linux.sh` для повторных сборок). И не собирай на `/mnt/c` — drvfs
-ломает симлинки Flutter, поэтому релизный скрипт работает с копией на Linux-ФС.
+Windows-овый Flutter из `/mnt/*` не умеет Linux-таргет, поэтому
+`tool/build_linux_wsl.sh` ставит внутрь WSL **нативный** Linux-SDK и следит, чтобы он
+выигрывал в `PATH`. Сборка идёт прямо в репозитории на `/mnt/c` — так собран 0.9.1.
 
 ### Нативные ядра — НЕ Flutter-ассеты
 `assets/bin/windows` и `assets/bin/linux` намеренно не объявлены ассетами в `pubspec.yaml`
