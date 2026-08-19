@@ -190,9 +190,10 @@ assets/bin/linux/     keqrnel, wireproxy, geoip.dat, geosite.dat
 | `tool/fetch_xray_geo.ps1` | обновить geoip.dat/geosite.dat |
 | `tool/prepare_windows_icon.dart` | иконка Windows |
 | `tools/amneziawg_android/` | AmneziaWG .so под Android |
-| `release/wsl_build_linux.sh` | релизная Linux-сборка: rsync проекта на Linux-ФС + сборка + артефакты в release/ |
-| `release/build_linux.sh` | сборка + упаковка tar.gz/deb/AppImage (вызывается из wsl-скрипта) |
-| `release/gen_sha256.ps1` | .sha256-сайдкары для всех артефактов в release/ |
+
+В `release/` скриптов нет — только каталоги собранных версий и файлы ноутов
+`<версия>-notes.md`. Сайдкары `.sha256` пишет `tool/make_release.ps1` для
+Windows и Android, `tool/package_linux.sh` — для Linux-артефактов.
 
 ## `test/` — тесты (зеркалят `lib/`)
 
