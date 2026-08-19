@@ -61,7 +61,8 @@ log "Build finished"
 echo "bundle: $BUNDLE"
 ls -la "$BUNDLE" || true
 echo ""
-echo "bundled cores:"
-ls -la "$BUNDLE/data/flutter_assets/assets/bin/linux" 2>/dev/null || echo "(cores dir not found)"
+echo "bundled cores (next to the binary, installed by linux/CMakeLists.txt):"
+ls -la "$BUNDLE"/keqrnel "$BUNDLE"/wireproxy "$BUNDLE"/*.dat 2>/dev/null \
+  || echo "(cores missing -- check assets/bin/linux)"
 echo ""
 echo "DONE. Binary: $BUNDLE/keqdroid"

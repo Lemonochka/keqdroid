@@ -1,6 +1,7 @@
 ﻿package com.keqdroid.keqdroid
 
 import android.app.Activity
+import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import androidx.activity.result.ActivityResult
@@ -202,6 +203,31 @@ class MainActivity : FlutterFragmentActivity() {
         }.getOrNull()
     }
 
+    /**
+     * Цвет системных обоев — источник акцента для прошивок, где Material You
+     * выключен.
+     *
+     * Ресурсы `system_accent1_*` есть на любом API 31+, но перекрашивает их
+     * системный ThemeOverlayController, и когда OEM его не включает (ColorOS и
+     * подобные), там остаётся дефолтная палитра AOSP: значение приходит, оно
+     * валидное, но это константа, которая не меняется ни от обоев, ни от темы.
+     * Снаружи это выглядит как «приложение всегда одного цвета».
+     *
+     * Обои же читаются публичным API с API 27 и на всех прошивках, а Material
+     * You и сам выводит палитру из них — поэтому как сид они ближе к тому, что
+     * пользователь видит вокруг. Null при любой ошибке: вызывающий откатится на
+     * `system_accent1_500`.
+     */
+    private fun readWallpaperAccentColor(): Int? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) return null
+        return runCatching {
+            WallpaperManager.getInstance(this)
+                .getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                ?.primaryColor
+                ?.toArgb()
+        }.getOrNull()
+    }
+
     private fun setupMethodChannel(flutterEngine: FlutterEngine) {
         methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
             .also { ch ->
@@ -318,7 +344,11 @@ class MainActivity : FlutterFragmentActivity() {
                             }
                         }
                         "getDeviceModel" -> result.success(android.os.Build.MODEL ?: "Android Device")
-                        "getSystemAccentColor" -> result.success(readSystemAccentColor())
+                        // Обои первыми: сюда попадаем только когда dynamic_color
+                        // промолчал, то есть Material You у прошивки нет, и
+                        // system_accent1_500 с большой вероятностью не перекрашен.
+                        "getSystemAccentColor" ->
+                            result.success(readWallpaperAccentColor() ?: readSystemAccentColor())
                         "getLaunchAction" -> {
                             // Возвращает action из Intent если приложение было запущено из уведомления
                             val action = intent?.getStringExtra(EXTRA_LAUNCH_ACTION)

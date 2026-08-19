@@ -137,6 +137,14 @@ const _updateRecheckInterval = Duration(hours: 6);
 /// доступны, платформа не Android, или Android < 12. Читается один раз при старте.
 final systemAccentColorProvider = FutureProvider<Color?>((ref) async {
   final argb = await VpnNativeBridge.getSystemAccentColor();
+  // В лог, потому что иначе «тема не следует за системой» неотличимо от «сид
+  // пришёл, но прошивка отдаёт константу»: и то и другое выглядит как всегда
+  // одинаковый цвет. С записью видно, дошло ли значение и какое.
+  AppLogger.instance.debug(
+    argb == null
+        ? 'System accent unavailable, using brand seed'
+        : 'System accent seed: #${argb.toRadixString(16).padLeft(8, '0')}',
+  );
   return argb == null ? null : Color(argb);
 });
 
