@@ -362,7 +362,7 @@ class ServersNotifier extends Notifier<ServersState> {
       state = state.copyWith(servers: newList);
     }
     final settings = await ref.read(storageProvider).getSettings();
-    final vpnState = ref.read(vpnStateProvider).value;
+    final vpnState = await _vpnStateForPing();
     final vpnConnected = vpnState?.status == VpnStatus.connected;
     final tunMode = vpnState?.activeMode == ConnectionMode.tun;
     // Raw TCP ping is unmeasurable through a TUN tunnel — switch to URL ping.
@@ -424,6 +424,25 @@ class ServersNotifier extends Notifier<ServersState> {
     return results;
   }
 
+  /// Состояние VPN для выбора типа пинга.
+  ///
+  /// Снимком читать нельзя: пока провайдер в loading (первый кадр после старта,
+  /// смена сервера, перезапуск ядра) `.value` отдаёт null, «подключены» выходит
+  /// false — и замер уходит сырым TCP прямо в туннель, где меряет локальный
+  /// конец вместо сервера. Ждём первое значение, но недолго: пинг не должен
+  /// зависать из-за состояния, а без него отработает как раньше.
+  Future<VpnState?> _vpnStateForPing() async {
+    final snapshot = ref.read(vpnStateProvider);
+    if (snapshot.hasValue) return snapshot.value;
+    try {
+      return await ref
+          .read(vpnStateProvider.future)
+          .timeout(const Duration(milliseconds: 700));
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> pingAll() async {
     await _pingServersWithBatchedUpdates(state.servers);
   }
@@ -481,7 +500,7 @@ class ServersNotifier extends Notifier<ServersState> {
     }
     try {
       final settings = await ref.read(storageProvider).getSettings();
-      final vpnState = ref.read(vpnStateProvider).value;
+      final vpnState = await _vpnStateForPing();
       final vpnConnected = vpnState?.status == VpnStatus.connected;
       final tunMode = vpnState?.activeMode == ConnectionMode.tun;
       // Raw TCP ping is unmeasurable through a TUN tunnel — switch to URL ping.

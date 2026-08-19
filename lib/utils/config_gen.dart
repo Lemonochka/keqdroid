@@ -59,7 +59,10 @@ class ConfigGeneratorV2 {
     );
   }
 
-  /// shared localhost port for ephemeral ping (sequential batch tests).
+  /// Запасной localhost-порт для временного ядра замера. Рабочий путь порт не
+  /// берёт отсюда: [PingService] выделяет свободный на каждый замер, потому что
+  /// на общей константе соседние ядра путались между собой. Остаётся дефолтом
+  /// для вызовов, которым порт не передали.
   static const int ephemeralPingPort = 28150;
 
   /// IP-литерал (IPv4 или IPv6). Regex только под IPv4 пропускал IPv6-адреса,
@@ -78,9 +81,6 @@ class ConfigGeneratorV2 {
     '198.51.100.0/24', '203.0.113.0/24',
     '::1/128', 'fc00::/7', 'fe80::/10',
   };
-
-  /// ephemeral socks port for url ping (fixed, one xray at a time).
-  static int ephemeralPingPortFor(String serverId) => ephemeralPingPort;
 
   /// Пароль на LAN-инбаунды включается только полной парой логин+пароль:
   /// половинчатый ввод даёт noauth, а не пустой логин/пароль в accounts.

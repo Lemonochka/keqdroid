@@ -81,4 +81,45 @@ void main() {
       PingType.tcp,
     );
   });
+
+  group('на Android подмена не зависит от activeMode', () {
+    // Android всегда TUN, но android_tunnel_backend не заполняет activeMode,
+    // поэтому tunMode приходит false — и без поправки на платформу raw tcp
+    // мерил бы локальный конец туннеля (у пользователей это выглядело как
+    // одинаковые 2-4 мс до любого сервера).
+    test('tcp подменяется даже при tunMode: false', () {
+      expect(
+        PingService.pingTypeForConnectionState(PingType.tcp,
+            vpnConnected: true, tunMode: false, platformAlwaysTun: true),
+        PingType.url,
+      );
+    });
+
+    test('icmp тоже, он через tun2socks не проходит', () {
+      expect(
+        PingService.pingTypeForConnectionState(PingType.icmp,
+            vpnConnected: true, tunMode: false, platformAlwaysTun: true),
+        PingType.url,
+      );
+    });
+
+    test('без подключения меряем как просили', () {
+      // Туннеля нет — raw tcp честен, подменять его нечем и незачем.
+      expect(
+        PingService.pingTypeForConnectionState(PingType.tcp,
+            vpnConnected: false, tunMode: false, platformAlwaysTun: true),
+        PingType.tcp,
+      );
+    });
+
+    test('speed и url не трогаем', () {
+      for (final type in const [PingType.speed, PingType.url]) {
+        expect(
+          PingService.pingTypeForConnectionState(type,
+              vpnConnected: true, tunMode: false, platformAlwaysTun: true),
+          type,
+        );
+      }
+    });
+  });
 }

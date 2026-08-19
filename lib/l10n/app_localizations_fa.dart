@@ -672,6 +672,15 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsPingMethodUrlHint => 'تأخیر درخواست GET را از داخل سرور اندازه می‌گیرد';
 
   @override
+  String get settingsPingKeepAliveTitle => 'روش اندازه‌گیری';
+
+  @override
+  String get settingsPingKeepAlive => 'Keep-alive';
+
+  @override
+  String get settingsPingKeepAliveHint => 'دو درخواست را روی یک اتصال می‌فرستد و بهترین را برمی‌دارد: نتیجه زمان پاسخ سرور بدون هزینهٔ برقراری اتصال است. با خاموش کردن آن کل درخواست همراه با دست‌دادن اندازه‌گیری می‌شود — عددها بزرگ‌تر و نزدیک‌تر به چیزی که مرورگر منتظرش می‌ماند.';
+
+  @override
   String get settingsPingMethodSpeed => 'تست سرعت';
 
   @override
