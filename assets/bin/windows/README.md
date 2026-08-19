@@ -17,6 +17,15 @@ keqrnel with a local SOCKS/HTTP inbound and points the Windows system proxy at
 it; TUN mode runs keqrnel with a TUN inbound and needs the app as administrator
 (plus `wintun.dll` next to keqrnel.exe).
 
+Build `keqrnel.exe` from [Lemonochka/keqrnel](https://github.com/Lemonochka/keqrnel):
+
+```sh
+go build -trimpath -buildvcs=false -tags with_gvisor -o keqrnel.exe ./cmd/keqrnel
+```
+
+`with_gvisor` is not optional — the TUN stack is a user setting, and `gvisor` /
+`mixed` (plus full-cone NAT) are missing from a build without that tag.
+
 AmneziaWG still runs through `wireproxy.exe` (wireproxy-awg, embeds amneziawg-go);
 keqrnel wraps its local SOCKS into the TUN. Build wireproxy with
 `tool/build_amneziawg.ps1 -Windows`. There's no official Windows release, so it's

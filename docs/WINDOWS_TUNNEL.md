@@ -2,16 +2,14 @@
 
 ## Процессы по режимам
 
-| Режим | Процессы (дефолт, `coreEngine: keqrnel`) | Что происходит |
-|-------|------------------------------------------|----------------|
-| **Proxy** | `keqrnel.exe` | ядро поднимает локальный SOCKS/HTTP; Chrome/Edge идут через системный прокси Windows, Firefox — через правку `user.js` (`firefox_proxy_helper`, нужен его перезапуск после подключения) |
+| Режим | Процессы | Что происходит |
+|-------|----------|----------------|
+| **Proxy** | `keqrnel.exe` | ядро поднимает локальный SOCKS/HTTP; Chromium-браузеры идут через системный прокси Windows, Firefox системный прокси игнорирует и настраивается вручную |
 | **TUN** | `keqrnel.exe` | ядро создаёт wintun-адаптер и само же терминирует протокол встроенным xray-движком — один процесс на всё |
 
-С `coreEngine: chain` вместо keqrnel работает классическая связка `xray.exe` →
-`sing-box.exe`: sing-box владеет TUN-устройством, его `proxy`-outbound смотрит на
-`127.0.0.1:<localPort>` с кредами SOCKS-инбаунда из сгенерированного xray-конфига.
-В поставку эти два бинарника **не входят** — chain на Windows заработает, только если
-положить их рядом с приложением (см. [`assets/bin/windows/README.md`](../assets/bin/windows/README.md)).
+Других вариантов нет: и в Proxy, и в TUN десктопный бэкенд резолвит только
+`keqrnel.exe`. Поле `coreEngine` со значением `chain` в моделях ещё лежит, но его
+никто не читает и переключателя в UI нет.
 
 AmneziaWG (`VpnBackend.awg`) идёт мимо обоих вариантов: в Proxy его обслуживает
 `wireproxy.exe`, в TUN ядро само владеет адаптером.
@@ -35,7 +33,7 @@ AmneziaWG (`VpnBackend.awg`) идёт мимо обоих вариантов: в
 перед стартом TUN. Жизненный цикл процессов ядра — `windows_core_lifecycle.cpp`, счётчики
 трафика адаптера — `windows_traffic_stats.cpp`.
 
-Статистика в Proxy-режиме берётся не с адаптера, а из xray StatsService API на
-`127.0.0.1:10985` (`lib/tunnel/xray_session_stats.dart`).
+Статистика в Proxy-режиме берётся не с адаптера, а из `clash_api` встроенного
+sing-box — порт keqrnel получает на старте сессии (`queryClashTraffic`).
 
 Сопоставление с Android — в [WINDOWS_ANDROID_PARITY.md](WINDOWS_ANDROID_PARITY.md).

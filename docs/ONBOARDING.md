@@ -52,12 +52,11 @@ flutter build windows --release
   `app_plugin_registrant.cc`) закоммичен уже без Firebase (он Android-only и ломает
   линковку). Обычная сборка работает сразу; `tool/sync_windows_plugins.ps1` перезапускай
   **только после добавления/удаления плагинов** в pubspec.
-- Ядра из `assets/bin/windows/` CMake кладёт рядом с exe. В поставке — `keqrnel.exe`,
-  `wireproxy.exe`, `wintun.dll`, `geoip.dat`, `geosite.dat`. Отдельных `xray.exe` /
-  `sing-box.exe` в бандле **нет**: дефолтное ядро — keqrnel, режим `chain` на Windows
-  заработает только если докинуть эти бинарники самостоятельно
-  ([`assets/bin/windows/README.md`](../assets/bin/windows/README.md)).
-- TUN-режим требует запуска от администратора (sing-box/keqrnel создаёт wintun-адаптер),
+- Ядра из `assets/bin/windows/` CMake кладёт рядом с exe: `keqrnel.exe`,
+  `wireproxy.exe`, `wintun.dll`, `geoip.dat`, `geosite.dat`
+  ([`assets/bin/windows/README.md`](../assets/bin/windows/README.md)). Отдельные
+  `xray.exe` / `sing-box.exe` не нужны — keqrnel несёт оба движка внутри.
+- TUN-режим требует запуска от администратора (keqrnel создаёт wintun-адаптер),
   Proxy работает без прав.
 
 ### Linux (Debian/Arch, x86_64)
@@ -75,7 +74,7 @@ wsl -d Ubuntu -u root bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/release/w
 
 - Сборка на `/mnt/c` (drvfs) не работает: медленно и ломаются симлинки Flutter — поэтому
   релизный скрипт сначала копирует проект в `/root/keqdroid`.
-- Ядра — в `assets/bin/linux/` (там лежит полный набор: keqrnel, xray, sing-box, wireproxy).
+- Ядра — в `assets/bin/linux/`: `keqrnel`, `wireproxy` и geo-базы.
 - Proxy работает без root; TUN запрашивает root через `pkexec` при подключении.
 - Упаковка: `release/build_linux.sh` делает tar.gz + deb + AppImage;
   `tool/package_linux.sh` — то же + `PKGBUILD` для Arch.
@@ -107,8 +106,36 @@ storage/подписки/апдейтер/пинг, `test/models/`, `test/tunnel
 | `tool/fetch_xray_geo.ps1` | свежие `geoip.dat` / `geosite.dat` |
 | `tools/amneziawg_android/` | AmneziaWG `.so` под Android |
 
-`xray.exe`/`wireproxy.exe` под Windows собирай **unstripped** и не запускай из `%TEMP%` —
-иначе Defender считает их угрозой (см. [PITFALLS.md](PITFALLS.md)).
+`keqrnel` скрипта не имеет — собирается из [своего
+репозитория](https://github.com/Lemonochka/keqrnel) обычным `go build`, по бинарю на
+платформу, в `assets/bin/windows/` и `assets/bin/linux/`:
+
+```bash
+go build -trimpath -buildvcs=false -tags with_gvisor -o keqrnel.exe ./cmd/keqrnel
+GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -tags with_gvisor -o keqrnel ./cmd/keqrnel
+```
+
+**`with_gvisor` обязателен.** Стек TUN — пользовательская настройка, и без этого тега
+в ядре нет ни `gvisor`, ни `mixed`, а с ними и full-cone NAT. Забытый тег виден по
+размеру: бинарь худеет примерно на 3 МБ.
+
+`libxray.so` под Android — это официальный xray для `android/arm64`, переименованный.
+Пересобирается из того же репозитория xray-ядра, но уже с NDK:
+
+```bash
+CGO_ENABLED=1 GOOS=android GOARCH=arm64 GOARM64=v8.0 \
+  CC=$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android21-clang.cmd \
+  go build -trimpath -buildvcs=false -gcflags=all=-l=4 \
+  -ldflags="-s -w -checklinkname=0" -o libxray.so github.com/xtls/xray-core/main
+```
+
+`-checklinkname=0` без вариантов: зависимость `anet` (чинит сломанный
+`net.Interfaces()` на Android) лезет в `net.zoneCache` из stdlib, а go1.26 такие
+`go:linkname` запрещает — без флага падает линковка.
+
+`keqrnel.exe`/`wireproxy.exe` под Windows собирай **unstripped** и не запускай из
+`%TEMP%` — иначе Defender считает их угрозой (см. [PITFALLS.md](PITFALLS.md)).
+Android-бинарь, наоборот, стрипается (`-s -w`), как это делает апстрим.
 
 ## 6. Локализация (en / ru / de / zh)
 

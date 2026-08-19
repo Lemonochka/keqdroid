@@ -80,12 +80,12 @@ lib/
 │   ├── connection_mode.dart / vpn_backend.dart / app_routing_mode.dart  enum'ы режимов
 │   ├── windows_core_paths.dart / linux_core_paths.dart  резолв путей к ядрам/geo
 │   ├── socks_credential_generator.dart  генерация кредов локального SOCKS
-│   └── xray_session_stats.dart      разбор статистики xray (StatsService, порт 10985)
+│   └── xray_session_stats.dart      разбор статистики xray StatsService (legacy: живые счётчики берутся из clash_api ядра)
 │
 ├── utils/               ← чистые функции (легко тестируются)
 │   ├── config_gen.dart        генератор xray-конфига (ConfigGeneratorV2) — правится чаще всего
 │   ├── singbox_tun_config.dart  генератор sing-box TUN-конфига
-│   ├── keqrnel_config.dart    единый keqrnel-конфиг из chain
+│   ├── keqrnel_config.dart    keqrnel-конфиг: sing-box TUN со встроенным xray-фрагментом
 │   ├── wireproxy_config.dart  wireproxy-конфиг (AmneziaWG proxy)
 │   ├── routing_entry.dart     разбор смешанных списков правил (домены/IP/geoip)
 │   ├── routing_presets.dart   готовые списки direct/proxy/block
@@ -168,11 +168,11 @@ windows/runner/
 
 ```
 assets/bin/windows/   keqrnel.exe, wireproxy.exe, wintun.dll, geoip.dat, geosite.dat
-assets/bin/linux/     keqrnel, xray, sing-box, wireproxy, geoip.dat, geosite.dat
+assets/bin/linux/     keqrnel, wireproxy, geoip.dat, geosite.dat
 ```
 
-Windows-бандл намеренно без `xray.exe`/`sing-box.exe`: дефолтное ядро — keqrnel, режим
-`chain` там требует докинуть бинарники руками. В `pubspec.yaml` как Flutter-ассеты
+Отдельных `xray` / `sing-box` нет ни там, ни там: keqrnel несёт оба движка внутри и
+на десктопе запускается всегда. В `pubspec.yaml` как Flutter-ассеты
 объявлены только geo-базы — сами ядра раскладываются рядом с exe через `windows/` /
 `linux/` CMakeLists, Android берёт их из `jniLibs`. Иначе Flutter паковал бы десктопные
 бинарники во все платформы (в APK когда-то уезжало ~150 МБ мусора).
