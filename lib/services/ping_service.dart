@@ -9,6 +9,7 @@ import '../models/server_item.dart';
 import '../services/vpn_engine.dart';
 import '../utils/config_gen.dart';
 import '../utils/hysteria_uri.dart';
+import '../utils/pooled.dart';
 
 /// tcp = raw connect latency, url = GET via ephemeral xray,
 /// speed = download throughput in kbps (not ms).
@@ -426,7 +427,21 @@ class PingService {
     return results.first;
   }
 
-  /// батч url-пинга: dns параллельно, onResult дёргается после каждого сервера для ui
+  /// Сколько url-замеров идёт одновременно.
+  ///
+  /// Каждый такой замер — отдельный процесс ядра со своим Go-рантаймом, поэтому
+  /// «все разом» на телефоне не вариант. Но и по одному нельзя: замер упирается
+  /// не в процессор, а в ожидание сети, и подписка из двух десятков серверов
+  /// складывалась в полминуты — при том, что мёртвый сервер выкупает весь
+  /// таймаут целиком. Шесть ядер телефон держит спокойно, а время всей подписки
+  /// упирается уже в самый медленный сервер, а не в их сумму.
+  static const urlPingConcurrency = 6;
+
+  /// батч url-пинга: dns параллельно, замеры пулом воркеров.
+  ///
+  /// [onResult] дёргается по мере готовности каждого сервера (порядок — какой
+  /// ответил, такой и первый), а возвращаемый список сохраняет порядок входного:
+  /// вызывающий раскладывает результаты по серверам, ему важен именно он.
   static Future<List<PingResult>> pingUrlBatch(
     List<ServerItem> servers,
     AppSettings settings, {
@@ -434,65 +449,84 @@ class PingService {
     int timeoutSeconds = 15,
     Map<String, String>? resolvedIps,
     void Function(PingResult)? onResult,
+    int concurrency = urlPingConcurrency,
   }) async {
     if (servers.isEmpty) return [];
 
     final ips = resolvedIps ?? await _resolveServerIps(servers);
-    final timeoutMs = timeoutSeconds * 1000;
-    final results = <PingResult>[];
+    final takenPorts = <int>{};
 
-    for (final s in servers) {
-      // Порт на КАЖДЫЙ замер, а не общая константа. Готовность временного ядра
-      // проверяется коннектом на 127.0.0.1:<порт>, и кто там слушает — не
-      // проверяется. С общим портом это стреляло дважды: следующий сервер в
-      // батче попадал в ещё не отпущенный сокет предыдущего (гонка, зависящая
-      // от скорости машины), а два наложившихся замера уводили пробу в чужое
-      // ядро — то есть молча мерили не тот сервер.
-      final socksPort = await _freePort();
-      final config = ConfigGeneratorV2.generatePingConfig(
-        s.config,
+    return mapPooled(servers, concurrency, (server) async {
+      final result = await _pingUrlSingle(
+        server,
         settings,
-        socksPort: socksPort,
-        resolvedServerIp: ips[s.id],
-        // Desktop probes over HTTP (dart:io HttpClient can't do SOCKS); Android's
-        // Java probe uses Proxy.Type.SOCKS, so it keeps the SOCKS inbound.
-        httpInbound: !Platform.isAndroid,
+        testUrl: testUrl,
+        timeoutMs: timeoutSeconds * 1000,
+        resolvedIp: ips[server.id],
+        takenPorts: takenPorts,
       );
-      PingResult result;
-      try {
-        final raw = await VpnEngine().xrayUrlTest(
-          xrayConfig: config,
-          socksPort: socksPort,
-          testUrl: testUrl,
-          timeoutMs: timeoutMs,
-          keepAlive: settings.pingKeepAlive,
-        );
-        result = PingResult(
-          serverId: s.id,
-          serverName: s.displayName,
-          latencyMs: raw.latencyMs,
-          success: raw.success,
-          error: raw.error,
-          pingType: PingType.url,
-        );
-      } catch (e) {
-        result = PingResult(
-          serverId: s.id,
-          serverName: s.displayName,
-          success: false,
-          error: e.toString(),
-          pingType: PingType.url,
-        );
-      }
-      results.add(result);
       onResult?.call(result);
-    }
+      return result;
+    });
+  }
 
-    return results;
+  static Future<PingResult> _pingUrlSingle(
+    ServerItem server,
+    AppSettings settings, {
+    required String testUrl,
+    required int timeoutMs,
+    String? resolvedIp,
+    Set<int>? takenPorts,
+  }) async {
+    // Порт на КАЖДЫЙ замер, а не общая константа. Готовность временного ядра
+    // проверяется коннектом на 127.0.0.1:<порт>, и кто там слушает — не
+    // проверяется. С общим портом это стреляло дважды: следующий сервер в
+    // батче попадал в ещё не отпущенный сокет предыдущего (гонка, зависящая
+    // от скорости машины), а два наложившихся замера уводили пробу в чужое
+    // ядро — то есть молча мерили не тот сервер.
+    final socksPort = await _freePort(avoid: takenPorts);
+    final config = ConfigGeneratorV2.generatePingConfig(
+      server.config,
+      settings,
+      socksPort: socksPort,
+      resolvedServerIp: resolvedIp,
+      // Desktop probes over HTTP (dart:io HttpClient can't do SOCKS); Android's
+      // Java probe uses Proxy.Type.SOCKS, so it keeps the SOCKS inbound.
+      httpInbound: !Platform.isAndroid,
+    );
+    try {
+      final raw = await VpnEngine().xrayUrlTest(
+        xrayConfig: config,
+        socksPort: socksPort,
+        testUrl: testUrl,
+        timeoutMs: timeoutMs,
+        keepAlive: settings.pingKeepAlive,
+      );
+      return PingResult(
+        serverId: server.id,
+        serverName: server.displayName,
+        latencyMs: raw.latencyMs,
+        success: raw.success,
+        error: raw.error,
+        pingType: PingType.url,
+      );
+    } catch (e) {
+      return PingResult(
+        serverId: server.id,
+        serverName: server.displayName,
+        success: false,
+        error: e.toString(),
+        pingType: PingType.url,
+      );
+    }
   }
 
   /// батч спидтеста: на каждый сервер поднимаем временный xray и меряем
   /// скорость скачивания (kbps), кладём её в PingResult.latencyMs
+  ///
+  /// В отличие от url-пинга — строго по одному. Спидтест меряет полосу канала,
+  /// и параллельные качалки делят её между собой: получилось бы N замеров,
+  /// каждый враньё, и тем сильнее, чем шире пул.
   static Future<List<PingResult>> pingSpeedBatch(
     List<ServerItem> servers,
     AppSettings settings, {
@@ -554,10 +588,18 @@ class PingService {
   /// между отпусканием и стартом теоретически даёт гонку, но со случайным
   /// портом она несравнимо менее вероятна, чем гарантированное столкновение на
   /// общей константе.
-  static Future<int> _freePort() async {
-    final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-    final port = s.port;
-    await s.close();
+  ///
+  /// [avoid] — номера, уже розданные соседним замерам этого батча. Слушающий
+  /// сокет мы закрываем сразу, так что ОС вправе тут же выдать тот же номер
+  /// другому воркеру; пока замеры шли по одному, это было неважно.
+  static Future<int> _freePort({Set<int>? avoid}) async {
+    var port = 0;
+    for (var attempt = 0; attempt < 8; attempt++) {
+      final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      port = socket.port;
+      await socket.close();
+      if (avoid == null || avoid.add(port)) return port;
+    }
     return port;
   }
 

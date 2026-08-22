@@ -34,6 +34,10 @@ class AppSettings {
   final bool darkTheme;
   final bool followSystemTheme;
   final String themePresetId;
+
+  /// Форма кружков под иконками: id из [IconShape] (`circle` по умолчанию).
+  final String iconShapeId;
+
   /// Шрифт интерфейса: id из [kAppFonts] (`system` по умолчанию).
   final String fontId;
   final bool debugMode;
@@ -61,6 +65,9 @@ class AppSettings {
   /// Ядро: `keqrnel` (единое ядро со встроенным xray, дефолт) или `chain`
   /// (связка xray → sing-box; только если явно сохранён в настройках).
   final String coreEngine;
+
+  /// Ядро, исполняющее сервер: `xray` (дефолт) или `mihomo`.
+  final String vpnCore;
   /// Desktop: хоткеи (HotkeyAction.id → токен сочетания, напр. `ctrl+shift+keyT`).
   /// Пустая карта = все хоткеи выключены (дефолт).
   final Map<String, String> hotkeys;
@@ -101,6 +108,7 @@ class AppSettings {
     this.darkTheme = false,
     this.followSystemTheme = true,
     this.themePresetId = 'ocean',
+    this.iconShapeId = 'circle',
     this.fontId = 'system',
     this.debugMode = false,
     this.lanSharing = false,
@@ -117,6 +125,7 @@ class AppSettings {
     this.minimizeToTray = true,
     this.launchAtStartup = false,
     this.coreEngine = coreEngineKeqrnel,
+    this.vpnCore = vpnCoreXray,
     this.hotkeys = const {},
     this.serversTwoColumns = false,
     this.amoledBlack = false,
@@ -145,6 +154,7 @@ class AppSettings {
     'darkTheme': darkTheme,
     'followSystemTheme': followSystemTheme,
     'themePresetId': themePresetId,
+    'iconShapeId': iconShapeId,
     'fontId': fontId,
     'debugMode': debugMode,
     'lanSharing': lanSharing,
@@ -161,6 +171,7 @@ class AppSettings {
     'minimizeToTray': minimizeToTray,
     'launchAtStartup': launchAtStartup,
     'coreEngine': coreEngine,
+    'vpnCore': vpnCore,
     'hotkeys': hotkeys,
     'serversTwoColumns': serversTwoColumns,
     'amoledBlack': amoledBlack,
@@ -211,6 +222,7 @@ class AppSettings {
       darkTheme: json['darkTheme'] as bool? ?? false,
       followSystemTheme: json['followSystemTheme'] as bool? ?? true,
       themePresetId: json['themePresetId'] as String? ?? 'ocean',
+      iconShapeId: json['iconShapeId'] as String? ?? 'circle',
       fontId: json['fontId'] as String? ?? 'system',
       debugMode: json['debugMode'] as bool? ?? false,
       lanSharing: json['lanSharing'] as bool? ?? false,
@@ -233,6 +245,7 @@ class AppSettings {
       minimizeToTray: json['minimizeToTray'] as bool? ?? true,
       launchAtStartup: json['launchAtStartup'] as bool? ?? false,
       coreEngine: normalizeCoreEngine(json['coreEngine'] as String?),
+      vpnCore: normalizeVpnCore(json['vpnCore'] as String?),
       hotkeys: _readHotkeys(json['hotkeys']),
       serversTwoColumns: json['serversTwoColumns'] as bool? ?? false,
       amoledBlack: json['amoledBlack'] as bool? ?? false,
@@ -271,6 +284,20 @@ class AppSettings {
   static String normalizeFinalOutbound(String? raw) {
     final v = raw?.trim().toLowerCase();
     return finalOutbounds.contains(v) ? v! : finalOutboundProxy;
+  }
+
+  /// Допустимые значения [vpnCore] — какое ядро исполняет сервер.
+  ///
+  /// Это НЕ [coreEngine]: тот про связку внутри xray-пути (`chain` против
+  /// `keqrnel`) и на Android всегда `chain`. Здесь выбирается само ядро.
+  /// AmneziaWG-серверы выбор игнорируют: их формат исполняет только своё ядро.
+  static const vpnCoreXray = 'xray';
+  static const vpnCoreMihomo = 'mihomo';
+  static const vpnCores = [vpnCoreXray, vpnCoreMihomo];
+
+  static String normalizeVpnCore(String? raw) {
+    final v = raw?.trim().toLowerCase();
+    return v == vpnCoreMihomo ? vpnCoreMihomo : vpnCoreXray;
   }
 
   /// Допустимые значения [coreEngine].
@@ -350,6 +377,7 @@ class AppSettings {
     bool? darkTheme,
     bool? followSystemTheme,
     String? themePresetId,
+    String? iconShapeId,
     String? fontId,
     bool? debugMode,
     bool? lanSharing,
@@ -366,6 +394,7 @@ class AppSettings {
     bool? minimizeToTray,
     bool? launchAtStartup,
     String? coreEngine,
+    String? vpnCore,
     Map<String, String>? hotkeys,
     bool? serversTwoColumns,
     bool? amoledBlack,
@@ -393,6 +422,7 @@ class AppSettings {
         darkTheme: darkTheme ?? this.darkTheme,
         followSystemTheme: followSystemTheme ?? this.followSystemTheme,
         themePresetId: themePresetId ?? this.themePresetId,
+        iconShapeId: iconShapeId ?? this.iconShapeId,
         fontId: fontId ?? this.fontId,
         debugMode: debugMode ?? this.debugMode,
         lanSharing: lanSharing ?? this.lanSharing,
@@ -409,6 +439,7 @@ class AppSettings {
         minimizeToTray: minimizeToTray ?? this.minimizeToTray,
         launchAtStartup: launchAtStartup ?? this.launchAtStartup,
         coreEngine: coreEngine ?? this.coreEngine,
+        vpnCore: vpnCore ?? this.vpnCore,
         hotkeys: hotkeys ?? this.hotkeys,
         serversTwoColumns: serversTwoColumns ?? this.serversTwoColumns,
         amoledBlack: amoledBlack ?? this.amoledBlack,
@@ -445,6 +476,7 @@ class AppSettings {
               darkTheme == other.darkTheme &&
               followSystemTheme == other.followSystemTheme &&
               themePresetId == other.themePresetId &&
+              iconShapeId == other.iconShapeId &&
               fontId == other.fontId &&
               debugMode == other.debugMode &&
               lanSharing == other.lanSharing &&
@@ -461,6 +493,7 @@ class AppSettings {
               minimizeToTray == other.minimizeToTray &&
               launchAtStartup == other.launchAtStartup &&
               coreEngine == other.coreEngine &&
+              vpnCore == other.vpnCore &&
               serversTwoColumns == other.serversTwoColumns &&
               amoledBlack == other.amoledBlack &&
               hapticFeedback == other.hapticFeedback &&
@@ -498,6 +531,7 @@ class AppSettings {
     darkTheme,
     followSystemTheme,
     themePresetId,
+    iconShapeId,
     fontId,
     debugMode,
     lanSharing,
@@ -514,6 +548,7 @@ class AppSettings {
     minimizeToTray,
     launchAtStartup,
     coreEngine,
+    vpnCore,
     serversTwoColumns,
     amoledBlack,
     hapticFeedback,

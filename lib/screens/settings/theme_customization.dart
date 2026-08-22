@@ -19,7 +19,7 @@ class _ThemeCustomizationCard extends ConsumerWidget {
     return _SettingsCard(
       title: AppLocalizations.of(context)!.settingsThemeTitle,
       subtitle: subtitle,
-      icon: isDesktop ? Icons.desktop_windows_outlined : Icons.palette_outlined,
+      icon: isDesktop ? Icons.desktop_windows_rounded : Icons.palette_rounded,
       accent: ExpressiveAccent.primary,
       onTap: () => Navigator.push(
         context,
@@ -45,23 +45,32 @@ class _ThemeCustomizationScreen extends ConsumerWidget {
 
     // Две вкладки: «Общие» — как выглядит приложение (колонки, чипы статистики),
     // «Темы» — всё про цвета (динамические/системные, светлая/тёмная, пресеты).
+    final tabBar = TabBar(
+      labelColor: controlsAccent,
+      unselectedLabelColor: AppTheme.textLight(context),
+      indicatorColor: controlsAccent,
+      dividerColor: AppTheme.divider(context),
+      tabs: [
+        Tab(text: l10n.appearanceTabGeneral),
+        Tab(text: l10n.appearanceTabThemes),
+      ],
+    );
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         backgroundColor: AppTheme.bg(context),
-        appBar: AppBar(
-          backgroundColor: AppTheme.bg(context),
-          elevation: 0,
-          title: Text(l10n.themeCustomizationTitle),
-          bottom: TabBar(
-            labelColor: controlsAccent,
-            unselectedLabelColor: AppTheme.textLight(context),
-            indicatorColor: controlsAccent,
-            dividerColor: AppTheme.divider(context),
-            tabs: [
-              Tab(text: l10n.appearanceTabGeneral),
-              Tab(text: l10n.appearanceTabThemes),
-            ],
+        // Высоту считаем от самого TabBar, а не константой: он
+        // `PreferredSizeWidget`, и его высота зависит от того, есть ли в
+        // вкладках иконки.
+        appBar: ExpressiveScrolledUnderBar(
+          preferredSize: Size.fromHeight(
+            kToolbarHeight + tabBar.preferredSize.height,
+          ),
+          builder: (context, background) => AppBar(
+            backgroundColor: background,
+            title: Text(l10n.themeCustomizationTitle),
+            bottom: tabBar,
           ),
         ),
         // Не TabBarView: его PageView при смене зависимостей (тёмная/светлая
@@ -104,7 +113,6 @@ class _AppearanceGeneralTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final controlsAccent = AppTheme.accent(context);
     return SmoothScroll(
       builder: (context, controller) => ListView(
         controller: controller,
@@ -115,109 +123,306 @@ class _AppearanceGeneralTab extends StatelessWidget {
             onSelect: (id) => onSave(current.copyWith(fontId: id)),
           ),
           const SizedBox(height: 8),
-          // Переключатели живут в контейнере, а не голыми на фоне: на верхнем
-          // уровне настроек всё собрано в группы, и экран без контейнеров
-          // выпадал из общего языка сильнее всего.
-          ExpressiveCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-          SwitchListTile(
-            value: current.serversTwoColumns,
-            onChanged: (v) => onSave(current.copyWith(serversTwoColumns: v)),
-            activeThumbColor: controlsAccent,
-            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
-            secondary: Icon(Icons.view_column_outlined, color: controlsAccent),
-            title: Text(l10n.serversTwoColumnsTitle),
-            subtitle: Text(l10n.serversTwoColumnsSubtitle),
+          _IconShapePicker(
+            currentShapeId: current.iconShapeId,
+            onSelect: (id) => onSave(current.copyWith(iconShapeId: id)),
           ),
-          SwitchListTile(
-            value: current.amoledBlack,
-            onChanged: current.darkTheme
-                ? (v) => onSave(current.copyWith(amoledBlack: v))
-                : null,
-            activeThumbColor: controlsAccent,
-            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
-            secondary: Icon(Icons.contrast, color: controlsAccent),
-            title: Text(l10n.appearanceAmoled),
-            // Переключатель гасим на светлой теме, а не прячем: иначе он
-            // «пропадает» и его ищут.
-            subtitle: Text(
-              current.darkTheme
-                  ? l10n.appearanceAmoledSubtitle
-                  : l10n.appearanceAmoledNeedsDark,
-            ),
+          const SizedBox(height: 8),
+          // Дальше — не сплошная стопка переключателей, а группы по смыслу.
+          // Девять одинаковых строк подряд читались как список без иерархии:
+          // глазу не за что зацепиться, и найти нужную можно только прочитав
+          // все. Заголовки разбивают их на «где что живёт».
+          ExpressiveSectionHeader(l10n.appearanceSectionServers),
+          ExpressiveGroup(
+            children: [
+              _AppearanceSwitchTile(
+                icon: Icons.view_column_rounded,
+                title: l10n.serversTwoColumnsTitle,
+                subtitle: l10n.serversTwoColumnsSubtitle,
+                value: current.serversTwoColumns,
+                onChanged: (v) =>
+                    onSave(current.copyWith(serversTwoColumns: v)),
+              ),
+              _AppearanceSwitchTile(
+                icon: Icons.swap_vert_rounded,
+                title: l10n.appearanceShowTraffic,
+                subtitle: l10n.appearanceShowTrafficSubtitle,
+                value: current.showTrafficStats,
+                onChanged: (v) => onSave(current.copyWith(showTrafficStats: v)),
+              ),
+              _AppearanceSwitchTile(
+                icon: Icons.timer_rounded,
+                title: l10n.appearanceShowTime,
+                subtitle: l10n.appearanceShowTimeSubtitle,
+                value: current.showConnectionTime,
+                onChanged: (v) =>
+                    onSave(current.copyWith(showConnectionTime: v)),
+              ),
+            ],
           ),
-          if (!PlatformBootstrap.isDesktop)
-            SwitchListTile(
-              value: current.hapticFeedback,
-              onChanged: (v) => onSave(current.copyWith(hapticFeedback: v)),
-              activeThumbColor: controlsAccent,
-              activeTrackColor: controlsAccent.withValues(alpha: 0.32),
-              secondary: Icon(Icons.vibration, color: controlsAccent),
-              title: Text(l10n.appearanceHaptics),
-              subtitle: Text(l10n.appearanceHapticsSubtitle),
-            ),
-          SwitchListTile(
-            value: current.showTrafficStats,
-            onChanged: (v) => onSave(current.copyWith(showTrafficStats: v)),
-            activeThumbColor: controlsAccent,
-            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
-            secondary: Icon(Icons.swap_vert, color: controlsAccent),
-            title: Text(l10n.appearanceShowTraffic),
-            subtitle: Text(l10n.appearanceShowTrafficSubtitle),
-          ),
-          SwitchListTile(
-            value: current.showConnectionTime,
-            onChanged: (v) => onSave(current.copyWith(showConnectionTime: v)),
-            activeThumbColor: controlsAccent,
-            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
-            secondary: Icon(Icons.timer_outlined, color: controlsAccent),
-            title: Text(l10n.appearanceShowTime),
-            subtitle: Text(l10n.appearanceShowTimeSubtitle),
-          ),
-              ],
-            ),
+          ExpressiveSectionHeader(l10n.appearanceSectionFeel),
+          ExpressiveGroup(
+            children: [
+              _AppearanceSwitchTile(
+                icon: Icons.contrast_rounded,
+                title: l10n.appearanceAmoled,
+                // Переключатель гасим на светлой теме, а не прячем: иначе он
+                // «пропадает» и его ищут.
+                subtitle: current.darkTheme
+                    ? l10n.appearanceAmoledSubtitle
+                    : l10n.appearanceAmoledNeedsDark,
+                value: current.amoledBlack,
+                onChanged: current.darkTheme
+                    ? (v) => onSave(current.copyWith(amoledBlack: v))
+                    : null,
+              ),
+              if (!PlatformBootstrap.isDesktop)
+                _AppearanceSwitchTile(
+                  icon: Icons.vibration_rounded,
+                  title: l10n.appearanceHaptics,
+                  subtitle: l10n.appearanceHapticsSubtitle,
+                  value: current.hapticFeedback,
+                  onChanged: (v) =>
+                      onSave(current.copyWith(hapticFeedback: v)),
+                ),
+            ],
           ),
           ExpressiveSectionHeader(l10n.appearanceNotifSectionTitle),
-          ExpressiveCard(
-            padding: EdgeInsets.zero,
+          ExpressiveGroup(
+            children: [
+              _AppearanceSwitchTile(
+                icon: Icons.speed_rounded,
+                title: l10n.appearanceNotifSpeedTitle,
+                subtitle: l10n.appearanceNotifSpeedSubtitle,
+                value: current.showSpeedInNotification,
+                onChanged: (v) =>
+                    onSave(current.copyWith(showSpeedInNotification: v)),
+              ),
+              _AppearanceSwitchTile(
+                icon: Icons.timer_outlined,
+                title: l10n.appearanceNotifUptimeTitle,
+                subtitle: l10n.appearanceNotifUptimeSubtitle,
+                value: current.showUptimeInNotification,
+                onChanged: (v) =>
+                    onSave(current.copyWith(showUptimeInNotification: v)),
+              ),
+              _AppearanceSwitchTile(
+                icon: Icons.sync_rounded,
+                title: l10n.appearanceNotifSubUpdatesTitle,
+                subtitle: l10n.appearanceNotifSubUpdatesSubtitle,
+                value: current.notifySubscriptionUpdates,
+                onChanged: (v) =>
+                    onSave(current.copyWith(notifySubscriptionUpdates: v)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+/// Переключатель настройки — сегмент группы, а не `SwitchListTile`.
+///
+/// `SwitchListTile` тянет за собой чужую анатомию: иконка без контейнера,
+/// свои отступы, своя высота строки. Рядом с остальными экранами, которые
+/// давно живут на [ExpressiveGroupTile] с кружком-иконкой, это и читалось как
+/// «страница из прошлой версии».
+///
+/// Включённое состояние показывает цвет кружка (`tertiary` — роль «тут
+/// что-то изменилось»), как у LAN-прокси и HWID. Нажатие по всей строке, а не
+/// только по самому переключателю: попасть в строку проще, чем в тумблер.
+class _AppearanceSwitchTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+
+  /// null — настройка недоступна в текущем состоянии (AMOLED на светлой теме).
+  final ValueChanged<bool>? onChanged;
+
+  const _AppearanceSwitchTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final enabled = onChanged != null;
+    final accent = AppTheme.accent(context);
+
+    return ExpressiveGroupTile(
+      padding: const EdgeInsets.all(16),
+      onTap: enabled ? () => onChanged!(!value) : null,
+      child: Row(
+        children: [
+          ExpressiveIconBadge(
+            icon: icon,
+            accent: value && enabled
+                ? ExpressiveAccent.tertiary
+                : ExpressiveAccent.secondary,
+          ),
+          const SizedBox(width: ExpressiveSpacing.large),
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-          SwitchListTile(
-            value: current.showSpeedInNotification,
-            onChanged: (v) =>
-                onSave(current.copyWith(showSpeedInNotification: v)),
-            activeThumbColor: controlsAccent,
-            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
-            secondary: Icon(Icons.speed_outlined, color: controlsAccent),
-            title: Text(l10n.appearanceNotifSpeedTitle),
-            subtitle: Text(l10n.appearanceNotifSpeedSubtitle),
-          ),
-          SwitchListTile(
-            value: current.showUptimeInNotification,
-            onChanged: (v) =>
-                onSave(current.copyWith(showUptimeInNotification: v)),
-            activeThumbColor: controlsAccent,
-            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
-            secondary: Icon(Icons.timer_outlined, color: controlsAccent),
-            title: Text(l10n.appearanceNotifUptimeTitle),
-            subtitle: Text(l10n.appearanceNotifUptimeSubtitle),
-          ),
-          SwitchListTile(
-            value: current.notifySubscriptionUpdates,
-            onChanged: (v) =>
-                onSave(current.copyWith(notifySubscriptionUpdates: v)),
-            activeThumbColor: controlsAccent,
-            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
-            secondary: Icon(Icons.sync_outlined, color: controlsAccent),
-            title: Text(l10n.appearanceNotifSubUpdatesTitle),
-            subtitle: Text(l10n.appearanceNotifSubUpdatesSubtitle),
-          ),
+                Text(
+                  title,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: enabled
+                        ? AppTheme.text(context)
+                        : AppTheme.textLight(context),
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textLight(context),
+                    height: 1.3,
+                  ),
+                ),
               ],
             ),
           ),
+          const SizedBox(width: ExpressiveSpacing.small),
+          Switch(
+            value: value,
+            activeThumbColor: accent,
+            onChanged: onChanged,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Выбор формы кружков под иконками — то же, что выбор формы иконок в лаунчере
+/// Pixel.
+///
+/// Образцы рисуются настоящим [ExpressiveIconBadge] с явно заданной формой, а
+/// не картинкой: превью, нарисованное отдельно, рано или поздно расходится с
+/// тем, что видно на экранах.
+class _IconShapePicker extends StatelessWidget {
+  final String currentShapeId;
+  final ValueChanged<String> onSelect;
+  const _IconShapePicker({
+    required this.currentShapeId,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final accent = AppTheme.accent(context);
+    final current = IconShape.fromId(currentShapeId);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ExpressiveSectionHeader(
+          l10n.appearanceIconShapeTitle,
+          icon: Icons.category_rounded,
+        ),
+        // Образцы — сами формы, крупно и без обвязки, как в выборе формы
+        // иконок на Pixel. Прежние карточки с рамкой и подписью под каждой
+        // соревновались с тем единственным, что тут надо разглядеть, — с
+        // силуэтом. Название выбранной формы уходит одной строкой под ряд:
+        // подпись нужна одна, а не шесть.
+        SizedBox(
+          height: 60,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: IconShape.values.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (context, i) {
+              final shape = IconShape.values[i];
+              return _ShapeSwatch(
+                shape: shape,
+                label: _shapeLabel(l10n, shape),
+                selected: shape == current,
+                onTap: () => onSelect(shape.id),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Text(
+            _shapeLabel(l10n, current),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: accent,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _shapeLabel(AppLocalizations l10n, IconShape shape) =>
+      switch (shape) {
+        IconShape.circle => l10n.appearanceIconShapeCircle,
+        IconShape.square => l10n.appearanceIconShapeSquare,
+        IconShape.slanted => l10n.appearanceIconShapeSlanted,
+        IconShape.arch => l10n.appearanceIconShapeArch,
+        IconShape.pill => l10n.appearanceIconShapePill,
+        IconShape.gem => l10n.appearanceIconShapeGem,
+        IconShape.sunny => l10n.appearanceIconShapeSunny,
+        IconShape.cookie => l10n.appearanceIconShapeCookie,
+        IconShape.clover => l10n.appearanceIconShapeClover,
+        IconShape.flower => l10n.appearanceIconShapeFlower,
+        IconShape.puffy => l10n.appearanceIconShapePuffy,
+        IconShape.pebble => l10n.appearanceIconShapePebble,
+      };
+}
+
+/// Один силуэт формы. Выбранный залит акцентом — тем же приёмом, что и в
+/// системном выборе: не рамкой вокруг, а самим цветом фигуры.
+class _ShapeSwatch extends StatelessWidget {
+  final IconShape shape;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ShapeSwatch({
+    required this.shape,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  static const _size = 56.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        label: label,
+        selected: selected,
+        button: true,
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            width: _size,
+            height: _size,
+            decoration: ShapeDecoration(
+              color: selected
+                  ? scheme.primary
+                  : scheme.surfaceContainerHighest,
+              shape: shape.border(_size),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -239,89 +444,102 @@ class _FontPicker extends StatelessWidget {
       children: [
         ExpressiveSectionHeader(
           l10n.appearanceFontTitle,
-          icon: Icons.text_fields,
+          icon: Icons.text_fields_rounded,
         ),
+        // Тот же принцип, что у форм: образец шрифта и всё. Рамка с подписью
+        // под каждой карточкой мешала сравнивать сами начертания, а сравнивают
+        // тут именно их.
         SizedBox(
-          height: 88,
+          height: 60,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: kAppFonts.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, i) {
               final font = kAppFonts[i];
-              return _FontCard(
-                label: font.id == kDefaultFontId
-                    ? l10n.appearanceFontSystem
-                    : font.label,
+              return _FontSwatch(
+                label: _fontLabel(l10n, font),
                 fontFamily: font.family,
                 selected: font.id == currentFontId,
-                accent: accent,
                 onTap: () => onSelect(font.id),
               );
             },
           ),
         ),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Text(
+            _fontLabel(
+              l10n,
+              kAppFonts.firstWhere(
+                (f) => f.id == currentFontId,
+                orElse: () => kAppFonts.first,
+              ),
+            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: accent,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
       ],
     );
   }
+
+  static String _fontLabel(AppLocalizations l10n, AppFont font) =>
+      font.id == kDefaultFontId ? l10n.appearanceFontSystem : font.label;
 }
 
-class _FontCard extends StatelessWidget {
+/// Образец начертания. Выбранный залит акцентом — как и выбранная форма, тем
+/// же приёмом, чтобы два ряда подряд читались как один язык.
+class _FontSwatch extends StatelessWidget {
   final String label;
   final String? fontFamily;
   final bool selected;
-  final Color accent;
   final VoidCallback onTap;
-  const _FontCard({
+
+  const _FontSwatch({
     required this.label,
     required this.fontFamily,
     required this.selected,
-    required this.accent,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 110,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? accent.withValues(alpha: 0.12)
-              : AppTheme.inset(context),
-          borderRadius: BorderRadius.circular(ExpressiveShape.large),
-          border: Border.all(
-            color: selected ? accent : AppTheme.divider(context),
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        label: label,
+        selected: selected,
+        button: true,
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            height: 56,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: BoxDecoration(
+              color: selected
+                  ? scheme.primary
+                  : scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(ExpressiveShape.large),
+            ),
+            child: Text(
+              // Латиница и кириллица разом: часть шрифтов различается только
+              // в одной из них, и по «Aa» выбрать было бы не из чего.
               'Aa Яя',
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontFamily: fontFamily, color: AppTheme.text(context)),
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontFamily: fontFamily, color: selected ? accent : AppTheme.textLight(context), fontWeight: selected ? FontWeight.w600 : FontWeight.w400),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontFamily: fontFamily,
+                    color: selected ? scheme.onPrimary : scheme.onSurface,
                   ),
-                ),
-                if (selected) Icon(Icons.check_circle, size: 16, color: accent),
-              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -351,7 +569,7 @@ class _AppearanceThemesTab extends StatelessWidget {
             activeThumbColor: controlsAccent,
             activeTrackColor: controlsAccent.withValues(alpha: 0.32),
             secondary: Icon(
-              isDesktop ? Icons.desktop_windows_outlined : Icons.android,
+              isDesktop ? Icons.desktop_windows_rounded : Icons.android_rounded,
               color: controlsAccent,
             ),
             title: Text(
@@ -483,14 +701,14 @@ class _LightDarkThemeSlider extends StatelessWidget {
                   _sliderItem(
                     context,
                     active: !isDark,
-                    icon: Icons.light_mode,
+                    icon: Icons.light_mode_rounded,
                     label: AppLocalizations.of(context)!.themeModeLight,
                     onTap: () => onChanged(false),
                   ),
                   _sliderItem(
                     context,
                     active: isDark,
-                    icon: Icons.dark_mode,
+                    icon: Icons.dark_mode_rounded,
                     label: AppLocalizations.of(context)!.themeModeDark,
                     onTap: () => onChanged(true),
                   ),
@@ -584,7 +802,7 @@ class _ThemePreviewCard extends StatelessWidget {
                   ),
                 ),
                 Icon(
-                  selected ? Icons.check_circle : Icons.palette_outlined,
+                  selected ? Icons.check_circle_rounded : Icons.palette_rounded,
                   size: 16,
                   color: selected ? scheme.primary : scheme.onSurfaceVariant,
                 ),
@@ -601,7 +819,7 @@ class _ThemePreviewCard extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: cardBorder),
                   ),
-                  child: Icon(Icons.play_arrow, size: 16, color: scheme.onPrimaryContainer),
+                  child: Icon(Icons.play_arrow_rounded, size: 16, color: scheme.onPrimaryContainer),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -644,7 +862,7 @@ class _ThemePreviewCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: cardBorder),
               ),
-              child: Icon(Icons.play_arrow, size: 23, color: scheme.onSurface),
+              child: Icon(Icons.play_arrow_rounded, size: 23, color: scheme.onSurface),
             ),
           ),
           const SizedBox(height: 6),
@@ -698,9 +916,9 @@ class _ThemePreviewCard extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Icon(Icons.hub, size: 10, color: scheme.onSurface),
-                Icon(Icons.public, size: 10, color: scheme.onSurfaceVariant),
-                Icon(Icons.settings, size: 10, color: scheme.onSurfaceVariant),
+                Icon(Icons.hub_rounded, size: 10, color: scheme.onSurface),
+                Icon(Icons.public_rounded, size: 10, color: scheme.onSurfaceVariant),
+                Icon(Icons.settings_rounded, size: 10, color: scheme.onSurfaceVariant),
               ],
             ),
           ),
@@ -715,7 +933,7 @@ class _ThemePreviewCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                selected ? Icons.check : Icons.palette,
+                selected ? Icons.check_rounded : Icons.palette_rounded,
                 size: 16,
                 color: scheme.onPrimaryContainer,
               ),
@@ -847,7 +1065,7 @@ class _ThemePreviewCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.chevron_right, size: 8, color: subText),
+                  Icon(Icons.chevron_right_rounded, size: 8, color: subText),
                   const SizedBox(width: 2),
                 ],
               ),

@@ -101,7 +101,7 @@ class ServerRow extends StatelessWidget {
                           // «приколотый» пин в мессенджерах
                           angle: 45 * pi / 180,
                           child: Icon(
-                            Icons.push_pin,
+                            Icons.push_pin_rounded,
                             size: 13,
                             color: foreground ?? AppTheme.accent(context),
                           ),
@@ -232,7 +232,7 @@ class ChainRouteStrip extends StatelessWidget {
       children: [
         for (var i = 0; i < shown.length; i++) ...[
           if (i > 0)
-            Icon(Icons.chevron_right, size: dotSize * 0.8, color: arrowColor),
+            Icon(Icons.chevron_right_rounded, size: dotSize * 0.8, color: arrowColor),
           _node(context, shown[i]),
         ],
         if (hidden > 0) ...[

@@ -82,6 +82,17 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   /// Читает [ConnectionsService].
   int? get clashApiPort => _keqrnelClashPort;
 
+  /// PID живых процессов ядра: подпись → pid. Пустая карта — сессии нет.
+  /// Читает панель «Внутренности».
+  ///
+  /// У root-процесса TUN это pid обёртки (pkexec/helper), а не самого ядра:
+  /// ядро он поднимает уже под собой, и его pid этой стороне не виден.
+  Map<String, int> get activeCorePids => {
+    if (_xrayProcess != null) 'keqrnel': _xrayProcess!.pid,
+    if (_wireproxyProcess != null) 'wireproxy': _wireproxyProcess!.pid,
+    if (_singboxProcess != null) 'keqrnel (root, TUN)': _singboxProcess!.pid,
+  };
+
   // true пока идёт штатный stopSession — чтобы вотчдог не принял наш же
   // kill за внезапную смерть ядра.
   bool _stoppingSession = false;

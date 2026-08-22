@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/expressive_elements.dart';
+import 'package:keqdroid/shared/ui/scrolled_under.dart';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -107,9 +109,9 @@ extension TunnelModeX on TunnelMode {
     TunnelMode.excludeOnly => l10n.splitModeAllExceptSelected,
   };
   IconData get icon => switch (this) {
-    TunnelMode.all         => Icons.public,
-    TunnelMode.includeOnly => Icons.shield_outlined,
-    TunnelMode.excludeOnly => Icons.alt_route,
+    TunnelMode.all         => Icons.public_rounded,
+    TunnelMode.includeOnly => Icons.shield_rounded,
+    TunnelMode.excludeOnly => Icons.alt_route_rounded,
   };
 }
 
@@ -247,7 +249,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
                       ctrl.text = pickedPath;
                     }
                   },
-                  icon: const Icon(Icons.folder_open_outlined, size: 18),
+                  icon: const Icon(Icons.folder_open_rounded, size: 18),
                   label: Text(l10n.splitAddAppPickFile),
                 ),
               ),
@@ -447,11 +449,14 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
 
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
-      appBar: _buildAppBar(checked, appsLoaded: appsLoaded),
+      appBar: ExpressiveScrolledUnderBar(
+        builder: (context, background) =>
+            _buildAppBar(checked, appsLoaded: appsLoaded, background: background),
+      ),
       floatingActionButton: _isDesktop && _mode != TunnelMode.all
           ? FloatingActionButton.extended(
               onPressed: _showAddAppDialog,
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add_rounded),
               label: Text(AppLocalizations.of(context)!.splitAddApp),
             )
           : null,
@@ -466,44 +471,19 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
             if (tunnelActive)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Material(
-                  color: AppTheme.orange(context).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 16,
-                          color: AppTheme.orange(context),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            AppLocalizations.of(context)!
-                                .splitTunnelingReconnectHint,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.35, color: AppTheme.text(context)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                child: ExpressiveNotice(
+                  color: AppTheme.orange(context),
+                  icon: Icons.info_outline_rounded,
+                  text: AppLocalizations.of(context)!
+                      .splitTunnelingReconnectHint,
                 ),
               ),
             if (proxyModeOnDesktop && _mode != TunnelMode.all)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Material(
-                  color: AppTheme.orange(context).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Text(
-                      AppLocalizations.of(context)!.splitProxyModeWarning,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.35, color: AppTheme.text(context)),
-                    ),
-                  ),
+                child: ExpressiveNotice(
+                  color: AppTheme.orange(context),
+                  text: AppLocalizations.of(context)!.splitProxyModeWarning,
                 ),
               ),
             _SearchBar(controller: _searchCtrl),
@@ -544,12 +524,14 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     );
   }
 
-  AppBar _buildAppBar(int checked, {required bool appsLoaded}) {
+  AppBar _buildAppBar(
+    int checked, {
+    required bool appsLoaded,
+    required Color background,
+  }) {
     final l10n = AppLocalizations.of(context)!;
     return AppBar(
-      backgroundColor: AppTheme.bg(context),
-      elevation: 0,
-      iconTheme: IconThemeData(color: AppTheme.text(context)),
+      backgroundColor: background,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -565,8 +547,8 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
           tooltip: _showSystem ? l10n.splitHideSystemApps : l10n.splitShowSystemApps,
           icon: Icon(
             _showSystem
-                ? (_isDesktop ? Icons.computer : Icons.android)
-                : (_isDesktop ? Icons.computer_outlined : Icons.android_outlined),
+                ? (_isDesktop ? Icons.computer_rounded : Icons.android_rounded)
+                : (_isDesktop ? Icons.computer_rounded : Icons.android_rounded),
             size: 20,
             color: _showSystem ? AppTheme.accent(context) : AppTheme.textLight(context),
           ),
@@ -738,10 +720,10 @@ class _SearchBar extends StatelessWidget {
           decoration: InputDecoration(
             hintText: l10n.splitSearchHint,
             hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight(context).withValues(alpha: 0.6)),
-            prefixIcon: Icon(Icons.search, color: AppTheme.textLight(context), size: 20),
+            prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textLight(context), size: 20),
             suffixIcon: controller.text.isNotEmpty
                 ? IconButton(
-              icon: Icon(Icons.close, color: AppTheme.textLight(context), size: 18),
+              icon: Icon(Icons.close_rounded, color: AppTheme.textLight(context), size: 18),
               onPressed: controller.clear,
               padding: EdgeInsets.zero,
             )
@@ -798,7 +780,7 @@ class _AppList extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children:[
-            Icon(Icons.search_off, size: 40, color: AppTheme.accent(context).withValues(alpha: 0.4)),
+            Icon(Icons.search_off_rounded, size: 40, color: AppTheme.accent(context).withValues(alpha: 0.4)),
             const SizedBox(height: 10),
             Text(l10n.splitNoAppsFound,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight(context))),
@@ -940,7 +922,7 @@ class _AppTile extends StatelessWidget {
                           : AppTheme.orange(context),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check, size: 16, color: Colors.white),
+                    child: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
                   )
                       : Container(
                     key: const ValueKey('unchecked'),

@@ -2180,4 +2180,190 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsInternalsTitle => 'Über die App';
+
+  @override
+  String get settingsInternalsSubtitle => 'Version, Kerne, Geo-Datenbanken und aktuelle Sitzung';
+
+  @override
+  String get settingsCoreXraySubtitle => 'Standard-Kern. Beherrscht alle Servertypen, auch Ketten und fertige JSON-Konfigurationen.';
+
+  @override
+  String get settingsCoreMihomoSubtitle => 'Clash-kompatibler Kern. Ketten und fertige Xray-Konfigurationen bleiben bei Xray.';
+
+  @override
+  String get settingsCoreHint => 'Gilt ab der nächsten Verbindung — die laufende Sitzung wird nicht neu gestartet.';
+
+  @override
+  String get settingsInternalsCores => 'Kerne';
+
+  @override
+  String get settingsInternalsGeo => 'Geo-Datenbanken';
+
+  @override
+  String get settingsInternalsSession => 'Aktuelle Sitzung';
+
+  @override
+  String get settingsInternalsBuild => 'App und Gerät';
+
+  @override
+  String get settingsInternalsCopyAll => 'Bericht kopieren';
+
+  @override
+  String get settingsInternalsCopied => 'Bericht kopiert';
+
+  @override
+  String get settingsInternalsNoCores => 'Für diese Plattform werden keine Kerne mitgeliefert';
+
+  @override
+  String get settingsInternalsCoreMissing => 'nicht gefunden';
+
+  @override
+  String get settingsInternalsVersionFromEngines => 'aus Quellen gebaut';
+
+  @override
+  String get settingsInternalsRoleCore => 'Proxy-Engine und TUN';
+
+  @override
+  String get settingsInternalsRoleProxy => 'Proxy-Engine';
+
+  @override
+  String get settingsInternalsRoleTun => 'TUN-Gerät';
+
+  @override
+  String get settingsInternalsRoleAwg => 'AmneziaWG';
+
+  @override
+  String settingsInternalsGeoCodes(int count) {
+    return 'Codes: $count';
+  }
+
+  @override
+  String get settingsInternalsStatus => 'Status';
+
+  @override
+  String get settingsInternalsStatusError => 'Fehler';
+
+  @override
+  String get settingsInternalsEngine => 'Engine';
+
+  @override
+  String get settingsInternalsMode => 'Modus';
+
+  @override
+  String get settingsInternalsPorts => 'Lokale Ports';
+
+  @override
+  String get settingsInternalsClashPort => 'Clash-API-Port';
+
+  @override
+  String get settingsInternalsUptime => 'Laufzeit';
+
+  @override
+  String get settingsInternalsCorePids => 'Kernprozesse';
+
+  @override
+  String get settingsInternalsElevated => 'Administrator';
+
+  @override
+  String get settingsInternalsYes => 'ja';
+
+  @override
+  String get settingsInternalsNo => 'nein';
+
+  @override
+  String get settingsInternalsAppVersion => 'App-Version';
+
+  @override
+  String get settingsInternalsPackage => 'Paket';
+
+  @override
+  String get settingsInternalsOs => 'System';
+
+  @override
+  String get settingsInternalsAbi => 'Architektur';
+
+  @override
+  String get settingsInternalsDart => 'Dart';
+
+  @override
+  String get settingsInternalsBuildMode => 'Build';
+
+  @override
+  String get settingsInternalsUnavailable => '—';
+
+  @override
+  String get appearanceIconShapeTitle => 'Symbolform';
+
+  @override
+  String get appearanceIconShapeCircle => 'Kreis';
+
+  @override
+  String get subscriptionCardThemeTitle => 'Kartenlook';
+
+  @override
+  String get subscriptionCardThemeNone => 'Ohne';
+
+  @override
+  String get subscriptionCardThemeInServers => 'In der Serverliste zeigen';
+
+  @override
+  String get subscriptionCardThemeInServersHint => 'Das Bild füllt auch die Gruppenkopfzeile. Die daraus gewonnenen Farben bleiben so oder so.';
+
+  @override
+  String get appearanceIconShapeSquare => 'Quadrat';
+
+  @override
+  String get appearanceIconShapeArch => 'Bogen';
+
+  @override
+  String get appearanceSectionServers => 'Serverliste und Startbildschirm';
+
+  @override
+  String get appearanceSectionFeel => 'Design und Feedback';
+
+  @override
+  String get appearanceIconShapeClover => 'Kleeblatt';
+
+  @override
+  String get appearanceIconShapeCookie => 'Keks';
+
+  @override
+  String get appearanceIconShapeFlower => 'Blume';
+
+  @override
+  String get appearanceIconShapeSlanted => 'Schräg';
+
+  @override
+  String get appearanceIconShapePill => 'Pille';
+
+  @override
+  String get appearanceIconShapeGem => 'Kristall';
+
+  @override
+  String get appearanceIconShapeSunny => 'Sonne';
+
+  @override
+  String get appearanceIconShapePuffy => 'Wolke';
+
+  @override
+  String get appearanceIconShapePebble => 'Kiesel';
+
+  @override
+  String get cardImageRejectAspect => 'Das Bild ist zu hoch für eine Karte. Nimm ein breites — etwa 3:2 bis 5:1.';
+
+  @override
+  String cardImageRejectSmall(int width) {
+    return 'Bild zu klein: mindestens $width px breit.';
+  }
+
+  @override
+  String cardImageRejectLarge(int width) {
+    return 'Bild zu groß: höchstens $width px breit.';
+  }
+
+  @override
+  String get cardImageRejectUnreadable => 'Bild konnte nicht gelesen werden.';
 }

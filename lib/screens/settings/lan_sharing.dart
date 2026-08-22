@@ -96,7 +96,6 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
     );
     final ip = _localIp ?? '...';
 
-    final scheme = Theme.of(context).colorScheme;
     // Включённое состояние показываем цветом иконки-контейнера, а не рамкой:
     // у M3E `tertiary` — это ровно роль «обратите внимание, тут что-то
     // изменилось», а группа сама держит форму сегмента.
@@ -110,17 +109,9 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: iconAccent.container(scheme),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.lan_outlined,
-                  size: 20,
-                  color: iconAccent.onContainer(scheme),
-                ),
+              ExpressiveIconBadge(
+                icon: Icons.lan_rounded,
+                accent: iconAccent,
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -177,7 +168,7 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
                             SnackBar(content: Text(l10n.settingsIpCopied), duration: const Duration(seconds: 1)),
                           );
                         },
-                        child: Icon(Icons.copy, size: 16, color: AppTheme.textLight(context)),
+                        child: Icon(Icons.copy_rounded, size: 16, color: AppTheme.textLight(context)),
                       ),
                     ],
                   ),
@@ -281,7 +272,7 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
               SnackBar(content: Text(l10n.settingsProxyCopied(label, text)), duration: const Duration(seconds: 1)),
             );
           },
-          child: Icon(Icons.copy, size: 14, color: AppTheme.textLight(context)),
+          child: Icon(Icons.copy_rounded, size: 14, color: AppTheme.textLight(context)),
         ),
       ],
     );
@@ -309,7 +300,7 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
         suffixIcon: obscurable
             ? IconButton(
                 icon: Icon(
-                  _lanPassVisible ? Icons.visibility_off : Icons.visibility,
+                  _lanPassVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
                   size: 18,
                   color: AppTheme.textLight(context),
                 ),

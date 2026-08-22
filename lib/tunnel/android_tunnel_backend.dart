@@ -112,6 +112,8 @@ class AndroidTunnelBackend implements TunnelBackend {
       final args = <String, dynamic>{
         'vpnBackend': request.vpnBackend.wireValue,
         'xrayConfig': coreConfig,
+        if (request.mihomoConfig != null && request.mihomoConfig!.isNotEmpty)
+          'mihomoConfig': request.mihomoConfig,
         'coreEngine': 'chain',
         'socksPort': request.socksPort,
         'excludePackages': request.excludePackages,

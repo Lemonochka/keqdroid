@@ -6,8 +6,10 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 
 import '../models/app_font.dart';
 import '../models/app_settings.dart';
+import '../models/icon_shape.dart';
 import '../providers/providers.dart';
 import '../shared/ui/expressive.dart';
+import '../shared/ui/expressive_elements.dart';
 import '../shared/ui/haptics.dart';
 import '../shared/ui/kawaii_decorations.dart';
 import '../utils/app_locale.dart';
@@ -28,6 +30,19 @@ class ThemePreset {
   /// Палитра kawaii-оверлея (стикеры и дождик из частиц); только у flair-тем.
   final KawaiiFlavor? kawaii;
 
+  /// Как палитра строится из сида.
+  ///
+  /// `tonalSpot` — то же, чем строит Material You сам Android, и потому дефолт:
+  /// иначе тема «Ocean» рядом с синей системной выглядит кислотной, хотя сид у
+  /// них почти один. Дело в контейнерных ролях: `fidelity` держится за сид и в
+  /// тёмной схеме кладёт в `primaryContainer` его же, на полной насыщенности
+  /// (`#4c8eff` против `#2b4678` у tonalSpot), а на контейнерах держится
+  /// заливка всех кружков-иконок, чипов и кнопок — светится сразу весь экран.
+  ///
+  /// Kawaii-темам `fidelity` оставлен намеренно: там леденцовый цвет и есть
+  /// смысл темы, а поверхности под него подобраны вручную.
+  final DynamicSchemeVariant variant;
+
   const ThemePreset({
     required this.id,
     required this.name,
@@ -35,6 +50,7 @@ class ThemePreset {
     this.schemeBuilder,
     this.flair = false,
     this.kawaii,
+    this.variant = DynamicSchemeVariant.tonalSpot,
   });
 }
 
@@ -101,6 +117,7 @@ const kThemePresets = <ThemePreset>[
     schemeBuilder: _sakuraScheme,
     flair: true,
     kawaii: KawaiiFlavor.sakura,
+    variant: DynamicSchemeVariant.fidelity,
   ),
   ThemePreset(
     id: 'lavender_milk',
@@ -109,6 +126,7 @@ const kThemePresets = <ThemePreset>[
     schemeBuilder: _lavenderMilkScheme,
     flair: true,
     kawaii: KawaiiFlavor.lavender,
+    variant: DynamicSchemeVariant.fidelity,
   ),
 ];
 
@@ -125,7 +143,7 @@ ColorScheme buildPresetScheme(ThemePreset preset, Brightness brightness) {
   return ColorScheme.fromSeed(
     seedColor: preset.seed,
     brightness: brightness,
-    dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+    dynamicSchemeVariant: preset.variant,
   );
 }
 
@@ -158,6 +176,7 @@ ThemeData buildAppTheme(
   ColorScheme scheme, {
   bool flair = false,
   String? fontFamily,
+  IconShape iconShape = IconShape.circle,
 }) {
   // Токены M3 Expressive: шкала форм, выразительные веса типографики и
   // компонентные темы. Экраны, пока живущие на хардкоде, от этого не ломаются —
@@ -168,6 +187,9 @@ ThemeData buildAppTheme(
   return ThemeData(
     colorScheme: scheme,
     useMaterial3: true,
+    // Форма кружков-иконок едет расширением темы: так её видит любой
+    // ExpressiveIconBadge, не таща за собой ни настройки, ни провайдеры.
+    extensions: [ExpressiveIconShapeTheme(shape: iconShape)],
     textTheme: fontFamily == null
         ? expressiveText
         : expressiveText.apply(fontFamily: fontFamily),
@@ -188,7 +210,7 @@ ThemeData buildAppTheme(
             shape: ExpressiveShape.border(ExpressiveShape.largeIncreased),
           )
         : components.card,
-    appBarTheme: const AppBarTheme(surfaceTintColor: Colors.transparent),
+    appBarTheme: components.appBar,
     navigationBarTheme: components.navigationBar,
     popupMenuTheme: components.popupMenu,
     segmentedButtonTheme: components.segmentedButton,
@@ -274,6 +296,7 @@ class _ThemedApp extends ConsumerWidget {
     // flair-пресеты сохраняют фирменный Comfortaa.
     final font = resolveAppFont(settings.fontId);
     final fontFamily = font.family ?? (flair ? 'Comfortaa' : null);
+    final iconShape = IconShape.fromId(settings.iconShapeId);
 
     final locale = localeFromSettings(settings);
 
@@ -282,9 +305,9 @@ class _ThemedApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       themeMode: settings.darkTheme ? ThemeMode.dark : ThemeMode.light,
       theme: buildAppTheme(useSystem ? lightScheme : customLight,
-          flair: flair, fontFamily: fontFamily),
+          flair: flair, fontFamily: fontFamily, iconShape: iconShape),
       darkTheme: buildAppTheme(dark(useSystem ? darkScheme : customDark),
-          flair: flair, fontFamily: fontFamily),
+          flair: flair, fontFamily: fontFamily, iconShape: iconShape),
       builder: (context, child) {
         final content = (!flair || child == null)
             ? (child ?? const SizedBox.shrink())

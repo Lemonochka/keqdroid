@@ -2185,4 +2185,190 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsInternalsTitle => 'О приложении';
+
+  @override
+  String get settingsInternalsSubtitle => 'Версия, ядра, geo-базы и текущая сессия';
+
+  @override
+  String get settingsCoreXraySubtitle => 'Ядро по умолчанию. Умеет все типы серверов, включая цепочки и готовые JSON-конфиги.';
+
+  @override
+  String get settingsCoreMihomoSubtitle => 'Ядро, совместимое с Clash. Цепочки и готовые конфиги xray остаются на Xray.';
+
+  @override
+  String get settingsCoreHint => 'Применится на следующем подключении — текущая сессия не перезапускается.';
+
+  @override
+  String get settingsInternalsCores => 'Ядра';
+
+  @override
+  String get settingsInternalsGeo => 'Geo-базы';
+
+  @override
+  String get settingsInternalsSession => 'Текущая сессия';
+
+  @override
+  String get settingsInternalsBuild => 'Приложение и устройство';
+
+  @override
+  String get settingsInternalsCopyAll => 'Скопировать отчёт';
+
+  @override
+  String get settingsInternalsCopied => 'Отчёт скопирован';
+
+  @override
+  String get settingsInternalsNoCores => 'Для этой платформы ядра не поставляются';
+
+  @override
+  String get settingsInternalsCoreMissing => 'не найдено';
+
+  @override
+  String get settingsInternalsVersionFromEngines => 'собрано из исходников';
+
+  @override
+  String get settingsInternalsRoleCore => 'Прокси-движок и TUN';
+
+  @override
+  String get settingsInternalsRoleProxy => 'Прокси-движок';
+
+  @override
+  String get settingsInternalsRoleTun => 'TUN-устройство';
+
+  @override
+  String get settingsInternalsRoleAwg => 'AmneziaWG';
+
+  @override
+  String settingsInternalsGeoCodes(int count) {
+    return 'кодов: $count';
+  }
+
+  @override
+  String get settingsInternalsStatus => 'Состояние';
+
+  @override
+  String get settingsInternalsStatusError => 'Ошибка';
+
+  @override
+  String get settingsInternalsEngine => 'Движок';
+
+  @override
+  String get settingsInternalsMode => 'Режим';
+
+  @override
+  String get settingsInternalsPorts => 'Локальные порты';
+
+  @override
+  String get settingsInternalsClashPort => 'Порт Clash API';
+
+  @override
+  String get settingsInternalsUptime => 'Время сессии';
+
+  @override
+  String get settingsInternalsCorePids => 'Процессы ядра';
+
+  @override
+  String get settingsInternalsElevated => 'Права администратора';
+
+  @override
+  String get settingsInternalsYes => 'да';
+
+  @override
+  String get settingsInternalsNo => 'нет';
+
+  @override
+  String get settingsInternalsAppVersion => 'Версия приложения';
+
+  @override
+  String get settingsInternalsPackage => 'Пакет';
+
+  @override
+  String get settingsInternalsOs => 'Система';
+
+  @override
+  String get settingsInternalsAbi => 'Архитектура';
+
+  @override
+  String get settingsInternalsDart => 'Dart';
+
+  @override
+  String get settingsInternalsBuildMode => 'Сборка';
+
+  @override
+  String get settingsInternalsUnavailable => '—';
+
+  @override
+  String get appearanceIconShapeTitle => 'Форма иконок';
+
+  @override
+  String get appearanceIconShapeCircle => 'Круг';
+
+  @override
+  String get subscriptionCardThemeTitle => 'Оформление карточки';
+
+  @override
+  String get subscriptionCardThemeNone => 'Без темы';
+
+  @override
+  String get subscriptionCardThemeInServers => 'Показывать в списке серверов';
+
+  @override
+  String get subscriptionCardThemeInServersHint => 'Картинка заполнит и шапку группы. Цвета, взятые из неё, остаются в любом случае.';
+
+  @override
+  String get appearanceIconShapeSquare => 'Квадрат';
+
+  @override
+  String get appearanceIconShapeArch => 'Арка';
+
+  @override
+  String get appearanceSectionServers => 'Список серверов и главный экран';
+
+  @override
+  String get appearanceSectionFeel => 'Тема и отклик';
+
+  @override
+  String get appearanceIconShapeClover => 'Клевер';
+
+  @override
+  String get appearanceIconShapeCookie => 'Печенье';
+
+  @override
+  String get appearanceIconShapeFlower => 'Цветок';
+
+  @override
+  String get appearanceIconShapeSlanted => 'Наклонный';
+
+  @override
+  String get appearanceIconShapePill => 'Пилюля';
+
+  @override
+  String get appearanceIconShapeGem => 'Кристалл';
+
+  @override
+  String get appearanceIconShapeSunny => 'Солнце';
+
+  @override
+  String get appearanceIconShapePuffy => 'Облако';
+
+  @override
+  String get appearanceIconShapePebble => 'Галька';
+
+  @override
+  String get cardImageRejectAspect => 'Картинка слишком высокая для карточки. Нужна широкая — примерно от 3:2 до 5:1.';
+
+  @override
+  String cardImageRejectSmall(int width) {
+    return 'Картинка мелкая: нужно от $width px по ширине.';
+  }
+
+  @override
+  String cardImageRejectLarge(int width) {
+    return 'Картинка слишком большая: не больше $width px по ширине.';
+  }
+
+  @override
+  String get cardImageRejectUnreadable => 'Не удалось прочитать эту картинку.';
 }

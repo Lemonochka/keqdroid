@@ -10,6 +10,13 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine);
 // Called when a second --autostart instance forwards connect to the running app.
 void KeqdisRequestAutostartConnect();
 
+// The link the app was launched with (cold start), stored before the engine is
+// up. Dart picks it up with getPendingDeepLink once its UI is built.
+void KeqdisSetPendingDeepLink(const std::string& url);
+
+// A link forwarded by a second instance while this one is already running.
+void KeqdisRequestDeepLink(const std::string& url);
+
 // Right-click on the tray icon — open the Flutter tray menu.
 void KeqdisRequestTrayMenu();
 

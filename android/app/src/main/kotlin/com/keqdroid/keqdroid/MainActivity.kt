@@ -20,7 +20,9 @@ import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.provider.Settings
 import android.system.OsConstants
 import android.util.Base64
@@ -149,6 +151,9 @@ class MainActivity : FlutterFragmentActivity() {
         setupMethodChannel(flutterEngine)
         setupEventChannel(flutterEngine)
         registerVpnStatusReceiver()
+        // После setupMethodChannel: слушатель шлёт цвета в Dart и без канала
+        // ронял бы их в пустоту.
+        startWallpaperColorsWatch()
     }
 
     override fun onResume() {
@@ -228,6 +233,85 @@ class MainActivity : FlutterFragmentActivity() {
         }.getOrNull()
     }
 
+    /**
+     * Сид темы, выбранный в системных настройках.
+     *
+     * Самый прямой из источников: это не «похожий цвет», а ровно то значение,
+     * из которого система развернула свои палитры. Лежит в
+     * `Settings.Secure.theme_customization_overlay_packages` — JSON, куда
+     * пишут все прошивки, реализующие механизм AOSP (ColorOS/realme UI, MIUI,
+     * One UI). Читается обычным приложением без разрешений.
+     *
+     * Ключ строкой, а не константой: `THEME_CUSTOMIZATION_OVERLAY_PACKAGES`
+     * помечен @hide и в SDK его нет.
+     *
+     * `accent_color` — форма до Android 13; читаем обе, потому что прошивки
+     * обновляют этот механизм с задержкой в пару лет.
+     */
+    private fun readThemeSettingSeed(): Int? = runCatching {
+        val raw = Settings.Secure.getString(
+            contentResolver,
+            "theme_customization_overlay_packages",
+        )
+        if (raw.isNullOrBlank()) return null
+        val json = org.json.JSONObject(raw)
+        val hex = json.optString("android.theme.customization.system_palette")
+            .ifBlank { json.optString("android.theme.customization.accent_color") }
+        parseThemeHex(hex)
+    }.getOrNull()
+
+    /**
+     * Цвет из настройки темы: `RRGGBB` либо `AARRGGBB`, изредка с решёткой.
+     * Всё остальное — не наш формат, и гадать не нужно: пусто честнее.
+     */
+    private fun parseThemeHex(raw: String?): Int? {
+        val hex = raw?.trim()?.removePrefix("#") ?: return null
+        val value = when (hex.length) {
+            6 -> hex.toLongOrNull(16)?.or(0xFF000000L)
+            8 -> hex.toLongOrNull(16)
+            else -> null
+        } ?: return null
+        return value.toInt()
+    }
+
+    /** Всё, что удалось добыть; выбирает из этого Dart (см. system_accent.dart). */
+    private fun collectAccentCandidates(): Map<String, Any?> = mapOf(
+        "themeSetting" to readThemeSettingSeed(),
+        "wallpaper" to readWallpaperAccentColor(),
+        "systemResource" to readSystemAccentColor(),
+    )
+
+    /**
+     * Обои сменили — пересобираем тему.
+     *
+     * Без этого «поставил обои, а приложение прежнего цвета» лечилось только
+     * перезапуском: извлечение цвета система запускает при установке обоев, то
+     * есть уже ПОСЛЕ того, как мы прочитали их на старте.
+     */
+    private var wallpaperColorsListener: WallpaperManager.OnColorsChangedListener? = null
+
+    private fun startWallpaperColorsWatch() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) return
+        if (wallpaperColorsListener != null) return
+        runCatching {
+            val listener = WallpaperManager.OnColorsChangedListener { _, which ->
+                if (which and WallpaperManager.FLAG_SYSTEM == 0) return@OnColorsChangedListener
+                methodChannel?.invokeMethod("onSystemAccentChanged", collectAccentCandidates())
+            }
+            WallpaperManager.getInstance(this)
+                .addOnColorsChangedListener(listener, Handler(Looper.getMainLooper()))
+            wallpaperColorsListener = listener
+        }
+    }
+
+    private fun stopWallpaperColorsWatch() {
+        val listener = wallpaperColorsListener ?: return
+        wallpaperColorsListener = null
+        runCatching {
+            WallpaperManager.getInstance(this).removeOnColorsChangedListener(listener)
+        }
+    }
+
     private fun setupMethodChannel(flutterEngine: FlutterEngine) {
         methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
             .also { ch ->
@@ -257,6 +341,26 @@ class MainActivity : FlutterFragmentActivity() {
                                         serverName,
                                         result,
                                         coreEngine,
+                                    )
+                                }
+                                KeqdisVpnService.VPN_BACKEND_MIHOMO -> {
+                                    val mihomoConfig = call.argument<String>("mihomoConfig") ?: run {
+                                        result.error("INVALID_ARGS", "Missing mihomoConfig", null)
+                                        return@setMethodCallHandler
+                                    }
+                                    startVpnWithXray(
+                                        mihomoConfig,
+                                        socksPort,
+                                        excludePackages,
+                                        includePackages,
+                                        serverName,
+                                        result,
+                                        // coreEngine у mihomo смысла не имеет — он
+                                        // про связку xray → sing-box.
+                                        KeqdisVpnService.CORE_ENGINE_CHAIN,
+                                        KeqdisVpnService.VPN_BACKEND_MIHOMO,
+                                        // Ядро читает YAML; наш JSON — его подмножество.
+                                        "mihomo_config.yaml",
                                     )
                                 }
                                 KeqdisVpnService.VPN_BACKEND_AWG -> {
@@ -317,6 +421,7 @@ class MainActivity : FlutterFragmentActivity() {
                             }
                             result.success(mapOf("username" to user, "password" to pass))
                         }
+                        "getMihomoApi" -> getMihomoApi(result)
                         "getPing" -> {
                             val addr    = call.argument<String>("address") ?: ""
                             val port    = call.argument<Int>("port") ?: 0
@@ -344,11 +449,35 @@ class MainActivity : FlutterFragmentActivity() {
                             }
                         }
                         "getDeviceModel" -> result.success(android.os.Build.MODEL ?: "Android Device")
+                        "getNativeInternals" -> {
+                            // Панель «Внутренности» читает версии ядер прямо из
+                            // файлов (Go build info), поэтому ей нужен каталог с
+                            // libxray.so/libtun2socks.so — из Dart он не виден.
+                            // PID берём здесь же: они живут в сервисе, а не в Dart.
+                            result.success(mapOf(
+                                "nativeLibraryDir" to applicationInfo.nativeLibraryDir,
+                                "xrayPid" to (vpnServiceBinder?.getXrayPid() ?: -1),
+                                "tun2socksPid" to (vpnServiceBinder?.getTun2SocksPid() ?: -1),
+                                // Ядро ЖИВОЙ сессии. Binder не привязан (холодный
+                                // старт при работающем туннеле) — берём из тех же
+                                // QS-prefs, что и всё остальное о прошлом старте.
+                                "coreKind" to (vpnServiceBinder?.getCoreKind()
+                                    ?: getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
+                                        .getString(KeqdisVpnService.KEY_QS_LAST_CORE_KIND, "")
+                                    ?: ""),
+                                "abis" to android.os.Build.SUPPORTED_ABIS.toList(),
+                                "sdkInt" to android.os.Build.VERSION.SDK_INT,
+                                "release" to (android.os.Build.VERSION.RELEASE ?: ""),
+                                "manufacturer" to (android.os.Build.MANUFACTURER ?: ""),
+                            ))
+                        }
                         // Обои первыми: сюда попадаем только когда dynamic_color
                         // промолчал, то есть Material You у прошивки нет, и
                         // system_accent1_500 с большой вероятностью не перекрашен.
-                        "getSystemAccentColor" ->
-                            result.success(readWallpaperAccentColor() ?: readSystemAccentColor())
+                        // Отдаём ВСЕ источники разом, а выбирает между ними Dart:
+                        // отбраковка непеpекрашенной палитры AOSP требует счёта
+                        // тонов, а библиотека для этого есть только там.
+                        "getSystemAccentColor" -> result.success(collectAccentCandidates())
                         "getLaunchAction" -> {
                             // Возвращает action из Intent если приложение было запущено из уведомления
                             val action = intent?.getStringExtra(EXTRA_LAUNCH_ACTION)
@@ -570,6 +699,12 @@ class MainActivity : FlutterFragmentActivity() {
         serverName: String?,
         result: MethodChannel.Result,
         coreEngine: String = KeqdisVpnService.CORE_ENGINE_CHAIN,
+        // mihomo занимает то же место в схеме (локальный SOCKS под tun2socks),
+        // поэтому путь запуска общий — различаются backend и имя файла конфига.
+        // Имя разное намеренно: по нему видно, каким ядром писан файл, а
+        // оставшийся от прошлой сессии чужой конфиг не подсунется новому ядру.
+        backend: String = KeqdisVpnService.VPN_BACKEND_XRAY,
+        configFileName: String = "xray_config.json",
     ) {
         if (VpnService.prepare(this) != null) {
             result.error("PERMISSION_DENIED", "VPN permission not granted", null)
@@ -590,7 +725,7 @@ class MainActivity : FlutterFragmentActivity() {
         // result.success/error возвращаются в Main thread через mainScope.
         mainScope.launch {
             val xrayPath = try {
-                withContext(Dispatchers.IO) { writeConfig(xrayConfig, "xray_config.json") }
+                withContext(Dispatchers.IO) { writeConfig(xrayConfig, configFileName) }
             } catch (e: IOException) {
                 // Credentials при ошибке IO НЕ сбрасываем: Dart может повторить
                 // startVpn без нового вызова getSocksCredentials.
@@ -609,7 +744,7 @@ class MainActivity : FlutterFragmentActivity() {
 
             startService(Intent(this@MainActivity, KeqdisVpnService::class.java).apply {
                 action = KeqdisVpnService.ACTION_START
-                putExtra(KeqdisVpnService.EXTRA_VPN_BACKEND, KeqdisVpnService.VPN_BACKEND_XRAY)
+                putExtra(KeqdisVpnService.EXTRA_VPN_BACKEND, backend)
                 putExtra(KeqdisVpnService.EXTRA_XRAY_CONFIG, xrayPath)
                 putExtra(KeqdisVpnService.EXTRA_CORE_ENGINE, coreEngine)
                 putExtra("socks_port", socksPort)
@@ -1091,8 +1226,51 @@ class MainActivity : FlutterFragmentActivity() {
         return file.absolutePath
     }
 
+    /**
+     * Порт и `secret` RESTful API работающей mihomo-сессии — для экрана
+     * «Соединения».
+     *
+     * Источник намеренно один: файл конфига, который прямо сейчас исполняет
+     * ядро. Пара придумана в Dart, но синглтон там не переживает пересоздание
+     * Flutter-движка, а из плитки сессию поднимает вообще сервис — Dart о ней
+     * узнаёт уже постфактум. Дублируй мы её в prefs отдельным путём, был бы
+     * второй источник правды и шанс разъехаться; здесь разъезжаться нечему.
+     *
+     * Пустой ответ (port=0) значит «нечего показывать»: сессии нет, она не на
+     * mihomo, или конфиг писан до появления API.
+     */
+    private fun getMihomoApi(result: MethodChannel.Result) {
+        mainScope.launch {
+            val payload = withContext(Dispatchers.IO) {
+                runCatching {
+                    val prefs = getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
+                    val coreKind = prefs.getString(KeqdisVpnService.KEY_QS_LAST_CORE_KIND, "")
+                    if (coreKind != KeqdisVpnService.CORE_KIND_MIHOMO) return@runCatching null
+
+                    val path = prefs.getString(KeqdisVpnService.KEY_QS_LAST_XRAY_CONFIG, "")
+                    if (path.isNullOrEmpty()) return@runCatching null
+                    val file = File(path)
+                    if (!file.isFile) return@runCatching null
+
+                    // Конфиг mihomo мы пишем обычным JSON (YAML 1.2 — его
+                    // надмножество, ядру всё равно), поэтому и читается он
+                    // штатным JSON-парсером.
+                    val json = org.json.JSONObject(file.readText(Charsets.UTF_8))
+                    val controller = json.optString("external-controller")
+                    val secret = json.optString("secret")
+                    val port = controller.substringAfterLast(':', "").toIntOrNull() ?: 0
+                    if (port <= 0 || secret.isEmpty()) return@runCatching null
+
+                    mapOf("port" to port, "secret" to secret)
+                }.getOrNull()
+            }
+            result.success(payload ?: mapOf("port" to 0, "secret" to ""))
+        }
+    }
+
     override fun onDestroy() {
         vpnServiceBinder?.setStatusListener(null)
+        stopWallpaperColorsWatch()
 
         if (vpnStatusReceiverRegistered) {
             try {

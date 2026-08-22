@@ -66,13 +66,13 @@ class _ConnectionStats extends ConsumerWidget {
               if (showTraffic) ...[
                 _statChip(
                   context,
-                  icon: Icons.arrow_downward,
+                  icon: Icons.arrow_downward_rounded,
                   value: _formatVpnRate(stats.$1),
                 ),
                 const SizedBox(width: 8),
                 _statChip(
                   context,
-                  icon: Icons.arrow_upward,
+                  icon: Icons.arrow_upward_rounded,
                   value: _formatVpnRate(stats.$2),
                 ),
                 const SizedBox(width: 8),

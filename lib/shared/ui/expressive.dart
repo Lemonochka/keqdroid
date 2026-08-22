@@ -67,6 +67,56 @@ abstract final class ExpressiveShape {
       );
 }
 
+/// Шкала расстояний.
+///
+/// Заводится по тем же соображениям, что и [ExpressiveShape]: пока её не было,
+/// экраны жили на случайных числах — 10 встречалось 43 раза, рядом 6, 7, 14, 18,
+/// и ни один интервал не повторял другой осмысленно. Глаз читает такой ритм как
+/// «свёрстано», даже когда все цвета и формы взяты из ролей.
+///
+/// Значения лежат на сетке 4dp. Шаги совпадают со шкалой форм не случайно:
+/// отступ между карточками и радиус карточки в M3E — это одна и та же
+/// размерность, и когда они берутся из разных наборов чисел, группа перестаёт
+/// читаться как единое целое.
+abstract final class ExpressiveSpacing {
+  static const double none = 0;
+
+  /// Шов внутри группы: щель видна, но сегменты не распадаются на карточки.
+  /// Единственное значение вне сетки 4dp — оно и не расстояние, а линия.
+  static const double hairline = 2;
+
+  static const double extraSmall = 4;
+  static const double small = 8;
+  static const double medium = 12;
+  static const double large = 16;
+  static const double largeIncreased = 20;
+  static const double extraLarge = 24;
+  static const double extraLargeIncreased = 32;
+  static const double extraExtraLarge = 48;
+}
+
+/// Размеры иконок.
+///
+/// Было девять разных: 18, 16, 20, 14, 10, 22, 17, 15, 8. Соседние значения
+/// (15 и 16, 17 и 18) не различимы как решение — они различимы только как
+/// разнобой: одинаковые по смыслу строки получали иконки разного кегля.
+abstract final class ExpressiveIconSize {
+  /// Внутри строки текста, в чипе, рядом с подписью.
+  static const double inline = 16;
+
+  /// Плотные списки — основной размер приложения.
+  static const double small = 18;
+
+  /// В цветном кружке ([ExpressiveIconBadge]) и в кнопках.
+  static const double medium = 20;
+
+  /// Шапки, крупные действия.
+  static const double large = 24;
+
+  /// Пустые состояния и «геройские» места.
+  static const double extraLarge = 40;
+}
+
 /// Контейнерные роли цвета для «раскрашенных» элементов.
 ///
 /// Спека делит их по назначению, а не по красоте: `secondary` — организующая
@@ -225,6 +275,7 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
 /// Компонентные темы по шкале форм. Собраны отдельно, чтобы `buildAppTheme`
 /// не превращался в простыню, а правки формы жили в одном месте.
 ({
+  AppBarThemeData appBar,
   CardThemeData card,
   DialogThemeData dialog,
   BottomSheetThemeData sheet,
@@ -244,6 +295,42 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
   final buttonPadding = const EdgeInsets.symmetric(horizontal: 24, vertical: 16);
 
   return (
+    // Шапка экрана. Раньше её собирал каждый подэкран сам — пятнадцать копий
+    // `backgroundColor: bg, elevation: 0, iconTheme: …`, которые успели
+    // разъехаться. Здесь же лечится и потерянная обратная связь на прокрутке:
+    // с `elevation: 0` и прозрачным `surfaceTint` шапка вообще никак не
+    // отделялась от контента, и текст списка уезжал под заголовок.
+    //
+    // Отделяем сменой УРОВНЯ поверхности, а не тенью с оттенком: иерархию в
+    // M3E несут `surfaceContainer`-уровни, и `AppBar` умеет резолвить цвет по
+    // состоянию `scrolledUnder` (см. `_resolveColor` в app_bar.dart).
+    //
+    // Это переключение бинарное — цвет меняется рывком, и смягчить его в теме
+    // нечем: `animateColor` живёт только на самом виджете `AppBar`, а у
+    // `SliverAppBar` его нет вовсе. Поэтому экраны берут заливку из
+    // `ExpressiveScrolledUnderBar`, где она привязана к смещению прокрутки.
+    // Здешнее значение остаётся страховкой для шапок, которые туда не обёрнуты.
+    appBar: AppBarThemeData(
+      backgroundColor: WidgetStateColor.resolveWith(
+        (states) => states.contains(WidgetState.scrolledUnder)
+            ? scheme.surfaceContainer
+            : scheme.surface,
+      ),
+      foregroundColor: scheme.onSurface,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      iconTheme: IconThemeData(
+        color: scheme.onSurface,
+        size: ExpressiveIconSize.large,
+      ),
+      actionsIconTheme: IconThemeData(
+        color: scheme.onSurfaceVariant,
+        size: ExpressiveIconSize.large,
+      ),
+    ),
     card: CardThemeData(
       // Тональную подсветку не используем: иерархию в M3E несут уровни
       // surfaceContainer и форма, а не тень с оттенком.

@@ -40,7 +40,13 @@ class KeqdisVpnService : VpnService() {
         const val EXTRA_SERVER_NAME    = "server_name"
         const val EXTRA_VPN_BACKEND    = "vpn_backend"
         const val VPN_BACKEND_XRAY     = "xray"
+        const val VPN_BACKEND_MIHOMO   = "mihomo"
         const val VPN_BACKEND_AWG      = "awg"
+
+        // Какое ядро исполняет конфиг. Уходит в NativeHelper.startCore: у xray и
+        // mihomo разный argv и разный способ показать базы geo.
+        const val CORE_KIND_XRAY       = "xray"
+        const val CORE_KIND_MIHOMO     = "mihomo"
         // Ядро (только для backend xray): chain — libxray.so; keqrnel — единое
         // ядро libkeqrnel.so (sing-box host + встроенный xray) как drop-in.
         const val EXTRA_CORE_ENGINE    = "core_engine"
@@ -83,6 +89,7 @@ class KeqdisVpnService : VpnService() {
         // Движок ядра последнего старта (chain/keqrnel) — плитка должна
         // переподключаться тем же движком, что и записанный configPath.
         const val KEY_QS_LAST_CORE_ENGINE = "qs_last_core_engine"
+        const val KEY_QS_LAST_CORE_KIND   = "qs_last_core_kind"
         const val KEY_QS_LAST_SERVER_NAME = "qs_last_server_name"
         const val KEY_QS_LAST_EXCLUDE_PACKAGES = "qs_last_exclude_packages"
         const val KEY_QS_LAST_INCLUDE_PACKAGES = "qs_last_include_packages"
@@ -99,6 +106,7 @@ class KeqdisVpnService : VpnService() {
     @Volatile private var lastXrayConfigPath: String? = null
     @Volatile private var lastSocksPort: Int = 2080
     @Volatile private var lastCoreEngine: String = CORE_ENGINE_KEQRNEL
+    @Volatile private var lastCoreKind: String = CORE_KIND_XRAY
     @Volatile private var lastExcludePackages: List<String> = emptyList()
     @Volatile private var lastIncludePackages: List<String> = emptyList()
     @Volatile private var xrayPid:            Int                   = -1
@@ -146,6 +154,13 @@ class KeqdisVpnService : VpnService() {
         fun getTotalUpload()     = uploadTotal.get()
         fun getTotalDownload()   = downloadTotal.get()
         fun getDurationSeconds() = if (startTime > 0) (System.currentTimeMillis() - startTime) / 1000L else 0L
+        // PID форкнутых ядер для панели «Внутренности»; -1 — процесс не запущен.
+        fun getXrayPid()         = xrayPid
+        fun getTun2SocksPid()    = tun2socksPid
+        // Чем исполняется ТЕКУЩАЯ сессия. Панель «Внутренности» не вправе
+        // выводить это из настройки: выбор ядра меняют на ходу, а работает всё
+        // равно то, с которым подключились.
+        fun getCoreKind()        = lastCoreKind
     }
     private val binder = LocalBinder()
 
@@ -256,7 +271,19 @@ class KeqdisVpnService : VpnService() {
                 val coreEngine = intent.getStringExtra(EXTRA_CORE_ENGINE) ?: CORE_ENGINE_CHAIN
                 lastCoreEngine = coreEngine
 
-                android.util.Log.d("KEQDIS", "onStartCommand: backend=$backend engine=$coreEngine config=$configPath")
+                // Ядро выводим из backend'а и запоминаем ТАМ ЖЕ, где configPath:
+                // файл конфига привязан к ядру (mihomo пишем в YAML, xray — в
+                // json), и плитка обязана переподключаться тем же ядром. Иначе
+                // повторим старый баг «плитка → ERROR»: libxray не разберёт
+                // конфиг mihomo и SOCKS-порт не поднимется.
+                val coreKind =
+                    if (backend == VPN_BACKEND_MIHOMO) CORE_KIND_MIHOMO else CORE_KIND_XRAY
+                lastCoreKind = coreKind
+
+                android.util.Log.d(
+                    "KEQDIS",
+                    "onStartCommand: backend=$backend core=$coreKind engine=$coreEngine config=$configPath"
+                )
                 lastXrayConfigPath = configPath
 
                 runCatching {
@@ -264,6 +291,7 @@ class KeqdisVpnService : VpnService() {
                         .edit()
                         .putString(KEY_QS_LAST_BACKEND, backend)
                         .putString(KEY_QS_LAST_CORE_ENGINE, coreEngine)
+                        .putString(KEY_QS_LAST_CORE_KIND, coreKind)
                         .putString(KEY_QS_LAST_XRAY_CONFIG, configPath)
                         .putInt(KEY_QS_LAST_SOCKS_PORT, socksPort)
                         .putString(KEY_QS_LAST_SOCKS_USERNAME, socksUsername)
@@ -284,7 +312,7 @@ class KeqdisVpnService : VpnService() {
                     startGuarded(startId) {
                         startVpnWithXray(
                             startId, configPath, socksPort, excludePkgs, includePkgs,
-                            socksNoAuth = false, coreEngine = coreEngine,
+                            socksNoAuth = false, coreEngine = coreEngine, coreKind = coreKind,
                         )
                     }
                 }
@@ -351,6 +379,7 @@ class KeqdisVpnService : VpnService() {
         includePkgs: List<String>,
         socksNoAuth: Boolean = false,
         coreEngine: String = CORE_ENGINE_CHAIN,
+        coreKind: String = CORE_KIND_XRAY,
     ) = opMutex.withLock {
         // Под opMutex: предыдущий стоп уже завершил cleanup(), порт/процессы свободны.
         if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) {
@@ -371,16 +400,40 @@ class KeqdisVpnService : VpnService() {
             // роутинг (см. AndroidTunnelBackend), и libkeqrnel.so в jniLibs нет.
             // coreEngine оставлен в сигнатурах для совместимости, но игнорируется —
             // даже старый сохранённый engine=keqrnel не должен искать отсутствующий бинарь.
-            xrayPid = startXray(getBinaryPath("libxray.so"), xrayConfigPath)
+            //
+            // mihomo занимает в схеме ровно то же место: поднимает локальный SOCKS5,
+            // TUN как и раньше держат VpnService + tun2socks. Отличаются только
+            // бинарь и argv (см. NativeHelper.startCore).
+            // Ядра от прошлой жизни приложения — до старта нового.
+            //
+            // Без этого новое ядро не займёт SOCKS-порт (его держит старое), а
+            // tun2socks подключится к старому ядру с чужими credentials: в логе
+            // `rejected username/password`, на экране — «подключено» и мёртвая
+            // сеть. Проверка isPortOpen ниже такое не ловит: порт-то открыт.
+            if (NativeHelper.killOrphans() > 0) {
+                // SIGKILL асинхронен: слушающий сокет освобождается не в тот же
+                // миг, а новое ядро полезет за портом сразу.
+                var waitedFree = 0
+                while (isPortOpen("127.0.0.1", socksPort) && waitedFree < 2000) {
+                    delay(100); waitedFree += 100
+                }
+            }
 
-            // ждём пока Xray поднимет SOCKS5 порт
+            val isMihomo = coreKind == CORE_KIND_MIHOMO
+            xrayPid = startXray(
+                getBinaryPath(if (isMihomo) "libmihomo.so" else "libxray.so"),
+                xrayConfigPath,
+                coreKind,
+            )
+
+            // ждём пока ядро поднимет SOCKS5 порт
             var waited = 0
             while (!isPortOpen("127.0.0.1", socksPort) && waited < 10000) {
                 delay(300); waited += 300
             }
             if (!isPortOpen("127.0.0.1", socksPort))
                 throw IllegalStateException(
-                    "Xray SOCKS5 port $socksPort not ready${coreLogTail()}"
+                    "${if (isMihomo) "mihomo" else "Xray"} SOCKS5 port $socksPort not ready${coreLogTail()}"
                 )
 
             // создаём TUN-интерфейс
@@ -794,14 +847,14 @@ class KeqdisVpnService : VpnService() {
             if (tail.isBlank()) "" else "\n$tail"
         }.getOrDefault("")
 
-    private fun startXray(binary: String, config: String): Int {
-        // NativeHelper.startXray: fork+execv из nativeLibraryDir, дублирует вывод ядра
+    private fun startXray(binary: String, config: String, coreKind: String = CORE_KIND_XRAY): Int {
+        // NativeHelper.startCore: fork+execv из nativeLibraryDir, дублирует вывод ядра
         // в logcat (KEQDIS_XRAY) и в файл CORE_LOG_FILE (его читает getXrayLogs).
         // Возвращает: pid > 0 — успех, -1 binary not found, -2 config not found, -4 crashed immediately
         XrayGeoAssets.ensure(this, filesDir)
         // Свежий лог ядра на каждую сессию (ping пишет в свой файл/никуда — не мешает).
         runCatching { File(filesDir, CORE_LOG_FILE).writeText("") }
-        val pid = NativeHelper.startXray(binary, config, filesDir.absolutePath, CORE_LOG_FILE)
+        val pid = NativeHelper.startCore(binary, config, filesDir.absolutePath, CORE_LOG_FILE, coreKind)
         when {
             pid == -1 -> throw IllegalStateException("Xray binary not found: $binary")
             pid == -2 -> throw IllegalStateException("Xray config not found: $config")
@@ -1123,7 +1176,13 @@ class KeqdisVpnService : VpnService() {
                 ) {
                     Intent(this, KeqdisVpnService::class.java).apply {
                         action = ACTION_START
-                        putExtra(EXTRA_VPN_BACKEND, VPN_BACKEND_XRAY)
+                        // Тем же ядром, что и в прошлой сессии: конфиг на диске
+                        // написан под него, чужое ядро его не разберёт.
+                        putExtra(
+                            EXTRA_VPN_BACKEND,
+                            if (lastCoreKind == CORE_KIND_MIHOMO) VPN_BACKEND_MIHOMO
+                            else VPN_BACKEND_XRAY,
+                        )
                         putExtra(EXTRA_CORE_ENGINE, lastCoreEngine)
                         putExtra(EXTRA_XRAY_CONFIG, lastXrayConfigPath)
                         putExtra("socks_port", lastSocksPort)

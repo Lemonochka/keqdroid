@@ -297,7 +297,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
         backgroundColor: AppTheme.card(ctx),
         title: Row(
           children: [
-            Icon(Icons.lock_open_outlined, color: AppTheme.accent(ctx), size: 26),
+            Icon(Icons.lock_open_rounded, color: AppTheme.accent(ctx), size: 26),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -495,9 +495,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     });
 
     final destinations = [
-      (icon: Icons.dns_outlined, label: l10n.navServers),
-      (icon: Icons.subscriptions_outlined, label: l10n.navSubscriptions),
-      (icon: Icons.settings_outlined, label: l10n.navSettings),
+      (icon: Icons.dns_rounded, label: l10n.navServers),
+      (icon: Icons.subscriptions_rounded, label: l10n.navSubscriptions),
+      (icon: Icons.settings_rounded, label: l10n.navSettings),
     ];
 
     return Scaffold(
@@ -736,7 +736,7 @@ class _ConnectionModeMenuButton extends ConsumerWidget {
     return PopupMenuButton<ConnectionMode>(
       tooltip: AppLocalizations.of(context)!.desktopConnectionMode,
       icon: Icon(
-        mode == ConnectionMode.tun ? Icons.vpn_lock_outlined : Icons.lan_outlined,
+        mode == ConnectionMode.tun ? Icons.vpn_lock_rounded : Icons.lan_rounded,
         size: 22,
       ),
       onSelected: (next) =>
@@ -784,12 +784,12 @@ class _ConnectionModeChip extends ConsumerWidget {
             ButtonSegment(
               value: ConnectionMode.proxy,
               label: Text('Proxy'),
-              icon: Icon(Icons.lan_outlined, size: 16),
+              icon: Icon(Icons.lan_rounded, size: 16),
             ),
             ButtonSegment(
               value: ConnectionMode.tun,
               label: Text('TUN'),
-              icon: Icon(Icons.vpn_lock_outlined, size: 16),
+              icon: Icon(Icons.vpn_lock_rounded, size: 16),
             ),
           ],
           selected: {mode},

@@ -15,7 +15,6 @@ class _ShareHwidCard extends ConsumerWidget {
       await ref.read(settingsNotifierProvider.notifier).save(settings.copyWith(shareDeviceHwid: value));
     }
 
-    final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     // Включённое состояние — цветом иконки, как у LAN-прокси: рамка вокруг
     // карточки внутри группы обрезалась бы её же формой.
@@ -29,19 +28,11 @@ class _ShareHwidCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: iconAccent.container(scheme),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.fingerprint,
-                  size: 20,
-                  color: iconAccent.onContainer(scheme),
-                ),
+              ExpressiveIconBadge(
+                icon: Icons.fingerprint_rounded,
+                accent: iconAccent,
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: ExpressiveSpacing.large),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -124,26 +124,26 @@ class ConnectionTile extends StatelessWidget {
             runSpacing: 4,
             children: [
               if (entry.closed)
-                _meta(context, Icons.link_off, l10n.connectionsClosed),
+                _meta(context, Icons.link_off_rounded, l10n.connectionsClosed),
               if (showProcess && process.isNotEmpty)
-                _meta(context, Icons.apps, process),
-              if (rule.isNotEmpty) _meta(context, Icons.rule, rule),
+                _meta(context, Icons.apps_rounded, process),
+              if (rule.isNotEmpty) _meta(context, Icons.rule_rounded, rule),
               if (entry.outbound.isNotEmpty)
-                _meta(context, Icons.call_split, entry.outbound),
+                _meta(context, Icons.call_split_rounded, entry.outbound),
               if (entry.inbound.isNotEmpty)
-                _meta(context, Icons.login, entry.inbound),
+                _meta(context, Icons.login_rounded, entry.inbound),
               if (entry.source.isNotEmpty)
-                _meta(context, Icons.computer, entry.source),
+                _meta(context, Icons.computer_rounded, entry.source),
               if (entry.download != null || entry.upload != null)
                 _meta(
                   context,
-                  Icons.swap_vert,
+                  Icons.swap_vert_rounded,
                   '↓ ${_bytes(entry.download ?? 0)}  ↑ ${_bytes(entry.upload ?? 0)}',
                 ),
               if (entry.startedAt != null)
                 _meta(
                   context,
-                  Icons.schedule,
+                  Icons.schedule_rounded,
                   _formatTime(entry.startedAt!),
                 ),
             ],

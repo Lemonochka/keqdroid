@@ -128,6 +128,18 @@ class Subscription {
   /// Чем клиент представляется этой панели: HWID, User-Agent, device-заголовки.
   final SubscriptionFetchIdentity fetchIdentity;
 
+  /// Оформление карточки: id из [kSubscriptionCardThemes]. Пусто — обычная
+  /// карточка. Выбирается в редакторе подписки.
+  final String cardThemeId;
+
+  /// Показывать ли ту же подложку в шапке группы серверов этой подписки.
+  ///
+  /// По умолчанию да: связь между карточкой и её серверами и есть смысл затеи.
+  /// Но список серверов — рабочий экран, и картинка в каждой шапке кому-то там
+  /// мешает; при этом цвета, выведенные из неё, остаются в любом случае —
+  /// выключается именно картинка, а не оформление группы целиком.
+  final bool cardThemeInServers;
+
   const Subscription({
     required this.id,
     required this.name,
@@ -146,6 +158,8 @@ class Subscription {
     this.webPageUrl,
     this.nameIsAuto = false,
     this.fetchIdentity = SubscriptionFetchIdentity.empty,
+    this.cardThemeId = '',
+    this.cardThemeInServers = true,
   });
 
   factory Subscription.create({
@@ -190,6 +204,10 @@ class Subscription {
     // «имя автоматическое». Иначе оно введено руками и трогать его нельзя.
     nameIsAuto:
         json['nameIsAuto'] as bool? ?? (name == Uri.tryParse(url)?.host),
+    cardThemeId: json['cardThemeId'] as String? ?? '',
+    // Отсутствует — значит подписку завели до появления флага: показываем,
+    // как показывали бы новой. Выключенное состояние пишется явно.
+    cardThemeInServers: json['cardThemeInServers'] as bool? ?? true,
     fetchIdentity: json['fetchIdentity'] is Map
         ? SubscriptionFetchIdentity.fromJson(
             (json['fetchIdentity'] as Map).cast<String, dynamic>(),
@@ -216,6 +234,10 @@ class Subscription {
     if (supportUrl != null) 'supportUrl': supportUrl,
     if (webPageUrl != null) 'webPageUrl': webPageUrl,
     'nameIsAuto': nameIsAuto,
+    if (cardThemeId.isNotEmpty) 'cardThemeId': cardThemeId,
+    // Только выключенное: значение по умолчанию в каждой записи — лишний шум
+    // в файле, а «нет ключа» и так читается как «включено».
+    if (!cardThemeInServers) 'cardThemeInServers': false,
     if (fetchIdentity.enabled || fetchIdentity.hasCustomFields)
       'fetchIdentity': fetchIdentity.toJson(),
   };
@@ -237,6 +259,8 @@ class Subscription {
     String? supportUrl,
     String? webPageUrl,
     bool? nameIsAuto,
+    String? cardThemeId,
+    bool? cardThemeInServers,
     SubscriptionFetchIdentity? fetchIdentity,
   }) =>
       Subscription(
@@ -256,6 +280,8 @@ class Subscription {
         supportUrl: supportUrl ?? this.supportUrl,
         webPageUrl: webPageUrl ?? this.webPageUrl,
         nameIsAuto: nameIsAuto ?? this.nameIsAuto,
+        cardThemeId: cardThemeId ?? this.cardThemeId,
+        cardThemeInServers: cardThemeInServers ?? this.cardThemeInServers,
         fetchIdentity: fetchIdentity ?? this.fetchIdentity,
       );
 
@@ -296,6 +322,8 @@ class Subscription {
       webPageUrl: webPageUrl,
       nameIsAuto: nameIsAuto,
       fetchIdentity: fetchIdentity,
+      cardThemeId: cardThemeId,
+      cardThemeInServers: cardThemeInServers,
     );
   }
 

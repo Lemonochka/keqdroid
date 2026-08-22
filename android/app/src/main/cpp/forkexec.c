@@ -145,7 +145,7 @@ static pid_t double_fork_exec(const char *binPath, char *const argv[], const cha
 /* ── tun2socks ──────────────────────────────────────────────────────────── */
 
 JNIEXPORT jint JNICALL
-Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
+Java_com_keqdroid_keqdroid_NativeHelper_nativeStartTun2Socks(
         JNIEnv *env, jclass clazz,
         jint tunFd, jstring jBinPath, jstring jProxyUrl,
         jstring jLogLevel, jstring jLogPath) {
@@ -389,17 +389,32 @@ Java_com_keqdroid_keqdroid_NativeHelper_startTun2Socks(
     return (jint)pid2;
 }
 
-/* ── Xray ───────────────────────────────────────────────────────────────── */
+/* ── Ядро прокси (xray / mihomo) ─────────────────────────────────────────── */
 
 JNIEXPORT jint JNICALL
-Java_com_keqdroid_keqdroid_NativeHelper_startXray(
+Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
         JNIEnv *env, jclass clazz,
-        jstring jBinPath, jstring jConfigPath, jstring jAssetDir, jstring jLogName) {
+        jstring jBinPath, jstring jConfigPath, jstring jAssetDir, jstring jLogName,
+        jstring jCoreKind) {
 
     const char *binPath    = (*env)->GetStringUTFChars(env, jBinPath,    NULL);
     const char *configPath = (*env)->GetStringUTFChars(env, jConfigPath, NULL);
     const char *assetDir   = (*env)->GetStringUTFChars(env, jAssetDir,   NULL);
     const char *logName    = jLogName ? (*env)->GetStringUTFChars(env, jLogName, NULL) : NULL;
+
+    /* Какое ядро запускаем: у них разный argv и разный способ показать базы geo.
+     * Копируем в свой буфер ДО fork: в ребёнке JNI-вызовы делать нельзя, а
+     * стековый буфер наследуется как есть. */
+    char coreKind[16];
+    coreKind[0] = '\0';
+    if (jCoreKind) {
+        const char *ck = (*env)->GetStringUTFChars(env, jCoreKind, NULL);
+        if (ck) {
+            snprintf(coreKind, sizeof(coreKind), "%s", ck);
+            (*env)->ReleaseStringUTFChars(env, jCoreKind, ck);
+        }
+    }
+    const int isMihomo = (strcmp(coreKind, "mihomo") == 0);
 
     /* Путь к файлу логов ядра: <assetDir>/<logName>. Пустое имя → файл выключен
      * (ping/спидтест им пользоваться не должны, чтобы не засорять лог соединения). */
@@ -410,14 +425,14 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
     if (logName) (*env)->ReleaseStringUTFChars(env, jLogName, logName);
 
     if (access(binPath, F_OK) != 0) {
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "startXray: binary not found: %s", binPath);
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "startCore: binary not found: %s", binPath);
         (*env)->ReleaseStringUTFChars(env, jBinPath, binPath);
         (*env)->ReleaseStringUTFChars(env, jConfigPath, configPath);
         (*env)->ReleaseStringUTFChars(env, jAssetDir, assetDir);
         return -1;
     }
     if (access(configPath, F_OK) != 0) {
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "startXray: config not found: %s", configPath);
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "startCore: config not found: %s", configPath);
         (*env)->ReleaseStringUTFChars(env, jBinPath, binPath);
         (*env)->ReleaseStringUTFChars(env, jConfigPath, configPath);
         (*env)->ReleaseStringUTFChars(env, jAssetDir, assetDir);
@@ -425,11 +440,11 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
     }
 
     __android_log_print(ANDROID_LOG_INFO, TAG,
-                        "startXray: bin=%s config=%s asset=%s", binPath, configPath, assetDir);
+                        "startCore: kind=%s bin=%s config=%s dir=%s", coreKind[0] ? coreKind : "xray", binPath, configPath, assetDir);
 
     int pipefd[2] = {-1, -1};
     if (pipe(pipefd) != 0) {
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "startXray: output pipe failed errno=%d", errno);
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "startCore: output pipe failed errno=%d", errno);
         (*env)->ReleaseStringUTFChars(env, jBinPath, binPath);
         (*env)->ReleaseStringUTFChars(env, jConfigPath, configPath);
         (*env)->ReleaseStringUTFChars(env, jAssetDir, assetDir);
@@ -438,7 +453,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
 
     int pidpipe[2];
     if (pipe(pidpipe) != 0) {
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "startXray: pid pipe failed errno=%d", errno);
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "startCore: pid pipe failed errno=%d", errno);
         close(pipefd[0]); close(pipefd[1]);
         (*env)->ReleaseStringUTFChars(env, jBinPath, binPath);
         (*env)->ReleaseStringUTFChars(env, jConfigPath, configPath);
@@ -448,7 +463,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
 
     pid_t pid1 = fork();
     if (pid1 < 0) {
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "startXray: first fork failed errno=%d", errno);
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "startCore: first fork failed errno=%d", errno);
         close(pipefd[0]); close(pipefd[1]);
         close(pidpipe[0]); close(pidpipe[1]);
         (*env)->ReleaseStringUTFChars(env, jBinPath, binPath);
@@ -485,10 +500,19 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
             int max = (int)sysconf(_SC_OPEN_MAX);
             for (int i = 3; i < max; i++) close(i);
 
-            setenv("XRAY_LOCATION_ASSET", assetDir, 1);
-
-            char *argv[] = { (char *)binPath, "run", "-c", (char *)configPath, NULL };
-            execv(binPath, argv);
+            /* xray ищет geoip.dat/geosite.dat по XRAY_LOCATION_ASSET, mihomo —
+             * в своём рабочем каталоге (`-d`). Каталог один и тот же (filesDir),
+             * различается только способ его назвать. */
+            if (isMihomo) {
+                char *argv[] = {
+                    (char *)binPath, "-d", (char *)assetDir, "-f", (char *)configPath, NULL
+                };
+                execv(binPath, argv);
+            } else {
+                setenv("XRAY_LOCATION_ASSET", assetDir, 1);
+                char *argv[] = { (char *)binPath, "run", "-c", (char *)configPath, NULL };
+                execv(binPath, argv);
+            }
             dprintf(STDOUT_FILENO, "execv failed errno=%d path=%s\n", errno, binPath);
             _exit(127);
         }
@@ -513,12 +537,12 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
     (*env)->ReleaseStringUTFChars(env, jAssetDir,   assetDir);
 
     if (pid2 <= 0) {
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "startXray: second fork failed");
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "startCore: second fork failed");
         if (pipefd[0] >= 0) close(pipefd[0]);
         return -3;
     }
 
-    __android_log_print(ANDROID_LOG_INFO, TAG, "startXray: forked pid=%d", (int)pid2);
+    __android_log_print(ANDROID_LOG_INFO, TAG, "startCore: forked pid=%d", (int)pid2);
 
     if (pipefd[0] >= 0) {
         fcntl(pipefd[0], F_SETFL, fcntl(pipefd[0], F_GETFL, 0) | O_NONBLOCK);
@@ -556,10 +580,10 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
         if (waitpid(pid2, &wstatus, WNOHANG) == pid2) {
             if (WIFEXITED(wstatus))
                 __android_log_print(ANDROID_LOG_ERROR, TAG,
-                                    "startXray: crashed immediately exit_code=%d", WEXITSTATUS(wstatus));
+                                    "startCore: crashed immediately exit_code=%d", WEXITSTATUS(wstatus));
             else if (WIFSIGNALED(wstatus))
                 __android_log_print(ANDROID_LOG_ERROR, TAG,
-                                    "startXray: killed signal=%d", WTERMSIG(wstatus));
+                                    "startCore: killed signal=%d", WTERMSIG(wstatus));
             close(pipefd[0]);
             return -4;
         }
@@ -581,7 +605,7 @@ Java_com_keqdroid_keqdroid_NativeHelper_startXray(
 
             if (rc != 0) {
                 __android_log_print(ANDROID_LOG_WARN, TAG,
-                                    "startXray: failed to start log reader thread rc=%d", rc);
+                                    "startCore: failed to start log reader thread rc=%d", rc);
                 free(targ);
                 close(pipefd[0]);
             }

@@ -156,12 +156,46 @@ class XrayCoreSettings {
       .toList();
 
   /// Builds the `dns` object for Xray config.
-  Map<String, dynamic> buildDnsBlock({required List<String> directDomains}) {
+  ///
+  /// [bootstrapDomains] — адреса самих прокси-серверов (свой узел и звенья
+  /// цепочки). Они ОБЯЗАНЫ резолвиться системным резолвером и никогда — через
+  /// туннель: адрес сервера нужен, чтобы до сервера дозвониться, и запрос по
+  /// нему через прокси означал бы круг. `skipFallback` не даёт свалиться с
+  /// этой записи на остальные при NXDOMAIN.
+  ///
+  /// [proxiedDoh] — гнать ли DoH внутрь туннеля (`https://` вместо
+  /// `https+local://`). Включаем в режиме глобал-прокси: тогда все DNS-запросы
+  /// устройства схлопываются в одно постоянное HTTP/2-соединение до 1.1.1.1
+  /// внутри туннеля, вместо отдельного TCP до сервера на каждый запрос. В
+  /// режимах «остальное — direct/block» оставляем прямой DoH: там `final` увёл
+  /// бы запрос к резолверу мимо прокси (или вовсе в blackhole), да и трафика к
+  /// серверу там на порядок меньше.
+  Map<String, dynamic> buildDnsBlock({
+    required List<String> directDomains,
+    List<String> bootstrapDomains = const [],
+    bool proxiedDoh = false,
+  }) {
     final servers = <Map<String, dynamic>>[];
+
+    if (bootstrapDomains.isNotEmpty) {
+      servers.add({
+        'address': 'localhost',
+        'domains': bootstrapDomains,
+        'skipFallback': true,
+      });
+    }
+
+    final dohScheme = proxiedDoh ? 'https' : 'https+local';
 
     if (dnsUseCustom) {
       final lines = _parseServerLines(dnsServers);
-      if (dnsSplitDirectDomains && directDomains.isNotEmpty && lines.isNotEmpty) {
+      // `lines.length > 1`, а не `isNotEmpty`: первая строка уходит под
+      // Direct-домены со `skipFallback`, то есть общего резолва не касается.
+      // Когда сервер в списке ОДИН, такой раскладке не остаётся резолвера
+      // вообще — всё, чего нет в Direct-списке, не резолвится ничем, и это
+      // выглядит как «прописал свой DNS, и интернет пропал». С одним сервером
+      // сплит и не нужен: он и так отвечает на всё, включая Direct-домены.
+      if (dnsSplitDirectDomains && directDomains.isNotEmpty && lines.length > 1) {
         servers.add({
           'address': lines.first,
           'domains': directDomains,
@@ -186,8 +220,14 @@ class XrayCoreSettings {
           'skipFallback': true,
         });
       }
-      servers.add({'address': 'https+local://1.1.1.1/dns-query'});
-      servers.add({'address': 'https+local://8.8.8.8/dns-query'});
+      servers.add({'address': '$dohScheme://1.1.1.1/dns-query'});
+      servers.add({'address': '$dohScheme://8.8.8.8/dns-query'});
+      // Последним — системный резолвер, на случай сети, где DoH к 1.1.1.1 и
+      // 8.8.8.8 просто не пускают. Через него теперь резолвится и адрес самого
+      // сервера (streamSettings.sockopt.domainStrategy), так что «DoH не
+      // прошёл» означало бы «подключения нет вообще». Спрашивается он только
+      // когда оба DoH промолчали.
+      servers.add({'address': 'localhost'});
     }
 
     if (servers.isEmpty) {

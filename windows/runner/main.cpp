@@ -2,8 +2,10 @@
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>
 
+#include "deep_link.h"
 #include "flutter_window.h"
 #include "single_instance.h"
+#include "tunnel_channel_handler.h"
 #include "utils.h"
 #include "window_placement.h"
 #include "windows_tray.h"
@@ -49,6 +51,20 @@ void NotifyExistingInstanceAutostart() {
   if (existing != nullptr) {
     ::PostMessageW(existing, kAutostartConnectMsg, 0, 0);
   }
+}
+
+// The running instance holds the mutex from its very first line, but its window
+// appears only a moment later — clicking a second link right after the first
+// would otherwise find nothing to hand it to.
+HWND WaitForExistingWindow() {
+  for (int attempt = 0; attempt < 30; ++attempt) {
+    HWND existing = ::FindWindowW(kWindowClassName, kWindowTitle);
+    if (existing != nullptr) {
+      return existing;
+    }
+    ::Sleep(100);
+  }
+  return nullptr;
 }
 
 bool ActivateExistingInstance() {
@@ -98,6 +114,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   const bool admin_restart = HasAdminRestartFlag();
+  // keqdroid://install-config?url=… from a subscription panel page, or a bare
+  // vless:// link dropped onto the exe.
+  const std::string deep_link = KeqdroidDeepLinkFromCommandLine();
 
   if (admin_restart) {
     for (int attempt = 0; attempt < 100; ++attempt) {
@@ -122,6 +141,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
         ::CreateMutexW(nullptr, TRUE, kSingleInstanceMutex);
     if (g_instance_mutex != nullptr &&
         ::GetLastError() == ERROR_ALREADY_EXISTS) {
+      if (!deep_link.empty()) {
+        KeqdroidForwardDeepLinkToRunningInstance(WaitForExistingWindow(),
+                                                 deep_link);
+      }
       if (HasAutostartFlag()) {
         NotifyExistingInstanceAutostart();
       }
@@ -130,6 +153,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
       g_instance_mutex = nullptr;
       return EXIT_SUCCESS;
     }
+  }
+
+  // Refreshed on every start rather than at install time: the app ships as a
+  // portable archive and updates itself in place, so nothing else would ever
+  // fix the stored path.
+  KeqdroidRegisterUrlProtocols();
+  if (!deep_link.empty()) {
+    KeqdisSetPendingDeepLink(deep_link);
   }
 
   FlutterWindow window(project);

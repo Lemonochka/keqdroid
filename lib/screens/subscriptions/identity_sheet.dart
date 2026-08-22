@@ -39,18 +39,7 @@ class _IdentityTile extends StatelessWidget {
       radius: ExpressiveShape.radius(ExpressiveShape.large),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: accent.container(scheme),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.badge_outlined,
-              size: 20,
-              color: accent.onContainer(scheme),
-            ),
-          ),
+          ExpressiveIconBadge(icon: Icons.badge_rounded, accent: accent),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -73,7 +62,7 @@ class _IdentityTile extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right, size: 22, color: scheme.onSurfaceVariant),
+          Icon(Icons.chevron_right_rounded, size: 22, color: scheme.onSurfaceVariant),
         ],
       ),
     );
@@ -144,7 +133,7 @@ class _SheetHeader extends StatelessWidget {
           ),
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close),
+            icon: const Icon(Icons.close_rounded),
             tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
           ),
         ],
@@ -291,7 +280,7 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
                         children: [
                           _IdentityOptionRow(
                             label: l10n.subscriptionIdentityHwid,
-                            icon: Icons.fingerprint,
+                            icon: Icons.fingerprint_rounded,
                             value: _hwid,
                             lowercaseCustom: true,
                             sections: _sections(
@@ -312,14 +301,14 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
                           ),
                           _IdentityOptionRow(
                             label: l10n.subscriptionIdentityDeviceOs,
-                            icon: Icons.phone_android_outlined,
+                            icon: Icons.phone_android_rounded,
                             value: _deviceOs,
                             sections: _sections(_osPresets, (i) => i.deviceOs),
                             onChanged: (v) => setState(() => _deviceOs = v),
                           ),
                           _IdentityOptionRow(
                             label: l10n.subscriptionIdentityDeviceModel,
-                            icon: Icons.smartphone_outlined,
+                            icon: Icons.smartphone_rounded,
                             value: _deviceModel,
                             sections:
                                 _sections(_modelPresets, (i) => i.deviceModel),
@@ -434,7 +423,7 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
     ),
     _IdentitySection(
       title: 'Android — build',
-      icon: Icons.build_circle_outlined,
+      icon: Icons.build_circle_rounded,
       items: OsVersionPresets.androidBuilds,
     ),
     _IdentitySection(
@@ -471,7 +460,7 @@ class _IdentityWarning extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          Icon(Icons.info_outline, size: 18, color: scheme.onErrorContainer),
+          Icon(Icons.info_outline_rounded, size: 18, color: scheme.onErrorContainer),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -677,7 +666,7 @@ class _IdentityOptionPickerState extends State<_IdentityOptionPicker> {
                 controller: _queryCtrl,
                 hintText: l10n.subscriptionIdentitySearchOrEnter,
                 autoFocus: false,
-                leading: Icon(Icons.search, color: scheme.onSurfaceVariant),
+                leading: Icon(Icons.search_rounded, color: scheme.onSurfaceVariant),
                 onChanged: (q) => setState(() => _query = q),
                 onSubmitted: (_) {
                   if (_typedValue != null) _pick(_typedValue);
@@ -696,7 +685,7 @@ class _IdentityOptionPickerState extends State<_IdentityOptionPicker> {
                       children: [
                         if (typed != null)
                           ExpressiveActionTile(
-                            icon: Icons.edit_outlined,
+                            icon: Icons.edit_rounded,
                             title: typed,
                             subtitle: l10n.subscriptionIdentityUseTyped,
                             accent: ExpressiveAccent.tertiary,
@@ -704,7 +693,7 @@ class _IdentityOptionPickerState extends State<_IdentityOptionPicker> {
                             onTap: () => _pick(typed),
                           ),
                         ExpressiveActionTile(
-                          icon: Icons.home_outlined,
+                          icon: Icons.home_rounded,
                           title: l10n.subscriptionIdentityAppDefault,
                           subtitle: l10n.subscriptionIdentityAppDefaultHint,
                           selected: widget.selected == null,

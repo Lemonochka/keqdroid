@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/scrolled_under.dart';
 
 import '../../models/server_item.dart';
 import '../../models/server_name_utils.dart';
@@ -578,11 +579,7 @@ class _ServerConfigEditorScreenState
     if (server == null) {
       return Scaffold(
         backgroundColor: AppTheme.bg(context),
-        appBar: AppBar(
-          backgroundColor: AppTheme.bg(context),
-          elevation: 0,
-          iconTheme: IconThemeData(color: AppTheme.text(context)),
-        ),
+        appBar: AppBar(),
         body: Center(
           child: Text(
             l10n.serverEditorServerMissing,
@@ -654,10 +651,9 @@ class _ServerConfigEditorScreenState
 
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        iconTheme: IconThemeData(color: AppTheme.text(context)),
+      appBar: ExpressiveScrolledUnderBar(
+        builder: (context, background) => AppBar(
+        backgroundColor: background,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -684,7 +680,7 @@ class _ServerConfigEditorScreenState
             IconButton(
               tooltip: l10n.serverEditorRawToggle,
               icon: Icon(
-                _rawMode ? Icons.tune : Icons.code,
+                _rawMode ? Icons.tune_rounded : Icons.code_rounded,
                 color:
                     _rawMode ? AppTheme.accent(context) : AppTheme.text(context),
               ),
@@ -692,6 +688,7 @@ class _ServerConfigEditorScreenState
             ),
           const SizedBox(width: 4),
         ],
+        ),
       ),
       body: body,
     );
@@ -714,7 +711,7 @@ class _ServerConfigEditorScreenState
           Row(
             children: [
               Icon(
-                overridden ? Icons.edit_note : Icons.info_outline,
+                overridden ? Icons.edit_note_rounded : Icons.info_outline_rounded,
                 size: 18,
                 color: color,
               ),
@@ -746,7 +743,7 @@ class _ServerConfigEditorScreenState
                         .catchError((_) {}),
                   );
                 },
-                icon: Icon(Icons.restore, size: 16, color: color),
+                icon: Icon(Icons.restore_rounded, size: 16, color: color),
                 label: Text(
                   l10n.serverEditorRevert,
                   style: Theme.of(context)
@@ -830,7 +827,7 @@ class _ServerConfigEditorScreenState
           Row(
             children: [
               Icon(
-                problem == null ? Icons.check_circle_outline : Icons.error_outline,
+                problem == null ? Icons.check_circle_outline_rounded : Icons.error_outline_rounded,
                 size: 16,
                 color: problem == null ? green : red,
               ),
@@ -848,7 +845,7 @@ class _ServerConfigEditorScreenState
               // отступы полезно и в конфиге, который ещё не полон.
               TextButton.icon(
                 onPressed: _rawJsonParses(raw) ? _formatRawJson : null,
-                icon: const Icon(Icons.format_align_left, size: 16),
+                icon: const Icon(Icons.format_align_left_rounded, size: 16),
                 label: Text(l10n.serverEditorJsonFormat),
                 style: TextButton.styleFrom(
                   visualDensity: VisualDensity.compact,
@@ -1187,7 +1184,7 @@ class _ServerConfigEditorScreenState
             ),
             IconButton(
               tooltip: l10n.serversCopyConfig,
-              icon: Icon(Icons.copy, size: 16, color: AppTheme.textLight(context)),
+              icon: Icon(Icons.copy_rounded, size: 16, color: AppTheme.textLight(context)),
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: preview));
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1339,7 +1336,7 @@ class _ServerConfigEditorScreenState
               ),
             ),
             if (selected)
-              Icon(Icons.check, size: 16, color: scheme.onSecondaryContainer),
+              Icon(Icons.check_rounded, size: 16, color: scheme.onSecondaryContainer),
           ],
         ),
       );
@@ -1376,7 +1373,7 @@ class _ServerConfigEditorScreenState
             .bodyMedium
             ?.copyWith(color: AppTheme.text(context)),
         icon: Icon(
-          Icons.expand_more,
+          Icons.expand_more_rounded,
           size: 18,
           color: AppTheme.textLight(context),
         ),

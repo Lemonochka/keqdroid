@@ -39,6 +39,10 @@ class GeoAssetService {
     }
   }
 
+  /// Каталог, из которого ядро читает geo-базы. Нужен ещё и панели
+  /// «Внутренности» — она показывает размеры и даты этих же файлов.
+  static Future<String?> geoDir() => _geoDir();
+
   static Future<String?> _geoDir() async {
     if (Platform.isAndroid) {
       // Нативная часть распаковывает базы в filesDir (XrayGeoAssets) и туда же

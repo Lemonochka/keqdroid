@@ -52,19 +52,10 @@ class _WindowsDesktopSettingsScreen extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        title: Text(l10n.settingsDesktopTitle),
-      ),
-      body: SmoothScroll(
-        builder: (context, controller) => ListView(
-          controller: controller,
-        physics: const ClampingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        children: [
+    return ExpressivePage(
+      title: l10n.settingsDesktopTitle,
+      physics: const ClampingScrollPhysics(),
+      children: [
           toggleRow(
             title: l10n.settingsMinimizeToTray,
             subtitle: l10n.settingsMinimizeToTrayHint,
@@ -99,8 +90,6 @@ class _WindowsDesktopSettingsScreen extends ConsumerWidget {
               ),
             ),
         ],
-      ),
-      ),
     );
   }
 }

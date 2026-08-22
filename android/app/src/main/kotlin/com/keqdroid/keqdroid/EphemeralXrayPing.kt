@@ -30,13 +30,23 @@ import kotlin.math.min
 
  * Starts a short-lived Xray process, performs HTTP via local SOCKS5 (noauth),
 
- * then kills the process. Serialized — only one URL test at a time.
+ * then kills the process.
+ *
+ * URL tests run concurrently: each one writes its own config file and gets its
+ * own SOCKS port from Dart, so nothing here is shared between them. How many go
+ * at once is decided in PingService (urlPingConcurrency) — one place, and it
+ * applies to desktop too.
+ *
+ * Speed tests stay serialized: they measure bandwidth, and parallel downloads
+ * would split the channel between themselves and report nonsense.
 
  */
 
 object EphemeralXrayPing {
 
     private const val TAG = "KEQDIS_PING"
+
+    // Only the speed test takes it, see the class doc.
 
     private val lock = ReentrantLock()
 
@@ -114,9 +124,9 @@ object EphemeralXrayPing {
 
         timeoutMs: Int,
 
-    ): Result = lock.withLock {
+    ): Result {
 
-        runSingle(
+        return runSingle(
 
             nativeLibraryDir = nativeLibraryDir,
 
@@ -138,7 +148,12 @@ object EphemeralXrayPing {
 
 
 
-    /** Runs many URL tests in one lock — avoids MethodChannel overhead per server. */
+    /**
+     * Runs several URL tests in one call — saves a MethodChannel round-trip per
+     * server. Items share a single SOCKS port, so they go one after another;
+     * running servers in parallel is PingService's job, and it hands every
+     * measurement a port of its own.
+     */
 
     fun urlTestBatch(
 
@@ -158,9 +173,9 @@ object EphemeralXrayPing {
 
         keepAlive: Boolean = true,
 
-    ): List<BatchResult> = lock.withLock {
+    ): List<BatchResult> {
 
-        if (items.isEmpty()) return@withLock emptyList()
+        if (items.isEmpty()) return emptyList()
 
         val binary = File(nativeLibraryDir, "libxray.so")
 
@@ -168,11 +183,11 @@ object EphemeralXrayPing {
 
             val err = Result(false, null, "libxray.so not found", null)
 
-            return@withLock items.map { BatchResult(it.id, err) }
+            return items.map { BatchResult(it.id, err) }
 
         }
 
-        items.map { item ->
+        return items.map { item ->
 
             BatchResult(
 
@@ -353,7 +368,7 @@ object EphemeralXrayPing {
 
 
             // logName="" — ping/спидтест не пишут в файл логов соединения.
-            pid = NativeHelper.startXray(xrayBin.absolutePath, configFile.absolutePath, assetDir, "")
+            pid = NativeHelper.startCore(xrayBin.absolutePath, configFile.absolutePath, assetDir, "", "xray")
 
             when {
 
@@ -454,7 +469,7 @@ object EphemeralXrayPing {
 
 
             // logName="" — ping/спидтест не пишут в файл логов соединения.
-            pid = NativeHelper.startXray(xrayBin.absolutePath, configFile.absolutePath, assetDir, "")
+            pid = NativeHelper.startCore(xrayBin.absolutePath, configFile.absolutePath, assetDir, "", "xray")
 
             when {
 

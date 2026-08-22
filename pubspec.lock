@@ -25,6 +25,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "12.1.0"
+  androidx_graphics_shapes:
+    dependency: "direct main"
+    description:
+      name: androidx_graphics_shapes
+      sha256: "4a0c4e8ce3317175040a9817246b93601e354f6448fa22f0af509044692f113a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.6.1"
   ansicolor:
     dependency: transitive
     description:
@@ -590,7 +598,7 @@ packages:
     source: hosted
     version: "0.12.19"
   material_color_utilities:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: material_color_utilities
       sha256: "9c337007e82b1889149c82ed242ed1cb24a66044e30979c44912381e9be4c48b"

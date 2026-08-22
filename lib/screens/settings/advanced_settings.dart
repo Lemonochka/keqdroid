@@ -8,19 +8,10 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final settingsAsync = ref.watch(settingsNotifierProvider);
 
-    return Scaffold(
-      backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        title: Text(l10n.settingsAdvanced),
-      ),
-      body: SmoothScroll(
-        builder: (context, controller) => ListView(
-          controller: controller,
-        physics: const ClampingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        children: [
+    return ExpressivePage(
+      title: l10n.settingsAdvanced,
+      physics: const ClampingScrollPhysics(),
+      children: [
           // Та же группировка, что на верхнем уровне настроек: «трафик и
           // ядро», «система», «диагностика». Раньше это была стопка из семи
           // отдельных карточек через 12 px — ровно тот вид, из-за которого
@@ -31,7 +22,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
               _SettingsCard(
                 title: l10n.settingsPingTitle,
                 subtitle: _pingSettingsSubtitle(l10n, settingsAsync.value),
-                icon: Icons.network_ping,
+                icon: Icons.network_ping_rounded,
                 accent: ExpressiveAccent.primary,
                 onTap: () => Navigator.push(
                   context,
@@ -41,7 +32,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
               _SettingsCard(
                 title: l10n.settingsXrayCoreTitle,
                 subtitle: _xrayCoreSettingsSubtitle(l10n, settingsAsync.value),
-                icon: Icons.settings_ethernet,
+                icon: Icons.settings_ethernet_rounded,
                 accent: ExpressiveAccent.secondary,
                 onTap: () => Navigator.push(
                   context,
@@ -53,7 +44,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
               _SettingsCard(
                 title: l10n.settingsRoutingTitle,
                 subtitle: l10n.settingsRoutingSubtitle,
-                icon: Icons.account_tree,
+                icon: Icons.account_tree_rounded,
                 accent: ExpressiveAccent.tertiary,
                 onTap: () => Navigator.push(
                   context,
@@ -72,7 +63,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
                   _SettingsCard(
                     title: l10n.settingsHotkeysTitle,
                     subtitle: l10n.settingsHotkeysSubtitle,
-                    icon: Icons.keyboard_outlined,
+                    icon: Icons.keyboard_rounded,
                     accent: ExpressiveAccent.secondary,
                     onTap: () => Navigator.push(
                       context,
@@ -85,7 +76,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
                   _SettingsCard(
                     title: l10n.settingsPermissionsTitle,
                     subtitle: l10n.settingsPermissionsSubtitle,
-                    icon: Icons.admin_panel_settings_outlined,
+                    icon: Icons.admin_panel_settings_rounded,
                     accent: ExpressiveAccent.primary,
                     onTap: () => Navigator.push(
                       context,
@@ -105,8 +96,6 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
             ],
           ),
         ],
-      ),
-      ),
     );
   }
 }

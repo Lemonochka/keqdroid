@@ -16,6 +16,9 @@
       },
       {
         "address": "https+local://8.8.8.8/dns-query"
+      },
+      {
+        "address": "localhost"
       }
     ],
     "queryStrategy": "UseIPv4"
@@ -85,6 +88,13 @@
     {
       "protocol": "blackhole",
       "tag": "block"
+    },
+    {
+      "protocol": "dns",
+      "tag": "dns-out",
+      "settings": {
+        "nonIPQuery": "reject"
+      }
     }
   ],
   "routing": {
@@ -99,6 +109,13 @@
         ],
         "outboundTag": "block",
         "ruleTag": "block-special"
+      },
+      {
+        "type": "field",
+        "port": "53",
+        "network": "tcp,udp",
+        "outboundTag": "dns-out",
+        "ruleTag": "dns-out"
       },
       {
         "type": "field",

@@ -2180,4 +2180,190 @@ class AppLocalizationsFa extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsInternalsTitle => 'درباره';
+
+  @override
+  String get settingsInternalsSubtitle => 'نسخه، هسته‌ها، پایگاه‌های جغرافیایی و نشست جاری';
+
+  @override
+  String get settingsCoreXraySubtitle => 'هسته پیش‌فرض. همه انواع سرور را پشتیبانی می‌کند، از جمله زنجیره‌ها و پیکربندی‌های آماده JSON.';
+
+  @override
+  String get settingsCoreMihomoSubtitle => 'هسته سازگار با Clash. زنجیره‌ها و پیکربندی‌های آماده xray روی Xray می‌مانند.';
+
+  @override
+  String get settingsCoreHint => 'از اتصال بعدی اعمال می‌شود — نشست فعلی راه‌اندازی مجدد نمی‌شود.';
+
+  @override
+  String get settingsInternalsCores => 'هسته‌ها';
+
+  @override
+  String get settingsInternalsGeo => 'پایگاه‌های جغرافیایی';
+
+  @override
+  String get settingsInternalsSession => 'نشست جاری';
+
+  @override
+  String get settingsInternalsBuild => 'برنامه و دستگاه';
+
+  @override
+  String get settingsInternalsCopyAll => 'کپی گزارش';
+
+  @override
+  String get settingsInternalsCopied => 'گزارش کپی شد';
+
+  @override
+  String get settingsInternalsNoCores => 'برای این سکو هسته‌ای ارائه نشده است';
+
+  @override
+  String get settingsInternalsCoreMissing => 'یافت نشد';
+
+  @override
+  String get settingsInternalsVersionFromEngines => 'ساخته‌شده از کد منبع';
+
+  @override
+  String get settingsInternalsRoleCore => 'موتور پراکسی و TUN';
+
+  @override
+  String get settingsInternalsRoleProxy => 'موتور پراکسی';
+
+  @override
+  String get settingsInternalsRoleTun => 'دستگاه TUN';
+
+  @override
+  String get settingsInternalsRoleAwg => 'AmneziaWG';
+
+  @override
+  String settingsInternalsGeoCodes(int count) {
+    return 'کدها: $count';
+  }
+
+  @override
+  String get settingsInternalsStatus => 'وضعیت';
+
+  @override
+  String get settingsInternalsStatusError => 'خطا';
+
+  @override
+  String get settingsInternalsEngine => 'موتور';
+
+  @override
+  String get settingsInternalsMode => 'حالت';
+
+  @override
+  String get settingsInternalsPorts => 'درگاه‌های محلی';
+
+  @override
+  String get settingsInternalsClashPort => 'درگاه Clash API';
+
+  @override
+  String get settingsInternalsUptime => 'مدت نشست';
+
+  @override
+  String get settingsInternalsCorePids => 'فرایندهای هسته';
+
+  @override
+  String get settingsInternalsElevated => 'دسترسی مدیر';
+
+  @override
+  String get settingsInternalsYes => 'بله';
+
+  @override
+  String get settingsInternalsNo => 'خیر';
+
+  @override
+  String get settingsInternalsAppVersion => 'نسخهٔ برنامه';
+
+  @override
+  String get settingsInternalsPackage => 'بسته';
+
+  @override
+  String get settingsInternalsOs => 'سیستم';
+
+  @override
+  String get settingsInternalsAbi => 'معماری';
+
+  @override
+  String get settingsInternalsDart => 'Dart';
+
+  @override
+  String get settingsInternalsBuildMode => 'ساخت';
+
+  @override
+  String get settingsInternalsUnavailable => '—';
+
+  @override
+  String get appearanceIconShapeTitle => 'شکل نمادها';
+
+  @override
+  String get appearanceIconShapeCircle => 'دایره';
+
+  @override
+  String get subscriptionCardThemeTitle => 'ظاهر کارت';
+
+  @override
+  String get subscriptionCardThemeNone => 'بدون';
+
+  @override
+  String get subscriptionCardThemeInServers => 'نمایش در فهرست سرورها';
+
+  @override
+  String get subscriptionCardThemeInServersHint => 'تصویر سربرگ گروه را هم پر می‌کند. رنگ‌های گرفته‌شده از آن در هر حالت باقی می‌مانند.';
+
+  @override
+  String get appearanceIconShapeSquare => 'مربع';
+
+  @override
+  String get appearanceIconShapeArch => 'قوس';
+
+  @override
+  String get appearanceSectionServers => 'فهرست سرورها و صفحهٔ اصلی';
+
+  @override
+  String get appearanceSectionFeel => 'پوسته و بازخورد';
+
+  @override
+  String get appearanceIconShapeClover => 'شبدر';
+
+  @override
+  String get appearanceIconShapeCookie => 'کوکی';
+
+  @override
+  String get appearanceIconShapeFlower => 'گل';
+
+  @override
+  String get appearanceIconShapeSlanted => 'مورب';
+
+  @override
+  String get appearanceIconShapePill => 'کپسول';
+
+  @override
+  String get appearanceIconShapeGem => 'نگین';
+
+  @override
+  String get appearanceIconShapeSunny => 'خورشید';
+
+  @override
+  String get appearanceIconShapePuffy => 'ابر';
+
+  @override
+  String get appearanceIconShapePebble => 'سنگریزه';
+
+  @override
+  String get cardImageRejectAspect => 'این تصویر برای کارت بلند است. تصویری عریض انتخاب کن — تقریباً از ۳:۲ تا ۵:۱.';
+
+  @override
+  String cardImageRejectSmall(int width) {
+    return 'تصویر کوچک است: حداقل $width پیکسل عرض.';
+  }
+
+  @override
+  String cardImageRejectLarge(int width) {
+    return 'تصویر بزرگ است: حداکثر $width پیکسل عرض.';
+  }
+
+  @override
+  String get cardImageRejectUnreadable => 'خواندن این تصویر ممکن نشد.';
 }

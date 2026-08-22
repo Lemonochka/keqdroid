@@ -4,8 +4,9 @@
   },
   "dns": {
     "servers": [
-      "8.8.8.8",
-      "1.1.1.1"
+      "https+local://1.1.1.1/dns-query",
+      "https+local://8.8.8.8/dns-query",
+      "localhost"
     ],
     "queryStrategy": "UseIPv4"
   },

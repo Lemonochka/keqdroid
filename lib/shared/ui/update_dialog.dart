@@ -116,7 +116,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
               color: accent.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.system_update, color: accent, size: 22),
+            child: Icon(Icons.system_update_rounded, color: accent, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(child: Text(context.l10n.updateTitle)),

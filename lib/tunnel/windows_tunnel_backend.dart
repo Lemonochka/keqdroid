@@ -47,6 +47,15 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   /// Порт clash_api активной сессии keqrnel; null — сессии нет или API не поднят
   /// (цепочка xray+sing-box его не даёт). Читает [ConnectionsService].
   int? get clashApiPort => _keqrnelClashPort;
+
+  /// PID живых процессов ядра: подпись → pid. Пустая карта — сессии нет.
+  /// Читает панель «Внутренности»; больше эти процессы из Dart нигде не видны.
+  Map<String, int> get activeCorePids => {
+    if (_keqrnelProcess != null) 'keqrnel': _keqrnelProcess!.pid,
+    if (_xrayProcess != null) 'xray': _xrayProcess!.pid,
+    if (_wireproxyProcess != null) 'wireproxy': _wireproxyProcess!.pid,
+    if (_singboxProcess != null) 'sing-box (TUN)': _singboxProcess!.pid,
+  };
   Directory? _sessionDir;
   ({String username, String password})? _pendingCreds;
   ConnectionMode? _activeMode;

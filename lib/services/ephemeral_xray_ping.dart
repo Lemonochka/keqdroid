@@ -47,6 +47,14 @@ class EphemeralXrayPing {
 
   static Future<void>? _serialGate;
 
+  /// Пропускает по одному замеру за раз.
+  ///
+  /// Нужен только спидтесту: он меряет полосу канала, и параллельные качалки
+  /// делили бы её между собой, выдавая N заниженных цифр вместо одной честной.
+  /// URL-пинг через эту калитку не идёт — каждый его замер живёт в своём
+  /// временном каталоге ([_sessionDir] делает `createTemp`) и на своём порту,
+  /// общего состояния между замерами нет. Сколько их идёт разом, решает
+  /// PingService.urlPingConcurrency — одна точка на все платформы.
   static Future<T> _runSerial<T>(Future<T> Function() body) async {
     while (_serialGate != null) {
       await _serialGate;
@@ -73,13 +81,11 @@ class EphemeralXrayPing {
     required String testUrl,
     required int timeoutMs,
   }) async {
-    return _runSerial(
-      () => _runSingle(
-        xrayConfigJson: xrayConfigJson,
-        socksPort: socksPort,
-        testUrl: testUrl,
-        timeoutMs: timeoutMs,
-      ),
+    return _runSingle(
+      xrayConfigJson: xrayConfigJson,
+      socksPort: socksPort,
+      testUrl: testUrl,
+      timeoutMs: timeoutMs,
     );
   }
 
@@ -99,32 +105,33 @@ class EphemeralXrayPing {
     bool keepAlive = true,
   }) async {
     if (items.isEmpty) return [];
-    return _runSerial(() async {
-      final out = <({
-        String id,
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })>[];
-      for (final item in items) {
-        final r = await _runSingle(
-          xrayConfigJson: item.xrayConfigJson,
-          socksPort: socksPort,
-          testUrl: testUrl,
-          timeoutMs: timeoutMs,
-          keepAlive: keepAlive,
-        );
-        out.add((
-          id: item.id,
-          success: r.success,
-          latencyMs: r.latencyMs,
-          error: r.error,
-          httpStatus: r.httpStatus,
-        ));
-      }
-      return out;
-    });
+    // Внутри батча — по очереди: все элементы приходят с ОДНИМ socksPort, и
+    // параллельно они дрались бы за него. Параллелит вызовы PingService, он же
+    // и выдаёт каждому замеру свой порт.
+    final out = <({
+      String id,
+      bool success,
+      int? latencyMs,
+      String error,
+      int? httpStatus,
+    })>[];
+    for (final item in items) {
+      final r = await _runSingle(
+        xrayConfigJson: item.xrayConfigJson,
+        socksPort: socksPort,
+        testUrl: testUrl,
+        timeoutMs: timeoutMs,
+        keepAlive: keepAlive,
+      );
+      out.add((
+        id: item.id,
+        success: r.success,
+        latencyMs: r.latencyMs,
+        error: r.error,
+        httpStatus: r.httpStatus,
+      ));
+    }
+    return out;
   }
 
   /// Boots an ephemeral Xray per server and downloads [downloadUrl] through its
