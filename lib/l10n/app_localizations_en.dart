@@ -2180,4 +2180,190 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsInternalsTitle => 'About';
+
+  @override
+  String get settingsInternalsSubtitle => 'Version, cores, geo databases and current session';
+
+  @override
+  String get settingsCoreXraySubtitle => 'Default core. Handles every server type, including chains and ready-made JSON configs.';
+
+  @override
+  String get settingsCoreMihomoSubtitle => 'Clash-compatible core. Chains and ready-made xray configs stay on Xray.';
+
+  @override
+  String get settingsCoreHint => 'Applies on the next connection — the running session is not restarted.';
+
+  @override
+  String get settingsInternalsCores => 'Cores';
+
+  @override
+  String get settingsInternalsGeo => 'Geo databases';
+
+  @override
+  String get settingsInternalsSession => 'Current session';
+
+  @override
+  String get settingsInternalsBuild => 'App and device';
+
+  @override
+  String get settingsInternalsCopyAll => 'Copy report';
+
+  @override
+  String get settingsInternalsCopied => 'Report copied to clipboard';
+
+  @override
+  String get settingsInternalsNoCores => 'No cores are bundled for this platform';
+
+  @override
+  String get settingsInternalsCoreMissing => 'not found';
+
+  @override
+  String get settingsInternalsVersionFromEngines => 'built from source';
+
+  @override
+  String get settingsInternalsRoleCore => 'Proxy engine and TUN';
+
+  @override
+  String get settingsInternalsRoleProxy => 'Proxy engine';
+
+  @override
+  String get settingsInternalsRoleTun => 'TUN device';
+
+  @override
+  String get settingsInternalsRoleAwg => 'AmneziaWG';
+
+  @override
+  String settingsInternalsGeoCodes(int count) {
+    return 'codes: $count';
+  }
+
+  @override
+  String get settingsInternalsStatus => 'Status';
+
+  @override
+  String get settingsInternalsStatusError => 'Error';
+
+  @override
+  String get settingsInternalsEngine => 'Engine';
+
+  @override
+  String get settingsInternalsMode => 'Mode';
+
+  @override
+  String get settingsInternalsPorts => 'Local ports';
+
+  @override
+  String get settingsInternalsClashPort => 'Clash API port';
+
+  @override
+  String get settingsInternalsUptime => 'Uptime';
+
+  @override
+  String get settingsInternalsCorePids => 'Core processes';
+
+  @override
+  String get settingsInternalsElevated => 'Administrator';
+
+  @override
+  String get settingsInternalsYes => 'yes';
+
+  @override
+  String get settingsInternalsNo => 'no';
+
+  @override
+  String get settingsInternalsAppVersion => 'App version';
+
+  @override
+  String get settingsInternalsPackage => 'Package';
+
+  @override
+  String get settingsInternalsOs => 'System';
+
+  @override
+  String get settingsInternalsAbi => 'Architecture';
+
+  @override
+  String get settingsInternalsDart => 'Dart';
+
+  @override
+  String get settingsInternalsBuildMode => 'Build';
+
+  @override
+  String get settingsInternalsUnavailable => '—';
+
+  @override
+  String get appearanceIconShapeTitle => 'Icon shape';
+
+  @override
+  String get appearanceIconShapeCircle => 'Circle';
+
+  @override
+  String get subscriptionCardThemeTitle => 'Card look';
+
+  @override
+  String get subscriptionCardThemeNone => 'None';
+
+  @override
+  String get subscriptionCardThemeInServers => 'Show in server list';
+
+  @override
+  String get subscriptionCardThemeInServersHint => 'The picture also fills the group header. Colours taken from it stay either way.';
+
+  @override
+  String get appearanceIconShapeSquare => 'Square';
+
+  @override
+  String get appearanceIconShapeArch => 'Arch';
+
+  @override
+  String get appearanceSectionServers => 'Server list and main screen';
+
+  @override
+  String get appearanceSectionFeel => 'Theme and feedback';
+
+  @override
+  String get appearanceIconShapeClover => 'Clover';
+
+  @override
+  String get appearanceIconShapeCookie => 'Cookie';
+
+  @override
+  String get appearanceIconShapeFlower => 'Flower';
+
+  @override
+  String get appearanceIconShapeSlanted => 'Slanted';
+
+  @override
+  String get appearanceIconShapePill => 'Pill';
+
+  @override
+  String get appearanceIconShapeGem => 'Gem';
+
+  @override
+  String get appearanceIconShapeSunny => 'Sunny';
+
+  @override
+  String get appearanceIconShapePuffy => 'Puffy';
+
+  @override
+  String get appearanceIconShapePebble => 'Pebble';
+
+  @override
+  String get cardImageRejectAspect => 'This image is too tall for a card. Pick a wide one — roughly from 3:2 to 5:1.';
+
+  @override
+  String cardImageRejectSmall(int width) {
+    return 'Image is too small: at least $width px wide.';
+  }
+
+  @override
+  String cardImageRejectLarge(int width) {
+    return 'Image is too large: at most $width px wide.';
+  }
+
+  @override
+  String get cardImageRejectUnreadable => 'Could not read this image.';
 }

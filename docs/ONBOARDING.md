@@ -103,6 +103,7 @@ storage/подписки/апдейтер/пинг, `test/models/`, `test/tunnel
 | Скрипт | Что собирает |
 |--------|--------------|
 | `tool/build_amneziawg.ps1` | AmneziaWG-ядро (`wireproxy-awg`) для Windows |
+| `tool/build_mihomo.ps1` | `libmihomo.so` (второе прокси-ядро Android), с патчами из `tool/patches/` |
 | `tool/build_linux_native.sh` | Linux-бандл + ядра на нативном Linux |
 | `tool/fetch_xray_geo.ps1` | свежие `geoip.dat` / `geosite.dat` |
 | `tools/amneziawg_android/` | AmneziaWG `.so` под Android |
@@ -137,6 +138,21 @@ CGO_ENABLED=1 GOOS=android GOARCH=arm64 GOARM64=v8.0 \
 `keqrnel.exe`/`wireproxy.exe` под Windows собирай **unstripped** и не запускай из
 `%TEMP%` — иначе Defender считает их угрозой (см. [PITFALLS.md](PITFALLS.md)).
 Android-бинарь, наоборот, стрипается (`-s -w`), как это делает апстрим.
+
+`libmihomo.so` — второе прокси-ядро под Android, между ним и `libxray.so`
+пользователь выбирает на экране «О приложении». Собирается скриптом, а не руками:
+
+```powershell
+powershell -File tool/build_mihomo.ps1
+```
+
+**Это не сток апстрима.** Скрипт накатывает `tool/patches/mihomo-*.patch` и падает,
+если патч не лёг, — молча непропатченное ядро выглядит здоровым и отваливается
+только на отдельных серверах. Что чинит каждый патч и что при обновлении держать
+в согласии, написано в шапке самого патча. Сейчас там один: mihomo зашивает в
+ClientHello версию REALITY-клиента `1.8.2`, и сервер с поднятым `minClient`
+отдаёт настоящий сертификат маскировочного домена вместо своего — клиент видит
+`REALITY authentication failed`, хотя ключи верные (см. [PITFALLS.md](PITFALLS.md)).
 
 ## 6. Локализация (en / ru / de / zh)
 

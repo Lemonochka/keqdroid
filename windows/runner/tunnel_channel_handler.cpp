@@ -844,6 +844,12 @@ bool RestartAsAdministrator() {
         has_admin_restart = true;
         continue;
       }
+      // The link we were launched with has already been imported. Carrying it
+      // into the elevated process would import it a second time, so the user
+      // would get a "duplicate subscription" error for merely enabling TUN.
+      if (std::wstring(argv[i]).find(L"://") != std::wstring::npos) {
+        continue;
+      }
       if (!params.empty()) {
         params += L' ';
       }
@@ -957,6 +963,23 @@ bool HasAutostartFlag() {
 std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> g_vpn_channel;
 bool g_pending_autostart_connect = false;
 
+// Touched only from the platform thread: the cold-start path runs before the
+// engine exists, WM_COPYDATA arrives on the window thread, and the method
+// handler runs there too.
+std::string g_pending_deep_link;
+
+void DispatchDeepLinkToDart() {
+  if (g_vpn_channel == nullptr || g_pending_deep_link.empty()) {
+    return;
+  }
+  // Deliberately no payload: the link stays here until Dart takes it with
+  // getPendingDeepLink. The servers tab is not built while the tray menu is
+  // open (see DesktopHomeScreen), and a push carrying the link would be
+  // dropped on the floor; this way it just waits for the tab to come back.
+  g_vpn_channel->InvokeMethod("onDeepLink",
+                              std::make_unique<flutter::EncodableValue>());
+}
+
 void DispatchAutostartConnectToDart() {
   if (g_vpn_channel == nullptr) {
     g_pending_autostart_connect = true;
@@ -1018,6 +1041,17 @@ void DispatchWindowVisibilityToDart(bool visible) {
 
 void KeqdisRequestAutostartConnect() {
   PostToPlatformThread([]() { DispatchAutostartConnectToDart(); });
+}
+
+void KeqdisSetPendingDeepLink(const std::string& url) {
+  g_pending_deep_link = url;
+}
+
+void KeqdisRequestDeepLink(const std::string& url) {
+  PostToPlatformThread([url]() {
+    g_pending_deep_link = url;
+    DispatchDeepLinkToDart();
+  });
 }
 
 void KeqdisRequestTrayMenu() {
@@ -1447,6 +1481,19 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
 
         if (call.method_name() == "isAutostartLaunch") {
           result->Success(flutter::EncodableValue(HasAutostartFlag()));
+          return;
+        }
+
+        if (call.method_name() == "getPendingDeepLink") {
+          // One shot, same contract as Android: handing it out twice would
+          // import the same subscription on every rebuild of the servers tab.
+          if (g_pending_deep_link.empty()) {
+            result->Success();
+            return;
+          }
+          const std::string url = g_pending_deep_link;
+          g_pending_deep_link.clear();
+          result->Success(flutter::EncodableValue(url));
           return;
         }
 

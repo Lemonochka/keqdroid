@@ -14,6 +14,7 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/expressive_elements.dart';
 
 /// Стопка сегментов в одном контейнере.
 ///
@@ -254,12 +255,12 @@ class ExpressiveActionTile extends StatelessWidget {
       color: selected ? scheme.secondaryContainer : null,
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-            child: Icon(icon, size: 20, color: iconFg),
+          ExpressiveIconBadge(
+            icon: icon,
+            background: iconBg,
+            foreground: iconFg,
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: ExpressiveSpacing.large),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,7 +289,7 @@ class ExpressiveActionTile extends StatelessWidget {
             ),
           ),
           if (selected)
-            Icon(Icons.check, size: 20, color: scheme.onSecondaryContainer),
+            Icon(Icons.check_rounded, size: 20, color: scheme.onSecondaryContainer),
         ],
       ),
     );

@@ -387,6 +387,22 @@ class ServersNotifier extends Notifier<ServersState> {
       const Duration(milliseconds: 200),
       (_) => flushBufferedToState(),
     );
+
+    // Крутилка на каждом тайле, а не только на кнопке группы. Раньше её ставил
+    // один pingSingle, поэтому «пинг всех» выглядел так, будто ничего не
+    // происходит: список стоял неподвижно, пока не приедет первый результат.
+    // Гасим по одному, по мере готовности, — видно, как замер идёт по списку.
+    final pingingIds = servers.map((s) => s.id).toSet();
+    ref
+        .read(pingingServerIdsProvider.notifier)
+        .update((set) => {...set, ...pingingIds});
+    void stopPinging(Iterable<String> ids) {
+      if (ids.isEmpty) return;
+      ref
+          .read(pingingServerIdsProvider.notifier)
+          .update((set) => {...set}..removeAll(ids));
+    }
+
     try {
       await PingService.pingBatch(
         servers,
@@ -405,11 +421,18 @@ class ServersNotifier extends Notifier<ServersState> {
             lastPingType: PingService.pingTypeToStored(result.pingType),
           );
           buffered.add(result);
+          // Не через buffered: цифра может подождать общий флаш, а крутилка,
+          // висящая над уже готовым результатом, читается как «завис».
+          pingingIds.remove(result.serverId);
+          stopPinging([result.serverId]);
         },
       );
     } finally {
       flushTimer.cancel();
       flushBufferedToState();
+      // Сюда попадают те, по кому результата так и не пришло, — например если
+      // весь батч упал исключением на полпути.
+      stopPinging(pingingIds);
     }
 
     if (pending.isNotEmpty) {

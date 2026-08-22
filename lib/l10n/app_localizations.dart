@@ -4216,6 +4216,366 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =0{no nodes} =1{1 node} other{{count} nodes}}'**
   String chainNodesCount(int count);
+
+  /// No description provided for @settingsInternalsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsInternalsTitle;
+
+  /// No description provided for @settingsInternalsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Version, cores, geo databases and current session'**
+  String get settingsInternalsSubtitle;
+
+  /// No description provided for @settingsCoreXraySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Default core. Handles every server type, including chains and ready-made JSON configs.'**
+  String get settingsCoreXraySubtitle;
+
+  /// No description provided for @settingsCoreMihomoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clash-compatible core. Chains and ready-made xray configs stay on Xray.'**
+  String get settingsCoreMihomoSubtitle;
+
+  /// No description provided for @settingsCoreHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Applies on the next connection — the running session is not restarted.'**
+  String get settingsCoreHint;
+
+  /// No description provided for @settingsInternalsCores.
+  ///
+  /// In en, this message translates to:
+  /// **'Cores'**
+  String get settingsInternalsCores;
+
+  /// No description provided for @settingsInternalsGeo.
+  ///
+  /// In en, this message translates to:
+  /// **'Geo databases'**
+  String get settingsInternalsGeo;
+
+  /// No description provided for @settingsInternalsSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Current session'**
+  String get settingsInternalsSession;
+
+  /// No description provided for @settingsInternalsBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'App and device'**
+  String get settingsInternalsBuild;
+
+  /// No description provided for @settingsInternalsCopyAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy report'**
+  String get settingsInternalsCopyAll;
+
+  /// No description provided for @settingsInternalsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Report copied to clipboard'**
+  String get settingsInternalsCopied;
+
+  /// No description provided for @settingsInternalsNoCores.
+  ///
+  /// In en, this message translates to:
+  /// **'No cores are bundled for this platform'**
+  String get settingsInternalsNoCores;
+
+  /// No description provided for @settingsInternalsCoreMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'not found'**
+  String get settingsInternalsCoreMissing;
+
+  /// No description provided for @settingsInternalsVersionFromEngines.
+  ///
+  /// In en, this message translates to:
+  /// **'built from source'**
+  String get settingsInternalsVersionFromEngines;
+
+  /// No description provided for @settingsInternalsRoleCore.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy engine and TUN'**
+  String get settingsInternalsRoleCore;
+
+  /// No description provided for @settingsInternalsRoleProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy engine'**
+  String get settingsInternalsRoleProxy;
+
+  /// No description provided for @settingsInternalsRoleTun.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN device'**
+  String get settingsInternalsRoleTun;
+
+  /// No description provided for @settingsInternalsRoleAwg.
+  ///
+  /// In en, this message translates to:
+  /// **'AmneziaWG'**
+  String get settingsInternalsRoleAwg;
+
+  /// No description provided for @settingsInternalsGeoCodes.
+  ///
+  /// In en, this message translates to:
+  /// **'codes: {count}'**
+  String settingsInternalsGeoCodes(int count);
+
+  /// No description provided for @settingsInternalsStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get settingsInternalsStatus;
+
+  /// No description provided for @settingsInternalsStatusError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get settingsInternalsStatusError;
+
+  /// No description provided for @settingsInternalsEngine.
+  ///
+  /// In en, this message translates to:
+  /// **'Engine'**
+  String get settingsInternalsEngine;
+
+  /// No description provided for @settingsInternalsMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get settingsInternalsMode;
+
+  /// No description provided for @settingsInternalsPorts.
+  ///
+  /// In en, this message translates to:
+  /// **'Local ports'**
+  String get settingsInternalsPorts;
+
+  /// No description provided for @settingsInternalsClashPort.
+  ///
+  /// In en, this message translates to:
+  /// **'Clash API port'**
+  String get settingsInternalsClashPort;
+
+  /// No description provided for @settingsInternalsUptime.
+  ///
+  /// In en, this message translates to:
+  /// **'Uptime'**
+  String get settingsInternalsUptime;
+
+  /// No description provided for @settingsInternalsCorePids.
+  ///
+  /// In en, this message translates to:
+  /// **'Core processes'**
+  String get settingsInternalsCorePids;
+
+  /// No description provided for @settingsInternalsElevated.
+  ///
+  /// In en, this message translates to:
+  /// **'Administrator'**
+  String get settingsInternalsElevated;
+
+  /// No description provided for @settingsInternalsYes.
+  ///
+  /// In en, this message translates to:
+  /// **'yes'**
+  String get settingsInternalsYes;
+
+  /// No description provided for @settingsInternalsNo.
+  ///
+  /// In en, this message translates to:
+  /// **'no'**
+  String get settingsInternalsNo;
+
+  /// No description provided for @settingsInternalsAppVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'App version'**
+  String get settingsInternalsAppVersion;
+
+  /// No description provided for @settingsInternalsPackage.
+  ///
+  /// In en, this message translates to:
+  /// **'Package'**
+  String get settingsInternalsPackage;
+
+  /// No description provided for @settingsInternalsOs.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get settingsInternalsOs;
+
+  /// No description provided for @settingsInternalsAbi.
+  ///
+  /// In en, this message translates to:
+  /// **'Architecture'**
+  String get settingsInternalsAbi;
+
+  /// No description provided for @settingsInternalsDart.
+  ///
+  /// In en, this message translates to:
+  /// **'Dart'**
+  String get settingsInternalsDart;
+
+  /// No description provided for @settingsInternalsBuildMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Build'**
+  String get settingsInternalsBuildMode;
+
+  /// No description provided for @settingsInternalsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'—'**
+  String get settingsInternalsUnavailable;
+
+  /// No description provided for @appearanceIconShapeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Icon shape'**
+  String get appearanceIconShapeTitle;
+
+  /// No description provided for @appearanceIconShapeCircle.
+  ///
+  /// In en, this message translates to:
+  /// **'Circle'**
+  String get appearanceIconShapeCircle;
+
+  /// No description provided for @subscriptionCardThemeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Card look'**
+  String get subscriptionCardThemeTitle;
+
+  /// No description provided for @subscriptionCardThemeNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get subscriptionCardThemeNone;
+
+  /// No description provided for @subscriptionCardThemeInServers.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in server list'**
+  String get subscriptionCardThemeInServers;
+
+  /// No description provided for @subscriptionCardThemeInServersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The picture also fills the group header. Colours taken from it stay either way.'**
+  String get subscriptionCardThemeInServersHint;
+
+  /// No description provided for @appearanceIconShapeSquare.
+  ///
+  /// In en, this message translates to:
+  /// **'Square'**
+  String get appearanceIconShapeSquare;
+
+  /// No description provided for @appearanceIconShapeArch.
+  ///
+  /// In en, this message translates to:
+  /// **'Arch'**
+  String get appearanceIconShapeArch;
+
+  /// No description provided for @appearanceSectionServers.
+  ///
+  /// In en, this message translates to:
+  /// **'Server list and main screen'**
+  String get appearanceSectionServers;
+
+  /// No description provided for @appearanceSectionFeel.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme and feedback'**
+  String get appearanceSectionFeel;
+
+  /// No description provided for @appearanceIconShapeClover.
+  ///
+  /// In en, this message translates to:
+  /// **'Clover'**
+  String get appearanceIconShapeClover;
+
+  /// No description provided for @appearanceIconShapeCookie.
+  ///
+  /// In en, this message translates to:
+  /// **'Cookie'**
+  String get appearanceIconShapeCookie;
+
+  /// No description provided for @appearanceIconShapeFlower.
+  ///
+  /// In en, this message translates to:
+  /// **'Flower'**
+  String get appearanceIconShapeFlower;
+
+  /// No description provided for @appearanceIconShapeSlanted.
+  ///
+  /// In en, this message translates to:
+  /// **'Slanted'**
+  String get appearanceIconShapeSlanted;
+
+  /// No description provided for @appearanceIconShapePill.
+  ///
+  /// In en, this message translates to:
+  /// **'Pill'**
+  String get appearanceIconShapePill;
+
+  /// No description provided for @appearanceIconShapeGem.
+  ///
+  /// In en, this message translates to:
+  /// **'Gem'**
+  String get appearanceIconShapeGem;
+
+  /// No description provided for @appearanceIconShapeSunny.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunny'**
+  String get appearanceIconShapeSunny;
+
+  /// No description provided for @appearanceIconShapePuffy.
+  ///
+  /// In en, this message translates to:
+  /// **'Puffy'**
+  String get appearanceIconShapePuffy;
+
+  /// No description provided for @appearanceIconShapePebble.
+  ///
+  /// In en, this message translates to:
+  /// **'Pebble'**
+  String get appearanceIconShapePebble;
+
+  /// No description provided for @cardImageRejectAspect.
+  ///
+  /// In en, this message translates to:
+  /// **'This image is too tall for a card. Pick a wide one — roughly from 3:2 to 5:1.'**
+  String get cardImageRejectAspect;
+
+  /// No description provided for @cardImageRejectSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'Image is too small: at least {width} px wide.'**
+  String cardImageRejectSmall(int width);
+
+  /// No description provided for @cardImageRejectLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'Image is too large: at most {width} px wide.'**
+  String cardImageRejectLarge(int width);
+
+  /// No description provided for @cardImageRejectUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read this image.'**
+  String get cardImageRejectUnreadable;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

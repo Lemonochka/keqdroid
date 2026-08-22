@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'geo_asset_index.dart';
 import 'geo_rule_sanitizer.dart';
+import 'removed_tls_fields.dart';
 
 /// Готовый конфиг xray в роли сервера — то, что провайдеры кладут в подписку
 /// вместо ссылки: свои аутбаунды, свой роутинг, свой dns (в v2rayNG такой
@@ -212,6 +213,7 @@ class CustomXrayConfig {
     if (geoIndex != null && !geoIndex.isEmpty) {
       stripUnknownGeoFromConfig(out, geoIndex);
     }
+    stripRemovedTlsFields(out);
     return out;
   }
 
@@ -223,7 +225,7 @@ class CustomXrayConfig {
     required List<Map<String, dynamic>> rules,
   }) {
     final outbounds = _outboundsOf(json);
-    return <String, dynamic>{
+    final out = <String, dynamic>{
       'log': {'loglevel': 'none'},
       'dns': {
         'servers': ['8.8.8.8', '1.1.1.1'],
@@ -236,6 +238,8 @@ class CustomXrayConfig {
         'rules': rules,
       },
     };
+    stripRemovedTlsFields(out);
+    return out;
   }
 
   static Map<String, dynamic> _asStringMap(Map<dynamic, dynamic> raw) =>

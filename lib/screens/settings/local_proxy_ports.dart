@@ -189,7 +189,7 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _XrayCoreSectionHeader(
-          icon: Icons.settings_input_component,
+          icon: Icons.settings_input_component_rounded,
           title: l10n.settingsLocalPortsTitle,
         ),
         _xraySettingsCard(

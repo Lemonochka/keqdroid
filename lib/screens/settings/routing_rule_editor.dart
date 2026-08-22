@@ -53,7 +53,7 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.travel_explore,
+                  Icon(Icons.travel_explore_rounded,
                       size: 18, color: AppTheme.accent(context)),
                   const SizedBox(width: 8),
                   Expanded(
@@ -106,7 +106,7 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                 ?.copyWith(color: AppTheme.text(context)),
                 decoration: InputDecoration(
                   isDense: true,
-                  prefixIcon: const Icon(Icons.search, size: 18),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
                   hintText: l10n.settingsRoutingGeoPickerSearchHint,
                   hintStyle: TextStyle(color: AppTheme.textLight(context)),
                   filled: true,
@@ -150,7 +150,7 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                                     color: AppTheme.text(context),
                                   ),
                             ),
-                            trailing: Icon(Icons.add,
+                            trailing: Icon(Icons.add_rounded,
                                 size: 16, color: AppTheme.accent(context)),
                             onTap: () =>
                                 Navigator.of(context).pop('$prefix$code'),

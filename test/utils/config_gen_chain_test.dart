@@ -41,7 +41,7 @@ void main() {
           .map((o) => o['tag'])
           .toList();
       // Выходной узел первым: в xray первый аутбаунд — основной.
-      expect(tags, ['proxy', 'chain-0', 'chain-1', 'direct', 'block']);
+      expect(tags, ['proxy', 'chain-0', 'chain-1', 'direct', 'block', 'dns-out']);
 
       // Вход набирается напрямую, дальше — через предыдущее звено.
       expect(_dialerProxyOf(_outboundByTag(config, 'chain-0')), isNull);
@@ -171,7 +171,7 @@ void main() {
           .cast<Map<String, dynamic>>()
           .map((o) => o['tag'])
           .toList();
-      expect(tags, ['proxy', 'direct', 'block']);
+      expect(tags, ['proxy', 'direct', 'block', 'dns-out']);
       expect(_dialerProxyOf(_outboundByTag(config, 'proxy')), isNull);
     });
   });

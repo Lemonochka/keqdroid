@@ -212,18 +212,9 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        title: Text(l10n.settingsBackupRestore),
-      ),
-      body: SmoothScroll(
-        builder: (context, controller) => ListView(
-          controller: controller,
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        children: [
+    return ExpressivePage(
+      title: l10n.settingsBackupRestore,
+      children: [
           ExpressiveCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,7 +270,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                         color: AppTheme.onAccentContainer(context),
                       ),
                     )
-                        : const Icon(Icons.download),
+                        : const Icon(Icons.download_rounded),
                     label: Text(_busy ? l10n.settingsWorking : l10n.settingsExportFile),
                   ),
                 ),
@@ -311,7 +302,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: _busy ? null : _import,
-                    icon: const Icon(Icons.upload),
+                    icon: const Icon(Icons.upload_rounded),
                     label: Text(l10n.settingsImportFile),
                   ),
                 ),
@@ -319,8 +310,6 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
             ),
           ),
         ],
-      ),
-      ),
     );
   }
 }

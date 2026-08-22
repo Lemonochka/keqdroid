@@ -146,6 +146,130 @@ class _ServersListPanel extends ConsumerWidget {
   }
 }
 
+/// Подложка карточки подписки, перенесённая в шапку её группы серверов.
+///
+/// Зачем: цвет, выведенный из картинки, связывает группу с карточкой лишь
+/// намёком — «похожий оттенок» ещё нужно заметить. Та же картинка связывает их
+/// буквально, с одного взгляда.
+///
+/// Почему это отдельный виджет, а не пара строк в шапке: подложка обязана
+/// обрезаться по форме карточки группы, а форма зависит от того, свёрнута ли
+/// группа. Держать эту связку рядом с деревом из семи уровней Row/Padding —
+/// верный способ однажды её потерять.
+class _GroupHeaderBackground extends StatelessWidget {
+  const _GroupHeaderBackground({
+    required this.subscription,
+    required this.surface,
+    required this.collapsed,
+    required this.child,
+  });
+
+  final Subscription? subscription;
+
+  /// Фон карточки группы — им же кроется картинка, чтобы текст читался.
+  final Color surface;
+  final bool collapsed;
+  final Widget child;
+
+  /// Насколько картинка заходит НИЖЕ строки заголовка.
+  ///
+  /// Эта полоса и есть весь смысл: обрезанная точно по строке картинка даёт
+  /// прямой горизонтальный шов — на нём взгляд и спотыкается. Продолженная
+  /// вниз и растворённая в фоне, она кончается там, где её край уже не виден.
+  ///
+  /// Полосу видно, только когда группа развёрнута: у свёрнутой снизу край
+  /// карточки, растворять картинку не во что.
+  static const fadeHeight = 26.0;
+
+  /// Высота шапки с учётом полосы растворения — её же занимает
+  /// SliverToBoxAdapter. Группы без картинки остаются прежней высоты: лишняя
+  /// полоса пустоты в каждой из них дороже, чем польза от единообразия.
+  static double heightFor(Subscription? subscription, {required bool collapsed}) =>
+      _showsImage(subscription) && !collapsed
+          ? _subCardRowHeight + fadeHeight
+          : _subCardRowHeight;
+
+  static bool _showsImage(Subscription? sub) =>
+      sub != null &&
+      sub.cardThemeInServers &&
+      sub.cardThemeId.isNotEmpty &&
+      !resolveCardTheme(sub.cardThemeId).isPlain;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subscription;
+    // Группы без подписки (цепочки, ручные серверы) картинки не имеют вовсе,
+    // и выключенный тумблер оставляет от темы только цвета.
+    if (!_showsImage(sub)) return child;
+    final theme = resolveCardTheme(sub!.cardThemeId);
+
+    // Внутренний радиус на 1 меньше внешнего: шапка живёт под рамкой
+    // DecoratedSliver, и совпадающий радиус оставлял бы вдоль дуги волосяную
+    // полоску картинки поверх линии рамки.
+    const outer = ExpressiveShape.extraLarge - 1;
+    // Доля высоты, на которой стоит строка заголовка. Ниже — только картинка.
+    final headerFraction = collapsed
+        ? 1.0
+        : _subCardRowHeight / (_subCardRowHeight + fadeHeight);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.vertical(
+        top: const Radius.circular(outer),
+        bottom: Radius.circular(collapsed ? outer : 0),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          theme.background(context),
+          // Вуаль поверх картинки — та же роль, что у карточки подписки: слева
+          // плотная (под заголовком), справа картинка открыта. Но цвет берётся
+          // из ФАКТИЧЕСКОГО фона группы, уже подкрашенного акцентом, а не из
+          // роли темы: иначе на стыке с первым сервером был бы виден шов.
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: AlignmentDirectional.centerStart,
+                end: AlignmentDirectional.centerEnd,
+                stops: const [0, 0.45, 1],
+                colors: [
+                  surface.withValues(alpha: 0.9),
+                  surface.withValues(alpha: 0.62),
+                  surface.withValues(alpha: 0.22),
+                ],
+              ),
+            ),
+          ),
+          // Растворение вниз. Начинается ВЫШЕ строки заголовка (на 0.72 от
+          // неё), иначе плавным был бы только хвост, а на самой границе строки
+          // всё равно читался бы уступ яркости.
+          if (!collapsed)
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0, headerFraction * 0.72, 1],
+                  colors: [
+                    surface.withValues(alpha: 0),
+                    surface.withValues(alpha: 0),
+                    surface,
+                  ],
+                ),
+              ),
+            ),
+          // Строка заголовка держится ВЕРХА, а не центра всей области: иначе
+          // полоса растворения утащила бы её вниз, и шапка перестала бы
+          // совпадать по высоте с обычными группами.
+          Align(
+            alignment: Alignment.topCenter,
+            child: SizedBox(height: _subCardRowHeight, child: child),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ServerGroupEntry {
   final Key key;
   final Subscription? subscription;
@@ -256,6 +380,63 @@ class _SubCardState extends ConsumerState<_SubCard> {
   List<ServerItem>? _sortedSource;
   ServerSortMode? _sortedMode;
 
+  /// Цвета, выведенные из картинки подписки. Группа связывает себя с карточкой
+  /// на вкладке «Подписки» именно ими.
+  SubscriptionAccent? _accent;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncAccent();
+  }
+
+  @override
+  void didUpdateWidget(_SubCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Подписке сменили картинку — группа обязана перекраситься следом.
+    if (oldWidget.subscription?.cardThemeId !=
+        widget.subscription?.cardThemeId) {
+      _syncAccent();
+    }
+  }
+
+  /// Достаёт акцент из кэша, а при промахе досчитывает его в фоне.
+  ///
+  /// Синхронный кэш — не оптимизация, а условие: список серверов
+  /// перестраивается на каждый пинг и на каждую смену активного сервера, и
+  /// FutureBuilder на этом пути дёргал бы квантование картинки постоянно, а
+  /// заодно мигал бы пустым кадром. Первый показ до готовности проходит без
+  /// подсветки — это ровно то, как выглядит группа без своей темы.
+  void _syncAccent() {
+    final themeId = widget.subscription?.cardThemeId ?? '';
+    final scheme = Theme.of(context).colorScheme;
+    if (themeId.isEmpty) {
+      if (_accent != null) setState(() => _accent = null);
+      return;
+    }
+
+    final cached = SubscriptionAccentService.cached(
+      themeId: themeId,
+      scheme: scheme,
+    );
+    if (cached != null) {
+      if (cached != _accent) setState(() => _accent = cached);
+      return;
+    }
+
+    unawaited(() async {
+      final accent = await SubscriptionAccentService.resolve(
+        themeId: themeId,
+        scheme: scheme,
+      );
+      // Пока считали, карточку могли увести с экрана, а подписке — сменить
+      // картинку: показывать акцент от прошлой было бы хуже, чем никакого.
+      if (!mounted) return;
+      if ((widget.subscription?.cardThemeId ?? '') != themeId) return;
+      if (accent != _accent) setState(() => _accent = accent);
+    }());
+  }
+
   List<ServerItem> _sortedFor(List<ServerItem> source, ServerSortMode mode) {
     if (identical(source, _sortedSource) && mode == _sortedMode) {
       return _sortedCache!;
@@ -304,9 +485,15 @@ class _SubCardState extends ConsumerState<_SubCard> {
             : context.l10n.serversManualGroup);
 
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
-    final cardColor = AppTheme.card(context);
-    final dividerColor = AppTheme.divider(context);
-    final accentColor = AppTheme.accent(context);
+    final accent = _accent;
+    final cardColor = accent?.surface(AppTheme.card(context)) ??
+        AppTheme.card(context);
+    final dividerColor = accent?.outline(AppTheme.divider(context)) ??
+        AppTheme.divider(context);
+    // Иконки шапки и спиннеры уводим в цвет подписки — это те самые элементы,
+    // что уже есть на её карточке (обновление, «12h»), и связь читается без
+    // единого нового пикселя.
+    final accentColor = accent?.seed ?? AppTheme.accent(context);
     final textLightColor = AppTheme.textLight(context);
 
     // Sliver-карточка: DecoratedSliver рисует фон/рамку/тень на всю длину
@@ -335,8 +522,18 @@ class _SubCardState extends ConsumerState<_SubCard> {
             SliverToBoxAdapter(
               child: RepaintBoundary(
                 child: SizedBox(
-                  height: _subCardRowHeight,
-                  child: Center(
+                  height: _GroupHeaderBackground.heightFor(
+                    sub,
+                    collapsed: collapsed,
+                  ),
+                  child: _GroupHeaderBackground(
+                    subscription: sub,
+                    surface: cardColor,
+                    // Свёрнутая группа — это только шапка, и снизу у неё тоже
+                    // край карточки: не скругли мы его, картинка вылезла бы
+                    // прямыми углами из-под скруглённой рамки.
+                    collapsed: collapsed,
+                    child: Center(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
                     child: Row(
@@ -373,7 +570,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                           milliseconds: 200,
                                         ),
                                         child: Icon(
-                                          Icons.expand_more,
+                                          Icons.expand_more_rounded,
                                           size: 22,
                                           color: textLightColor,
                                         ),
@@ -451,7 +648,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                 ),
                                 icon: Icon(
                                   sortMode == ServerSortMode.defaultOrder
-                                      ? Icons.sort
+                                      ? Icons.sort_rounded
                                       : sortMode.icon,
                                   size: 18,
                                   color: sortMode == ServerSortMode.defaultOrder
@@ -496,7 +693,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                           ),
                                         )
                                       : Icon(
-                                          Icons.refresh,
+                                          Icons.refresh_rounded,
                                           size: 18,
                                           color: hasRefreshError
                                               ? AppTheme.red(context)
@@ -538,7 +735,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                         ),
                                       )
                                     : Icon(
-                                        Icons.network_ping,
+                                        Icons.network_ping_rounded,
                                         size: 18,
                                         color: textLightColor,
                                       ),
@@ -549,6 +746,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                       ],
                     ),
                   ),
+                ),
                 ),
                 ),
               ),
@@ -563,6 +761,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                 activeServerId: activeServerId,
                 textLightColor: textLightColor,
                 twoColumns: widget.twoColumns,
+                accent: accent,
               ),
           ],
         ),
@@ -579,6 +778,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
     required String? activeServerId,
     required Color textLightColor,
     required bool twoColumns,
+    required SubscriptionAccent? accent,
   }) {
     if (servers.isEmpty) {
       return SliverToBoxAdapter(
@@ -614,6 +814,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
               isActive: server.id == activeServerId,
               isFirst: index < 2,
               isLast: inLastRow,
+              accent: accent,
               radius: BorderRadius.only(
                 bottomLeft: inLastRow && index.isEven
                     ? const Radius.circular(ExpressiveShape.extraLarge)
@@ -645,6 +846,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
           isActive: servers[index].id == activeServerId,
           isFirst: index == 0,
           isLast: index == servers.length - 1,
+          accent: accent,
           onTap: () => widget.onSelectServer(servers[index]),
           onDelete: () =>
               ref.read(serversProvider.notifier).delete(servers[index].id),
@@ -746,7 +948,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                       // расходиться со шторкой из карточки подписки он не
                       // должен.
                       ExpressiveActionTile(
-                        icon: Icons.update_disabled,
+                        icon: Icons.update_disabled_rounded,
                         title: context.l10n.subscriptionsAutoUpdateOff,
                         selected: !sub.autoUpdate,
                         onTap: () {
@@ -759,8 +961,8 @@ class _SubCardState extends ConsumerState<_SubCard> {
                       for (final h in options)
                         ExpressiveActionTile(
                           icon: h < 24
-                              ? Icons.schedule
-                              : Icons.calendar_today_outlined,
+                              ? Icons.schedule_rounded
+                              : Icons.calendar_today_rounded,
                           title: h == 1
                               ? context.l10n.subscriptionsEveryHour
                               : h < 24

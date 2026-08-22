@@ -2,7 +2,7 @@ name: keqdroid
 description: "KEQDIS proxy/VPN client for Android and Windows."
 publish_to: 'none'
 
-version: 0.9.2+35
+version: 0.10.0+36
 
 environment:
   sdk: ^3.11.3
@@ -25,6 +25,9 @@ dependencies:
   workmanager: ^0.10.7
   flutter_local_notifications: ^22.0.0
   dynamic_color: ^1.8.1
+  # Тональные палитры M3. Приходит транзитивно с dynamic_color, но мы считаем
+  # ими сами (см. utils/system_accent.dart) — значит зависимость наша, прямая.
+  material_color_utilities: ^0.13.0
   country_flags: ^4.1.2
   # Рисуем флаги из ассетов country_flags сами: его виджет не умеет часть
   # положенных в пакет картинок (🇪🇺, 🇺🇳, флаги субъектов). См. FlagArt.
@@ -39,6 +42,7 @@ dependencies:
   window_manager: ^0.5.1
   tray_manager: ^0.5.3
   mobile_scanner: ^7.2.0
+  androidx_graphics_shapes: ^1.6.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -90,6 +94,9 @@ flutter:
     # GeoIP/Geosite DBs for xray routing (geoip:/geosite: rules on Android).
     - assets/bin/windows/geoip.dat
     - assets/bin/windows/geosite.dat
+    # Картинки для карточек подписок: объявлена папка целиком, чтобы добавление
+    # своей картинки не требовало правки pubspec. См. README внутри.
+    - assets/card_themes/
   # NOTE: core binaries (assets/bin/windows, assets/bin/linux) are deliberately
   # NOT Flutter assets. Flutter bundles assets into every platform, which dragged
   # the Windows .exe + Linux ELF + geo data into the Android APK (~150 MB of dead

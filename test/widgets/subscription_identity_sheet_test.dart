@@ -52,7 +52,7 @@ Future<void> _pumpTab(
 
 /// Доводит до открытой шторки идентичности из формы добавления подписки.
 Future<void> _openIdentitySheet(WidgetTester tester) async {
-  await tester.tap(find.byIcon(Icons.add));
+  await tester.tap(find.byIcon(Icons.add_rounded));
   await tester.pumpAndSettle();
 
   await tester.tap(find.text('Device identity'));
@@ -217,7 +217,7 @@ void main() {
     expect(tester.getRect(find.byType(SearchBar)).width, lessThan(600));
 
     // Крестик закрывает список, не трогая шторку идентичности под ним.
-    await tester.tap(find.byIcon(Icons.close).last);
+    await tester.tap(find.byIcon(Icons.close_rounded).last);
     await tester.pumpAndSettle();
     expect(find.byType(SearchBar), findsNothing);
     expect(find.text('User-Agent'), findsOneWidget);

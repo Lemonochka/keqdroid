@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../models/connection_entry.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../tunnel/linux_tunnel_backend.dart';
 import '../tunnel/windows_tunnel_backend.dart';
+import '../utils/mihomo_api_session.dart';
 import 'connections_tracker.dart';
 import 'debug_log_service.dart';
 
@@ -13,8 +16,10 @@ import 'debug_log_service.dart';
 /// Источник зависит от платформы, потому что ядра разные:
 ///  - desktop (keqrnel = sing-box + встроенный xray): clash_api ядра отдаёт
 ///    список соединений с процессом, доменом, правилом и счётчиками;
-///  - Android (чистый libxray): API соединений у xray нет вовсе, поэтому
-///    разбираем его access-лог — тот же файл, что показывает экран логов.
+///  - Android + mihomo: тот же clash_api, только с `secret` — ядро держит
+///    список сессий само;
+///  - Android + xray: API соединений у xray нет вовсе, поэтому разбираем его
+///    access-лог — тот же файл, что показывает экран логов.
 class ConnectionsService {
   ConnectionsService._();
 
@@ -51,7 +56,20 @@ class ConnectionsService {
       final log = await _fromAccessLog();
       return log.entries.isEmpty ? api : log;
     }
-    if (Platform.isAndroid) return _fromAccessLog();
+    if (Platform.isAndroid) {
+      // mihomo держит список сессий сам и отдаёт его по RESTful API — тому
+      // самому clash_api, что и на десктопе. Access-лог для него бесполезен:
+      // формат другой, а парсер написан под xray. Обратный фолбэк оставлен —
+      // API мог не подняться (порт увели), и тогда пустой экран честнее.
+      if (MihomoApiSession().isActive) {
+        final api = await _fromClashApi();
+        if (api.source == ConnectionsSource.coreApi) {
+          return _withAndroidAppNames(api);
+        }
+        return api;
+      }
+      return _fromAccessLog();
+    }
     return const ConnectionsSnapshot(
       entries: [],
       source: ConnectionsSource.unavailable,
@@ -77,8 +95,15 @@ class ConnectionsService {
   static int? _activeClashPort() {
     if (Platform.isWindows) return WindowsTunnelBackend.activeInstance?.clashApiPort;
     if (Platform.isLinux) return LinuxTunnelBackend.activeInstance?.clashApiPort;
+    if (Platform.isAndroid) return MihomoApiSession().port;
     return null;
   }
+
+  /// Токен API. У keqrnel на десктопе его нет (API слушает петлю в
+  /// однопользовательской системе), у mihomo на Android он обязателен: петля
+  /// там общая для всех приложений.
+  static String _activeClashSecret() =>
+      Platform.isAndroid ? MihomoApiSession().secret : '';
 
   static Future<ConnectionsSnapshot> _fromClashApi() async {
     final port = _activeClashPort();
@@ -94,6 +119,12 @@ class ConnectionsService {
       final req = await _http
           .get('127.0.0.1', port, '/connections')
           .timeout(const Duration(seconds: 3));
+      final secret = _activeClashSecret();
+      if (secret.isNotEmpty) {
+        // Схема из `hub/route/server.go`: заголовок ровно `Bearer <secret>`,
+        // всё остальное — 401.
+        req.headers.set(HttpHeaders.authorizationHeader, 'Bearer $secret');
+      }
       final resp = await req.close().timeout(const Duration(seconds: 3));
       if (resp.statusCode != 200) {
         await resp.drain<void>();
@@ -117,7 +148,7 @@ class ConnectionsService {
       if (raw is List) {
         for (final item in raw) {
           if (item is! Map) continue;
-          final entry = _entryFromClashJson(item.cast<String, dynamic>());
+          final entry = entryFromClashJson(item.cast<String, dynamic>());
           if (entry != null) entries.add(entry);
         }
       }
@@ -128,7 +159,17 @@ class ConnectionsService {
         return bt.compareTo(at);
       });
 
-      final resolved = await _resolveEngineVerdicts(entries, port);
+      // У mihomo дорешивать нечего: правило в ответе API — уже настоящее, тот
+      // самый `SRC-IP-CIDR`/`GEOSITE`, по которому ушло соединение. Это не
+      // мелочь: имя прокси у нас `proxy`, ровно как тег движка внутри
+      // keqrnel, — прогони мы ответ mihomo через [_resolveEngineVerdicts],
+      // и каждое проксированное соединение поехало бы искать вердикт в
+      // xray-логе, которого при mihomo нет, а найденное правило затёрлось бы
+      // пустым «решает ядро».
+      final needsEngineVerdicts = !Platform.isAndroid;
+      final resolved = needsEngineVerdicts
+          ? await _resolveEngineVerdicts(entries, port)
+          : entries;
       return ConnectionsSnapshot(
         entries: resolved,
         source: ConnectionsSource.coreApi,
@@ -233,7 +274,10 @@ class ConnectionsService {
     _httpClient = null;
   }
 
-  static ConnectionEntry? _entryFromClashJson(Map<String, dynamic> json) {
+  /// Одна запись из ответа `GET /connections`. Формат общий для sing-box и
+  /// mihomo, различия — в комментариях по ходу.
+  @visibleForTesting
+  static ConnectionEntry? entryFromClashJson(Map<String, dynamic> json) {
     final meta = json['metadata'];
     if (meta is! Map) return null;
     final m = meta.cast<String, dynamic>();
@@ -247,8 +291,19 @@ class ConnectionsService {
         ? (json['chains'] as List).map((e) => e.toString()).toList()
         : const <String>[];
 
-    // clash отдаёт `rule` как "<описание правила> => <действие>" или "final".
-    final rule = json['rule']?.toString().trim() ?? '';
+    // Одно поле, два формата. sing-box кладёт в `rule` готовую строку вида
+    // "<описание правила> => <действие>" (или "final" для catch-all), mihomo —
+    // только ТИП правила («GeoSite», «DomainSuffix», «Match»), а его значение
+    // отдельно, в `rulePayload`. Без склейки экран показывал бы «GeoSite» без
+    // единого намёка на то, какой именно список сработал.
+    final ruleType = json['rule']?.toString().trim() ?? '';
+    final rulePayload = json['rulePayload']?.toString().trim() ?? '';
+    final rule = switch (ruleType.toLowerCase()) {
+      // Финальное правило у обоих ядер не несёт информации: под него попадает
+      // всё, что не поймали остальные.
+      '' || 'final' || 'match' => '',
+      _ => rulePayload.isEmpty ? ruleType : '$ruleType($rulePayload)',
+    };
 
     final id = json['id']?.toString() ??
         '${str('sourceIP')}:${str('sourcePort')}>$host:${str('destinationPort')}';
@@ -267,7 +322,7 @@ class ConnectionsService {
       // chains приходит от внешнего аутбаунда к внутреннему; для «куда ушло»
       // нужен первый — им и помечаем прокси/директ/блок.
       outbound: chains.isEmpty ? '' : chains.first,
-      rule: rule == 'final' ? '' : rule,
+      rule: rule,
       startedAt: DateTime.tryParse(json['start']?.toString() ?? '')?.toLocal(),
       upload: (json['upload'] as num?)?.toInt(),
       download: (json['download'] as num?)?.toInt(),
@@ -287,13 +342,23 @@ class ConnectionsService {
     }
     final snapshot = XrayAccessLogParser.parse(text);
     if (!Platform.isAndroid) return snapshot;
-    return withAppNames(
-      snapshot,
-      peers: Tun2SocksLogParser.parse(await VpnNativeBridge.getTun2SocksLogs()),
-      resolve: VpnNativeBridge.resolveConnectionOwners,
-      cache: _appNames,
-    );
+    return _withAndroidAppNames(snapshot);
   }
+
+  /// Владелец соединения на Android известен только из лога tun2socks — в нём
+  /// одном виден исходный сокет приложения. Ядро тут ни при чём, поэтому
+  /// обогащение одинаково и для access-лога xray, и для API mihomo (у
+  /// последнего своё поле `process` всегда пустое: `find-process-mode: off`,
+  /// да и увидел бы он один только tun2socks).
+  static Future<ConnectionsSnapshot> _withAndroidAppNames(
+    ConnectionsSnapshot snapshot,
+  ) async =>
+      withAppNames(
+        snapshot,
+        peers: Tun2SocksLogParser.parse(await VpnNativeBridge.getTun2SocksLogs()),
+        resolve: VpnNativeBridge.resolveConnectionOwners,
+        cache: _appNames,
+      );
 
   /// Копия снимка с пометкой, что владельцев определить нечем.
   static ConnectionsSnapshot _withoutAppNames(ConnectionsSnapshot s) =>

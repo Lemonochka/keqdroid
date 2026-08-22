@@ -11,7 +11,7 @@ import '../utils/routing_entry.dart';
 import '../utils/socks5_credentials.dart';
 
 /// builds client outbound json for xray 26.x. a few quirks: no empty fingerprint
-/// (core rejects ""), emit allowInsecure only when true, echConfigList is a
+/// (core rejects ""), never emit allowInsecure at all, echConfigList is a
 /// string not an array, and hysteria2 uses network "hysteria" not "quic".
 class ConfigGeneratorV2 {
   static String generateConfig(
@@ -87,14 +87,6 @@ class ConfigGeneratorV2 {
   static bool _lanAuthEnabled(AppSettings settings) =>
       settings.lanUsername.trim().isNotEmpty && settings.lanPassword.isNotEmpty;
 
-  static bool _truthyQueryFlag(String Function(String, [String]) getParam, List<String> keys) {
-    for (final k in keys) {
-      final v = getParam(k, '').trim().toLowerCase();
-      if (v == '1' || v == 'true' || v == 'yes') return true;
-    }
-    return false;
-  }
-
   static List<String>? _splitAlpn(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     final list = raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
@@ -102,9 +94,35 @@ class ConfigGeneratorV2 {
   }
 
   /// tls client profile — keep fields compatible with infra/conf json tags.
+  ///
+  /// Отсутствующий `fingerprint` подставлять НЕ надо: `tls.GetFingerprint("")`
+  /// в ядре возвращает `utls.HelloChrome_Auto`, то есть пустое поле — это уже
+  /// Chrome-рукопожатие, а не Go-шный crypto/tls. Дописывать сюда `chrome`
+  /// значит писать в конфиг то, что ядро и так делает.
+  ///
+  /// `allowInsecure` не эмитим НИКОГДА, даже когда ссылка просит (`insecure=1`,
+  /// `skip-cert-verify=1`). Ядро это поле снесло намертво:
+  ///
+  /// ```go
+  /// if c.AllowInsecure {
+  ///   return nil, errors.PrintRemovedFeatureError(`"allowInsecure"`, ...)
+  /// }
+  /// ```
+  ///
+  /// (`infra/conf/transport_security.go`; в 26.3.27 отказ был по дате
+  /// «после 2026-06-01», в 26.7.28 стал безусловным). Разбор падает целиком —
+  /// то есть ОДИН сервер с `insecure=1` в подписке лишал связи все остальные,
+  /// и наружу это выглядело как «SOCKS port not ready» без намёка на причину.
+  ///
+  /// Замен, предлагаемых ядром, тут не подставить: `pinnedPeerCertSha256` хочет
+  /// отпечаток сертификата (его в ссылке нет), а `verifyPeerCertByName` сверяет
+  /// цепочку с системными корнями по другому имени — самоподписанному серверу
+  /// это не поможет. Поэтому просто проверяем сертификат как обычно: сервер с
+  /// нормальным сертификатом (а `insecure=1` в панелях сплошь и рядом просто
+  /// мусор копипасты) работает, а остальные хотя бы не тянут за собой всю
+  /// подписку.
   static Map<String, dynamic> _tlsClientSettings({
     required String serverName,
-    bool allowInsecure = false,
     String fingerprint = '',
     String? alpnQuery,
     String? echConfigList,
@@ -113,7 +131,6 @@ class ConfigGeneratorV2 {
     final tls = <String, dynamic>{
       'serverName': serverName,
     };
-    if (allowInsecure) tls['allowInsecure'] = true;
     final fp = fingerprint.trim();
     if (fp.isNotEmpty) tls['fingerprint'] = fp;
     final alpn = _splitAlpn(alpnQuery);
@@ -268,8 +285,46 @@ class ConfigGeneratorV2 {
     }
 
     _applyXrayStreamExtras(outbound, settings.xrayCore);
+    _applyServerDomainStrategy(outbound, address, settings.xrayCore);
 
     return (outbound: outbound, address: address, port: port);
+  }
+
+  /// Адрес сервера резолвит встроенный DNS ядра, а не резолвер его процесса.
+  ///
+  /// Иначе домен сервера уходит в системный резолвер Go, а на Android он почти
+  /// не отвечает: `/etc/resolv.conf` там нет, и в логах ядра бесконечное
+  /// «dial tcp: lookup <сервер>: operation was canceled» — трафик стоит, хотя
+  /// сервер жив и раз в пару минут случайно пробивается. `domainStrategy`
+  /// переводит этот резолв на dns-блок конфига (у нас DoH), то есть на тот же
+  /// путь, которым ходят остальные домены. В mihomo ту же дыру закрывает
+  /// отдельная настройка `proxy-server-nameserver`.
+  ///
+  /// Семейство адресов берём от queryStrategy: просить A+AAAA, когда DNS
+  /// настроен отдавать только A, значит ждать впустую вторую половину ответа.
+  ///
+  /// Адрес-IP не трогаем: резолвить там нечего, а лишняя строка в конфиге —
+  /// лишний повод сломать то, что и так работает.
+  static void _applyServerDomainStrategy(
+    Map<String, dynamic> outbound,
+    String address,
+    XrayCoreSettings core,
+  ) {
+    if (address.isEmpty || _isIpLiteral(address)) return;
+    final stream = Map<String, dynamic>.from(
+      (outbound['streamSettings'] as Map<String, dynamic>?) ??
+          const <String, dynamic>{},
+    );
+    final sockopt = Map<String, dynamic>.from(
+      (stream['sockopt'] as Map<String, dynamic>?) ?? const <String, dynamic>{},
+    );
+    sockopt['domainStrategy'] = switch (core.dnsQueryStrategy) {
+      'UseIPv4' => 'UseIPv4',
+      'UseIPv6' => 'UseIPv6',
+      _ => 'UseIP',
+    };
+    stream['sockopt'] = sockopt;
+    outbound['streamSettings'] = stream;
   }
 
   /// Префикс тегов промежуточных узлов цепочки. Выходной узел остаётся
@@ -345,6 +400,10 @@ class ConfigGeneratorV2 {
       (stream['sockopt'] as Map<String, dynamic>?) ?? const <String, dynamic>{},
     );
     sockopt['dialerProxy'] = tag;
+    // Адрес этого узла резолвит предыдущий: соединение до него идёт уже
+    // внутри чужого туннеля, и локальный резолв тут ничего не решает —
+    // только заставляет ядро ждать ответа, который не нужен.
+    sockopt.remove('domainStrategy');
     stream['sockopt'] = sockopt;
 
     // Перебор портов hysteria (`mport`) работает только на самом внешнем узле:
@@ -789,21 +848,10 @@ class ConfigGeneratorV2 {
     if (security == 'tls') {
       streamSettings['security'] = 'tls';
       final fp = vmessConfig?['fp']?.toString() ?? '';
-      var insecure = false;
-      if (vmessConfig != null) {
-        for (final k in ['insecure', 'allowInsecure', 'skip-cert-verify']) {
-          final v = (vmessConfig[k] ?? '').toString().trim().toLowerCase();
-          if (v == '1' || v == 'true' || v == 'yes') {
-            insecure = true;
-            break;
-          }
-        }
-      }
       final alpn = vmessConfig?['alpn']?.toString();
       final ech = vmessConfig?['ech']?.toString();
       streamSettings['tlsSettings'] = _tlsClientSettings(
         serverName: sni.isNotEmpty ? sni : (vmessConfig?['add']?.toString() ?? ''),
-        allowInsecure: insecure,
         fingerprint: fp,
         alpnQuery: alpn,
         echConfigList: ech,
@@ -840,13 +888,11 @@ class ConfigGeneratorV2 {
     final type = getParam('type', 'tcp');
     final sni = getParam('sni', address);
     final fingerprint = getParam('fp', '');
-    final insecure = _truthyQueryFlag(getParam, ['insecure', 'allowInsecure', 'skip-cert-verify']);
 
     streamSettings['network'] = type;
     streamSettings['security'] = 'tls';
     streamSettings['tlsSettings'] = _tlsClientSettings(
       serverName: sni,
-      allowInsecure: insecure,
       fingerprint: fingerprint,
       alpnQuery: getParam('alpn'),
       echConfigList: getParam('ech'),
@@ -974,7 +1020,6 @@ class ConfigGeneratorV2 {
 
     final hyParams = HysteriaLinkParams.fromConfig(uri.toString());
     final sni = getParam('sni', hyParams.sni.isNotEmpty ? hyParams.sni : address);
-    final insecure = _truthyQueryFlag(getParam, ['insecure', 'allowInsecure']);
     final version = int.tryParse(getParam('version', '2')) ?? 2;
     if (version != 2) {
       throw ArgumentError(
@@ -990,7 +1035,6 @@ class ConfigGeneratorV2 {
     streamSettings['security'] = 'tls';
     streamSettings['tlsSettings'] = _tlsClientSettings(
       serverName: sni,
-      allowInsecure: insecure,
       fingerprint: getParam('fp', ''),
       alpnQuery: alpnForTls,
       echConfigList: getParam('ech'),
@@ -1052,10 +1096,8 @@ class ConfigGeneratorV2 {
     stream['security'] = security;
 
     if (security == 'tls') {
-      final insecure = _truthyQueryFlag(getParam, ['insecure', 'allowInsecure', 'skip-cert-verify']);
       stream['tlsSettings'] = _tlsClientSettings(
         serverName: sni,
-        allowInsecure: insecure,
         fingerprint: getParam('fp', ''),
         alpnQuery: getParam('alpn'),
         echConfigList: getParam('ech'),
@@ -1159,12 +1201,36 @@ class ConfigGeneratorV2 {
         (!isPingMode && hasUserIpRules && core.routingDomainStrategy == 'AsIs')
             ? 'IPIfNonMatch'
             : core.routingDomainStrategy;
+    // Адреса самих серверов — в bootstrap-список DNS (см. buildDnsBlock).
+    // IP-литералы туда не нужны: резолвить нечего.
+    final bootstrapDomains = <String>[
+      for (final addr in [originalServerAddress, ...extraServerAddresses])
+        if (addr.trim().isNotEmpty && !_isIpLiteral(addr)) 'full:${addr.trim()}',
+    ];
+
+    // Перехват DNS имеет смысл только там, где «остальное» уходит в туннель:
+    // см. `proxiedDoh` в buildDnsBlock.
+    final globalProxy = settings.finalOutbound == AppSettings.finalOutboundProxy;
+
     final dns = isPingMode
         ? {
-            'servers': ['8.8.8.8', '1.1.1.1'],
+            // Тот же DoH, что и в боевом конфиге: пинг дозванивается до того же
+            // домена сервера, и резолвить его другим путём — значит мерить не
+            // то, что потом будет подключаться. Обычный UDP-53 к 8.8.8.8 у
+            // части провайдеров подменяется, и пинг краснел бы на живом
+            // сервере. Системный резолвер — последним, как и там.
+            'servers': [
+              'https+local://1.1.1.1/dns-query',
+              'https+local://8.8.8.8/dns-query',
+              'localhost',
+            ],
             'queryStrategy': 'UseIPv4',
           }
-        : core.buildDnsBlock(directDomains: directDomains);
+        : core.buildDnsBlock(
+            directDomains: directDomains,
+            bootstrapDomains: bootstrapDomains,
+            proxiedDoh: globalProxy,
+          );
 
     // `ruleTag` — имя правила в логах ядра: xray печатает «Hit route rule:
     // [tag] so taking detour [proxy] for [tcp:host:443]» (уровень логов Info),
@@ -1240,6 +1306,27 @@ class ConfigGeneratorV2 {
         'outboundTag': 'block',
       }));
     }
+    // DNS устройства отвечает само ядро, а не сервер на том конце туннеля.
+    //
+    // TUN отдаёт системе 8.8.8.8, и без этого правила КАЖДЫЙ запрос уезжал в
+    // туннель отдельной сессией — то есть отдельным TCP до сервера. Android
+    // шлёт их пачками (в логах по 5–7 одновременно), и на сервере с лимитом
+    // новых соединений с одного адреса такая пачка выносит весь лимит: часть
+    // соединений проходит, остальные висят с молча дропнутым SYN. Именно так
+    // выглядела «Нидерланды не работают, а в FlClash работают» — mihomo с
+    // fake-ip на DNS соединений не тратит вовсе.
+    //
+    // `dns`-аутбаунд отвечает из dns-блока конфига: A/AAAA — локально и
+    // бесплатно, остальные типы — `reject` (дефолт ядра, задаём явно, чтобы
+    // смена дефолта наверху не поменяла наше поведение молча).
+    //
+    // ПОСЛЕ lan-правил, не до: инбаунд LAN-прокси слушает 0.0.0.0, и перехвати
+    // мы DNS раньше запрета — получили бы открытый резолвер наружу.
+    rules.add(rule('dns-out', {
+      'port': '53',
+      'network': 'tcp,udp',
+      'outboundTag': 'dns-out',
+    }));
     if (blockedDomains.isNotEmpty) {
       rules.add(rule('block-domains',
           {'domain': blockedDomains, 'outboundTag': 'block'}));
@@ -1288,6 +1375,33 @@ class ConfigGeneratorV2 {
       ],
       'outboundTag': 'direct',
     }));
+    // QUIC в vision-аутбаунд не пролезает — и узнаёт об этом ядро слишком поздно.
+    //
+    // При `flow=xtls-rprx-vision` xray отвергает UDP/443 (`XTLS rejected UDP/443
+    // traffic`), но ТОЛЬКО после того, как поднял до сервера полноценное
+    // TCP+TLS-соединение: отказ живёт в vless-аутбаунде, за диалером. Каждый
+    // QUIC-пакет, который приложение шлёт «на всякий случай», стоит нам одного
+    // рукопожатия до сервера, выброшенного в мусор. В логе это видно прямо: одна
+    // цель (`udp:188.234.73.160:443`) успевает съесть пять рукопожатий за 2.5
+    // секунды, потому что приложение ретраит QUIC, а ядро каждый раз честно
+    // дозванивается до сервера заново.
+    //
+    // Блокируем такой трафик правилом, до аутбаунда. Для приложений это ничего
+    // не меняет — QUIC и так не работал, они откатываются на TCP через секунду —
+    // но убирает шквал коротких TLS-сессий к одному IP:443. Так же поступают
+    // v2rayNG и Happ.
+    //
+    // Только при глобал-прокси: если «остальное» уходит direct или block, то
+    // сюда доезжает и трафик, которому в туннель не надо, и резать его QUIC —
+    // не наше дело. Вариант флоу `-udp443` умеет UDP/443 сам, его не трогаем.
+    if (settings.finalOutbound == AppSettings.finalOutboundProxy &&
+        _visionRejectsQuic(proxyOutbounds)) {
+      rules.add(rule('block-quic', {
+        'network': 'udp',
+        'port': '443',
+        'outboundTag': 'block',
+      }));
+    }
     if (proxyDomains.isNotEmpty) {
       rules.add(rule('proxy-domains',
           {'domain': proxyDomains, 'outboundTag': 'proxy'}));
@@ -1334,12 +1448,36 @@ class ConfigGeneratorV2 {
         ...proxyOutbounds,
         {'protocol': 'freedom', 'tag': 'direct'},
         {'protocol': 'blackhole', 'tag': 'block'},
+        // Тег из правила `dns-out`; в ping-режиме правила нет, и аутбаунд с
+        // несуществующим тегом только раздувал бы конфиг пробы.
+        if (!isPingMode)
+          {
+            'protocol': 'dns',
+            'tag': 'dns-out',
+            'settings': {'nonIPQuery': 'reject'},
+          },
       ],
       'routing': {
         'domainStrategy': isPingMode ? 'AsIs' : effectiveDomainStrategy,
         'rules': rules,
       },
     };
+  }
+
+  /// Отвергает ли выходной аутбаунд UDP/443 сам, уже после дозвона до сервера.
+  ///
+  /// Так ведёт себя `xtls-rprx-vision`; отдельный флоу `xtls-rprx-vision-udp443`
+  /// как раз для того и заведён, чтобы UDP/443 пропускать — его исключаем.
+  /// Смотрим только на первый аутбаунд: в цепочке это выходной узел, а именно
+  /// он решает судьбу пакета.
+  static bool _visionRejectsQuic(List<Map<String, dynamic>> proxyOutbounds) {
+    if (proxyOutbounds.isEmpty) return false;
+    final first = proxyOutbounds.first;
+    if (first['protocol'] != 'vless') return false;
+    final settings = first['settings'];
+    if (settings is! Map) return false;
+    final flow = settings['flow']?.toString().trim() ?? '';
+    return flow.startsWith('xtls-rprx-vision') && !flow.endsWith('-udp443');
   }
 
   /// Инбаунды приложения: локальные SOCKS/HTTP (и опционально LAN).

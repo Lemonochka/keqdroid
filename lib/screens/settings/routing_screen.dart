@@ -166,18 +166,18 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       };
 
   IconData _presetIcon(String id) => switch (id) {
-        'ru' => Icons.flag_outlined,
-        'ru_geoip' => Icons.public,
-        'ru_geosite' => Icons.travel_explore,
-        'banks' => Icons.account_balance_outlined,
-        'lan_ips' => Icons.lan_outlined,
-        'ads' => Icons.block,
-        'ads_geosite' => Icons.block_flipped,
-        'streaming' => Icons.play_circle_outline,
-        'messengers' => Icons.chat_bubble_outline,
-        'telegram_geo' => Icons.send_outlined,
-        'refilter' => Icons.shield_outlined,
-        _ => Icons.tune,
+        'ru' => Icons.flag_rounded,
+        'ru_geoip' => Icons.public_rounded,
+        'ru_geosite' => Icons.travel_explore_rounded,
+        'banks' => Icons.account_balance_rounded,
+        'lan_ips' => Icons.lan_rounded,
+        'ads' => Icons.block_rounded,
+        'ads_geosite' => Icons.block_rounded,
+        'streaming' => Icons.play_circle_outline_rounded,
+        'messengers' => Icons.chat_bubble_outline_rounded,
+        'telegram_geo' => Icons.send_rounded,
+        'refilter' => Icons.shield_rounded,
+        _ => Icons.tune_rounded,
       };
 
   Color _presetColor(BuildContext context, RoutingField f) => switch (f) {
@@ -212,35 +212,28 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     // подключением) и наполняем пикер кодов.
     final geoIndex =
         ref.watch(geoAssetIndexProvider).value ?? GeoAssetIndex.empty;
-    return Scaffold(
-      backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        iconTheme: IconThemeData(color: AppTheme.text(context)),
-        title: Text(
-          l10n.settingsRoutingTitle,
-          style: TextStyle(color: AppTheme.text(context)),
-        ),
-        actions: [
-          IconButton(
-            tooltip: l10n.routingCheatSheetTitle,
-            icon: Icon(Icons.help_outline, color: AppTheme.text(context)),
-            onPressed: () => _showCheatSheet(context, l10n),
-          ),
-          IconButton(
-            tooltip: l10n.settingsResetRoutingTitle,
-            icon: Icon(Icons.restore, color: AppTheme.text(context)),
-            onPressed: _resetToDefaults,
-          ),
-        ],
+    return ExpressivePage(
+      title: l10n.settingsRoutingTitle,
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(
+        ExpressiveSpacing.large,
+        ExpressiveSpacing.none,
+        ExpressiveSpacing.large,
+        ExpressiveSpacing.extraLargeIncreased,
       ),
-      body: SmoothScroll(
-        builder: (context, controller) => ListView(
-          controller: controller,
-        physics: const ClampingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        children: [
+      actions: [
+        IconButton(
+          tooltip: l10n.routingCheatSheetTitle,
+          icon: const Icon(Icons.help_outline_rounded),
+          onPressed: () => _showCheatSheet(context, l10n),
+        ),
+        IconButton(
+          tooltip: l10n.settingsResetRoutingTitle,
+          icon: const Icon(Icons.restore_rounded),
+          onPressed: _resetToDefaults,
+        ),
+      ],
+      children: [
           if (tunnelActive) ...[
             _reconnectHintBanner(context, l10n),
             const SizedBox(height: 12),
@@ -254,7 +247,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           _section(
             context: context,
             color: AppTheme.green(context),
-            icon: Icons.call_made,
+            icon: Icons.call_made_rounded,
             title: l10n.settingsRoutingDirectTitle,
             desc: l10n.settingsRoutingDirectDesc,
             controller: _directRules,
@@ -267,7 +260,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           _section(
             context: context,
             color: AppTheme.accent(context),
-            icon: Icons.vpn_lock,
+            icon: Icons.vpn_lock_rounded,
             title: l10n.settingsRoutingProxyTitle,
             desc: l10n.settingsRoutingProxyDesc,
             controller: _proxyRules,
@@ -280,7 +273,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           _section(
             context: context,
             color: AppTheme.red(context),
-            icon: Icons.block,
+            icon: Icons.block_rounded,
             title: l10n.settingsRoutingBlockTitle,
             desc: l10n.settingsRoutingBlockDesc,
             controller: _blockedRules,
@@ -294,33 +287,14 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           const SizedBox(height: 16),
           _syntaxLegend(context, l10n),
         ],
-      ),
-      ),
     );
   }
 
   Widget _reconnectHintBanner(BuildContext context, AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppTheme.orange(context).withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, size: 16, color: AppTheme.orange(context)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              l10n.splitTunnelingReconnectHint,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    height: 1.35,
-                    color: AppTheme.text(context),
-                  ),
-            ),
-          ),
-        ],
-      ),
+    return ExpressiveNotice(
+      color: AppTheme.orange(context),
+      icon: Icons.info_outline_rounded,
+      text: l10n.splitTunnelingReconnectHint,
     );
   }
 
@@ -333,9 +307,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       };
 
   IconData _finalIcon(String value) => switch (value) {
-        AppSettings.finalOutboundDirect => Icons.call_made,
-        AppSettings.finalOutboundBlock => Icons.block,
-        _ => Icons.vpn_lock,
+        AppSettings.finalOutboundDirect => Icons.call_made_rounded,
+        AppSettings.finalOutboundBlock => Icons.block_rounded,
+        _ => Icons.vpn_lock_rounded,
       };
 
   Color _finalColor(BuildContext context, String value) => switch (value) {
@@ -352,7 +326,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.alt_route, size: 18, color: AppTheme.accent(context)),
+              Icon(Icons.alt_route_rounded, size: 18, color: AppTheme.accent(context)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -454,7 +428,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.tune, size: 18, color: AppTheme.accent(context)),
+              Icon(Icons.tune_rounded, size: 18, color: AppTheme.accent(context)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -496,7 +470,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             alignment: AlignmentDirectional.centerStart,
             child: FilledButton.tonalIcon(
               onPressed: () => _openRuleEditor(l10n, null),
-              icon: const Icon(Icons.add, size: 18),
+              icon: const Icon(Icons.add_rounded, size: 18),
               label: Text(l10n.settingsRoutingAdvancedAdd),
             ),
           ),
@@ -564,7 +538,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           IconButton(
             visualDensity: VisualDensity.compact,
             tooltip: l10n.settingsRoutingRuleEditTitle,
-            icon: Icon(Icons.edit_outlined,
+            icon: Icon(Icons.edit_rounded,
                 size: 18, color: AppTheme.textLight(context)),
             onPressed: () => _openRuleEditor(l10n, rule),
           ),
@@ -700,7 +674,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       child:Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.help_outline, size: 18, color: AppTheme.textLight(context)),
+          Icon(Icons.help_outline_rounded, size: 18, color: AppTheme.textLight(context)),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -726,7 +700,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.alt_route, size: 20, color: AppTheme.accent(context)),
+          Icon(Icons.alt_route_rounded, size: 20, color: AppTheme.accent(context)),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -787,7 +761,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             ),
           ),
           if (selected)
-            Icon(Icons.check, size: 18, color: scheme.onSecondaryContainer),
+            Icon(Icons.check_rounded, size: 18, color: scheme.onSecondaryContainer),
         ],
       ),
     );
@@ -859,7 +833,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                     ),
                     dropdownColor: AppTheme.card(context),
                     icon: Icon(
-                      Icons.arrow_drop_down,
+                      Icons.arrow_drop_down_rounded,
                       color: AppTheme.textLight(context),
                     ),
                     // Закрытое поле — без обёртки подсветки: её отступы не
@@ -916,7 +890,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                         selected,
                         _presetTitle(l10n, selected.id),
                       ),
-              icon: const Icon(Icons.add, size: 18),
+              icon: const Icon(Icons.add_rounded, size: 18),
               label: Text(l10n.settingsRoutingPresetAdd),
             ),
           ],
@@ -996,7 +970,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  icon: Icon(Icons.travel_explore, size: 18, color: color),
+                  icon: Icon(Icons.travel_explore_rounded, size: 18, color: color),
                   onPressed: () => _showGeoCodePicker(field, geoIndex),
                 ),
             ],

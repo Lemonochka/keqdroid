@@ -1,0 +1,196 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
+import '../models/subscription_card_theme.dart';
+
+/// Почему картинку не взяли. Текст подбирает экран — здесь только причина.
+enum CardImageRejection {
+  /// Слишком узкая или слишком высокая: карточка низкая и широкая, портрет в
+  /// ней превратится в полоску из середины.
+  aspect,
+
+  /// Слишком мелкая: растянутая на всю ширину карточки будет мылом.
+  tooSmall,
+
+  /// Неприлично большая: держать в памяти декодированные десятки мегапикселей
+  /// ради полоски 3:1 незачем.
+  tooLarge,
+
+  /// Файл не читается или это не картинка.
+  unreadable,
+}
+
+class CardImageResult {
+  const CardImageResult.picked(this.theme)
+      : rejection = null,
+        cancelled = false;
+  const CardImageResult.rejected(this.rejection)
+      : theme = null,
+        cancelled = false;
+  const CardImageResult.cancelled()
+      : theme = null,
+        rejection = null,
+        cancelled = true;
+
+  final SubscriptionCardTheme? theme;
+  final CardImageRejection? rejection;
+  final bool cancelled;
+}
+
+/// Своя картинка на карточку подписки: выбор, проверка, копия в каталог
+/// приложения.
+class CardImageService {
+  CardImageService._();
+
+  /// Границы, при которых картинка на карточке выглядит картинкой, а не
+  /// случайно обрезанным куском.
+  ///
+  /// Карточка широкая и низкая, картинка кроется по `BoxFit.cover` — значит из
+  /// портрета в неё попадёт горизонтальная полоса из середины, а из панорамы
+  /// 8:1 останется центральный огрызок. Поэтому берём только близкое к
+  /// пропорциям самой карточки.
+  static const minAspect = 1.2;
+  static const maxAspect = 5.0;
+  static const minWidth = 600;
+  static const maxWidth = 4000;
+
+  /// Диапазон для подписи под кнопкой: «от 600 до 4000 px по ширине».
+  static String get sizeHint => '$minWidth–$maxWidth px';
+
+  /// Узнать каталог картинок заранее — один раз на старте приложения.
+  ///
+  /// Карточка подписки рисуется синхронно, а путь к каталогу достаётся
+  /// асинхронно. Без этого своя картинка не могла бы попасть на карточку
+  /// вообще: id в настройках есть, а куда за файлом идти — неизвестно.
+  static Future<void> warmUp() async {
+    try {
+      await _directoryPath();
+    } catch (_) {
+      // path_provider не ответил — своя картинка просто не покажется, а
+      // приложение стартует: из-за фона карточки падать не за что.
+    }
+  }
+
+  /// Каталог картинок. Однажды узнанный путь лежит в
+  /// [SubscriptionCardTheme.customDirectory] — оттуда его берёт и карточка,
+  /// которой некогда ждать асинхронный path_provider, и мы сами: миниатюра
+  /// слайдера спрашивает путь на каждой перерисовке, и каждый раз ходить в
+  /// платформенный канал незачем.
+  static Future<String> _directoryPath() async {
+    final known = SubscriptionCardTheme.customDirectory;
+    if (known != null) return known;
+    final base = await getApplicationSupportDirectory();
+    final path = p.join(base.path, 'card_themes');
+    SubscriptionCardTheme.customDirectory = path;
+    return path;
+  }
+
+  static Future<Directory> _directory() async {
+    final dir = Directory(await _directoryPath());
+    if (!dir.existsSync()) await dir.create(recursive: true);
+    return dir;
+  }
+
+  /// Диалог выбора, проверка размеров и копия к себе.
+  ///
+  /// Копируем, а не запоминаем чужой путь: выбранный файл живёт в галерее или
+  /// загрузках, его переименуют или удалят — и карточка облысеет. Своя копия
+  /// принадлежит приложению и уезжает вместе с ним.
+  static Future<CardImageResult> pick({required String subscriptionId}) async {
+    final picked = await FilePicker.pickFiles(
+      type: FileType.image,
+    );
+    final path = picked?.files.singleOrNull?.path;
+    if (path == null) return const CardImageResult.cancelled();
+
+    final rejection = await _validate(File(path));
+    if (rejection != null) return CardImageResult.rejected(rejection);
+
+    final dir = await _directory();
+    // Имя от подписки, а не от исходного файла: две подписки с картинками
+    // `image.jpg` не должны затирать друг друга. Метка времени — потому что
+    // Flutter кэширует картинки по пути: перезапиши файл на месте, и на
+    // карточке ещё долго висела бы предыдущая.
+    final ext = p.extension(path).toLowerCase();
+    final fileName =
+        '$subscriptionId-${DateTime.now().millisecondsSinceEpoch}$ext';
+    // Прошлую картинку здесь не трогаем: выбор ещё не подтверждён кнопкой
+    // «Сохранить», и отмена редактирования не должна оставлять карточку с
+    // выбранной, но удалённой картинкой. Уборка — в [prune] при сохранении.
+    await File(path).copy(p.join(dir.path, fileName));
+
+    return CardImageResult.picked(
+      SubscriptionCardTheme.file(fileName, dir.path),
+    );
+  }
+
+  /// Путь к сохранённой картинке по id темы (`file:<имя>`); null — это не своя
+  /// картинка либо файла уже нет.
+  static Future<String?> resolvePath(String themeId) async {
+    if (!themeId.startsWith(SubscriptionCardTheme.filePrefix)) return null;
+    final name = themeId.substring(SubscriptionCardTheme.filePrefix.length);
+    final file = File(p.join(await _directoryPath(), name));
+    return file.existsSync() ? file.path : null;
+  }
+
+  /// Убрать все картинки подписки — при её удалении.
+  static Future<void> remove(String subscriptionId) =>
+      prune(subscriptionId, null);
+
+  /// Оставить у подписки только выбранную картинку, остальные — удалить.
+  ///
+  /// Зовётся при сохранении подписки: выбор копирует файл сразу, но
+  /// подтверждается кнопкой «Сохранить». До неё на диске лежат обе картинки —
+  /// старая (вдруг отмена) и новая. Здесь лишняя и убирается.
+  static Future<void> prune(String subscriptionId, String? keepThemeId) async {
+    final keep = keepThemeId != null &&
+            keepThemeId.startsWith(SubscriptionCardTheme.filePrefix)
+        ? keepThemeId.substring(SubscriptionCardTheme.filePrefix.length)
+        : null;
+    final dir = Directory(await _directoryPath());
+    if (!dir.existsSync()) return;
+    await for (final entry in dir.list()) {
+      if (entry is! File) continue;
+      final name = p.basename(entry.path);
+      if (name == keep || !_belongsTo(name, subscriptionId)) continue;
+      try {
+        await entry.delete();
+      } catch (_) {
+        // Занят другим процессом — уберётся при следующем сохранении.
+      }
+    }
+  }
+
+  /// Файл этой подписки? Кроме нынешнего `<id>-<время>.jpg` признаём и старое
+  /// `<id>.jpg`: у тех, кто уже выбрал картинку, она лежит под этим именем.
+  static bool _belongsTo(String fileName, String subscriptionId) {
+    final base = p.basenameWithoutExtension(fileName);
+    return base == subscriptionId || base.startsWith('$subscriptionId-');
+  }
+
+  static Future<CardImageRejection?> _validate(File file) async {
+    final ui.Image image;
+    try {
+      final bytes = await file.readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes);
+      image = (await codec.getNextFrame()).image;
+    } catch (_) {
+      return CardImageRejection.unreadable;
+    }
+    try {
+      if (image.width < minWidth) return CardImageRejection.tooSmall;
+      if (image.width > maxWidth) return CardImageRejection.tooLarge;
+      final aspect = image.width / image.height;
+      if (aspect < minAspect || aspect > maxAspect) {
+        return CardImageRejection.aspect;
+      }
+      return null;
+    } finally {
+      image.dispose();
+    }
+  }
+}

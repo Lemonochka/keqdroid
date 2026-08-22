@@ -4,9 +4,12 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
+#include "deep_link.h"
 #include "tunnel_channel_handler.h"
 #include "windows_hotkeys.h"
 #include "windows_tray.h"
+
+#include <string>
 
 namespace {
 constexpr UINT kAutostartConnectMsg = WM_APP + 100;
@@ -46,6 +49,7 @@ bool FlutterWindow::OnCreate() {
   flutter_controller_->ForceRedraw();
 
   WindowsTrayInit(GetHandle());
+  KeqdroidAllowDeepLinkMessages(GetHandle());
 
   return true;
 }
@@ -86,6 +90,20 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     case kAutostartConnectMsg:
       KeqdisRequestAutostartConnect();
       return 0;
+    case WM_COPYDATA: {
+      // A second instance, launched by the browser for a keqdroid:// link,
+      // handed it to us and exited.
+      std::string url;
+      if (KeqdroidDeepLinkFromCopyData(lparam, &url)) {
+        // Come back from the tray ourselves instead of leaving it to the
+        // other process: only this one knows it is hidden or showing the tray
+        // popup, and the result of the import has to be visible somewhere.
+        WindowsTrayActivateMainWindow();
+        KeqdisRequestDeepLink(url);
+        return TRUE;
+      }
+      break;
+    }
     case WM_HOTKEY: {
       const std::string action =
           KeqdroidHotkeyActionForId(static_cast<int>(wparam));

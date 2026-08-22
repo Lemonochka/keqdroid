@@ -971,5 +971,86 @@
         "type": "int"
       }
     }
-  }
+  },
+  "settingsInternalsTitle": "About",
+  "settingsInternalsSubtitle": "Version, cores, geo databases and current session",
+  "settingsCoreXraySubtitle": "Default core. Handles every server type, including chains and ready-made JSON configs.",
+  "settingsCoreMihomoSubtitle": "Clash-compatible core. Chains and ready-made xray configs stay on Xray.",
+  "settingsCoreHint": "Applies on the next connection — the running session is not restarted.",
+  "settingsInternalsCores": "Cores",
+  "settingsInternalsGeo": "Geo databases",
+  "settingsInternalsSession": "Current session",
+  "settingsInternalsBuild": "App and device",
+  "settingsInternalsCopyAll": "Copy report",
+  "settingsInternalsCopied": "Report copied to clipboard",
+  "settingsInternalsNoCores": "No cores are bundled for this platform",
+  "settingsInternalsCoreMissing": "not found",
+  "settingsInternalsVersionFromEngines": "built from source",
+  "settingsInternalsRoleCore": "Proxy engine and TUN",
+  "settingsInternalsRoleProxy": "Proxy engine",
+  "settingsInternalsRoleTun": "TUN device",
+  "settingsInternalsRoleAwg": "AmneziaWG",
+  "settingsInternalsGeoCodes": "codes: {count}",
+  "@settingsInternalsGeoCodes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsInternalsStatus": "Status",
+  "settingsInternalsStatusError": "Error",
+  "settingsInternalsEngine": "Engine",
+  "settingsInternalsMode": "Mode",
+  "settingsInternalsPorts": "Local ports",
+  "settingsInternalsClashPort": "Clash API port",
+  "settingsInternalsUptime": "Uptime",
+  "settingsInternalsCorePids": "Core processes",
+  "settingsInternalsElevated": "Administrator",
+  "settingsInternalsYes": "yes",
+  "settingsInternalsNo": "no",
+  "settingsInternalsAppVersion": "App version",
+  "settingsInternalsPackage": "Package",
+  "settingsInternalsOs": "System",
+  "settingsInternalsAbi": "Architecture",
+  "settingsInternalsDart": "Dart",
+  "settingsInternalsBuildMode": "Build",
+  "settingsInternalsUnavailable": "—",
+  "appearanceIconShapeTitle": "Icon shape",
+  "appearanceIconShapeCircle": "Circle",
+  "subscriptionCardThemeTitle": "Card look",
+  "subscriptionCardThemeNone": "None",
+  "subscriptionCardThemeInServers": "Show in server list",
+  "subscriptionCardThemeInServersHint": "The picture also fills the group header. Colours taken from it stay either way.",
+  "appearanceIconShapeSquare": "Square",
+  "appearanceIconShapeArch": "Arch",
+  "appearanceSectionServers": "Server list and main screen",
+  "appearanceSectionFeel": "Theme and feedback",
+  "appearanceIconShapeClover": "Clover",
+  "appearanceIconShapeCookie": "Cookie",
+  "appearanceIconShapeFlower": "Flower",
+  "appearanceIconShapeSlanted": "Slanted",
+  "appearanceIconShapePill": "Pill",
+  "appearanceIconShapeGem": "Gem",
+  "appearanceIconShapeSunny": "Sunny",
+  "appearanceIconShapePuffy": "Puffy",
+  "appearanceIconShapePebble": "Pebble",
+  "cardImageRejectAspect": "This image is too tall for a card. Pick a wide one — roughly from 3:2 to 5:1.",
+  "cardImageRejectSmall": "Image is too small: at least {width} px wide.",
+  "@cardImageRejectSmall": {
+    "placeholders": {
+      "width": {
+        "type": "int"
+      }
+    }
+  },
+  "cardImageRejectLarge": "Image is too large: at most {width} px wide.",
+  "@cardImageRejectLarge": {
+    "placeholders": {
+      "width": {
+        "type": "int"
+      }
+    }
+  },
+  "cardImageRejectUnreadable": "Could not read this image."
 }

@@ -128,30 +128,27 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
     final tun = settings.tun;
     final accent = AppTheme.accent(context);
 
-    return Scaffold(
-      backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        title: Text(l10n.settingsXrayCoreTitle),
-        actions: [
-          TextButton(
-            onPressed: () => _resetDefaults(settings),
-            child: Text(
-              l10n.settingsXrayResetDefaults,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelLarge
-                  ?.copyWith(color: accent),
-            ),
-          ),
-        ],
+    return ExpressivePage(
+      title: l10n.settingsXrayCoreTitle,
+      padding: const EdgeInsets.fromLTRB(
+        ExpressiveSpacing.large,
+        ExpressiveSpacing.none,
+        ExpressiveSpacing.large,
+        ExpressiveSpacing.extraLargeIncreased,
       ),
-      body: SmoothScroll(
-        builder: (context, controller) => ListView(
-          controller: controller,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
+      actions: [
+        TextButton(
+          onPressed: () => _resetDefaults(settings),
+          child: Text(
+            l10n.settingsXrayResetDefaults,
+            style: Theme.of(context)
+                .textTheme
+                .labelLarge
+                ?.copyWith(color: accent),
+          ),
+        ),
+      ],
+      children: [
           Container(
             padding: const EdgeInsets.all(16),
             margin: const EdgeInsets.only(bottom: 4),
@@ -163,13 +160,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.16),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.settings_ethernet, size: 20, color: accent),
+                ExpressiveIconBadge(
+                  icon: Icons.settings_ethernet_rounded,
+                  background: accent.withValues(alpha: 0.16),
+                  foreground: accent,
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -185,7 +179,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
             ),
           ),
           const _LocalPortsSection(),
-          _XrayCoreSectionHeader(icon: Icons.dns_outlined, title: l10n.settingsXrayDnsSection),
+          _XrayCoreSectionHeader(icon: Icons.dns_rounded, title: l10n.settingsXrayDnsSection),
           _xraySettingsCard(
             context,
             children: [
@@ -273,7 +267,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
               ),
             ],
           ),
-          _XrayCoreSectionHeader(icon: Icons.merge_type, title: l10n.settingsXrayXmuxSection),
+          _XrayCoreSectionHeader(icon: Icons.merge_type_rounded, title: l10n.settingsXrayXmuxSection),
           _xraySettingsCard(
             context,
             children: [
@@ -436,7 +430,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
               ),
             ],
           ),
-          _XrayCoreSectionHeader(icon: Icons.tune, title: l10n.settingsXrayGeneralSection),
+          _XrayCoreSectionHeader(icon: Icons.tune_rounded, title: l10n.settingsXrayGeneralSection),
           _xraySettingsCard(
             context,
             children: [
@@ -538,7 +532,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
           // VpnService + tun2socks, эти опции там ни на что не влияют.
           if (Platform.isWindows || Platform.isLinux) ...[
             _XrayCoreSectionHeader(
-              icon: Icons.lan_outlined,
+              icon: Icons.lan_rounded,
               title: l10n.settingsTunSection,
             ),
             _xraySettingsCard(
@@ -746,7 +740,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () => _resetDefaults(settings),
-            icon: const Icon(Icons.restore, size: 18),
+            icon: const Icon(Icons.restore_rounded, size: 18),
             label: Text(l10n.settingsXrayResetDefaults),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.textLight(context),
@@ -758,8 +752,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
             ),
           ),
         ],
-      ),
-      ),
     );
   }
 }

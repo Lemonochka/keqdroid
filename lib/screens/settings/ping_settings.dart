@@ -63,18 +63,9 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
           child: Column(children: children),
         );
 
-    return Scaffold(
-      backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        title: Text(l10n.settingsPingTitle),
-      ),
-      body: SmoothScroll(
-        builder: (context, controller) => ListView(
-          controller: controller,
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        children: [
+    return ExpressivePage(
+      title: l10n.settingsPingTitle,
+      children: [
           ExpressiveSectionHeader(l10n.settingsPingMethodTitle),
           card(
             children: [
@@ -199,8 +190,6 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
             ),
           ],
         ],
-      ),
-      ),
     );
   }
 }

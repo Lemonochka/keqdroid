@@ -9,6 +9,11 @@ class _ServerTile extends ConsumerWidget {
   /// (одноколоночный список); сетка в две колонки передаёт своё (у нижнего
   /// ряда скругляется только внешний угол каждой колонки).
   final BorderRadius? radius;
+
+  /// Цвета, выведенные из картинки подписки. null — у подписки нет своей
+  /// подложки (или сервер добавлен руками), тогда тайл живёт на ролях темы,
+  /// как и раньше.
+  final SubscriptionAccent? accent;
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final Future<void> Function() onPing;
@@ -20,6 +25,7 @@ class _ServerTile extends ConsumerWidget {
     required this.isFirst,
     required this.isLast,
     this.radius,
+    this.accent,
     required this.onTap,
     required this.onDelete,
     required this.onPing,
@@ -82,7 +88,13 @@ class _ServerTile extends ConsumerWidget {
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final accentColor = AppTheme.accent(context);
+    // Акцент подписки подменяет РОЛЬ, а не отдельный цвет: и заливка поднятого
+    // сегмента, и текст на нём берутся из одной тональной схемы, поэтому
+    // контраст остаётся выверенным при любой картинке. Подписи «серверов
+    // вообще» (пинг, протокол) остаются на ролях темы — иначе список стал бы
+    // пёстрым, а не связанным.
+    final accent = this.accent;
+    final accentColor = accent?.seed ?? AppTheme.accent(context);
     final textLightColor = AppTheme.textLight(context);
 
     // Активный сервер «поднимается» из группы отдельным сегментом: свои
@@ -105,8 +117,12 @@ class _ServerTile extends ConsumerWidget {
     final liftedRadius = ExpressiveShape.radius(ExpressiveShape.largeIncreased);
     const liftedInset = EdgeInsets.symmetric(horizontal: 6, vertical: 3);
 
-    final activeDecoration = BoxDecoration(color: scheme.secondaryContainer);
-    final restDecoration = BoxDecoration(color: AppTheme.card(context));
+    final activeDecoration = BoxDecoration(
+      color: accent?.container ?? scheme.secondaryContainer,
+    );
+    final restDecoration = BoxDecoration(
+      color: accent?.surface(AppTheme.card(context)) ?? AppTheme.card(context),
+    );
 
     // Сам ряд — общий с выбором узлов цепочки (shared/ui/server_row.dart).
     // Плитка добавляет к нему только подсветку активного, форму и жесты.
@@ -121,7 +137,9 @@ class _ServerTile extends ConsumerWidget {
       pingMs: pingMs,
       lastTestedAt: lastTestedAt,
       pingColorType: pingColorType,
-      foreground: isLifted ? scheme.onSecondaryContainer : null,
+      foreground: isLifted
+          ? (accent?.onContainer ?? scheme.onSecondaryContainer)
+          : null,
       opaqueBadge: isLifted,
       // Активный сервер отличается ВЕСОМ, а не размером: у M3E это и есть
       // роль усиленного варианта.
@@ -230,14 +248,14 @@ class _ServerTile extends ConsumerWidget {
       );
     } else if (isConnected) {
       bgColor = green.withValues(alpha: 0.25);
-      center = Icon(Icons.pause, key: const ValueKey('pause'), size: 18, color: green);
+      center = Icon(Icons.pause_rounded, key: const ValueKey('pause'), size: 18, color: green);
     } else if (isActive) {
       bgColor = accentColor.withValues(alpha: 0.18);
       center =
-          Icon(Icons.play_arrow, key: const ValueKey('play'), size: 18, color: accentColor);
+          Icon(Icons.play_arrow_rounded, key: const ValueKey('play'), size: 18, color: accentColor);
     } else {
       bgColor = Colors.transparent;
-      center = Icon(Icons.chevron_right, key: const ValueKey('idle'), color: textLightColor);
+      center = Icon(Icons.chevron_right_rounded, key: const ValueKey('idle'), color: textLightColor);
     }
 
     return AnimatedContainer(
@@ -331,7 +349,7 @@ class _ServerTile extends ConsumerWidget {
                 child: ExpressiveGroup(
                   children: [
                     ExpressiveActionTile(
-                      icon: Icons.network_ping,
+                      icon: Icons.network_ping_rounded,
                       title: l10n.serversPingServer,
                       accent: ExpressiveAccent.primary,
                       onTap: () async {
@@ -351,8 +369,8 @@ class _ServerTile extends ConsumerWidget {
                     ),
                     ExpressiveActionTile(
                       icon: server.isPinned
-                          ? Icons.push_pin_outlined
-                          : Icons.push_pin,
+                          ? Icons.push_pin_rounded
+                          : Icons.push_pin_rounded,
                       title: server.isPinned
                           ? l10n.serversUnpin
                           : l10n.serversPin,
@@ -376,7 +394,7 @@ class _ServerTile extends ConsumerWidget {
                 child: ExpressiveGroup(
                   children: [
                     ExpressiveActionTile(
-                      icon: Icons.drive_file_rename_outline,
+                      icon: Icons.drive_file_rename_outline_rounded,
                       title: l10n.serversRename,
                       onTap: () {
                         Navigator.pop(context);
@@ -385,7 +403,7 @@ class _ServerTile extends ConsumerWidget {
                     ),
                     if (server.protocol == 'chain')
                       ExpressiveActionTile(
-                        icon: Icons.route,
+                        icon: Icons.route_rounded,
                         title: l10n.chainEdit,
                         subtitle: l10n.chainRouteLabel,
                         onTap: () {
@@ -402,7 +420,7 @@ class _ServerTile extends ConsumerWidget {
                       )
                     else
                       ExpressiveActionTile(
-                        icon: Icons.tune,
+                        icon: Icons.tune_rounded,
                         title: l10n.serversEditConfig,
                         subtitle: l10n.serversEditConfigDesc,
                         onTap: () {
@@ -418,7 +436,7 @@ class _ServerTile extends ConsumerWidget {
                         },
                       ),
                     ExpressiveActionTile(
-                      icon: Icons.link,
+                      icon: Icons.link_rounded,
                       title: l10n.serversCopyConfig,
                       subtitle: server.protocol.toUpperCase(),
                       onTap: () {
@@ -440,7 +458,7 @@ class _ServerTile extends ConsumerWidget {
                 child: ExpressiveGroup(
                   children: [
                     ExpressiveActionTile(
-                      icon: Icons.delete_outline,
+                      icon: Icons.delete_outline_rounded,
                       title: server.protocol == 'chain'
                           ? l10n.chainDelete
                           : l10n.serversDeleteServer,
@@ -478,7 +496,7 @@ class _ServerTile extends ConsumerWidget {
         backgroundColor: cardColor,
         title: Row(
           children: [
-            Icon(Icons.drive_file_rename_outline, color: accentColor, size: 26),
+            Icon(Icons.drive_file_rename_outline_rounded, color: accentColor, size: 26),
             const SizedBox(width: 12),
             Expanded(
               child: Text(

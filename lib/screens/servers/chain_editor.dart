@@ -7,6 +7,7 @@ import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
 import 'package:keqdroid/shared/ui/server_avatar.dart';
+import 'package:keqdroid/shared/ui/scrolled_under.dart';
 import 'package:keqdroid/shared/ui/server_row.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
@@ -184,24 +185,24 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        iconTheme: IconThemeData(color: textColor),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _isNew ? l10n.chainNew : l10n.chainTitle,
-              style: theme.textTheme
-                  .emphasized(theme.textTheme.titleMedium)
-                  ?.copyWith(color: textColor),
-            ),
-            Text(
-              l10n.chainNodesCount(_hops.length),
-              style: theme.textTheme.bodySmall?.copyWith(color: textLight),
-            ),
-          ],
+      appBar: ExpressiveScrolledUnderBar(
+        builder: (context, background) => AppBar(
+          backgroundColor: background,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _isNew ? l10n.chainNew : l10n.chainTitle,
+                style: theme.textTheme
+                    .emphasized(theme.textTheme.titleMedium)
+                    ?.copyWith(color: textColor),
+              ),
+              Text(
+                l10n.chainNodesCount(_hops.length),
+                style: theme.textTheme.bodySmall?.copyWith(color: textLight),
+              ),
+            ],
+          ),
         ),
       ),
       body: SafeArea(
@@ -220,7 +221,7 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
               SliverToBoxAdapter(
                 child: ExpressiveSectionHeader(
                   l10n.chainRouteLabel,
-                  icon: Icons.route,
+                  icon: Icons.route_rounded,
                 ),
               ),
               SliverPadding(
@@ -252,7 +253,7 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
       decoration: InputDecoration(
         labelText: l10n.chainNameLabel,
         hintText: l10n.chainNameHint,
-        prefixIcon: Icon(Icons.link, color: AppTheme.textLight(context)),
+        prefixIcon: Icon(Icons.link_rounded, color: AppTheme.textLight(context)),
         filled: true,
         fillColor: AppTheme.card(context),
         border: OutlineInputBorder(
@@ -296,7 +297,7 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: _EndpointNode(
-                icon: Icons.smartphone,
+                icon: Icons.smartphone_rounded,
                 label: l10n.chainDeviceNode,
                 lineAbove: false,
                 lineBelow: true,
@@ -327,7 +328,7 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
             SliverToBoxAdapter(child: _addNodeRow(l10n)),
             SliverToBoxAdapter(
               child: _EndpointNode(
-                icon: Icons.public,
+                icon: Icons.public_rounded,
                 label: l10n.chainInternetNode,
                 lineAbove: true,
                 lineBelow: false,
@@ -367,7 +368,7 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
                   ),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.add, size: 17, color: color),
+                child: Icon(Icons.add_rounded, size: 17, color: color),
               ),
             ),
             const SizedBox(width: 8),
@@ -398,7 +399,7 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (error != null) ...[
-          _banner(error, AppTheme.red(context), Icons.error_outline),
+          _banner(error, AppTheme.red(context), Icons.error_outline_rounded),
           const SizedBox(height: 8),
         ] else if (_hops.length < 2) ...[
           // Не ошибка, а требование к маршруту: красный баннер тут пугал бы
@@ -406,7 +407,7 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
           _banner(
             l10n.chainNeedsTwoNodes,
             AppTheme.textLight(context),
-            Icons.info_outline,
+            Icons.info_outline_rounded,
           ),
           const SizedBox(height: 8),
         ],
@@ -651,7 +652,7 @@ class _HopRow extends StatelessWidget {
                       child: Tooltip(
                         message: l10n.chainExitNodeHint,
                         child: Icon(
-                          Icons.public,
+                          Icons.public_rounded,
                           size: 16,
                           color: AppTheme.accent(context),
                         ),
@@ -661,7 +662,7 @@ class _HopRow extends StatelessWidget {
                     tooltip: l10n.chainRemoveNode,
                     onPressed: onRemove,
                     visualDensity: VisualDensity.compact,
-                    icon: Icon(Icons.close, size: 18, color: textLight),
+                    icon: Icon(Icons.close_rounded, size: 18, color: textLight),
                   ),
                   ReorderableDragStartListener(
                     index: index,
@@ -671,7 +672,7 @@ class _HopRow extends StatelessWidget {
                         vertical: 8,
                       ),
                       child: Icon(
-                        Icons.drag_handle,
+                        Icons.drag_handle_rounded,
                         size: 20,
                         color: textLight,
                       ),
@@ -826,7 +827,7 @@ class _HopPickerSheetState extends ConsumerState<_HopPickerSheet> {
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
                     hintText: l10n.chainPickSearch,
-                    prefixIcon: const Icon(Icons.search, size: 20),
+                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
                     isDense: true,
                     filled: true,
                     fillColor: AppTheme.inset(context),
@@ -932,7 +933,7 @@ class _HopPickerSheetState extends ConsumerState<_HopPickerSheet> {
               pingColorType:
                   PingService.pingColorTypeForServer(server, settings),
               trailing: Icon(
-                Icons.add_circle_outline,
+                Icons.add_circle_outline_rounded,
                 color: AppTheme.accent(context),
               ),
             ),

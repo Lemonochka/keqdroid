@@ -14,6 +14,7 @@ import '../models/ping_test_config.dart';
 import '../models/routing_rule.dart';
 import '../models/server_item.dart';
 import '../models/subscription.dart';
+import '../services/card_image_service.dart';
 import '../services/geo_asset_service.dart';
 import '../services/notification_service.dart';
 import '../services/ping_service.dart';
@@ -33,12 +34,15 @@ import '../utils/error_messages.dart';
 import '../utils/geo_asset_index.dart';
 import '../utils/local_vpn_proxy.dart';
 import '../utils/process_name_utils.dart';
+import '../utils/mihomo_api_session.dart';
+import '../utils/mihomo_config_gen.dart';
 import '../utils/proxy_chain.dart';
 import '../utils/routing_rules_fold.dart';
 import '../utils/socks5_credentials.dart';
 import '../utils/split_tunnel_routing.dart';
 import '../utils/subscription_diff.dart';
 import '../utils/subscription_url.dart';
+import '../utils/system_accent.dart';
 import 'ui_state_providers.dart';
 
 export 'ui_state_providers.dart';
@@ -135,17 +139,30 @@ const _updateRecheckInterval = Duration(hours: 6);
 /// Системный акцент (Material You) как запасной сид «динамических цветов», когда
 /// плагин dynamic_color молчит на не-Pixel устройствах. `null` — цвета из плагина
 /// доступны, платформа не Android, или Android < 12. Читается один раз при старте.
-final systemAccentColorProvider = FutureProvider<Color?>((ref) async {
-  final argb = await VpnNativeBridge.getSystemAccentColor();
-  // В лог, потому что иначе «тема не следует за системой» неотличимо от «сид
-  // пришёл, но прошивка отдаёт константу»: и то и другое выглядит как всегда
-  // одинаковый цвет. С записью видно, дошло ли значение и какое.
-  AppLogger.instance.debug(
-    argb == null
-        ? 'System accent unavailable, using brand seed'
-        : 'System accent seed: #${argb.toRadixString(16).padLeft(8, '0')}',
-  );
-  return argb == null ? null : Color(argb);
+final systemAccentColorProvider = StreamProvider<Color?>((ref) async* {
+  Color? select(SystemAccentCandidates candidates) {
+    final picked = pickSystemAccent(candidates);
+    // В лог, потому что иначе «тема не следует за системой» неотличимо от «сид
+    // пришёл, но прошивка отдаёт константу»: и то и другое выглядит как всегда
+    // одинаковый цвет. Источник важен не меньше значения — по нему видно, на
+    // какой ступени цепочки прошивка сдалась.
+    AppLogger.instance.debug(
+      picked == null
+          ? 'System accent unavailable, using brand seed'
+          : 'System accent seed: '
+              '#${picked.color.toARGB32().toRadixString(16).padLeft(8, '0')}'
+              ' from ${picked.source.name}',
+    );
+    return picked?.color;
+  }
+
+  yield select(await VpnNativeBridge.getSystemAccentCandidates());
+  // Смена обоев запускает извлечение цвета уже ПОСЛЕ нашего чтения на старте:
+  // без подписки «поставил обои — приложение прежнего цвета» лечилось бы
+  // только перезапуском.
+  await for (final candidates in VpnNativeBridge.systemAccentChanges) {
+    yield select(candidates);
+  }
 });
 
 /// Коды, которые реально лежат в поставляемых geoip.dat/geosite.dat.

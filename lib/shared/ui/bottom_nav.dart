@@ -71,9 +71,9 @@ class _AppBottomNavState extends State<AppBottomNav>
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final items = <(IconData, String, bool)>[
-      (Icons.lan, l10n.navServers, widget.showConnectedBadge),
-      (Icons.language, l10n.navSubscriptions, false),
-      (Icons.settings, l10n.navSettings, false),
+      (Icons.lan_rounded, l10n.navServers, widget.showConnectedBadge),
+      (Icons.language_rounded, l10n.navSubscriptions, false),
+      (Icons.settings_rounded, l10n.navSettings, false),
     ];
 
     return Container(

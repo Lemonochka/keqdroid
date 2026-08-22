@@ -10,13 +10,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/app_font.dart';
 import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/models/app_internals.dart';
 import 'package:keqdroid/models/connection_entry.dart';
 import 'package:keqdroid/models/hotkey_config.dart';
+import 'package:keqdroid/models/icon_shape.dart';
 import 'package:keqdroid/models/ping_test_config.dart';
 import 'package:keqdroid/models/routing_rule.dart';
 import 'package:keqdroid/models/tun_settings.dart';
 import 'package:keqdroid/models/xray_core_settings.dart';
 import 'package:keqdroid/providers/providers.dart';
+import 'package:keqdroid/services/app_internals_service.dart';
 import 'package:keqdroid/services/connections_service.dart';
 import 'package:keqdroid/services/debug_log_service.dart';
 import 'package:keqdroid/services/hotkey_service.dart';
@@ -27,12 +30,17 @@ import 'package:keqdroid/app/app.dart';
 import 'package:keqdroid/screens/settings/connection_tile.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/expressive_elements.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
+import 'package:keqdroid/shared/ui/expressive_page.dart';
+import 'package:keqdroid/shared/ui/scrolled_under.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:keqdroid/services/update_service.dart';
 import 'package:keqdroid/shared/ui/update_dialog.dart';
 import 'package:keqdroid/utils/app_locale.dart';
+import 'package:keqdroid/utils/error_messages.dart';
 import 'package:keqdroid/utils/bidi.dart';
+import 'package:keqdroid/utils/byte_format.dart';
 import 'package:keqdroid/utils/awg_profile.dart';
 import 'package:keqdroid/utils/local_vpn_proxy.dart';
 import 'package:keqdroid/utils/geo_asset_index.dart';
@@ -45,6 +53,7 @@ import 'package:keqdroid/ui/responsive/desktop_page_layout.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 part 'settings/advanced_settings.dart';
+part 'settings/app_internals.dart';
 part 'settings/backup_restore.dart';
 part 'settings/connections.dart';
 part 'settings/debug_and_logs.dart';
@@ -115,7 +124,7 @@ class SettingsTab extends ConsumerWidget {
                         _SettingsCard(
                           title: l10n.settingsDesktopTitle,
                           subtitle: l10n.settingsDesktopSubtitle,
-                          icon: Icons.desktop_windows_outlined,
+                          icon: Icons.desktop_windows_rounded,
                           accent: ExpressiveAccent.secondary,
                           onTap: () => Navigator.push(
                             context,
@@ -128,7 +137,7 @@ class SettingsTab extends ConsumerWidget {
                       _SettingsCard(
                         title: l10n.settingsAdvanced,
                         subtitle: l10n.settingsAdvancedSubtitle,
-                        icon: Icons.tune,
+                        icon: Icons.tune_rounded,
                         accent: ExpressiveAccent.primary,
                         onTap: () => Navigator.push(
                           context,
@@ -145,12 +154,24 @@ class SettingsTab extends ConsumerWidget {
                       _SettingsCard(
                         title: l10n.settingsBackupRestore,
                         subtitle: l10n.settingsBackupRestoreSubtitle,
-                        icon: Icons.cloud_upload_outlined,
+                        icon: Icons.cloud_upload_rounded,
                         accent: ExpressiveAccent.secondary,
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => const _BackupRestoreScreen(),
+                          ),
+                        ),
+                      ),
+                      _SettingsCard(
+                        title: l10n.settingsInternalsTitle,
+                        subtitle: l10n.settingsInternalsSubtitle,
+                        icon: Icons.info_rounded,
+                        accent: ExpressiveAccent.tertiary,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const _AppInternalsScreen(),
                           ),
                         ),
                       ),
@@ -193,7 +214,7 @@ class _LanguageSettingsCard extends ConsumerWidget {
     return _SettingsCard(
       title: l10n.settingsLanguageTitle,
       subtitle: l10n.settingsLanguageSubtitle(label),
-      icon: Icons.translate,
+      icon: Icons.translate_rounded,
       accent: ExpressiveAccent.tertiary,
       onTap: () => _showLanguageSheet(context, ref, settings),
     );
@@ -305,7 +326,7 @@ class _LanguageSettingsCard extends ConsumerWidget {
                                       ),
                                     ),
                                     if (selected)
-                                      Icon(Icons.check_circle,
+                                      Icon(Icons.check_circle_rounded,
                                           color: scheme.onSecondaryContainer,
                                           size: 22),
                                   ],
@@ -342,7 +363,7 @@ class _SplitTunnelingSettingsCard extends ConsumerWidget {
     return _SettingsCard(
       title: l10n.settingsSplitTitle,
       subtitle: l10n.settingsSplitConfigured(packageCount),
-      icon: Icons.alt_route,
+      icon: Icons.alt_route_rounded,
       accent: ExpressiveAccent.tertiary,
       onTap: () => Navigator.push(
         context,
@@ -375,22 +396,14 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return ExpressiveGroupTile(
       onTap: onTap,
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: accent.container(scheme),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 20, color: accent.onContainer(scheme)),
-          ),
-          const SizedBox(width: 14),
+          ExpressiveIconBadge(icon: icon, accent: accent),
+          const SizedBox(width: ExpressiveSpacing.large),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,7 +425,7 @@ class _SettingsCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: AppTheme.textLight(context)),
+          Icon(Icons.chevron_right_rounded, color: AppTheme.textLight(context)),
         ],
       ),
     );
@@ -547,7 +560,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle, color: AppTheme.bg(context), size: 20),
+                Icon(Icons.check_circle_rounded, color: AppTheme.bg(context), size: 20),
                 const SizedBox(width: 10),
                 Text(l10n.settingsLatestVersionInstalled),
               ],
@@ -565,7 +578,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.error_outline, color: AppTheme.bg(context), size: 20),
+              Icon(Icons.error_outline_rounded, color: AppTheme.bg(context), size: 20),
               const SizedBox(width: 10),
               Expanded(child: Text(l10n.settingsCheckFailedError('$e'))),
             ],
@@ -599,16 +612,16 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
     IconData statusIcon;
     if (checking) {
       statusColor = subtitleColor;
-      statusIcon = Icons.hourglass_empty;
+      statusIcon = Icons.hourglass_empty_rounded;
     } else if (error) {
       statusColor = AppTheme.red(context);
-      statusIcon = Icons.error_outline;
+      statusIcon = Icons.error_outline_rounded;
     } else if (updateAvailable) {
       statusColor = accent;
-      statusIcon = Icons.system_update_alt;
+      statusIcon = Icons.system_update_alt_rounded;
     } else {
       statusColor = AppTheme.green(context);
-      statusIcon = Icons.check_circle_outline;
+      statusIcon = Icons.check_circle_outline_rounded;
     }
 
     return Column(
@@ -680,7 +693,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: accent),
                         )
-                      : const Icon(Icons.refresh),
+                      : const Icon(Icons.refresh_rounded),
                   tooltip: l10n.settingsCheckForUpdates,
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
@@ -723,7 +736,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                 ),
                 FilledButton.icon(
                   onPressed: () => showUpdateDialog(context, updateInfo),
-                  icon: const Icon(Icons.download, size: 18),
+                  icon: const Icon(Icons.download_rounded, size: 18),
                   label: Text(l10n.updateActionNow),
                   style: FilledButton.styleFrom(
                     backgroundColor: accent,

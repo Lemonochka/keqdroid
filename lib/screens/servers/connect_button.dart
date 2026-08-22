@@ -183,7 +183,7 @@ class _ConnectButtonState extends State<_ConnectButton>
                 ),
               )
             : Icon(
-                widget.isConnected ? Icons.pause : Icons.play_arrow,
+                widget.isConnected ? Icons.pause_rounded : Icons.play_arrow_rounded,
                 key: ValueKey(widget.isConnected ? 'pause' : 'play'),
                 size: 52,
                 color: widget.isConnected

@@ -11,6 +11,7 @@ import 'package:keqdroid/core/app_logger.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/services/background_service.dart';
+import 'package:keqdroid/services/card_image_service.dart';
 import 'package:keqdroid/services/desktop_background_service.dart';
 import 'package:keqdroid/services/notification_service.dart';
 import 'package:keqdroid/providers/providers.dart';
@@ -85,6 +86,9 @@ Future<void> main() async {
     }
 
     final storage = await StorageService.init();
+    // До первого кадра: список подписок рисует свои картинки синхронно, и без
+    // известного каталога выбранная картинка не показалась бы вовсе.
+    await CardImageService.warmUp();
 
     final home = Platform.isWindows || Platform.isLinux
         ? const DesktopHomeScreen()

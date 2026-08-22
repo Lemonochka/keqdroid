@@ -63,11 +63,11 @@ class _QrScanScreenState extends State<QrScanScreen> {
         title: Text(l10n.qrScanTitle),
         actions: [
           IconButton(
-            icon: const Icon(Icons.flash_on_outlined),
+            icon: const Icon(Icons.flash_on_rounded),
             onPressed: () => _controller.toggleTorch(),
           ),
           IconButton(
-            icon: const Icon(Icons.cameraswitch_outlined),
+            icon: const Icon(Icons.cameraswitch_rounded),
             onPressed: () => _controller.switchCamera(),
           ),
         ],
@@ -85,7 +85,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(
-                      Icons.no_photography_outlined,
+                      Icons.no_photography_rounded,
                       color: Colors.white54,
                       size: 48,
                     ),

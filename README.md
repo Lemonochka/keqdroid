@@ -183,7 +183,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 
 ## License
 
-[GPL-3.0](LICENSE). The bundled cores keep their upstream licenses: Xray-core (MPL-2.0), sing-box (GPL-3.0), amneziawg-go (MIT).
+[GPL-3.0](LICENSE). The bundled cores keep their upstream licenses: Xray-core (MPL-2.0), mihomo (GPL-3.0), sing-box (GPL-3.0), amneziawg-go (MIT).
 
 ---
 
@@ -362,7 +362,7 @@ powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFi
 
 ## Лицензия
 
-[GPL-3.0](LICENSE). Встроенные ядра — под своими лицензиями: Xray-core (MPL-2.0), sing-box (GPL-3.0), amneziawg-go (MIT).
+[GPL-3.0](LICENSE). Встроенные ядра — под своими лицензиями: Xray-core (MPL-2.0), mihomo (GPL-3.0), sing-box (GPL-3.0), amneziawg-go (MIT).
 
 ---
 

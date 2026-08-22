@@ -2,9 +2,11 @@ part of '../settings_tab.dart';
 
 /// Дебаг-экран «Соединения»: что, куда и по какому правилу идёт прямо сейчас.
 ///
-/// Данные берёт [ConnectionsService]; полнота зависит от платформы — на десктопе
-/// это живой снимок из clash_api ядра (с процессом и байтами), на Android —
-/// разбор access-лога xray (без процесса и байт).
+/// Данные берёт [ConnectionsService]; полнота зависит не от платформы, а от
+/// ядра. Живой снимок из clash_api (с байтами и правилом) дают keqrnel на
+/// десктопе и mihomo на Android. Android+xray остаётся особым случаем: API у
+/// ядра нет вовсе, поэтому там разбор access-лога — без байт и без правила,
+/// пока уровень логов ниже Info.
 class _ConnectionsScreen extends ConsumerStatefulWidget {
   const _ConnectionsScreen();
 
@@ -119,24 +121,27 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        title: Text(l10n.settingsConnectionsTitle),
-        actions: [
-          IconButton(
-            tooltip: _paused ? l10n.connectionsResume : l10n.connectionsPause,
-            icon: Icon(_paused ? Icons.play_arrow : Icons.pause),
-            onPressed: () => setState(() => _paused = !_paused),
-          ),
-          IconButton(
-            tooltip: l10n.settingsRefresh,
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              setState(() => _paused = false);
-              unawaited(_refresh());
-            },
-          ),
-        ],
+      appBar: ExpressiveScrolledUnderBar(
+        builder: (context, background) => AppBar(
+          backgroundColor: background,
+          title: Text(l10n.settingsConnectionsTitle),
+          actions: [
+            IconButton(
+              tooltip: _paused ? l10n.connectionsResume : l10n.connectionsPause,
+              icon:
+                  Icon(_paused ? Icons.play_arrow_rounded : Icons.pause_rounded),
+              onPressed: () => setState(() => _paused = !_paused),
+            ),
+            IconButton(
+              tooltip: l10n.settingsRefresh,
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () {
+                setState(() => _paused = false);
+                unawaited(_refresh());
+              },
+            ),
+          ],
+        ),
       ),
       body: _loading
           ? Center(
@@ -157,7 +162,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                         const SizedBox(height: 10),
                         _noticeBox(
                           context,
-                          Icons.apps,
+                          Icons.apps_rounded,
                           l10n.connectionsAppNamesHint,
                         ),
                       ],
@@ -165,7 +170,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                         const SizedBox(height: 10),
                         _noticeBox(
                           context,
-                          Icons.call_split,
+                          Icons.call_split_rounded,
                           l10n.connectionsSplitTunnelNote,
                           color: AppTheme.textLight(context),
                         ),
@@ -179,7 +184,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                             ?.copyWith(color: AppTheme.text(context)),
                         decoration: InputDecoration(
                           isDense: true,
-                          prefixIcon: const Icon(Icons.search, size: 18),
+                          prefixIcon: const Icon(Icons.search_rounded, size: 18),
                           hintText: l10n.connectionsFilterHint,
                           hintStyle:
                               TextStyle(color: AppTheme.textLight(context)),
@@ -198,7 +203,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                           suffixIcon: _filter.isEmpty
                               ? null
                               : IconButton(
-                                  icon: const Icon(Icons.clear, size: 18),
+                                  icon: const Icon(Icons.clear_rounded, size: 18),
                                   onPressed: () {
                                     _filterCtrl.clear();
                                     setState(() => _filter = '');
@@ -291,7 +296,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.rule, size: 16, color: AppTheme.orange(context)),
+          Icon(Icons.rule_rounded, size: 16, color: AppTheme.orange(context)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -353,7 +358,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.lan_outlined,
+              Icons.lan_rounded,
               size: 40,
               color: AppTheme.textLight(context),
             ),

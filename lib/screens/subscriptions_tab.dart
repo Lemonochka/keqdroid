@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/expressive_elements.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:path_provider/path_provider.dart';
@@ -16,6 +17,8 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/subscription.dart';
+import '../models/subscription_card_theme.dart';
+import '../services/card_image_service.dart';
 import '../platform/platform_bootstrap.dart';
 import '../providers/providers.dart';
 import 'qr_scan_screen.dart';
@@ -191,7 +194,7 @@ class SubscriptionsTab extends ConsumerWidget {
             heroTag: 'subscriptions_add_fab',
             backgroundColor: accentContainerColor,
             foregroundColor: onAccentContainerColor,
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add_rounded),
             label: Text(l10n.subscriptionsAddButton),
             onPressed: () => _showAddSubDialog(context, ref),
           ),
@@ -208,7 +211,7 @@ class SubscriptionsTab extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.subscriptions_outlined,
+            Icons.subscriptions_rounded,
             size: 48,
             color: accentColor.withValues(alpha: 0.5),
           ),
@@ -292,7 +295,7 @@ class SubscriptionsTab extends ConsumerWidget {
                     ? null
                     : IconButton(
                         icon: Icon(
-                          Icons.qr_code_scanner,
+                          Icons.qr_code_scanner_rounded,
                           color: AppTheme.accent(context),
                         ),
                         tooltip: l10n.qrScanTitle,
@@ -468,7 +471,7 @@ class _SubsErrorView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.cloud_off_outlined,
+              Icons.cloud_off_rounded,
               size: 48,
               color: redColor.withValues(alpha: 0.7),
             ),
@@ -489,7 +492,7 @@ class _SubsErrorView extends StatelessWidget {
             const SizedBox(height: 24),
             TextButton.icon(
               onPressed: onRetry,
-              icon: Icon(Icons.refresh, size: 18, color: accentColor),
+              icon: Icon(Icons.refresh_rounded, size: 18, color: accentColor),
               label: Text(
                 l10n.subscriptionsRetry,
                 style: TextStyle(color: accentColor),
@@ -571,11 +574,14 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final orangeColor = AppTheme.orange(context);
     final isDesktop = PlatformBootstrap.isDesktop;
 
+    final cardTheme = resolveCardTheme(sub.cardThemeId);
+    final cardRadius = BorderRadius.circular(ExpressiveShape.largeIncreased);
+
     return RepaintBoundary(
       child: Container(
         decoration: BoxDecoration(
           color: cardColor,
-          borderRadius: BorderRadius.circular(ExpressiveShape.largeIncreased),
+          borderRadius: cardRadius,
           boxShadow: [
             BoxShadow(
               color: accentColor.withValues(alpha: 0.12),
@@ -584,7 +590,18 @@ class _SubItemState extends ConsumerState<_SubItem> {
             ),
           ],
         ),
-        child: Column(
+        // Подложка темы обрезается формой карточки и лежит ПОД содержимым,
+        // не перехватывая нажатия: карточка целиком остаётся кликабельной.
+        child: Stack(
+          children: [
+            if (!cardTheme.isPlain)
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: cardRadius,
+                  child: IgnorePointer(child: cardTheme.background(context)),
+                ),
+              ),
+            Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
@@ -597,7 +614,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       child: Padding(
                         padding: const EdgeInsetsDirectional.only(end: 6),
                         child: Icon(
-                          Icons.drag_handle,
+                          Icons.drag_handle_rounded,
                           size: 22,
                           color: textLightColor,
                         ),
@@ -617,7 +634,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                             turns: collapsed ? -0.25 : 0,
                             duration: const Duration(milliseconds: 200),
                             child: Icon(
-                              Icons.expand_more,
+                              Icons.expand_more_rounded,
                               size: 20,
                               color: textLightColor,
                             ),
@@ -677,7 +694,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                             ),
                           )
                         : Icon(
-                            Icons.refresh,
+                            Icons.refresh_rounded,
                             size: 20,
                             color: hasRefreshError ? redColor : textLightColor,
                           ),
@@ -711,7 +728,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   // осталось снаружи. Удаление заодно перестало стоять в один
                   // ряд с безобидной правкой.
                   IconButton(
-                    icon: const Icon(Icons.more_vert, size: 20),
+                    icon: const Icon(Icons.more_vert_rounded, size: 20),
                     color: textLightColor,
                     tooltip: l10n.subscriptionsCardMenu,
                     onPressed: () => _showCardMenu(context),
@@ -752,7 +769,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
-                        Icons.campaign_outlined,
+                        Icons.campaign_rounded,
                         size: 18,
                         color: Theme.of(context).colorScheme.onTertiaryContainer,
                       ),
@@ -791,7 +808,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.timer_off_outlined, size: 15, color: redColor),
+                      Icon(Icons.timer_off_rounded, size: 15, color: redColor),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
@@ -875,7 +892,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         padding: const EdgeInsets.only(top: 6),
                         child: Row(
                           children: [
-                            Icon(Icons.lock_open, size: 14, color: orangeColor),
+                            Icon(Icons.lock_open_rounded, size: 14, color: orangeColor),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
@@ -940,7 +957,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         child: Row(
                           children: [
                             Icon(
-                              Icons.error_outline,
+                              Icons.error_outline_rounded,
                               size: 14,
                               color: redColor,
                             ),
@@ -971,7 +988,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       children: [
                         if (sub.expiresAt != null) ...[
                           Icon(
-                            Icons.timer_outlined,
+                            Icons.timer_rounded,
                             size: 14,
                             color: sub.isExpired ? redColor : textLightColor,
                           ),
@@ -1014,7 +1031,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         // secondary и tertiary. Три роли, три разных чипа: ряд
                         // перестаёт быть однородной полосой.
                         _CardChip(
-                          icon: Icons.update,
+                          icon: Icons.update_rounded,
                           label: sub.autoUpdate
                               ? l10n.subscriptionsIntervalShort(
                                   sub.updateIntervalHours,
@@ -1026,7 +1043,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         ),
                         if (sub.webPageUrl != null)
                           _CardChip(
-                            icon: Icons.open_in_new,
+                            icon: Icons.open_in_new_rounded,
                             label: l10n.subscriptionsProviderPage,
                             accent: ExpressiveAccent.secondary,
                             onTap: () =>
@@ -1034,7 +1051,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                           ),
                         if (sub.supportUrl != null)
                           _CardChip(
-                            icon: Icons.support_agent_outlined,
+                            icon: Icons.support_agent_rounded,
                             label: l10n.subscriptionsSupport,
                             accent: ExpressiveAccent.tertiary,
                             onTap: () =>
@@ -1046,6 +1063,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 ),
               ),
               secondChild: const SizedBox(height: 10),
+            ),
+              ],
             ),
           ],
         ),
@@ -1076,6 +1095,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final nameCtrl = TextEditingController(text: sub.name);
     final urlCtrl = TextEditingController(text: sub.url);
     var identity = sub.fetchIdentity;
+    var cardThemeId = sub.cardThemeId;
+    var cardThemeInServers = sub.cardThemeInServers;
     // Ошибка сохранения (например, дубликат URL) — показываем в самой шторке:
     // snackbar был бы скрыт за модальным барьером.
     String? editError;
@@ -1101,6 +1122,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
             String label,
             String hint, {
             int maxLines = 1,
+            Widget? suffix,
           }) {
             return TextField(
               controller: ctrl,
@@ -1112,6 +1134,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
               decoration: InputDecoration(
                 labelText: label,
                 hintText: hint,
+                suffixIcon: suffix,
                 labelStyle: TextStyle(color: textLightColor),
                 hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: textLightColor.withValues(alpha: 0.5),
@@ -1167,7 +1190,44 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 const SizedBox(height: 20),
                 inputField(nameCtrl, l10n.subscriptionNameLabel, sub.name),
                 const SizedBox(height: 10),
-                inputField(urlCtrl, l10n.subscriptionUrlLabel, sub.url, maxLines: 2),
+                // Копирование — микро-кнопкой в самом поле, а не отдельной
+                // широкой кнопкой ниже: действие относится к этой строке, и
+                // рядом с ней ему и место. Заодно шторка теряет целый ряд.
+                inputField(
+                  urlCtrl,
+                  l10n.subscriptionUrlLabel,
+                  sub.url,
+                  maxLines: 2,
+                  suffix: IconButton(
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    tooltip: l10n.subscriptionsCopyUrl,
+                    color: textLightColor,
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: urlCtrl.text));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.subscriptionsUrlCopied),
+                          backgroundColor: textColor,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(ExpressiveShape.medium),
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _CardThemePicker(
+                  currentId: cardThemeId,
+                  subscriptionId: sub.id,
+                  onSelect: (id) => setSheet(() => cardThemeId = id),
+                  inServers: cardThemeInServers,
+                  onInServersChanged: (v) =>
+                      setSheet(() => cardThemeInServers = v),
+                ),
                 const SizedBox(height: 12),
                 _IdentityTile(
                   identity: identity,
@@ -1188,85 +1248,11 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         ?.copyWith(color: AppTheme.red(ctx)),
                   ),
                 ],
+                // Ни «поделиться», ни стрелок перестановки здесь нет: делиться
+                // предлагает меню карточки, а порядок задаётся перетаскиванием
+                // самой карточки. Дублировать их в редакторе — превращать его
+                // в панель со всем сразу; здесь правят подписку, и только.
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      // Форму НЕ задаём: у M3E кнопка — пилюля, и тема её уже
-                      // даёт. Локальный shape перебивал её на прямоугольник —
-                      // это и делало шторку чужой на фоне остального.
-                      child: FilledButton.tonalIcon(
-                        icon: const Icon(Icons.copy, size: 18),
-                        label: Text(
-                          l10n.subscriptionsCopyUrl,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        onPressed: () {
-                          Clipboard.setData(ClipboardData(text: sub.url));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(l10n.subscriptionsUrlCopied),
-                              backgroundColor: textColor,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                              ),
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _ReorderButton(
-                      icon: Icons.keyboard_arrow_up,
-                      tooltip: l10n.subscriptionsMoveUp,
-                      onTap: () {
-                        final subs =
-                            ref.read(subscriptionsProvider).value ?? [];
-                        final idx = subs.indexWhere((s) => s.id == sub.id);
-                        if (idx > 0) {
-                          ref.read(subscriptionsProvider.notifier).reorder(
-                                idx,
-                                idx - 1,
-                                fromReorderableList: false,
-                              );
-                        }
-                      },
-                    ),
-                    const SizedBox(width: 6),
-                    _ReorderButton(
-                      icon: Icons.keyboard_arrow_down,
-                      tooltip: l10n.subscriptionsMoveDown,
-                      onTap: () {
-                        final subs =
-                            ref.read(subscriptionsProvider).value ?? [];
-                        final idx = subs.indexWhere((s) => s.id == sub.id);
-                        if (idx < subs.length - 1) {
-                          // fromReorderableList: false обязателен — иначе
-                          // поправка «-1 при движении вниз» превращала
-                          // idx+1 обратно в idx, и кнопка была no-op.
-                          ref.read(subscriptionsProvider.notifier).reorder(
-                                idx,
-                                idx + 1,
-                                fromReorderableList: false,
-                              );
-                        }
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.tonalIcon(
-                    icon: const Icon(Icons.qr_code_2, size: 18),
-                    label: Text(l10n.subscriptionsShareButton),
-                    onPressed: () => _showShareSheet(context),
-                  ),
-                ),
-                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -1293,6 +1279,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
                               resetName: newName.isEmpty,
                               url: newUrl,
                               fetchIdentity: identity,
+                              cardThemeId: cardThemeId,
+                              cardThemeInServers: cardThemeInServers,
                             );
                       } catch (e) {
                         // например, дубликат URL: без catch ошибка молча уходит
@@ -1353,7 +1341,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
               ExpressiveGroup(
                 children: [
                   ExpressiveActionTile(
-                    icon: Icons.edit_outlined,
+                    icon: Icons.edit_rounded,
                     title: l10n.subscriptionsEditSubscription,
                     accent: ExpressiveAccent.primary,
                     onTap: () {
@@ -1362,7 +1350,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     },
                   ),
                   ExpressiveActionTile(
-                    icon: Icons.qr_code_2,
+                    icon: Icons.qr_code_2_rounded,
                     title: l10n.subscriptionsShareButton,
                     accent: ExpressiveAccent.secondary,
                     onTap: () {
@@ -1377,7 +1365,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
               ExpressiveGroup(
                 children: [
                   ExpressiveActionTile(
-                    icon: Icons.delete_outline,
+                    icon: Icons.delete_outline_rounded,
                     title: l10n.subscriptionsDelete,
                     danger: true,
                     onTap: () {
@@ -1471,7 +1459,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     borderRadius: BorderRadius.circular(ExpressiveShape.large),
                   ),
                 ),
-                icon: const Icon(Icons.share, size: 18),
+                icon: const Icon(Icons.share_rounded, size: 18),
                 label: Text(
                   l10n.subscriptionsShareAction,
                   style: const TextStyle(fontWeight: FontWeight.bold),
@@ -1563,7 +1551,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       // карточке: это одна настройка, и орган управления у неё
                       // должен быть один.
                       ExpressiveActionTile(
-                        icon: Icons.update_disabled,
+                        icon: Icons.update_disabled_rounded,
                         title: l10n.subscriptionsAutoUpdateOff,
                         selected: !sub.autoUpdate,
                         onTap: () {
@@ -1576,8 +1564,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
                       for (final h in options)
                         ExpressiveActionTile(
                           icon: h < 24
-                              ? Icons.schedule
-                              : Icons.calendar_today_outlined,
+                              ? Icons.schedule_rounded
+                              : Icons.calendar_today_rounded,
                           title: h == 1
                               ? l10n.subscriptionsEveryHour
                               : h < 24
@@ -1702,6 +1690,285 @@ class _SubItemState extends ConsumerState<_SubItem> {
 /// Роли разведены по назначению — `primary` у настройки самого приложения,
 /// `secondary` и `tertiary` у ссылок провайдера, — то есть тем же способом,
 /// которым раскрашены иконки в настройках.
+/// Слайдер оформления карточки в редакторе подписки.
+///
+/// Образцы — та же самая подложка, что рисуется на карточке, только маленькая:
+/// превью, нарисованное отдельно, рано или поздно разойдётся с настоящим видом.
+class _CardThemePicker extends StatefulWidget {
+  final String currentId;
+
+  /// Выбранная тема целиком, а не «переключи»: снятие темы повторным тапом —
+  /// дело самого слайдера, а выбор своей картинки её всегда включает.
+  final ValueChanged<String> onSelect;
+
+  /// Нужен, чтобы назвать файл картинки: у каждой подписки своя, и они не
+  /// должны затирать друг друга.
+  final String subscriptionId;
+
+  /// Показывать ли подложку и в шапке группы серверов.
+  final bool inServers;
+  final ValueChanged<bool> onInServersChanged;
+
+  const _CardThemePicker({
+    required this.currentId,
+    required this.onSelect,
+    required this.subscriptionId,
+    required this.inServers,
+    required this.onInServersChanged,
+  });
+
+  @override
+  State<_CardThemePicker> createState() => _CardThemePickerState();
+}
+
+class _CardThemePickerState extends State<_CardThemePicker> {
+  /// Почему картинку не взяли — под самим слайдером.
+  String? _error;
+
+  Future<void> _pick() async {
+    final l10n = AppLocalizations.of(context)!;
+    final result =
+        await CardImageService.pick(subscriptionId: widget.subscriptionId);
+    if (result.cancelled || !mounted) return;
+
+    final rejection = result.rejection;
+    if (rejection != null) {
+      // Прямо в шторке, а не снекбаром: снекбар рисует Scaffold под модальной
+      // шторкой, и объяснение осталось бы за ней — со стороны выглядело бы,
+      // что нажатие вообще ничего не сделало.
+      setState(() => _error = switch (rejection) {
+            CardImageRejection.aspect => l10n.cardImageRejectAspect,
+            CardImageRejection.tooSmall =>
+              l10n.cardImageRejectSmall(CardImageService.minWidth),
+            CardImageRejection.tooLarge =>
+              l10n.cardImageRejectLarge(CardImageService.maxWidth),
+            CardImageRejection.unreadable => l10n.cardImageRejectUnreadable,
+          });
+      return;
+    }
+    setState(() => _error = null);
+    widget.onSelect(result.theme!.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final accent = AppTheme.accent(context);
+    final currentId = widget.currentId;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            l10n.subscriptionCardThemeTitle,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppTheme.textLight(context),
+                ),
+          ),
+        ),
+        SizedBox(
+          height: 64,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            // +1 — кнопка «своя картинка» первым слотом. Раньше там стояла
+            // пустая карточка «без темы»: место занимала, а делать с ней было
+            // нечего. Отказаться от темы можно, выбрав её же повторно.
+            itemCount: kSubscriptionCardThemes.length + 1,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return _CustomImageSlot(themeId: currentId, onTap: _pick);
+              }
+              final i = index - 1;
+              final theme = kSubscriptionCardThemes[i];
+              final selected = theme.id == currentId;
+              return GestureDetector(
+                // Повторный тап по выбранной теме снимает её.
+                onTap: () => widget.onSelect(selected ? '' : theme.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 92,
+                  decoration: BoxDecoration(
+                    color: AppTheme.card(context),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                    border: Border.all(
+                      color: selected ? accent : AppTheme.divider(context),
+                      width: selected ? 2 : 1,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(
+                      ExpressiveShape.large - 2,
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        theme.background(context),
+                        if (theme.isPlain)
+                          Center(
+                            child: Text(
+                              l10n.subscriptionCardThemeNone,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: AppTheme.textLight(context),
+                                  ),
+                            ),
+                          ),
+                        if (selected)
+                          Align(
+                            alignment: AlignmentDirectional.bottomEnd,
+                            child: Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.check_circle_rounded,
+                                size: 16,
+                                color: accent,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 4, top: 8),
+            child: Text(
+              _error!,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: AppTheme.red(context)),
+            ),
+          ),
+        // Тумблер появляется только когда подложка выбрана: без неё выбирать
+        // нечего, а постоянно висящая неактивная строка — обещание настройки,
+        // которая ничего не делает.
+        if (currentId.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: SwitchListTile(
+              contentPadding: const EdgeInsets.only(left: 4, right: 0),
+              dense: true,
+              value: widget.inServers,
+              onChanged: widget.onInServersChanged,
+              title: Text(
+                l10n.subscriptionCardThemeInServers,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              subtitle: Text(
+                l10n.subscriptionCardThemeInServersHint,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textLight(context),
+                    ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Первый слот слайдера: своя картинка.
+///
+/// Пока не выбрана — кнопка с плюсом и допустимым размером: требование к
+/// картинке читается ДО того, как файл выбран и отвергнут. Выбрана — её же
+/// миниатюра.
+///
+/// Путь к файлу слот достаёт сам по id темы, а не получает сверху: иначе его
+/// пришлось бы асинхронно резолвить при открытии шторки и протаскивать через
+/// весь редактор ради одной картинки.
+class _CustomImageSlot extends StatelessWidget {
+  final String themeId;
+  final VoidCallback onTap;
+
+  const _CustomImageSlot({required this.themeId, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppTheme.accent(context);
+    final selected = themeId.startsWith(SubscriptionCardTheme.filePrefix);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 92,
+        decoration: BoxDecoration(
+          color: AppTheme.card(context),
+          borderRadius: BorderRadius.circular(ExpressiveShape.large),
+          border: Border.all(
+            color: selected ? accent : AppTheme.divider(context),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(ExpressiveShape.large - 2),
+          child: FutureBuilder<String?>(
+            // Ключ по id: сменили картинку — future пересоздаётся и миниатюра
+            // обновляется, иначе на месте новой осталась бы старая.
+            key: ValueKey(themeId),
+            future: CardImageService.resolvePath(themeId),
+            builder: (context, snapshot) {
+              final path = snapshot.data;
+              if (path == null) {
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      selected
+                          ? Icons.image_not_supported_rounded
+                          : Icons.add_photo_alternate_rounded,
+                      size: 22,
+                      color: accent,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      CardImageService.sizeHint,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppTheme.textLight(context),
+                          ),
+                    ),
+                  ],
+                );
+              }
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image(
+                    image: FileImage(File(path)),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                  Align(
+                    alignment: AlignmentDirectional.bottomEnd,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        selected
+                            ? Icons.check_circle_rounded
+                            : Icons.edit_rounded,
+                        size: 16,
+                        color: accent,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CardChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1754,35 +2021,3 @@ class _CardChip extends StatelessWidget {
   }
 }
 
-class _ReorderButton extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  const _ReorderButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    // Тональная кнопка-пилюля рядом с такими же «Скопировать»/«Поделиться»:
-    // раньше это был квадрат 42×42 с рамкой 1.5 — единственная прямоугольная
-    // форма во всей шторке.
-    return Tooltip(
-      message: tooltip,
-      child: IconButton.filledTonal(
-        onPressed: onTap,
-        icon: Icon(icon, size: 22),
-        style: IconButton.styleFrom(
-          backgroundColor: scheme.secondaryContainer,
-          foregroundColor: scheme.onSecondaryContainer,
-          minimumSize: const Size(48, 48),
-        ),
-      ),
-    );
-  }
-}

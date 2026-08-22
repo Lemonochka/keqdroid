@@ -23,13 +23,10 @@ class _DebugModeCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.orange(context).withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.bug_report_outlined, size: 20, color: AppTheme.orange(context)),
+              ExpressiveIconBadge(
+                icon: Icons.bug_report_rounded,
+                background: AppTheme.orange(context).withValues(alpha: 0.2),
+                foreground: AppTheme.orange(context),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -70,7 +67,7 @@ class _DebugModeCard extends ConsumerWidget {
                 context,
                 MaterialPageRoute(builder: (_) => const _XrayLogsScreen()),
               ),
-              icon: const Icon(Icons.terminal),
+              icon: const Icon(Icons.terminal_rounded),
               label: Text(l10n.settingsOpenXrayLogs),
             ),
             const SizedBox(height: 8),
@@ -79,7 +76,7 @@ class _DebugModeCard extends ConsumerWidget {
                 context,
                 MaterialPageRoute(builder: (_) => const _ConnectionsScreen()),
               ),
-              icon: const Icon(Icons.lan_outlined),
+              icon: const Icon(Icons.lan_rounded),
               label: Text(l10n.settingsOpenConnections),
             ),
           ],
@@ -146,21 +143,23 @@ class _XrayLogsScreenState extends ConsumerState<_XrayLogsScreen> {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        title: Text(l10n.settingsXrayCoreLogs),
-        actions: [
-          IconButton(
-            tooltip: l10n.settingsCopyLogs,
-            onPressed: _logs.isEmpty ? null : () => _copyLogs(l10n),
-            icon: const Icon(Icons.copy_all),
-          ),
-          IconButton(
-            tooltip: l10n.settingsRefresh,
-            onPressed: _refreshLogs,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
+      appBar: ExpressiveScrolledUnderBar(
+        builder: (context, background) => AppBar(
+          backgroundColor: background,
+          title: Text(l10n.settingsXrayCoreLogs),
+          actions: [
+            IconButton(
+              tooltip: l10n.settingsCopyLogs,
+              onPressed: _logs.isEmpty ? null : () => _copyLogs(l10n),
+              icon: const Icon(Icons.copy_all_rounded),
+            ),
+            IconButton(
+              tooltip: l10n.settingsRefresh,
+              onPressed: _refreshLogs,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          ],
+        ),
       ),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: AppTheme.accent(context)))

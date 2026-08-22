@@ -67,24 +67,13 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
-      backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        title: Text(l10n.settingsPermissionsTitle),
-      ),
-      body: SmoothScroll(
-        builder: (context, controller) => ListView(
-          controller: controller,
-          physics: const ClampingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            if (Platform.isAndroid) ..._androidPermissions(l10n),
-            if (Platform.isLinux) ..._linuxPermissions(l10n),
-          ],
-        ),
-      ),
+    return ExpressivePage(
+      title: l10n.settingsPermissionsTitle,
+      physics: const ClampingScrollPhysics(),
+      children: [
+        if (Platform.isAndroid) ..._androidPermissions(l10n),
+        if (Platform.isLinux) ..._linuxPermissions(l10n),
+      ],
     );
   }
 
@@ -101,20 +90,20 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
             // Уведомления — единственное разрешение с реальным статусом/запросом.
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              leading: Icon(Icons.notifications_active_outlined, color: accent),
+              leading: Icon(Icons.notifications_active_rounded, color: accent),
               title: Text(l10n.settingsPermNotifTitle),
               subtitle: Text(l10n.settingsPermNotifDesc),
               trailing: _statusChip(granted),
               onTap: granted ? _openAppSettings : _requestNotif,
             ),
             _PermissionInfoTile(
-              icon: Icons.qr_code_scanner_outlined,
+              icon: Icons.qr_code_scanner_rounded,
               title: l10n.settingsPermCameraTitle,
               subtitle: l10n.settingsPermCameraDesc,
               onTap: _openAppSettings,
             ),
             _PermissionInfoTile(
-              icon: Icons.system_update_outlined,
+              icon: Icons.system_update_rounded,
               title: l10n.settingsPermInstallTitle,
               subtitle: l10n.settingsPermInstallDesc,
               onTap: _openAppSettings,
@@ -127,7 +116,7 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
         alignment: AlignmentDirectional.centerStart,
         child: TextButton.icon(
           onPressed: _openAppSettings,
-          icon: const Icon(Icons.open_in_new, size: 18),
+          icon: const Icon(Icons.open_in_new_rounded, size: 18),
           label: Text(l10n.settingsPermOpenAppSettings),
           style: TextButton.styleFrom(foregroundColor: accent),
         ),
@@ -193,7 +182,7 @@ class _PermissionInfoTile extends StatelessWidget {
       leading: Icon(icon, color: AppTheme.textLight(context)),
       title: Text(title),
       subtitle: Text(subtitle),
-      trailing: Icon(Icons.open_in_new, size: 18, color: AppTheme.textLight(context)),
+      trailing: Icon(Icons.open_in_new_rounded, size: 18, color: AppTheme.textLight(context)),
       onTap: onTap,
     );
   }
@@ -264,7 +253,7 @@ class _LinuxTunPasswordlessTileState
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2, color: accent),
             )
-          : Icon(Icons.lock_open_outlined, color: accent),
+          : Icon(Icons.lock_open_rounded, color: accent),
       title: Text(l10n.settingsPermTunPasswordlessTitle),
       subtitle: Text(l10n.settingsPermTunPasswordlessSubtitle),
     );

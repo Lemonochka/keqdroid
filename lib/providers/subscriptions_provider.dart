@@ -194,6 +194,10 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
 
   Future<void> remove(String id) async {
     await ref.read(storageProvider).deleteSubscription(id);
+    // Своя картинка карточки — файл в каталоге приложения, и запись о подписке
+    // его не уносит: без этого удалённые подписки копили бы картинки на диске
+    // до переустановки. Ошибку глушим — подписку удаляем в любом случае.
+    unawaited(CardImageService.remove(id).catchError((_) {}));
     state = AsyncData(
       (state.value ?? []).where((s) => s.id != id).toList(),
     );
@@ -325,6 +329,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     String? url,
     bool resetName = false,
     SubscriptionFetchIdentity? fetchIdentity,
+    String? cardThemeId,
+    bool? cardThemeInServers,
   }) async {
     final subs = state.value ?? [];
     final idx = subs.indexWhere((s) => s.id == id);
@@ -357,10 +363,19 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       // обратный переход.
       nameIsAuto: resetName ? true : (name != null ? false : null),
       fetchIdentity: fetchIdentity,
+      cardThemeId: cardThemeId,
+      cardThemeInServers: cardThemeInServers,
     );
     await ref.read(storageProvider).upsertSubscription(updated);
     final newList = [...subs]..[idx] = updated;
     state = AsyncData(newList);
+
+    // Выбор своей картинки копирует файл сразу, а подтверждается только здесь:
+    // до сохранения на диске лежат обе — старая и новая. Сохранились — лишняя
+    // больше не нужна.
+    unawaited(
+      CardImageService.prune(id, updated.cardThemeId).catchError((_) {}),
+    );
 
     // Сменили ссылку или идентичность → перетягиваем серверы заново: с нового
     // URL, а под новой идентичностью панель и по старому может отдать другой

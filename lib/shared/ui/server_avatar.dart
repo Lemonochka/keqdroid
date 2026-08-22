@@ -4,6 +4,7 @@ import 'package:jovial_svg/jovial_svg.dart';
 
 import '../../models/server_flag.dart';
 import 'app_theme.dart';
+import 'expressive_elements.dart';
 
 /// Цвет протокола сервера.
 ///
@@ -109,10 +110,17 @@ class ServerAvatar extends StatelessWidget {
     );
   }
 
+  /// Аватарка подчиняется выбранной форме иконок: в списке серверов это самая
+  /// частая «иконка» приложения, и оставить её кругом, когда всё остальное
+  /// сменило форму, — то же самое, что лаунчер с одним неподчинившимся значком.
+  /// Значок-счётчик узлов в углу остаётся круглым: он не иконка, а бейдж.
   Widget _circle(BuildContext context) => SizedBox(
     width: size,
     height: size,
-    child: ClipOval(
+    child: ClipPath(
+      clipper: ShapeBorderClipper(
+        shape: ExpressiveIconShapeTheme.of(context).border(size),
+      ),
       clipBehavior: Clip.antiAlias,
       child: switch (flag) {
         // Картинка шире круга, поэтому cover — обрезаем по бокам, а не жмём.
@@ -146,7 +154,7 @@ class ServerAvatar extends StatelessWidget {
       // У цепочки первая буква («C») ничего не сообщает и путается с custom —
       // рисуем звенья.
       child: protocol == 'chain'
-          ? Icon(Icons.link, size: size * 0.5, color: Colors.white)
+          ? Icon(Icons.link_rounded, size: size * 0.5, color: Colors.white)
           : Text(
               protocol.isNotEmpty ? protocol[0].toUpperCase() : '?',
               style: TextStyle(

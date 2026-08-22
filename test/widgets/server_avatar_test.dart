@@ -139,7 +139,7 @@ void main() {
       await tester.pumpWidget(hostChain(flag: null, hops: 2));
 
       expect(find.text('C'), findsNothing);
-      expect(find.byIcon(Icons.link), findsOneWidget);
+      expect(find.byIcon(Icons.link_rounded), findsOneWidget);
     });
 
     testWidgets('значок не растит кругляш', (tester) async {

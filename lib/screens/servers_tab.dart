@@ -21,8 +21,10 @@ import '../models/app_settings.dart';
 import '../models/server_item.dart';
 import '../models/server_name_utils.dart';
 import '../models/subscription.dart';
+import '../models/subscription_card_theme.dart';
 import '../providers/providers.dart';
 import '../services/ping_service.dart';
+import '../services/subscription_accent_service.dart';
 import '../services/vpn_engine.dart';
 import '../platform/platform_bootstrap.dart';
 import '../platform/vpn_native_bridge.dart';
@@ -97,8 +99,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (Platform.isAndroid) {
         unawaited(_checkLaunchAction());
-        unawaited(_checkPendingDeepLink());
       }
+      unawaited(_checkPendingDeepLink());
       _syncHeaderAnimations();
     });
   }
@@ -210,7 +212,14 @@ class _ServersTabState extends ConsumerState<ServersTab>
     }
     if (call.method == 'onDeepLink') {
       final url = ((call.arguments as Map?)?['url'] as String?)?.trim();
-      if (url != null && url.isNotEmpty) await _importDeepLink(url);
+      if (url != null && url.isNotEmpty) {
+        await _importDeepLink(url);
+      } else {
+        // Windows шлёт пуш без ссылки: она лежит у натива и ждёт, пока её
+        // заберут. Так ссылка не теряется, если вкладка сейчас не построена
+        // (открыто меню трея — DesktopHomeScreen отдаёт TrayMenuScreen).
+        await _checkPendingDeepLink();
+      }
       return;
     }
     // Notification / QS tile may send a quick status snapshot via native
@@ -227,9 +236,13 @@ class _ServersTabState extends ConsumerState<ServersTab>
     }
   }
 
-  /// Ссылка со схемой сервера (vless:// и т.п.), которой открыли приложение
-  /// снаружи (Telegram, браузер). Холодный старт — забираем одноразовую
-  /// pending-ссылку у натива; тёплый приходит пушем onDeepLink.
+  /// Ссылка, которой открыли приложение снаружи (Telegram, браузер): схема
+  /// сервера (vless:// и т.п.) либо `keqdroid://install-config?url=…` с кнопки
+  /// на странице подписки. Холодный старт — забираем одноразовую pending-ссылку
+  /// у натива; тёплый приходит пушем onDeepLink.
+  ///
+  /// Зовётся и при (пере)монтировании вкладки: на Windows ссылка могла прийти,
+  /// пока было открыто меню трея и вкладки не было в дереве.
   Future<void> _checkPendingDeepLink() async {
     if (!VpnNativeBridge.supportsDeepLinks) return;
     try {
@@ -621,7 +634,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                     borderRadius: BorderRadius.circular(ExpressiveShape.large),
                   ),
                   onPressed: () => _showAddServerDialog(context),
-                  child: const Icon(Icons.add, size: 26),
+                  child: const Icon(Icons.add_rounded, size: 26),
                 ),
               ),
             ],
@@ -661,7 +674,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
             ExpressiveGroup(
               children: [
                 ExpressiveActionTile(
-                  icon: Icons.link,
+                  icon: Icons.link_rounded,
                   title: l10n.serversPasteLinks,
                   subtitle: 'vless, vmess, trojan, ss, hysteria2, hy2',
                   accent: ExpressiveAccent.primary,
@@ -671,7 +684,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                   },
                 ),
                 ExpressiveActionTile(
-                  icon: Icons.description_outlined,
+                  icon: Icons.description_rounded,
                   title: l10n.serversImportFile,
                   subtitle: 'AmneziaWG (.conf)',
                   accent: ExpressiveAccent.secondary,
@@ -683,7 +696,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 // у mobile_scanner нет имплементации под Windows/Linux
                 if (!PlatformBootstrap.isDesktop)
                   ExpressiveActionTile(
-                    icon: Icons.qr_code_scanner,
+                    icon: Icons.qr_code_scanner_rounded,
                     title: l10n.qrScanTitle,
                     subtitle: l10n.serversScanQrHint,
                     accent: ExpressiveAccent.tertiary,
@@ -698,7 +711,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 // чего в нём пока нельзя сделать.
                 if (_chainCandidateCount >= 2)
                   ExpressiveActionTile(
-                    icon: Icons.route,
+                    icon: Icons.route_rounded,
                     title: l10n.chainCreate,
                     subtitle: l10n.chainCreateDesc,
                     onTap: () {
@@ -1087,7 +1100,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.cloud_off,
+            Icons.cloud_off_rounded,
             size: 48,
             color: AppTheme.accent(context).withValues(alpha: 0.5),
           ),
@@ -1109,14 +1122,14 @@ class _ServersTabState extends ConsumerState<ServersTab>
               foregroundColor: AppTheme.onAccentContainer(context),
             ),
             onPressed: () => _showAddServerDialog(context),
-            icon: const Icon(Icons.add, size: 18),
+            icon: const Icon(Icons.add_rounded, size: 18),
             label: Text(l10n.serversAddServer),
           ),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: () => pasteServersFromClipboard(context, ref),
             icon: Icon(
-              Icons.content_paste,
+              Icons.content_paste_rounded,
               size: 16,
               color: AppTheme.accent(context),
             ),

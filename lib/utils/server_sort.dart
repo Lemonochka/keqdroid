@@ -29,10 +29,10 @@ enum ServerSortMode {
       };
 
   IconData get icon => switch (this) {
-        ServerSortMode.defaultOrder => Icons.format_list_bulleted,
-        ServerSortMode.ping => Icons.network_check,
-        ServerSortMode.speed => Icons.speed,
-        ServerSortMode.name => Icons.sort_by_alpha,
+        ServerSortMode.defaultOrder => Icons.format_list_bulleted_rounded,
+        ServerSortMode.ping => Icons.network_check_rounded,
+        ServerSortMode.speed => Icons.speed_rounded,
+        ServerSortMode.name => Icons.sort_by_alpha_rounded,
       };
 }
 

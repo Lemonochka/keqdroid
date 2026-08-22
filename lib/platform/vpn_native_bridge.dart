@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
 
 import '../services/hotkey_service.dart';
+import '../utils/system_accent.dart';
 
 /// android: действия из уведомления; windows: автоподключение, меню трея и хоткеи
 class VpnNativeBridge {
@@ -11,7 +13,7 @@ class VpnNativeBridge {
   static const channel = MethodChannel('keqdis_vpn_channel');
 
   static bool get supportsNotificationLaunch => Platform.isAndroid;
-  static bool get supportsDeepLinks => Platform.isAndroid;
+  static bool get supportsDeepLinks => Platform.isAndroid || Platform.isWindows;
   static bool get supportsAutostartNotification => Platform.isWindows;
   static bool get supportsTrayMenu => Platform.isWindows;
   static bool get supportsGlobalHotkeys => Platform.isWindows;
@@ -32,23 +34,59 @@ class VpnNativeBridge {
     await channel.invokeMethod<void>('clearLaunchAction');
   }
 
-  /// Ссылка vless://…, с которой систему попросили открыть приложение
-  /// (холодный старт). Одноразовая: натив отдаёт и забывает её.
+  /// Ссылка vless://… или keqdroid://install-config?url=…, с которой систему
+  /// попросили открыть приложение. Одноразовая: натив отдаёт и забывает её.
+  ///
+  /// На Windows этим же путём приходят и ссылки при живом приложении: натив
+  /// держит их у себя, а `onDeepLink` только будит нас (см. ниже).
   static Future<String?> getPendingDeepLink() async {
     if (!supportsDeepLinks) return null;
     return channel.invokeMethod<String>('getPendingDeepLink');
   }
 
-  /// ARGB системного акцента (Material You), когда плагин dynamic_color молчит
-  /// на не-Pixel устройствах. `null` — до Android 12, при ошибке или не на Android.
-  static Future<int?> getSystemAccentColor() async {
-    if (!Platform.isAndroid) return null;
+  /// Android-данные для панели «Внутренности»: каталог нативных библиотек
+  /// (версии ядер читаются прямо из их файлов), PID запущенных ядер и сведения
+  /// об устройстве. Пустая карта — не Android или сервис недоступен.
+  static Future<Map<String, Object?>> getNativeInternals() async {
+    if (!Platform.isAndroid) return const {};
     try {
-      return await channel.invokeMethod<int>('getSystemAccentColor');
+      final info = await channel.invokeMapMethod<String, Object?>(
+        'getNativeInternals',
+      );
+      return info ?? const {};
     } catch (_) {
-      return null;
+      return const {};
     }
   }
+
+  /// Все источники цвета системной темы разом; выбор между ними — за
+  /// [pickSystemAccent]. Нужны, когда плагин dynamic_color молчит: официальный
+  /// флаг Material You есть далеко не у каждой прошивки, а цвет темы у них при
+  /// этом свой.
+  static Future<SystemAccentCandidates> getSystemAccentCandidates() async {
+    if (!Platform.isAndroid) return const SystemAccentCandidates.empty();
+    try {
+      final map = await channel.invokeMethod<Map<Object?, Object?>>(
+        'getSystemAccentColor',
+      );
+      return SystemAccentCandidates.fromMap(map);
+    } catch (_) {
+      return const SystemAccentCandidates.empty();
+    }
+  }
+
+  /// Цвета системы после смены обоев.
+  ///
+  /// Broadcast и без закрытия: слушателей может быть несколько (тема плюс
+  /// диагностика), а живёт поток столько же, сколько само приложение.
+  static final _systemAccentCtrl =
+      StreamController<SystemAccentCandidates>.broadcast();
+
+  static Stream<SystemAccentCandidates> get systemAccentChanges =>
+      _systemAccentCtrl.stream;
+
+  /// Слушать смену обоев имеет смысл только там, где её кто-то шлёт.
+  static bool get supportsSystemAccentEvents => Platform.isAndroid;
 
   /// Лог tun2socks. Пишется только в дебаг-режиме: там на каждое соединение
   /// печатается сокет самого приложения, а больше его взять негде — в лог xray
@@ -63,6 +101,26 @@ class VpnNativeBridge {
       return text ?? '';
     } catch (_) {
       return '';
+    }
+  }
+
+  /// Координаты RESTful API у работающей mihomo-сессии: `port` и `secret`.
+  ///
+  /// Нужно только свежему Dart-изоляту, когда VpnService пережил пересоздание
+  /// Flutter-движка (и после реконнекта из плитки — там сессию поднимает сам
+  /// сервис, а Dart о ней узнаёт постфактум). Натив достаёт пару из того же
+  /// файла конфига, который исполняет ядро, — расходиться им негде.
+  /// null — сессии нет или она не на mihomo.
+  static Future<({int port, String secret})?> getMihomoApi() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      final result = await channel.invokeMethod<Map>('getMihomoApi');
+      final port = result?['port'] as int? ?? 0;
+      final secret = result?['secret'] as String? ?? '';
+      if (port <= 0 || secret.isEmpty) return null;
+      return (port: port, secret: secret);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -127,7 +185,9 @@ class VpnNativeBridge {
 
   static void _syncMethodCallHandler() {
     final needsHandler = supportsNotificationLaunch ||
+        supportsDeepLinks ||
         supportsAutostartNotification ||
+        supportsSystemAccentEvents ||
         supportsTrayMenu;
     if (!needsHandler) {
       channel.setMethodCallHandler(null);
@@ -150,6 +210,13 @@ class VpnNativeBridge {
         final args = call.arguments;
         final visible = args is Map ? args['visible'] as bool? ?? true : true;
         _windowVisibilityHandler?.call(visible);
+        return;
+      }
+      if (call.method == 'onSystemAccentChanged' && supportsSystemAccentEvents) {
+        final args = call.arguments;
+        _systemAccentCtrl.add(
+          SystemAccentCandidates.fromMap(args is Map ? args : null),
+        );
         return;
       }
       if (call.method == 'onHotkeyPressed' && supportsGlobalHotkeys) {

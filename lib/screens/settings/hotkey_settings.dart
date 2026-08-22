@@ -133,25 +133,25 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
     final actions = <(HotkeyAction, IconData, String, String)>[
       (
         HotkeyAction.toggleConnection,
-        Icons.power_settings_new,
+        Icons.power_settings_new_rounded,
         l10n.hotkeyActionToggleConnection,
         l10n.hotkeyActionToggleConnectionDesc,
       ),
       (
         HotkeyAction.toggleTunMode,
-        Icons.vpn_lock_outlined,
+        Icons.vpn_lock_rounded,
         l10n.hotkeyActionToggleTun,
         l10n.hotkeyActionToggleTunDesc,
       ),
       (
         HotkeyAction.bestPingServer,
-        Icons.network_check,
+        Icons.network_check_rounded,
         l10n.hotkeyActionBestPing,
         l10n.hotkeyActionBestPingDesc,
       ),
       (
         HotkeyAction.toggleWindow,
-        Icons.flip_to_front,
+        Icons.flip_to_front_rounded,
         l10n.hotkeyActionToggleWindow,
         l10n.hotkeyActionToggleWindowDesc,
       ),
@@ -159,10 +159,11 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
-      appBar: AppBar(
-        backgroundColor: AppTheme.bg(context),
-        elevation: 0,
-        title: Text(l10n.settingsHotkeysTitle),
+      appBar: ExpressiveScrolledUnderBar(
+        builder: (context, background) => AppBar(
+          backgroundColor: background,
+          title: Text(l10n.settingsHotkeysTitle),
+        ),
       ),
       body: Focus(
         focusNode: _captureFocus,
@@ -190,7 +191,7 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
-                        Icons.info_outline,
+                        Icons.info_outline_rounded,
                         size: 18,
                         color: AppTheme.accent(context),
                       ),
@@ -283,13 +284,10 @@ class _HotkeyRow extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, size: 20, color: AppTheme.text(context)),
+              ExpressiveIconBadge(
+                icon: icon,
+                background: accent.withValues(alpha: 0.2),
+                foreground: AppTheme.text(context),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -413,7 +411,7 @@ class _HotkeyRow extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(4),
                 child: Icon(
-                  Icons.close,
+                  Icons.close_rounded,
                   size: 15,
                   color: AppTheme.textLight(context),
                 ),

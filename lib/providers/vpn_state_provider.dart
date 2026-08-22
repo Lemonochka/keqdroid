@@ -54,6 +54,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   void _applyNativeState(VpnState s) {
     _restoreSocksCredentialsIfNeeded(s);
+    _syncMihomoApiSession(s);
     if (_serverSwitchInProgress && s.status == VpnStatus.error) return;
     if (_connectInFlight) {
       // Реальный неуспех попытки ловит _awaitNativeConnectOutcome, поэтому
@@ -107,6 +108,44 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         }
       } finally {
         _credsRestoreInFlight = false;
+      }
+    }());
+  }
+
+  bool _mihomoApiRestoreInFlight = false;
+
+  /// Держит [MihomoApiSession] в согласии с тем, что реально происходит в
+  /// нативном сервисе.
+  ///
+  /// Два случая, когда синглтон пуст, а сессия жива: пересоздание
+  /// Flutter-движка и реконнект из плитки (там ядро поднимает сервис, connect-
+  /// flow в Dart не выполняется вовсе). В обоих натив достаёт пару из файла
+  /// конфига, который исполняет ядро.
+  ///
+  /// Обратная сторона — отключение: в мёртвый порт экран «Соединения» стучался
+  /// бы по три секунды на каждый опрос, показывая «Core API unreachable»
+  /// вместо честного «сессии нет».
+  void _syncMihomoApiSession(VpnState s) {
+    if (!Platform.isAndroid) return;
+    final api = MihomoApiSession();
+    if (s.status == VpnStatus.disconnected || s.status == VpnStatus.error) {
+      api.clear();
+      return;
+    }
+    if (s.status != VpnStatus.connected) return;
+    if (api.isActive || _mihomoApiRestoreInFlight) return;
+    _mihomoApiRestoreInFlight = true;
+    unawaited(() async {
+      try {
+        final restored = await VpnNativeBridge.getMihomoApi();
+        if (restored != null) {
+          api.restore(port: restored.port, secret: restored.secret);
+          AppLogger.instance.info(
+            'mihomo API restored from the running VPN service',
+          );
+        }
+      } finally {
+        _mihomoApiRestoreInFlight = false;
       }
     }());
   }
@@ -335,10 +374,44 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       final desktopProxyNoAuth = (Platform.isWindows || Platform.isLinux) &&
           connectionMode == ConnectionMode.proxy;
 
-      final vpnBackend = isAwg ? VpnBackend.awg : VpnBackend.xray;
+      // mihomo пока только на Android и только для одиночных ссылок: цепочки и
+      // готовые xray-конфиги описаны в терминах xray, переводить их незачем —
+      // такие серверы остаются на своём ядре независимо от выбора.
+      final mihomoPicked = !isAwg &&
+          Platform.isAndroid &&
+          settings.vpnCore == AppSettings.vpnCoreMihomo &&
+          server.protocol != 'custom' &&
+          ProxyChainConfig.tryParse(server.config) == null;
+
+      final vpnBackend = isAwg
+          ? VpnBackend.awg
+          : mihomoPicked
+              ? VpnBackend.mihomo
+              : VpnBackend.xray;
+
+      // Координаты API ядра нужны ДО генерации: они едут внутрь конфига.
+      // У xray-пути аналога нет — там «Соединения» читают access-лог.
+      final mihomoApi = MihomoApiSession();
+      if (mihomoPicked) {
+        await mihomoApi.renew();
+      } else {
+        mihomoApi.clear();
+      }
+
+      final mihomoConfig = mihomoPicked
+          ? MihomoConfigGen.generate(
+              server.config,
+              settings,
+              socksPort: settings.localPort,
+              resolvedServerIp: serverIp,
+              apiPort: mihomoApi.port,
+              apiSecret: mihomoApi.secret,
+            )
+          : null;
 
       // AmneziaWG поднимается из сырого .conf своим ядром — xray-конфиг не нужен.
-      final xrayConfig = isAwg
+      // У mihomo свой конфиг, xray-генератор для него не запускаем.
+      final xrayConfig = (isAwg || mihomoPicked)
           ? ''
           : ConfigGeneratorV2.generateConfig(
               server.config,
@@ -358,6 +431,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         xrayConfig: xrayConfig,
         vpnBackend: vpnBackend,
         awgConfig: isAwg ? server.config : null,
+        mihomoConfig: mihomoConfig,
         resolvedServerIp: serverIp,
         socksUsername: creds.username,
         socksPassword: creds.password,

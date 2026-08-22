@@ -143,7 +143,7 @@ void main() {
 
     final node = tester.widget<Container>(
       find
-          .ancestor(of: find.byIcon(Icons.add), matching: find.byType(Container))
+          .ancestor(of: find.byIcon(Icons.add_rounded), matching: find.byType(Container))
           .first,
     );
     expect((node.decoration as BoxDecoration).color!.a, 1.0);

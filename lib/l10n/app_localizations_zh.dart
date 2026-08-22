@@ -2178,4 +2178,190 @@ class AppLocalizationsZh extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get settingsInternalsTitle => '关于';
+
+  @override
+  String get settingsInternalsSubtitle => '版本、内核、地理数据库与当前会话';
+
+  @override
+  String get settingsCoreXraySubtitle => '默认内核。支持所有服务器类型，包括链式代理和现成的 JSON 配置。';
+
+  @override
+  String get settingsCoreMihomoSubtitle => '兼容 Clash 的内核。链式代理和现成的 xray 配置仍由 Xray 处理。';
+
+  @override
+  String get settingsCoreHint => '下次连接时生效 — 当前会话不会重启。';
+
+  @override
+  String get settingsInternalsCores => '内核';
+
+  @override
+  String get settingsInternalsGeo => '地理数据库';
+
+  @override
+  String get settingsInternalsSession => '当前会话';
+
+  @override
+  String get settingsInternalsBuild => '应用与设备';
+
+  @override
+  String get settingsInternalsCopyAll => '复制报告';
+
+  @override
+  String get settingsInternalsCopied => '报告已复制';
+
+  @override
+  String get settingsInternalsNoCores => '该平台未附带内核';
+
+  @override
+  String get settingsInternalsCoreMissing => '未找到';
+
+  @override
+  String get settingsInternalsVersionFromEngines => '由源码构建';
+
+  @override
+  String get settingsInternalsRoleCore => '代理引擎与 TUN';
+
+  @override
+  String get settingsInternalsRoleProxy => '代理引擎';
+
+  @override
+  String get settingsInternalsRoleTun => 'TUN 设备';
+
+  @override
+  String get settingsInternalsRoleAwg => 'AmneziaWG';
+
+  @override
+  String settingsInternalsGeoCodes(int count) {
+    return '条目：$count';
+  }
+
+  @override
+  String get settingsInternalsStatus => '状态';
+
+  @override
+  String get settingsInternalsStatusError => '错误';
+
+  @override
+  String get settingsInternalsEngine => '引擎';
+
+  @override
+  String get settingsInternalsMode => '模式';
+
+  @override
+  String get settingsInternalsPorts => '本地端口';
+
+  @override
+  String get settingsInternalsClashPort => 'Clash API 端口';
+
+  @override
+  String get settingsInternalsUptime => '已运行';
+
+  @override
+  String get settingsInternalsCorePids => '内核进程';
+
+  @override
+  String get settingsInternalsElevated => '管理员权限';
+
+  @override
+  String get settingsInternalsYes => '是';
+
+  @override
+  String get settingsInternalsNo => '否';
+
+  @override
+  String get settingsInternalsAppVersion => '应用版本';
+
+  @override
+  String get settingsInternalsPackage => '包名';
+
+  @override
+  String get settingsInternalsOs => '系统';
+
+  @override
+  String get settingsInternalsAbi => '架构';
+
+  @override
+  String get settingsInternalsDart => 'Dart';
+
+  @override
+  String get settingsInternalsBuildMode => '构建';
+
+  @override
+  String get settingsInternalsUnavailable => '—';
+
+  @override
+  String get appearanceIconShapeTitle => '图标形状';
+
+  @override
+  String get appearanceIconShapeCircle => '圆形';
+
+  @override
+  String get subscriptionCardThemeTitle => '卡片外观';
+
+  @override
+  String get subscriptionCardThemeNone => '无';
+
+  @override
+  String get subscriptionCardThemeInServers => '在服务器列表中显示';
+
+  @override
+  String get subscriptionCardThemeInServersHint => '图片也会填充分组标题栏。无论是否开启，从图片取到的配色都会保留。';
+
+  @override
+  String get appearanceIconShapeSquare => '方形';
+
+  @override
+  String get appearanceIconShapeArch => '拱形';
+
+  @override
+  String get appearanceSectionServers => '服务器列表与主屏幕';
+
+  @override
+  String get appearanceSectionFeel => '主题与反馈';
+
+  @override
+  String get appearanceIconShapeClover => '四叶草';
+
+  @override
+  String get appearanceIconShapeCookie => '曲奇';
+
+  @override
+  String get appearanceIconShapeFlower => '花朵';
+
+  @override
+  String get appearanceIconShapeSlanted => '斜角';
+
+  @override
+  String get appearanceIconShapePill => '胶囊';
+
+  @override
+  String get appearanceIconShapeGem => '宝石';
+
+  @override
+  String get appearanceIconShapeSunny => '太阳';
+
+  @override
+  String get appearanceIconShapePuffy => '云朵';
+
+  @override
+  String get appearanceIconShapePebble => '鹅卵石';
+
+  @override
+  String get cardImageRejectAspect => '图片对卡片来说太高了，请选择宽幅图片，约 3:2 到 5:1。';
+
+  @override
+  String cardImageRejectSmall(int width) {
+    return '图片太小：宽度至少 $width px。';
+  }
+
+  @override
+  String cardImageRejectLarge(int width) {
+    return '图片太大：宽度最多 $width px。';
+  }
+
+  @override
+  String get cardImageRejectUnreadable => '无法读取该图片。';
 }

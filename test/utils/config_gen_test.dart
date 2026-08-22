@@ -295,7 +295,9 @@ void main() {
       expect(tlsSettings['serverName'], 'example.com');
     });
 
-    test('Trojan TLS sets allowInsecure when insecure=1', () {
+    // Ядро отвергает `allowInsecure` безусловно и роняет при этом разбор всего
+    // конфига — подробности и остальные протоколы в removed_tls_fields_test.
+    test('Trojan TLS drops allowInsecure even when insecure=1', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(
         'trojan://password@example.com:443?sni=example.com&type=tcp&insecure=1',
@@ -304,9 +306,12 @@ void main() {
       final map = jsonDecode(config) as Map<String, dynamic>;
       final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
       final tls = stream['tlsSettings'] as Map<String, dynamic>;
-      expect(tls['allowInsecure'], isTrue);
+      expect(tls.containsKey('allowInsecure'), isFalse);
+      expect(tls['serverName'], 'example.com');
     });
 
+    // Пустое поле ядро само читает как HelloChrome_Auto (`GetFingerprint("")`),
+    // так что дописывать сюда `chrome` нечего — это ровно дефолт ядра.
     test('VLESS TLS omits fingerprint when fp not set (Xray 26)', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(
@@ -317,6 +322,18 @@ void main() {
       final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
       final tls = stream['tlsSettings'] as Map<String, dynamic>;
       expect(tls.containsKey('fingerprint'), isFalse);
+    });
+
+    test('VLESS TLS keeps the fingerprint named by the link', () {
+      Socks5Credentials().init('u', 'p');
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://5783a3e7-e373-51cd-8642-c83782b807c5@example.com:443?encryption=none&security=tls&sni=example.com&type=tcp&fp=firefox',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
+      final tls = stream['tlsSettings'] as Map<String, dynamic>;
+      expect(tls['fingerprint'], 'firefox');
     });
 
     test('builds Trojan outbound with WebSocket', () {
@@ -537,8 +554,15 @@ void main() {
       expect((map['log'] as Map)['loglevel'], 'debug');
       final dns = map['dns'] as Map<String, dynamic>;
       expect(dns['queryStrategy'], 'PreferIPv4');
-      final servers = dns['servers'] as List;
-      expect((servers.first as Map)['address'], 'https://dns.google/dns-query');
+      final servers = (dns['servers'] as List).cast<Map<String, dynamic>>();
+      // Первым идёт bootstrap на адрес сервера: его нельзя резолвить ничем,
+      // что само требует туннеля. Пользовательские серверы — следом.
+      expect(servers.first['address'], 'localhost');
+      expect(servers.first['domains'], ['full:example.com']);
+      expect(
+        servers.map((s) => s['address']),
+        contains('https://dns.google/dns-query'),
+      );
       expect((map['routing'] as Map)['domainStrategy'], 'IPIfNonMatch');
     });
 

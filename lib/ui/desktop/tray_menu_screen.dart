@@ -438,8 +438,8 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
                 trailing: servers.length > 1
                     ? Icon(
                         _serversExpanded
-                            ? Icons.expand_less
-                            : Icons.expand_more,
+                            ? Icons.expand_less_rounded
+                            : Icons.expand_more_rounded,
                         size: 18,
                         color: mutedFg,
                       )
@@ -577,7 +577,7 @@ class _TrayItem extends StatelessWidget {
                   ),
                 ),
                 if (selected && accentColor != null)
-                  Icon(Icons.check, size: 16, color: accentColor),
+                  Icon(Icons.check_rounded, size: 16, color: accentColor),
                 if (trailing != null) ...[
                   const SizedBox(width: 4),
                   trailing!,
