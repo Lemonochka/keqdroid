@@ -411,8 +411,11 @@ void main() {
       expect(rules[block]['outboundTag'], 'block');
       expect(rules[direct]['outboundTag'], 'direct');
       expect(rules[tags.indexOf('user-block-ips')]['ip'], ['10.1.2.0/24']);
-      // Свои freedom/blackhole не нужны — у автора они уже есть.
-      expect(jsonEncode(config['outbounds']).contains('keq-'), isFalse);
+      // Свои freedom/blackhole не нужны — у автора они уже есть. Свой
+      // `dns`-аутбаунд появляется всё равно: перехват DNS висел на авторском
+      // инбаунде, а инбаунды мы заменяем своими.
+      expect(jsonEncode(config['outbounds']).contains('keq-direct'), isFalse);
+      expect(jsonEncode(config['outbounds']).contains('keq-block'), isFalse);
     });
 
     test('unmatched traffic follows the app setting', () {

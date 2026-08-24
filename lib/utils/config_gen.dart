@@ -453,6 +453,10 @@ class ConfigGeneratorV2 {
   /// конфиге blackhole тоже бывает не заведён.
   static const _customBlockTag = 'keq-block';
 
+  /// Тег `dns`-аутбаунда для перехвата DNS устройства в готовом конфиге —
+  /// на случай, если своего у автора нет.
+  static const _customDnsTag = 'keq-dns-out';
+
   /// Готовый конфиг ядра в роли сервера.
   ///
   /// Что меняем и почему:
@@ -550,6 +554,65 @@ class ConfigGeneratorV2 {
       blockTag: blockTag ?? _customBlockTag,
     );
 
+    // DNS устройства отвечает ядро, а не сервер на том конце туннеля, — и в
+    // готовом конфиге это приходится дописывать за автора.
+    //
+    // Перехват DNS у автора висит на ЕГО инбаунде: `dokodemo-door` с тегом
+    // `dns-in` и правило `inboundTag: [dns-in] -> dns-out`. Инбаунды мы
+    // заменяем своими (см. [_buildInbounds]), и вместе с `dns-in` умирает
+    // правило: сработать ему теперь не на чем. Дальше запрос к 8.8.8.8:53
+    // (этот адрес TUN отдаёт системе) не ловит ни одно авторское правило и
+    // падает в наш `final`. С финалом «блок» это выглядит как «в кастомном
+    // конфиге не работает вообще ничего, даже то, что сам он ведёт напрямую»:
+    // без резолва нет и соединений, по которым авторские правила могли бы
+    // сработать.
+    //
+    // ПОСЛЕ авторских правил: если автор DNS всё-таки разложил сам (`port: 53`
+    // или catch-all), решает он — принцип готового конфига не меняем.
+    //
+    // `inboundTag` тут обязателен. Без него правило поймает и запросы САМОГО
+    // ядра к своему upstream — их ядро тоже отправляет через роутинг, — и
+    // `dns`-аутбаунд начнёт отвечать сам себе по кругу.
+    // Чем `dns`-аутбаунд будет отвечать, если своего блока у автора нет.
+    final fallbackDns = settings.xrayCore.buildDnsBlock(
+      directDomains: _normalizeDomains(
+        splitDomainsAndIps(_parseRuleList(settings.directRules)).domains,
+      ),
+      bootstrapDomains: [
+        if (custom.address.trim().isNotEmpty && !_isIpLiteral(custom.address))
+          'full:${custom.address.trim()}',
+      ],
+      proxiedDoh: settings.finalOutbound == AppSettings.finalOutboundProxy,
+    );
+    final effectiveDns = custom.authorDns ?? fallbackDns;
+
+    // fakedns — единственный случай, когда перехват DNS всё ЛОМАЕТ, а не чинит.
+    // Ядро отдало бы приложению адрес из фейкового пула, а достать из такого
+    // адреса домен обратно умеет только снифер с `fakedns` в `destOverride` —
+    // у нас его нет (`XrayCoreSettings.buildSniffing`). Тогда не сработало бы
+    // НИ ОДНО доменное правило автора. Конфиг с fakedns оставляем как был:
+    // DNS идёт мимо нашего перехвата, ровно как до его появления.
+    final usesFakeDns = custom.json.containsKey('fakedns') ||
+        _dnsUsesFakeIp(effectiveDns);
+
+    final dnsOutTag = _existingOutboundTag(custom, 'dns') ?? _customDnsTag;
+    final inboundTags = <String>[
+      for (final inbound in inbounds)
+        if (inbound['tag'] is String) inbound['tag'] as String,
+    ];
+    final interceptDns = !usesFakeDns && inboundTags.isNotEmpty;
+    final dnsRules = <Map<String, dynamic>>[
+      if (interceptDns)
+        {
+          'type': 'field',
+          'ruleTag': 'dns-out',
+          'inboundTag': inboundTags,
+          'port': '53',
+          'network': 'tcp,udp',
+          'outboundTag': dnsOutTag,
+        },
+    ];
+
     // Финальное правило — в самый конец. У автора почти всегда есть свой
     // catch-all, и тогда наше не сработает вовсе; но если его нет, «остальной
     // трафик» из настроек должен решать он, а не молчаливый дефолт ядра
@@ -559,8 +622,40 @@ class ConfigGeneratorV2 {
       AppSettings.finalOutboundBlock => blockTag ?? _customBlockTag,
       _ => custom.primaryOutboundTag,
     };
+
+    // Собственные запросы ядра к своему upstream в блок пускать нельзя.
+    //
+    // Авторский `dns.servers` — это чаще всего обычный UDP-53, а такой запрос
+    // ядро отправляет ЧЕРЕЗ РОУТИНГ (для того и существует форма `+local`).
+    // С финалом «блок» ядро блокирует собственный резолвер: молчит не только
+    // перехваченный выше DNS устройства, но и `domainStrategy: IPIfNonMatch`
+    // (в готовых конфигах он стоит почти всегда), то есть авторские
+    // ip-правила по доменам разваливаются следом.
+    //
+    // Ловим такие запросы ПЕРЕД `final` и уводим напрямую — ровно так же
+    // ходит DoH сгенерированных конфигов. Правило добавляем, только если
+    // резолверу действительно нужен роутинг: у `https+local`/`localhost`
+    // запросы идут мимо него, и «блок» остаётся буквальным.
+    //
+    // Когда перехвата нет (fakedns), это же правило спасает DNS САМОГО
+    // устройства: без него он падал бы в `final`, то есть в блок.
+    final resolverNeedsRouting = _dnsGoesThroughRouting(effectiveDns);
+    final resolverRules = <Map<String, dynamic>>[
+      if ((resolverNeedsRouting || !interceptDns) &&
+          settings.finalOutbound == AppSettings.finalOutboundBlock)
+        {
+          'type': 'field',
+          'ruleTag': 'dns-resolver',
+          'port': '53',
+          'network': 'tcp,udp',
+          'outboundTag': directTag,
+        },
+    ];
+
     final appendRules = <Map<String, dynamic>>[
+      ...dnsRules,
       ...userRules,
+      ...resolverRules,
       {
         'type': 'field',
         'ruleTag': 'final',
@@ -577,6 +672,11 @@ class ConfigGeneratorV2 {
     final config = custom.buildSessionConfig(
       inbounds: inbounds,
       logLevel: settings.xrayCore.logLevel,
+      // Подставится, только если своего dns-блока у автора нет: отвечать на
+      // перехваченный выше DNS `dns`-аутбаунду больше нечем, а его дефолт
+      // (`localhost`) на Android не резолвит ничего — системного резолвера
+      // там нет.
+      dns: fallbackDns,
       // LAN-правила остаются ПЕРЕД авторскими, и это не вкусовщина: инбаунд
       // LAN-прокси слушает 0.0.0.0, а `lan-deny` отсекает всё, что пришло в
       // него не из локальной сети. Пропусти вперёд авторское правило — и любой
@@ -594,6 +694,14 @@ class ConfigGeneratorV2 {
         {'protocol': 'blackhole', 'tag': _customBlockTag},
       if (usedTags.contains(_customDirectTag))
         {'protocol': 'freedom', 'tag': _customDirectTag},
+      if (usedTags.contains(_customDnsTag))
+        {
+          'protocol': 'dns',
+          'tag': _customDnsTag,
+          // Не-A/AAAA запросы отклоняем явно: это и так дефолт ядра, но смена
+          // дефолта наверху не должна молча поменять наше поведение.
+          'settings': {'nonIPQuery': 'reject'},
+        },
     ];
     if (extraOutbounds.isNotEmpty) {
       config['outbounds'] = [
@@ -602,6 +710,50 @@ class ConfigGeneratorV2 {
       ];
     }
     return config;
+  }
+
+  /// Отвечает ли dns-блок адресами из фейкового пула.
+  static bool _dnsUsesFakeIp(Map<String, dynamic> dns) {
+    final servers = dns['servers'];
+    if (servers is! List) return false;
+    return servers.any((server) {
+      final address = switch (server) {
+        String s => s,
+        Map m => m['address']?.toString() ?? '',
+        _ => '',
+      };
+      return address.trim().toLowerCase() == 'fakedns';
+    });
+  }
+
+  /// Пойдут ли запросы встроенного резолвера через роутинг.
+  ///
+  /// В xray это решает форма адреса: `localhost` (системный резолвер), `fakedns`
+  /// и любая схема с суффиксом `+local` отправляют запрос мимо роутинга, всё
+  /// остальное — обычный UDP-53, `https://`, `tcp://` — идёт через него и
+  /// попадает под наши правила наравне с трафиком приложений.
+  static bool _dnsGoesThroughRouting(Map<String, dynamic> dns) {
+    final servers = dns['servers'];
+    if (servers is! List) return false;
+    for (final server in servers) {
+      final address = switch (server) {
+        String s => s,
+        Map m => m['address']?.toString() ?? '',
+        _ => '',
+      }
+          .trim()
+          .toLowerCase();
+      if (address.isEmpty) continue;
+      if (address == 'localhost' || address == 'fakedns') continue;
+      final scheme = RegExp(r'^([a-z][a-z0-9.+-]*)://').firstMatch(address);
+      if (scheme != null) {
+        final name = scheme.group(1)!;
+        // `dhcp` спрашивает адрес резолвера у системы, а не по сети.
+        if (name.endsWith('+local') || name == 'dhcp') continue;
+      }
+      return true;
+    }
+    return false;
   }
 
   /// Правила из пользовательских списков для готового (custom) конфига.
@@ -1479,6 +1631,11 @@ class ConfigGeneratorV2 {
     final flow = settings['flow']?.toString().trim() ?? '';
     return flow.startsWith('xtls-rprx-vision') && !flow.endsWith('-udp443');
   }
+
+  /// Теги инбаундов, которые ставит [_buildInbounds]. Вынесены, потому что по
+  /// ним считается, какие авторские правила готового конфига остались без
+  /// инбаунда и уже не сработают (`previewDeadInboundRules`).
+  static const appInboundTags = ['socks-in', 'http-in', 'socks-lan', 'http-lan'];
 
   /// Инбаунды приложения: локальные SOCKS/HTTP (и опционально LAN).
   ///

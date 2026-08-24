@@ -8,6 +8,13 @@
     {
       "protocol": "blackhole",
       "tag": "keq-block"
+    },
+    {
+      "protocol": "dns",
+      "tag": "keq-dns-out",
+      "settings": {
+        "nonIPQuery": "reject"
+      }
     }
   ],
   "log": {
@@ -55,8 +62,48 @@
       }
     }
   ],
+  "dns": {
+    "servers": [
+      {
+        "address": "localhost",
+        "domains": [
+          "domain:direct.example"
+        ],
+        "skipFallback": true,
+        "timeoutMs": 2500,
+        "serveStale": true
+      },
+      {
+        "address": "https://1.1.1.1/dns-query",
+        "timeoutMs": 2500,
+        "serveStale": true
+      },
+      {
+        "address": "https://8.8.8.8/dns-query",
+        "timeoutMs": 2500,
+        "serveStale": true
+      },
+      {
+        "address": "localhost",
+        "timeoutMs": 2500,
+        "serveStale": true
+      }
+    ],
+    "queryStrategy": "UseIPv4"
+  },
   "routing": {
     "rules": [
+      {
+        "type": "field",
+        "ruleTag": "dns-out",
+        "inboundTag": [
+          "socks-in",
+          "http-in"
+        ],
+        "port": "53",
+        "network": "tcp,udp",
+        "outboundTag": "keq-dns-out"
+      },
       {
         "type": "field",
         "ruleTag": "user-block-domains",
