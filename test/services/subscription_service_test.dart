@@ -306,6 +306,153 @@ void main() {
     });
   });
 
+  group('SubscriptionService._parseBody with Clash payloads', () {
+    // Панель отдаёт такое, когда у подписки выставлена идентичность
+    // clash-клиента. Узлы важнее профиля: их видно списком, между ними
+    // переключаются, каждый пингуется — и они работают на любом ядре.
+    const reality = '''
+proxies:
+  - name: "NL Reality"
+    type: vless
+    server: nl.example
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+    network: tcp
+    tls: true
+    servername: www.example.org
+    client-fingerprint: chrome
+    flow: xtls-rprx-vision
+    reality-opts:
+      public-key: aGVsbG8gd29ybGQgaGVsbG8gd29ybGQgaGVsbG8gd28
+      short-id: 0123abcd
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: ["NL Reality"]
+rules:
+  - MATCH,Proxy
+''';
+
+    test('узел REALITY переживает перевод в ссылку целиком', () {
+      // Ключ REALITY и отпечаток лежат ВЛОЖЕННЫМИ картами. Построчный сканер
+      // их не видел, и ссылка собиралась «успешно» — без pbk, то есть
+      // молча неподключаемая.
+      final configs = SubscriptionService.parseBodyForTest(reality);
+      expect(configs, hasLength(1));
+
+      final uri = Uri.parse(configs.single);
+      expect(uri.scheme, 'vless');
+      expect(uri.host, 'nl.example');
+      expect(uri.queryParameters['security'], 'reality');
+      expect(uri.queryParameters['pbk'], isNotEmpty);
+      expect(uri.queryParameters['sid'], '0123abcd');
+      expect(uri.queryParameters['fp'], 'chrome');
+      expect(uri.queryParameters['flow'], 'xtls-rprx-vision');
+      expect(uri.queryParameters['sni'], 'www.example.org');
+      // `type` у Clash — это протокол, а не транспорт: подставленный в
+      // транспорт, он давал ссылку с несуществующим `type=vless`.
+      expect(uri.queryParameters['type'], 'tcp');
+    });
+
+    test('профиль без разбираемых узлов остаётся конфигом целиком', () {
+      // Узлы приходят из `proxy-providers` (в сеть за ними мы не ходим), но
+      // сам конфиг рабочий — его исполнит mihomo, как написал автор.
+      const providerProfile = '''
+proxies:
+  - name: "direct-ish"
+    type: socks5
+    server: 198.51.100.9
+    port: 1080
+proxy-groups:
+  - name: Proxy
+    type: select
+    use: ["provider-a"]
+proxy-providers:
+  provider-a:
+    type: http
+    url: "https://example.invalid/nodes.yaml"
+    interval: 3600
+rules:
+  - MATCH,Proxy
+''';
+      final configs = SubscriptionService.parseBodyForTest(providerProfile);
+      expect(configs, hasLength(1));
+
+      final server = ServerItem.fromRaw(configs.single);
+      expect(server.protocol, 'clash');
+      expect(server.address, '198.51.100.9');
+      // Авторские правила и провайдеры доезжают до сервера как есть.
+      expect(server.config, contains('proxy-providers'));
+    });
+
+    // Ровно то, что панели отдают clash-клиентам чаще всего: ни одного
+    // `proxies`, весь список узлов за ссылкой. Раньше такая подписка
+    // отказывалась обновляться с «Unsupported subscription format: Clash YAML»
+    // — при том, что Clash приложение как раз исполняет.
+    const providersOnly = '''
+mixed-port: 7890
+proxy-providers:
+  main:
+    type: http
+    url: "https://example.invalid/nodes.yaml"
+    interval: 3600
+    path: ./providers/main.yaml
+proxy-groups:
+  - name: "🚀 Proxy"
+    type: select
+    use: ["main"]
+rules:
+  - MATCH,🚀 Proxy
+''';
+
+    test('профиль целиком из proxy-providers принимается сервером', () {
+      final configs = SubscriptionService.parseBodyForTest(providersOnly);
+      expect(configs, hasLength(1));
+
+      final server = ServerItem.fromRaw(configs.single);
+      expect(server.protocol, 'clash');
+      // Своего адреса у такого профиля нет и быть не может — список ещё не
+      // скачан. Это не болванка, и отказывать по этому признаку нельзя.
+      expect(server.address, isEmpty);
+      expect(server.config, contains('proxy-providers'));
+    });
+
+    // Без групп правилу некуда указывать: `primaryTarget` вернул бы DIRECT, то
+    // есть подключение «работает», а прокси нет. Лучше отказ с причиной.
+    test('провайдеры без групп — отказ, и причина названа', () {
+      const noGroups = '''
+proxy-providers:
+  main:
+    type: http
+    url: "https://example.invalid/nodes.yaml"
+''';
+      expect(
+        () => SubscriptionService.parseBodyForTest(noGroups),
+        throwsA(isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          allOf(contains('proxy-groups'), isNot(contains('Unsupported'))),
+        )),
+      );
+    });
+
+    test('битый YAML объясняется сообщением парсера', () {
+      const broken = '''
+proxies:
+  - name: "a
+    type: vless
+''';
+      expect(
+        () => SubscriptionService.parseBodyForTest(broken),
+        throwsA(isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          allOf(contains('Clash subscription'), contains('YAML')),
+        )),
+      );
+    });
+  });
+
   group('SubscriptionService._parseBody with ready-made core configs', () {
     // Провайдеры отдают не только списки ссылок, но и «сервера с готовым
     // роутингом» — конфиг xray целиком, имя в корневом `remarks` (v2rayNG).

@@ -563,7 +563,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXraySniffingHint => 'Определять протокол и домен назначения по входящему трафику';
 
   @override
-  String get settingsXraySniffingRouteOnlyHint => 'Sniffing только для маршрутизации, без подмены адреса';
+  String get settingsXraySniffingRouteOnlyHint => 'Выключено (по умолчанию): домен из снифера становится адресом назначения, и его резолвят заново — для прямого маршрута локально, для проксируемого на сервере. Включено: домен нужен только для выбора правила, а соединение идёт на адрес от приложения — а он неверный всякий раз, когда пришёл от резолвера по ту сторону туннеля (ру-сайты тогда идут напрямую к зарубежному узлу CDN).';
 
   @override
   String get settingsXrayResetDefaults => 'Сбросить настройки';
@@ -599,19 +599,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunStackTitle => 'Сетевой стек';
 
   @override
-  String get settingsTunStackSystemHint => 'Стек ядра ОС — самый быстрый, по умолчанию';
+  String get settingsTunStackSystemHint => 'Стек ядра ОС — самый быстрый, но на Windows терминирует TCP листенером на адресе TUN и требует правила Windows Firewall; если правило не встало, туннель поднимается вообще без трафика';
 
   @override
-  String get settingsTunStackGvisorHint => 'Userspace-стек — лучше совместимость, чуть медленнее. Нужно ядро, собранное с gVisor (ядра из приложения 0.7.1 и старше падают с кодом 1)';
+  String get settingsTunStackGvisorHint => 'Userspace-стек — по умолчанию. Работает целиком внутри ядра, поэтому ему не нужны ни листенер, ни правила фаервола; чуть медленнее. Нужно ядро, собранное с gVisor (ядра из приложения 0.7.1 и старше падают с кодом 1)';
 
   @override
-  String get settingsTunStackMixedHint => 'system для TCP, gVisor для UDP. Нужно ядро, собранное с gVisor (ядра из приложения 0.7.1 и старше падают с кодом 1)';
+  String get settingsTunStackMixedHint => 'gVisor для TCP, system для UDP. Нужно ядро, собранное с gVisor (ядра из приложения 0.7.1 и старше падают с кодом 1)';
 
   @override
   String get settingsTunMtu => 'MTU';
 
   @override
-  String get settingsTunMtuHint => '576–65535, по умолчанию 1400';
+  String get settingsTunMtuHint => '576–65535, по умолчанию 9000';
 
   @override
   String get settingsTunUdpTimeout => 'UDP-таймаут (сек)';
@@ -648,6 +648,21 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsTunAutoRouteHint => 'Автоматически добавляет системные маршруты в туннель. Выключайте только при ручном управлении маршрутами — без него трафик в TUN не попадает';
+
+  @override
+  String get settingsTunIpv6 => 'Не выпускать IPv6 мимо туннеля';
+
+  @override
+  String get settingsTunIpv6Hint => 'TUN-интерфейс с одним только IPv4-адресом не получает IPv6-маршрутов, поэтому на двухстековой машине весь IPv6 идёт мимо туннеля — мимо правил роутинга и мимо прокси. С включённой опцией интерфейс получает и IPv6-адрес, а выход IPv6 наружу закрывается: приложения сразу откатываются на IPv4, который уже в туннеле. Адрес заводится только тогда, когда глобальный IPv6 у машины действительно есть. Только ядро xray/keqrnel';
+
+  @override
+  String get settingsMihomoSection => 'Ядро mihomo';
+
+  @override
+  String get settingsMihomoFakeIp => 'Fake IP';
+
+  @override
+  String get settingsMihomoFakeIpHint => 'Ядро отвечает на DNS подменным адресом вместо настоящего: резолв мгновенный, а доменные правила перестают зависеть от снифинга. Взамен IP-правила приходится доразрешать перед сравнением, поэтому те же списки роутинга ведут себя не совсем как на Xray. Действует только там, где туннелем владеет mihomo, — режим TUN и Android.';
 
   @override
   String get settingsPingTitle => 'Пинг серверов';
@@ -915,7 +930,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversAddServerTitle => 'Добавить сервер';
 
   @override
-  String get serversPasteVlessHint => 'Вставьте vless://, vmess://, trojan://, ss://, hysteria2:// или hy2:// (по одному на строку) либо готовый JSON-конфиг Xray';
+  String get serversPasteVlessHint => 'Вставьте vless://, vmess://, trojan://, ss://, hysteria2:// или hy2:// (по одному на строку) либо конфиг целиком: JSON Xray, YAML Clash, .conf AmneziaWG';
 
   @override
   String get serversPasteHint => 'vless://… или hy2://host:port?auth=…';
@@ -1430,6 +1445,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String serversImportedSummary(Object added, Object total) {
     return 'Добавлено серверов: $added из $total';
   }
+
+  @override
+  String get sidebarJumpTitle => 'Быстрый переход';
+
+  @override
+  String get serversScrollToEnd => 'К концу списка';
 
   @override
   String get serversManualGroup => 'Ручные серверы';
@@ -2200,6 +2221,27 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsCoreHint => 'Применится на следующем подключении — текущая сессия не перезапускается.';
+
+  @override
+  String get settingsCoreAuto => 'Автоматически';
+
+  @override
+  String get settingsCoreAutoSubtitle => 'Ядро выбирает формат сервера: ссылки идут на Xray, готовые конфиги — на то ядро, на языке которого написаны.';
+
+  @override
+  String get settingsCoreSkipClash => 'Активный сервер — готовый конфиг Clash: его исполняет только mihomo, при любом выборе ядра.';
+
+  @override
+  String get settingsCoreSkipCustom => 'Активный сервер — готовый JSON-конфиг Xray (роутинг и DNS в нём от провайдера), поэтому он идёт через libxray при любом выборе ядра. Чтобы работал mihomo, нужна подписка с обычными ссылками vless:// / vmess:// — поменяйте идентичность клиента в настройках подписки.';
+
+  @override
+  String get settingsCoreSkipChain => 'Активный сервер — цепочка: её узлы связаны через dialerProxy Xray, поэтому она идёт через libxray при любом выборе ядра.';
+
+  @override
+  String get settingsCoreSkipAwg => 'Активный сервер — профиль AmneziaWG: его исполняет своё ядро wg-go при любом выборе.';
+
+  @override
+  String get settingsCoreSkipPlatform => 'Ядро mihomo не поставляется на этой платформе — подключение идёт через ядро Xray.';
 
   @override
   String get settingsInternalsCores => 'Ядра';

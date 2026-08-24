@@ -148,7 +148,7 @@ JNIEXPORT jint JNICALL
 Java_com_keqdroid_keqdroid_NativeHelper_nativeStartTun2Socks(
         JNIEnv *env, jclass clazz,
         jint tunFd, jstring jBinPath, jstring jProxyUrl,
-        jstring jLogLevel, jstring jLogPath) {
+        jstring jLogLevel, jstring jLogPath, jint jMtu) {
 
     const char *binPath  = (*env)->GetStringUTFChars(env, jBinPath,  NULL);
     const char *proxyUrl = (*env)->GetStringUTFChars(env, jProxyUrl, NULL);
@@ -182,11 +182,22 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeStartTun2Socks(
     char fdStr[32];
     snprintf(fdStr, sizeof(fdStr), "fd://%d", (int)tunFd);
 
+    /*
+     * MTU обязателен: у fd-устройства tun2socks по умолчанию берёт 1500
+     * (core/device/fdbased: `if mtu == 0 { mtu = defaultMTU }`), а интерфейс
+     * VpnService поднят с нашим TUN_MTU. Расхождение — это пакеты, которые
+     * netstack считает допустимыми, а ядро на записи в tun отбрасывает:
+     * снаружи выглядит как «мелочь грузится, крупное встаёт».
+     */
+    char mtuStr[16];
+    snprintf(mtuStr, sizeof(mtuStr), "%d", (int)jMtu);
+
     char *argv[] = {
             (char *)binPath,
             "--device",  fdStr,
             "--proxy",   (char *)proxyUrl,
             "--loglevel",logLevel,
+            "--mtu",     mtuStr,
             NULL
     };
 
@@ -395,7 +406,7 @@ JNIEXPORT jint JNICALL
 Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
         JNIEnv *env, jclass clazz,
         jstring jBinPath, jstring jConfigPath, jstring jAssetDir, jstring jLogName,
-        jstring jCoreKind) {
+        jstring jCoreKind, jint jTunFd) {
 
     const char *binPath    = (*env)->GetStringUTFChars(env, jBinPath,    NULL);
     const char *configPath = (*env)->GetStringUTFChars(env, jConfigPath, NULL);
@@ -440,7 +451,21 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
     }
 
     __android_log_print(ANDROID_LOG_INFO, TAG,
-                        "startCore: kind=%s bin=%s config=%s dir=%s", coreKind[0] ? coreKind : "xray", binPath, configPath, assetDir);
+                        "startCore: kind=%s bin=%s config=%s dir=%s tunFd=%d",
+                        coreKind[0] ? coreKind : "xray", binPath, configPath, assetDir, (int)jTunFd);
+
+    /*
+     * Дескриптор TUN, если ядро само владеет туннелем (mihomo читает его номер
+     * из `tun.file-descriptor` в конфиге). Как и у tun2socks, снимаем
+     * FD_CLOEXEC — иначе execv закроет его, и ядро получит «bad file
+     * descriptor» на устройстве, которого уже нет. Владение остаётся за
+     * ParcelFileDescriptor на стороне сервиса: у ребёнка своя копия таблицы
+     * дескрипторов, и его close() нашего не трогает.
+     */
+    const int tunFd = (int)jTunFd;
+    if (tunFd >= 0) {
+        fcntl(tunFd, F_SETFD, fcntl(tunFd, F_GETFD) & ~FD_CLOEXEC);
+    }
 
     int pipefd[2] = {-1, -1};
     if (pipe(pipefd) != 0) {
@@ -498,7 +523,9 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
             prctl(PR_SET_PDEATHSIG, 0);
 
             int max = (int)sysconf(_SC_OPEN_MAX);
-            for (int i = 3; i < max; i++) close(i);
+            for (int i = 3; i < max; i++) {
+                if (i != tunFd) close(i);
+            }
 
             /* xray ищет geoip.dat/geosite.dat по XRAY_LOCATION_ASSET, mihomo —
              * в своём рабочем каталоге (`-d`). Каталог один и тот же (filesDir),

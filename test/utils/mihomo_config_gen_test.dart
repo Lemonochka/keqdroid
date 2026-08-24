@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/xray_core_settings.dart';
+import 'package:keqdroid/tunnel/app_routing_mode.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
@@ -330,7 +331,11 @@ void main() {
       expect(rules, contains('DOMAIN-SUFFIX,vk.com,DIRECT'));
       expect(rules, contains('GEOSITE,category-ru,DIRECT'));
       expect(rules, contains('GEOIP,ru,DIRECT'));
-      expect(rules, contains('IP-CIDR,10.8.0.0/24,DIRECT,no-resolve'));
+      // Без `no-resolve`: умолчание снифера — подмена адреса назначения, и
+      // тогда пользовательские IP-правила обязаны резолвить домен, иначе они
+      // молча промахиваются (тот же случай, что `AsIs` → `IPIfNonMatch` у
+      // xray). Полный разбор — в тесте про no-resolve ниже.
+      expect(rules, contains('IP-CIDR,10.8.0.0/24,DIRECT'));
       expect(rules, contains('DOMAIN-SUFFIX,youtube.com,proxy'));
     });
 
@@ -392,7 +397,9 @@ void main() {
         socksPort: 2080,
       ));
       expect(rules, contains('IP-CIDR,203.0.113.9/32,DIRECT,no-resolve'));
-      expect(rules, contains('IP-CIDR,1.2.3.4/32,DIRECT,no-resolve'));
+      // no-resolve тут нет по той же причине, что и выше: умолчание — подмена
+      // адреса. Проверяем префикс, а не суффикс правила.
+      expect(rules, contains('IP-CIDR,1.2.3.4/32,DIRECT'));
     });
   });
 
@@ -444,7 +451,7 @@ void main() {
   group('dns', () {
     // Системного резолвера на Android нет (/etc/resolv.conf отсутствует), и без
     // своего DNS домен сервера из ссылки не разрешается вовсе.
-    test('ядро резолвит само, fake-ip не включаем', () {
+    test('ядро резолвит само, подмена адресов по умолчанию выключена', () {
       final dns = MihomoConfigGen.build(
         'vless://uuid@nl.example:443?type=tcp&security=none',
         const AppSettings(),
@@ -622,6 +629,287 @@ void main() {
       expect(rules, contains('SRC-IP-CIDR,192.168.0.0/16,proxy'));
       expect(rules, contains('SRC-IP-CIDR,10.0.0.0/8,proxy'));
       expect(rules.where((r) => r.startsWith('SRC-IP-CIDR')).length, 5);
+    });
+  });
+
+  group('свой туннель', () {
+    const link = 'vless://uuid@nl.example:443?type=tcp&security=none';
+
+    MihomoTunOptions desktopTun() => const MihomoTunOptions(
+          device: 'tun-keqdis',
+          stack: 'gvisor',
+          mtu: 9000,
+        );
+
+    test('десктоп: ядро создаёт устройство само', () {
+      final tun = MihomoConfigGen.build(
+        link,
+        settings,
+        socksPort: 2080,
+        httpPort: 2081,
+        tun: desktopTun(),
+        windows: true,
+      )['tun'] as Map<String, dynamic>;
+
+      expect(tun['enable'], isTrue);
+      // Имя своё: без него mihomo берёт `Meta`, а wintun считает GUID
+      // адаптера от имени — тот же GUID у любого mihomo-клиента на машине.
+      expect(tun['device'], 'tun-keqdis');
+      expect(tun['stack'], 'gvisor');
+      expect(tun['mtu'], 9000);
+      expect(tun['auto-route'], isTrue);
+      expect(tun['auto-detect-interface'], isTrue);
+      // Ради этого схема и нужна: запрос системы на 53 уходит в резолвер ядра.
+      expect(tun['dns-hijack'], ['any:53']);
+    });
+
+    // На Android дескриптор и MTU принадлежат сервису: он поднял интерфейс, он
+    // же и дописывает оба числа в готовый конфиг. Вторая копия MTU на этой
+    // стороне разъехалась бы с интерфейсом молча.
+    test('android: ни устройства, ни MTU — их проставит владелец fd', () {
+      final config = MihomoConfigGen.build(
+        link,
+        settings,
+        socksPort: 2080,
+        tun: const MihomoTunOptions(
+          fromFileDescriptor: true,
+          stack: 'gvisor',
+          autoRoute: false,
+        ),
+      );
+      final tun = config['tun'] as Map<String, dynamic>;
+
+      expect(tun['enable'], isTrue);
+      expect(tun.containsKey('device'), isFalse);
+      expect(tun.containsKey('mtu'), isFalse);
+      expect(tun.containsKey('file-descriptor'), isFalse);
+      // Адреса и маршруты уже проставил VpnService, а netlink на Android 14+
+      // ядру запрещён — с автодетектом листенер не поднялся бы вовсе.
+      expect(tun['auto-route'], isFalse);
+      expect(tun['auto-detect-interface'], isFalse);
+      // Владельца соединения непривилегированный процесс на Android не узнает.
+      expect(config['find-process-mode'], 'off');
+    });
+
+    test('HTTP-инбаунд поднимается только там, где его просят', () {
+      final android =
+          MihomoConfigGen.build(link, settings, socksPort: 2080);
+      expect(android.containsKey('port'), isFalse);
+
+      final desktop = MihomoConfigGen.build(
+        link,
+        settings,
+        socksPort: 2080,
+        httpPort: 2081,
+      );
+      expect(desktop['port'], 2081);
+    });
+
+    test('подсеть своего интерфейса — мимо туннеля', () {
+      final rules = MihomoConfigGen.build(
+        link,
+        settings,
+        socksPort: 2080,
+        tun: desktopTun(),
+        windows: true,
+      )['rules'] as List;
+
+      expect(rules, contains('IP-CIDR,198.18.0.0/30,DIRECT,no-resolve'));
+    });
+  });
+
+  group('fake-ip', () {
+    const link = 'vless://uuid@nl.example:443?type=tcp&security=none';
+    final on = settings.copyWith(mihomoFakeIp: true);
+
+    Map<String, dynamic> dnsOf(AppSettings s, {MihomoTunOptions? tun}) =>
+        MihomoConfigGen.build(
+          link,
+          s,
+          socksPort: 2080,
+          httpPort: 2081,
+          tun: tun,
+          windows: true,
+        )['dns'] as Map<String, dynamic>;
+
+    test('включённая настройка со своим туннелем подменяет адреса', () {
+      final dns = dnsOf(
+        on,
+        tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
+      );
+
+      expect(dns['enhanced-mode'], 'fake-ip');
+      expect(dns['fake-ip-range'], '198.18.0.1/16');
+      // Локальные зоны и проверки связности — мимо подмены, иначе система
+      // рисует «интернета нет» поверх работающего туннеля.
+      expect(dns['fake-ip-filter'], contains('*.lan'));
+      expect(dns['fake-ip-filter'], contains('connectivitycheck.gstatic.com'));
+    });
+
+    // Перехват DNS живёт в tun-блоке: без него подменный адрес некому вернуть
+    // системе, и он же вернулся бы в правила как неизвестный IP.
+    test('без своего туннеля настройка ничего не включает', () {
+      final dns = dnsOf(on);
+      expect(dns['enhanced-mode'], 'normal');
+      expect(dns.containsKey('fake-ip-range'), isFalse);
+    });
+
+    test('выключенная настройка оставляет обычный резолв', () {
+      final dns = dnsOf(
+        settings,
+        tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
+      );
+      expect(dns['enhanced-mode'], 'normal');
+    });
+
+    // Ядро стирает подменный адрес перед выбором правила и восстанавливает
+    // домен, поэтому IP-правилу с no-resolve сравнивать нечего — оно
+    // промахивается всегда.
+    test('пользовательские IP-правила теряют no-resolve', () {
+      final rules = (MihomoConfigGen.build(
+        link,
+        on.copyWith(
+          directRules: '10.8.0.0/24',
+          // Снифер в режиме routeOnly — то есть прежнее условие снятия
+          // no-resolve не выполнено, и решает именно fake-ip.
+          xrayCore: const XrayCoreSettings(sniffingRouteOnly: true),
+        ),
+        socksPort: 2080,
+        tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
+        windows: true,
+      )['rules'] as List)
+          .cast<String>();
+
+      expect(rules, contains('IP-CIDR,10.8.0.0/24,DIRECT'));
+      expect(rules, isNot(contains('IP-CIDR,10.8.0.0/24,DIRECT,no-resolve')));
+    });
+
+    // Правило против круга обязано решать без резолва при любых настройках:
+    // резолв ради него — это тот же круг, только на шаг раньше.
+    test('правило про сам сервер no-resolve не теряет', () {
+      final rules = (MihomoConfigGen.build(
+        link,
+        on,
+        socksPort: 2080,
+        resolvedServerIp: '203.0.113.7',
+        tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
+        windows: true,
+      )['rules'] as List)
+          .cast<String>();
+
+      expect(rules, contains('IP-CIDR,203.0.113.7/32,DIRECT,no-resolve'));
+    });
+  });
+
+  group('правила по процессам', () {
+    const link = 'vless://uuid@nl.example:443?type=tcp&security=none';
+
+    List<String> rulesFor({
+      required AppRoutingMode mode,
+      List<String> managed = const [],
+    }) =>
+        (MihomoConfigGen.build(
+          link,
+          settings,
+          socksPort: 2080,
+          httpPort: 2081,
+          tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
+          routingMode: mode,
+          managedProcessNames: managed,
+          appProcessName: 'keqdroid.exe',
+          windows: true,
+        )['rules'] as List)
+            .cast<String>();
+
+    // Иначе tcp-пинг мерил бы локальный конец туннеля вместо сервера.
+    test('свой процесс — первым правилом и мимо туннеля', () {
+      final rules = rulesFor(mode: AppRoutingMode.allProxy);
+      expect(rules.first, 'PROCESS-NAME,keqdroid.exe,DIRECT');
+    });
+
+    test('чужие VPN-клиенты не заворачиваются в туннель в туннеле', () {
+      final rules = rulesFor(mode: AppRoutingMode.allProxy);
+      expect(rules, contains('PROCESS-NAME,tailscaled.exe,DIRECT'));
+      expect(rules, contains('PROCESS-NAME,openvpn.exe,DIRECT'));
+    });
+
+    // При пер-аппном сплите пользователь назвал приложения сам, и дописывать к
+    // его списку свои нельзя.
+    test('при сплите чужие VPN-клиенты не дописываются', () {
+      final rules = rulesFor(
+        mode: AppRoutingMode.allExceptSelected,
+        managed: const ['Telegram.exe'],
+      );
+      expect(rules.any((r) => r.contains('tailscaled')), isFalse);
+      expect(rules, contains('PROCESS-NAME,Telegram.exe,DIRECT'));
+      // «Всё кроме выбранных» означает, что остальное идёт в туннель.
+      expect(rules.last, 'MATCH,proxy');
+    });
+
+    test('«только выбранные» шлёт остальное напрямую', () {
+      final rules = rulesFor(
+        mode: AppRoutingMode.onlySelected,
+        managed: const ['chrome.exe'],
+      );
+      expect(rules, contains('PROCESS-NAME,chrome.exe,proxy'));
+      expect(rules.last, 'MATCH,DIRECT');
+    });
+
+    // Под tun2socks в инбаунд ходит ровно один процесс — он же был бы
+    // «владельцем» всего, поэтому правил там нет вовсе.
+    test('без своего туннеля правил по процессам не бывает', () {
+      final config = MihomoConfigGen.build(
+        link,
+        settings,
+        socksPort: 2080,
+        managedProcessNames: const ['Telegram.exe'],
+        appProcessName: 'keqdroid.exe',
+      );
+      expect(config['find-process-mode'], 'off');
+      expect(
+        (config['rules'] as List).any((r) => '$r'.startsWith('PROCESS-NAME')),
+        isFalse,
+      );
+    });
+  });
+
+  // Смысл тот же, что у kill switch в sing-box: весь IP-трафик в прокси, а
+  // финалом отказ — падение прокси не превращается в утечку мимо туннеля.
+  group('kill switch', () {
+    const link = 'vless://uuid@nl.example:443?type=tcp&security=none';
+
+    test('весь трафик в прокси, финал — отказ', () {
+      final rules = (MihomoConfigGen.build(
+        link,
+        settings.copyWith(killSwitch: true),
+        socksPort: 2080,
+        httpPort: 2081,
+        tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
+        windows: true,
+      )['rules'] as List)
+          .cast<String>();
+
+      expect(rules, contains('IP-CIDR,0.0.0.0/1,proxy'));
+      expect(rules, contains('IP-CIDR,128.0.0.0/1,proxy'));
+      expect(rules.last, 'MATCH,REJECT');
+    });
+
+    // Финал у них и так не proxy: гнать всё в туннель ради отказа бессмысленно.
+    test('при обходе и блокировке не применяется', () {
+      for (final finalOutbound in const [
+        AppSettings.finalOutboundDirect,
+        AppSettings.finalOutboundBlock,
+      ]) {
+        final rules = (MihomoConfigGen.build(
+          link,
+          settings.copyWith(killSwitch: true, finalOutbound: finalOutbound),
+          socksPort: 2080,
+          tun: const MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor'),
+          windows: true,
+        )['rules'] as List)
+            .cast<String>();
+        expect(rules.any((r) => r.startsWith('IP-CIDR,0.0.0.0/1')), isFalse);
+      }
     });
   });
 

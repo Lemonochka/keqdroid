@@ -68,6 +68,20 @@ class AppSettings {
 
   /// Ядро, исполняющее сервер: `xray` (дефолт) или `mihomo`.
   final String vpnCore;
+
+  /// mihomo: отдавать системе подменные адреса вместо настоящих (`fake-ip`).
+  ///
+  /// Значимо только там, где туннелем владеет само ядро и есть перехват DNS:
+  /// TUN-режим на десктопе и Android. В прокси-режиме десктопа запросы системы
+  /// до ядра не доходят вовсе, и подменять нечего.
+  ///
+  /// Выключено по умолчанию не из осторожности вообще, а по конкретной причине:
+  /// с fake-ip назначение соединения перестаёт быть настоящим адресом, и
+  /// IP-правила пользователя приходится доразрешать (см.
+  /// [MihomoConfigGen.buildUserRules]) — то есть одни и те же списки ведут себя
+  /// не так, как на xray. Взамен резолв становится мгновенным, а доменные
+  /// правила перестают зависеть от снифера.
+  final bool mihomoFakeIp;
   /// Desktop: хоткеи (HotkeyAction.id → токен сочетания, напр. `ctrl+shift+keyT`).
   /// Пустая карта = все хоткеи выключены (дефолт).
   final Map<String, String> hotkeys;
@@ -125,7 +139,8 @@ class AppSettings {
     this.minimizeToTray = true,
     this.launchAtStartup = false,
     this.coreEngine = coreEngineKeqrnel,
-    this.vpnCore = vpnCoreXray,
+    this.vpnCore = vpnCoreAuto,
+    this.mihomoFakeIp = false,
     this.hotkeys = const {},
     this.serversTwoColumns = false,
     this.amoledBlack = false,
@@ -172,6 +187,7 @@ class AppSettings {
     'launchAtStartup': launchAtStartup,
     'coreEngine': coreEngine,
     'vpnCore': vpnCore,
+    'mihomoFakeIp': mihomoFakeIp,
     'hotkeys': hotkeys,
     'serversTwoColumns': serversTwoColumns,
     'amoledBlack': amoledBlack,
@@ -246,6 +262,7 @@ class AppSettings {
       launchAtStartup: json['launchAtStartup'] as bool? ?? false,
       coreEngine: normalizeCoreEngine(json['coreEngine'] as String?),
       vpnCore: normalizeVpnCore(json['vpnCore'] as String?),
+      mihomoFakeIp: json['mihomoFakeIp'] as bool? ?? false,
       hotkeys: _readHotkeys(json['hotkeys']),
       serversTwoColumns: json['serversTwoColumns'] as bool? ?? false,
       amoledBlack: json['amoledBlack'] as bool? ?? false,
@@ -291,13 +308,17 @@ class AppSettings {
   /// Это НЕ [coreEngine]: тот про связку внутри xray-пути (`chain` против
   /// `keqrnel`) и на Android всегда `chain`. Здесь выбирается само ядро.
   /// AmneziaWG-серверы выбор игнорируют: их формат исполняет только своё ядро.
+  /// «Само»: ядро выбирает ФОРМАТ сервера. Ссылку берёт xray, готовый конфиг —
+  /// то ядро, на языке которого он написан. Умолчание: пользователю не нужно
+  /// знать, чем отличается json от yaml, чтобы подписка заработала.
+  static const vpnCoreAuto = 'auto';
   static const vpnCoreXray = 'xray';
   static const vpnCoreMihomo = 'mihomo';
-  static const vpnCores = [vpnCoreXray, vpnCoreMihomo];
+  static const vpnCores = [vpnCoreAuto, vpnCoreXray, vpnCoreMihomo];
 
   static String normalizeVpnCore(String? raw) {
     final v = raw?.trim().toLowerCase();
-    return v == vpnCoreMihomo ? vpnCoreMihomo : vpnCoreXray;
+    return vpnCores.contains(v) ? v! : vpnCoreAuto;
   }
 
   /// Допустимые значения [coreEngine].
@@ -395,6 +416,7 @@ class AppSettings {
     bool? launchAtStartup,
     String? coreEngine,
     String? vpnCore,
+    bool? mihomoFakeIp,
     Map<String, String>? hotkeys,
     bool? serversTwoColumns,
     bool? amoledBlack,
@@ -440,6 +462,7 @@ class AppSettings {
         launchAtStartup: launchAtStartup ?? this.launchAtStartup,
         coreEngine: coreEngine ?? this.coreEngine,
         vpnCore: vpnCore ?? this.vpnCore,
+        mihomoFakeIp: mihomoFakeIp ?? this.mihomoFakeIp,
         hotkeys: hotkeys ?? this.hotkeys,
         serversTwoColumns: serversTwoColumns ?? this.serversTwoColumns,
         amoledBlack: amoledBlack ?? this.amoledBlack,
@@ -494,6 +517,7 @@ class AppSettings {
               launchAtStartup == other.launchAtStartup &&
               coreEngine == other.coreEngine &&
               vpnCore == other.vpnCore &&
+              mihomoFakeIp == other.mihomoFakeIp &&
               serversTwoColumns == other.serversTwoColumns &&
               amoledBlack == other.amoledBlack &&
               hapticFeedback == other.hapticFeedback &&
@@ -549,6 +573,7 @@ class AppSettings {
     launchAtStartup,
     coreEngine,
     vpnCore,
+    mihomoFakeIp,
     serversTwoColumns,
     amoledBlack,
     hapticFeedback,

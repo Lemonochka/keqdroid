@@ -22,6 +22,19 @@ class XrayCoreSettings {
   final int xmuxHKeepAlivePeriod;
 
   final bool sniffingEnabled;
+
+  /// `true` — снифер только подсказывает роутингу домен, соединение уходит на
+  /// ТОТ адрес, который подставило приложение. `false` (умолчание, как у
+  /// v2rayNG/Happ) — адресом назначения становится сам домен.
+  ///
+  /// Разница видна ровно там, где IP от приложения «неправильный». Домен для
+  /// прямого маршрута приложение резолвит своим DNS, и если этот DNS ушёл через
+  /// туннель (готовый конфиг провайдера без перехвата DNS, DoH внутри браузера,
+  /// кеш до подключения), в ответе будет узел CDN, ближний к ВЫХОДУ туннеля.
+  /// С `routeOnly` мы к нему и дозваниваемся — напрямую, из России, в обход
+  /// туннеля: «ру-сайты не грузятся, пока не выключишь снифинг». Подмена
+  /// адреса заставляет резолвить домен заново и на месте: прямой маршрут
+  /// получает локальный IP, проксируемый — резолв на стороне сервера.
   final bool sniffingRouteOnly;
 
   const XrayCoreSettings({
@@ -40,7 +53,7 @@ class XrayCoreSettings {
     this.xmuxHMaxReusableSecs = '',
     this.xmuxHKeepAlivePeriod = 0,
     this.sniffingEnabled = true,
-    this.sniffingRouteOnly = true,
+    this.sniffingRouteOnly = false,
   });
 
   static const logLevels = ['none', 'error', 'warning', 'info', 'debug'];
@@ -103,7 +116,7 @@ class XrayCoreSettings {
       xmuxHMaxReusableSecs: json['xmuxHMaxReusableSecs'] as String? ?? '',
       xmuxHKeepAlivePeriod: i('xmuxHKeepAlivePeriod', 0),
       sniffingEnabled: b('sniffingEnabled', true),
-      sniffingRouteOnly: b('sniffingRouteOnly', true),
+      sniffingRouteOnly: b('sniffingRouteOnly', false),
     );
   }
 
@@ -155,6 +168,102 @@ class XrayCoreSettings {
       .where((e) => e.isNotEmpty)
       .toList();
 
+  /// Один DNS-адрес в виде, который РЕАЛЬНО исполняет xray, или null — такой
+  /// адрес ядро не поднимет и его лучше выбросить.
+  ///
+  /// Поле `address` у xray — не «строка подключения». Если в ней не узнаётся IP,
+  /// строка считается доменом и разбирается как URL (`app/dns.NewServer`), а
+  /// дальше сравнивается со списком поддерживаемых схем. Отсюда две ловушки,
+  /// каждая из которых оставляет пользователя без DNS:
+  ///
+  ///  * `[2606:4700:4700::1111]:53` — не IP (скобки и порт), как URL не
+  ///    разбирается вовсе: «first path segment in URL cannot contain colon».
+  ///    Ядро не стартует, туннель не поднимается. Порт у xray живёт отдельным
+  ///    полем `port`, поэтому host и порт мы разделяем сами.
+  ///  * `tls://`, `sdns://`, `dhcp://` и прочее вне списка схем ошибки не дают:
+  ///    строка молча становится ДОМЕНОМ обычного UDP-резолвера, который никогда
+  ///    не резолвится. Такие адреса выбрасываем — работающий дефолт лучше
+  ///    сломанного выбора.
+  ///  * `quic://` xray тоже не знает: DoQ у него есть только как `quic+local`
+  ///    (удалённого режима у QUIC-резолвера нет). Приводим к нему, вместо того
+  ///    чтобы терять адрес.
+  static ({String address, int? port})? xrayDnsEntry(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+    final lower = trimmed.toLowerCase();
+    if (lower == 'localhost' || lower == 'fakedns') {
+      return (address: lower, port: null);
+    }
+
+    final schemeMatch = RegExp(r'^([a-z][a-z0-9.+-]*)://').firstMatch(lower);
+    if (schemeMatch != null) {
+      final scheme = schemeMatch.group(1)!;
+      final rest = trimmed.substring(schemeMatch.end);
+      switch (scheme) {
+        case 'https':
+        case 'https+local':
+        case 'h2c':
+        case 'h2c+local':
+        case 'tcp':
+        case 'tcp+local':
+        case 'quic+local':
+          return (address: trimmed, port: null);
+        case 'quic':
+        case 'doq':
+        case 'doq+local':
+          return (address: 'quic+local://$rest', port: null);
+        // Голый UDP: схему xray не знает, но она и не нужна — это его дефолт.
+        case 'udp':
+        case 'udp+local':
+        case 'dns':
+          return _hostPort(rest);
+        default:
+          return null;
+      }
+    }
+
+    return _hostPort(trimmed);
+  }
+
+  /// `host` / `host:port` / `[v6]:port` / голый IPv6 → адрес и порт отдельно.
+  static ({String address, int? port})? _hostPort(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+
+    final bracketed = RegExp(r'^\[([0-9a-fA-F:.]+)\](?::(\d+))?$').firstMatch(trimmed);
+    if (bracketed != null) {
+      final port = int.tryParse(bracketed.group(2) ?? '');
+      return (address: bracketed.group(1)!, port: port);
+    }
+    // Ровно одно двоеточие с числовым портом — иначе это голый IPv6.
+    final hostPort = RegExp(r'^([^:]+):(\d+)$').firstMatch(trimmed);
+    if (hostPort != null) {
+      return (address: hostPort.group(1)!, port: int.tryParse(hostPort.group(2)!));
+    }
+    return (address: trimmed, port: null);
+  }
+
+  /// DNS-адреса пользователя, приведённые под xray. Второй список — то, что
+  /// выброшено: вызывающий пишет его в лог, чтобы «мой DNS не применился» имело
+  /// объяснение.
+  static ({List<Map<String, dynamic>> servers, List<String> dropped})
+      xrayDnsServers(String raw) {
+    final servers = <Map<String, dynamic>>[];
+    final dropped = <String>[];
+    for (final line in _parseServerLines(raw)) {
+      final entry = xrayDnsEntry(line);
+      if (entry == null) {
+        dropped.add(line);
+        continue;
+      }
+      servers.add({
+        'address': entry.address,
+        if (entry.port != null) 'port': entry.port,
+      });
+    }
+    return (servers: servers, dropped: dropped);
+  }
+
   /// Builds the `dns` object for Xray config.
   ///
   /// [bootstrapDomains] — адреса самих прокси-серверов (свой узел и звенья
@@ -187,27 +296,28 @@ class XrayCoreSettings {
 
     final dohScheme = proxiedDoh ? 'https' : 'https+local';
 
-    if (dnsUseCustom) {
-      final lines = _parseServerLines(dnsServers);
-      // `lines.length > 1`, а не `isNotEmpty`: первая строка уходит под
+    // Пустой список после чистки (пользователь вписал только то, чего ядро не
+    // исполняет) — не повод остаться без резолвера: уходим в ветку дефолта.
+    final custom = dnsUseCustom
+        ? xrayDnsServers(dnsServers).servers
+        : const <Map<String, dynamic>>[];
+
+    if (custom.isNotEmpty) {
+      // `length > 1`, а не `isNotEmpty`: первая строка уходит под
       // Direct-домены со `skipFallback`, то есть общего резолва не касается.
       // Когда сервер в списке ОДИН, такой раскладке не остаётся резолвера
       // вообще — всё, чего нет в Direct-списке, не резолвится ничем, и это
       // выглядит как «прописал свой DNS, и интернет пропал». С одним сервером
       // сплит и не нужен: он и так отвечает на всё, включая Direct-домены.
-      if (dnsSplitDirectDomains && directDomains.isNotEmpty && lines.length > 1) {
+      if (dnsSplitDirectDomains && directDomains.isNotEmpty && custom.length > 1) {
         servers.add({
-          'address': lines.first,
+          ...custom.first,
           'domains': directDomains,
           'skipFallback': true,
         });
-        for (var i = 1; i < lines.length; i++) {
-          servers.add({'address': lines[i]});
-        }
+        servers.addAll(custom.skip(1));
       } else {
-        for (final addr in lines) {
-          servers.add({'address': addr});
-        }
+        servers.addAll(custom);
       }
     } else {
       if (dnsSplitDirectDomains && directDomains.isNotEmpty) {
@@ -235,11 +345,38 @@ class XrayCoreSettings {
     }
 
     return {
-      'servers': servers,
+      'servers': [for (final server in servers) _withDnsLimits(server)],
       'queryStrategy': dnsQueryStrategy,
       if (dnsDisableCache) 'disableCache': true,
     };
   }
+
+  /// Сколько ждать ОДИН резолвер и что делать, когда он молчит.
+  ///
+  /// Это лечение «интернет отвалился секунд на двадцать и вернулся сам».
+  /// Резолверы xray опрашивает ПО ОЧЕРЕДИ, а таймаут у него по умолчанию 4
+  /// секунды на каждый (`app/dns/nameserver.go`). В списке их до четырёх —
+  /// bootstrap, два DoH, системный, — и один потерянный пакет к первому DoH
+  /// стоит 4+4+4 секунд ожидания. Всё это время новые соединения стоят: с
+  /// `IPIfNonMatch` (он включается сам, стоит завести хоть одно IP-правило)
+  /// резолв нужен КАЖДОМУ соединению до выбора маршрута. Отсюда и «просто
+  /// произвольная хуйня, без периодичности»: зависит от того, когда истёк TTL
+  /// и повезло ли пакету.
+  ///
+  /// [_dnsTimeoutMs] режет цену одного молчащего резолвера, `serveStale` —
+  /// саму паузу: пока ядро ходит за свежим ответом, оно отдаёт просроченный из
+  /// кэша, и пользователь не замечает ничего. Оба поля — на каждом сервере,
+  /// потому что у xray они per-server, а не глобальные.
+  static Map<String, dynamic> _withDnsLimits(Map<String, dynamic> server) => {
+        ...server,
+        if (!server.containsKey('timeoutMs')) 'timeoutMs': _dnsTimeoutMs,
+        if (!server.containsKey('serveStale')) 'serveStale': true,
+      };
+
+  /// 2.5 с: DoH через туннель укладывается в сотни миллисекунд даже на
+  /// мобильной сети, а вчетверо больший дефолт ядра существует ради совсем
+  /// плохих каналов — ценой той самой двадцатисекундной паузы.
+  static const _dnsTimeoutMs = 2500;
 
   /// XMUX block for XHTTP `extra` (client-only).
   Map<String, dynamic>? buildXmuxMap() {

@@ -8,6 +8,7 @@ import 'package:keqdroid/shared/extensions/build_context_l10n.dart';
 
 import '../../providers/providers.dart';
 import '../../services/update_service.dart';
+import '../../tunnel/local_port_plan.dart';
 import '../../tunnel/tunnel_state.dart';
 import '../../utils/awg_profile.dart';
 import '../../utils/local_vpn_proxy.dart';
@@ -255,7 +256,9 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
           awgBackend: activeServer != null &&
               AwgProfile.isAwgConfig(activeServer.config),
         ),
-        httpPort: settings.httpPort,
+        // Порт живой сессии: настроенный мог быть занят/изъят системой, и тогда
+        // локальный HTTP-инбаунд слушает подменённый (см. [LocalPortPlan]).
+        httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),
         onProgress: (received, total) {
           if (total > 0 && mounted) {
             setState(() => _progress = received / total);

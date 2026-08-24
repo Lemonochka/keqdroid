@@ -9,16 +9,25 @@ Android APK.)
 | File | Source | In git? |
 |------|--------|---------|
 | `keqrnel` | the unified core: proxy and TUN for all xray protocols. Embeds xray + sing-box. | yes (committed) |
+| `mihomo` | the Clash core: runs ready-made Clash configs and plain links; in TUN mode it owns the tun device itself | yes |
 | `wireproxy` | the AmneziaWG core (wireproxy-awg) | yes |
 | `geoip.dat` | enables `geoip:…` routing rules | yes |
 | `geosite.dat` | enables `geosite:…` rules | yes |
 
-`keqrnel` is the only engine the Linux backend ever launches — proxy, TUN and the
-traffic counters all go through it. Standalone `xray` and `sing-box` used to sit here
-too; nothing executed them, CMake stopped installing them, and they are gone.
+Which core runs a server is decided by the server's **format**, not by a setting:
+Clash YAML only mihomo can execute, an Xray JSON config only keqrnel; a plain link
+is taken by whichever core the user picked. Standalone `xray` and `sing-box` used to
+sit here too; nothing executed them, CMake stopped installing them, and they are gone.
 
-Proxy mode runs keqrnel with a local SOCKS/HTTP inbound and needs no privileges; TUN
-mode runs it with a TUN inbound and asks for root via `pkexec` at connect time.
+Proxy mode runs the core with a local SOCKS/HTTP inbound and needs no privileges; TUN
+mode asks for root via `pkexec` at connect time — keqrnel because of its sing-box TUN
+inbound, mihomo because it creates the tun device itself.
+
+## Building mihomo
+
+`tool/build_mihomo.ps1 -Target linux` (runs on Windows, cross-compiles). It is NOT a
+stock upstream build: `tool/patches/*.patch` are applied first, and the script fails
+if any of them no longer applies.
 
 ## Building keqrnel
 

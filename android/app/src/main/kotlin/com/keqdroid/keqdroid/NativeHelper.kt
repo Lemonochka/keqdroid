@@ -31,6 +31,7 @@ object NativeHelper {
         proxyUrl: String,
         logLevel: String,
         logPath: String,
+        mtu: Int,
     ): Int
 
     @JvmStatic
@@ -40,6 +41,7 @@ object NativeHelper {
         assetDir: String,
         logName: String,
         coreKind: String,
+        tunFd: Int,
     ): Int
 
     // logLevel: уровень логов tun2socks. На `info` он печатает каждое соединение
@@ -47,13 +49,20 @@ object NativeHelper {
     // где виден исходный сокет; в лог xray попадает уже наш собственный, со
     // стороны SOCKS. logPath: полный путь к файлу логов, пустая строка —
     // логирование в файл выключено и пайп не создаётся вовсе.
+    // mtu: ОБЯЗАН совпадать с тем, с которым поднят интерфейс VpnService. Своего
+    // значения у fd-устройства tun2socks не знает и по умолчанию берёт 1500;
+    // расхождение с интерфейсом даёт пакеты, которые netstack собрал, а ядро на
+    // записи в tun отбросило.
     fun startTun2Socks(
         tunFd: Int,
         binPath: String,
         proxyUrl: String,
         logLevel: String,
         logPath: String,
-    ): Int = remember(nativeStartTun2Socks(tunFd, binPath, proxyUrl, logLevel, logPath))
+        mtu: Int,
+    ): Int = remember(
+        nativeStartTun2Socks(tunFd, binPath, proxyUrl, logLevel, logPath, mtu),
+    )
 
     // Запуск ядра прокси. logName: имя файла логов ядра внутри assetDir
     // (filesDir); пустая строка — файловое логирование выключено (используется
@@ -62,13 +71,21 @@ object NativeHelper {
     // coreKind: "xray" или "mihomo". От него зависит argv — xray хочет
     // `run -c <config>` и базы geo через XRAY_LOCATION_ASSET, mihomo —
     // `-d <dir> -f <config>` и берёт базы из рабочего каталога.
+    //
+    // tunFd: дескриптор TUN-устройства, когда туннелем владеет само ядро
+    // (mihomo с `tun.file-descriptor`); -1 — ядро о туннеле не знает, пакеты
+    // ему приносит tun2socks. Дескриптор переживает execv только со снятым
+    // FD_CLOEXEC, и снимает его натив — см. forkexec.c.
     fun startCore(
         binPath: String,
         configPath: String,
         assetDir: String,
         logName: String,
         coreKind: String,
-    ): Int = remember(nativeStartCore(binPath, configPath, assetDir, logName, coreKind))
+        tunFd: Int = -1,
+    ): Int = remember(
+        nativeStartCore(binPath, configPath, assetDir, logName, coreKind, tunFd),
+    )
 
     private fun remember(pid: Int): Int {
         if (pid > 0) livePids.add(pid)

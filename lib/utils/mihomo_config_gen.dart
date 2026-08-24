@@ -1,27 +1,88 @@
 import 'dart:convert';
+import 'dart:io';
 
 import '../models/app_settings.dart';
 import '../models/xray_core_settings.dart';
+import '../tunnel/app_routing_mode.dart';
+import 'custom_clash_config.dart';
 import 'routing_entry.dart';
 import 'socks5_credentials.dart';
 
-/// Конфиг mihomo для роли «локальный SOCKS-листенер под нашим tun2socks».
+/// Туннель, которым владеет САМО ядро: wintun-адаптер на десктопе или готовый
+/// fd от VpnService на Android.
 ///
-/// Ядро НЕ владеет туннелем: TUN по-прежнему держит VpnService, пакеты в него
-/// разбирает tun2socks и отдаёт сюда обычным SOCKS5. Для mihomo это ровно та же
-/// схема, что у xray в [ConfigGeneratorV2] — меняется только синтаксис.
+/// Отсутствие этого объекта (`tun: null`) означает противоположную схему —
+/// ядро всего лишь локальный SOCKS-листенер, а пакеты ему приносит кто-то
+/// другой (tun2socks под Android, системный прокси на десктопе).
+class MihomoTunOptions {
+  const MihomoTunOptions({
+    this.device,
+    required this.stack,
+    this.mtu = 0,
+    this.autoRoute = true,
+    this.strictRoute = false,
+    this.fromFileDescriptor = false,
+  });
+
+  /// Устройство создано не ядром, а нами, и приезжает готовым дескриптором
+  /// (Android: `VpnService.Builder.establish`).
+  ///
+  /// Самого номера дескриптора здесь нет и быть не может: конфиг собирается до
+  /// того, как интерфейс поднят, а поднимает его нативный сервис. Он же
+  /// дописывает в готовый конфиг `file-descriptor` и `mtu` — обе величины его
+  /// собственные, и хранить их копию на этой стороне значило бы завести второй
+  /// источник правды для числа, которое обязано совпадать (см. PITFALLS про
+  /// `--mtu` у tun2socks).
+  final bool fromFileDescriptor;
+
+  /// Имя интерфейса (десктоп). Задаём сами: без него mihomo берёт `Meta`, а
+  /// wintun считает GUID адаптера от имени — то есть один и тот же GUID у
+  /// любого mihomo-клиента на машине, со всеми последствиями из PITFALLS.
+  final String? device;
+
+  /// `gvisor` | `system` | `mixed`. Ядро обязано быть собрано с
+  /// `-tags with_gvisor` для первых двух вариантов.
+  final String stack;
+
+  /// `0` — не писать вовсе: значение проставит тот, кто создал устройство.
+  final int mtu;
+
+  /// Ставит ли ядро маршруты само. На Android — нет: там это дело VpnService,
+  /// и попытка ядра прописать маршруты закончится отказом без root.
+  final bool autoRoute;
+
+  final bool strictRoute;
+
+  /// Ядро ищет исходящий интерфейс само только там, где само же и
+  /// маршрутизирует. На Android его сокеты и так вне туннеля (UID приложения
+  /// исключён через `addDisallowedApplication`), и автодетект там лишний.
+  bool get autoDetectInterface => autoRoute;
+}
+
+/// Конфиг mihomo — и для роли «локальный SOCKS под чужим туннелем», и для роли
+/// владельца туннеля.
 ///
-/// Отсюда три следствия, о которых стоит помнить:
+/// Схемы две, и различает их наличие [MihomoTunOptions]:
 ///
-///  * `fake-ip` и `dns-hijack` не работают. Оба живут в tun-инбаунде mihomo, а
-///    его тут нет — значит DNS устройства идёт в туннель обычным трафиком, по
-///    соединению на запрос, как у xray до перехвата порта 53. Когда/если ядро
-///    переведут на fd-туннель, это включится само.
-///  * Домен назначения ядро узнаёт ТОЛЬКО из `sniffer` (см. [buildSniffer]):
-///    в SOCKS приезжает голый IP, и без него доменная половина правил не
-///    срабатывает никогда.
-///  * UDP работает через SOCKS5 UDP ASSOCIATE, поэтому у прокси всегда
-///    `udp: true` — иначе mihomo молча отбросит UDP-сессии.
+///  * **Ядро не владеет туннелем** (Android под tun2socks, десктопный
+///    proxy-режим). Домен назначения ядро узнаёт ТОЛЬКО из `sniffer` (см.
+///    [buildSniffer]): в SOCKS приезжает голый IP, и без снифера доменная
+///    половина правил не срабатывает никогда. Перехвата DNS в этой схеме нет и
+///    быть не может — он живёт в tun-инбаунде.
+///  * **Ядро владеет туннелем** (десктопный TUN, Android через
+///    `tun.file-descriptor`). Тогда доступны `dns-hijack` — то есть перехват
+///    системного DNS, аналог правила `dns-out` у xray, — и правила по процессам
+///    там, где ядро вообще способно узнать процесс (десктоп).
+///
+/// В обеих схемах у прокси всегда `udp: true`: под SOCKS это UDP ASSOCIATE, под
+/// собственным туннелем — обычные UDP-сессии, и без флага mihomo молча
+/// отбрасывает и то, и другое.
+///
+/// `fake-ip` намеренно не включается даже там, где перехват DNS есть. Ядро при
+/// нём отдаёт системе подменный адрес, и любое IP-правило пользователя
+/// сравнивается уже не с тем адресом, ради которого его писали. Правила обоих
+/// генераторов обязаны означать одно и то же — иначе один и тот же список
+/// «обход/прокси» вёл бы себя по-разному в зависимости от выбранного ядра.
 ///
 /// Формат: mihomo читает YAML через `yaml.v3`, а YAML 1.2 — надмножество JSON,
 /// поэтому эмитим обычный JSON и не тащим YAML-райтер. Файл при этом всё равно
@@ -43,45 +104,276 @@ class MihomoConfigGen {
     String input,
     AppSettings settings, {
     required int socksPort,
+    int? httpPort,
     String? resolvedServerIp,
     bool localInboundsNoAuth = false,
     int? apiPort,
     String apiSecret = '',
+    MihomoTunOptions? tun,
+    AppRoutingMode routingMode = AppRoutingMode.allProxy,
+    List<String> managedProcessNames = const [],
+    String appProcessName = '',
+    bool? windows,
   }) =>
       const JsonEncoder.withIndent('  ').convert(
         build(
           input,
           settings,
           socksPort: socksPort,
+          httpPort: httpPort,
           resolvedServerIp: resolvedServerIp,
           localInboundsNoAuth: localInboundsNoAuth,
           apiPort: apiPort,
           apiSecret: apiSecret,
+          tun: tun,
+          routingMode: routingMode,
+          managedProcessNames: managedProcessNames,
+          appProcessName: appProcessName,
+          windows: windows,
         ),
       );
 
   /// [apiPort]/[apiSecret] — RESTful API ядра для экрана «Соединения».
   /// Поднимается только когда порт передали: пингу и спидтесту он не нужен.
+  ///
+  /// [httpPort] — локальный HTTP-инбаунд. На Android его нет: туда ходит один
+  /// только tun2socks, и то по SOCKS. На десктопе он обязателен даже в
+  /// TUN-режиме — через него приложение качает обновления (`Dart HttpClient` не
+  /// умеет SOCKS вовсе, см. PITFALLS).
+  ///
+  /// [tun] непустой — ядро само владеет туннелем; [managedProcessNames] и
+  /// [appProcessName] тогда превращаются в правила `PROCESS-NAME`, но только
+  /// там, где ядро способно узнать процесс (десктоп).
   static Map<String, dynamic> build(
     String input,
     AppSettings settings, {
     required int socksPort,
+    int? httpPort,
     String? resolvedServerIp,
     bool localInboundsNoAuth = false,
     int? apiPort,
     String apiSecret = '',
+    MihomoTunOptions? tun,
+    AppRoutingMode routingMode = AppRoutingMode.allProxy,
+    List<String> managedProcessNames = const [],
+    String appProcessName = '',
+    bool? windows,
   }) {
+    // Правила по процессам умеет только та сторона, где ядро способно найти
+    // владельца соединения: десктопный TUN. На Android их роль исполняет сам
+    // VpnService (addAllowed/DisallowedApplication), а поиск владельца из
+    // непривилегированного процесса упирается в SELinux — netlink INET_DIAG и
+    // `/proc/net/*` чужих uid untrusted_app не отдаются.
+    final processRules = tun != null && !tun.fromFileDescriptor;
+
+    // Режим сплита БЕЗ правил по процессам — это не «сплит не сработал», а
+    // «весь трафик ушёл мимо прокси». Финал у `onlySelected` равен `DIRECT`
+    // («не выбранные приложения идут напрямую»), и держится этот смысл ровно на
+    // правилах `PROCESS-NAME`, которые ставят выбранным приложениям прокси. Там,
+    // где ядро процесс-владельца не знает, правил нет — а финал оставался, и
+    // ядро честно отправляло в `DIRECT` ВСЁ: `[TCP] ... match Match using
+    // DIRECT` на каждое соединение при живом «подключено».
+    //
+    // Так ломался десктопный proxy-режим (туннеля у ядра нет, процесс искать
+    // негде) — и ровно так же ломался бы Android, где владельца по соединению
+    // не отдаёт система, а по приложениям маршрутизирует VpnService. В обоих
+    // случаях верный режим один — «весь трафик», а сплит исполняет тот, кто
+    // умеет: VpnService на Android, никто в proxy-режиме (там он и не обещан).
+    final effectiveRoutingMode = processRules
+        ? routingMode
+        : AppRoutingMode.allProxy;
+
+    // fake-ip держится на перехвате DNS, а перехват живёт в tun-блоке: без
+    // своего туннеля подменный адрес некому вернуть системе. Поэтому настройка
+    // включает его только вместе с туннелем — и молчаливым откатом это не
+    // является: в прокси-режиме десктопа запросы системы до ядра не доходят
+    // вовсе, подменять там нечего.
+    final fakeIp = settings.mihomoFakeIp && tun != null;
+
+    // Готовый конфиг Clash вместо ссылки: прокси, группы и правила авторские,
+    // наше дело — инбаунд, снифер, api и свои списки роутинга поверх.
+    final clash = CustomClashConfig.tryParse(input);
+    if (clash != null) {
+      return _buildCustom(
+        clash,
+        settings,
+        socksPort: socksPort,
+        httpPort: httpPort,
+        resolvedServerIp: resolvedServerIp,
+        localInboundsNoAuth: localInboundsNoAuth,
+        apiPort: apiPort,
+        apiSecret: apiSecret,
+        tun: tun,
+        routingMode: effectiveRoutingMode,
+        managedProcessNames: managedProcessNames,
+        appProcessName: appProcessName,
+        processRules: processRules,
+        fakeIp: fakeIp,
+        windows: windows,
+      );
+    }
+
     final proxy = buildProxy(input.trim());
-    final creds = Socks5Credentials();
 
     return <String, dynamic>{
-      'socks-port': socksPort,
-      // Слушаем только петлю: наружу инбаунд не смотрит, в него ходит
-      // исключительно tun2socks с этого же устройства.
-      'bind-address': '127.0.0.1',
-      'allow-lan': false,
+      ..._inbound(
+        settings,
+        socksPort: socksPort,
+        httpPort: httpPort,
+        localInboundsNoAuth: localInboundsNoAuth,
+        apiPort: apiPort,
+        apiSecret: apiSecret,
+      ),
       'mode': 'rule',
       'log-level': _logLevel(settings.xrayCore.logLevel),
+      // Базы geo — те же вшитые v2fly `.dat`, что и у xray: ядро запускается с
+      // `-d <dir>` и берёт их оттуда. Автообновление глушим, иначе ядро
+      // полезет в сеть за своими копиями ещё до того, как туннель поднялся.
+      'geodata-mode': true,
+      'geo-auto-update': false,
+      // Поиск процесса-владельца соединения стоит денег на каждой сессии
+      // (лезет в /proc или в таблицы ОС), поэтому включаем его ровно там, где
+      // без него не работают наши же правила.
+      'find-process-mode': processRules ? 'strict' : 'off',
+      'sniffer': buildSniffer(settings.xrayCore),
+      'dns': buildDns(settings, fakeIp: fakeIp),
+      if (tun != null) 'tun': buildTun(tun),
+      if (settings.lanSharing) ...{
+        'listeners': buildLanListeners(settings),
+        'sub-rules': {lanRuleSet: buildLanRules()},
+      },
+      'proxies': [proxy],
+      'rules': buildRules(
+        settings,
+        serverAddress: proxy['server']?.toString() ?? '',
+        resolvedServerIp: resolvedServerIp,
+        routingMode: effectiveRoutingMode,
+        managedProcessNames: processRules ? managedProcessNames : const [],
+        appProcessName: processRules ? appProcessName : '',
+        tunOwned: tun != null,
+        fakeIp: fakeIp,
+        windows: windows,
+      ),
+    };
+  }
+
+  // ─────────────────────────────── TUN ───────────────────────────────
+
+  /// tun-инбаунд: ядро само принимает пакеты.
+  ///
+  /// `dns-hijack` — то, ради чего эта схема и нужна: запрос системы на порт 53
+  /// заворачивается в резолвер ядра вместо того, чтобы уехать в туннель
+  /// обычным соединением. Аналог правила `dns-out` у xray.
+  ///
+  /// Адрес интерфейса задать НЕЛЬЗЯ: mihomo считает его из `dns.fake-ip-range`
+  /// (`config.parseTun`: `PrefixFrom(FakeIPRange.Addr(), 30)`) независимо от
+  /// того, включён ли fake-ip вообще. Поэтому готовность десктопного туннеля
+  /// определяется по ИМЕНИ интерфейса, а не по адресу, как у sing-box.
+  static Map<String, dynamic> buildTun(MihomoTunOptions tun) =>
+      <String, dynamic>{
+        'enable': true,
+        if (tun.device != null && tun.device!.isNotEmpty) 'device': tun.device,
+        'stack': tun.stack,
+        if (tun.mtu > 0) 'mtu': tun.mtu,
+        'auto-route': tun.autoRoute,
+        'auto-detect-interface': tun.autoDetectInterface,
+        if (tun.strictRoute) 'strict-route': true,
+        'dns-hijack': const ['any:53'],
+      };
+
+  /// Конфиг сессии из готового clash-конфига.
+  ///
+  /// Наши списки роутинга едут в прокси-цель самого конфига ([primaryTarget] —
+  /// первая группа, а не узел: пользователь переключает узлы внутри неё, и
+  /// правило обязано ехать за его выбором), и встают ПОСЛЕ авторских правил, но
+  /// перед их `MATCH`. Своего `MATCH` не добавляем: «остальное» в таком сервере
+  /// решает автор — за этим его и берут.
+  static Map<String, dynamic> _buildCustom(
+    CustomClashConfig clash,
+    AppSettings settings, {
+    required int socksPort,
+    int? httpPort,
+    String? resolvedServerIp,
+    bool localInboundsNoAuth = false,
+    int? apiPort,
+    String apiSecret = '',
+    MihomoTunOptions? tun,
+    AppRoutingMode routingMode = AppRoutingMode.allProxy,
+    List<String> managedProcessNames = const [],
+    String appProcessName = '',
+    bool processRules = false,
+    bool fakeIp = false,
+    bool? windows,
+  }) {
+    return clash.buildSessionConfig(
+      inbound: _inbound(
+        settings,
+        socksPort: socksPort,
+        httpPort: httpPort,
+        localInboundsNoAuth: localInboundsNoAuth,
+        apiPort: apiPort,
+        apiSecret: apiSecret,
+      ),
+      sniffer: buildSniffer(settings.xrayCore),
+      logLevel: _logLevel(settings.xrayCore.logLevel),
+      // Свой DNS (а с ним и fake-ip) уезжает сюда только когда у автора его нет
+      // вовсе — см. `buildSessionConfig`. Автор конфига решил про DNS сам, и
+      // настройка приложения его выбор не отменяет.
+      dns: buildDns(settings, fakeIp: fakeIp),
+      // Правила по процессам идут ПЕРЕД авторскими: «этот процесс мимо
+      // туннеля» — решение пользователя о своей машине, и заготовка провайдера
+      // его не отменяет. Ровно так же лежит `lan-deny`.
+      prependRules: [
+        if (processRules)
+          ...buildProcessRules(
+            routingMode: routingMode,
+            managedProcessNames: managedProcessNames,
+            appProcessName: appProcessName,
+            proxyTarget: clash.primaryTarget,
+            windows: windows,
+          ),
+        ...buildServerDirectRules(
+          serverAddress: clash.address,
+          resolvedServerIp: resolvedServerIp,
+        ),
+        if (tun != null) 'IP-CIDR,$tunInterfaceRange,DIRECT,no-resolve',
+      ],
+      appendRules: buildUserRules(
+        settings,
+        proxyTarget: clash.primaryTarget,
+        fakeIp: fakeIp,
+      ),
+      extra: {
+        if (processRules) 'find-process-mode': 'strict',
+        if (tun != null) 'tun': buildTun(tun),
+        if (settings.lanSharing) ...{
+          'listeners': buildLanListeners(settings),
+          'sub-rules': {lanRuleSet: buildLanRules(target: clash.primaryTarget)},
+        },
+      },
+    );
+  }
+
+  /// Общая часть обоих путей: наши инбаунды, их креды и RESTful API.
+  static Map<String, dynamic> _inbound(
+    AppSettings settings, {
+    required int socksPort,
+    int? httpPort,
+    required bool localInboundsNoAuth,
+    int? apiPort,
+    String apiSecret = '',
+  }) {
+    final creds = Socks5Credentials();
+    return <String, dynamic>{
+      'socks-port': socksPort,
+      // `port` у mihomo — это HTTP-прокси. На десктопе он обязателен: через
+      // него ходит апдейтер (SOCKS `HttpClient` не умеет вовсе) и на него
+      // указывает системный прокси Windows/GNOME.
+      'port': ?httpPort,
+      // Слушаем только петлю: наружу инбаунд не смотрит, в него ходят
+      // исключительно свои — tun2socks, апдейтер, системный прокси.
+      'bind-address': '127.0.0.1',
+      'allow-lan': false,
       // Семейство адресов берём оттуда же, откуда его берёт xray, — из
       // стратегии DNS-запросов. Глобальный `ipv6: false` у mihomo режет AAAA
       // независимо от `dns.ipv6`, так что разъехаться этим двум нельзя.
@@ -99,29 +391,6 @@ class MihomoConfigGen {
         'external-controller': '127.0.0.1:$apiPort',
         'secret': apiSecret,
       },
-      // Базы geo — те же вшитые v2fly `.dat`, что и у xray: ядро запускается с
-      // `-d <filesDir>` и берёт их оттуда. Автообновление глушим, иначе ядро
-      // полезет в сеть за своими копиями ещё до того, как туннель поднялся.
-      'geodata-mode': true,
-      'geo-auto-update': false,
-      // Поиск процесса-владельца соединения: у нас его знать неоткуда и незачем.
-      // В инбаунд ходит один только tun2socks, то есть ВСЕ соединения приписаны
-      // ему; правил `PROCESS-NAME` мы не генерируем, а дефолтный `strict` на
-      // каждую сессию лезет в /proc. Сплит по приложениям делает не ядро, а
-      // VpnService (addAllowed/DisallowedApplication) — см. KeqdisVpnService.
-      'find-process-mode': 'off',
-      'sniffer': buildSniffer(settings.xrayCore),
-      'dns': buildDns(settings),
-      if (settings.lanSharing) ...{
-        'listeners': buildLanListeners(settings),
-        'sub-rules': {lanRuleSet: buildLanRules()},
-      },
-      'proxies': [proxy],
-      'rules': buildRules(
-        settings,
-        serverAddress: proxy['server']?.toString() ?? '',
-        resolvedServerIp: resolvedServerIp,
-      ),
     };
   }
 
@@ -244,8 +513,10 @@ class MihomoConfigGen {
   /// Цель для своих — `proxy`, а не финальный аутбаунд из настроек: xray в
   /// `lan-allow` отправляет LAN-трафик в туннель точно так же, мимо списков
   /// обхода. Раздают именно ради туннеля.
-  static List<String> buildLanRules() => [
-        for (final range in _lanSourceRanges) 'SRC-IP-CIDR,$range,$proxyName',
+  /// [target] — куда уходит трафик из LAN-инбаундов: у ссылки это наш узел, у
+  /// готового конфига — его группа.
+  static List<String> buildLanRules({String target = proxyName}) => [
+        for (final range in _lanSourceRanges) 'SRC-IP-CIDR,$range,$target',
         'MATCH,REJECT',
       ];
 
@@ -260,11 +531,19 @@ class MihomoConfigGen {
   /// пакета.
   ///
   /// Чего этот блок НЕ делает — не перехватывает DNS устройства. Перехват
-  /// живёт в tun-инбаунде mihomo, которого у нас нет (TUN держит VpnService),
-  /// поэтому запросы системы по-прежнему уходят в туннель обычным трафиком —
-  /// по соединению на запрос, как у xray до правила `dns-out`. Это единственное
-  /// оставшееся расхождение с xray-путём, и лечится оно только fd-туннелем.
-  static Map<String, dynamic> buildDns(AppSettings settings) {
+  /// живёт в tun-инбаунде (`dns-hijack`, см. [buildTun]), поэтому в схеме без
+  /// собственного туннеля запросы системы уходят в туннель обычным трафиком —
+  /// по соединению на запрос, как у xray до правила `dns-out`.
+  ///
+  /// [fakeIp] — отдавать системе подменные адреса. Осмысленно только там, где
+  /// ядро само перехватывает DNS: без перехвата подменный адрес некому вернуть
+  /// системе, и он же приедет обратно в правила как «неизвестный IP». Поэтому
+  /// решает не настройка сама по себе, а [build] — она включает fake-ip только
+  /// вместе с tun-блоком.
+  static Map<String, dynamic> buildDns(
+    AppSettings settings, {
+    bool fakeIp = false,
+  }) {
     final core = settings.xrayCore;
     final servers = dnsServers(core);
     // Тот же смысл, что у `proxiedDoh` в xray-генераторе: перехват провайдером
@@ -276,9 +555,22 @@ class MihomoConfigGen {
       'enable': true,
       // AAAA спрашиваем только если этого просит стратегия запросов xray.
       'ipv6': core.dnsQueryStrategy != 'UseIPv4',
-      // fake-ip без перехвата DNS бессмыслен: подменный адрес некому вернуть
-      // системе, и он же приедет обратно в правила как «неизвестный IP».
-      'enhanced-mode': 'normal',
+      'enhanced-mode': fakeIp ? 'fake-ip' : 'normal',
+      if (fakeIp) ...{
+        // Диапазон подменных адресов. Тот же, что у ядра по умолчанию, и это
+        // не косметика: из него же ядро берёт адрес собственного
+        // tun-интерфейса (см. [buildTun]), а его мы отдельным правилом пускаем
+        // мимо туннеля.
+        'fake-ip-range': fakeIpRange,
+        // Кому подменный адрес нельзя давать ни при каких условиях.
+        //
+        // Локальные зоны — потому что к ним ходят по настоящему адресу в своей
+        // сети, а не через туннель. Проверки связности — потому что система
+        // считает сеть сломанной, когда её пробник получает адрес, по которому
+        // никто не отвечает: на Android это «интернета нет» в шторке при живом
+        // туннеле.
+        'fake-ip-filter': fakeIpFilter,
+      },
       // Bootstrap: по ним резолвятся имена самих DoH-серверов. Всегда напрямую,
       // иначе первый же запрос упирается в курицу и яйцо.
       'default-nameserver': const ['1.1.1.1', '8.8.8.8'],
@@ -739,6 +1031,180 @@ class MihomoConfigGen {
     AppSettings settings, {
     required String serverAddress,
     String? resolvedServerIp,
+    String proxyTarget = proxyName,
+    AppRoutingMode routingMode = AppRoutingMode.allProxy,
+    List<String> managedProcessNames = const [],
+    String appProcessName = '',
+    bool tunOwned = false,
+    bool fakeIp = false,
+    bool? windows,
+  }) {
+    final rules = <String>[
+      ...buildProcessRules(
+        routingMode: routingMode,
+        managedProcessNames: managedProcessNames,
+        appProcessName: appProcessName,
+        proxyTarget: proxyTarget,
+        windows: windows,
+      ),
+      ...buildUserRules(settings, blockedOnly: true, fakeIp: fakeIp),
+      ...buildServerDirectRules(
+        serverAddress: serverAddress,
+        resolvedServerIp: resolvedServerIp,
+      ),
+      // Адрес собственного tun-интерфейса. Ядро считает его из
+      // `dns.fake-ip-range` (см. [buildTun]), и без явного правила обращение к
+      // нему ушло бы в туннель — то есть само в себя.
+      if (tunOwned) 'IP-CIDR,$tunInterfaceRange,DIRECT,no-resolve',
+      ...buildUserRules(
+        settings,
+        proxyTarget: proxyTarget,
+        blockedOnly: false,
+        skipBlocked: true,
+        fakeIp: fakeIp,
+      ),
+    ];
+
+    // При пер-аппном сплите финал несёт смысл «остальные приложения идут
+    // мимо/через туннель», и выбор пользователя в «финальном действии» его не
+    // отменяет: он про трафик, а не про приложения.
+    var finalTarget = switch (routingMode) {
+      AppRoutingMode.onlySelected => 'DIRECT',
+      AppRoutingMode.allExceptSelected => proxyTarget,
+      AppRoutingMode.allProxy => _finalTarget(settings.finalOutbound, proxyTarget),
+    };
+
+    // Kill switch осмыслен только при глобал-прокси: гоним весь IP-трафик в
+    // прокси, а финалом ставим отказ — тогда падение прокси не превращается в
+    // утечку мимо туннеля. Для «обхода» и «блокировки» финал и так не proxy.
+    if (settings.killSwitch &&
+        routingMode == AppRoutingMode.allProxy &&
+        finalTarget == proxyTarget) {
+      rules
+        ..add('IP-CIDR,0.0.0.0/1,$proxyTarget')
+        ..add('IP-CIDR,128.0.0.0/1,$proxyTarget');
+      finalTarget = 'REJECT';
+    }
+
+    return [...rules, 'MATCH,$finalTarget'];
+  }
+
+  /// Подсеть tun-интерфейса ядра: `dns.fake-ip-range` по умолчанию
+  /// `198.18.0.1/16`, а адрес интерфейса mihomo берёт из неё же с маской /30.
+  static const tunInterfaceRange = '198.18.0.0/30';
+
+  /// Диапазон подменных адресов. Совпадает с умолчанием ядра намеренно: тот же
+  /// диапазон определяет адрес tun-интерфейса, и разъехаться им нельзя.
+  static const fakeIpRange = '198.18.0.1/16';
+
+  /// Домены, которым подменный адрес не выдаётся никогда.
+  ///
+  /// Первые — локальные зоны: к ним ходят по настоящему адресу в своей сети.
+  /// Остальные — проверки связности Android, Windows и Apple: получив адрес, по
+  /// которому никто не отвечает, система решает, что сети нет, и рисует
+  /// «интернета нет» поверх работающего туннеля.
+  static const fakeIpFilter = <String>[
+    '*.lan',
+    '*.local',
+    '*.localdomain',
+    '*.home.arpa',
+    'localhost',
+    'connectivitycheck.gstatic.com',
+    '*.msftconnecttest.com',
+    '*.msftncsi.com',
+    'captive.apple.com',
+    'time.*.com',
+    '*.ntp.org',
+  ];
+
+  /// Правила по процессам — только для схемы, где туннель принадлежит ядру и
+  /// оно способно узнать владельца соединения (десктоп).
+  ///
+  /// Порядок важен: собственный процесс приложения и чужие VPN-клиенты идут
+  /// раньше пользовательского сплита, иначе выбранный «весь трафик кроме…»
+  /// режим утащил бы в туннель и наши пинг-сокеты.
+  ///
+  /// Имя сравнивается без учёта регистра (`strings.EqualFold` в
+  /// `rules/common/process.go`), поэтому вариантов регистра, как у sing-box с
+  /// его map-lookup'ом, тут не нужно.
+  static List<String> buildProcessRules({
+    required AppRoutingMode routingMode,
+    required List<String> managedProcessNames,
+    required String appProcessName,
+    String proxyTarget = proxyName,
+    bool? windows,
+  }) {
+    final app = appProcessName.trim();
+    if (app.isEmpty && managedProcessNames.isEmpty) return const [];
+
+    // Целевая ОС параметром, а не из `Platform`: три имени ниже несут `.exe`
+    // только на Windows, и снятая там фикстура иначе падала бы на linux-раннере,
+    // ничего не сообщая о самом генераторе. Ср. [SingBoxTunConfigGen.generate].
+    final exe = (windows ?? Platform.isWindows) ? '.exe' : '';
+
+    final rules = <String>[
+      // Наши собственные сокеты (tcp-пинг, спидтест, апдейтер) — мимо туннеля,
+      // иначе пинг мерил бы локальный конец туннеля вместо сервера.
+      if (app.isNotEmpty) 'PROCESS-NAME,$app,DIRECT',
+      // Чужие VPN-клиенты: их собственный транспорт обязан идти мимо нашего
+      // туннеля, иначе получается туннель в туннеле и оба перестают работать.
+      // Только в режиме «весь трафик»: при пер-аппном сплите пользователь
+      // назвал приложения сам, и дописывать к его списку свои нельзя.
+      if (routingMode == AppRoutingMode.allProxy) ...[
+        'PROCESS-NAME,tailscaled$exe,DIRECT',
+        'PROCESS-NAME,wireguard$exe,DIRECT',
+        'PROCESS-NAME,openvpn$exe,DIRECT',
+      ],
+    ];
+
+    for (final process in managedProcessNames) {
+      final name = process.trim();
+      if (name.isEmpty) continue;
+      switch (routingMode) {
+        case AppRoutingMode.onlySelected:
+          rules.add('PROCESS-NAME,$name,$proxyTarget');
+        case AppRoutingMode.allExceptSelected:
+          rules.add('PROCESS-NAME,$name,DIRECT');
+        case AppRoutingMode.allProxy:
+          break;
+      }
+    }
+    return rules;
+  }
+
+  /// Сам сервер — мимо туннеля, иначе обращение к его адресу закольцуется.
+  ///
+  /// `no-resolve` здесь безусловен, и снимать его нельзя ни при каких
+  /// настройках: резолв ради правила, которое защищает от круга, — это тот же
+  /// круг, только на шаг раньше.
+  static List<String> buildServerDirectRules({
+    required String serverAddress,
+    String? resolvedServerIp,
+  }) {
+    final rules = <String>[];
+    if (serverAddress.isNotEmpty && !looksLikeIpOrCidr(serverAddress)) {
+      rules.add('DOMAIN,$serverAddress,DIRECT');
+    }
+    for (final ip in [serverAddress, resolvedServerIp ?? '']) {
+      if (ip.isNotEmpty && looksLikeIpOrCidr(ip)) {
+        rules.add('IP-CIDR,${_cidr(ip)},DIRECT,no-resolve');
+      }
+    }
+    return rules;
+  }
+
+  /// Списки роутинга из настроек: блок, обход (плюс приватные диапазоны) и
+  /// прокси. [proxyTarget] — куда слать «в прокси»: у ссылки это наш
+  /// единственный узел, у готового конфига — его группа.
+  ///
+  /// [blockedOnly]/[skipBlocked] разделяют список надвое: у ссылки блокировки
+  /// решают раньше правила про сам сервер, и порядок этот менять нельзя.
+  static List<String> buildUserRules(
+    AppSettings settings, {
+    String proxyTarget = proxyName,
+    bool blockedOnly = false,
+    bool skipBlocked = false,
+    bool fakeIp = false,
   }) {
     final rules = <String>[];
 
@@ -749,8 +1215,13 @@ class MihomoConfigGen {
     ].any((raw) => splitGeoipTokens(
           splitDomainsAndIps(_parseList(raw)).ips,
         ).plainIps.isNotEmpty);
+    // С fake-ip назначение и вовсе перестаёт быть адресом: ядро выдало системе
+    // подменный, а перед выбором правила стирает его (`preHandleMetadata`
+    // чистит `DstIP` для fake-адресов) и восстанавливает домен. Правило с
+    // `no-resolve` тогда сравнивать не с чем — оно промахивается ВСЕГДА, и
+    // «корпоративный CIDR в обходе не работает» возвращается в полном объёме.
     final resolveForIpRules =
-        !settings.xrayCore.sniffingRouteOnly && hasUserIpRules;
+        (fakeIp || !settings.xrayCore.sniffingRouteOnly) && hasUserIpRules;
     final ipSuffix = resolveForIpRules ? '' : ',no-resolve';
 
     void addGroup(String raw, String target) {
@@ -767,20 +1238,8 @@ class MihomoConfigGen {
       }
     }
 
-    addGroup(settings.blockedRules, 'REJECT');
-
-    // Сам сервер — мимо туннеля, иначе обращение к его адресу закольцуется.
-    // Здесь `no-resolve` безусловен, и снимать его нельзя ни при каких
-    // настройках: резолв ради правила, которое защищает от круга, — это тот же
-    // круг, только на шаг раньше.
-    if (serverAddress.isNotEmpty && !looksLikeIpOrCidr(serverAddress)) {
-      rules.add('DOMAIN,$serverAddress,DIRECT');
-    }
-    for (final ip in [serverAddress, resolvedServerIp ?? '']) {
-      if (ip.isNotEmpty && looksLikeIpOrCidr(ip)) {
-        rules.add('IP-CIDR,${_cidr(ip)},DIRECT,no-resolve');
-      }
-    }
+    if (!skipBlocked) addGroup(settings.blockedRules, 'REJECT');
+    if (blockedOnly) return rules;
 
     addGroup(settings.directRules, 'DIRECT');
     // Приватные диапазоны xray под `AsIs` тоже по домену не проверяет, так что
@@ -789,16 +1248,15 @@ class MihomoConfigGen {
       rules.add('IP-CIDR,$range,DIRECT,no-resolve');
     }
 
-    addGroup(settings.proxyRules, proxyName);
-
-    rules.add('MATCH,${_finalTarget(settings.finalOutbound)}');
+    addGroup(settings.proxyRules, proxyTarget);
     return rules;
   }
 
-  static String _finalTarget(String finalOutbound) => switch (finalOutbound) {
+  static String _finalTarget(String finalOutbound, String proxyTarget) =>
+      switch (finalOutbound) {
         AppSettings.finalOutboundDirect => 'DIRECT',
         AppSettings.finalOutboundBlock => 'REJECT',
-        _ => proxyName,
+        _ => proxyTarget,
       };
 
   /// Запись домена из наших списков → правило mihomo.

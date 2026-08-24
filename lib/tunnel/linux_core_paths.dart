@@ -16,13 +16,14 @@ class LinuxCorePaths {
   static const assetXray = 'assets/bin/linux/xray';
   static const assetSingbox = 'assets/bin/linux/sing-box';
   static const assetKeqrnel = 'assets/bin/linux/keqrnel';
+  static const assetMihomo = 'assets/bin/linux/mihomo';
   static const assetWireproxy = 'assets/bin/linux/wireproxy';
   static const assetGeoip = 'assets/bin/linux/geoip.dat';
   static const assetGeosite = 'assets/bin/linux/geosite.dat';
   static const geoFileNames = ['geoip.dat', 'geosite.dat'];
 
   static const binariesHint =
-      'Положите xray, sing-box и wireproxy в assets/bin/linux/ '
+      'Положите keqrnel, mihomo и wireproxy в assets/bin/linux/ '
       '(см. README) и пересоберите приложение, '
       'или поместите их рядом с исполняемым файлом / в \$PATH.';
 
@@ -40,8 +41,53 @@ class LinuxCorePaths {
   static Future<String?> keqrnelExecutable() =>
       _resolveExecutable(assetKeqrnel, 'keqrnel');
 
+  /// mihomo — второе ядро: исполняет готовые конфиги Clash и ссылки, а в
+  /// TUN-режиме само создаёт tun-устройство (для этого его и запускают под root).
+  static Future<String?> mihomoExecutable() =>
+      _resolveExecutable(assetMihomo, 'mihomo');
+
   static Future<String?> wireproxyExecutable() =>
       _resolveExecutable(assetWireproxy, 'wireproxy');
+
+  /// Домашний каталог mihomo (аргумент `-d`).
+  ///
+  /// Отдельный от каталога с geo-базами намеренно: ядро создаёт в доме
+  /// `config.yaml`, если его там нет (`config.Init`), и на каталоге без права
+  /// записи это фатальная ошибка — ядро не стартует. А на Linux дом «рядом с
+  /// бинарём» недоступен для записи в большинстве установок: `/opt` у .deb и
+  /// read-only FUSE-монт у AppImage. Поэтому дом в пользовательском кэше, а
+  /// geo-базы копируются туда один раз, со сверкой по размеру.
+  ///
+  /// Для TUN под root этот каталог не годится — там дом делает сам бэкенд в
+  /// каталоге сессии, иначе root наплодил бы в пользовательском кэше файлов,
+  /// которые потом не переписать обычным запуском.
+  static Future<String> mihomoHomeDir() async {
+    final dir = Directory(p.join(await _cacheRoot(), 'keqdroid', 'mihomo'));
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+    final geoDir = await geoAssetDir();
+    if (geoDir != null && geoDir != dir.path) {
+      for (final name in geoFileNames) {
+        final src = File(p.join(geoDir, name));
+        if (!src.existsSync()) continue;
+        final dst = File(p.join(dir.path, name));
+        if (dst.existsSync() && dst.lengthSync() == src.lengthSync()) continue;
+        try {
+          await src.copy(dst.path);
+        } catch (_) {
+          // Занято работающим ядром или нет места: geo-правила не сработают,
+          // но подключение важнее — ядро скажет об этом в свой лог.
+        }
+      }
+    }
+    return dir.path;
+  }
+
+  static Future<String> _cacheRoot() async =>
+      Platform.environment['XDG_CACHE_HOME'] ??
+      p.join(
+        Platform.environment['HOME'] ?? Directory.systemTemp.path,
+        '.cache',
+      );
 
   /// Directory holding geoip.dat / geosite.dat for xray's asset lookup
   /// (passed to xray via XRAY_LOCATION_ASSET). Null if not found.

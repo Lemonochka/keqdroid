@@ -32,6 +32,10 @@ class TunnelSessionBuilder {
     String? serverName,
     AppRoutingMode routingMode = AppRoutingMode.allProxy,
     ConnectionMode? modeOverride,
+    /// Есть ли у машины глобальный IPv6 — решает, забирать ли IPv6 в туннель
+    /// (см. [TunSettings.blockIpv6Leak]). Считает вызывающий: здесь нельзя,
+    /// метод синхронный, а перечисление интерфейсов — нет.
+    bool hostHasIpv6 = false,
   }) {
     final mode = modeOverride ?? resolveMode(settings);
     final isAwg = vpnBackend == VpnBackend.awg;
@@ -57,6 +61,7 @@ class TunnelSessionBuilder {
         routingMode: routingMode,
         localSocksNoAuth: isAwg,
         appProcessName: p.basename(Platform.resolvedExecutable),
+        hostHasIpv6: hostHasIpv6,
       );
     }
 

@@ -13,6 +13,7 @@ import '../core/app_logger.dart';
 import '../models/server_item.dart';
 import '../models/subscription.dart';
 import '../services/storage_service.dart';
+import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
 import '../utils/identity_presets.dart';
 import '../core/exceptions.dart';
@@ -1176,6 +1177,15 @@ class SubscriptionService {
       final structured = _extractConfigsFromStructuredContent(candidate);
       if (structured.isNotEmpty) return structured;
 
+      // Конфиг Clash целиком — сервером, как и готовый конфиг xray, но только
+      // если по узлам его разобрать не вышло. Список узлов лучше одного
+      // «профиля»: их видно, между ними переключаются, каждый пингуется — и
+      // они работают на любом ядре. Целиком конфиг остаётся, когда узлов в нём
+      // нет (`proxy-providers`) или они неизвестного нам типа: тогда его
+      // исполнит mihomo ровно так, как написал автор.
+      final clashConfigs = _extractClashConfigs(candidate);
+      if (clashConfigs.isNotEmpty) return clashConfigs;
+
       final lines = LineSplitter.split(candidate)
           .map((l) => l.trim())
           .where((l) => l.isNotEmpty)
@@ -1244,6 +1254,30 @@ class SubscriptionService {
       out.addAll(CustomXrayConfig.extractConfigs(decoded));
     }
     return out.where(_isUsableCustomConfig).toList();
+  }
+
+  /// Готовые конфиги Clash из payload подписки — то, что панель отдаёт
+  /// clash-клиентам, когда у подписки выставлена их идентичность.
+  ///
+  /// Отдельно от [_extractCustomConfigs]: у Clash своя проверка пригодности
+  /// (нужны `proxies` с типом и адресом) и свой разбор — YAML, а не JSON.
+  static List<String> _extractClashConfigs(String content) {
+    final whole = CustomClashConfig.extractConfigs(content);
+    return whole.where(_isUsableClashConfig).toList();
+  }
+
+  /// Конфиг без единого прокси с адресом — та же болванка, что и у xray:
+  /// панель отдаёт её на истёкшую подписку или непривязанный HWID. Сервером
+  /// такое ставить нельзя, внятная ошибка полезнее.
+  ///
+  /// Исключение — профиль на `proxy-providers`: адреса у него нет и быть не
+  /// может, список узлов ядро скачает само. Отсекать его по тому же признаку
+  /// значило бы отказывать в самом распространённом формате, который панели
+  /// отдают clash-клиентам.
+  static bool _isUsableClashConfig(String config) {
+    final clash = CustomClashConfig.tryParse(config);
+    if (clash == null) return false;
+    return clash.address.isNotEmpty || clash.usesProviders;
   }
 
   /// Годится ли готовый конфиг из подписки в качестве сервера.
@@ -1340,8 +1374,18 @@ class SubscriptionService {
     if (lower.startsWith('proxies:') ||
         lower.contains('\nproxies:') ||
         lower.startsWith('mixed-port:') ||
+        lower.startsWith('proxy-providers:') ||
         lower.contains('\nproxy-providers:')) {
-      return 'Unsupported subscription format: Clash YAML';
+      // Clash мы исполняем, поэтому «формат не поддерживается» здесь было бы
+      // прямой неправдой — и именно так это выглядело у пользователя: подписка
+      // с UA clash-клиента отказывалась обновляться с сообщением про
+      // неподдерживаемый формат. Досюда доходит только конфиг, который не
+      // удалось взять по КОНКРЕТНОЙ причине, — её и называем.
+      final problem = CustomClashConfig.describeProblem(text);
+      if (problem != null) return 'Clash subscription: $problem';
+      return 'Clash subscription returned a config without a server address. '
+          'This is usually a provider stub: check subscription status and '
+          'HWID binding in the provider panel.';
     }
 
     if (text.startsWith('{') || text.startsWith('[')) {
@@ -1359,8 +1403,8 @@ class SubscriptionService {
                   'This is usually a provider stub: check subscription status and '
                   'HWID binding in the provider panel.';
             }
-            return 'Unsupported subscription format: sing-box/Clash JSON '
-                '(only Xray JSON configs are supported)';
+            return 'Unsupported subscription format: sing-box JSON '
+                '(only Xray and Clash configs are supported)';
           }
         } else if (parsed is List && parsed.isNotEmpty) {
           return 'Unsupported subscription format: JSON array config';
@@ -1494,7 +1538,22 @@ class SubscriptionService {
     }
   }
 
+  /// Прокси из конфига Clash.
+  ///
+  /// Сначала настоящим YAML-парсером: построчный сканер ниже видит только
+  /// плоские `ключ: значение` и теряет всё, что лежит вложенными картами —
+  /// `reality-opts` (public-key, short-id), `grpc-opts`, заголовки `ws-opts`.
+  /// Для современного узла это разница между рабочей ссылкой и ссылкой без
+  /// ключа REALITY, то есть между сервером и его видимостью в списке.
+  /// Сканер остаётся запасным путём: payload бывает битым (обрезан, склеен с
+  /// html), и тогда «хоть что-то» лучше, чем ничего.
   static List<Map<String, dynamic>> _extractYamlLikeProxies(String content) {
+    final parsed = CustomClashConfig.tryParse(content);
+    if (parsed != null && parsed.proxies.isNotEmpty) return parsed.proxies;
+    return _scanYamlLikeProxies(content);
+  }
+
+  static List<Map<String, dynamic>> _scanYamlLikeProxies(String content) {
     final lines = LineSplitter.split(content).toList();
     final proxies = <Map<String, dynamic>>[];
     Map<String, dynamic>? current;
@@ -1549,9 +1608,74 @@ class SubscriptionService {
     return v;
   }
 
-  static String? _proxyMapToUri(Map<String, dynamic> raw) {
+  /// Вложенные карты Clash → плоские ключи, которыми оперирует [_proxyMapToUri].
+  ///
+  /// Без этого прокси теряет ровно то, что делает его рабочим: ключ REALITY,
+  /// имя grpc-сервиса, Host из заголовков ws. Ссылка при этом собирается
+  /// «успешно» — и молча не подключается.
+  static Map<String, String> _flattenClashProxy(Map<String, dynamic> raw) {
     final map = <String, String>{};
-    raw.forEach((k, v) => map[k.toLowerCase()] = v?.toString().trim() ?? '');
+    String text(Object? v) {
+      if (v == null) return '';
+      if (v is List) return v.map((e) => e?.toString().trim() ?? '').join(',');
+      return v.toString().trim();
+    }
+
+    void put(String key, Object? value) {
+      final v = text(value);
+      if (v.isNotEmpty && (map[key] ?? '').isEmpty) map[key] = v;
+    }
+
+    raw.forEach((k, v) {
+      if (v is Map || v is List) {
+        // Списки (alpn) плоские по смыслу, карты разбираем ниже.
+        if (v is List) put(k.toLowerCase(), v);
+        return;
+      }
+      put(k.toLowerCase(), v);
+    });
+
+    Map<String, dynamic>? nested(String key) {
+      final value = raw[key];
+      return value is Map ? value.cast<String, dynamic>() : null;
+    }
+
+    final ws = nested('ws-opts');
+    if (ws != null) {
+      put('path', ws['path']);
+      final headers = ws['headers'];
+      if (headers is Map) {
+        for (final entry in headers.entries) {
+          if (entry.key.toString().toLowerCase() == 'host') {
+            put('host', entry.value);
+          }
+        }
+      }
+    }
+    final http = nested('http-opts') ?? nested('h2-opts');
+    if (http != null) {
+      final path = http['path'];
+      put('path', path is List && path.isNotEmpty ? path.first : path);
+      final host = http['host'] ?? http['Host'];
+      put('host', host is List && host.isNotEmpty ? host.first : host);
+    }
+    final grpc = nested('grpc-opts');
+    if (grpc != null) put('servicename', grpc['grpc-service-name']);
+    final reality = nested('reality-opts');
+    if (reality != null) {
+      put('pbk', reality['public-key']);
+      put('sid', reality['short-id']);
+      put('spx', reality['support-x25519mlkem768']);
+    }
+
+    // Имена, под которыми те же вещи знает ссылка.
+    put('fp', raw['client-fingerprint']);
+    put('sni', raw['servername']);
+    return map;
+  }
+
+  static String? _proxyMapToUri(Map<String, dynamic> raw) {
+    final map = _flattenClashProxy(raw);
 
     String pick(List<String> keys) {
       for (final k in keys) {
@@ -1590,15 +1714,13 @@ class SubscriptionService {
     if (type == 'vless') {
       final id = pick(['uuid', 'id']);
       if (host.isEmpty || port <= 0 || id.isEmpty) return null;
-      final query = <String, String>{};
-      final security = pick(['security', 'tls']);
-      if (security.isNotEmpty) query['security'] = _normalizeTlsValue(security);
-      final sni = pick(['servername', 'sni', 'host']);
-      if (sni.isNotEmpty) query['sni'] = sni;
-      final network = pick(['network', 'net', 'type']);
-      if (network.isNotEmpty) query['type'] = network;
-      final path = pick(['path']);
-      if (path.isNotEmpty) query['path'] = path;
+      final query = <String, String>{
+        // Транспорт и его параметры. `type` тут НЕ синоним `network`: у Clash
+        // это протокол узла, и подставленный в транспорт он давал ссылку с
+        // `type=vless`, то есть узел с несуществующим транспортом.
+        ..._clashTransportQuery(pick),
+        ..._clashSecurityQuery(pick),
+      };
       final uri = Uri(
         scheme: 'vless',
         userInfo: id,
@@ -1613,13 +1735,10 @@ class SubscriptionService {
     if (type == 'trojan') {
       final password = pick(['password', 'passwd', 'pass']);
       if (host.isEmpty || port <= 0 || password.isEmpty) return null;
-      final query = <String, String>{};
-      final sni = pick(['servername', 'sni', 'host']);
-      if (sni.isNotEmpty) query['sni'] = sni;
-      final network = pick(['network', 'net', 'type']);
-      if (network.isNotEmpty) query['type'] = network;
-      final path = pick(['path']);
-      if (path.isNotEmpty) query['path'] = path;
+      final query = <String, String>{
+        ..._clashTransportQuery(pick),
+        ..._clashSecurityQuery(pick, defaultSecurity: 'tls'),
+      };
       final uri = Uri(
         scheme: 'trojan',
         userInfo: password,
@@ -1677,6 +1796,55 @@ class SubscriptionService {
     }
 
     return null;
+  }
+
+  /// Транспорт узла Clash в параметрах ссылки. `type` в источнике — протокол,
+  /// а не транспорт, поэтому в `network` он не годится ни при каких условиях.
+  static Map<String, String> _clashTransportQuery(
+    String Function(List<String>) pick,
+  ) {
+    final query = <String, String>{};
+    final network = pick(['network', 'net']);
+    if (network.isNotEmpty) query['type'] = network;
+    final path = pick(['path']);
+    if (path.isNotEmpty) query['path'] = path;
+    final wsHost = pick(['host']);
+    if (wsHost.isNotEmpty) query['host'] = wsHost;
+    final serviceName = pick(['servicename', 'grpc-service-name']);
+    if (serviceName.isNotEmpty) query['serviceName'] = serviceName;
+    final mode = pick(['mode']);
+    if (mode.isNotEmpty) query['mode'] = mode;
+    return query;
+  }
+
+  /// TLS/REALITY: без `pbk` (а часто и без `fp`) узел REALITY не подключается
+  /// вовсе, а ссылка при этом собирается как будто успешно.
+  static Map<String, String> _clashSecurityQuery(
+    String Function(List<String>) pick, {
+    String defaultSecurity = '',
+  }) {
+    final query = <String, String>{};
+    final pbk = pick(['pbk', 'public-key']);
+    final security = pick(['security', 'tls']);
+    final normalized =
+        security.isNotEmpty ? _normalizeTlsValue(security) : defaultSecurity;
+    if (pbk.isNotEmpty) {
+      query['security'] = 'reality';
+      query['pbk'] = pbk;
+      final sid = pick(['sid', 'short-id']);
+      if (sid.isNotEmpty) query['sid'] = sid;
+    } else if (normalized.isNotEmpty) {
+      query['security'] = normalized;
+    }
+    final sni = pick(['sni', 'servername']);
+    if (sni.isNotEmpty) query['sni'] = sni;
+    final fp = pick(['fp', 'client-fingerprint']);
+    if (fp.isNotEmpty) query['fp'] = fp;
+    final flow = pick(['flow']);
+    if (flow.isNotEmpty) query['flow'] = flow;
+    final alpn = pick(['alpn']);
+    if (alpn.isNotEmpty) query['alpn'] = alpn;
+    return query;
   }
 
   static String _normalizeTlsValue(String raw) {

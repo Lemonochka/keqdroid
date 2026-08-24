@@ -561,7 +561,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXraySniffingHint => 'Detect destination protocol and domain from inbound traffic';
 
   @override
-  String get settingsXraySniffingRouteOnlyHint => 'Use sniffing for routing only, without overriding the destination';
+  String get settingsXraySniffingRouteOnlyHint => 'Off (default): the sniffed domain becomes the destination, so it is resolved again — locally for direct routes, on the server for proxied ones. On: the domain is used only to pick a rule, and the connection still goes to the address the app supplied — which is wrong whenever that address came from a resolver on the far side of the tunnel (RU sites then load over a direct route to a foreign CDN node).';
 
   @override
   String get settingsXrayResetDefaults => 'Reset to defaults';
@@ -597,19 +597,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTunStackTitle => 'Network stack';
 
   @override
-  String get settingsTunStackSystemHint => 'Kernel TCP/IP stack — fastest, default';
+  String get settingsTunStackSystemHint => 'OS kernel TCP/IP stack — fastest, but on Windows it terminates TCP on a listener at the TUN address and needs a Windows Firewall rule; when that rule does not stick, the tunnel comes up with no traffic at all';
 
   @override
-  String get settingsTunStackGvisorHint => 'Userspace stack — better compatibility, a bit slower. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)';
+  String get settingsTunStackGvisorHint => 'Userspace stack — default. Runs entirely inside the core, so it needs neither a listener nor firewall rules; a bit slower. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)';
 
   @override
-  String get settingsTunStackMixedHint => 'system for TCP, gVisor for UDP. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)';
+  String get settingsTunStackMixedHint => 'gVisor for TCP, system for UDP. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)';
 
   @override
   String get settingsTunMtu => 'MTU';
 
   @override
-  String get settingsTunMtuHint => '576–65535, default 1400';
+  String get settingsTunMtuHint => '576–65535, default 9000';
 
   @override
   String get settingsTunUdpTimeout => 'UDP timeout (sec)';
@@ -646,6 +646,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsTunAutoRouteHint => 'Adds system routes into the tunnel automatically. Disable only if you manage routes yourself — without it no traffic enters the TUN';
+
+  @override
+  String get settingsTunIpv6 => 'Keep IPv6 inside the tunnel';
+
+  @override
+  String get settingsTunIpv6Hint => 'A TUN interface with only an IPv4 address gets no IPv6 routes, so on a dual-stack machine IPv6 traffic goes around the tunnel — past the routing rules and past the proxy. With this on the interface also gets an IPv6 address and IPv6 egress is closed, so apps fall back to IPv4, which is already tunnelled. The address is added only when the machine really has global IPv6. Xray/keqrnel core only';
+
+  @override
+  String get settingsMihomoSection => 'mihomo core';
+
+  @override
+  String get settingsMihomoFakeIp => 'Fake IP';
+
+  @override
+  String get settingsMihomoFakeIpHint => 'Answers DNS with a placeholder address instead of the real one: lookups become instant and domain rules stop depending on sniffing. In exchange, IP rules have to be resolved again before they can match, so the same routing lists behave a little differently than on Xray. Applies only where mihomo owns the tunnel — TUN mode and Android.';
 
   @override
   String get settingsPingTitle => 'Server ping';
@@ -913,7 +928,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversAddServerTitle => 'Add Server';
 
   @override
-  String get serversPasteVlessHint => 'Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line), or a whole Xray JSON config';
+  String get serversPasteVlessHint => 'Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line), or a whole config: Xray JSON, Clash YAML, AmneziaWG .conf';
 
   @override
   String get serversPasteHint => 'vless://… or hy2://host:port?auth=…';
@@ -1428,6 +1443,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String serversImportedSummary(Object added, Object total) {
     return 'Servers added: $added of $total';
   }
+
+  @override
+  String get sidebarJumpTitle => 'Jump to';
+
+  @override
+  String get serversScrollToEnd => 'Jump to end';
 
   @override
   String get serversManualGroup => 'Manual servers';
@@ -2195,6 +2216,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsCoreHint => 'Applies on the next connection — the running session is not restarted.';
+
+  @override
+  String get settingsCoreAuto => 'Automatic';
+
+  @override
+  String get settingsCoreAutoSubtitle => 'The core is picked by the server\'s format: links run on Xray, ready-made configs run on the core they are written for.';
+
+  @override
+  String get settingsCoreSkipClash => 'The active server is a ready-made Clash config — only mihomo can run it, no matter which core is selected.';
+
+  @override
+  String get settingsCoreSkipCustom => 'The active server is a ready-made Xray JSON config (its routing and DNS come from the provider), so it runs on libxray no matter which core is selected. To use mihomo, take a subscription that hands out plain vless:// / vmess:// links — switch the client identity in the subscription\'s settings.';
+
+  @override
+  String get settingsCoreSkipChain => 'The active server is a proxy chain: its hops are linked by Xray\'s dialerProxy, so it runs on libxray no matter which core is selected.';
+
+  @override
+  String get settingsCoreSkipAwg => 'The active server is an AmneziaWG profile — it runs on its own core, wg-go, no matter which core is selected.';
+
+  @override
+  String get settingsCoreSkipPlatform => 'The mihomo core is not bundled for this platform, so the connection runs on the Xray core instead.';
 
   @override
   String get settingsInternalsCores => 'Cores';

@@ -63,6 +63,12 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
         .save(settings.copyWith(tun: tun));
   }
 
+  Future<void> _saveFakeIp(AppSettings settings, bool value) async {
+    await ref
+        .read(settingsNotifierProvider.notifier)
+        .save(settings.copyWith(mihomoFakeIp: value));
+  }
+
   Future<void> _resetDefaults(AppSettings settings) async {
     if (!await _confirmReset(
       context,
@@ -81,6 +87,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
           settings.copyWith(
             xrayCore: const XrayCoreSettings(),
             tun: const TunSettings(),
+            // Кнопка сбрасывает ВСЁ, что стоит на этом экране, — включая
+            // секцию mihomo. Забытое поле здесь выглядит как «сброс не
+            // сработал».
+            mihomoFakeIp: defaults.mihomoFakeIp,
             localPort: portsLocked ? null : defaults.localPort,
             httpPort: portsLocked ? null : defaults.httpPort,
           ),
@@ -734,9 +744,43 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                     style: _xrayTileSubtitleStyle(context),
                   ),
                 ),
+                _xraySettingsDivider(context),
+                SwitchListTile(
+                  value: tun.blockIpv6Leak,
+                  onChanged: (v) =>
+                      _saveTun(settings, tun.copyWith(blockIpv6Leak: v)),
+                  activeThumbColor: accent,
+                  title: Text(l10n.settingsTunIpv6),
+                  subtitle: Text(
+                    l10n.settingsTunIpv6Hint,
+                    style: _xrayTileSubtitleStyle(context),
+                  ),
+                ),
               ],
             ),
           ],
+          // mihomo поставляется на всех трёх платформах, поэтому секция здесь
+          // безусловна — в отличие от TUN-настроек выше, которые описывают
+          // sing-box-инбаунд и на Android не значат ничего.
+          _XrayCoreSectionHeader(
+            icon: Icons.alt_route_rounded,
+            title: l10n.settingsMihomoSection,
+          ),
+          _xraySettingsCard(
+            context,
+            children: [
+              SwitchListTile(
+                value: settings.mihomoFakeIp,
+                onChanged: (v) => _saveFakeIp(settings, v),
+                activeThumbColor: accent,
+                title: Text(l10n.settingsMihomoFakeIp),
+                subtitle: Text(
+                  l10n.settingsMihomoFakeIpHint,
+                  style: _xrayTileSubtitleStyle(context),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () => _resetDefaults(settings),

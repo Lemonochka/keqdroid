@@ -19,13 +19,29 @@ class TunSettings {
   /// маршрутами: без auto_route трафик в туннель не попадает.
   final bool autoRoute;
 
+  /// Не выпускать IPv6 мимо туннеля.
+  ///
+  /// TUN-интерфейс с одним лишь IPv4-адресом IPv6-маршрутов не получает, и на
+  /// двухстековой машине весь IPv6-трафик идёт мимо туннеля — то есть мимо
+  /// правил роутинга и мимо прокси. Наш DNS отдаёт только A-записи, но браузеры
+  /// ходят своим DoH и AAAA получают, поэтому «сайт открывается в обход VPN» и
+  /// «мой IP не сменился» на дуалстеке — это оно.
+  ///
+  /// Включённая опция добавляет интерфейсу IPv6-адрес (ядро тогда забирает и
+  /// IPv6-маршруты) и закрывает выход IPv6 наружу — приложения мгновенно
+  /// откатываются на IPv4, который уже в туннеле. Адрес заводится ТОЛЬКО когда
+  /// у машины есть настоящий глобальный IPv6: на машине с выключенным IPv6
+  /// sing-box падает на настройке адаптера, и TUN не поднимается вовсе.
+  final bool blockIpv6Leak;
+
   const TunSettings({
-    this.stack = stackSystem,
+    this.stack = defaultStack,
     this.mtu = defaultMtu,
     this.strictRoute = strictRouteAuto,
     this.endpointIndependentNat = false,
     this.udpTimeoutSec = defaultUdpTimeoutSec,
     this.autoRoute = true,
+    this.blockIpv6Leak = true,
   });
 
   static const stackSystem = 'system';
@@ -33,14 +49,38 @@ class TunSettings {
   static const stackMixed = 'mixed';
   static const stacks = [stackSystem, stackGvisor, stackMixed];
 
+  /// Стек по умолчанию.
+  ///
+  /// `system` терминирует TCP не в процессе, а листенером на адресе самого
+  /// TUN-интерфейса, и на Windows требует правила Windows Firewall — sing-tun
+  /// заводит его сам (`fixWindowsFirewall`), но ошибку глотает. Не завелось —
+  /// входящие к листенеру режет фаервол, TUN поднялся, ошибок нет, а трафика
+  /// нет вовсе. Отсюда жалоба «на нормальных настройках туннель не работает,
+  /// работает только на gvisor». gvisor держит TCP/IP целиком в процессе ядра,
+  /// поэтому ни листенера, ни правил фаервола ему не нужно; своё умолчание
+  /// (пустая строка) sing-box тоже разрешает в пользу gvisor-стека.
+  static const defaultStack = stackGvisor;
+
   static const strictRouteAuto = 'auto';
   static const strictRouteOn = 'on';
   static const strictRouteOff = 'off';
   static const strictRouteModes = [strictRouteAuto, strictRouteOn, strictRouteOff];
 
-  static const defaultMtu = 1400;
+  /// MTU по умолчанию — как у sing-box и у клиентов на нём (v2rayN, Nekoray,
+  /// Hiddify). Прежние 1400 — величина из мира физических каналов: TUN здесь
+  /// не гоняет байты по проводу, он отдаёт их ядру, и мелкий MTU лишь дробит
+  /// один поток на лишние пакеты.
+  static const defaultMtu = 9000;
   static const minMtu = 576;
   static const maxMtu = 65535;
+
+  /// Прежняя пара умолчаний (до смены на gvisor/9000). Нужна миграции ниже.
+  static const _legacyDefaultStack = stackSystem;
+  static const _legacyDefaultMtu = 1400;
+
+  /// Версия набора умолчаний, записанная в json. Отсутствует — настройки
+  /// сохранены до миграции.
+  static const _defaultsVersion = 2;
 
   static const defaultUdpTimeoutSec = 300;
   static const minUdpTimeoutSec = 10;
@@ -57,7 +97,7 @@ class TunSettings {
 
   static String normalizeStack(String? raw) {
     final v = raw?.trim().toLowerCase();
-    return stacks.contains(v) ? v! : stackSystem;
+    return stacks.contains(v) ? v! : defaultStack;
   }
 
   static String normalizeStrictRoute(String? raw) {
@@ -77,19 +117,39 @@ class TunSettings {
         'endpointIndependentNat': endpointIndependentNat,
         'udpTimeoutSec': udpTimeoutSec,
         'autoRoute': autoRoute,
+        'blockIpv6Leak': blockIpv6Leak,
+        'defaultsVersion': _defaultsVersion,
       };
 
   factory TunSettings.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const TunSettings();
+    var stack = normalizeStack(json['stack'] as String?);
+    var mtu = clampMtu((json['mtu'] as num?)?.toInt() ?? defaultMtu);
+
+    // Миграция прежних умолчаний. Настройки записываются целиком при любом
+    // изменении в приложении, поэтому старая пара `system`/1400 лежит почти у
+    // всех — и почти ни у кого не выбрана осознанно. Меняем ровно её и ровно
+    // один раз: значения, отличные от прежних умолчаний, — это уже выбор
+    // пользователя, и трогать его нельзя.
+    final migrated = json['defaultsVersion'] == null;
+    if (migrated && stack == _legacyDefaultStack && mtu == _legacyDefaultMtu) {
+      stack = defaultStack;
+      mtu = defaultMtu;
+    }
+
     return TunSettings(
-      stack: normalizeStack(json['stack'] as String?),
-      mtu: clampMtu((json['mtu'] as num?)?.toInt() ?? defaultMtu),
+      stack: stack,
+      mtu: mtu,
       strictRoute: normalizeStrictRoute(json['strictRoute'] as String?),
       endpointIndependentNat: json['endpointIndependentNat'] as bool? ?? false,
       udpTimeoutSec: clampUdpTimeout(
         (json['udpTimeoutSec'] as num?)?.toInt() ?? defaultUdpTimeoutSec,
       ),
       autoRoute: json['autoRoute'] as bool? ?? true,
+      // Отсутствие ключа — настройки, сохранённые до появления опции. Дефолт
+      // тот же, что у новых установок: утечка IPv6 мимо туннеля — это баг, а
+      // не выбор пользователя.
+      blockIpv6Leak: json['blockIpv6Leak'] as bool? ?? true,
     );
   }
 
@@ -100,6 +160,7 @@ class TunSettings {
     bool? endpointIndependentNat,
     int? udpTimeoutSec,
     bool? autoRoute,
+    bool? blockIpv6Leak,
   }) =>
       TunSettings(
         stack: stack ?? this.stack,
@@ -109,6 +170,7 @@ class TunSettings {
             endpointIndependentNat ?? this.endpointIndependentNat,
         udpTimeoutSec: udpTimeoutSec ?? this.udpTimeoutSec,
         autoRoute: autoRoute ?? this.autoRoute,
+        blockIpv6Leak: blockIpv6Leak ?? this.blockIpv6Leak,
       );
 
   @override
@@ -121,7 +183,8 @@ class TunSettings {
           strictRoute == other.strictRoute &&
           endpointIndependentNat == other.endpointIndependentNat &&
           udpTimeoutSec == other.udpTimeoutSec &&
-          autoRoute == other.autoRoute;
+          autoRoute == other.autoRoute &&
+          blockIpv6Leak == other.blockIpv6Leak;
 
   @override
   int get hashCode => Object.hash(
@@ -131,6 +194,7 @@ class TunSettings {
         endpointIndependentNat,
         udpTimeoutSec,
         autoRoute,
+        blockIpv6Leak,
       );
 
   String toJsonString() => jsonEncode(toJson());

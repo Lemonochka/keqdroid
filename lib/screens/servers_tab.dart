@@ -13,11 +13,14 @@ import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
+import 'package:keqdroid/shared/ui/server_group_anchors.dart';
+import 'package:keqdroid/shared/ui/scroll_to_end_overlay.dart';
 import 'package:keqdroid/shared/ui/server_row.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
 import '../core/app_logger.dart';
 import '../models/app_settings.dart';
+import '../models/server_group.dart';
 import '../models/server_item.dart';
 import '../models/server_name_utils.dart';
 import '../models/subscription.dart';
@@ -594,7 +597,14 @@ class _ServersTabState extends ConsumerState<ServersTab>
       );
     }
 
-    return SizedBox.expand(
+    return ScrollToEndOverlay(
+      // Только телефон: на десктопе по группам возит боковой навигатор, а
+      // всплывающая кнопка посреди окна там просто мусор.
+      enabled: !isDesktop,
+      label: context.l10n.serversScrollToEnd,
+      // Над нижним градиентом списка и на одной линии с кнопкой добавления.
+      bottomInset: 20,
+      child: SizedBox.expand(
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -639,7 +649,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
               ),
             ],
           ),
-        );
+        ),
+    );
   }
 
   /// Сколько серверов годятся узлом цепочки — по этому числу решаем,

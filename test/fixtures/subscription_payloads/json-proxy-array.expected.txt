@@ -1,2 +1,2 @@
-vless://00000000-0000-4000-8000-000000000000@198.51.100.30:443?security=tls&sni=json.example&type=ws#JSON%20One
-trojan://password@198.51.100.31:443?sni=json2.example&type=trojan#JSON%20Two
+vless://00000000-0000-4000-8000-000000000000@198.51.100.30:443?type=ws&path=%2Fjson&security=tls&sni=json.example#JSON%20One
+trojan://password@198.51.100.31:443?security=tls&sni=json2.example#JSON%20Two

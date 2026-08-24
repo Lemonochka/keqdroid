@@ -5,13 +5,19 @@
   "dns": {
     "servers": [
       {
-        "address": "https://1.1.1.1/dns-query"
+        "address": "https://1.1.1.1/dns-query",
+        "timeoutMs": 2500,
+        "serveStale": true
       },
       {
-        "address": "https://8.8.8.8/dns-query"
+        "address": "https://8.8.8.8/dns-query",
+        "timeoutMs": 2500,
+        "serveStale": true
       },
       {
-        "address": "localhost"
+        "address": "localhost",
+        "timeoutMs": 2500,
+        "serveStale": true
       }
     ],
     "queryStrategy": "UseIPv4"
@@ -39,7 +45,7 @@
           "tls",
           "quic"
         ],
-        "routeOnly": true
+        "routeOnly": false
       }
     },
     {

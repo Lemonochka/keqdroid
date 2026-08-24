@@ -71,6 +71,35 @@ void main() {
       expect(info.depVersion('sagernet/sing-box'), 'v1.13.19');
     });
 
+    test('флаги сборки: по ним видно, что ядро умеет', () {
+      // `-tags` решает судьбу TUN: без `with_gvisor` ядро падает на СТАРТЕ со
+      // `stack: gvisor`, а это наше умолчание.
+      final info = GoBuildInfo.parse(buildBlob(
+        goVersion: 'go1.26.0',
+        modinfo: 'mod\tkeqrnel\t(devel)\t\n'
+            'build\t-buildmode=exe\n'
+            'build\t-tags=with_gvisor,with_quic\n'
+            'build\tCGO_ENABLED=0\n'
+            'build\t-ldflags=-s -w\n',
+      ))!;
+
+      expect(info.hasBuildSettings, isTrue);
+      expect(info.buildTags, {'with_gvisor', 'with_quic'});
+      expect(info.settings['CGO_ENABLED'], '0');
+      // Значение со своими '=' режется по ПЕРВОМУ разделителю.
+      expect(info.settings['-ldflags'], '-s -w');
+    });
+
+    test('без флагов сборки «тега нет» означает «неизвестно»', () {
+      final info = GoBuildInfo.parse(buildBlob(
+        goVersion: 'go1.26.0',
+        modinfo: 'mod\tkeqrnel\t(devel)\t\n',
+      ))!;
+
+      expect(info.hasBuildSettings, isFalse);
+      expect(info.buildTags, isEmpty);
+    });
+
     test('зависимость ищется и по полному пути, и по хвосту', () {
       final info = GoBuildInfo.parse(buildBlob(
         goVersion: 'go1.26.0',

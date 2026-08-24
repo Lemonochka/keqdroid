@@ -54,6 +54,11 @@ class KeqdisVpnService : VpnService() {
         const val CORE_ENGINE_KEQRNEL  = "keqrnel"
         // Файл логов ядра в filesDir; читается getXrayLogs (надёжнее logcat на Android 13+).
         const val CORE_LOG_FILE        = "core_logs.txt"
+        // Вердикт mihomo о собственном туннеле — единственный способ узнать,
+        // взял ли он наш дескриптор (см. awaitMihomoTun). Строки из
+        // listener/listener.go: ReCreateTun.
+        const val MIHOMO_TUN_READY     = "[TUN] Tun adapter listening at:"
+        const val MIHOMO_TUN_FAILED    = "Start TUN listening error:"
         // Лог tun2socks; пишется только в дебаг-режиме. Нужен экрану «Соединения»:
         // исходный сокет приложения виден больше нигде.
         const val TUN2SOCKS_LOG_FILE   = "tun2socks_logs.txt"
@@ -420,13 +425,44 @@ class KeqdisVpnService : VpnService() {
             }
 
             val isMihomo = coreKind == CORE_KIND_MIHOMO
-            xrayPid = startXray(
-                getBinaryPath(if (isMihomo) "libmihomo.so" else "libxray.so"),
-                xrayConfigPath,
-                coreKind,
-            )
+
+            // Порядок зависит от того, кто владеет туннелем.
+            //
+            //  * xray: ядро о TUN не знает, пакеты ему приносит tun2socks.
+            //    Сначала ядро (и его SOCKS-порт), потом интерфейс, потом
+            //    tun2socks — так упавшее ядро не оставляет за собой поднятый
+            //    интерфейс.
+            //  * mihomo: туннель держит оно само через `tun.file-descriptor`,
+            //    поэтому интерфейс обязан существовать РАНЬШЕ ядра — номер
+            //    дескриптора дописывается в конфиг перед запуском. Взамен
+            //    исчезает tun2socks, а с ним лишняя пересылка каждого пакета
+            //    через локальный SOCKS; появляются перехват DNS (`dns-hijack`)
+            //    и настоящий UDP.
+            if (isMihomo) {
+                val tun = buildTunInterface(excludePkgs, includePkgs)
+                tunInterface = tun
+                val tunRawFd = tun.fd
+                injectTunFd(xrayConfigPath, tunRawFd)
+                activeSocksPort = socksPort
+                xrayPid = startXray(
+                    getBinaryPath("libmihomo.so"),
+                    xrayConfigPath,
+                    coreKind,
+                    tunFd = tunRawFd,
+                )
+            } else {
+                xrayPid = startXray(
+                    getBinaryPath("libxray.so"),
+                    xrayConfigPath,
+                    coreKind,
+                )
+            }
 
             // ждём пока ядро поднимет SOCKS5 порт
+            //
+            // Признак годится и для mihomo с собственным туннелем: локальные
+            // инбаунды у него в том же конфиге и поднимаются тем же стартом, а
+            // отдельного «tun готов» ядро наружу не сообщает.
             var waited = 0
             while (!isPortOpen("127.0.0.1", socksPort) && waited < 10000) {
                 delay(300); waited += 300
@@ -436,14 +472,24 @@ class KeqdisVpnService : VpnService() {
                     "${if (isMihomo) "mihomo" else "Xray"} SOCKS5 port $socksPort not ready${coreLogTail()}"
                 )
 
-            // создаём TUN-интерфейс
-            val tun = buildTunInterface(excludePkgs, includePkgs)
-            tunInterface = tun
+            // Открытый SOCKS-порт у mihomo НЕ означает, что туннель взлетел:
+            // инбаунды поднимаются раньше tun-листенера (`updateListeners` идёт
+            // до `updateTun`), а его падение ядро переживает — пишет ошибку,
+            // гасит `tun.enable` и работает дальше. Снаружи всё выглядит
+            // здоровым: порт слушается, прокси набирается, статус «подключено»,
+            // и только пакеты из tun не читает никто.
+            if (isMihomo) awaitMihomoTun()
 
-            // запускаем tun2socks через нативный fork
-            val tunRawFd = tun.fd
-            activeSocksPort = socksPort
-            startTun2Socks(tunRawFd, socksPort, socksNoAuth = socksNoAuth)
+            if (!isMihomo) {
+                // создаём TUN-интерфейс
+                val tun = buildTunInterface(excludePkgs, includePkgs)
+                tunInterface = tun
+
+                // запускаем tun2socks через нативный fork
+                val tunRawFd = tun.fd
+                activeSocksPort = socksPort
+                startTun2Socks(tunRawFd, socksPort, socksNoAuth = socksNoAuth)
+            }
 
             startTime = System.currentTimeMillis()
             setStatus(VpnRunStatus.RUNNING)
@@ -795,6 +841,7 @@ class KeqdisVpnService : VpnService() {
             proxyUrl,
             logLevel,
             logPath,
+            TUN_MTU,
         )
         if (pid <= 0) throw IllegalStateException("fork() failed (pid=$pid)")
 
@@ -847,14 +894,123 @@ class KeqdisVpnService : VpnService() {
             if (tail.isBlank()) "" else "\n$tail"
         }.getOrDefault("")
 
-    private fun startXray(binary: String, config: String, coreKind: String = CORE_KIND_XRAY): Int {
+    /**
+     * Ждёт, пока mihomo действительно возьмёт наш дескриптор.
+     *
+     * Отдельного «tun готов» ядро наружу не отдаёт, поэтому смотрим лог, и
+     * сразу на оба исхода: `[TUN] Tun adapter listening at:` при успехе,
+     * `Start TUN listening error:` при отказе. Ошибка ценна сама по себе —
+     * причина в ней уже названа, и пользователю уезжает она, а не «не
+     * работает».
+     *
+     * Молчание не считаем отказом: успех ядро пишет уровнем info, а уровень
+     * лога выбирает пользователь, и на `warning` строки просто не будет. Ошибка
+     * же видна на всех уровнях, кроме `silent`, — поэтому вышедшее время
+     * означает «доказательств отказа нет», и это не повод рвать подключение.
+     */
+    private suspend fun awaitMihomoTun(timeoutMs: Int = 4000) {
+        val file = File(filesDir, CORE_LOG_FILE)
+        var waited = 0
+        while (waited < timeoutMs) {
+            val log = runCatching { file.readText() }.getOrDefault("")
+            val failure = log.lineSequence().lastOrNull { it.contains(MIHOMO_TUN_FAILED) }
+            if (failure != null) {
+                throw IllegalStateException(
+                    "mihomo did not take over the tunnel: " +
+                        failure.substringAfter(MIHOMO_TUN_FAILED).trim().take(300)
+                )
+            }
+            if (log.contains(MIHOMO_TUN_READY)) {
+                android.util.Log.i("KEQDIS", "mihomo tun adapter is up")
+                return
+            }
+            delay(100); waited += 100
+        }
+        android.util.Log.i("KEQDIS", "mihomo tun: no verdict in the log, continuing")
+    }
+
+    /**
+     * Дописывает в готовый конфиг mihomo номер дескриптора TUN и MTU.
+     *
+     * Обе величины принадлежат этой стороне и только ей: интерфейс поднимает
+     * сервис, дескриптор существует лишь в этом процессе, а [TUN_MTU] —
+     * константа сервиса. Держать их копию в Dart значило бы завести второй
+     * источник правды для числа, которое ОБЯЗАНО совпадать: у fd-устройства
+     * ядро не может спросить MTU у системы и берёт своё умолчание, а
+     * расхождение с интерфейсом — это пакеты, которые netstack считает
+     * допустимыми, а ядро ОС на записи в tun отбрасывает (ровно та же
+     * ловушка, что с `--mtu` у tun2socks).
+     *
+     * Конфиг переписывается на месте: экран «Соединения» и реконнект из плитки
+     * читают координаты API из того же файла.
+     */
+    private fun injectTunFd(configPath: String, tunFd: Int) {
+        val file = File(configPath)
+        val root = org.json.JSONObject(file.readText())
+        val tun = root.optJSONObject("tun")
+            ?: throw IllegalStateException(
+                "mihomo config has no `tun` section — the core cannot take over " +
+                    "the tunnel without it"
+            )
+        tun.put("file-descriptor", tunFd)
+        tun.put("mtu", TUN_MTU)
+        root.put("tun", tun)
+        file.writeText(yamlSafeJson(root.toString()))
+        android.util.Log.i("KEQDIS", "mihomo tun: fd=$tunFd mtu=$TUN_MTU")
+    }
+
+    /**
+     * Снимает escape-последовательность `\/`, которую вставляет `org.json`.
+     *
+     * Конфиг мы пишем обычным JSON, а разбирает его ядро YAML-парсером
+     * (`gopkg.in/yaml.v3`) — YAML 1.2 надмножество JSON, и до сих пор это
+     * работало. Но `JSONStringer` в Android экранирует ещё и косую черту:
+     * `"https://1.1.1.1/dns-query"` превращается в `"https:\/\/1.1.1.1\/…"`.
+     * Для JSON это законно, а таблица escape-ов go-yaml (`scannerc.go`) знает
+     * `\t \n \r \f \" \\ \uXXXX`, но НЕ `\/` — и разбор обрывается на первом же
+     * слэше: `Parse config error: yaml: found unknown escape character`. Ядро не
+     * стартует вовсе, а снаружи это выглядит как долгое подключение и падение,
+     * потому что мы всё это время ждём SOCKS-порт, которого не будет.
+     *
+     * Слэшей в конфиге полно всегда: адреса DoH, CIDR-правила, пути транспортов.
+     * Поэтому ломается ЛЮБОЙ конфиг, а не какой-то особенный.
+     *
+     * Идём по строке с учётом самих escape-ов: `\\` копируем парой, чтобы
+     * следующий за ней слэш не сошёл за экранированный.
+     */
+    private fun yamlSafeJson(json: String): String {
+        if (!json.contains("\\/")) return json
+        val out = StringBuilder(json.length)
+        var i = 0
+        while (i < json.length) {
+            val c = json[i]
+            if (c == '\\' && i + 1 < json.length) {
+                val next = json[i + 1]
+                if (next == '/') out.append('/') else out.append(c).append(next)
+                i += 2
+                continue
+            }
+            out.append(c)
+            i++
+        }
+        return out.toString()
+    }
+
+    private fun startXray(
+        binary: String,
+        config: String,
+        coreKind: String = CORE_KIND_XRAY,
+        tunFd: Int = -1,
+    ): Int {
         // NativeHelper.startCore: fork+execv из nativeLibraryDir, дублирует вывод ядра
         // в logcat (KEQDIS_XRAY) и в файл CORE_LOG_FILE (его читает getXrayLogs).
         // Возвращает: pid > 0 — успех, -1 binary not found, -2 config not found, -4 crashed immediately
         XrayGeoAssets.ensure(this, filesDir)
         // Свежий лог ядра на каждую сессию (ping пишет в свой файл/никуда — не мешает).
         runCatching { File(filesDir, CORE_LOG_FILE).writeText("") }
-        val pid = NativeHelper.startCore(binary, config, filesDir.absolutePath, CORE_LOG_FILE, coreKind)
+        val pid = NativeHelper.startCore(
+            binary, config, filesDir.absolutePath, CORE_LOG_FILE, coreKind, tunFd,
+        )
         when {
             pid == -1 -> throw IllegalStateException("Xray binary not found: $binary")
             pid == -2 -> throw IllegalStateException("Xray config not found: $config")

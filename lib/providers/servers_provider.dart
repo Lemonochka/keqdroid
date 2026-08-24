@@ -253,7 +253,12 @@ class ServersNotifier extends Notifier<ServersState> {
     }
 
     // Готовый конфиг ядра целиком (провайдеры отдают такие «сервера с готовым
-    // роутингом»): проверяем, что это именно xray-конфиг с аутбаундами.
+    // роутингом»): проверяем, что это именно конфиг того ядра, за которое себя
+    // выдаёт. Clash — раньше xray: json-конфиг Clash тоже начинается с '{', а
+    // xray-парсер его не возьмёт и выдаст непонятную жалобу про outbounds.
+    if (CustomClashConfig.looksLikeClash(rawConfig)) {
+      return CustomClashConfig.describeProblem(rawConfig);
+    }
     if (CustomXrayConfig.looksLikeJson(rawConfig)) {
       return CustomXrayConfig.describeProblem(rawConfig);
     }
@@ -267,7 +272,7 @@ class ServersNotifier extends Notifier<ServersState> {
         lower.startsWith('hysteria://') ||
         lower.startsWith('hysteria2://') ||
         lower.startsWith('hy2://'))) {
-      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2:// or AmneziaWG .conf';
+      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, an Xray JSON config, a Clash YAML config or an AmneziaWG .conf';
     }
 
     if (lower.startsWith('vmess://')) {
@@ -485,10 +490,12 @@ class ServersNotifier extends Notifier<ServersState> {
   }
 
   /// Ключ скоупа группы цепочек — общий для пинга, сворачивания и сортировки.
-  static const String chainsGroupKey = '__chains__';
+  /// Значение живёт в `models/server_group.dart` вместе с самим разбиением на
+  /// группы: по нему же боковой навигатор находит, куда прыгать.
+  static const String chainsGroupKey = kChainsServerGroupKey;
 
   /// То же для серверов, добавленных руками (без подписки).
-  static const String manualGroupKey = '__manual__';
+  static const String manualGroupKey = kManualServerGroupKey;
 
   Future<void> pingChains() => _pingScoped(
         chainsGroupKey,

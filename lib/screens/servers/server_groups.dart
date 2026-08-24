@@ -25,62 +25,47 @@ class _ServersListPanel extends ConsumerWidget {
       return emptyState;
     }
 
-    // Цепочки живут в списке обычными серверами, но своей группой: у них своя
-    // логика («маршрут», а не «сервер»), и в куче с ручными они бы потерялись.
-    final chains = serversState.servers
-        .where((s) => s.protocol == 'chain')
-        .toList();
-    final manual = serversState.servers
-        .where((s) => s.subscriptionId == null && s.protocol != 'chain')
-        .toList();
-    final bySubId = <String, List<ServerItem>>{};
-    for (final s in serversState.servers.where(
-      (s) => s.subscriptionId != null,
-    )) {
-      bySubId.putIfAbsent(s.subscriptionId!, () => []).add(s);
-    }
+    // Разбиение на группы — общее с боковым навигатором (`buildServerGroups`):
+    // кнопка «перейти к группе», которой в списке нет или которая там стоит не
+    // там, — это не мелочь оформления, а сломанная навигация. Здесь к каждой
+    // группе добавляются только заголовок и действия, состав и порядок — оттуда.
+    final groups = [
+      for (final group in buildServerGroups(
+        servers: serversState.servers,
+        subscriptions: subs,
+      ))
+        switch (group.kind) {
+          ServerGroupKind.chains => _ServerGroupEntry(
+              key: const ValueKey('server-group-chains'),
+              subscription: null,
+              servers: group.servers,
+              groupKey: group.key,
+              groupTitle: context.l10n.chainGroupTitle,
+              onRefresh: null,
+              onPingAll: () => ref.read(serversProvider.notifier).pingChains(),
+            ),
+          ServerGroupKind.subscription => _ServerGroupEntry(
+              key: ValueKey('server-group-${group.key}'),
+              subscription: group.subscription,
+              servers: group.servers,
+              onRefresh: () => ref
+                  .read(subscriptionsProvider.notifier)
+                  .refreshTracked(group.subscription!),
+              onPingAll: () => ref
+                  .read(serversProvider.notifier)
+                  .pingSubscription(group.key),
+            ),
+          ServerGroupKind.manual => _ServerGroupEntry(
+              key: const ValueKey('server-group-manual'),
+              subscription: null,
+              servers: group.servers,
+              onRefresh: null,
+              onPingAll: () =>
+                  ref.read(serversProvider.notifier).pingSubscription(null),
+            ),
+        },
+    ];
 
-    final groups = <_ServerGroupEntry>[];
-    if (chains.isNotEmpty) {
-      groups.add(
-        _ServerGroupEntry(
-          key: const ValueKey('server-group-chains'),
-          subscription: null,
-          servers: chains,
-          groupKey: ServersNotifier.chainsGroupKey,
-          groupTitle: context.l10n.chainGroupTitle,
-          onRefresh: null,
-          onPingAll: () => ref.read(serversProvider.notifier).pingChains(),
-        ),
-      );
-    }
-    for (final sub in subs) {
-      final servers = bySubId[sub.id] ?? [];
-      if (servers.isEmpty) continue;
-      groups.add(
-        _ServerGroupEntry(
-          key: ValueKey('server-group-${sub.id}'),
-          subscription: sub,
-          servers: servers,
-          onRefresh: () =>
-              ref.read(subscriptionsProvider.notifier).refreshTracked(sub),
-          onPingAll: () =>
-              ref.read(serversProvider.notifier).pingSubscription(sub.id),
-        ),
-      );
-    }
-    if (manual.isNotEmpty) {
-      groups.add(
-        _ServerGroupEntry(
-          key: const ValueKey('server-group-manual'),
-          subscription: null,
-          servers: manual,
-          onRefresh: null,
-          onPingAll: () =>
-              ref.read(serversProvider.notifier).pingSubscription(null),
-        ),
-      );
-    }
 
     // Режим колонок читаем здесь и раздаём карточкам ПАРАМЕТРОМ, а не вотчем
     // внутри _SubCard: при смене настройки AnimatedSwitcher ниже держит старое
@@ -96,7 +81,12 @@ class _ServersListPanel extends ConsumerWidget {
     // прокрутки (SliverList.builder в _SubCard), а не все разом Column'ом —
     // раскрытая группа на сотни серверов иначе джанкает свайп (build +
     // семантика каждого тайла на каждый кадр).
-    final list = SmoothScroll(
+    // Отступ прыжка: список накрыт градиентом шапки, и выровненная «в ноль»
+    // группа уехала бы под него. Здесь же живёт слежение за тем, на какой
+    // группе список стоит сейчас, — по нему навигатор ставит подсветку.
+    final list = ServerGroupAnchorScope(
+      leadingInset: topPadding + 12,
+      child: SmoothScroll(
       builder: (context, controller) => CustomScrollView(
         controller: controller,
         physics: const ClampingScrollPhysics(),
@@ -122,6 +112,7 @@ class _ServersListPanel extends ConsumerWidget {
               ),
             ),
         ],
+      ),
       ),
     );
 
@@ -520,7 +511,13 @@ class _SubCardState extends ConsumerState<_SubCard> {
         sliver: SliverMainAxisGroup(
           slivers: [
             SliverToBoxAdapter(
-              child: RepaintBoundary(
+              // Шапка — цель прыжка из бокового навигатора. Именно она, а не
+              // сама sliver-карточка: `SliverToBoxAdapter` строит и раскладывает
+              // ребёнка всегда, даже когда группа далеко за экраном, так что у
+              // якоря есть живой render object и посчитанное смещение.
+              child: ServerGroupAnchor(
+                groupKey: collapseKey,
+                child: RepaintBoundary(
                 child: SizedBox(
                   height: _GroupHeaderBackground.heightFor(
                     sub,
@@ -749,6 +746,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                 ),
                 ),
                 ),
+              ),
               ),
             ),
 

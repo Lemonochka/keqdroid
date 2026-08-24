@@ -2,7 +2,7 @@ name: keqdroid
 description: "KEQDIS proxy/VPN client for Android and Windows."
 publish_to: 'none'
 
-version: 0.10.0+36
+version: 0.11.0+37
 
 environment:
   sdk: ^3.11.3
@@ -43,6 +43,10 @@ dependencies:
   tray_manager: ^0.5.3
   mobile_scanner: ^7.2.0
   androidx_graphics_shapes: ^1.6.1
+  # Подписки для clash-клиентов приходят в YAML. Приходит транзитивно с
+  # тулингом, но разбираем его мы сами (см. utils/custom_clash_config.dart) —
+  # значит зависимость наша, прямая.
+  yaml: ^3.1.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

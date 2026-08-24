@@ -32,13 +32,13 @@
     {
       "type": "tun",
       "tag": "tun-in",
-      "mtu": 1400,
+      "mtu": 9000,
       "address": [
         "172.19.0.1/30"
       ],
       "auto_route": true,
       "strict_route": false,
-      "stack": "system",
+      "stack": "gvisor",
       "interface_name": "tun-keqdis"
     }
   ],

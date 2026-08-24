@@ -561,7 +561,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXraySniffingHint => 'تشخیص پروتکل و دامنهٔ مقصد از روی ترافیک ورودی';
 
   @override
-  String get settingsXraySniffingRouteOnlyHint => 'نتیجهٔ شناسایی فقط برای مسیریابی به کار برود، بدون تغییر مقصد';
+  String get settingsXraySniffingRouteOnlyHint => 'خاموش (پیش‌فرض): دامنهٔ شناسایی‌شده مقصد می‌شود و دوباره ترجمه می‌شود — برای مسیر مستقیم به‌صورت محلی و برای مسیر پروکسی روی سرور. روشن: دامنه فقط قاعده را انتخاب می‌کند و اتصال به همان نشانی‌ای می‌رود که برنامه داده — و هر وقت آن نشانی از یک ریزالور آن‌سوی تونل آمده باشد، نادرست است.';
 
   @override
   String get settingsXrayResetDefaults => 'بازگشت به پیش‌فرض';
@@ -597,19 +597,19 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsTunStackTitle => 'پشتهٔ شبکه';
 
   @override
-  String get settingsTunStackSystemHint => 'پشتهٔ TCP/IP هسته — سریع‌ترین، پیش‌فرض';
+  String get settingsTunStackSystemHint => 'پشتهٔ TCP/IP هسته — سریع‌ترین، اما در ویندوز TCP را با یک شنونده روی نشانی TUN پایان می‌دهد و به قاعدهٔ Windows Firewall نیاز دارد؛ اگر آن قاعده ثبت نشود، تونل بالا می‌آید ولی هیچ ترافیکی رد نمی‌شود';
 
   @override
-  String get settingsTunStackGvisorHint => 'پشتهٔ فضای کاربر — سازگاری بهتر، کمی کندتر. به هسته‌ای با gVisor نیاز دارد (هسته‌های نسخهٔ 0.7.1 و قدیمی‌تر با کد 1 بسته می‌شوند)';
+  String get settingsTunStackGvisorHint => 'پشتهٔ فضای کاربر — پیش‌فرض. کاملاً داخل هسته اجرا می‌شود، پس نه شنونده می‌خواهد و نه قاعدهٔ فایروال؛ کمی کندتر. به هسته‌ای با gVisor نیاز دارد (هسته‌های نسخهٔ 0.7.1 و قدیمی‌تر با کد 1 بسته می‌شوند)';
 
   @override
-  String get settingsTunStackMixedHint => 'system برای TCP و gVisor برای UDP. به هسته‌ای با gVisor نیاز دارد (هسته‌های نسخهٔ 0.7.1 و قدیمی‌تر با کد 1 بسته می‌شوند)';
+  String get settingsTunStackMixedHint => 'gVisor برای TCP و system برای UDP. به هسته‌ای با gVisor نیاز دارد (هسته‌های نسخهٔ 0.7.1 و قدیمی‌تر با کد 1 بسته می‌شوند)';
 
   @override
   String get settingsTunMtu => 'MTU';
 
   @override
-  String get settingsTunMtuHint => '576 تا 65535، پیش‌فرض 1400';
+  String get settingsTunMtuHint => '576 تا 65535، پیش‌فرض 9000';
 
   @override
   String get settingsTunUdpTimeout => 'مهلت UDP (ثانیه)';
@@ -646,6 +646,21 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get settingsTunAutoRouteHint => 'مسیرهای سیستم را خودکار به تونل اضافه می‌کند. فقط اگر مسیرها را خودتان مدیریت می‌کنید خاموش کنید — بدون آن هیچ ترافیکی وارد TUN نمی‌شود';
+
+  @override
+  String get settingsTunIpv6 => 'IPv6 را داخل تونل نگه دار';
+
+  @override
+  String get settingsTunIpv6Hint => 'رابط TUN که تنها نشانی IPv4 دارد هیچ مسیر IPv6 نمی‌گیرد، پس روی دستگاه دوپشته‌ای تمام ترافیک IPv6 از کنار تونل می‌رود — از کنار قاعده‌های مسیریابی و از کنار پراکسی. با روشن بودن این گزینه رابط نشانی IPv6 هم می‌گیرد و خروج IPv6 بسته می‌شود، پس برنامه‌ها فوراً به IPv4 که از پیش در تونل است بازمی‌گردند. نشانی تنها زمانی افزوده می‌شود که دستگاه واقعاً IPv6 جهانی داشته باشد. فقط هستهٔ xray/keqrnel';
+
+  @override
+  String get settingsMihomoSection => 'هسته mihomo';
+
+  @override
+  String get settingsMihomoFakeIp => 'Fake IP';
+
+  @override
+  String get settingsMihomoFakeIpHint => 'هسته به‌جای نشانی واقعی، نشانی جایگزین به DNS پاسخ می‌دهد: تفکیک نام آنی می‌شود و قاعده‌های دامنه دیگر به sniffing وابسته نیستند. در عوض قاعده‌های IP پیش از تطبیق باید دوباره تفکیک شوند، پس همان فهرست‌های مسیریابی کمی متفاوت از Xray رفتار می‌کنند. فقط جایی اثر دارد که تونل در اختیار خود mihomo است — حالت TUN و اندروید.';
 
   @override
   String get settingsPingTitle => 'پینگ سرور';
@@ -913,7 +928,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversAddServerTitle => 'افزودن سرور';
 
   @override
-  String get serversPasteVlessHint => 'لینک vless://، vmess://، trojan://، ss://، hysteria2:// یا hy2:// را بچسبانید (هر کدام در یک خط)، یا یک کانفیگ کامل JSON برای Xray';
+  String get serversPasteVlessHint => 'لینک vless://، vmess://، trojan://، ss://، hysteria2:// یا hy2:// را بچسبانید (هر کدام در یک خط)، یا یک کانفیگ کامل: JSON برای Xray، YAML برای Clash، ‎.conf برای AmneziaWG';
 
   @override
   String get serversPasteHint => '…//:vless یا …?hy2://host:port=auth';
@@ -1428,6 +1443,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String serversImportedSummary(Object added, Object total) {
     return '$added سرور از $total اضافه شد';
   }
+
+  @override
+  String get sidebarJumpTitle => 'پرش سریع';
+
+  @override
+  String get serversScrollToEnd => 'به انتهای فهرست';
 
   @override
   String get serversManualGroup => 'سرورهای دستی';
@@ -2195,6 +2216,27 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get settingsCoreHint => 'از اتصال بعدی اعمال می‌شود — نشست فعلی راه‌اندازی مجدد نمی‌شود.';
+
+  @override
+  String get settingsCoreAuto => 'خودکار';
+
+  @override
+  String get settingsCoreAutoSubtitle => 'هسته را قالبِ سرور تعیین می‌کند: لینک‌ها روی Xray و پیکربندی‌های آماده روی همان هسته‌ای که برایش نوشته شده‌اند اجرا می‌شوند.';
+
+  @override
+  String get settingsCoreSkipClash => 'سرور فعال یک پیکربندی آمادهٔ Clash است — صرف‌نظر از هستهٔ انتخاب‌شده تنها mihomo آن را اجرا می‌کند.';
+
+  @override
+  String get settingsCoreSkipCustom => 'سرور فعال یک پیکربندی آمادهٔ JSON برای Xray است (مسیریابی و DNS آن از سمت ارائه‌دهنده می‌آید)، بنابراین صرف‌نظر از هستهٔ انتخاب‌شده با libxray اجرا می‌شود. برای استفاده از mihomo به اشتراکی نیاز است که لینک‌های ساده vless:// / vmess:// بدهد — هویت کلاینت را در تنظیمات اشتراک عوض کنید.';
+
+  @override
+  String get settingsCoreSkipChain => 'سرور فعال یک زنجیره است: گره‌های آن با dialerProxy در Xray به هم وصل شده‌اند، پس صرف‌نظر از هستهٔ انتخاب‌شده با libxray اجرا می‌شود.';
+
+  @override
+  String get settingsCoreSkipAwg => 'سرور فعال یک پروفایل AmneziaWG است — صرف‌نظر از هستهٔ انتخاب‌شده با هستهٔ خودش، wg-go، اجرا می‌شود.';
+
+  @override
+  String get settingsCoreSkipPlatform => 'هستهٔ mihomo برای این پلتفرم ارائه نمی‌شود — اتصال از هستهٔ Xray انجام می‌شود.';
 
   @override
   String get settingsInternalsCores => 'هسته‌ها';

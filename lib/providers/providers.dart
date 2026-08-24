@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
@@ -11,9 +12,12 @@ import '../l10n/app_localizations.dart';
 import '../models/app_info.dart';
 import '../models/app_settings.dart';
 import '../models/ping_test_config.dart';
+import '../models/server_group.dart';
+import '../models/tun_settings.dart';
 import '../models/routing_rule.dart';
 import '../models/server_item.dart';
 import '../models/subscription.dart';
+import '../models/xray_core_settings.dart';
 import '../services/card_image_service.dart';
 import '../services/geo_asset_service.dart';
 import '../services/notification_service.dart';
@@ -25,24 +29,29 @@ import '../services/tunnel_session_builder.dart';
 import '../services/vpn_engine.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../tunnel/app_routing_mode.dart';
+import '../tunnel/local_port_plan.dart';
 import '../tunnel/vpn_backend.dart';
 import '../utils/app_locale.dart';
 import '../utils/awg_profile.dart';
 import '../utils/config_gen.dart';
+import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
 import '../utils/error_messages.dart';
 import '../utils/geo_asset_index.dart';
+import '../utils/host_ipv6.dart';
 import '../utils/local_vpn_proxy.dart';
 import '../utils/process_name_utils.dart';
 import '../utils/mihomo_api_session.dart';
 import '../utils/mihomo_config_gen.dart';
 import '../utils/proxy_chain.dart';
 import '../utils/routing_rules_fold.dart';
+import '../utils/singbox_tun_config.dart';
 import '../utils/socks5_credentials.dart';
 import '../utils/split_tunnel_routing.dart';
 import '../utils/subscription_diff.dart';
 import '../utils/subscription_url.dart';
 import '../utils/system_accent.dart';
+import '../utils/vpn_core_support.dart';
 import 'ui_state_providers.dart';
 
 export 'ui_state_providers.dart';
@@ -212,7 +221,9 @@ final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
       vpnConnected: vpnConnected,
       awgBackend: awgActive,
     ),
-    httpPort: settings.httpPort,
+    // Порт активной сессии, а не из настроек: когда настроенный был занят или
+    // изъят системой, ядро слушает подменённый (см. [LocalPortPlan]).
+    httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),
   );
 });
 
