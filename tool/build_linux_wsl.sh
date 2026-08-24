@@ -62,7 +62,7 @@ echo "bundle: $BUNDLE"
 ls -la "$BUNDLE" || true
 echo ""
 echo "bundled cores (next to the binary, installed by linux/CMakeLists.txt):"
-ls -la "$BUNDLE"/keqrnel "$BUNDLE"/wireproxy "$BUNDLE"/*.dat 2>/dev/null \
+ls -la "$BUNDLE"/keqrnel "$BUNDLE"/mihomo "$BUNDLE"/wireproxy "$BUNDLE"/*.dat 2>/dev/null \
   || echo "(cores missing -- check assets/bin/linux)"
 echo ""
 echo "DONE. Binary: $BUNDLE/keqdroid"

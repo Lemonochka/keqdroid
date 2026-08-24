@@ -1,0 +1,60 @@
+Do not read the Android package list when nothing asks for it.
+
+Starting a TUN listener on Android goes through `buildAndroidRules`, which
+unconditionally starts sing-tun's package manager. The manager reads
+`/data/system/packages.xml` -- a file SELinux keeps readable by `system` only
+since Android 11. From an ordinary app (`untrusted_app`) the read fails with
+EACCES, `buildAndroidRules` returns the error, and `sing_tun.New` never gets
+called:
+
+    Start TUN listening error: build android rules: read packages list:
+    open /data/system/packages.xml: permission denied
+
+The core survives that -- `ReCreateTun` logs the error, clears `tun.enable` and
+carries on -- so everything else looks healthy: the local SOCKS inbound is up,
+the proxy dials fine, the app reports "connected". Only nobody ever reads the
+tun device, so not a single packet moves.
+
+Upstream sidesteps this with the `cmfa` build tag: ClashMetaForAndroid runs
+mihomo as a library and feeds it the package list from Java. That tag is not an
+option here -- it also swaps the `system` DNS client for one that is fed
+through a Java bridge we do not have, disables the loopback detector and puts
+the RESTful API into embed mode. We run the core as a plain executable, so the
+non-cmfa build is the right one; it just must not die on a list it does not
+need.
+
+And it genuinely does not need it. The list serves exactly one purpose:
+translating `include-package` / `exclude-package` into UID ranges. This app
+never sets either -- per-app routing on Android is done by VpnService
+(`addAllowedApplication` / `addDisallowedApplication`), which is the only thing
+that works without privileges anyway. `BuildAndroidRules` touches the manager
+only inside those two branches, so with both empty it can be handed a nil one;
+the android-user handling it still performs (scanning `/data/user`) needs no
+manager.
+
+Keep the guard in step with the fields `BuildAndroidRules` resolves through the
+package manager: should sing-tun learn a third package-shaped option, it has to
+be listed here too, or that option would silently do nothing.
+
+diff --git a/listener/sing_tun/server_android.go b/listener/sing_tun/server_android.go
+--- a/listener/sing_tun/server_android.go
++++ b/listener/sing_tun/server_android.go
+@@ -47,6 +47,18 @@
+ }
+
+ func (l *Listener) buildAndroidRules(tunOptions *tun.Options) error {
++	// keqdroid: the package manager exists to turn package names into UIDs.
++	// With no package rules there is nothing to turn, and reading the list is
++	// not permitted for an ordinary app at all: SELinux keeps
++	// /data/system/packages.xml readable by system only, so Start() fails with
++	// EACCES and takes the whole TUN listener down with it. A nil manager is
++	// safe here -- BuildAndroidRules only dereferences it inside the
++	// IncludePackage/ExcludePackage branches, and the android-user handling it
++	// still performs needs no manager at all.
++	if len(tunOptions.IncludePackage) == 0 && len(tunOptions.ExcludePackage) == 0 {
++		tunOptions.BuildAndroidRules(nil, l.handler)
++		return nil
++	}
+ 	packageManager, err := getPackageManager()
+ 	if err != nil {
+ 		return err

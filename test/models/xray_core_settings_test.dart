@@ -59,7 +59,8 @@ void main() {
 
     // Строки пользователя уходят в конфиг как есть: и `https+local://` (мимо
     // туннеля), и `https://` (через роутинг) остаются на его усмотрение.
-    test('кастомные серверы не переписываются', () {
+    test('кастомные серверы переписываются только там, где ядро их не поймёт',
+        () {
       const core = XrayCoreSettings(
         dnsUseCustom: true,
         dnsServers: 'https+local://1.1.1.1/dns-query\nquic://dns.adguard.com\n1.1.1.1',
@@ -72,7 +73,63 @@ void main() {
       expect(servers.first['domains'], ['full:vpn.example.net']);
       expect(
         servers.skip(1).map((s) => s['address']),
-        ['https+local://1.1.1.1/dns-query', 'quic://dns.adguard.com', '1.1.1.1'],
+        // DoQ у xray существует только как `quic+local` (удалённого режима у
+        // QUIC-резолвера нет): голый `quic://` молча становится ДОМЕНОМ
+        // обычного UDP-сервера и не резолвится никогда.
+        [
+          'https+local://1.1.1.1/dns-query',
+          'quic+local://dns.adguard.com',
+          '1.1.1.1',
+        ],
+      );
+    });
+
+    test('host:port разъезжается на address и port', () {
+      // `address` у xray — не строка подключения: если в ней не узнаётся IP,
+      // строка разбирается как URL. `[2606:4700:4700::1111]:53` не разбирается
+      // вовсе («first path segment in URL cannot contain colon»), и ядро не
+      // стартует — туннеля нет совсем.
+      const core = XrayCoreSettings(
+        dnsUseCustom: true,
+        dnsServers: '[2606:4700:4700::1111]:53\ndns.example:5353\n9.9.9.9',
+      );
+      final servers = (core.buildDnsBlock(directDomains: const [])['servers']
+              as List)
+          .cast<Map<String, dynamic>>();
+
+      expect(
+        servers.map((s) => {'address': s['address'], if (s.containsKey('port')) 'port': s['port']}),
+        [
+          {'address': '2606:4700:4700::1111', 'port': 53},
+          {'address': 'dns.example', 'port': 5353},
+          {'address': '9.9.9.9'},
+        ],
+      );
+      // Ограничители — на каждом сервере: их у xray нет глобальных, а без них
+      // один молчащий резолвер стоит 4 секунды ожидания (и до 20 на список).
+      expect(servers.every((s) => s['timeoutMs'] == 2500), isTrue);
+      expect(servers.every((s) => s['serveStale'] == true), isTrue);
+    });
+
+    test('адреса, которых ядро не исполнит, выбрасываются с откатом на дефолт',
+        () {
+      // `tls://`, `sdns://`, `dhcp://` xray не знает: строка молча становится
+      // доменом UDP-резолвера, который никогда не отвечает. Пустой список
+      // после чистки — уходим в дефолтный DoH, а не остаёмся без DNS.
+      const core = XrayCoreSettings(
+        dnsUseCustom: true,
+        dnsServers: 'tls://1.1.1.1\nsdns://gibberish',
+      );
+      final servers = (core.buildDnsBlock(directDomains: const [])['servers']
+              as List)
+          .cast<Map<String, dynamic>>();
+
+      expect(
+        servers.map((s) => s['address']),
+        containsAll(<String>[
+          'https+local://1.1.1.1/dns-query',
+          'https+local://8.8.8.8/dns-query',
+        ]),
       );
     });
 

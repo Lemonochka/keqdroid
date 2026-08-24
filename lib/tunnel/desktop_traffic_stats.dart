@@ -187,11 +187,20 @@ mixin DesktopTrafficStats {
     }
   }
 
-  Future<({int down, int up})?> queryClashTraffic(int port) async {
+  /// [secret] — токен RESTful API. У keqrnel его нет (API слушает петлю), у
+  /// mihomo он обязателен: без заголовка ядро отвечает 401, и счётчики молча
+  /// остаются нулями.
+  Future<({int down, int up})?> queryClashTraffic(
+    int port, {
+    String secret = '',
+  }) async {
     try {
       final req = await statsHttp
           .get('127.0.0.1', port, '/connections')
           .timeout(const Duration(seconds: 2));
+      if (secret.isNotEmpty) {
+        req.headers.set(HttpHeaders.authorizationHeader, 'Bearer $secret');
+      }
       final resp = await req.close().timeout(const Duration(seconds: 2));
       if (resp.statusCode != 200) {
         await resp.drain<void>();

@@ -64,7 +64,7 @@ class ConnectionsService {
       if (MihomoApiSession().isActive) {
         final api = await _fromClashApi();
         if (api.source == ConnectionsSource.coreApi) {
-          return _withAndroidAppNames(api);
+          return _withAndroidAppNamesFromSource(api);
         }
         return api;
       }
@@ -99,11 +99,11 @@ class ConnectionsService {
     return null;
   }
 
-  /// Токен API. У keqrnel на десктопе его нет (API слушает петлю в
-  /// однопользовательской системе), у mihomo на Android он обязателен: петля
-  /// там общая для всех приложений.
-  static String _activeClashSecret() =>
-      Platform.isAndroid ? MihomoApiSession().secret : '';
+  /// Токен API. У keqrnel его нет (API слушает петлю), у mihomo он есть всегда:
+  /// на Android петля общая для всех приложений, а разные правила для разных ОС
+  /// означали бы 401 ровно на одной из них. Пустая строка — значит активной
+  /// сессии mihomo нет, и заголовок не нужен.
+  static String _activeClashSecret() => MihomoApiSession().secret;
 
   static Future<ConnectionsSnapshot> _fromClashApi() async {
     final port = _activeClashPort();
@@ -166,7 +166,11 @@ class ConnectionsService {
       // и каждое проксированное соединение поехало бы искать вердикт в
       // xray-логе, которого при mihomo нет, а найденное правило затёрлось бы
       // пустым «решает ядро».
-      final needsEngineVerdicts = !Platform.isAndroid;
+      //
+      // Признак — активная сессия mihomo, а не платформа: то же ядро теперь
+      // работает и на десктопе, и там keqrnel с его двухслойным роутингом уже
+      // не участвует.
+      final needsEngineVerdicts = !MihomoApiSession().isActive;
       final resolved = needsEngineVerdicts
           ? await _resolveEngineVerdicts(entries, port)
           : entries;
@@ -345,11 +349,9 @@ class ConnectionsService {
     return _withAndroidAppNames(snapshot);
   }
 
-  /// Владелец соединения на Android известен только из лога tun2socks — в нём
-  /// одном виден исходный сокет приложения. Ядро тут ни при чём, поэтому
-  /// обогащение одинаково и для access-лога xray, и для API mihomo (у
-  /// последнего своё поле `process` всегда пустое: `find-process-mode: off`,
-  /// да и увидел бы он один только tun2socks).
+  /// Владелец соединения на xray-пути известен только из лога tun2socks — в нём
+  /// одном виден исходный сокет приложения (в лог xray попадает уже наш
+  /// собственный, со стороны SOCKS).
   static Future<ConnectionsSnapshot> _withAndroidAppNames(
     ConnectionsSnapshot snapshot,
   ) async =>
@@ -359,6 +361,91 @@ class ConnectionsService {
         resolve: VpnNativeBridge.resolveConnectionOwners,
         cache: _appNames,
       );
+
+  /// То же для mihomo, владеющего туннелем: исходный сокет приложения приезжает
+  /// прямо в ответе API (`metadata.sourceIP`/`sourcePort`), потому что ядро
+  /// принимает пакеты из tun, а не из локального SOCKS.
+  ///
+  /// Это не просто другой источник тех же данных: лог tun2socks писался только
+  /// в дебаг-режиме, а здесь имена находятся всегда. Само поле `process` ядра
+  /// по-прежнему пустое (`find-process-mode: off`): непривилегированному
+  /// процессу Android не отдаёт ни netlink INET_DIAG, ни `/proc/net/*` чужих
+  /// uid — спрашивать систему может только приложение-владелец туннеля.
+  static Future<ConnectionsSnapshot> _withAndroidAppNamesFromSource(
+    ConnectionsSnapshot snapshot,
+  ) async =>
+      withAppNamesFromSource(
+        snapshot,
+        resolve: VpnNativeBridge.resolveConnectionOwners,
+        cache: _appNames,
+      );
+
+  /// Обогащение по исходному сокету из самой записи.
+  @visibleForTesting
+  static Future<ConnectionsSnapshot> withAppNamesFromSource(
+    ConnectionsSnapshot snapshot, {
+    required Future<List<String>> Function(List<Map<String, Object?>>) resolve,
+    Map<String, String>? cache,
+  }) async {
+    final entries = [...snapshot.entries];
+    final indexes = <int>[];
+    final requests = <Map<String, Object?>>[];
+    for (var i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+      final known = cache?[entry.id];
+      if (known != null && known.isNotEmpty) {
+        entries[i] = entry.withProcess(known);
+        continue;
+      }
+      // Закрытые не спрашиваем: система ищет владельца в живой таблице сокетов.
+      if (entry.closed) continue;
+      final source = _splitHostPort(entry.source);
+      if (source == null) continue;
+      // Спрашиваем по IP: host к этому моменту мог смениться на домен.
+      final ip = entry.destIp.isNotEmpty ? entry.destIp : entry.host;
+      if (ip.isEmpty) continue;
+      indexes.add(i);
+      requests.add({
+        'protocol': entry.network,
+        'srcIp': source.host,
+        'srcPort': source.port,
+        'dstIp': ip,
+        'dstPort': entry.destPort,
+      });
+    }
+    if (requests.isEmpty) {
+      return entries.isEmpty ? snapshot : _withoutAppNames(snapshot);
+    }
+    final names = await resolve(requests);
+    for (var i = 0; i < indexes.length && i < names.length; i++) {
+      final name = names[i];
+      if (name.isEmpty) continue;
+      final index = indexes[i];
+      entries[index] = entries[index].withProcess(name);
+      if (cache != null) {
+        cache[entries[index].id] = name;
+        while (cache.length > _appNamesLimit) {
+          cache.remove(cache.keys.first);
+        }
+      }
+    }
+    return ConnectionsSnapshot(
+      entries: entries,
+      source: snapshot.source,
+      note: snapshot.note,
+      ruleInfoAvailable: snapshot.ruleInfoAvailable,
+      appNamesAvailable: snapshot.appNamesAvailable,
+    );
+  }
+
+  /// `1.2.3.4:5678` → пара. Null — строка пустая или без порта.
+  static ({String host, int port})? _splitHostPort(String value) {
+    final colon = value.lastIndexOf(':');
+    if (colon <= 0) return null;
+    final port = int.tryParse(value.substring(colon + 1));
+    if (port == null || port <= 0) return null;
+    return (host: value.substring(0, colon), port: port);
+  }
 
   /// Копия снимка с пометкой, что владельцев определить нечем.
   static ConnectionsSnapshot _withoutAppNames(ConnectionsSnapshot s) =>

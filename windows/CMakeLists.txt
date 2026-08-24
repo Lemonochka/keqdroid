@@ -114,9 +114,11 @@ install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
 # Android APK (~150 MB dead weight). Installing them here keeps the Windows
 # build self-contained while the APK and the Linux build don't get them.
 #   keqrnel.exe   - unified core (xray protocols + sing-box TUN)
+#   mihomo.exe    - Clash core; owns its own wintun adapter in TUN mode
 #   wireproxy.exe - AmneziaWG core
-#   wintun.dll    - Windows TUN adapter (loaded by sing-box at runtime)
-#   *.dat         - geoip/geosite for xray geo routing
+#   wintun.dll    - Windows TUN adapter (loaded by sing-tun at runtime, and
+#                   sing-tun is what BOTH keqrnel and mihomo build on)
+#   *.dat         - geoip/geosite for xray and mihomo geo routing
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/../assets/bin/windows/"
   DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime

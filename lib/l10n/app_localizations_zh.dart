@@ -561,7 +561,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXraySniffingHint => '从入站流量中检测目标协议和域名';
 
   @override
-  String get settingsXraySniffingRouteOnlyHint => '仅将嗅探用于路由，不覆盖目标地址';
+  String get settingsXraySniffingRouteOnlyHint => '关闭（默认）：嗅探到的域名成为目标地址并被重新解析 —— 直连走本地解析，代理走服务端解析。开启：域名只用于匹配规则，连接仍发往应用给出的地址；只要该地址来自隧道另一端的解析器，它就是错的（此时国内站点会直连到境外 CDN 节点）。';
 
   @override
   String get settingsXrayResetDefaults => '重置为默认值';
@@ -597,19 +597,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunStackTitle => '网络栈';
 
   @override
-  String get settingsTunStackSystemHint => '内核 TCP/IP 栈 — 最快，默认';
+  String get settingsTunStackSystemHint => '内核 TCP/IP 栈 — 最快，但在 Windows 上它用 TUN 地址上的监听器终结 TCP，需要一条 Windows 防火墙规则；规则未生效时隧道虽已建立却完全没有流量';
 
   @override
-  String get settingsTunStackGvisorHint => '用户态网络栈 — 兼容性更好，稍慢。需要包含 gVisor 的内核（0.7.1 及更早版本自带的内核会以代码 1 退出）';
+  String get settingsTunStackGvisorHint => '用户态网络栈 — 默认。完全运行在内核进程内，既不需要监听器也不需要防火墙规则；稍慢。需要包含 gVisor 的内核（0.7.1 及更早版本自带的内核会以代码 1 退出）';
 
   @override
-  String get settingsTunStackMixedHint => 'TCP 用 system，UDP 用 gVisor。需要包含 gVisor 的内核（0.7.1 及更早版本自带的内核会以代码 1 退出）';
+  String get settingsTunStackMixedHint => 'TCP 用 gVisor，UDP 用 system。需要包含 gVisor 的内核（0.7.1 及更早版本自带的内核会以代码 1 退出）';
 
   @override
   String get settingsTunMtu => 'MTU';
 
   @override
-  String get settingsTunMtuHint => '576–65535，默认 1400';
+  String get settingsTunMtuHint => '576–65535，默认 9000';
 
   @override
   String get settingsTunUdpTimeout => 'UDP 超时（秒）';
@@ -646,6 +646,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsTunAutoRouteHint => '自动将系统路由指向隧道。仅在手动管理路由时关闭 — 否则流量不会进入 TUN';
+
+  @override
+  String get settingsTunIpv6 => '把 IPv6 留在隧道内';
+
+  @override
+  String get settingsTunIpv6Hint => '只有 IPv4 地址的 TUN 接口不会获得 IPv6 路由，因此在双栈机器上所有 IPv6 流量都会绕过隧道 — 绕过路由规则，也绕过代理。开启后接口同时获得 IPv6 地址，并关闭 IPv6 出口，应用会立即回退到已在隧道中的 IPv4。仅当机器确实拥有全球 IPv6 时才会添加该地址。仅限 xray/keqrnel 内核';
+
+  @override
+  String get settingsMihomoSection => 'mihomo 内核';
+
+  @override
+  String get settingsMihomoFakeIp => 'Fake IP';
+
+  @override
+  String get settingsMihomoFakeIpHint => '内核用虚拟地址而非真实地址回应 DNS：解析瞬间完成，域名规则也不再依赖嗅探。代价是 IP 规则在匹配前需要重新解析，因此同一套路由列表的行为与 Xray 略有不同。仅在 mihomo 自己持有隧道时生效 — TUN 模式与 Android。';
 
   @override
   String get settingsPingTitle => '服务器 Ping';
@@ -913,7 +928,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversAddServerTitle => '添加服务器';
 
   @override
-  String get serversPasteVlessHint => '粘贴 vless://、vmess://、trojan://、ss://、hysteria2:// 或 hy2://（每行一个），或整份 Xray JSON 配置';
+  String get serversPasteVlessHint => '粘贴 vless://、vmess://、trojan://、ss://、hysteria2:// 或 hy2://（每行一个），或整份配置：Xray JSON、Clash YAML、AmneziaWG .conf';
 
   @override
   String get serversPasteHint => 'vless://… 或 hy2://host:port?auth=…';
@@ -1428,6 +1443,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String serversImportedSummary(Object added, Object total) {
     return '已添加服务器：$added/$total';
   }
+
+  @override
+  String get sidebarJumpTitle => '快速跳转';
+
+  @override
+  String get serversScrollToEnd => '跳到列表底部';
 
   @override
   String get serversManualGroup => '手动添加的服务器';
@@ -2193,6 +2214,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsCoreHint => '下次连接时生效 — 当前会话不会重启。';
+
+  @override
+  String get settingsCoreAuto => '自动';
+
+  @override
+  String get settingsCoreAutoSubtitle => '由服务器的格式决定内核：链接走 Xray，现成配置走它所使用的那个内核。';
+
+  @override
+  String get settingsCoreSkipClash => '当前服务器是现成的 Clash 配置 —— 无论选择哪个内核，都只能由 mihomo 运行。';
+
+  @override
+  String get settingsCoreSkipCustom => '当前服务器是现成的 Xray JSON 配置（其路由与 DNS 来自机场），因此无论选择哪个内核都由 libxray 运行。要使用 mihomo，需要下发普通 vless:// / vmess:// 链接的订阅 — 请在订阅设置中更换客户端标识。';
+
+  @override
+  String get settingsCoreSkipChain => '当前服务器是代理链：各节点通过 Xray 的 dialerProxy 串联，因此无论选择哪个内核都由 libxray 运行。';
+
+  @override
+  String get settingsCoreSkipAwg => '当前服务器是 AmneziaWG 配置 — 无论选择哪个内核，都由它自己的内核 wg-go 运行。';
+
+  @override
+  String get settingsCoreSkipPlatform => '此平台未附带 mihomo 内核，连接将改用 Xray 内核。';
 
   @override
   String get settingsInternalsCores => '内核';

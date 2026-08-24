@@ -8,11 +8,16 @@ import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../services/ephemeral_xray_ping.dart';
 import '../utils/keqrnel_config.dart';
+import '../utils/mihomo_api_session.dart';
+import '../utils/singbox_tun_config.dart';
 import '../utils/wireproxy_config.dart';
 import 'connection_mode.dart';
+import 'core_capabilities.dart';
 import 'desktop_traffic_stats.dart';
 import 'linux_core_paths.dart';
+import 'local_port_plan.dart';
 import 'socks_credential_generator.dart';
+import 'tun_failure_hints.dart';
 import 'tunnel_backend.dart';
 import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
@@ -78,9 +83,19 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   // и список соединений для дебаг-экрана (оба режима).
   int? _keqrnelClashPort;
 
-  /// Порт clash_api активной сессии keqrnel; null — сессии нет или API не поднят.
+  // mihomo: одно ядро на оба режима. В proxy-режиме обычный процесс, в TUN —
+  // тот же root-путь через pkexec, что и у keqrnel (tun-устройство и маршруты
+  // без root не создать).
+  Process? _mihomoProcess;
+
+  /// Порт clash_api активной сессии; null — сессии нет или API не поднят.
   /// Читает [ConnectionsService].
-  int? get clashApiPort => _keqrnelClashPort;
+  ///
+  /// У mihomo координаты API придумывает не бэкенд, а тот же код, что собирал
+  /// конфиг ([MihomoApiSession]) — порт и `secret` едут внутрь конфига.
+  int? get clashApiPort =>
+      _keqrnelClashPort ??
+      (_mihomoProcess != null ? MihomoApiSession().port : null);
 
   /// PID живых процессов ядра: подпись → pid. Пустая карта — сессии нет.
   /// Читает панель «Внутренности».
@@ -89,9 +104,16 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   /// ядро он поднимает уже под собой, и его pid этой стороне не виден.
   Map<String, int> get activeCorePids => {
     if (_xrayProcess != null) 'keqrnel': _xrayProcess!.pid,
+    if (_mihomoProcess != null)
+      _mihomoRunsAsRoot ? 'mihomo (root, TUN)' : 'mihomo': _mihomoProcess!.pid,
     if (_wireproxyProcess != null) 'wireproxy': _wireproxyProcess!.pid,
     if (_singboxProcess != null) 'keqrnel (root, TUN)': _singboxProcess!.pid,
   };
+
+  /// TUN-сессия mihomo идёт через pkexec, и остановить её нужно так же, как
+  /// keqrnel: удалением сентинела, а не сигналом (обычный пользователь
+  /// root-процессу сигнал послать не может).
+  bool _mihomoRunsAsRoot = false;
 
   // true пока идёт штатный stopSession — чтобы вотчдог не принял наш же
   // kill за внезапную смерть ядра.
@@ -156,27 +178,34 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       _activeMode = request.mode;
       _sessionDir = await LinuxCorePaths.sessionDir();
 
-      final isAwg = request.vpnBackend == VpnBackend.awg;
-      if (request.mode == ConnectionMode.tun) {
-        if (isAwg) {
-          await _startAwgTunSession(request);
-        } else {
-          await _startKeqrnelTunSession(request);
-        }
-      } else {
-        if (isAwg) {
-          await _startAwgProxySession(request);
-        } else {
-          await _startKeqrnelProxySession(request);
-        }
+      final isTun = request.mode == ConnectionMode.tun;
+      switch (request.vpnBackend) {
+        case VpnBackend.awg:
+          await (isTun
+              ? _startAwgTunSession(request)
+              : _startAwgProxySession(request));
+        case VpnBackend.mihomo:
+          await _startMihomoSession(request);
+        case VpnBackend.xray:
+          await (isTun
+              ? _startKeqrnelTunSession(request)
+              : _startKeqrnelProxySession(request));
       }
 
       startStatsLoop(request.mode);
       emitConnectedTelemetry(request.mode);
 
+      // «Ядро поднялось» и «через него что-то ходит» — разные утверждения, и
+      // расходятся они постоянно: истёкшая подписка, мёртвый сервер, правило,
+      // отправившее всё в block. Снаружи это «подключено, но ничего не
+      // грузится» без единой строчки о причине. Проверяем сами — в фоне, чтобы
+      // не задерживать подключение.
+      unawaited(_verifyChainReachable(request));
+
       // Смерть ядра посреди сессии без вотчдога оставляла UI в «Connected»,
       // а системный прокси (gsettings) — направленным на мёртвый порт.
       _watchProcessExit(_xrayProcess, 'keqrnel');
+      _watchProcessExit(_mihomoProcess, 'mihomo');
       _watchProcessExit(_singboxProcess, 'keqrnel TUN');
       _watchProcessExit(_wireproxyProcess, 'wireproxy');
     } catch (e, st) {
@@ -224,7 +253,9 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     final configFile = File(p.join(_sessionDir!.path, 'keqrnel.json'));
     await configFile.writeAsString(merged);
 
-    await _ensurePortsAvailable(request, needsHttp: request.systemProxy);
+    // HTTP-инбаунд ядро поднимает всегда (через него ходит апдейтер), поэтому
+    // занятый HTTP-порт роняет ядро целиком независимо от системного прокси.
+    await _ensurePortsAvailable(request, needsHttp: true);
 
     final geoDir = await LinuxCorePaths.geoAssetDir();
     _xrayProcess = await Process.start(
@@ -273,6 +304,11 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     if (singConfig == null || singConfig.isEmpty) {
       throw const VpnStartException('singboxConfig is required for TUN mode');
     }
+    // Локальные порты в TUN-режиме слушает встроенный xray внутри keqrnel:
+    // занял их сосед — ядро падает на старте инбаунда, и наружу это выглядит
+    // как «TUN не поднялся», хотя TUN тут ни при чём.
+    await _ensurePortsAvailable(request, needsHttp: true);
+
     final clashPort = await _freePort();
     final merged = KeqrnelConfig.fromChain(
       singboxConfig: singConfig,
@@ -282,6 +318,117 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     );
     _keqrnelClashPort = clashPort;
     await _runKeqrnelAsRoot(merged);
+  }
+
+  // ---- mihomo -------------------------------------------------------------
+
+  /// mihomo — второе полноценное ядро, а не обёртка вокруг keqrnel: в
+  /// TUN-режиме tun-устройство и маршруты создаёт оно само (внутри у него тот
+  /// же sing-tun), поэтому связки «ядро → локальный SOCKS → keqrnel» здесь нет.
+  /// Требование то же, что у keqrnel: root через pkexec.
+  Future<void> _startMihomoSession(TunnelSessionRequest request) async {
+    final bin = await LinuxCorePaths.mihomoExecutable();
+    if (bin == null) {
+      throw VpnStartException(
+        'mihomo not found. ${LinuxCorePaths.binariesHint}',
+      );
+    }
+    final config = request.mihomoConfig;
+    if (config == null || config.isEmpty) {
+      throw const VpnStartException('mihomoConfig is required for mihomo');
+    }
+
+    final isTun = request.mode == ConnectionMode.tun;
+    // Локальные socks/http поднимает то же ядро и в TUN-режиме: через HTTP
+    // ходит апдейтер, и занятый соседом порт роняет старт целиком.
+    await _ensurePortsAvailable(request, needsHttp: true);
+
+    // Расширение `.yaml` — то, что ядро ждёт; содержимое при этом JSON (YAML 1.2
+    // его надмножество, см. MihomoConfigGen).
+    final configFile = File(p.join(_sessionDir!.path, 'mihomo.yaml'));
+    await configFile.writeAsString(config);
+
+    if (isTun) {
+      _mihomoRunsAsRoot = true;
+      // Дом для root-запуска — в каталоге сессии, а не в пользовательском
+      // кэше: иначе root наплодил бы там своих `config.yaml`/`cache.db`,
+      // которые следующий обычный запуск уже не перепишет.
+      final home = await _stageGeoAssetsForRoot() ?? _sessionDir!.path;
+      final rootBin = await _stageBinaryForRoot(bin, 'mihomo');
+
+      _mihomoProcess = await _startElevatedCore(
+        binPath: rootBin,
+        configPath: configFile.path,
+        geoOrHomeDir: home,
+        kind: 'mihomo',
+        label: 'mihomo',
+        log: _singboxLog,
+        onStarted: (p) => _mihomoProcess = p,
+      );
+
+      final ready = await _waitForTunCore(
+        process: _mihomoProcess!,
+        log: _singboxLog,
+      );
+      final coreLog = await _readRootCoreLog();
+      if (coreLog.trim().isNotEmpty) {
+        _singboxLog
+          ..writeln('=== mihomo (core) ===')
+          ..writeln(coreLog);
+      }
+      if (!ready) {
+        final tail = coreLog.trim().isEmpty
+            ? _tail(_singboxLog)
+            : _tail(StringBuffer(coreLog));
+        throw VpnStartException(tunStartFailureMessage(
+          fallback: 'The mihomo TUN tunnel did not start.',
+          coreOutput: coreLog.trim().isEmpty ? _singboxLog.toString() : coreLog,
+          windows: false,
+          tail: tail,
+        ));
+      }
+      return;
+    }
+
+    _mihomoRunsAsRoot = false;
+    _mihomoProcess = await Process.start(
+      bin,
+      ['-d', await LinuxCorePaths.mihomoHomeDir(), '-f', configFile.path],
+      workingDirectory: _sessionDir!.path,
+      mode: ProcessStartMode.normal,
+    );
+    _pipeProcessOutput(_mihomoProcess!, _xrayLog);
+
+    final socksReady = await _waitForPort(
+      '127.0.0.1',
+      request.socksPort,
+      process: _mihomoProcess,
+      log: _xrayLog,
+      processLabel: 'mihomo',
+    );
+    if (!socksReady) {
+      throw VpnStartException(
+        'mihomo SOCKS port ${request.socksPort} did not open.\n'
+        '${_tail(_xrayLog)}',
+      );
+    }
+
+    if (request.systemProxy) {
+      final httpReady = await _waitForPort(
+        '127.0.0.1',
+        request.httpPort,
+        process: _mihomoProcess,
+        log: _xrayLog,
+        processLabel: 'mihomo HTTP',
+      );
+      if (!httpReady) {
+        throw VpnStartException(
+          'mihomo HTTP port ${request.httpPort} did not open. '
+          'System proxy needs the HTTP inbound.\n${_tail(_xrayLog)}',
+        );
+      }
+      await _applySystemProxy(request);
+    }
   }
 
   // ---- wireproxy (AmneziaWG) ----------------------------------------------
@@ -369,7 +516,19 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   /// Root-owned хелпер, который pkexec запускает вместо inline `sh -c`.
   /// polkit-правило разрешает беспарольный запуск ИМЕННО этого пути.
-  static const _polkitHelperPath = '/usr/local/lib/keqdroid/keqrnel-tun-root';
+  /// Путь версионирован намеренно. Тело обёртки — контракт по позициям
+  /// аргументов, а установленный у пользователя хелпер живёт своей жизнью:
+  /// добавь мы восьмой аргумент к прежнему пути, у всех, кто уже поставил
+  /// беспарольное правило, mihomo молча запускался бы командой keqrnel. Новый
+  /// путь честнее: [isPasswordlessTunInstalled] отвечает «нет», пользователь
+  /// один раз вводит пароль и ставит правило заново (старый хелпер при этом
+  /// удаляется).
+  static const _polkitHelperPath = '/usr/local/lib/keqdroid/core-tun-root';
+
+  /// Хелпер прежней версии — умел запускать только keqrnel. Установка новой
+  /// его сносит, иначе он остался бы разрешён в polkit навсегда.
+  static const _legacyPolkitHelperPath =
+      '/usr/local/lib/keqdroid/keqrnel-tun-root';
 
   /// polkit JS-правило (polkit >= 0.106). Разрешает беспарольный запуск хелпера
   /// для активной локальной сессии.
@@ -382,18 +541,37 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   ///  * правило не стоит → `pkexec sh -c <body> sh <args>` (polkit спросит пароль);
   ///  * правило стоит     → `pkexec <_polkitHelperPath> <args>` (без пароля),
   ///    файл хелпера = shebang + это тело.
-  static const _tunWrapperBody = r'''SB="$1"; CFG="$2"; GEO="$3"; LOGF="$4"; SENT="$5"; APPPID="$6"; AUTHF="$7"
+  /// Восьмой аргумент — какое ядро запускать: командные строки у них разные
+  /// (`keqrnel run -c <cfg>` против `mihomo -d <home> -f <cfg>`), а обёртка
+  /// одна. Пустой KIND означает keqrnel — так обёртка ведёт себя как прежняя.
+  ///
+  /// `modprobe tun` здесь потому, что это ЕДИНСТВЕННОЕ место, где мы root:
+  /// без модуля `/dev/net/tun` не существует, и ядро падает на открытии
+  /// устройства («no such file or directory») — типовой случай минимальных
+  /// сборок ядра и контейнеров. Позиции аргументов при этом не тронуты, так
+  /// что уже установленный хелпер прежней версии остаётся корректным (он
+  /// просто не умеет этого чинить, и тогда причину называет
+  /// [tunFailureHint]).
+  static const _tunWrapperBody = r'''SB="$1"; CFG="$2"; GEO="$3"; LOGF="$4"; SENT="$5"; APPPID="$6"; AUTHF="$7"; KIND="$8"
 : >"$LOGF"
 : >"$AUTHF"
-echo "[wrap v3 sentinel] start SENT=$SENT exists=$([ -e "$SENT" ] && echo y || echo n) APPPID=$APPPID app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
-if [ -n "$GEO" ]; then export XRAY_LOCATION_ASSET="$GEO"; fi
-"$SB" run -c "$CFG" >>"$LOGF" 2>&1 &
+echo "[wrap v4 sentinel] start KIND=$KIND SENT=$SENT exists=$([ -e "$SENT" ] && echo y || echo n) APPPID=$APPPID app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+if [ ! -e /dev/net/tun ]; then
+  echo "[wrap] /dev/net/tun missing, loading module" >>"$LOGF"
+  modprobe tun >>"$LOGF" 2>&1 || echo "[wrap] modprobe tun failed" >>"$LOGF"
+fi
+if [ "$KIND" = "mihomo" ]; then
+  "$SB" -d "$GEO" -f "$CFG" >>"$LOGF" 2>&1 &
+else
+  if [ -n "$GEO" ]; then export XRAY_LOCATION_ASSET="$GEO"; fi
+  "$SB" run -c "$CFG" >>"$LOGF" 2>&1 &
+fi
 sb=$!
 while [ -e "$SENT" ] && kill -0 "$APPPID" 2>/dev/null; do
   kill -0 "$sb" 2>/dev/null || break
   sleep 1
 done
-echo "[wrap v3 sentinel] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) sb=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+echo "[wrap v4 sentinel] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) sb=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
 kill -TERM "$sb" 2>/dev/null
 wait "$sb"
 ''';
@@ -440,6 +618,7 @@ polkit.addRule(function(action, subject) {
     final script = '''
 set -e
 mkdir -p /usr/local/lib/keqdroid
+rm -f '$_legacyPolkitHelperPath'
 cat > '$_polkitHelperPath' <<'KEQDROID_HELPER_EOF'
 $helper
 KEQDROID_HELPER_EOF
@@ -472,7 +651,8 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
   /// возвращает поведение к запросу пароля на каждый TUN-коннект.
   static Future<bool> removePasswordlessTun() async {
     if (!Platform.isLinux) return false;
-    final script = "rm -f '$_polkitHelperPath' '$_polkitRulePath'";
+    final script =
+        "rm -f '$_polkitHelperPath' '$_legacyPolkitHelperPath' '$_polkitRulePath'";
     try {
       final res = await Process.run('pkexec', ['sh', '-c', script]);
       return res.exitCode == 0;
@@ -496,22 +676,105 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       );
     }
 
-    final singConfigFile = File(p.join(_sessionDir!.path, 'keqrnel-tun.json'));
-    await singConfigFile.writeAsString(config);
-    final rootGeoDir = await _stageGeoAssetsForRoot();
-
-    // keqrnel runs as root via pkexec. When the app ships as an AppImage the
-    // bundled binary lives on a per-user FUSE mount (/tmp/.mount_*) that root
-    // CANNOT read — pkexec then dies with "Permission denied" / code 127. Copy
-    // it into the session dir (real /tmp) where root has access, and exec that.
-    final rootSingBin = p.join(_sessionDir!.path, 'keqrnel');
-    try {
-      await File(singBin).copy(rootSingBin);
-      await Process.run('chmod', ['0755', rootSingBin]);
-    } catch (e) {
-      throw VpnStartException('Could not stage keqrnel for elevation: $e');
+    // Стек TUN-инбаунда — под возможности ЭТОГО бинаря: ядро без
+    // `-tags with_gvisor` на `stack: gvisor` не ругается в конфиге, а падает
+    // при старте («gVisor is not included in this build»), и TUN не поднимается
+    // вовсе. Поставляемый keqrnel собран с тегом, собранный руками — вряд ли.
+    final stackFix = applyTunStackFallback(
+      config,
+      gvisorAvailable: await CoreCapabilities.hasGvisor(singBin),
+    );
+    if (stackFix.downgradedFrom != null) {
+      AppLogger.instance.warn(
+        'TUN stack "${stackFix.downgradedFrom}" needs a core built with '
+        '-tags with_gvisor; this keqrnel has none, falling back to "system".',
+      );
     }
 
+    final singConfigFile = File(p.join(_sessionDir!.path, 'keqrnel-tun.json'));
+    await singConfigFile.writeAsString(stackFix.config);
+    final rootGeoDir = await _stageGeoAssetsForRoot();
+    final rootSingBin = await _stageBinaryForRoot(singBin, 'keqrnel');
+
+    _singboxProcess = await _startElevatedCore(
+      binPath: rootSingBin,
+      configPath: singConfigFile.path,
+      geoOrHomeDir: rootGeoDir ?? '',
+      kind: '',
+      label: 'keqrnel',
+      log: _singboxLog,
+      onStarted: (p) => _singboxProcess = p,
+    );
+
+    final ready = await _waitForTunCore(
+      process: _singboxProcess!,
+      log: _singboxLog,
+    );
+
+    // Pull the core's own output (the file above) into the session log so the
+    // debug screen and the error below show the real sing-box/xray message.
+    final coreLog = await _readRootCoreLog();
+    if (coreLog.trim().isNotEmpty) {
+      _singboxLog
+        ..writeln('=== keqrnel (core) ===')
+        ..writeln(coreLog);
+    }
+
+    if (!ready) {
+      final tail = coreLog.trim().isEmpty
+          ? _tail(_singboxLog)
+          : _tail(StringBuffer(coreLog));
+      throw VpnStartException(tunStartFailureMessage(
+        fallback: 'The TUN tunnel did not start.',
+        coreOutput: coreLog.trim().isEmpty ? _singboxLog.toString() : coreLog,
+        windows: false,
+        tail: tail,
+      ));
+    }
+  }
+
+  /// Копия ядра, которую сможет исполнить root.
+  ///
+  /// В AppImage бинарь лежит на пользовательском FUSE-монте (`/tmp/.mount_*`),
+  /// куда root ВООБЩЕ не может зайти, и pkexec умирает с «Permission denied» /
+  /// кодом 127. Копия в каталоге сессии (обычный /tmp) от этого избавлена.
+  Future<String> _stageBinaryForRoot(String binPath, String name) async {
+    final staged = p.join(_sessionDir!.path, name);
+    try {
+      await File(binPath).copy(staged);
+      await Process.run('chmod', ['0755', staged]);
+    } catch (e) {
+      throw VpnStartException('Could not stage $name for elevation: $e');
+    }
+    return staged;
+  }
+
+  /// Вывод root-ядра из файла, куда его редиректит обёртка.
+  Future<String> _readRootCoreLog() async {
+    try {
+      return await File(_coreLogPath).readAsString();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// Общий pkexec-путь для обоих ядер: сентинел, auth-маркер, запуск обёртки и
+  /// ожидание самой авторизации. Возвращает процесс pkexec — готовность TUN
+  /// меряет уже вызывающий.
+  ///
+  /// [onStarted] зовётся СРАЗУ после запуска, до ожидания авторизации: стоп,
+  /// пришедший в это окно, обязан найти процесс на месте и снять сентинел.
+  /// Иначе root-ядро остаётся жить с поднятым TUN, а убить его нам уже нечем —
+  /// обычный пользователь root-процессу сигнал не пошлёт.
+  Future<Process> _startElevatedCore({
+    required String binPath,
+    required String configPath,
+    required String geoOrHomeDir,
+    required String kind,
+    required String label,
+    required StringBuffer log,
+    required void Function(Process) onStarted,
+  }) async {
     // sing-box runs as root via pkexec. pkexec does NOT reliably forward signals
     // to its root child, and a normal user cannot signal a root process — so we
     // can't stop sing-box by killing the pkexec wrapper. Doing that orphans
@@ -533,26 +796,27 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     // surfaced. Redirect them to a stable, root-readable file so the REAL reason
     // a TUN start failed is always available. Readiness is detected via the tun
     // interface appearing, so this doesn't depend on the live pipe.
-    const coreLogPath = _coreLogPath;
-    final sentinelFile = File(p.join(_sessionDir!.path, 'keqrnel.run'));
+    final sentinelFile = File(p.join(_sessionDir!.path, 'core.run'));
     await sentinelFile.writeAsString('1');
     _rootSentinel = sentinelFile;
     // Auth-маркер: root-обёртка создаёт его сразу после успешной polkit-
     // аутентификации. По нему отличаем «пользователь ещё вводит пароль» от
     // «ядро стартовало и должно поднять TUN» (см. _waitForElevation). Session
     // dir свежий на каждую сессию — застарелый маркер исключён.
-    final authMarker = File(p.join(_sessionDir!.path, 'keqrnel.auth'));
+    final authMarker = File(p.join(_sessionDir!.path, 'core.auth'));
     _keqrnelLaunchedAt = DateTime.now();
 
-    // Аргументы root-обёртки одинаковы для обоих путей запуска.
+    // Позиции аргументов — контракт с телом обёртки; менять их можно только
+    // вместе с версией [_polkitHelperPath].
     final coreArgs = <String>[
-      rootSingBin,
-      singConfigFile.path,
-      rootGeoDir ?? '',
-      coreLogPath,
+      binPath,
+      configPath,
+      geoOrHomeDir,
+      _coreLogPath,
       sentinelFile.path,
       '$pid',
       authMarker.path,
+      kind,
     ];
     // Если установлено беспарольное правило — pkexec запускает root-owned хелпер
     // по фиксированному пути (polkit пропускает без пароля). Иначе inline-обёртка
@@ -561,8 +825,9 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     final pkexecArgs = usePasswordless
         ? <String>[_polkitHelperPath, ...coreArgs]
         : <String>['sh', '-c', _tunWrapperBody, 'sh', ...coreArgs];
+    final Process process;
     try {
-      _singboxProcess = await Process.start(
+      process = await Process.start(
         'pkexec',
         pkexecArgs,
         workingDirectory: _sessionDir!.path,
@@ -570,19 +835,20 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       );
     } on ProcessException catch (e) {
       throw VpnStartException(
-        'Could not launch keqrnel with elevated privileges. TUN mode needs '
+        'Could not launch $label with elevated privileges. TUN mode needs '
         'pkexec (polkit). Install it, or use Proxy mode. ($e)',
       );
     }
-    _pipeProcessOutput(_singboxProcess!, _singboxLog);
+    onStarted(process);
+    _pipeProcessOutput(process, log);
 
     // Сначала дожидаемся polkit-аутентификации, и только потом меряем
-    // готовность TUN — иначе 20с бюджета _waitForSingbox тикали, пока
+    // готовность TUN — иначе 20с бюджета _waitForTunCore тикали, пока
     // пользователь вводил пароль, и коннект падал «после запроса прав».
     await _waitForElevation(
-      process: _singboxProcess!,
+      process: process,
       authMarker: authMarker,
-      log: _singboxLog,
+      log: log,
     );
 
     // Пользователь только что ввёл пароль в polkit, а беспарольного правила нет —
@@ -594,30 +860,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
         _linuxTunRememberController.add(null);
       }
     }
-
-    final ready = await _waitForSingbox(
-      process: _singboxProcess!,
-      log: _singboxLog,
-    );
-
-    // Pull the core's own output (the file above) into the session log so the
-    // debug screen and the error below show the real sing-box/xray message.
-    String coreLog = '';
-    try {
-      coreLog = await File(coreLogPath).readAsString();
-    } catch (_) {}
-    if (coreLog.trim().isNotEmpty) {
-      _singboxLog
-        ..writeln('=== keqrnel (core) ===')
-        ..writeln(coreLog);
-    }
-
-    if (!ready) {
-      final tail = coreLog.trim().isEmpty
-          ? _tail(_singboxLog)
-          : _tail(StringBuffer(coreLog));
-      throw VpnStartException('keqrnel TUN did not start.\n$tail');
-    }
+    return process;
   }
 
   Future<String?> _stageGeoAssetsForRoot() async {
@@ -677,7 +920,10 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     );
   }
 
-  Future<bool> _waitForSingbox({
+  /// Готовность TUN. Работает для обоих ядер: главный признак — появление
+  /// самого интерфейса, а он у нас назван одинаково (`tun-keqdis`) независимо
+  /// от того, кто его создал.
+  Future<bool> _waitForTunCore({
     required Process process,
     required StringBuffer log,
   }) async {
@@ -687,12 +933,10 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       if (code != null) {
         throw VpnStartException(_elevationError(code, log));
       }
-      final text = log.toString().toLowerCase();
-      if (text.contains('started') && text.contains('tun')) return true;
-      if (text.contains('tun-in') &&
-          (text.contains('started') || text.contains('listening'))) {
-        return true;
-      }
+      // Строка ТОЛЬКО от sing-box: прежнее «"started" где-то и "tun"
+      // где-то» ловило баннер встроенного xray, а он печатается раньше, чем
+      // поднят tun-инбаунд (ядро стартует аутбаунды до инбаундов).
+      if (singboxTunReady(log.toString())) return true;
       // tun interface up is the most reliable signal across versions.
       if (await _tunInterfaceExists()) return true;
       await Future<void>.delayed(const Duration(milliseconds: 300));
@@ -749,11 +993,16 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
         } catch (_) {}
         final detail =
             coreTail.isNotEmpty ? _tail(StringBuffer(coreTail)) : _tail(log);
-        if (coreTail.contains('gVisor is not included in this build')) {
-          return 'keqrnel exited with code $code: this core build has no '
-              'gVisor network stack. Set TUN stack to "system" in Settings → '
-              'Core and protocols, or update the app to a core built with '
-              'gVisor.\n$detail';
+        // Причину ищем в полном выводе (в хвосте её часто уже нет), а сам
+        // хвост всё равно показываем: типовые случаи объясняет подсказка,
+        // разбирать приходится нетиповые.
+        final hint = tunFailureHint(
+          coreTail.isNotEmpty ? coreTail : log.toString(),
+          windows: false,
+        );
+        if (hint != null) {
+          return 'The tunnel core exited with code $code.\n'
+              '${hint.message}\n$detail';
         }
         return 'keqrnel exited with code $code (TUN/elevation failed?).\n'
             '$detail';
@@ -762,6 +1011,44 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
 
   Future<bool> _tunInterfaceExists() async {
     return Directory('/sys/class/net/$tunInterfaceName').exists();
+  }
+
+  /// Ходит ли хоть что-нибудь через поднятое ядро.
+  ///
+  /// Проверка идёт через ЛОКАЛЬНЫЙ HTTP-инбаунд — он есть в обоих режимах (в
+  /// TUN его инбаунды лифтит keqrnel, через него же качается обновление), и
+  /// путь через него ровно тот же, что у трафика из туннеля: те же правила
+  /// роутинга, тот же аутбаунд, тот же сервер.
+  ///
+  /// Только предупреждение: сессию не рвём. Правило пользователя, отправляющее
+  /// тестовый адрес в block, — тоже причина, и разрывать из-за неё живой
+  /// туннель нельзя.
+  Future<void> _verifyChainReachable(TunnelSessionRequest request) async {
+    await Future<void>.delayed(const Duration(seconds: 3));
+    if (_activeMode == null) return; // сессию уже погасили
+    final client = HttpClient();
+    String outcome;
+    try {
+      client.findProxy = (uri) => 'PROXY 127.0.0.1:${request.httpPort}';
+      final req = await client
+          .getUrl(Uri.parse('http://connectivitycheck.gstatic.com/generate_204'))
+          .timeout(const Duration(seconds: 10));
+      final response = await req.close().timeout(const Duration(seconds: 10));
+      await response.drain<void>();
+      if (response.statusCode == 204 || response.statusCode == 200) return;
+      outcome = 'status=${response.statusCode}';
+    } catch (e) {
+      outcome = 'failed ($e)';
+    } finally {
+      client.close(force: true);
+    }
+    if (_activeMode == null) return;
+    AppLogger.instance.warn(
+      'The tunnel is up, but a test request through the core did not go '
+      'through ($outcome). Nothing will load until this is fixed — the usual '
+      'reasons are an unreachable or expired server, wrong server settings, or '
+      'a routing rule that blocks the test address.',
+    );
   }
 
   // ---- system proxy (GNOME gsettings, best effort) ------------------------
@@ -846,6 +1133,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       // Процесс уже не из активной сессии (штатный stop занулил поля).
       if (!identical(process, _xrayProcess) &&
           !identical(process, _singboxProcess) &&
+          !identical(process, _mihomoProcess) &&
           !identical(process, _wireproxyProcess)) {
         return;
       }
@@ -892,6 +1180,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
 
     if (_singboxProcess != null ||
         _xrayProcess != null ||
+        _mihomoProcess != null ||
         _wireproxyProcess != null) {
       await _dumpLogsToFile();
     }
@@ -903,10 +1192,19 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
 
     // sing-box first: it owns the tun device + routes, tear it down before the
     // upstream SOCKS provider so traffic fails closed, not into a dead socks.
-    await _stopSingbox();
+    await _stopRootCore(_singboxProcess, 'keqrnel');
+    // mihomo под root останавливается тем же сентинелом; обычный (proxy-режим)
+    // — сигналом, как любой свой процесс.
+    if (_mihomoRunsAsRoot) {
+      await _stopRootCore(_mihomoProcess, 'mihomo');
+    } else {
+      await _killProcess(_mihomoProcess);
+    }
     await _killProcess(_wireproxyProcess);
     await _killProcess(_xrayProcess);
     _singboxProcess = null;
+    _mihomoProcess = null;
+    _mihomoRunsAsRoot = false;
     _wireproxyProcess = null;
     _awgInfoPort = null;
     _xrayProcess = null;
@@ -933,6 +1231,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
   Future<VpnState> getCurrentState() async {
     if (_xrayProcess != null ||
         _wireproxyProcess != null ||
+        _mihomoProcess != null ||
         _singboxProcess != null) {
       return buildConnectedState(_activeMode);
     }
@@ -1109,11 +1408,10 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       .then<int?>((c) => c)
       .timeout(const Duration(milliseconds: 1), onTimeout: () => null);
 
-  /// Stops the elevated sing-box gracefully. We cannot signal the root process
+  /// Stops the elevated core gracefully. We cannot signal the root process
   /// directly, so we delete the sentinel file the root wrapper polls — it then
-  /// SIGTERMs sing-box AS ROOT, which reverts auto_route/nftables before exiting.
-  Future<void> _stopSingbox() async {
-    final proc = _singboxProcess;
+  /// SIGTERMs the core AS ROOT, which reverts auto_route/nftables before exiting.
+  Future<void> _stopRootCore(Process? proc, String coreName) async {
     if (proc == null) return;
     try {
       final sentinel = _rootSentinel;
@@ -1124,13 +1422,31 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       await proc.exitCode.timeout(const Duration(seconds: 8));
     } catch (_) {
       // Wrapper didn't exit in time — last resort so we never leave a root
-      // sing-box holding the TUN. The elevated pkill may show a polkit prompt.
+      // core holding the TUN. The elevated pkill may show a polkit prompt.
       try {
-        await Process.run('pkexec', ['pkill', '-TERM', '-x', 'keqrnel']);
+        await Process.run('pkexec', ['pkill', '-TERM', '-x', coreName]);
       } catch (_) {}
       try {
         proc.kill(ProcessSignal.sigkill);
       } catch (_) {}
+    }
+
+    // Процесс мёртв — устройство ещё нет: ядро снимает интерфейс и маршруты уже
+    // после выхода из main, а при жёстком добивании эту уборку доделывает ядро
+    // ОС. Стартовать поверх ещё живого `tun-keqdis` нельзя: имя занято, и
+    // следующая сессия либо падает, либо поднимается на умирающем устройстве —
+    // «через раз ошибка, через раз туннеля нет».
+    const budgetMs = 6000;
+    var waited = 0;
+    while (waited < budgetMs && await _tunInterfaceExists()) {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      waited += 250;
+    }
+    if (waited >= budgetMs) {
+      AppLogger.instance.warn(
+        'TUN interface $tunInterfaceName is still present '
+        '${budgetMs ~/ 1000}s after the core was stopped.',
+      );
     }
   }
 
@@ -1191,29 +1507,38 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     return port;
   }
 
+  /// Последняя проверка портов перед стартом ядра.
+  ///
+  /// Порты сюда приезжают уже подобранные ([LocalPortResolver] отработал до
+  /// генерации конфига), так что остаётся гонка «занял между проверкой и
+  /// стартом». Причину всё равно называем: «занят соседом» и «запрещён» —
+  /// разные действия пользователя.
   Future<void> _ensurePortsAvailable(
     TunnelSessionRequest request, {
     required bool needsHttp,
   }) async {
-    if (!await _isPortAvailable('127.0.0.1', request.socksPort)) {
+    final socksIssue =
+        await LocalPortResolver.probe('127.0.0.1', request.socksPort);
+    if (socksIssue != null) {
       throw VpnStartException(
-        'SOCKS port ${request.socksPort} is already in use.',
+        localPortBlockedMessage(
+          label: 'SOCKS',
+          port: request.socksPort,
+          issue: socksIssue,
+        ),
       );
     }
-    if (needsHttp && !await _isPortAvailable('127.0.0.1', request.httpPort)) {
+    if (!needsHttp) return;
+    final httpIssue =
+        await LocalPortResolver.probe('127.0.0.1', request.httpPort);
+    if (httpIssue != null) {
       throw VpnStartException(
-        'HTTP port ${request.httpPort} is already in use.',
+        localPortBlockedMessage(
+          label: 'HTTP',
+          port: request.httpPort,
+          issue: httpIssue,
+        ),
       );
-    }
-  }
-
-  Future<bool> _isPortAvailable(String host, int port) async {
-    try {
-      final serverSocket = await ServerSocket.bind(host, port);
-      await serverSocket.close();
-      return true;
-    } catch (_) {
-      return false;
     }
   }
 
@@ -1245,6 +1570,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     if (!statsPollingEnabled && !force) return;
     if (_xrayProcess == null &&
         _wireproxyProcess == null &&
+        _mihomoProcess == null &&
         _singboxProcess == null) {
       return;
     }
@@ -1252,7 +1578,24 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       final int inOctets;
       final int outOctets;
 
-      if (mode == ConnectionMode.tun) {
+      if (_mihomoProcess != null) {
+        // У mihomo источник один на оба режима — его собственный RESTful API.
+        // Счётчики tun-интерфейса тут не годятся: в TUN-режиме их пишет ядро
+        // ОС, а в proxy-режиме интерфейса нет вовсе.
+        final api = MihomoApiSession();
+        final port = api.port;
+        if (port == null) {
+          emitConnectedTelemetry(mode);
+          return;
+        }
+        final t = await queryClashTraffic(port, secret: api.secret);
+        if (t == null) {
+          emitConnectedTelemetry(mode);
+          return;
+        }
+        inOctets = t.down;
+        outOctets = t.up;
+      } else if (mode == ConnectionMode.tun) {
         // tun interface stats: kernel writes the app's egress to the device
         // (tx) and reads sing-box's downloaded replies from it (rx).
         final c = await _queryTunCounters();

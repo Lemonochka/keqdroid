@@ -1142,7 +1142,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXraySniffingRouteOnlyHint.
   ///
   /// In en, this message translates to:
-  /// **'Use sniffing for routing only, without overriding the destination'**
+  /// **'Off (default): the sniffed domain becomes the destination, so it is resolved again — locally for direct routes, on the server for proxied ones. On: the domain is used only to pick a rule, and the connection still goes to the address the app supplied — which is wrong whenever that address came from a resolver on the far side of the tunnel (RU sites then load over a direct route to a foreign CDN node).'**
   String get settingsXraySniffingRouteOnlyHint;
 
   /// No description provided for @settingsXrayResetDefaults.
@@ -1214,19 +1214,19 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunStackSystemHint.
   ///
   /// In en, this message translates to:
-  /// **'Kernel TCP/IP stack — fastest, default'**
+  /// **'OS kernel TCP/IP stack — fastest, but on Windows it terminates TCP on a listener at the TUN address and needs a Windows Firewall rule; when that rule does not stick, the tunnel comes up with no traffic at all'**
   String get settingsTunStackSystemHint;
 
   /// No description provided for @settingsTunStackGvisorHint.
   ///
   /// In en, this message translates to:
-  /// **'Userspace stack — better compatibility, a bit slower. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)'**
+  /// **'Userspace stack — default. Runs entirely inside the core, so it needs neither a listener nor firewall rules; a bit slower. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)'**
   String get settingsTunStackGvisorHint;
 
   /// No description provided for @settingsTunStackMixedHint.
   ///
   /// In en, this message translates to:
-  /// **'system for TCP, gVisor for UDP. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)'**
+  /// **'gVisor for TCP, system for UDP. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)'**
   String get settingsTunStackMixedHint;
 
   /// No description provided for @settingsTunMtu.
@@ -1238,7 +1238,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunMtuHint.
   ///
   /// In en, this message translates to:
-  /// **'576–65535, default 1400'**
+  /// **'576–65535, default 9000'**
   String get settingsTunMtuHint;
 
   /// No description provided for @settingsTunUdpTimeout.
@@ -1312,6 +1312,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Adds system routes into the tunnel automatically. Disable only if you manage routes yourself — without it no traffic enters the TUN'**
   String get settingsTunAutoRouteHint;
+
+  /// No description provided for @settingsTunIpv6.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep IPv6 inside the tunnel'**
+  String get settingsTunIpv6;
+
+  /// No description provided for @settingsTunIpv6Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'A TUN interface with only an IPv4 address gets no IPv6 routes, so on a dual-stack machine IPv6 traffic goes around the tunnel — past the routing rules and past the proxy. With this on the interface also gets an IPv6 address and IPv6 egress is closed, so apps fall back to IPv4, which is already tunnelled. The address is added only when the machine really has global IPv6. Xray/keqrnel core only'**
+  String get settingsTunIpv6Hint;
+
+  /// No description provided for @settingsMihomoSection.
+  ///
+  /// In en, this message translates to:
+  /// **'mihomo core'**
+  String get settingsMihomoSection;
+
+  /// No description provided for @settingsMihomoFakeIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Fake IP'**
+  String get settingsMihomoFakeIp;
+
+  /// No description provided for @settingsMihomoFakeIpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Answers DNS with a placeholder address instead of the real one: lookups become instant and domain rules stop depending on sniffing. In exchange, IP rules have to be resolved again before they can match, so the same routing lists behave a little differently than on Xray. Applies only where mihomo owns the tunnel — TUN mode and Android.'**
+  String get settingsMihomoFakeIpHint;
 
   /// No description provided for @settingsPingTitle.
   ///
@@ -1802,7 +1832,7 @@ abstract class AppLocalizations {
   /// No description provided for @serversPasteVlessHint.
   ///
   /// In en, this message translates to:
-  /// **'Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line), or a whole Xray JSON config'**
+  /// **'Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line), or a whole config: Xray JSON, Clash YAML, AmneziaWG .conf'**
   String get serversPasteVlessHint;
 
   /// No description provided for @serversPasteHint.
@@ -2788,6 +2818,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Servers added: {added} of {total}'**
   String serversImportedSummary(Object added, Object total);
+
+  /// No description provided for @sidebarJumpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to'**
+  String get sidebarJumpTitle;
+
+  /// No description provided for @serversScrollToEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to end'**
+  String get serversScrollToEnd;
 
   /// No description provided for @serversManualGroup.
   ///
@@ -4246,6 +4288,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Applies on the next connection — the running session is not restarted.'**
   String get settingsCoreHint;
+
+  /// No description provided for @settingsCoreAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get settingsCoreAuto;
+
+  /// No description provided for @settingsCoreAutoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The core is picked by the server\'s format: links run on Xray, ready-made configs run on the core they are written for.'**
+  String get settingsCoreAutoSubtitle;
+
+  /// No description provided for @settingsCoreSkipClash.
+  ///
+  /// In en, this message translates to:
+  /// **'The active server is a ready-made Clash config — only mihomo can run it, no matter which core is selected.'**
+  String get settingsCoreSkipClash;
+
+  /// No description provided for @settingsCoreSkipCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'The active server is a ready-made Xray JSON config (its routing and DNS come from the provider), so it runs on libxray no matter which core is selected. To use mihomo, take a subscription that hands out plain vless:// / vmess:// links — switch the client identity in the subscription\'s settings.'**
+  String get settingsCoreSkipCustom;
+
+  /// No description provided for @settingsCoreSkipChain.
+  ///
+  /// In en, this message translates to:
+  /// **'The active server is a proxy chain: its hops are linked by Xray\'s dialerProxy, so it runs on libxray no matter which core is selected.'**
+  String get settingsCoreSkipChain;
+
+  /// No description provided for @settingsCoreSkipAwg.
+  ///
+  /// In en, this message translates to:
+  /// **'The active server is an AmneziaWG profile — it runs on its own core, wg-go, no matter which core is selected.'**
+  String get settingsCoreSkipAwg;
+
+  /// No description provided for @settingsCoreSkipPlatform.
+  ///
+  /// In en, this message translates to:
+  /// **'The mihomo core is not bundled for this platform, so the connection runs on the Xray core instead.'**
+  String get settingsCoreSkipPlatform;
 
   /// No description provided for @settingsInternalsCores.
   ///

@@ -17,6 +17,7 @@ class GoBuildInfo {
     required this.modulePath,
     required this.moduleVersion,
     required this.deps,
+    this.settings = const {},
   });
 
   /// Версия тулчейна, например `go1.26.0`.
@@ -31,6 +32,26 @@ class GoBuildInfo {
 
   /// Версии зависимостей: полный путь модуля → версия.
   final Map<String, String> deps;
+
+  /// Настройки сборки (`build`-строки `go version -m`): `-tags`, `GOOS`,
+  /// `CGO_ENABLED` и прочее. Пустая карта — бинарь собран Go без них.
+  final Map<String, String> settings;
+
+  /// Теги сборки из `-tags`. Пусто — тегов не было ЛИБО настроек в бинаре нет
+  /// вовсе; отличать эти случаи должен вызывающий (см. [hasBuildSettings]).
+  Set<String> get buildTags {
+    final raw = settings['-tags'];
+    if (raw == null || raw.trim().isEmpty) return const {};
+    return raw
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet();
+  }
+
+  /// Есть ли в бинаре блок настроек сборки. Без него «тега нет» означает лишь
+  /// «неизвестно», и решать по нему нельзя.
+  bool get hasBuildSettings => settings.isNotEmpty;
 
   /// Версия зависимости, чей путь оканчивается на [suffix]:
   /// `depVersion('xtls/xray-core')` → `v1.260327.1-…`. Null — нет такой.
@@ -148,8 +169,17 @@ class GoBuildInfo {
     String? modulePath;
     String? moduleVersion;
     final deps = <String, String>{};
+    final settings = <String, String>{};
     for (final line in const LineSplitter().convert(modinfo)) {
       final parts = line.split('\t');
+      // `build`-строка короче остальных: ключ и значение, без хеша.
+      if (parts.length == 2 && parts[0] == 'build') {
+        final eq = parts[1].indexOf('=');
+        if (eq > 0) {
+          settings[parts[1].substring(0, eq)] = parts[1].substring(eq + 1);
+        }
+        continue;
+      }
       if (parts.length < 3) continue;
       switch (parts[0]) {
         case 'mod':
@@ -157,7 +187,7 @@ class GoBuildInfo {
           moduleVersion = parts[2];
         case 'dep':
           deps[parts[1]] = parts[2];
-        // `build` (флаги сборки) и `=>` (replace) панели не нужны.
+        // `=>` (replace) панели не нужен.
       }
     }
     return GoBuildInfo(
@@ -165,6 +195,7 @@ class GoBuildInfo {
       modulePath: modulePath,
       moduleVersion: moduleVersion,
       deps: Map.unmodifiable(deps),
+      settings: Map.unmodifiable(settings),
     );
   }
 

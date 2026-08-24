@@ -6,8 +6,9 @@ compile time, so they have to exist first.
 | File | Used for | In git? |
 |------|----------|---------|
 | `keqrnel.exe` | the unified core: Proxy and TUN for all xray protocols (VLESS, VMess, Trojan, SS, Hysteria2). Embeds xray + sing-box. | yes (committed) |
+| `mihomo.exe` | the Clash core: ready-made Clash configs and plain links; in TUN mode it owns the wintun adapter itself | yes (committed) |
 | `wireproxy.exe` | the AmneziaWG core (wireproxy-awg) | no — place manually |
-| `wintun.dll` | the Windows TUN adapter; keqrnel's embedded sing-box loads it at runtime to create the tunnel | no — place manually |
+| `wintun.dll` | the Windows TUN adapter; loaded at runtime by sing-tun — which is what BOTH keqrnel and mihomo build on | no — place manually |
 | `geoip.dat` | optional, enables `geoip:…` routing rules (xray side) | yes |
 | `geosite.dat` | optional, enables `geosite:…` rules (xray side) | yes |
 
@@ -25,6 +26,14 @@ go build -trimpath -buildvcs=false -tags with_gvisor -o keqrnel.exe ./cmd/keqrne
 
 `with_gvisor` is not optional — the TUN stack is a user setting, and `gvisor` /
 `mixed` (plus full-cone NAT) are missing from a build without that tag.
+
+`mihomo.exe` is the second core, not a wrapper: which one runs a server is decided
+by the server's **format** (Clash YAML → mihomo, Xray JSON → keqrnel, a plain link
+→ whichever the user picked). In TUN mode mihomo creates the adapter itself, so it
+needs the same two things as keqrnel: administrator rights and `wintun.dll` next to
+the binary. Build it with `tool/build_mihomo.ps1 -Target windows` — a patched build,
+see `tool/patches/`; it is deliberately left unstripped, like wireproxy, to keep
+Defender calm.
 
 AmneziaWG still runs through `wireproxy.exe` (wireproxy-awg, embeds amneziawg-go);
 keqrnel wraps its local SOCKS into the TUN. Build wireproxy with

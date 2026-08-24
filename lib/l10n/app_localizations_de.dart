@@ -561,7 +561,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXraySniffingHint => 'Zielprotokoll und Domain aus dem eingehenden Verkehr erkennen';
 
   @override
-  String get settingsXraySniffingRouteOnlyHint => 'Sniffing nur für das Routing nutzen, ohne das Ziel zu überschreiben';
+  String get settingsXraySniffingRouteOnlyHint => 'Aus (Standard): die erkannte Domain wird zum Ziel und wird erneut aufgelöst — bei direkten Routen lokal, bei Proxy-Routen auf dem Server. An: die Domain wählt nur die Regel, verbunden wird weiterhin mit der Adresse der App — und die ist falsch, sobald sie von einem Resolver jenseits des Tunnels stammt.';
 
   @override
   String get settingsXrayResetDefaults => 'Auf Standard zurücksetzen';
@@ -597,19 +597,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTunStackTitle => 'Netzwerk-Stack';
 
   @override
-  String get settingsTunStackSystemHint => 'Kernel-TCP/IP-Stack — am schnellsten, Standard';
+  String get settingsTunStackSystemHint => 'Kernel-TCP/IP-Stack — am schnellsten, terminiert unter Windows TCP jedoch über einen Listener an der TUN-Adresse und braucht eine Windows-Firewall-Regel; greift die Regel nicht, startet der Tunnel ganz ohne Datenverkehr';
 
   @override
-  String get settingsTunStackGvisorHint => 'Userspace-Stack — bessere Kompatibilität, etwas langsamer. Erfordert einen mit gVisor gebauten Core (Cores aus App 0.7.1 und älter beenden sich mit Code 1)';
+  String get settingsTunStackGvisorHint => 'Userspace-Stack — Standard. Läuft vollständig im Core, braucht daher weder Listener noch Firewall-Regeln; etwas langsamer. Erfordert einen mit gVisor gebauten Core (Cores aus App 0.7.1 und älter beenden sich mit Code 1)';
 
   @override
-  String get settingsTunStackMixedHint => 'system für TCP, gVisor für UDP. Erfordert einen mit gVisor gebauten Core (Cores aus App 0.7.1 und älter beenden sich mit Code 1)';
+  String get settingsTunStackMixedHint => 'gVisor für TCP, system für UDP. Erfordert einen mit gVisor gebauten Core (Cores aus App 0.7.1 und älter beenden sich mit Code 1)';
 
   @override
   String get settingsTunMtu => 'MTU';
 
   @override
-  String get settingsTunMtuHint => '576–65535, Standard 1400';
+  String get settingsTunMtuHint => '576–65535, Standard 9000';
 
   @override
   String get settingsTunUdpTimeout => 'UDP-Timeout (Sek.)';
@@ -646,6 +646,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsTunAutoRouteHint => 'Fügt Systemrouten automatisch in den Tunnel ein. Nur deaktivieren, wenn Routen manuell verwaltet werden — sonst erreicht kein Traffic das TUN';
+
+  @override
+  String get settingsTunIpv6 => 'IPv6 im Tunnel halten';
+
+  @override
+  String get settingsTunIpv6Hint => 'Ein TUN-Interface mit nur einer IPv4-Adresse bekommt keine IPv6-Routen: Auf Dual-Stack-Rechnern läuft IPv6-Verkehr am Tunnel vorbei — an den Routing-Regeln und am Proxy vorbei. Aktiviert erhält das Interface auch eine IPv6-Adresse und der IPv6-Ausgang wird geschlossen, sodass Anwendungen sofort auf IPv4 zurückfallen, das bereits im Tunnel liegt. Die Adresse wird nur gesetzt, wenn der Rechner wirklich globales IPv6 hat. Nur Kern xray/keqrnel';
+
+  @override
+  String get settingsMihomoSection => 'mihomo-Kern';
+
+  @override
+  String get settingsMihomoFakeIp => 'Fake IP';
+
+  @override
+  String get settingsMihomoFakeIpHint => 'Der Kern beantwortet DNS mit einer Platzhalter-Adresse statt der echten: Auflösungen sind sofort da, und Domain-Regeln hängen nicht mehr am Sniffing. Dafür müssen IP-Regeln vor dem Vergleich erneut aufgelöst werden — dieselben Routing-Listen verhalten sich also etwas anders als unter Xray. Gilt nur dort, wo mihomo den Tunnel selbst besitzt: TUN-Modus und Android.';
 
   @override
   String get settingsPingTitle => 'Server-Ping';
@@ -913,7 +928,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serversAddServerTitle => 'Server hinzufügen';
 
   @override
-  String get serversPasteVlessHint => 'Füge vless://, vmess://, trojan://, ss://, hysteria2:// oder hy2:// ein (eine pro Zeile) oder eine komplette Xray-JSON-Konfiguration';
+  String get serversPasteVlessHint => 'Füge vless://, vmess://, trojan://, ss://, hysteria2:// oder hy2:// ein (eine pro Zeile) oder eine komplette Konfiguration: Xray-JSON, Clash-YAML, AmneziaWG-.conf';
 
   @override
   String get serversPasteHint => 'vless://… oder hy2://host:port?auth=…';
@@ -1428,6 +1443,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String serversImportedSummary(Object added, Object total) {
     return 'Server hinzugefügt: $added von $total';
   }
+
+  @override
+  String get sidebarJumpTitle => 'Schnellzugriff';
+
+  @override
+  String get serversScrollToEnd => 'Zum Ende springen';
 
   @override
   String get serversManualGroup => 'Manuelle Server';
@@ -2195,6 +2216,27 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsCoreHint => 'Gilt ab der nächsten Verbindung — die laufende Sitzung wird nicht neu gestartet.';
+
+  @override
+  String get settingsCoreAuto => 'Automatisch';
+
+  @override
+  String get settingsCoreAutoSubtitle => 'Der Kern richtet sich nach dem Format des Servers: Links laufen auf Xray, fertige Konfigurationen auf dem Kern, für den sie geschrieben sind.';
+
+  @override
+  String get settingsCoreSkipClash => 'Der aktive Server ist eine fertige Clash-Konfiguration — sie läuft unabhängig von der Kernauswahl nur auf mihomo.';
+
+  @override
+  String get settingsCoreSkipCustom => 'Der aktive Server ist eine fertige Xray-JSON-Konfiguration (Routing und DNS stammen vom Anbieter) und läuft deshalb unabhängig von der Kernauswahl über libxray. Für mihomo wird ein Abo mit gewöhnlichen vless:// / vmess://-Links benötigt — ändere die Client-Identität in den Abo-Einstellungen.';
+
+  @override
+  String get settingsCoreSkipChain => 'Der aktive Server ist eine Proxy-Kette: Ihre Knoten hängen an Xrays dialerProxy, sie läuft deshalb unabhängig von der Kernauswahl über libxray.';
+
+  @override
+  String get settingsCoreSkipAwg => 'Der aktive Server ist ein AmneziaWG-Profil — er läuft unabhängig von der Kernauswahl über seinen eigenen Kern wg-go.';
+
+  @override
+  String get settingsCoreSkipPlatform => 'Der mihomo-Kern wird für diese Plattform nicht mitgeliefert — die Verbindung läuft über den Xray-Kern.';
 
   @override
   String get settingsInternalsCores => 'Kerne';

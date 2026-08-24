@@ -91,11 +91,14 @@ bool IsKeqdisCoreProcess(DWORD pid) {
   bool is_core = false;
   if (::QueryFullProcessImageNameW(process, 0, path, &size)) {
     const std::wstring image(path);
-    // keqrnel.exe — единственное ядро, которое приложение сейчас запускает
-    // (sing-box host + встроенный xray). Без него в списке осиротевший процесс
-    // не убивался: pid-файл вычищался, а ядро жило и занимало порт/TUN, из-за
-    // чего следующая сессия падала и процесс приходилось снимать вручную.
+    // Список обязан покрывать ВСЕ ядра, которые приложение запускает: не
+    // названное здесь осиротевшее ядро переживает падение/убийство приложения,
+    // держит локальные порты и wintun-адаптер, и следующая сессия падает
+    // («порт занят», «TUN не поднялся»), а снимать процесс приходится руками.
+    // mihomo.exe сюда завезли вместе с самим ядром — до этого он в списке не
+    // числился и как раз оставался висеть.
     is_core = EndsWithIgnoreCase(image, L"keqrnel.exe") ||
+              EndsWithIgnoreCase(image, L"mihomo.exe") ||
               EndsWithIgnoreCase(image, L"xray.exe") ||
               EndsWithIgnoreCase(image, L"sing-box.exe") ||
               EndsWithIgnoreCase(image, L"wireproxy.exe");

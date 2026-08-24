@@ -1207,31 +1207,44 @@ class _ServerConfigEditorScreenState
 
   // ---------- строительные блоки ----------
 
+  /// Карточка секции.
+  ///
+  /// Именно `Material`, а не `Container` с `BoxDecoration`: внутри секций живут
+  /// `SwitchListTile` (`allowInsecure`), а `ListTile` рисует свой фон и чернила
+  /// на БЛИЖАЙШЕМ `Material`-предке. Когда ближе оказывается крашеный
+  /// `DecoratedBox`, Flutter роняет ассерт «ListTile background color or ink
+  /// splashes may be invisible» — в дебаге это отваливший кусок экрана при
+  /// заходе в редактор, в релизе тихо съеденные чернила. Цвет, радиус и рамка
+  /// те же, что были у декорации, так что вид не меняется.
   Widget _section(String title, List<Widget> children) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
         color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(ExpressiveShape.large),
-        border: Border.all(color: AppTheme.divider(context)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context)
-                .textTheme
-                .emphasized(Theme.of(context).textTheme.labelMedium)
-                ?.copyWith(
-                  letterSpacing: 0.3,
-                  color: AppTheme.textLight(context),
-                ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ExpressiveShape.large),
+          side: BorderSide(color: AppTheme.divider(context)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context)
+                    .textTheme
+                    .emphasized(Theme.of(context).textTheme.labelMedium)
+                    ?.copyWith(
+                      letterSpacing: 0.3,
+                      color: AppTheme.textLight(context),
+                    ),
+              ),
+              const SizedBox(height: 10),
+              ...children,
+            ],
           ),
-          const SizedBox(height: 10),
-          ...children,
-        ],
+        ),
       ),
     );
   }

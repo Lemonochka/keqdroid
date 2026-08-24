@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
 import '../utils/awg_profile.dart';
+import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
 import '../utils/proxy_chain.dart';
 import 'server_flag.dart';
@@ -46,6 +47,8 @@ class ServerItem {
   bool _vmessPayloadParsed = false;
   CustomXrayConfig? _cachedCustom;
   bool _customParsed = false;
+  CustomClashConfig? _cachedClash;
+  bool _clashParsed = false;
   ProxyChainConfig? _cachedChain;
   bool _chainParsed = false;
 
@@ -187,6 +190,15 @@ class ServerItem {
               : (custom.address.isNotEmpty ? custom.address : 'Custom config'),
         );
       }
+      if (protocol == 'clash') {
+        final clash = clashConfig!;
+        final remarks = clash.remarks;
+        return _cachedDerivedName = _sanitizeUtf16(
+          remarks.isNotEmpty
+              ? remarks
+              : (clash.address.isNotEmpty ? clash.address : 'Clash config'),
+        );
+      }
       if (protocol == 'awg') {
         final profile = AwgProfile.parse(config);
         final remark = profile.remark;
@@ -315,6 +327,9 @@ class ServerItem {
       if (protocol == 'custom') {
         return customConfig!.address;
       }
+      if (protocol == 'clash') {
+        return clashConfig!.address;
+      }
       if (protocol == 'awg') {
         return AwgProfile.parse(config).endpointHost;
       }
@@ -341,6 +356,9 @@ class ServerItem {
       if (protocol == 'custom') {
         return customConfig!.port;
       }
+      if (protocol == 'clash') {
+        return clashConfig!.port;
+      }
       if (protocol == 'awg') {
         return AwgProfile.parse(config).endpointPort;
       }
@@ -363,6 +381,19 @@ class ServerItem {
       _cachedCustom = CustomXrayConfig.tryParse(config);
     }
     return _cachedCustom;
+  }
+
+  /// Готовый конфиг Clash/mihomo вместо ссылки (сервер «CLASH»): прокси,
+  /// группы и правила в нём авторские. null — конфиг не такой. Разбор
+  /// кэшируется наравне с xray-конфигом: [protocol] зовут на каждую
+  /// перерисовку плитки.
+  CustomClashConfig? get clashConfig {
+    if (_clashParsed) return _cachedClash;
+    _clashParsed = true;
+    if (CustomClashConfig.looksLikeClash(config)) {
+      _cachedClash = CustomClashConfig.tryParse(config);
+    }
+    return _cachedClash;
   }
 
   /// Цепочка серверов вместо одиночного сервера. null — конфиг не такой.
@@ -398,7 +429,7 @@ class ServerItem {
   }
 
   /// Протокол ('vless', 'vmess', 'trojan', 'ss', 'ssr', 'hysteria', 'hy2',
-  /// 'awg', 'custom', 'chain', 'unknown')
+  /// 'awg', 'custom', 'clash', 'chain', 'unknown')
   String get protocol {
     final lower = config.toLowerCase();
     if (lower.startsWith('${ProxyChainConfig.scheme}://')) {
@@ -416,6 +447,9 @@ class ServerItem {
     if (lower.startsWith('hysteria2://')) return 'hysteria2';
     if (lower.startsWith('hysteria://')) return 'hysteria';
     if (AwgProfile.isAwgConfig(config)) return 'awg';
+    // Clash — раньше xray: json-конфиг Clash тоже начинается с '{', и
+    // разбирать его как xray-конфиг бессмысленно (у него нет outbounds).
+    if (clashConfig != null) return 'clash';
     if (customConfig != null) return 'custom';
     return 'unknown';
   }

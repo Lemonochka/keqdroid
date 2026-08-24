@@ -126,12 +126,16 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   /// бы по три секунды на каждый опрос, показывая «Core API unreachable»
   /// вместо честного «сессии нет».
   void _syncMihomoApiSession(VpnState s) {
-    if (!Platform.isAndroid) return;
     final api = MihomoApiSession();
+    // Зачистка — на всех платформах: пара переживает сессию, а по ней
+    // «Соединения» решают, к какому диалекту API обращаться.
     if (s.status == VpnStatus.disconnected || s.status == VpnStatus.error) {
       api.clear();
       return;
     }
+    // Восстановление — только на Android: это единственное место, где сессия
+    // ядра переживает Dart-изолят (плитка, пересоздание движка).
+    if (!Platform.isAndroid) return;
     if (s.status != VpnStatus.connected) return;
     if (api.isActive || _mihomoApiRestoreInFlight) return;
     _mihomoApiRestoreInFlight = true;
@@ -289,12 +293,29 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // Затем выкидываем geoip:/geosite:-коды, которых нет в поставляемых базах:
       // xray на неизвестном коде не игнорирует правило, а падает на разборе
       // всего конфига, и подключение умирает с «SOCKS port not ready».
-      final settings = await GeoAssetService.sanitizeRules(
+      var settings = await GeoAssetService.sanitizeRules(
         applyRoutingRules(
           await ref.read(storageProvider).getSettings(),
           await ref.read(storageProvider).getRules(),
         ),
       );
+      // Свои DNS-адреса, которых ядро не исполнит, генератор выбрасывает молча
+      // (иначе они не «не сработают», а не дадут ядру подняться). Пользователю
+      // это видно только по тому, что его DNS «не применился» — говорим прямо.
+      if (settings.xrayCore.dnsUseCustom) {
+        final dropped =
+            XrayCoreSettings.xrayDnsServers(settings.xrayCore.dnsServers)
+                .dropped;
+        if (dropped.isNotEmpty) {
+          AppLogger.instance.warn(
+            'Custom DNS: ${dropped.length} address(es) dropped — the core '
+            'cannot run them: ${dropped.join(', ')}. Supported: plain ip[:port], '
+            'https+local://, https://, h2c://, tcp://, quic+local://, '
+            'localhost, fakedns.',
+          );
+        }
+      }
+
       final split = ref.read(splitTunnelingProvider);
       final excludePkgs = split.excludePackages.toList();
       final includePkgs = split.includePackages.toList();
@@ -315,12 +336,17 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       }
 
       var connectionMode = TunnelSessionBuilder.resolveMode(settings);
-      if (Platform.isWindows &&
+      if ((Platform.isWindows || Platform.isLinux) &&
           connectionMode == ConnectionMode.proxy &&
           routingMode != AppRoutingMode.allProxy) {
+        // Не «сплит не сработал», а «сессия идёт как весь-трафик»: без туннеля
+        // ядро не знает процесса-владельца соединения, а оставленный от сплита
+        // финал (`onlySelected` → DIRECT) отправил бы мимо прокси ВСЁ.
         AppLogger.instance.warn(
-          'Split tunneling rules are ignored in Proxy mode on Windows. '
-          'Switch to TUN mode to apply per-process rules.',
+          'Split tunneling rules are ignored in Proxy mode on desktop: without '
+          'a tunnel the core cannot tell which process a connection belongs '
+          'to. The session runs as "all traffic" instead — switch to TUN mode '
+          'to apply per-process rules.',
         );
       }
       if (Platform.isWindows && isAwg && connectionMode == ConnectionMode.tun) {
@@ -357,6 +383,29 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         }
       }
 
+      // Локальные порты — это пожелание, а не факт. 2080 держит сосед (второй
+      // клиент, наше же осиротевшее ядро, локальный сервер), а на Windows целые
+      // диапазоны изымает Hyper-V/WSL: слушателя нет, `netstat` пуст, бинд
+      // запрещён (WSAEACCES). Раньше любой из этих случаев заканчивался отказом
+      // подключаться — снаружи «прокси/TUN не работает», а чинить надо руками и
+      // в другом месте. Теперь порт подбирается рабочий; расхождение с
+      // настройкой идёт в лог, а сами настройки НЕ переписываются.
+      //
+      // Ставить это раньше нельзя: выше есть ветка, которая сохраняет
+      // `settings` в хранилище (автостарт без прав → Proxy), и подменённые
+      // порты уехали бы в постоянные настройки.
+      if (Platform.isWindows || Platform.isLinux) {
+        final portPlan = await LocalPortResolver.resolve(settings);
+        for (final change in portPlan.changes) {
+          AppLogger.instance.warn(change.describe());
+        }
+        settings = portPlan.applyTo(settings);
+        ActiveLocalPorts().set(
+          socksPort: portPlan.socksPort,
+          httpPort: portPlan.httpPort,
+        );
+      }
+
       // 1. забираем SOCKS5-креды у нативного сервиса
       final creds = await engine.fetchSocksCredentials();
       Socks5Credentials().init(creds.username, creds.password);
@@ -374,20 +423,26 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       final desktopProxyNoAuth = (Platform.isWindows || Platform.isLinux) &&
           connectionMode == ConnectionMode.proxy;
 
-      // mihomo пока только на Android и только для одиночных ссылок: цепочки и
-      // готовые xray-конфиги описаны в терминах xray, переводить их незачем —
-      // такие серверы остаются на своём ядре независимо от выбора.
-      final mihomoPicked = !isAwg &&
-          Platform.isAndroid &&
-          settings.vpnCore == AppSettings.vpnCoreMihomo &&
-          server.protocol != 'custom' &&
-          ProxyChainConfig.tryParse(server.config) == null;
+      // Ядро выбирает ФОРМАТ сервера, а настройка — только там, где формат
+      // берут оба (обычная ссылка). Готовый конфиг исполняет то ядро, на языке
+      // которого он написан: xray-json — xray, clash-yaml — mihomo. Несовпадение
+      // с выбором пользователя больше не молчит: раньше это выглядело как
+      // «настройка не работает» (в списке ядер mihomo, в сессии libxray).
+      final choice = resolveVpnBackend(
+        config: server.config,
+        preference: settings.vpnCore,
+        mihomoAvailable: mihomoShipsHere,
+      );
+      if (choice.skip != null) {
+        AppLogger.instance.warn(
+          'Core preference "${settings.vpnCore}" is not used for this server: '
+          '${vpnCoreSkipLogReason(choice.skip!)}. Running it on '
+          '${choice.backend.wireValue}.',
+        );
+      }
 
-      final vpnBackend = isAwg
-          ? VpnBackend.awg
-          : mihomoPicked
-              ? VpnBackend.mihomo
-              : VpnBackend.xray;
+      final vpnBackend = choice.backend;
+      final mihomoPicked = vpnBackend == VpnBackend.mihomo;
 
       // Координаты API ядра нужны ДО генерации: они едут внутрь конфига.
       // У xray-пути аналога нет — там «Соединения» читают access-лог.
@@ -398,14 +453,58 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         mihomoApi.clear();
       }
 
+      // Туннель принадлежит самому mihomo: адаптер, маршруты и перехват DNS —
+      // его, а не sing-box'а или tun2socks. Различие платформ ровно одно: на
+      // десктопе ядро создаёт устройство само, на Android получает готовый
+      // дескриптор от VpnService (и потому не трогает ни адреса, ни маршруты).
+      final MihomoTunOptions? mihomoTun;
+      if (!mihomoPicked) {
+        mihomoTun = null;
+      } else if (Platform.isAndroid) {
+        mihomoTun = const MihomoTunOptions(
+          fromFileDescriptor: true,
+          // Стек не спрашиваем: `TunSettings` — десктопная настройка, а gvisor
+          // держит весь TCP/IP внутри процесса ядра, что на Android
+          // единственный рабочий вариант без root.
+          stack: TunSettings.stackGvisor,
+          autoRoute: false,
+        );
+      } else if (connectionMode == ConnectionMode.tun) {
+        mihomoTun = MihomoTunOptions(
+          device: kTunInterfaceName,
+          stack: settings.tun.stack,
+          mtu: settings.tun.mtu,
+          autoRoute: settings.tun.autoRoute,
+          strictRoute:
+              settings.tun.strictRouteEnabled(windows: Platform.isWindows),
+        );
+      } else {
+        mihomoTun = null;
+      }
+
       final mihomoConfig = mihomoPicked
           ? MihomoConfigGen.generate(
               server.config,
               settings,
               socksPort: settings.localPort,
+              // HTTP-инбаунд — только на десктопе: под tun2socks в ядро ходят
+              // одним SOCKS, а лишний слушающий порт на телефоне не нужен.
+              httpPort: Platform.isAndroid ? null : settings.httpPort,
               resolvedServerIp: serverIp,
+              localInboundsNoAuth: desktopProxyNoAuth,
               apiPort: mihomoApi.port,
               apiSecret: mihomoApi.secret,
+              tun: mihomoTun,
+              routingMode: routingMode,
+              managedProcessNames: switch (routingMode) {
+                AppRoutingMode.onlySelected ||
+                AppRoutingMode.allExceptSelected =>
+                  processNames,
+                AppRoutingMode.allProxy => const <String>[],
+              },
+              appProcessName: Platform.isAndroid
+                  ? ''
+                  : p.basename(Platform.resolvedExecutable),
             )
           : null;
 
@@ -425,6 +524,32 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
                   ? await GeoAssetService.index()
                   : null,
             );
+
+      // Забирать ли IPv6 в туннель. Спрашиваем машину, а не только настройку:
+      // IPv6-адрес на TUN-интерфейсе там, где IPv6 в системе выключен, роняет
+      // sing-box на старте («set ipv6 dns: Access is denied»), то есть чинил бы
+      // утечку ценой неработающего TUN. См. [TunSettings.blockIpv6Leak].
+      final hostHasIpv6 = connectionMode == ConnectionMode.tun &&
+              (Platform.isWindows || Platform.isLinux) &&
+              settings.tun.blockIpv6Leak &&
+              !mihomoPicked
+          ? await hostHasGlobalIpv6(excludeInterfaceName: kTunInterfaceName)
+          : false;
+      // Молчаливого отката быть не должно: у mihomo туннель свой, и наш
+      // sing-box-инбаунд с его IPv6-адресом в этой схеме не участвует вовсе.
+      if (mihomoPicked &&
+          connectionMode == ConnectionMode.tun &&
+          settings.tun.blockIpv6Leak &&
+          (Platform.isWindows || Platform.isLinux) &&
+          await hostHasGlobalIpv6(excludeInterfaceName: kTunInterfaceName)) {
+        AppLogger.instance.warn(
+          'This machine has global IPv6, but the tunnel here belongs to the '
+          'mihomo core, which keeps its own IPv6 handling — the TUN option '
+          '"keep IPv6 inside the tunnel" covers the xray/keqrnel core only. '
+          'IPv6 traffic can therefore bypass the tunnel; switch the core to '
+          'xray in Settings → About if that matters.',
+        );
+      }
 
       final session = TunnelSessionBuilder.build(
         settings: settings,
@@ -446,6 +571,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         routingMode: routingMode,
         serverName: server.displayName,
         modeOverride: connectionMode,
+        hostHasIpv6: hostHasIpv6,
       );
       await engine.startSession(session);
       _awaitingSessionStart = false;
@@ -529,6 +655,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   Future<void> disconnect() async {
     state = const AsyncData(VpnState(status: VpnStatus.disconnecting));
+    // Порты сессии больше ничего не слушает — апдейтер обязан вернуться к
+    // настройке, а не стучаться в подменённый порт умершего ядра.
+    ActiveLocalPorts().clear();
     try {
       await ref.read(vpnEngineProvider).stopVpn();
     } catch (e, st) {

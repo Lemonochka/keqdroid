@@ -46,6 +46,7 @@ import 'package:keqdroid/utils/local_vpn_proxy.dart';
 import 'package:keqdroid/utils/geo_asset_index.dart';
 import 'package:keqdroid/utils/geo_rule_sanitizer.dart';
 import 'package:keqdroid/utils/routing_presets.dart';
+import 'package:keqdroid/utils/vpn_core_support.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/screens/split_tunneling_screen.dart';
 import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';

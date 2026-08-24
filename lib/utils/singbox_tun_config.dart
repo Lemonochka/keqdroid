@@ -7,6 +7,104 @@ import '../tunnel/app_routing_mode.dart';
 import 'process_name_utils.dart';
 import 'routing_entry.dart';
 
+/// Адрес TUN-интерфейса (тот же, что у sing-box по умолчанию). Вынесен из
+/// генератора: по нему бэкенды понимают, что адаптер уже поднят.
+const kTunInterfaceAddress = '172.19.0.1';
+
+/// Подсеть TUN-интерфейса — /30, как требует system-стек sing-box (ему нужен
+/// «следующий» адрес в префиксе).
+const kTunInterfacePrefix = '$kTunInterfaceAddress/30';
+
+/// IPv6-подсеть TUN-интерфейса — умолчание sing-box (`/126` по той же причине,
+/// что и `/30` у IPv4). Заводится только когда у машины есть глобальный IPv6:
+/// см. [TunSettings.blockIpv6Leak].
+const kTunInterfaceIpv6Prefix = 'fdfe:dcba:9876::1/126';
+
+/// Локальные IPv6-диапазоны, которые обязаны ходить мимо туннеля и НЕ попадать
+/// под запрет: link-local (соседи, SLAAC), ULA (адреса своей сети), multicast
+/// (mDNS/SSDP — обнаружение принтеров и колонок) и петля.
+const kLocalIpv6Cidrs = ['::1/128', 'fe80::/10', 'fc00::/7', 'ff00::/8'];
+
+/// Имя TUN-интерфейса. Задаём САМИ на всех платформах: без него sing-box берёт
+/// «tun0», а wintun считает GUID адаптера как MD5("wintun" + имя) — один и тот
+/// же у любого sing-box-клиента на машине.
+const kTunInterfaceName = 'tun-keqdis';
+
+/// Поднялся ли TUN, судя по выводу ядра.
+///
+/// Признак — строка САМОГО sing-box, и только она. Прежняя проверка («в логе
+/// есть "started" и где-нибудь есть "tun"») срабатывала на баннере встроенного
+/// xray: ядро запускает аутбаунды раньше инбаундов (`Box.preStart` → outbound,
+/// затем `Box.start` → inbound), поэтому «Xray N.N.N started» появляется ДО
+/// того, как создан адаптер, прописаны маршруты и DNS. Приложение показывало
+/// «Подключено» и заводило таймер сессии, пока трафик ещё шёл старым путём —
+/// отсюда «работает только через 20 секунд после включения».
+///
+/// Однозначных строк три: `started at <имя>` от tun-инбаунда (маршруты уже
+/// добавлены), `sing-box started` по окончании старта всего ядра и
+/// `keqrnel started` — её печатает уже наша обёртка, последней.
+bool singboxTunReady(String rawLog) {
+  final text = rawLog.toLowerCase();
+  return text.contains('sing-box started') ||
+      text.contains('keqrnel started') ||
+      text.contains('started at ');
+}
+
+/// Стеки, которых нет в ядре, собранном без `-tags with_gvisor`.
+///
+/// `NewGVisor`/`NewMixed` там заменены заглушкой и возвращают «gVisor is not
+/// included in this build», то есть ядро падает на СТАРТЕ — конфиг разобран,
+/// адаптер не создан, пользователь видит «keqrnel TUN did not start (exit code
+/// 1)». Наши поставляемые бинари собраны с тегом (`go version -m` →
+/// `-tags=with_gvisor`), но чужая сборка `go build ./...` — нет.
+const _gvisorStacks = {TunSettings.stackGvisor, TunSettings.stackMixed};
+
+/// Понижает стек TUN-инбаунда до `system`, если ядро собрано без gVisor.
+///
+/// Умолчание у нас `gvisor`, и с ядром без тега оно означало бы «TUN не
+/// работает вообще, у всех, всегда». Обрезанный конфиг лучше упавшего: system
+/// доступен в любой сборке.
+///
+/// [gvisorAvailable] — `null`, когда выяснить не удалось (бинарь не Go, блок
+/// настроек сборки не прочитался). Тогда конфиг не трогаем: «неизвестно» — не
+/// повод переписывать выбор пользователя.
+({String config, String? downgradedFrom}) applyTunStackFallback(
+  String singboxConfig, {
+  required bool? gvisorAvailable,
+}) {
+  if (gvisorAvailable != false) {
+    return (config: singboxConfig, downgradedFrom: null);
+  }
+  final Map<String, dynamic> box;
+  try {
+    box = jsonDecode(singboxConfig) as Map<String, dynamic>;
+  } catch (_) {
+    return (config: singboxConfig, downgradedFrom: null);
+  }
+  final inbounds = box['inbounds'];
+  if (inbounds is! List) return (config: singboxConfig, downgradedFrom: null);
+
+  String? downgradedFrom;
+  for (final raw in inbounds) {
+    if (raw is! Map) continue;
+    if (raw['type'] != 'tun') continue;
+    final stack = raw['stack']?.toString();
+    if (stack == null || !_gvisorStacks.contains(stack)) continue;
+    raw['stack'] = TunSettings.stackSystem;
+    // endpoint_independent_nat живёт только на gvisor/mixed: на system
+    // sing-box его игнорирует, но в конфиге он оставался бы ложью.
+    raw.remove('endpoint_independent_nat');
+    downgradedFrom = stack;
+  }
+  if (downgradedFrom == null) {
+    return (config: singboxConfig, downgradedFrom: null);
+  }
+  return (
+    config: const JsonEncoder.withIndent('  ').convert(box),
+    downgradedFrom: downgradedFrom,
+  );
+}
+
 /// sing-box tun-конфиг: весь трафик tun → socks5 (auth) → локальный xray.
 /// xray поднимает upstream (vless, vmess, hysteria, …), sing-box только
 /// перехватывает пакеты и не парсит subscription-протоколы.
@@ -30,6 +128,11 @@ class SingBoxTunConfigGen {
     /// генераторе. Ср. [TunSettings.strictRouteEnabled], где платформа уже входит
     /// аргументом.
     bool? windows,
+    /// Есть ли у машины глобальный IPv6 (см. `utils/host_ipv6.dart`). Только
+    /// вместе с [TunSettings.blockIpv6Leak] это включает захват IPv6: адрес на
+    /// интерфейсе там, где IPv6 в системе выключен, — это не «лишняя строка в
+    /// конфиге», а упавший на старте sing-box.
+    bool hostHasIpv6 = false,
   }) {
     final isWindows = windows ?? Platform.isWindows;
     // Разделители — и запятая, и перевод строки: UI обещает «по одному в
@@ -68,8 +171,14 @@ class SingBoxTunConfigGen {
       // quic://, tcp://, голый ip[:port]). sing-box же ждёт типизированный
       // объект сервера, а НЕ сырую xray-строку: если скормить её как есть,
       // keqrnel падал на разборе конфига (exit code 2 — «ошибка подключения»).
-      // Переводим первый адрес; непереводимое (localhost/fakedns/…) → дефолт.
-      return _singBoxDnsServerFromXray(customDns.first) ?? defaultDoh();
+      // Берём ПЕРВЫЙ переводимый адрес, а не просто первый: непереводимая
+      // строка в начале списка (localhost, fakedns) иначе отправляла в дефолт
+      // весь список, включая нормальный DoH следующей строкой.
+      for (final address in customDns) {
+        final server = _singBoxDnsServerFromXray(address);
+        if (server != null) return server;
+      }
+      return defaultDoh();
     }
 
     ({
@@ -197,6 +306,13 @@ class SingBoxTunConfigGen {
 
     const tunInboundTag = 'tun-in';
 
+    // Забирать ли IPv6 в туннель. Без адреса на интерфейсе ядро не берёт
+    // IPv6-маршруты, и на дуалстеке весь IPv6 идёт мимо туннеля (см.
+    // [TunSettings.blockIpv6Leak]); с адресом на машине, где IPv6 выключен,
+    // sing-box падает при настройке адаптера. Отсюда И настройка, И проверка
+    // машины.
+    final captureIpv6 = settings.tun.blockIpv6Leak && hostHasIpv6;
+
     final rules = <Map<String, dynamic>>[
       {
         'inbound': [tunInboundTag],
@@ -283,9 +399,13 @@ class SingBoxTunConfigGen {
     }
 
     if (serverIpToExclude.isNotEmpty) {
+      // Маска по семейству адреса: `/32` на IPv6-адресе — это не «сам сервер»,
+      // а треть интернета (`2a03:…::1/32` → `2a03::/32`), пущенная мимо
+      // туннеля. `ip_cidr` у sing-box принимает и голый адрес, но у нас он
+      // приезжает уже с маской у половины вызовов, так что считаем её сами.
       final cidrs = serverIpToExclude.contains('/')
           ? [serverIpToExclude]
-          : ['$serverIpToExclude/32'];
+          : ['$serverIpToExclude/${serverIpToExclude.contains(':') ? 128 : 32}'];
       rules.add({'ip_cidr': cidrs, 'outbound': 'direct'});
     }
 
@@ -307,6 +427,9 @@ class SingBoxTunConfigGen {
         '172.16.0.0/12',
         '192.168.0.0/16',
         '127.0.0.0/8',
+        // Локальный IPv6 — только когда мы его вообще забираем: иначе это
+        // мёртвые строки в конфиге у всех.
+        if (captureIpv6) ...kLocalIpv6Cidrs,
       ],
       'outbound': 'direct',
     });
@@ -320,6 +443,19 @@ class SingBoxTunConfigGen {
     }
     if (proxyIpsForSingBox.isNotEmpty) {
       rules.add({'ip_cidr': proxyIpsForSingBox, 'outbound': 'proxy'});
+    }
+
+    // Выход IPv6 наружу закрыт — но ПОСЛЕ пользовательских правил: явное
+    // IPv6-правило пользователя остаётся сильнее умолчания.
+    //
+    // Смысл именно в закрытии, а не в проксировании: наш DNS отдаёт только
+    // A-записи, значит IPv6-адрес у приложения появляется лишь помимо нас
+    // (свой DoH браузера, литерал в коде). Закрытый выход возвращает такое
+    // соединение на IPv4 мгновенно — Happy Eyeballs делает это за миллисекунды,
+    // — тогда как отправленное в прокси оно висело бы до таймаута на сервере
+    // без IPv6. Локальный IPv6 сюда не попадает: он ушёл в `direct` выше.
+    if (captureIpv6) {
+      rules.add({'ip_cidr': ['::/0'], 'outbound': 'block'});
     }
 
     // Финальное действие (catch-all). При per-app сплите режим сам диктует финал
@@ -401,7 +537,9 @@ class SingBoxTunConfigGen {
       'type': 'tun',
       'tag': tunInboundTag,
       'mtu': tun.mtu,
-      'address': ['172.19.0.1/30'],
+      // Второй адрес — это и есть «забрать IPv6 в туннель»: sing-box ставит
+      // IPv6-маршруты только на интерфейс, у которого IPv6-адрес есть.
+      'address': [kTunInterfacePrefix, if (captureIpv6) kTunInterfaceIpv6Prefix],
       // без auto_route трафик в TUN не попадает; off — только для ручных маршрутов
       'auto_route': tun.autoRoute,
       // auto: on везде, кроме Windows — там strict_route breaks routing when
@@ -422,7 +560,7 @@ class SingBoxTunConfigGen {
     // OpenAdapter(имя) — мы молча забираем ЧУЖОЙ адаптер и настраиваем на нём
     // свои адреса и маршруты. Отсюда и «TUN запустился, ошибок нет, трафика
     // нет», и падения через раз на машинах, где стоит второй такой клиент.
-    tunInbound['interface_name'] = 'tun-keqdis';
+    tunInbound['interface_name'] = kTunInterfaceName;
 
     final map = <String, dynamic>{
       'log': {
@@ -505,7 +643,13 @@ class SingBoxTunConfigGen {
           return server('tls', uri.host, port);
         case 'quic':
         case 'doq':
-          return server('quic', uri.host, port);
+          // `type: quic` в ядре НЕ зарегистрирован (реестр транспортов у
+          // keqrnel — udp/tcp/tls/https/hosts/fakeip/local), и конфиг с ним не
+          // разбирается вовсе: «unknown transport type: quic» → ядро не
+          // стартует → TUN не поднимается. Берём DoT к тому же хосту: у всех,
+          // кто отдаёт DoQ, он есть, и шифрование сохраняется. Порт не
+          // переносим — у DoQ он свой (784/853), у DoT дефолтный 853.
+          return server('tls', uri.host, null);
         case 'tcp':
           return server('tcp', uri.host, port);
         case 'udp':

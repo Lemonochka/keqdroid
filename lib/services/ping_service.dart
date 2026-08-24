@@ -485,16 +485,19 @@ class PingService {
     // от скорости машины), а два наложившихся замера уводили пробу в чужое
     // ядро — то есть молча мерили не тот сервер.
     final socksPort = await _freePort(avoid: takenPorts);
-    final config = ConfigGeneratorV2.generatePingConfig(
-      server.config,
-      settings,
-      socksPort: socksPort,
-      resolvedServerIp: resolvedIp,
-      // Desktop probes over HTTP (dart:io HttpClient can't do SOCKS); Android's
-      // Java probe uses Proxy.Type.SOCKS, so it keeps the SOCKS inbound.
-      httpInbound: !Platform.isAndroid,
-    );
+    // Генерация — внутри try: url-пинг умеет только формат xray, а сервером
+    // бывает и готовый конфиг Clash. Незавёрнутое исключение отсюда роняло бы
+    // весь батч замеров, вместо того чтобы покраснеть одной строкой.
     try {
+      final config = ConfigGeneratorV2.generatePingConfig(
+        server.config,
+        settings,
+        socksPort: socksPort,
+        resolvedServerIp: resolvedIp,
+        // Desktop probes over HTTP (dart:io HttpClient can't do SOCKS);
+        // Android's Java probe uses Proxy.Type.SOCKS, so it keeps SOCKS.
+        httpInbound: !Platform.isAndroid,
+      );
       final raw = await VpnEngine().xrayUrlTest(
         xrayConfig: config,
         socksPort: socksPort,
@@ -543,17 +546,19 @@ class PingService {
     for (final s in servers) {
       // см. pingUrlBatch: порт на каждый замер, иначе соседние ядра путаются.
       final socksPort = await _freePort();
-      final config = ConfigGeneratorV2.generatePingConfig(
-        s.config,
-        settings,
-        socksPort: socksPort,
-        resolvedServerIp: ips[s.id],
-        // Desktop probes over HTTP (dart:io HttpClient can't do SOCKS); Android's
-        // Java probe uses Proxy.Type.SOCKS, so it keeps the SOCKS inbound.
-        httpInbound: !Platform.isAndroid,
-      );
       PingResult result;
+      // Генерация — внутри try: замер умеет только формат xray, а сервером
+      // бывает и готовый конфиг Clash (см. pingUrlBatch).
       try {
+        final config = ConfigGeneratorV2.generatePingConfig(
+          s.config,
+          settings,
+          socksPort: socksPort,
+          resolvedServerIp: ips[s.id],
+          // Desktop probes over HTTP (dart:io HttpClient can't do SOCKS);
+          // Android's Java probe uses Proxy.Type.SOCKS, so it keeps SOCKS.
+          httpInbound: !Platform.isAndroid,
+        );
         final raw = await VpnEngine().xraySpeedTest(
           xrayConfig: config,
           socksPort: socksPort,

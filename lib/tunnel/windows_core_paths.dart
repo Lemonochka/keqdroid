@@ -10,15 +10,16 @@ class WindowsCorePaths {
   static const assetXray = 'assets/bin/windows/xray.exe';
   static const assetSingbox = 'assets/bin/windows/sing-box.exe';
   static const assetKeqrnel = 'assets/bin/windows/keqrnel.exe';
+  static const assetMihomo = 'assets/bin/windows/mihomo.exe';
   static const assetGeoip = 'assets/bin/windows/geoip.dat';
   static const assetGeosite = 'assets/bin/windows/geosite.dat';
   static const geoFileNames = ['geoip.dat', 'geosite.dat'];
   static const assetWireproxy = 'assets/bin/windows/wireproxy.exe';
 
   static const binariesHint =
-      'Положите wireproxy.exe (для AmneziaWG) и wintun.dll (нужен для TUN) в '
-      'assets/bin/windows/ (см. README) и пересоберите приложение, '
-      'или рядом с keqdroid.exe.';
+      'Положите keqrnel.exe, mihomo.exe, wireproxy.exe (для AmneziaWG) и '
+      'wintun.dll (нужен для TUN) в assets/bin/windows/ (см. README) и '
+      'пересоберите приложение, или рядом с keqdroid.exe.';
 
   static Future<Directory> sessionDir() async {
     _sweepLegacyTempDirs();
@@ -77,12 +78,47 @@ class WindowsCorePaths {
   static Future<String?> keqrnelExecutable() =>
       _resolveExecutable(assetKeqrnel, 'keqrnel.exe');
 
+  /// mihomo — второе ядро: исполняет готовые конфиги Clash и ссылки, а в
+  /// TUN-режиме само владеет wintun-адаптером (keqrnel ему для этого не нужен).
+  static Future<String?> mihomoExecutable() =>
+      _resolveExecutable(assetMihomo, 'mihomo.exe');
+
   /// wireproxy-awg — userspace AmneziaWG (embeds amneziawg-go), exposes a local
   /// SOCKS5/HTTP proxy. Used for both Proxy and TUN mode (TUN: wireproxy SOCKS →
   /// sing-box). Bundled in flutter_assets like xray/sing-box and resolved from
   /// there; wintun.dll is what sing-box needs for the TUN adapter.
   static Future<String?> wireproxyExecutable() =>
       _resolveExecutable(assetWireproxy, 'wireproxy.exe');
+
+  /// Домашний каталог mihomo (аргумент `-d`).
+  ///
+  /// Отдельный от каталога с geo-базами намеренно. Ядро на старте создаёт в
+  /// доме `config.yaml`, если его там нет (`config.Init`), и на недоступном для
+  /// записи каталоге возвращает ошибку — а `config.Init` в mihomo фатален,
+  /// то есть ядро просто не стартует. Каталог рядом с exe бывает недоступен
+  /// (установка в Program Files, карантин, read-only носитель), поэтому дом
+  /// живёт в пользовательском каталоге, а geo-базы копируются в него один раз —
+  /// сверка по размеру, как и во всех остальных извлечениях здесь.
+  static Future<String> mihomoHomeDir() async {
+    final dir = Directory(p.join(_stableExtractRoot(), 'mihomo'));
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+    final geoDir = await geoAssetDir();
+    if (geoDir != null && geoDir != dir.path) {
+      for (final name in geoFileNames) {
+        final src = File(p.join(geoDir, name));
+        if (!src.existsSync()) continue;
+        final dst = File(p.join(dir.path, name));
+        if (dst.existsSync() && dst.lengthSync() == src.lengthSync()) continue;
+        try {
+          await src.copy(dst.path);
+        } catch (_) {
+          // Занят работающим ядром или нет места — geo-правила тогда не
+          // сработают, но подключение важнее; ядро скажет об этом в лог.
+        }
+      }
+    }
+    return dir.path;
+  }
 
   /// Directory holding geoip.dat / geosite.dat for xray's asset lookup
   /// (passed to xray via XRAY_LOCATION_ASSET so `geoip:`/`geosite:` rules

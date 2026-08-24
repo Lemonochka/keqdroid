@@ -85,6 +85,10 @@ class AppInternalsService {
       return [
         await _core(await WindowsCorePaths.keqrnelExecutable(), 'keqrnel.exe',
             CoreRole.core),
+        // mihomo — второе ядро, а не довесок: в TUN-режиме оно владеет
+        // адаптером само, и keqrnel в такой сессии не участвует вовсе.
+        await _core(await WindowsCorePaths.mihomoExecutable(), 'mihomo.exe',
+            CoreRole.core),
         await _core(await WindowsCorePaths.wireproxyExecutable(),
             'wireproxy.exe', CoreRole.amneziawg),
       ];
@@ -93,6 +97,8 @@ class AppInternalsService {
       return [
         await _core(
             await LinuxCorePaths.keqrnelExecutable(), 'keqrnel', CoreRole.core),
+        await _core(
+            await LinuxCorePaths.mihomoExecutable(), 'mihomo', CoreRole.core),
         await _core(await LinuxCorePaths.wireproxyExecutable(), 'wireproxy',
             CoreRole.amneziawg),
       ];
@@ -212,7 +218,7 @@ class AppInternalsService {
       // который всё ещё исполняет старое ядро.
       engine: Platform.isAndroid
           ? _androidCoreBinary(android)
-          : settings.coreEngine,
+          : _desktopEngine(settings),
       mode: Platform.isAndroid ? null : settings.connectionModeEnum,
       socksPort: settings.localPort,
       httpPort: settings.httpPort,
@@ -231,6 +237,21 @@ class AppInternalsService {
                   ? LinuxTunnelBackend.activeInstance?.clashApiPort
                   : null,
     );
+  }
+
+  /// Чем идёт текущая десктопная сессия.
+  ///
+  /// `settings.coreEngine` описывает только связку вокруг xray и про mihomo не
+  /// знает: при живой mihomo-сессии панель показывала бы `keqrnel`, которого в
+  /// ней нет. Спрашиваем поэтому у самой сессии — как и на Android.
+  static String _desktopEngine(AppSettings settings) {
+    final pids = Platform.isWindows
+        ? WindowsTunnelBackend.activeInstance?.activeCorePids
+        : LinuxTunnelBackend.activeInstance?.activeCorePids;
+    if (pids != null && pids.keys.any((k) => k.startsWith('mihomo'))) {
+      return 'mihomo';
+    }
+    return settings.coreEngine;
   }
 
   /// Имя бинаря, которым идёт текущая android-сессия.

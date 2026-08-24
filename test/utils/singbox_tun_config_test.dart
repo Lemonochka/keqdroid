@@ -223,17 +223,37 @@ void main() {
     expect(proxyDns['server_port'], 853);
   });
 
-  test('quic:// (DoQ) maps to a quic server', () {
+  test('quic:// (DoQ) maps to DoT — the core has no quic transport', () {
+    // Реестр DNS-транспортов keqrnel: udp/tcp/tls/https/hosts/fakeip/local.
+    // `type: quic` не разбирается вовсе — «decode config: dns.servers[1]:
+    // unknown transport type: quic», ядро не стартует, TUN не поднимается.
     final proxyDns = proxyDnsFor(
       const AppSettings(
         xrayCore: XrayCoreSettings(
           dnsUseCustom: true,
-          dnsServers: 'quic://dns.adguard-dns.com',
+          dnsServers: 'quic://dns.adguard-dns.com:784',
         ),
       ),
     );
-    expect(proxyDns['type'], 'quic');
+    expect(proxyDns['type'], 'tls');
     expect(proxyDns['server'], 'dns.adguard-dns.com');
+    // Порт DoQ (784) к DoT не относится — там свой дефолтный 853.
+    expect(proxyDns.containsKey('server_port'), isFalse);
+  });
+
+  test('первый переводимый адрес, а не просто первый', () {
+    // `localhost` sing-box'у как upstream не скормишь; раньше он утягивал в
+    // дефолт весь список, включая нормальный DoH следующей строкой.
+    final proxyDns = proxyDnsFor(
+      const AppSettings(
+        xrayCore: XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: 'localhost\nhttps+local://9.9.9.9/dns-query',
+        ),
+      ),
+    );
+    expect(proxyDns['type'], 'https');
+    expect(proxyDns['server'], '9.9.9.9');
   });
 
   test('plain host:port DNS rides TCP with the given port', () {
@@ -308,10 +328,10 @@ void main() {
     return (map['inbounds'] as List).first as Map<String, dynamic>;
   }
 
-  test('default tun inbound matches the legacy hardcoded values', () {
+  test('default tun inbound is gvisor/9000', () {
     final inbound = tunInboundFor(const AppSettings());
-    expect(inbound['stack'], 'system');
-    expect(inbound['mtu'], 1400);
+    expect(inbound['stack'], 'gvisor');
+    expect(inbound['mtu'], 9000);
     expect(inbound['auto_route'], isTrue);
     // дефолтные значения не должны раздувать конфиг новыми ключами
     expect(inbound.containsKey('endpoint_independent_nat'), isFalse);

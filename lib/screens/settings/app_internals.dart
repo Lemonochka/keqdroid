@@ -41,7 +41,7 @@ class _AppInternalsScreen extends ConsumerWidget {
         ),
       ],
       children: switch (internals) {
-        AsyncData(:final value) => _sections(context, l10n, value),
+        AsyncData(:final value) => _sections(context, ref, l10n, value),
         AsyncError(:final error) => [
             ExpressiveNotice(
               color: Theme.of(context).colorScheme.error,
@@ -61,6 +61,7 @@ class _AppInternalsScreen extends ConsumerWidget {
 
   List<Widget> _sections(
     BuildContext context,
+    WidgetRef ref,
     AppLocalizations l10n,
     AppInternals data,
   ) {
@@ -81,6 +82,10 @@ class _AppInternalsScreen extends ConsumerWidget {
       else ...[
         ExpressiveGroup(
           children: [
+            // «Само» — первым: это умолчание и правильный ответ для почти
+            // всех. Ручной выбор ниже нужен ровно для обычных ссылок, всё
+            // остальное исполняет то ядро, на языке которого написано.
+            if (mihomoShipsHere) const _AutoCoreTile(),
             for (final core in data.cores)
               if (_selectableCore(core) case final vpnCore?)
                 _SelectableCoreTile(core: core, value: vpnCore)
@@ -90,7 +95,7 @@ class _AppInternalsScreen extends ConsumerWidget {
         ),
         // Подсказка стоит под группой, а не внутри: внутри она была бы
         // сегментом без заливки и рвала бы containment посередине списка.
-        if (Platform.isAndroid)
+        if (mihomoShipsHere)
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
             child: Text(
@@ -100,6 +105,17 @@ class _AppInternalsScreen extends ConsumerWidget {
                   ),
             ),
           ),
+        // Выбранное ядро не исполняет активный сервер — говорим об этом прямо
+        // здесь. Без плашки настройка выглядела сломанной: выбран mihomo, а
+        // строкой ниже, в «Текущей сессии», честно стоит libxray.
+        if (_coreMismatch(ref) case final skip?) ...[
+          const SizedBox(height: 8),
+          ExpressiveNotice(
+            color: AppTheme.orange(context),
+            icon: Icons.info_outline_rounded,
+            text: _coreMismatchText(l10n, skip),
+          ),
+        ],
       ],
 
       ExpressiveSectionHeader(l10n.settingsInternalsGeo),
@@ -457,20 +473,122 @@ class _InternalsRow extends StatelessWidget {
   }
 }
 
+/// Причина, по которой выбранное ядро не возьмёт активный сервер, или null —
+/// возьмёт (либо выбран xray, который умеет всё).
+///
+/// Считается по активному серверу, а не по всему списку: ядро выбирается для
+/// подключения, а подключение идёт к нему одному.
+VpnCoreSkip? _coreMismatch(WidgetRef ref) {
+  final server = ref.watch(serversProvider).activeServer;
+  if (server == null) return null;
+  final core = ref.watch(
+    settingsNotifierProvider.select(
+      (a) => a.value?.vpnCore ?? AppSettings.vpnCoreAuto,
+    ),
+  );
+  return resolveVpnBackend(
+    config: server.config,
+    preference: core,
+    mihomoAvailable: mihomoShipsHere,
+  ).skip;
+}
+
+String _coreMismatchText(AppLocalizations l10n, VpnCoreSkip skip) =>
+    switch (skip) {
+      VpnCoreSkip.customConfig => l10n.settingsCoreSkipCustom,
+      VpnCoreSkip.chain => l10n.settingsCoreSkipChain,
+      VpnCoreSkip.amneziaWg => l10n.settingsCoreSkipAwg,
+      VpnCoreSkip.clashConfig => l10n.settingsCoreSkipClash,
+      VpnCoreSkip.platform => l10n.settingsCoreSkipPlatform,
+    };
+
+/// «Само»: ядро выбирает формат сервера, а не пользователь.
+///
+/// Отдельной плиткой, а не переключателем над списком: выбор здесь один и тот
+/// же — из чего исполнять сервер, — и все его варианты должны стоять в одном
+/// ряду, иначе «авто» читается как ещё одна настройка поверх выбранного ядра.
+class _AutoCoreTile extends ConsumerWidget {
+  const _AutoCoreTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final selected = ref.watch(
+          settingsNotifierProvider.select((a) => a.value?.vpnCore),
+        ) ==
+        AppSettings.vpnCoreAuto;
+
+    Future<void> select() async {
+      if (selected) return;
+      final settings = await ref.read(settingsNotifierProvider.future);
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .save(settings.copyWith(vpnCore: AppSettings.vpnCoreAuto));
+    }
+
+    return ExpressiveGroupTile(
+      padding: const EdgeInsets.all(16),
+      onTap: select,
+      child: Row(
+        children: [
+          ExpressiveIconBadge(
+            icon: Icons.auto_awesome_rounded,
+            accent: ExpressiveAccent.primary,
+          ),
+          const SizedBox(width: ExpressiveSpacing.large),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.settingsCoreAuto,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text(context),
+                  ),
+                ),
+                Text(
+                  l10n.settingsCoreAutoSubtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textLight(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: ExpressiveSpacing.large),
+          Icon(
+            selected
+                ? Icons.radio_button_checked_rounded
+                : Icons.radio_button_unchecked_rounded,
+            color: selected
+                ? AppTheme.accent(context)
+                : AppTheme.textLight(context),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Ядра, между которыми пользователь выбирает: имя файла → значение
 /// [AppSettings.vpnCore].
 ///
-/// Выбор — только на Android: на десктопе mihomo не поставляется, и подключение
-/// там идёт другим путём (keqrnel/sing-box).
+/// Имена платформенные, но роль одна: слева — то, что исполняет конфиги xray
+/// (на десктопе это keqrnel, внутри которого тот же xray), справа — mihomo.
 const _selectableCores = <String, String>{
   'libxray.so': AppSettings.vpnCoreXray,
+  'keqrnel.exe': AppSettings.vpnCoreXray,
+  'keqrnel': AppSettings.vpnCoreXray,
   'libmihomo.so': AppSettings.vpnCoreMihomo,
+  'mihomo.exe': AppSettings.vpnCoreMihomo,
+  'mihomo': AppSettings.vpnCoreMihomo,
 };
 
 /// Значение [AppSettings.vpnCore] для плитки — или null, если это ядро не
 /// выбирают. Отсутствующий бинарь выбрать нельзя: выбирать нечего.
 String? _selectableCore(CoreInfo core) =>
-    Platform.isAndroid && !core.missing ? _selectableCores[core.name] : null;
+    core.missing ? null : _selectableCores[core.name];
 
 /// Плитка ядра, которая заодно выбирает его.
 ///
@@ -493,7 +611,7 @@ class _SelectableCoreTile extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final current = ref.watch(
       settingsNotifierProvider.select(
-        (a) => a.value?.vpnCore ?? AppSettings.vpnCoreXray,
+        (a) => a.value?.vpnCore ?? AppSettings.vpnCoreAuto,
       ),
     );
 

@@ -29,6 +29,7 @@ import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/update_dialog.dart';
 import '../../utils/clipboard_import.dart';
 import 'desktop_connection_mode.dart';
+import 'sidebar_group_nav.dart';
 import 'tray_menu_screen.dart';
 
 /// desktop shell: фиксированный sidebar + вкладки (без NavigationRail — на windows ломается layout)
@@ -532,7 +533,14 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
                       compact: MediaQuery.sizeOf(context).width < 900,
                       onTap: () => _selectTab(i),
                     ),
-                  const Spacer(),
+                  // Пустоту под разделами занимает быстрый переход по группам
+                  // серверов: он сам разворачивается в Expanded и потому
+                  // работает и как прежний Spacer. На одной группе (прыгать
+                  // некуда) схлопывается в ноль, и панель выглядит как раньше.
+                  SidebarGroupNav(
+                    compact: MediaQuery.sizeOf(context).width < 900,
+                    onOpenServers: () => _selectTab(0),
+                  ),
                 ],
               ),
             ),
@@ -801,4 +809,3 @@ class _ConnectionModeChip extends ConsumerWidget {
     );
   }
 }
-
