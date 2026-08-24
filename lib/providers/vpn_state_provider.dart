@@ -508,6 +508,36 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             )
           : null;
 
+      // Готовый конфиг несёт свои geo-правила: неизвестный ядру код уронил бы
+      // разбор целиком (для списков настроек это уже сделал
+      // GeoAssetService.sanitizeRules выше).
+      final customGeoIndex =
+          server.protocol == 'custom' ? await GeoAssetService.index() : null;
+      // Чистка молчит, а выброшенное авторское правило меняет смысл конфига:
+      // его трафик проваливается в наш `final`, и с «остальной трафик = блок»
+      // перестаёт ходить вовсе. Снаружи это «приложение блокирует то, что
+      // провайдер пускает через прокси» — называем причину вслух.
+      if (customGeoIndex != null && !customGeoIndex.isEmpty) {
+        final parsed = CustomXrayConfig.tryParse(server.config);
+        final lost = parsed == null
+            ? (tokens: const <String>[], removedRules: 0)
+            : previewUnknownGeo(parsed.json, customGeoIndex);
+        if (lost.removedRules > 0) {
+          final blocked =
+              settings.finalOutbound == AppSettings.finalOutboundBlock;
+          AppLogger.instance.warn(
+            'Provider config: ${lost.removedRules} routing rule(s) were '
+            'dropped — their geo codes are not in the bundled databases: '
+            '${lost.tokens.toSet().join(', ')}. The core exits on an unknown '
+            'code, so the rules cannot be kept. Their traffic now falls '
+            'through to "unmatched traffic" in Settings → Routing'
+            '${blocked ? ', which is set to BLOCK — that traffic will not '
+                'connect at all. Set it to Proxy or Bypass, or replace the '
+                'codes in the config.' : '.'}',
+          );
+        }
+      }
+
       // AmneziaWG поднимается из сырого .conf своим ядром — xray-конфиг не нужен.
       // У mihomo свой конфиг, xray-генератор для него не запускаем.
       final xrayConfig = (isAwg || mihomoPicked)
@@ -517,12 +547,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
               settings,
               resolvedServerIp: serverIp,
               localInboundsNoAuth: desktopProxyNoAuth,
-              // Готовый конфиг несёт свои geo-правила: неизвестный ядру код
-              // уронил бы разбор целиком (для списков настроек это уже сделал
-              // GeoAssetService.sanitizeRules выше).
-              geoIndex: server.protocol == 'custom'
-                  ? await GeoAssetService.index()
-                  : null,
+              geoIndex: customGeoIndex,
             );
 
       // Забирать ли IPv6 в туннель. Спрашиваем машину, а не только настройку:
