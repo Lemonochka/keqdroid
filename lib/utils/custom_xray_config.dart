@@ -330,6 +330,33 @@ class CustomXrayConfig {
 ///
 /// Правило, у которого после чистки не осталось ни одного условия, удаляем
 /// целиком — xray на «this rule has no effective fields» тоже выходит.
+/// Что чистка geo выбросит из готового конфига — не трогая оригинал.
+///
+/// Нужна ради предупреждения, и это не украшательство: сама чистка молчит, а
+/// выброшенное АВТОРСКОЕ правило меняет смысл конфига. С финалом «блок»
+/// («остальной трафик» в настройках) трафик такого правила перестаёт ходить
+/// вовсе — ядро честно пишет `Hit route rule: [final] so taking detour
+/// [block]`, и снаружи это «приложение блокирует то, что провайдер пускает
+/// через прокси». Проверено на живом ядре: правило с кодом, которого нет в
+/// наших базах, исчезает из конфига целиком.
+({List<String> tokens, int removedRules}) previewUnknownGeo(
+  Map<String, dynamic> config,
+  GeoAssetIndex index,
+) {
+  if (index.isEmpty) return (tokens: const <String>[], removedRules: 0);
+  final copy = jsonDecode(jsonEncode(config)) as Map<String, dynamic>;
+  final before = _routingRuleCount(copy);
+  final tokens = stripUnknownGeoFromConfig(copy, index);
+  return (tokens: tokens, removedRules: before - _routingRuleCount(copy));
+}
+
+int _routingRuleCount(Map<String, dynamic> config) {
+  final routing = config['routing'];
+  if (routing is! Map) return 0;
+  final rules = routing['rules'];
+  return rules is List ? rules.length : 0;
+}
+
 List<String> stripUnknownGeoFromConfig(
   Map<String, dynamic> config,
   GeoAssetIndex index,
