@@ -517,6 +517,28 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // его трафик проваливается в наш `final`, и с «остальной трафик = блок»
       // перестаёт ходить вовсе. Снаружи это «приложение блокирует то, что
       // провайдер пускает через прокси» — называем причину вслух.
+      if (server.protocol == 'custom') {
+        // Правила автора, привязанные к ЕГО инбаундам, после подмены инбаундов
+        // не сработают ни разу. Перехват DNS мы делаем за него сами, всё
+        // остальное — молча мёртвый код в конфиге, и снаружи это «правила
+        // провайдера не работают».
+        final parsed = CustomXrayConfig.tryParse(server.config);
+        final dead = parsed == null
+            ? (rules: 0, tags: const <String>[])
+            : previewDeadInboundRules(
+                parsed.json,
+                ConfigGeneratorV2.appInboundTags,
+              );
+        if (dead.rules > 0) {
+          AppLogger.instance.warn(
+            'Provider config: ${dead.rules} routing rule(s) are bound to '
+            'inbound tags this app does not create '
+            '(${dead.tags.toSet().join(', ')}). The app replaces the config '
+            'inbounds with its own — those rules will never match, and their '
+            'traffic follows "unmatched traffic" in Settings → Routing.',
+          );
+        }
+      }
       if (customGeoIndex != null && !customGeoIndex.isEmpty) {
         final parsed = CustomXrayConfig.tryParse(server.config);
         final lost = parsed == null

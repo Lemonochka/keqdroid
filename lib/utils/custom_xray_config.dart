@@ -160,6 +160,17 @@ class CustomXrayConfig {
   String get address => endpoint.address;
   int get port => endpoint.port;
 
+  /// Авторский `dns`-блок — если он есть и в нём действительно есть серверы.
+  /// `null` значит «резолвить нечем», и генератор подставляет свой (см.
+  /// параметр `dns` у [buildSessionConfig]).
+  Map<String, dynamic>? get authorDns {
+    final raw = json['dns'];
+    if (raw is! Map) return null;
+    final servers = raw['servers'];
+    if (servers is! List || servers.isEmpty) return null;
+    return _asStringMap(raw);
+  }
+
   /// Конфиг для сессии: авторские аутбаунды/роутинг/dns + наши инбаунды и
   /// уровень логов.
   ///
@@ -174,12 +185,18 @@ class CustomXrayConfig {
   /// catch-all.
   /// [logLevel] — из настроек: без `info` ядро не печатает решения роутинга, и
   /// экран «Соединения» остаётся без правил.
+  /// [dns] — наш dns-блок НА СЛУЧАЙ, если своего у автора нет. Без него ядро
+  /// уходит в системный резолвер (`localhost`), а на Android его нет
+  /// (`/etc/resolv.conf` отсутствует) — не резолвится даже адрес самого
+  /// сервера. Авторский блок при этом не трогаем: он и есть часть готового
+  /// конфига (то же правило, что и у clash-конфигов).
   /// [geoIndex] — чем чистим `geoip:`/`geosite:`-коды, которых нет в
   /// поставляемых базах: один такой код роняет разбор ВСЕГО конфига, и
   /// подключение умирает с «SOCKS port not ready» (см. geo_rule_sanitizer).
   Map<String, dynamic> buildSessionConfig({
     required List<Map<String, dynamic>> inbounds,
     required String logLevel,
+    Map<String, dynamic>? dns,
     List<Map<String, dynamic>> prependRules = const [],
     List<Map<String, dynamic>> appendRules = const [],
     GeoAssetIndex? geoIndex,
@@ -197,6 +214,8 @@ class CustomXrayConfig {
     out['log'] = log;
 
     out['inbounds'] = inbounds;
+
+    if (authorDns == null && dns != null) out['dns'] = dns;
 
     if (prependRules.isNotEmpty || appendRules.isNotEmpty) {
       final routing = Map<String, dynamic>.from(
@@ -348,6 +367,55 @@ class CustomXrayConfig {
   final before = _routingRuleCount(copy);
   final tokens = stripUnknownGeoFromConfig(copy, index);
   return (tokens: tokens, removedRules: before - _routingRuleCount(copy));
+}
+
+/// Авторские правила, которые после подмены инбаундов не сработают НИКОГДА.
+///
+/// Служебные инбаунды готового конфига — перехват DNS через `dokodemo-door`
+/// `dns-in`, api-порт, прозрачный прокси — адресуются в правилах через
+/// `inboundTag`. Инбаунды мы заменяем своими, и такое правило остаётся без
+/// инбаунда: его условие не выполнится ни разу, а трафик уходит в наш `final`.
+/// Молча это выглядит как «правила провайдера не работают».
+///
+/// [keptTags] — теги инбаундов, которые в конфиге на самом деле будут
+/// (`ConfigGeneratorV2.appInboundTags`).
+///
+/// Правила, ведущие в `dns`-аутбаунд, не считаем: перехват DNS мы делаем за
+/// автора сами (правило `dns-out`), и звать это потерей неверно.
+({int rules, List<String> tags}) previewDeadInboundRules(
+  Map<String, dynamic> config,
+  List<String> keptTags,
+) {
+  final routing = config['routing'];
+  if (routing is! Map) return (rules: 0, tags: const <String>[]);
+  final rules = routing['rules'];
+  if (rules is! List) return (rules: 0, tags: const <String>[]);
+
+  final dnsOutbounds = <String>{
+    for (final o in (config['outbounds'] as List? ?? const []))
+      if (o is Map &&
+          o['protocol']?.toString().toLowerCase() == 'dns' &&
+          o['tag'] is String)
+        o['tag'] as String,
+  };
+
+  var dead = 0;
+  final tags = <String>[];
+  for (final rule in rules) {
+    if (rule is! Map) continue;
+    final raw = rule['inboundTag'];
+    final ruleTags = switch (raw) {
+      String s => [s],
+      List l => [for (final t in l) t.toString()],
+      _ => const <String>[],
+    }.where((t) => t.trim().isNotEmpty).toList();
+    if (ruleTags.isEmpty) continue;
+    if (ruleTags.any(keptTags.contains)) continue;
+    if (dnsOutbounds.contains(rule['outboundTag']?.toString())) continue;
+    dead++;
+    tags.addAll(ruleTags);
+  }
+  return (rules: dead, tags: tags);
 }
 
 int _routingRuleCount(Map<String, dynamic> config) {

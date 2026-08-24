@@ -148,7 +148,9 @@ void main() {
 
     test("our own rules reuse the author's direct/block, not invented tags", () {
       // Свои freedom/blackhole дописываются, только если у автора их нет.
-      // Здесь есть оба — лишних аутбаундов появиться не должно.
+      // Здесь есть оба — лишних аутбаундов появиться не должно. Кроме
+      // `dns`-аутбаунда: перехват DNS у автора висел на его же инбаунде, а
+      // инбаунды мы заменяем своими.
       final config = build(
         settings: const AppSettings(
           directRules: 'example-direct.com',
@@ -159,7 +161,7 @@ void main() {
 
       expect(
         _outboundTags(config),
-        unorderedEquals(<String>{'proxy', 'direct', 'block'}),
+        unorderedEquals(<String>{'proxy', 'direct', 'block', 'keq-dns-out'}),
       );
       expect(
         rules.firstWhere(
