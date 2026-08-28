@@ -140,10 +140,7 @@ class AppInternalsService {
   static Map<String, String> _engines(GoBuildInfo info) {
     final engines = <String, String>{};
     for (final entry in _engineModules.entries) {
-      if (info.modulePath == entry.key ||
-          (info.modulePath?.endsWith('/${entry.key}') ?? false)) {
-        continue;
-      }
+      if (info.isModule(entry.key)) continue;
       final version = info.depVersion(entry.key);
       if (version == null) continue;
       final formatted = formatVersion(version);

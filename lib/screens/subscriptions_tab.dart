@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -17,6 +18,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/subscription.dart';
+import '../models/subscription_card_layout.dart';
 import '../models/subscription_card_theme.dart';
 import '../services/card_image_service.dart';
 import '../platform/platform_bootstrap.dart';
@@ -28,6 +30,7 @@ import '../utils/error_messages.dart';
 import '../utils/external_link.dart';
 import '../utils/identity_presets.dart';
 
+part 'subscriptions/card_look_sheet.dart';
 part 'subscriptions/identity_sheet.dart';
 
 class SubscriptionsTab extends ConsumerWidget {
@@ -577,6 +580,12 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final cardTheme = resolveCardTheme(sub.cardThemeId);
     final cardRadius = BorderRadius.circular(ExpressiveShape.largeIncreased);
 
+    // Состав карточки — настройка подписки (редактор оформления). Убрать можно
+    // только оформление и факты второго плана: предупреждения о просроченной
+    // подписке, о `http` и о неудачном обновлении рисуются всегда, что бы ни
+    // было выбрано, — спрятанная проблема выглядит как её отсутствие.
+    final showsUsage = sub.showsCard(SubscriptionCardElement.usage);
+
     return RepaintBoundary(
       child: Container(
         decoration: BoxDecoration(
@@ -598,7 +607,9 @@ class _SubItemState extends ConsumerState<_SubItem> {
               Positioned.fill(
                 child: ClipRRect(
                   borderRadius: cardRadius,
-                  child: IgnorePointer(child: cardTheme.background(context)),
+                  child: IgnorePointer(
+                    child: cardTheme.background(context, veil: sub.cardVeil),
+                  ),
                 ),
               ),
             Column(
@@ -751,7 +762,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
             // здесь был бы неверен, это не ошибка. Свёрнутая карточка режет
             // текст до двух строк, раскрытая показывает целиком — отдельного
             // органа управления заводить не пришлось, чевron уже есть.
-            if (sub.announce != null)
+            if (sub.announce != null &&
+                sub.showsCard(SubscriptionCardElement.announce))
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Container(
@@ -855,7 +867,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     // зацепиться, приходилось читать подряд. Размер здесь и
                     // делает иерархию: у M3E это один из пяти механизмов
                     // наравне с цветом и формой.
-                    if (sub.usedDisplay != null)
+                    if (sub.usedDisplay != null && showsUsage)
                       // «Потрачено / лимит» — одно значение из двух виджетов, и
                       // порядок в нём держит LtrBlock, а не изолят: в персидской
                       // локали Row зеркалился, и вместо `621.8 GiB / 100 GiB`
@@ -922,7 +934,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                           ],
                         ),
                       ),
-                    if (pct != null) ...[
+                    if (pct != null && showsUsage) ...[
                       const SizedBox(height: 10),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(ExpressiveShape.extraSmall),
@@ -977,13 +989,14 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 12),
                     // МЕТА: факты второго плана — одной тихой строкой.
                     //
                     // Раньше срок годности стоял в ряду с чипами управления, а
                     // «когда обновлялось» — этажом выше рядом с трафиком. Два
                     // однородных факта в разных местах и разных ролях; теперь
                     // они вместе и оба `labelMedium`.
+                    if (sub.showsCard(SubscriptionCardElement.meta)) ...[
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         if (sub.expiresAt != null) ...[
@@ -1015,7 +1028,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    ],
                     // УПРАВЛЕНИЕ: чипы одного вида в одном ряду.
                     //
                     // Автообновление было тремя элементами — подпись, значок
@@ -1023,6 +1036,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     // переключалось скрытым тапом по значку. Теперь это один
                     // чип: он же показывает состояние, он же открывает выбор,
                     // где «Выключить» стоит первым пунктом.
+                    if (sub.showsCard(SubscriptionCardElement.actions)) ...[
+                    const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,
@@ -1059,6 +1074,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                           ),
                       ],
                     ),
+                    ],
                   ],
                 ),
               ),
@@ -1095,8 +1111,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final nameCtrl = TextEditingController(text: sub.name);
     final urlCtrl = TextEditingController(text: sub.url);
     var identity = sub.fetchIdentity;
-    var cardThemeId = sub.cardThemeId;
-    var cardThemeInServers = sub.cardThemeInServers;
     // Ошибка сохранения (например, дубликат URL) — показываем в самой шторке:
     // snackbar был бы скрыт за модальным барьером.
     String? editError;
@@ -1220,13 +1234,13 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _CardThemePicker(
-                  currentId: cardThemeId,
-                  subscriptionId: sub.id,
-                  onSelect: (id) => setSheet(() => cardThemeId = id),
-                  inServers: cardThemeInServers,
-                  onInServersChanged: (v) =>
-                      setSheet(() => cardThemeInServers = v),
+                // Оформление уехало в свою шторку и применяется сразу, поэтому
+                // здесь только вход в неё: держать половину настроек карточки
+                // под кнопкой «Сохранить», а половину без неё — вернейший
+                // способ однажды затереть новое значение старым.
+                _CardLookTile(
+                  fallback: sub,
+                  onTap: () => _showCardLookSheet(ctx, sub),
                 ),
                 const SizedBox(height: 12),
                 _IdentityTile(
@@ -1279,8 +1293,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
                               resetName: newName.isEmpty,
                               url: newUrl,
                               fetchIdentity: identity,
-                              cardThemeId: cardThemeId,
-                              cardThemeInServers: cardThemeInServers,
                             );
                       } catch (e) {
                         // например, дубликат URL: без catch ошибка молча уходит
@@ -1320,7 +1332,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
-        child: Padding(
+        // Прокрутка, а не просто Column: пунктов в меню уже пять, и на
+        // невысоком экране (или при крупном системном шрифте) неподвижная
+        // колонка рвётся по нижнему краю вместо того, чтобы прокрутиться.
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1347,6 +1362,18 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     onTap: () {
                       Navigator.pop(ctx);
                       _showEditDialog(context);
+                    },
+                  ),
+                  // Оформление — рядом с правкой, а не внутри неё: менять вид
+                  // карточки хочется чаще, чем её адрес, и идти за этим в
+                  // форму с полем URL незачем.
+                  ExpressiveActionTile(
+                    icon: Icons.style_rounded,
+                    title: l10n.subscriptionCardLookTitle,
+                    accent: ExpressiveAccent.tertiary,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showCardLookSheet(context, sub);
                     },
                   ),
                   ExpressiveActionTile(
@@ -1709,12 +1736,16 @@ class _CardThemePicker extends StatefulWidget {
   final bool inServers;
   final ValueChanged<bool> onInServersChanged;
 
+  /// Затемнение, с которым рисуются образцы: то же, что у самой карточки.
+  final CardVeil veil;
+
   const _CardThemePicker({
     required this.currentId,
     required this.onSelect,
     required this.subscriptionId,
     required this.inServers,
     required this.onInServersChanged,
+    required this.veil,
   });
 
   @override
@@ -1804,7 +1835,11 @@ class _CardThemePickerState extends State<_CardThemePicker> {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        theme.background(context),
+                        // Образец с ТЕМ ЖЕ затемнением, что выбрано у карточки:
+                        // иначе картинка в слайдере и на карточке выглядели бы
+                        // по-разному, а слайдер для того и нужен, чтобы выбрать
+                        // по виду.
+                        theme.background(context, veil: widget.veil),
                         if (theme.isPlain)
                           Center(
                             child: Text(
@@ -1847,10 +1882,12 @@ class _CardThemePickerState extends State<_CardThemePicker> {
                   ?.copyWith(color: AppTheme.red(context)),
             ),
           ),
-        // Тумблер появляется только когда подложка выбрана: без неё выбирать
-        // нечего, а постоянно висящая неактивная строка — обещание настройки,
-        // которая ничего не делает.
-        if (currentId.isNotEmpty)
+        // Тумблер появляется только когда выбрана КАРТИНКА: он и обещает
+        // ровно её («картинка заполнит и шапку группы»), а у палитры
+        // переносить нечего — цвета уезжают в группу и без него. Пока условием
+        // было «тема выбрана», включённый тумблер на палитре растил шапку
+        // группы на пустую полосу.
+        if (resolveCardTheme(currentId).hasImage)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: SwitchListTile(

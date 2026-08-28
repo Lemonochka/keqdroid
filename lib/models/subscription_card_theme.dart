@@ -2,6 +2,81 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+/// Насколько плотно картинка притушена под текстом.
+///
+/// Вуаль здесь не украшение: под текстом лежит произвольная фотография, и без
+/// неё крупное значение трафика пропадает на любом светлом участке. Поэтому
+/// [none] — осознанный выбор («картинка важнее»), а не то, что получают по
+/// невнимательности: по умолчанию стоит [medium], то самое затемнение, с
+/// которым карточка и была нарисована.
+enum CardVeil {
+  none,
+  light,
+  medium,
+  strong;
+
+  /// Прозрачности трёх опорных точек: под текстом → к середине → у правого
+  /// края, где картинку и видно.
+  List<double> get alphas => switch (this) {
+        CardVeil.none => const [0, 0, 0],
+        CardVeil.light => const [0.62, 0.38, 0.1],
+        CardVeil.medium => const [0.9, 0.62, 0.22],
+        CardVeil.strong => const [0.98, 0.86, 0.5],
+      };
+
+  /// Разбор значения из хранилища. Незнакомое имя — [medium]: настройку писала
+  /// версия новее этой, и карточка со штатным затемнением лучше, чем упавший
+  /// разбор списка подписок.
+  static CardVeil byName(String? name) {
+    for (final veil in values) {
+      if (veil.name == name) return veil;
+    }
+    return CardVeil.medium;
+  }
+}
+
+/// Вуаль поверх картинки: слева плотная (под текстом), справа картинка открыта.
+///
+/// Один виджет на оба места, где картинка темы лежит под текстом, — карточку
+/// подписки и шапку её группы в списке серверов. Раньше это были два
+/// одинаковых градиента в разных файлах, и «убрать затемнение» пришлось бы
+/// делать дважды, а расходиться они начали бы с первой правки одного из них.
+class CardVeilOverlay extends StatelessWidget {
+  const CardVeilOverlay({
+    super.key,
+    required this.color,
+    required this.veil,
+  });
+
+  /// Чем кроется картинка — фактическим фоном того, на чём она лежит. У группы
+  /// серверов он подкрашен акцентом подписки, и цвет роли дал бы шов на стыке
+  /// с первым сервером.
+  final Color color;
+
+  final CardVeil veil;
+
+  @override
+  Widget build(BuildContext context) {
+    // Нулевая вуаль — это отсутствие слоя, а не прозрачный градиент: рисовать
+    // невидимое на каждый кадр незачем.
+    if (veil == CardVeil.none) return const SizedBox.shrink();
+    final alphas = veil.alphas;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: AlignmentDirectional.centerStart,
+          end: AlignmentDirectional.centerEnd,
+          // Правая цифра и есть «насколько видно картинку». Левая держит
+          // крупный текст, средняя отодвигает спад вправо — под цифрой трафика
+          // ещё плотно, дальше уже видно картинку.
+          stops: const [0, 0.45, 1],
+          colors: [for (final alpha in alphas) color.withValues(alpha: alpha)],
+        ),
+      ),
+    );
+  }
+}
+
 /// Оформление карточки подписки: подложка под содержимым.
 ///
 /// Зачем: список подписок — это несколько одинаковых прямоугольников, и
@@ -57,15 +132,31 @@ class SubscriptionCardTheme {
 
   bool get isPlain => palette == null && asset == null;
 
+  /// Есть ли у темы КАРТИНКА, а не просто подложка.
+  ///
+  /// Палитра рисуется цветами схемы на месте и переносить её некуда: там, где
+  /// картинка связывает группу с карточкой буквально, палитра уже отдала свой
+  /// оттенок акценту группы, и рисовать поверх нечего. Отличать это от
+  /// [isPlain] обязательно — «не пустая» и «с картинкой» разошлись ровно на
+  /// палитрах, и шапка группы вырастала на полосу пустоты.
+  bool get hasImage => asset != null;
+
   /// Подложка под содержимое карточки. Ложится в `Stack` под текстом и
   /// обрезается формой карточки снаружи.
-  Widget background(BuildContext context) {
+  ///
+  /// [veil] — насколько притушить картинку. Параметр обязателен и у палитр,
+  /// хотя им он и не нужен: вызывающий обязан решить этот вопрос осознанно, а
+  /// молчаливое «как всегда» — то, из-за чего шапка группы кроет картинку
+  /// дважды. Шапка как раз и передаёт [CardVeil.none]: свою вуаль она рисует
+  /// сама, цветом фона группы.
+  Widget background(BuildContext context, {required CardVeil veil}) {
     final scheme = Theme.of(context).colorScheme;
     final asset = this.asset;
     if (asset != null) {
       return _ImageBackground(
         asset: asset,
         scheme: scheme,
+        veil: veil,
         fromFile: id.startsWith(filePrefix),
       );
     }
@@ -151,11 +242,13 @@ class _ImageBackground extends StatelessWidget {
   const _ImageBackground({
     required this.asset,
     required this.scheme,
+    required this.veil,
     this.fromFile = false,
   });
 
   final String asset;
   final ColorScheme scheme;
+  final CardVeil veil;
 
   /// Своя картинка пользователя лежит файлом на диске, встроенная — в ассетах.
   final bool fromFile;
@@ -175,28 +268,10 @@ class _ImageBackground extends StatelessWidget {
           errorBuilder: (_, _, _) => const SizedBox.shrink(),
         ),
         // Вуаль цветом карточки: слева, под текстом, почти непрозрачная,
-        // справа картинка открыта. Так текст читается на любой картинке,
-        // а не только на тёмной.
-        //
-        // Правая цифра и есть «насколько видно картинку»: при 0.55 поверх неё
-        // лежало больше половины цвета карточки, и любая картинка выглядела
-        // выцветшей. Левая держит крупный текст и трогать её нельзя, а средняя
-        // отодвигает спад вправо — под цифрой трафика ещё плотно, дальше уже
-        // видно картинку. Правая не ноль: там мелкое «20m ago» и иконки.
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: AlignmentDirectional.centerStart,
-              end: AlignmentDirectional.centerEnd,
-              stops: const [0, 0.45, 1],
-              colors: [
-                scheme.surfaceContainerHigh.withValues(alpha: 0.9),
-                scheme.surfaceContainerHigh.withValues(alpha: 0.62),
-                scheme.surfaceContainerHigh.withValues(alpha: 0.22),
-              ],
-            ),
-          ),
-        ),
+        // справа картинка открыта. Так текст читается на любой картинке, а не
+        // только на тёмной. Насколько плотно — решает пользователь в редакторе
+        // карточки; при [CardVeil.none] слоя нет вовсе.
+        CardVeilOverlay(color: scheme.surfaceContainerHigh, veil: veil),
       ],
     );
   }

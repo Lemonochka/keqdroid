@@ -1,5 +1,9 @@
 import 'package:uuid/uuid.dart';
 
+import 'subscription_card_layout.dart';
+import 'subscription_card_theme.dart';
+
+
 /// Чем клиент представляется панели при загрузке ОДНОЙ подписки.
 ///
 /// Панели с привязкой по HWID считают устройства по заголовкам запроса
@@ -140,6 +144,12 @@ class Subscription {
   /// выключается именно картинка, а не оформление группы целиком.
   final bool cardThemeInServers;
 
+  /// Что убрано с карточки. Пусто — карточка показывает всё, что знает.
+  final Set<SubscriptionCardElement> hiddenCardElements;
+
+  /// Насколько притушена картинка подложки — и на карточке, и в шапке группы.
+  final CardVeil cardVeil;
+
   const Subscription({
     required this.id,
     required this.name,
@@ -160,6 +170,8 @@ class Subscription {
     this.fetchIdentity = SubscriptionFetchIdentity.empty,
     this.cardThemeId = '',
     this.cardThemeInServers = true,
+    this.hiddenCardElements = const {},
+    this.cardVeil = CardVeil.medium,
   });
 
   factory Subscription.create({
@@ -208,6 +220,9 @@ class Subscription {
     // Отсутствует — значит подписку завели до появления флага: показываем,
     // как показывали бы новой. Выключенное состояние пишется явно.
     cardThemeInServers: json['cardThemeInServers'] as bool? ?? true,
+    hiddenCardElements:
+        SubscriptionCardElement.setFromJson(json['cardHidden']),
+    cardVeil: CardVeil.byName(json['cardVeil'] as String?),
     fetchIdentity: json['fetchIdentity'] is Map
         ? SubscriptionFetchIdentity.fromJson(
             (json['fetchIdentity'] as Map).cast<String, dynamic>(),
@@ -238,6 +253,9 @@ class Subscription {
     // Только выключенное: значение по умолчанию в каждой записи — лишний шум
     // в файле, а «нет ключа» и так читается как «включено».
     if (!cardThemeInServers) 'cardThemeInServers': false,
+    if (hiddenCardElements.isNotEmpty)
+      'cardHidden': [for (final e in hiddenCardElements) e.name],
+    if (cardVeil != CardVeil.medium) 'cardVeil': cardVeil.name,
     if (fetchIdentity.enabled || fetchIdentity.hasCustomFields)
       'fetchIdentity': fetchIdentity.toJson(),
   };
@@ -261,6 +279,8 @@ class Subscription {
     bool? nameIsAuto,
     String? cardThemeId,
     bool? cardThemeInServers,
+    Set<SubscriptionCardElement>? hiddenCardElements,
+    CardVeil? cardVeil,
     SubscriptionFetchIdentity? fetchIdentity,
   }) =>
       Subscription(
@@ -282,6 +302,8 @@ class Subscription {
         nameIsAuto: nameIsAuto ?? this.nameIsAuto,
         cardThemeId: cardThemeId ?? this.cardThemeId,
         cardThemeInServers: cardThemeInServers ?? this.cardThemeInServers,
+        hiddenCardElements: hiddenCardElements ?? this.hiddenCardElements,
+        cardVeil: cardVeil ?? this.cardVeil,
         fetchIdentity: fetchIdentity ?? this.fetchIdentity,
       );
 
@@ -384,4 +406,16 @@ class Subscription {
 
   bool get isExpired =>
       expiresAt != null && expiresAt!.isBefore(DateTime.now());
+
+  /// Показывать ли эту часть карточки.
+  ///
+  /// Спрашивать надо ИМЕННО так, а не `!hiddenCardElements.contains(...)` на
+  /// месте: список того, что можно убрать, закрыт ([SubscriptionCardElement]),
+  /// и предупреждения об ошибках в него не входят — прятать их нельзя.
+  bool showsCard(SubscriptionCardElement element) =>
+      !hiddenCardElements.contains(element);
+
+  /// Какому готовому набору отвечает текущий состав карточки.
+  SubscriptionCardPreset get cardPreset =>
+      SubscriptionCardPreset.of(hiddenCardElements);
 }

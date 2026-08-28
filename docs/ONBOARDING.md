@@ -102,11 +102,10 @@ storage/подписки/апдейтер/пинг, `test/models/`, `test/tunnel
 
 | Скрипт | Что собирает |
 |--------|--------------|
-| `tool/build_amneziawg.ps1` | AmneziaWG-ядро (`wireproxy-awg`) для Windows |
+| `tool/build_amneziawg.ps1` | AmneziaWG-ядра: `wireproxy` (Windows + Linux) и `libwg-go.so` (Android) |
 | `tool/build_mihomo.ps1` | `libmihomo.so` (второе прокси-ядро Android), с патчами из `tool/patches/` |
 | `tool/build_linux_native.sh` | Linux-бандл + ядра на нативном Linux |
 | `tool/fetch_xray_geo.ps1` | свежие `geoip.dat` / `geosite.dat` |
-| `tools/amneziawg_android/` | AmneziaWG `.so` под Android |
 
 `keqrnel` скрипта не имеет — собирается из [своего
 репозитория](https://github.com/Lemonochka/keqrnel) обычным `go build`, по бинарю на
@@ -153,6 +152,26 @@ powershell -File tool/build_mihomo.ps1
 ClientHello версию REALITY-клиента `1.8.2`, и сервер с поднятым `minClient`
 отдаёт настоящий сертификат маскировочного домена вместо своего — клиент видит
 `REALITY authentication failed`, хотя ключи верные (см. [PITFALLS.md](PITFALLS.md)).
+
+AmneziaWG собирается одним скриптом на все три платформы:
+
+```powershell
+powershell -File tool/build_amneziawg.ps1                       # wireproxy (win+linux) + libwg-go.so
+powershell -File tool/build_amneziawg.ps1 -WireproxyVersion v1.0.19
+```
+
+Версия wireproxy **закреплена тегом** в самом скрипте, и оба десктопных бинаря идут
+из одного чекаута: раньше Windows собирался из исходников, а Linux качался
+релизом, и они молча разъехались на поколение протокола (см.
+[PITFALLS.md](PITFALLS.md)). Android-часть тянет `amneziawg-android` (там лежат
+`go.mod` + `jni.c`, из которых и получается `libwg-go.so`) и строит только
+`arm64-v8a`: `abiFilters` в `app/build.gradle.kts` другого всё равно не пустит,
+а собранный заодно `x86_64` — мусор в дереве.
+
+Обе половины ставят одну и ту же версию amneziawg-go, и это условие, а не
+совпадение: `.conf` на десктопе исполняет wireproxy, на Android — `libwg-go.so`
+через UAPI, и профиль, который поднимется на одной платформе, обязан подняться
+на другой.
 
 ## 6. Локализация (en / ru / de / zh)
 

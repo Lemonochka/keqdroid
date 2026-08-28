@@ -1451,6 +1451,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversScrollToEnd => 'Jump to end';
 
   @override
+  String get serversScrollToTop => 'Jump to top';
+
+  @override
+  String get serversJumpToActive => 'Show in list';
+
+  @override
   String get serversManualGroup => 'Manual servers';
 
   @override
@@ -2343,7 +2349,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceIconShapeCircle => 'Circle';
 
   @override
-  String get subscriptionCardThemeTitle => 'Card look';
+  String get subscriptionCardThemeTitle => 'Backdrop';
 
   @override
   String get subscriptionCardThemeNone => 'None';
@@ -2353,6 +2359,63 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subscriptionCardThemeInServersHint => 'The picture also fills the group header. Colours taken from it stay either way.';
+
+  @override
+  String get subscriptionCardLookTitle => 'Card look';
+
+  @override
+  String get subscriptionCardLookDefault => 'Default';
+
+  @override
+  String get subscriptionCardLookThemeOn => 'Backdrop on';
+
+  @override
+  String get subscriptionCardVeilTitle => 'Image dimming';
+
+  @override
+  String get subscriptionCardVeilNone => 'Off';
+
+  @override
+  String get subscriptionCardVeilLight => 'Light';
+
+  @override
+  String get subscriptionCardVeilMedium => 'Medium';
+
+  @override
+  String get subscriptionCardVeilStrong => 'Heavy';
+
+  @override
+  String get subscriptionCardVeilHint => 'The text sits over the left side of the picture. Without dimming it can get lost on a light photo.';
+
+  @override
+  String get subscriptionCardContentTitle => 'What to show';
+
+  @override
+  String get subscriptionCardPresetFull => 'Full';
+
+  @override
+  String get subscriptionCardPresetCompact => 'Compact';
+
+  @override
+  String get subscriptionCardPresetMinimal => 'Minimal';
+
+  @override
+  String get subscriptionCardPresetCustom => 'Custom';
+
+  @override
+  String get subscriptionCardElementAnnounce => 'Provider announcement';
+
+  @override
+  String get subscriptionCardElementUsage => 'Traffic';
+
+  @override
+  String get subscriptionCardElementMeta => 'Expiry and last update';
+
+  @override
+  String get subscriptionCardElementActions => 'Buttons';
+
+  @override
+  String get subscriptionCardContentHint => 'Warnings are always shown: expired subscription, insecure link, failed update.';
 
   @override
   String get appearanceIconShapeSquare => 'Square';

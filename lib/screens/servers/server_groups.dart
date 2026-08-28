@@ -180,11 +180,15 @@ class _GroupHeaderBackground extends StatelessWidget {
           ? _subCardRowHeight + fadeHeight
           : _subCardRowHeight;
 
+  /// Именно `hasImage`, а не «тема выбрана»: у палитровой темы картинки нет
+  /// вовсе, и шапка вырастала на [fadeHeight] пустоты — подложку из ролей
+  /// схемы съедала та же вуаль, которой кроется картинка. Со стороны это и
+  /// выглядело как «картинка не загрузилась».
   static bool _showsImage(Subscription? sub) =>
       sub != null &&
       sub.cardThemeInServers &&
       sub.cardThemeId.isNotEmpty &&
-      !resolveCardTheme(sub.cardThemeId).isPlain;
+      resolveCardTheme(sub.cardThemeId).hasImage;
 
   @override
   Widget build(BuildContext context) {
@@ -211,25 +215,14 @@ class _GroupHeaderBackground extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          theme.background(context),
+          // Своя вуаль у подложки выключена: шапка кроет картинку сама, ниже.
+          // Иначе слоя два, и «убрать затемнение» убирало бы только один.
+          theme.background(context, veil: CardVeil.none),
           // Вуаль поверх картинки — та же роль, что у карточки подписки: слева
           // плотная (под заголовком), справа картинка открыта. Но цвет берётся
           // из ФАКТИЧЕСКОГО фона группы, уже подкрашенного акцентом, а не из
           // роли темы: иначе на стыке с первым сервером был бы виден шов.
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: AlignmentDirectional.centerStart,
-                end: AlignmentDirectional.centerEnd,
-                stops: const [0, 0.45, 1],
-                colors: [
-                  surface.withValues(alpha: 0.9),
-                  surface.withValues(alpha: 0.62),
-                  surface.withValues(alpha: 0.22),
-                ],
-              ),
-            ),
-          ),
+          CardVeilOverlay(color: surface, veil: sub.cardVeil),
           // Растворение вниз. Начинается ВЫШЕ строки заголовка (на 0.72 от
           // неё), иначе плавным был бы только хвост, а на самой границе строки
           // всё равно читался бы уступ яркости.
@@ -474,6 +467,34 @@ class _SubCardState extends ConsumerState<_SubCard> {
         (sub != null
             ? '${sub.name}  |  ${ltrIsolate(sub.usageLabel)}'
             : context.l10n.serversManualGroup);
+
+    // Где стоит активный сервер — для прыжка к нему с главного экрана.
+    //
+    // Пишем из build, а не из initState, как якорь группы: смещение строки
+    // меняется от сортировки, числа колонок и от того, какой сервер активен, —
+    // то есть ровно на тех перестроениях, что здесь и происходят. Запись
+    // дешёвая (поле в реестре, без уведомлений), а расчёт живёт там, где
+    // известна раскладка.
+    final activeIndex = activeServerId == null
+        ? -1
+        : sortedServers.indexWhere((s) => s.id == activeServerId);
+    if (activeIndex >= 0) {
+      // В две колонки строка на индекс вдвое короче; высота строки общая с
+      // `mainAxisExtent` сетки, потому и считается одинаково.
+      final row = widget.twoColumns ? activeIndex ~/ 2 : activeIndex;
+      ServerGroupAnchors.instance.registerActiveServer(
+        serverId: activeServerId!,
+        groupKey: collapseKey,
+        offsetInGroup: collapsed
+            ? null
+            : _GroupHeaderBackground.heightFor(sub, collapsed: false) +
+                row * _subCardRowHeight,
+      );
+    } else {
+      // Активного сервера в этой группе нет — если запись всё же наша, она
+      // протухла (сервер удалили, перенесли, спрятал фильтр).
+      ServerGroupAnchors.instance.unregisterActiveServer(collapseKey);
+    }
 
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
     final accent = _accent;

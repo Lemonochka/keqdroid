@@ -267,10 +267,27 @@ class XrayCoreSettings {
   /// Builds the `dns` object for Xray config.
   ///
   /// [bootstrapDomains] — адреса самих прокси-серверов (свой узел и звенья
-  /// цепочки). Они ОБЯЗАНЫ резолвиться системным резолвером и никогда — через
-  /// туннель: адрес сервера нужен, чтобы до сервера дозвониться, и запрос по
-  /// нему через прокси означал бы круг. `skipFallback` не даёт свалиться с
-  /// этой записи на остальные при NXDOMAIN.
+  /// цепочки). Их НЕЛЬЗЯ резолвить через туннель: адрес сервера нужен, чтобы до
+  /// сервера дозвониться, и запрос по нему через прокси означал бы круг. Отсюда
+  /// отдельные записи со схемой `+local` — тот же DoH, но запрос идёт напрямую,
+  /// минуя роутинг, — и системный резолвер следом.
+  ///
+  /// Системный резолвер стоит здесь ВТОРЫМ, а не первым, как было раньше:
+  /// открытый UDP-53 у части провайдеров подменяется. Ответ при этом приходит с
+  /// ПОДСТАВЛЕННЫМ адресом источника, так что ни по конфигу, ни по `dig` подмена
+  /// не видна — она ловится только сравнением с TCP/53 или DoH. Пока домены
+  /// серверов в реестр не попадают, коннект от этого не ломался, но провайдеру
+  /// уходил список узлов, к которым подключается пользователь. Ping-режим
+  /// резолвил сервер по DoH уже давно (см. `generatePingConfig`), боевой конфиг
+  /// — нет, и «пинг зелёный, а подключения нет» было бы ровно отсюда.
+  ///
+  /// Перебор обрывает `finalQuery`, а НЕ `skipFallback`. `skipFallback` значит
+  /// другое: «не использовать этот сервер для доменов, которые в его `domains`
+  /// не попали». В `app/dns.sortClients` сначала идут совпавшие серверы в
+  /// порядке конфига, а следом — все остальные без `skipFallback`; свалиться С
+  /// записи на другие он не мешает. Без `finalQuery` промах по адресу сервера
+  /// уходил бы в общий DoH, а в режиме глобал-прокси тот ведёт в ещё не
+  /// поднятый туннель.
   ///
   /// [proxiedDoh] — гнать ли DoH внутрь туннеля (`https://` вместо
   /// `https+local://`). Включаем в режиме глобал-прокси: тогда все DNS-запросы
@@ -286,14 +303,6 @@ class XrayCoreSettings {
   }) {
     final servers = <Map<String, dynamic>>[];
 
-    if (bootstrapDomains.isNotEmpty) {
-      servers.add({
-        'address': 'localhost',
-        'domains': bootstrapDomains,
-        'skipFallback': true,
-      });
-    }
-
     final dohScheme = proxiedDoh ? 'https' : 'https+local';
 
     // Пустой список после чистки (пользователь вписал только то, чего ядро не
@@ -301,6 +310,22 @@ class XrayCoreSettings {
     final custom = dnsUseCustom
         ? xrayDnsServers(dnsServers).servers
         : const <Map<String, dynamic>>[];
+
+    if (bootstrapDomains.isNotEmpty) {
+      for (final server in _bootstrapResolvers(custom)) {
+        servers.add({
+          ...server,
+          'domains': bootstrapDomains,
+          'skipFallback': true,
+        });
+      }
+      servers.add({
+        'address': 'localhost',
+        'domains': bootstrapDomains,
+        'skipFallback': true,
+        'finalQuery': true,
+      });
+    }
 
     if (custom.isNotEmpty) {
       // `length > 1`, а не `isNotEmpty`: первая строка уходит под
@@ -349,6 +374,51 @@ class XrayCoreSettings {
       'queryStrategy': dnsQueryStrategy,
       if (dnsDisableCache) 'disableCache': true,
     };
+  }
+
+  /// Чем искать адрес самого сервера, в порядке опроса. Системный резолвер
+  /// идёт после них и добавляется вызывающим.
+  ///
+  /// Не больше двух записей: каждый молчащий резолвер стоит [_dnsTimeoutMs], а
+  /// этот список лежит на критическом пути к подключению. В сети, где DoH
+  /// режут, цена платится не один раз при старте, а перед каждым коннектом с
+  /// истёкшим TTL — поэтому по умолчанию тут ОДИН адрес, а не пара, как в
+  /// общем списке.
+  static List<Map<String, dynamic>> _bootstrapResolvers(
+    List<Map<String, dynamic>> custom,
+  ) {
+    if (custom.isEmpty) {
+      return [
+        {'address': 'https+local://1.1.1.1/dns-query'},
+      ];
+    }
+    final out = <Map<String, dynamic>>[];
+    for (final server in custom) {
+      final address = server['address'];
+      if (address is! String) continue;
+      final local = _forceLocalScheme(address);
+      if (local == null) continue;
+      out.add({...server, 'address': local});
+      if (out.length == 2) break;
+    }
+    return out;
+  }
+
+  /// `https://` → `https+local://`: тот же резолвер, но запрос идёт напрямую, а
+  /// не через outbound-цепочку.
+  ///
+  /// null — адрес, которым адрес сервера искать нельзя: `localhost` вызывающий
+  /// добавляет сам последним, а `fakedns` вернул бы на него ПОДДЕЛЬНЫЙ IP из
+  /// fake-диапазона, и подключение ушло бы в никуда.
+  static String? _forceLocalScheme(String address) {
+    final lower = address.toLowerCase();
+    if (lower == 'localhost' || lower == 'fakedns') return null;
+    final scheme = RegExp(r'^([a-z][a-z0-9.+-]*)://').firstMatch(lower);
+    // Голый хост — это UDP-резолвер, он и так опрашивается напрямую.
+    if (scheme == null) return address;
+    final name = scheme.group(1)!;
+    if (name.endsWith('+local')) return address;
+    return '$name+local://${address.substring(scheme.end)}';
   }
 
   /// Сколько ждать ОДИН резолвер и что делать, когда он молчит.

@@ -14,7 +14,7 @@ import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
 import 'package:keqdroid/shared/ui/server_group_anchors.dart';
-import 'package:keqdroid/shared/ui/scroll_to_end_overlay.dart';
+import 'package:keqdroid/shared/ui/scroll_jump_overlay.dart';
 import 'package:keqdroid/shared/ui/server_row.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
@@ -597,11 +597,12 @@ class _ServersTabState extends ConsumerState<ServersTab>
       );
     }
 
-    return ScrollToEndOverlay(
+    return ScrollJumpOverlay(
       // Только телефон: на десктопе по группам возит боковой навигатор, а
       // всплывающая кнопка посреди окна там просто мусор.
       enabled: !isDesktop,
-      label: context.l10n.serversScrollToEnd,
+      endLabel: context.l10n.serversScrollToEnd,
+      topLabel: context.l10n.serversScrollToTop,
       // Над нижним градиентом списка и на одной линии с кнопкой добавления.
       bottomInset: 20,
       child: SizedBox.expand(
@@ -1048,23 +1049,42 @@ class _ServersTabState extends ConsumerState<ServersTab>
       // статуса, и он же даёт главному экрану второй цветовой акцент после
       // кнопки. Тот же secondaryContainer носит активный сервер в списке —
       // цвет читается как «вот это выбрано» на обоих экранах.
-      return Container(
+      //
+      // Чип же и увозит к своему серверу в списке: он единственный на экране
+      // называет активный сервер по имени, а найти его строку среди полусотни
+      // других можно было только свайпами — при том, что приложение и так
+      // знает, где она.
+      final shape = RoundedRectangleBorder(
+        borderRadius: ExpressiveShape.radius(ExpressiveShape.full),
+      );
+      return Tooltip(
         key: const ValueKey('connected'),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: _statusChipVerticalPadding,
-        ),
-        decoration: BoxDecoration(
+        message: l10n.serversJumpToActive,
+        waitDuration: const Duration(milliseconds: 600),
+        child: Material(
           color: scheme.secondaryContainer,
-          borderRadius: ExpressiveShape.radius(ExpressiveShape.full),
-        ),
-        child: Text(
-          l10n.vpnConnectedTo(cleanName),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: _statusChipTextStyle(textTheme)
-              ?.copyWith(color: scheme.onSecondaryContainer),
+          shape: shape,
+          child: InkWell(
+            onTap: _jumpToActiveServer,
+            customBorder: shape,
+            child: Semantics(
+              button: true,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: _statusChipVerticalPadding,
+                ),
+                child: Text(
+                  l10n.vpnConnectedTo(cleanName),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: _statusChipTextStyle(textTheme)
+                      ?.copyWith(color: scheme.onSecondaryContainer),
+                ),
+              ),
+            ),
+          ),
         ),
       );
     } else {
@@ -1173,6 +1193,33 @@ class _ServersTabState extends ConsumerState<ServersTab>
         _showSnack(_shortError(e, context));
       }
     }
+  }
+
+  /// Тап по чипу «подключено к…»: прокрутить список к строке этого сервера.
+  ///
+  /// Смещение строки считает сама группа (`ServerGroupAnchors`): строки
+  /// строятся лениво, и у сервера, до которого ещё не долистали, нет ни
+  /// контекста, ни render object — `ensureVisible` по нему невозможен в
+  /// принципе, а прыгают как раз к таким.
+  Future<void> _jumpToActiveServer() async {
+    final id = ref.read(serversProvider).activeServerId;
+    if (id == null) return;
+    final anchors = ServerGroupAnchors.instance;
+    // Сервера может не быть в списке вовсе — например, его группу спрятал
+    // поиск. Тогда прыжок молча ничего не делает: уводить экран к чужой
+    // строке хуже, чем не уводить никуда.
+    final place = anchors.placeOfServer(id);
+    if (place == null) return;
+    if (place.collapsed) {
+      // У свёрнутой группы строки нет в дереве — разворачиваем и ждём кадр:
+      // смещение появится, когда группа пересоберётся с тайлами.
+      ref
+          .read(collapsedServerGroupsProvider.notifier)
+          .update((m) => {...m, place.groupKey: false});
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+    }
+    await anchors.jumpToServer(id);
   }
 
   Future<void> _toggleVpn(VpnStatus status) async {

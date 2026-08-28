@@ -43,6 +43,24 @@ const kTunInterfaceName = 'tun-keqdis';
 /// Однозначных строк три: `started at <имя>` от tun-инбаунда (маршруты уже
 /// добавлены), `sing-box started` по окончании старта всего ядра и
 /// `keqrnel started` — её печатает уже наша обёртка, последней.
+/// Годится ли строка как значение `ip_cidr`: голый адрес или адрес с маской.
+///
+/// Домен сюда попадает штатным путём — резолв адреса сервера при неудаче
+/// откатывается на исходную строку, — а `ip_cidr` его не принимает и роняет
+/// разбор ВСЕГО конфига.
+bool _isRoutableIpTarget(String raw) {
+  final value = raw.trim();
+  if (value.isEmpty) return false;
+  final slash = value.lastIndexOf('/');
+  if (slash < 0) return InternetAddress.tryParse(value) != null;
+  final address = InternetAddress.tryParse(value.substring(0, slash));
+  if (address == null) return false;
+  final bits = int.tryParse(value.substring(slash + 1));
+  if (bits == null) return false;
+  final max = address.type == InternetAddressType.IPv6 ? 128 : 32;
+  return bits >= 0 && bits <= max;
+}
+
 bool singboxTunReady(String rawLog) {
   final text = rawLog.toLowerCase();
   return text.contains('sing-box started') ||
@@ -319,6 +337,19 @@ class SingBoxTunConfigGen {
         'action': 'sniff',
       },
       {'protocol': 'dns', 'action': 'hijack-dns'},
+      // Тот же перехват, но ПО ПОРТУ, а не по определению снифера.
+      //
+      // Правило выше срабатывает только если снифер опознал пакет как DNS.
+      // Не опознал — запрос проваливается ниже и попадает под правило
+      // «подсеть самого TUN → direct», а адрес системного резолвера лежит
+      // ровно в ней: sing-tun ставит системе СЛЕДУЮЩИЙ адрес после адреса
+      // интерфейса (172.19.0.1 → 172.19.0.2). Тогда ядро честно пытается
+      // открыть сокет к 172.19.0.2:53 наружу, попадает в никуда, и резолва
+      // нет вовсе — снаружи это «подключился, а интернета нет».
+      //
+      // У mihomo то же самое сделано сразу по порту (`dns-hijack: any:53`),
+      // и у xray-пути тоже (`dns-out` по `port: 53`).
+      {'port': 53, 'action': 'hijack-dns'},
       // icmp can't go over socks; route it locally
       {'protocol': 'icmp', 'outbound': 'direct'},
       {'ip_cidr': ['172.19.0.0/30'], 'outbound': 'direct'},
@@ -334,6 +365,19 @@ class SingBoxTunConfigGen {
     // output byte-identical by only appending the suffix there.
     final exe = isWindows ? '.exe' : '';
     final bypassProcessNames = <String>{
+      // ИМЕНА РЕАЛЬНЫХ БИНАРЕЙ, а не движков внутри них.
+      //
+      // `xray` и `sing-box` отдельными процессами на десктопе не существуют
+      // с тех пор, как оба переехали внутрь keqrnel: правило по ним не
+      // совпадало ни разу. Держало схему только правило по IP сервера ниже —
+      // а оно исчезает, стоит резолву адреса не удаться. Без обоих правил
+      // соединение ядра к серверу забирает auto_route, отдаёт его обратно в
+      // `proxy`, то есть в само ядро, и получается круг: туннель поднят,
+      // ошибок нет, трафика нет.
+      'keqrnel$exe',
+      // mihomo в TUN-режиме владеет адаптером сам, и этот конфиг ему не нужен;
+      // но он же исполняет сервер в proxy-режиме под нашим TUN.
+      'mihomo$exe',
       'xray$exe',
       'sing-box$exe',
       // wireproxy (AmneziaWG): его WG-UDP к серверу должен идти мимо туннеля
@@ -398,7 +442,16 @@ class SingBoxTunConfigGen {
       rules.add({'ip_cidr': blockedIpsForSingBox, 'outbound': 'block'});
     }
 
-    if (serverIpToExclude.isNotEmpty) {
+    // Адрес сервера мимо туннеля — иначе коннект ядра к нему заходит в круг.
+    //
+    // Только настоящий адрес: сюда приезжает результат резолва, а он при
+    // неудаче откатывается на исходную строку сервера, то есть на ДОМЕН
+    // (`vpn.example.com`). Домен в `ip_cidr` — это `vpn.example.com/32`,
+    // невалидный префикс: sing-box не разбирает такой конфиг вовсе и выходит,
+    // то есть туннель не поднимается совсем. Пропустить правило хуже, чем
+    // уронить ядро, только на первый взгляд: круг ловит правило по имени
+    // процесса выше, а упавшее ядро не ловит ничего.
+    if (_isRoutableIpTarget(serverIpToExclude)) {
       // Маска по семейству адреса: `/32` на IPv6-адресе — это не «сам сервер»,
       // а треть интернета (`2a03:…::1/32` → `2a03::/32`), пущенная мимо
       // туннеля. `ip_cidr` у sing-box принимает и голый адрес, но у нас он

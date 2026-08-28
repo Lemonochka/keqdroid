@@ -2831,6 +2831,18 @@ abstract class AppLocalizations {
   /// **'Jump to end'**
   String get serversScrollToEnd;
 
+  /// No description provided for @serversScrollToTop.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to top'**
+  String get serversScrollToTop;
+
+  /// No description provided for @serversJumpToActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in list'**
+  String get serversJumpToActive;
+
   /// No description provided for @serversManualGroup.
   ///
   /// In en, this message translates to:
@@ -4538,7 +4550,7 @@ abstract class AppLocalizations {
   /// No description provided for @subscriptionCardThemeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Card look'**
+  /// **'Backdrop'**
   String get subscriptionCardThemeTitle;
 
   /// No description provided for @subscriptionCardThemeNone.
@@ -4558,6 +4570,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The picture also fills the group header. Colours taken from it stay either way.'**
   String get subscriptionCardThemeInServersHint;
+
+  /// No description provided for @subscriptionCardLookTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Card look'**
+  String get subscriptionCardLookTitle;
+
+  /// No description provided for @subscriptionCardLookDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get subscriptionCardLookDefault;
+
+  /// No description provided for @subscriptionCardLookThemeOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Backdrop on'**
+  String get subscriptionCardLookThemeOn;
+
+  /// No description provided for @subscriptionCardVeilTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Image dimming'**
+  String get subscriptionCardVeilTitle;
+
+  /// No description provided for @subscriptionCardVeilNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get subscriptionCardVeilNone;
+
+  /// No description provided for @subscriptionCardVeilLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get subscriptionCardVeilLight;
+
+  /// No description provided for @subscriptionCardVeilMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get subscriptionCardVeilMedium;
+
+  /// No description provided for @subscriptionCardVeilStrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Heavy'**
+  String get subscriptionCardVeilStrong;
+
+  /// No description provided for @subscriptionCardVeilHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The text sits over the left side of the picture. Without dimming it can get lost on a light photo.'**
+  String get subscriptionCardVeilHint;
+
+  /// No description provided for @subscriptionCardContentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What to show'**
+  String get subscriptionCardContentTitle;
+
+  /// No description provided for @subscriptionCardPresetFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Full'**
+  String get subscriptionCardPresetFull;
+
+  /// No description provided for @subscriptionCardPresetCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get subscriptionCardPresetCompact;
+
+  /// No description provided for @subscriptionCardPresetMinimal.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimal'**
+  String get subscriptionCardPresetMinimal;
+
+  /// No description provided for @subscriptionCardPresetCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get subscriptionCardPresetCustom;
+
+  /// No description provided for @subscriptionCardElementAnnounce.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider announcement'**
+  String get subscriptionCardElementAnnounce;
+
+  /// No description provided for @subscriptionCardElementUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Traffic'**
+  String get subscriptionCardElementUsage;
+
+  /// No description provided for @subscriptionCardElementMeta.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiry and last update'**
+  String get subscriptionCardElementMeta;
+
+  /// No description provided for @subscriptionCardElementActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Buttons'**
+  String get subscriptionCardElementActions;
+
+  /// No description provided for @subscriptionCardContentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Warnings are always shown: expired subscription, insecure link, failed update.'**
+  String get subscriptionCardContentHint;
 
   /// No description provided for @appearanceIconShapeSquare.
   ///

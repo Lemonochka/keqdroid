@@ -110,10 +110,82 @@ class ServerGroupAnchors {
     if (identical(_anchors[groupKey], context)) _anchors.remove(groupKey);
   }
 
+  /// Где стоит активный сервер: в какой группе и на сколько ниже её шапки.
+  ///
+  /// Пишет сама группа, и иначе нельзя: смещение строки складывается из
+  /// порядка сортировки (у каждой группы свой), числа колонок и высоты
+  /// собственной шапки. Повторить этот расчёт на стороне прыжка — завести
+  /// вторую половину, которая разъедется с первой на первой же правке
+  /// раскладки.
+  ///
+  /// `offsetInGroup == null` — группа свёрнута: строки в дереве нет вовсе.
+  ({String serverId, String groupKey, double? offsetInGroup})? _activeServer;
+
+  void registerActiveServer({
+    required String serverId,
+    required String groupKey,
+    required double? offsetInGroup,
+  }) {
+    _activeServer = (
+      serverId: serverId,
+      groupKey: groupKey,
+      offsetInGroup: offsetInGroup,
+    );
+  }
+
+  /// Снимает запись, если она принадлежит [groupKey].
+  ///
+  /// Зовётся группой, которая перестроилась и активного сервера у себя не
+  /// нашла: его удалили, перенесли в другую группу или спрятал фильтр. Без
+  /// этого осталось бы смещение строки, которой в группе больше нет, и прыжок
+  /// увозил бы к чужой. Ключ проверяется по той же причине, что и контекст в
+  /// [unregister]: группа снимает ТОЛЬКО свою запись.
+  void unregisterActiveServer(String groupKey) {
+    if (_activeServer?.groupKey == groupKey) _activeServer = null;
+  }
+
+  /// В какой группе стоит сервер и развёрнута ли она. Null — список про этот
+  /// сервер ничего не говорил: он не построен, отфильтрован или удалён.
+  ({String groupKey, bool collapsed})? placeOfServer(String serverId) {
+    final active = _activeServer;
+    if (active == null || active.serverId != serverId) return null;
+    return (
+      groupKey: active.groupKey,
+      collapsed: active.offsetInGroup == null,
+    );
+  }
+
+  /// Прокручивает список к СТРОКЕ сервера. `false` — прыгать не к чему:
+  /// группа свёрнута (строки нет) или её якоря в реестре не оказалось.
+  ///
+  /// Строки строятся лениво, поэтому цель считается арифметикой от шапки
+  /// группы, а не `ensureVisible` по её контексту: у сервера, до которого ещё
+  /// не долистали, контекста нет — а прыгают как раз к таким.
+  Future<bool> jumpToServer(
+    String serverId, {
+    Duration duration = const Duration(milliseconds: 420),
+    Curve curve = Curves.easeOutCubic,
+  }) async {
+    final active = _activeServer;
+    if (active == null || active.serverId != serverId) return false;
+    final offsetInGroup = active.offsetInGroup;
+    if (offsetInGroup == null) return false;
+    return jumpTo(
+      active.groupKey,
+      extraOffset: offsetInGroup,
+      duration: duration,
+      curve: curve,
+    );
+  }
+
   /// Прокручивает список к группе. `false` — якоря нет (список не построен,
   /// группа исчезла), и вызывающий может решить, что делать дальше.
+  ///
+  /// [extraOffset] — сколько ещё проехать вниз от шапки группы: так к строке
+  /// внутри группы прыгают тем же кодом, что и к самой группе.
   Future<bool> jumpTo(
     String groupKey, {
+    double extraOffset = 0,
     Duration duration = const Duration(milliseconds: 420),
     Curve curve = Curves.easeOutCubic,
   }) async {
@@ -128,8 +200,10 @@ class ServerGroupAnchors {
     if (position == null || viewport == null) return false;
     if (!position.hasContentDimensions) return false;
 
-    final target = (viewport.getOffsetToReveal(render, 0).offset - leadingInset)
-        .clamp(position.minScrollExtent, position.maxScrollExtent);
+    final target =
+        (viewport.getOffsetToReveal(render, 0).offset + extraOffset -
+                leadingInset)
+            .clamp(position.minScrollExtent, position.maxScrollExtent);
     // Уже там: анимация «на месте» выглядит как случайное вздрагивание списка.
     if ((target - position.pixels).abs() < 1) return true;
 
