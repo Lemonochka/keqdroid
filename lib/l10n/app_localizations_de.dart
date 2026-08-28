@@ -1451,6 +1451,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serversScrollToEnd => 'Zum Ende springen';
 
   @override
+  String get serversScrollToTop => 'Zum Anfang springen';
+
+  @override
+  String get serversJumpToActive => 'In der Liste zeigen';
+
+  @override
   String get serversManualGroup => 'Manuelle Server';
 
   @override
@@ -2343,7 +2349,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appearanceIconShapeCircle => 'Kreis';
 
   @override
-  String get subscriptionCardThemeTitle => 'Kartenlook';
+  String get subscriptionCardThemeTitle => 'Hintergrund';
 
   @override
   String get subscriptionCardThemeNone => 'Ohne';
@@ -2353,6 +2359,63 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get subscriptionCardThemeInServersHint => 'Das Bild füllt auch die Gruppenkopfzeile. Die daraus gewonnenen Farben bleiben so oder so.';
+
+  @override
+  String get subscriptionCardLookTitle => 'Kartendesign';
+
+  @override
+  String get subscriptionCardLookDefault => 'Standard';
+
+  @override
+  String get subscriptionCardLookThemeOn => 'Hintergrund aktiv';
+
+  @override
+  String get subscriptionCardVeilTitle => 'Bild abdunkeln';
+
+  @override
+  String get subscriptionCardVeilNone => 'Aus';
+
+  @override
+  String get subscriptionCardVeilLight => 'Leicht';
+
+  @override
+  String get subscriptionCardVeilMedium => 'Mittel';
+
+  @override
+  String get subscriptionCardVeilStrong => 'Stark';
+
+  @override
+  String get subscriptionCardVeilHint => 'Der Text liegt links über dem Bild. Ohne Abdunkeln geht er auf hellen Fotos verloren.';
+
+  @override
+  String get subscriptionCardContentTitle => 'Was angezeigt wird';
+
+  @override
+  String get subscriptionCardPresetFull => 'Vollständig';
+
+  @override
+  String get subscriptionCardPresetCompact => 'Kompakt';
+
+  @override
+  String get subscriptionCardPresetMinimal => 'Minimal';
+
+  @override
+  String get subscriptionCardPresetCustom => 'Eigen';
+
+  @override
+  String get subscriptionCardElementAnnounce => 'Ankündigung des Anbieters';
+
+  @override
+  String get subscriptionCardElementUsage => 'Datenvolumen';
+
+  @override
+  String get subscriptionCardElementMeta => 'Ablauf und Aktualisierung';
+
+  @override
+  String get subscriptionCardElementActions => 'Schaltflächen';
+
+  @override
+  String get subscriptionCardContentHint => 'Warnungen werden immer angezeigt: abgelaufenes Abo, unsichere Adresse, fehlgeschlagene Aktualisierung.';
 
   @override
   String get appearanceIconShapeSquare => 'Quadrat';

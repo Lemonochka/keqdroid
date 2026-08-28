@@ -1453,6 +1453,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversScrollToEnd => 'К концу списка';
 
   @override
+  String get serversScrollToTop => 'К началу списка';
+
+  @override
+  String get serversJumpToActive => 'Показать в списке';
+
+  @override
   String get serversManualGroup => 'Ручные серверы';
 
   @override
@@ -2348,7 +2354,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceIconShapeCircle => 'Круг';
 
   @override
-  String get subscriptionCardThemeTitle => 'Оформление карточки';
+  String get subscriptionCardThemeTitle => 'Подложка';
 
   @override
   String get subscriptionCardThemeNone => 'Без темы';
@@ -2358,6 +2364,63 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get subscriptionCardThemeInServersHint => 'Картинка заполнит и шапку группы. Цвета, взятые из неё, остаются в любом случае.';
+
+  @override
+  String get subscriptionCardLookTitle => 'Оформление карточки';
+
+  @override
+  String get subscriptionCardLookDefault => 'По умолчанию';
+
+  @override
+  String get subscriptionCardLookThemeOn => 'Подложка выбрана';
+
+  @override
+  String get subscriptionCardVeilTitle => 'Затемнение картинки';
+
+  @override
+  String get subscriptionCardVeilNone => 'Нет';
+
+  @override
+  String get subscriptionCardVeilLight => 'Лёгкое';
+
+  @override
+  String get subscriptionCardVeilMedium => 'Среднее';
+
+  @override
+  String get subscriptionCardVeilStrong => 'Плотное';
+
+  @override
+  String get subscriptionCardVeilHint => 'Текст лежит поверх картинки слева. Без затемнения он теряется на светлой фотографии.';
+
+  @override
+  String get subscriptionCardContentTitle => 'Что показывать';
+
+  @override
+  String get subscriptionCardPresetFull => 'Полная';
+
+  @override
+  String get subscriptionCardPresetCompact => 'Компактная';
+
+  @override
+  String get subscriptionCardPresetMinimal => 'Минимальная';
+
+  @override
+  String get subscriptionCardPresetCustom => 'Своя';
+
+  @override
+  String get subscriptionCardElementAnnounce => 'Объявление провайдера';
+
+  @override
+  String get subscriptionCardElementUsage => 'Трафик';
+
+  @override
+  String get subscriptionCardElementMeta => 'Срок и обновление';
+
+  @override
+  String get subscriptionCardElementActions => 'Кнопки';
+
+  @override
+  String get subscriptionCardContentHint => 'Предупреждения показываются всегда: просроченная подписка, небезопасная ссылка, неудачное обновление.';
 
   @override
   String get appearanceIconShapeSquare => 'Квадрат';

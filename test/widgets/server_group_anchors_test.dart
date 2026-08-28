@@ -161,6 +161,125 @@ void main() {
     expect(await ServerGroupAnchors.instance.jumpTo('missing'), isFalse);
   });
 
+  /// Прыжок к СТРОКЕ активного сервера — тап по чипу «подключено к…».
+  ///
+  /// Строки списка строятся лениво, поэтому у сервера за экраном нет ни
+  /// контекста, ни render object: `ensureVisible` по нему невозможен, и
+  /// цель считается смещением от шапки группы. Смещение приносит сама группа —
+  /// только она знает свою сортировку, число колонок и высоту шапки.
+  group('строка активного сервера', () {
+    testWidgets('прыжок доезжает до строки, а не до шапки группы', (
+      tester,
+    ) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      await _pump(tester, _list(controller: controller));
+
+      ServerGroupAnchors.instance.registerActiveServer(
+        serverId: 'srv-row',
+        groupKey: 'g3',
+        offsetInGroup: 152,
+      );
+
+      final jump = ServerGroupAnchors.instance.jumpToServer(
+        'srv-row',
+        duration: const Duration(milliseconds: 20),
+      );
+      await tester.pumpAndSettle();
+
+      expect(await jump, isTrue);
+      // g3 начинается на 1200, строка — двумя рядами ниже.
+      expect(controller.offset, closeTo(1352, 1));
+    });
+
+    testWidgets('отступ шапки списка учитывается и здесь', (tester) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      await _pump(tester, _list(controller: controller), leadingInset: 34);
+
+      ServerGroupAnchors.instance.registerActiveServer(
+        serverId: 'srv-inset',
+        groupKey: 'g2',
+        offsetInGroup: 76,
+      );
+
+      final jump = ServerGroupAnchors.instance.jumpToServer(
+        'srv-inset',
+        duration: const Duration(milliseconds: 20),
+      );
+      await tester.pumpAndSettle();
+
+      expect(await jump, isTrue);
+      expect(controller.offset, closeTo(800 + 76 - 34, 1));
+    });
+
+    testWidgets('у свёрнутой группы строки нет — прыжка тоже', (tester) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      await _pump(tester, _list(controller: controller));
+
+      ServerGroupAnchors.instance.registerActiveServer(
+        serverId: 'srv-collapsed',
+        groupKey: 'g3',
+        offsetInGroup: null,
+      );
+
+      final place = ServerGroupAnchors.instance.placeOfServer('srv-collapsed');
+      expect(place?.groupKey, 'g3');
+      // Вызывающий по этому и понимает, что группу надо сперва развернуть.
+      expect(place?.collapsed, isTrue);
+      expect(
+        await ServerGroupAnchors.instance.jumpToServer('srv-collapsed'),
+        isFalse,
+      );
+      expect(controller.offset, 0);
+    });
+
+    testWidgets('группа снимает свою протухшую запись, но не чужую', (
+      tester,
+    ) async {
+      await _pump(tester, const SizedBox());
+      final anchors = ServerGroupAnchors.instance;
+
+      anchors.registerActiveServer(
+        serverId: 'srv-gone',
+        groupKey: 'g1',
+        offsetInGroup: 76,
+      );
+
+      // Чужая группа перестроилась и активного сервера у себя не нашла —
+      // запись группы g1 её не касается.
+      anchors.unregisterActiveServer('g4');
+      expect(anchors.placeOfServer('srv-gone')?.groupKey, 'g1');
+
+      // А своя — касается: иначе остался бы отступ до строки, которой в
+      // группе больше нет.
+      anchors.unregisterActiveServer('g1');
+      expect(anchors.placeOfServer('srv-gone'), isNull);
+    });
+
+    testWidgets('про чужой сервер реестр молчит', (tester) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      await _pump(tester, _list(controller: controller));
+
+      ServerGroupAnchors.instance.registerActiveServer(
+        serverId: 'srv-known',
+        groupKey: 'g1',
+        offsetInGroup: 0,
+      );
+
+      // Сервер сменили, а список ещё не перестроился — увозить экран к строке
+      // прошлого хуже, чем не увозить никуда.
+      expect(ServerGroupAnchors.instance.placeOfServer('srv-other'), isNull);
+      expect(
+        await ServerGroupAnchors.instance.jumpToServer('srv-other'),
+        isFalse,
+      );
+      expect(controller.offset, 0);
+    });
+  });
+
   group('текущая группа', () {
     testWidgets('в начале списка — первая', (tester) async {
       final controller = ScrollController();

@@ -74,6 +74,10 @@
         "action": "hijack-dns"
       },
       {
+        "port": 53,
+        "action": "hijack-dns"
+      },
+      {
         "protocol": "icmp",
         "outbound": "direct"
       },
@@ -85,6 +89,8 @@
       },
       {
         "process_name": [
+          "keqrnel.exe",
+          "mihomo.exe",
           "xray.exe",
           "sing-box.exe",
           "wireproxy.exe"

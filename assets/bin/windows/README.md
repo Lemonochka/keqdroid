@@ -7,8 +7,8 @@ compile time, so they have to exist first.
 |------|----------|---------|
 | `keqrnel.exe` | the unified core: Proxy and TUN for all xray protocols (VLESS, VMess, Trojan, SS, Hysteria2). Embeds xray + sing-box. | yes (committed) |
 | `mihomo.exe` | the Clash core: ready-made Clash configs and plain links; in TUN mode it owns the wintun adapter itself | yes (committed) |
-| `wireproxy.exe` | the AmneziaWG core (wireproxy-awg) | no — place manually |
-| `wintun.dll` | the Windows TUN adapter; loaded at runtime by sing-tun — which is what BOTH keqrnel and mihomo build on | no — place manually |
+| `wireproxy.exe` | the AmneziaWG core (wireproxy-awg), AmneziaWG 3.1 included | yes (committed) |
+| `wintun.dll` | the Windows TUN adapter; loaded at runtime by sing-tun — which is what BOTH keqrnel and mihomo build on | yes (committed) |
 | `geoip.dat` | optional, enables `geoip:…` routing rules (xray side) | yes |
 | `geosite.dat` | optional, enables `geosite:…` rules (xray side) | yes |
 
@@ -37,9 +37,18 @@ Defender calm.
 
 AmneziaWG still runs through `wireproxy.exe` (wireproxy-awg, embeds amneziawg-go);
 keqrnel wraps its local SOCKS into the TUN. Build wireproxy with
-`tool/build_amneziawg.ps1 -Windows`. There's no official Windows release, so it's
-built locally and unsigned — Defender sometimes flags it as a PUA; the build
-keeps symbols to avoid most of that, else add a Defender exclusion for the repo.
+`tool/build_amneziawg.ps1` — one run builds the Windows and the Linux binary from
+the same pinned tag, which is the point: they are one core on two platforms and
+must not drift apart. There's no official Windows release, so it's built locally
+and unsigned — Defender sometimes flags it as a PUA; the build keeps symbols to
+avoid most of that, else add a Defender exclusion for the repo.
+
+The `.conf` is handed to wireproxy verbatim, so the AmneziaWG generation it
+understands is whatever the binary was built from: v1.0.18 is the first release
+that takes AmneziaWG 3.1 (`HeaderProtectionKey`, `ContentPaddingAddition`, timing
+ranges). An older binary does not ignore those keys, it refuses the config and
+never opens the SOCKS port. `wireproxy.exe -n -c <file>` checks a config without
+starting a tunnel; `-v` prints the version the build stamped in.
 
 `wintun.dll` is the official Wintun library (wintun.net); it's also bundled in
 sing-box Windows releases. Without it, TUN mode can't create the adapter.

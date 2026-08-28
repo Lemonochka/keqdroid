@@ -555,10 +555,15 @@ void main() {
       final dns = map['dns'] as Map<String, dynamic>;
       expect(dns['queryStrategy'], 'PreferIPv4');
       final servers = (dns['servers'] as List).cast<Map<String, dynamic>>();
-      // Первым идёт bootstrap на адрес сервера: его нельзя резолвить ничем,
-      // что само требует туннеля. Пользовательские серверы — следом.
-      expect(servers.first['address'], 'localhost');
+      // Первым идёт bootstrap на адрес сервера: его нельзя резолвить ничем, что
+      // само требует туннеля, — отсюда `+local`. Открытым UDP-53 его тоже не
+      // ищем: у части провайдеров он подменяется. Поэтому пользовательский
+      // `https://` для bootstrap приводится к `https+local://`, а в общем списке
+      // остаётся как вписан. Пользовательские серверы — следом.
+      expect(servers.first['address'], 'https+local://dns.google/dns-query');
       expect(servers.first['domains'], ['full:example.com']);
+      expect(servers[1]['address'], 'localhost');
+      expect(servers[1]['finalQuery'], isTrue);
       expect(
         servers.map((s) => s['address']),
         contains('https://dns.google/dns-query'),

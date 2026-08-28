@@ -1451,6 +1451,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversScrollToEnd => '跳到列表底部';
 
   @override
+  String get serversScrollToTop => '跳到列表顶部';
+
+  @override
+  String get serversJumpToActive => '在列表中显示';
+
+  @override
   String get serversManualGroup => '手动添加的服务器';
 
   @override
@@ -2341,7 +2347,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceIconShapeCircle => '圆形';
 
   @override
-  String get subscriptionCardThemeTitle => '卡片外观';
+  String get subscriptionCardThemeTitle => '背景';
 
   @override
   String get subscriptionCardThemeNone => '无';
@@ -2351,6 +2357,63 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get subscriptionCardThemeInServersHint => '图片也会填充分组标题栏。无论是否开启，从图片取到的配色都会保留。';
+
+  @override
+  String get subscriptionCardLookTitle => '卡片外观';
+
+  @override
+  String get subscriptionCardLookDefault => '默认';
+
+  @override
+  String get subscriptionCardLookThemeOn => '已选背景';
+
+  @override
+  String get subscriptionCardVeilTitle => '图片压暗';
+
+  @override
+  String get subscriptionCardVeilNone => '关';
+
+  @override
+  String get subscriptionCardVeilLight => '轻';
+
+  @override
+  String get subscriptionCardVeilMedium => '中';
+
+  @override
+  String get subscriptionCardVeilStrong => '重';
+
+  @override
+  String get subscriptionCardVeilHint => '文字位于图片左侧上方。不压暗时，浅色照片上的文字会看不清。';
+
+  @override
+  String get subscriptionCardContentTitle => '显示内容';
+
+  @override
+  String get subscriptionCardPresetFull => '完整';
+
+  @override
+  String get subscriptionCardPresetCompact => '紧凑';
+
+  @override
+  String get subscriptionCardPresetMinimal => '极简';
+
+  @override
+  String get subscriptionCardPresetCustom => '自定义';
+
+  @override
+  String get subscriptionCardElementAnnounce => '服务商公告';
+
+  @override
+  String get subscriptionCardElementUsage => '流量';
+
+  @override
+  String get subscriptionCardElementMeta => '到期与更新时间';
+
+  @override
+  String get subscriptionCardElementActions => '按钮';
+
+  @override
+  String get subscriptionCardContentHint => '警告始终显示：订阅过期、不安全链接、更新失败。';
 
   @override
   String get appearanceIconShapeSquare => '方形';

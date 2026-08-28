@@ -331,6 +331,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     SubscriptionFetchIdentity? fetchIdentity,
     String? cardThemeId,
     bool? cardThemeInServers,
+    Set<SubscriptionCardElement>? hiddenCardElements,
+    CardVeil? cardVeil,
   }) async {
     final subs = state.value ?? [];
     final idx = subs.indexWhere((s) => s.id == id);
@@ -365,6 +367,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       fetchIdentity: fetchIdentity,
       cardThemeId: cardThemeId,
       cardThemeInServers: cardThemeInServers,
+      hiddenCardElements: hiddenCardElements,
+      cardVeil: cardVeil,
     );
     await ref.read(storageProvider).upsertSubscription(updated);
     final newList = [...subs]..[idx] = updated;

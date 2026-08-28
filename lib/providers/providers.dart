@@ -17,6 +17,8 @@ import '../models/tun_settings.dart';
 import '../models/routing_rule.dart';
 import '../models/server_item.dart';
 import '../models/subscription.dart';
+import '../models/subscription_card_layout.dart';
+import '../models/subscription_card_theme.dart';
 import '../models/xray_core_settings.dart';
 import '../services/card_image_service.dart';
 import '../services/geo_asset_service.dart';

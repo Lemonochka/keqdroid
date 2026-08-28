@@ -102,17 +102,36 @@ void main() {
       );
     });
 
-    // Адрес сервера обязан резолвиться системным резолвером: через туннель за
-    // ним не сходить — туннеля ещё нет.
+    // Адрес сервера обязан резолвиться в обход туннеля: за ним туда не сходить,
+    // туннеля ещё нет. Но «в обход туннеля» — это `+local`, а не открытый
+    // UDP-53: голый 53-й у части провайдеров подменяется, и домены узлов, к
+    // которым подключается пользователь, уходили бы провайдеру открытым текстом.
     test('адрес сервера резолвится локально, DoH уходит в туннель', () {
       final dns = dnsBlock(ConfigGeneratorV2.generateConfig(
         'vless://uuid@vpn.example.net:443?type=tcp&security=none#demo',
         const AppSettings(),
       ));
       final servers = (dns['servers'] as List).cast<Map<String, dynamic>>();
-      expect(servers.first['address'], 'localhost');
-      expect(servers.first['domains'], ['full:vpn.example.net']);
-      expect(servers.first['skipFallback'], isTrue);
+      final bootstrap = servers
+          .where((s) =>
+              (s['domains'] as List?)?.contains('full:vpn.example.net') ??
+              false)
+          .toList();
+
+      expect(
+        bootstrap.map((s) => s['address']),
+        ['https+local://1.1.1.1/dns-query', 'localhost'],
+      );
+      expect(bootstrap.every((s) => s['skipFallback'] == true), isTrue);
+      expect(
+        bootstrap.every(
+            (s) => (s['domains'] as List).single == 'full:vpn.example.net'),
+        isTrue,
+      );
+      // Системный резолвер — последний и обрывающий: без `finalQuery` промах по
+      // адресу сервера ушёл бы в общий DoH, а тот здесь ведёт в туннель.
+      expect(bootstrap.first['finalQuery'], isNull);
+      expect(bootstrap.last['finalQuery'], isTrue);
       expect(
         servers.map((s) => s['address']),
         contains('https://1.1.1.1/dns-query'),

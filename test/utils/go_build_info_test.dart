@@ -114,6 +114,33 @@ void main() {
       expect(info.depVersion('нет-такого'), isNull);
     });
 
+    test('мажорная версия в пути модуля не прячет зависимость', () {
+      // Выпуск мажора переименовывает модуль целиком: amneziawg-go 3.1 живёт
+      // по пути `…/amneziawg-go/v3`. Панель обязана показать его версию, не
+      // дожидаясь, пока кто-нибудь допишет `/v3` в свой список движков.
+      final info = GoBuildInfo.parse(buildBlob(
+        goVersion: 'go1.26.0',
+        modinfo: 'mod\tgithub.com/artem-russkikh/wireproxy-awg\tv1.0.18\t\n'
+            'dep\tgithub.com/amnezia-vpn/amneziawg-go/v3\tv3.1.20260814\t\n',
+      ))!;
+
+      expect(info.depVersion('amnezia-vpn/amneziawg-go'), 'v3.1.20260814');
+      expect(info.depVersion('amnezia-vpn/amneziawg-go/v3'), 'v3.1.20260814');
+      // Мажор отбрасывается, а не игнорируется целый сегмент.
+      expect(info.depVersion('amnezia-vpn'), isNull);
+    });
+
+    test('своё ядро узнаётся по пути с мажорной версией', () {
+      final info = GoBuildInfo.parse(buildBlob(
+        goVersion: 'go1.26.0',
+        modinfo: 'mod\tgithub.com/xjasonlyu/tun2socks/v2\tv2.7.0\t\n',
+      ))!;
+
+      expect(info.isModule('xjasonlyu/tun2socks/v2'), isTrue);
+      expect(info.isModule('xjasonlyu/tun2socks'), isTrue);
+      expect(info.isModule('sagernet/sing-box'), isFalse);
+    });
+
     test('маркеры рамки не утекают в текст модулей', () {
       final info = GoBuildInfo.parse(buildBlob(
         goVersion: 'go1.26.0',

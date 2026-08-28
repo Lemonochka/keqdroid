@@ -13,7 +13,8 @@
 | **keqrnel** | единый бинарь: sing-box-хост со встроенным xray-движком. **Дефолтное ядро** (`coreEngine: keqrnel`) — один процесс вместо связки, меньше RAM. | Windows/Linux |
 | **xray** | прокси-движок: протоколы (VLESS/VMess/Trojan/SS/Hysteria2), локальный SOCKS/HTTP, маршрутизация по доменам/IP/geoip. Целевая версия — **26.x**. | Android — отдельным `libxray.so`; на десктопе — только внутри keqrnel |
 | **sing-box** | владеет TUN-устройством на десктопе и считает трафик через `clash_api`. Отдельным бинарём не поставляется — только внутри keqrnel. | Windows/Linux |
-| **wireproxy** (`wireproxy-awg`) | реализует AmneziaWG и отдаёт его локальным SOCKS/HTTP (proxy-режим без админ-прав). | Windows/Linux |
+| **wireproxy** (`wireproxy-awg`) | реализует AmneziaWG (по 3.1 включительно) и отдаёт его локальным SOCKS/HTTP (proxy-режим без админ-прав). | Windows/Linux |
+| **libwg-go** (`amneziawg-go`) | то же ядро AmneziaWG на Android, но конфиг принимает только в UAPI — его собирает `AwgProfile.toUapi`. | Android (внутри VpnService) |
 | **tun2socks** | на Android превращает TUN-трафик в SOCKS-запросы к xray. | Android (внутри VpnService) |
 | **geoip.dat / geosite.dat** | базы для правил `geoip:` / `geosite:` (страны IP / категории доменов). | рядом с ядром |
 
@@ -42,7 +43,7 @@
 | **Trojan** | `trojan://` | маскируется под обычный HTTPS |
 | **Shadowsocks** | `ss://` | классика; SIP002 base64 |
 | **Hysteria 2** | `hysteria2://`, `hy2://` | QUIC/UDP; ссылки `hysteria://` тоже принимаются и трактуются как v2, сам протокол Hysteria v1 не поддерживается |
-| **AmneziaWG** | файл `.conf` | обфусцированный WireGuard (1.0/1.5/2.0); добавляется файлом/текстом, не ссылкой |
+| **AmneziaWG** | файл `.conf` | обфусцированный WireGuard (1.0/1.5/2.0/3.1); добавляется файлом/текстом, не ссылкой |
 
 - **Reality / XTLS** — TLS-маскировка для VLESS (поля `pbk`/`sid`/`spx`, fingerprint).
 - **ALPN, SNI, fingerprint (fp), ECH** — параметры TLS-рукопожатия, влияют на незаметность.

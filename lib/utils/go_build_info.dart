@@ -55,14 +55,38 @@ class GoBuildInfo {
 
   /// Версия зависимости, чей путь оканчивается на [suffix]:
   /// `depVersion('xtls/xray-core')` → `v1.260327.1-…`. Null — нет такой.
+  ///
+  /// Мажорная версия Go-модуля живёт в самом пути (`…/amneziawg-go/v3`), и
+  /// выпуск мажора переименовывает зависимость целиком. Поиск это учитывает:
+  /// суффикс `/vN` отбрасывается с обеих сторон, поэтому движок не пропадает с
+  /// панели ровно в тот релиз, когда его обновили, — а панель существует, чтобы
+  /// показывать реальную версию, а не ту, что успели вписать в код.
   String? depVersion(String suffix) {
+    final wanted = _withoutMajor(suffix);
     for (final entry in deps.entries) {
-      if (entry.key == suffix || entry.key.endsWith('/$suffix')) {
+      final path = _withoutMajor(entry.key);
+      if (path == wanted || path.endsWith('/$wanted')) {
         return entry.value;
       }
     }
     return null;
   }
+
+  /// Сама программа и есть этот модуль? Правила сравнения те же, что у
+  /// [depVersion], — иначе «xray-core внутри xray-core» отфильтруется по одному
+  /// написанию пути и не отфильтруется по другому.
+  bool isModule(String suffix) {
+    final path = modulePath;
+    if (path == null) return false;
+    final wanted = _withoutMajor(suffix);
+    final own = _withoutMajor(path);
+    return own == wanted || own.endsWith('/$wanted');
+  }
+
+  static final _majorSuffix = RegExp(r'/v[2-9]\d*$');
+
+  static String _withoutMajor(String modulePath) =>
+      modulePath.replaceFirst(_majorSuffix, '');
 
   /// `\xff Go buildinf:` — метка начала блока.
   static const magic = <int>[

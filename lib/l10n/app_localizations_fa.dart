@@ -1451,6 +1451,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversScrollToEnd => 'به انتهای فهرست';
 
   @override
+  String get serversScrollToTop => 'به ابتدای فهرست';
+
+  @override
+  String get serversJumpToActive => 'نمایش در فهرست';
+
+  @override
   String get serversManualGroup => 'سرورهای دستی';
 
   @override
@@ -2343,7 +2349,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceIconShapeCircle => 'دایره';
 
   @override
-  String get subscriptionCardThemeTitle => 'ظاهر کارت';
+  String get subscriptionCardThemeTitle => 'پس‌زمینه';
 
   @override
   String get subscriptionCardThemeNone => 'بدون';
@@ -2353,6 +2359,63 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get subscriptionCardThemeInServersHint => 'تصویر سربرگ گروه را هم پر می‌کند. رنگ‌های گرفته‌شده از آن در هر حالت باقی می‌مانند.';
+
+  @override
+  String get subscriptionCardLookTitle => 'ظاهر کارت';
+
+  @override
+  String get subscriptionCardLookDefault => 'پیش‌فرض';
+
+  @override
+  String get subscriptionCardLookThemeOn => 'پس‌زمینه فعال';
+
+  @override
+  String get subscriptionCardVeilTitle => 'تیرگی تصویر';
+
+  @override
+  String get subscriptionCardVeilNone => 'خاموش';
+
+  @override
+  String get subscriptionCardVeilLight => 'کم';
+
+  @override
+  String get subscriptionCardVeilMedium => 'متوسط';
+
+  @override
+  String get subscriptionCardVeilStrong => 'زیاد';
+
+  @override
+  String get subscriptionCardVeilHint => 'متن روی سمت چپ تصویر قرار می‌گیرد. بدون تیرگی، روی عکس روشن گم می‌شود.';
+
+  @override
+  String get subscriptionCardContentTitle => 'چه چیزی نمایش داده شود';
+
+  @override
+  String get subscriptionCardPresetFull => 'کامل';
+
+  @override
+  String get subscriptionCardPresetCompact => 'فشرده';
+
+  @override
+  String get subscriptionCardPresetMinimal => 'کمینه';
+
+  @override
+  String get subscriptionCardPresetCustom => 'دلخواه';
+
+  @override
+  String get subscriptionCardElementAnnounce => 'اطلاعیه ارائه‌دهنده';
+
+  @override
+  String get subscriptionCardElementUsage => 'ترافیک';
+
+  @override
+  String get subscriptionCardElementMeta => 'انقضا و به‌روزرسانی';
+
+  @override
+  String get subscriptionCardElementActions => 'دکمه‌ها';
+
+  @override
+  String get subscriptionCardContentHint => 'هشدارها همیشه نمایش داده می‌شوند: اشتراک منقضی، پیوند ناامن، به‌روزرسانی ناموفق.';
 
   @override
   String get appearanceIconShapeSquare => 'مربع';

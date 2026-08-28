@@ -70,9 +70,27 @@ void main() {
         bootstrapDomains: const ['full:vpn.example.net'],
       )['servers'] as List).cast<Map<String, dynamic>>();
 
-      expect(servers.first['domains'], ['full:vpn.example.net']);
+      final bootstrap =
+          servers.where((s) => s.containsKey('domains')).toList();
+      // Bootstrap берёт кастомные резолверы, а не дефолтные: раз пользователь
+      // выбрал свой DNS, адрес сервера ищется им же. Не больше двух — каждый
+      // молчащий стоит таймаута на критическом пути к подключению.
       expect(
-        servers.skip(1).map((s) => s['address']),
+        bootstrap.map((s) => s['address']),
+        [
+          'https+local://1.1.1.1/dns-query',
+          'quic+local://dns.adguard.com',
+          'localhost',
+        ],
+      );
+      expect(
+        bootstrap.every(
+            (s) => (s['domains'] as List).single == 'full:vpn.example.net'),
+        isTrue,
+      );
+
+      expect(
+        servers.where((s) => !s.containsKey('domains')).map((s) => s['address']),
         // DoQ у xray существует только как `quic+local` (удалённого режима у
         // QUIC-резолвера нет): голый `quic://` молча становится ДОМЕНОМ
         // обычного UDP-сервера и не резолвится никогда.
@@ -81,6 +99,26 @@ void main() {
           'quic+local://dns.adguard.com',
           '1.1.1.1',
         ],
+      );
+    });
+
+    test('bootstrap не ищет адрес сервера через fakedns', () {
+      // fakedns вернул бы на адрес сервера ПОДДЕЛЬНЫЙ IP из fake-диапазона, и
+      // подключение ушло бы в никуда.
+      const core = XrayCoreSettings(
+        dnsUseCustom: true,
+        dnsServers: 'fakedns\nhttps://1.1.1.1/dns-query',
+      );
+      final servers = (core.buildDnsBlock(
+        directDomains: const [],
+        bootstrapDomains: const ['full:vpn.example.net'],
+      )['servers'] as List).cast<Map<String, dynamic>>();
+
+      expect(
+        servers.where((s) => s.containsKey('domains')).map((s) => s['address']),
+        // `https://` тоже приведён к `+local`: через туннель за адресом сервера
+        // не сходить, туннеля ещё нет.
+        ['https+local://1.1.1.1/dns-query', 'localhost'],
       );
     });
 

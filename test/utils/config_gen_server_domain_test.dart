@@ -102,19 +102,49 @@ void main() {
   });
 
   // Адрес сервера — единственное, что НЕЛЬЗЯ резолвить через туннель: чтобы до
-  // сервера дозвониться, его адрес уже нужен. Отсюда отдельная запись на
-  // системный резолвер со `skipFallback`, иначе NXDOMAIN увёл бы запрос в DoH,
-  // а тот — в ещё не поднятый туннель.
+  // сервера дозвониться, его адрес уже нужен. Отсюда отдельные записи со схемой
+  // `+local` — запрос идёт напрямую, минуя роутинг, — и системный резолвер
+  // следом. Обрывает перебор `finalQuery`, а не `skipFallback`: последний лишь
+  // убирает сервер из общей очереди, но свалиться С записи на другие не мешает,
+  // и промах ушёл бы в DoH, а тот — в ещё не поднятый туннель.
   test('адрес сервера резолвится в обход туннеля', () {
     final servers = ((_generate(_domainServer)['dns'] as Map<String, dynamic>)
         ['servers'] as List).cast<Map<String, dynamic>>();
-    final bootstrap = servers.first;
-    expect(bootstrap['address'], 'localhost');
-    expect(bootstrap['skipFallback'], isTrue);
+    // Только bootstrap: direct-домены тоже несут `domains`, но с иными
+    // префиксами — адреса серверов уходят сюда как `full:`.
+    final bootstrap = servers
+        .where((s) =>
+            (s['domains'] as List?)
+                ?.any((d) => d.toString().startsWith('full:')) ??
+            false)
+        .toList();
+
     expect(
-      (bootstrap['domains'] as List).single.toString(),
-      startsWith('full:'),
+      bootstrap.map((s) => s['address']),
+      ['https+local://1.1.1.1/dns-query', 'localhost'],
     );
+    expect(bootstrap.every((s) => s['skipFallback'] == true), isTrue);
+    expect(bootstrap.last['finalQuery'], isTrue);
+    for (final server in bootstrap) {
+      expect(
+        (server['domains'] as List).single.toString(),
+        startsWith('full:'),
+      );
+    }
+  });
+
+  // Открытый UDP-53 у части провайдеров подменяется — ответ приходит с
+  // подставленным адресом источника, так что ни по конфигу, ни по `dig` это не
+  // видно. Пока домены серверов в реестр не попадают, коннект не ломается, но
+  // провайдеру уходит список узлов, к которым подключается пользователь.
+  test('адрес сервера не ищется открытым UDP-53', () {
+    final servers = ((_generate(_domainServer)['dns'] as Map<String, dynamic>)
+        ['servers'] as List).cast<Map<String, dynamic>>();
+    final bootstrap = servers.firstWhere((s) =>
+        (s['domains'] as List?)
+            ?.any((d) => d.toString().startsWith('full:')) ??
+        false);
+    expect(bootstrap['address'], startsWith('https+local://'));
   });
 
   test('пинг резолвит сервер тем же путём, что и подключение', () {

@@ -42,6 +42,14 @@ GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -tags with_gvisor \
 `with_gvisor` is required: the TUN stack is a user setting, and `gvisor` / `mixed`
 (and with them full-cone NAT) do not exist in a build without that tag.
 
-`wireproxy` comes from `artem-russkikh/wireproxy-awg` (`wireproxy_linux_amd64`,
-checksum-verified). `geoip.dat` / `geosite.dat` are copied from
-`assets/bin/windows/` so routing behaves identically on both platforms.
+## Building wireproxy
+
+`tool/build_amneziawg.ps1` (runs on Windows, cross-compiles - pure Go, no CGO). The
+same run produces `assets/bin/windows/wireproxy.exe` from the same pinned tag, and
+that is deliberate: this file used to be a release download while Windows was built
+from source, and the two ended up a protocol generation apart (AmneziaWG 2.0 against
+3.1) with nothing in the app saying so. Which AmneziaWG generation a profile can use
+is decided by this binary alone - the `.conf` reaches it verbatim.
+
+`geoip.dat` / `geosite.dat` are copied from `assets/bin/windows/` so routing behaves
+identically on both platforms.
