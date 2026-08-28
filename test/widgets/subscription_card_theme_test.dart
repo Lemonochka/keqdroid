@@ -68,10 +68,16 @@ Future<void> _openCardLookSheet(
   required String cardThemeId,
   Set<SubscriptionCardElement> hidden = const {},
   CardVeil veil = CardVeil.medium,
+  String? announce,
 }) async {
   await _pumpTab(
     tester,
-    _sub(cardThemeId: cardThemeId, hidden: hidden, veil: veil),
+    _sub(
+      cardThemeId: cardThemeId,
+      hidden: hidden,
+      veil: veil,
+      announce: announce,
+    ),
   );
 
   await tester.tap(find.byIcon(Icons.more_vert_rounded));
@@ -393,6 +399,70 @@ void main() {
       // «Нет» — тоже шаг: именно его и просили.
       expect(find.text('Off'), findsOneWidget);
       expect(find.text('Heavy'), findsOneWidget);
+    });
+
+    // Образец наверху шторки — настоящая карточка, а не картинка с двумя
+    // строчками: на вопрос «а что изменится, если убрать трафик» нарисованный
+    // отдельно образец не отвечал никак.
+    testWidgets('образец в шторке — та же карточка со всем содержимым', (
+      tester,
+    ) async {
+      await _openCardLookSheet(
+        tester,
+        cardThemeId: '',
+        announce: 'Реклама бота',
+      );
+
+      // Две: одна в списке под шторкой, вторая — образец.
+      expect(find.text('Реклама бота'), findsNWidgets(2));
+    });
+
+    testWidgets('переключатель убирает часть и из образца тоже', (
+      tester,
+    ) async {
+      await _openCardLookSheet(
+        tester,
+        cardThemeId: '',
+        announce: 'Реклама бота',
+      );
+
+      final tile = find.ancestor(
+        of: find.text('Provider announcement'),
+        matching: find.byType(SwitchListTile),
+      );
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+
+      // Ни в образце, ни на самой карточке: правка применяется сразу.
+      expect(find.text('Реклама бота'), findsNothing);
+    });
+
+    testWidgets('свёрнутая карточка в образце всё равно раскрыта', (
+      tester,
+    ) async {
+      // Сворачиваемая часть живёт в AnimatedCrossFade, а он держит в дереве
+      // ОБА состояния — по тексту свёрнутость не проверить, только по нему
+      // самому.
+      int expandedCards() => tester
+          .widgetList<AnimatedCrossFade>(find.byType(AnimatedCrossFade))
+          .where((w) => w.crossFadeState == CrossFadeState.showFirst)
+          .length;
+
+      await _pumpTab(tester, _sub());
+      await tester.tap(find.byIcon(Icons.expand_more_rounded));
+      await tester.pumpAndSettle();
+      expect(expandedCards(), 0, reason: 'карточку в списке свернули');
+
+      await tester.tap(find.byIcon(Icons.more_vert_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Card look'));
+      await tester.pumpAndSettle();
+
+      // Свёрнутый образец прятал бы ровно то, что в этой шторке переключают,
+      // поэтому у него своя ProviderScope.
+      expect(expandedCards(), 1, reason: 'образец развёрнут');
     });
 
     testWidgets('редактор показывает состав и текущий пресет', (tester) async {

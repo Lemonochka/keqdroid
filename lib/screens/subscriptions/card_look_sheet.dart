@@ -69,29 +69,39 @@ class _CardLookSheet extends ConsumerWidget {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: double.infinity,
-                child: Text(
-                  l10n.subscriptionCardLookTitle,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme
-                      .emphasized(theme.textTheme.titleLarge)
-                      ?.copyWith(color: AppTheme.text(context)),
-                ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Образец не уезжает вместе с содержимым: переключатели состава
+            // стоят в самом низу списка, и прокрученный вместе с ними образец
+            // показывал бы результат тогда, когда его уже не видно.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      l10n.subscriptionCardLookTitle,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme
+                          .emphasized(theme.textTheme.titleLarge)
+                          ?.copyWith(color: AppTheme.text(context)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _CardPreview(sub: sub),
+                ],
               ),
-              const SizedBox(height: 16),
-              // Образец только у картинок: у палитры затемнения нет, а
-              // оценивать по образцу больше нечего — цвета видно в слайдере.
-              if (cardTheme.hasImage) ...[
-                _CardVeilPreview(theme: cardTheme, sub: sub),
-                const SizedBox(height: 16),
-              ],
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
               _CardThemePicker(
                 currentId: sub.cardThemeId,
                 subscriptionId: sub.id,
@@ -154,64 +164,8 @@ class _CardLookSheet extends ConsumerWidget {
                 ),
               const SizedBox(height: 4),
               _SheetHint(l10n.subscriptionCardContentHint),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Образец подложки: та же картинка с тем же затемнением и текст поверх неё.
-///
-/// Затемнение — единственная настройка карточки, которую нельзя оценить по
-/// названию: «лёгкое» на тёмной фотографии и на светлой читается по-разному, а
-/// проверять его, закрывая шторку и открывая заново, — это и есть «настройка
-/// вслепую». Поэтому образец рисует НАСТОЯЩУЮ подложку (`background`), а не
-/// свою копию: нарисованная отдельно, она разошлась бы с карточкой.
-class _CardVeilPreview extends StatelessWidget {
-  final SubscriptionCardTheme theme;
-  final Subscription sub;
-
-  const _CardVeilPreview({required this.theme, required this.sub});
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return ClipRRect(
-      borderRadius: ExpressiveShape.radius(ExpressiveShape.large),
-      child: SizedBox(
-        height: 96,
-        width: double.infinity,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            theme.background(context, veil: sub.cardVeil),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    sub.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleMedium?.copyWith(
-                      color: AppTheme.text(context),
-                    ),
-                  ),
-                  // Тот же кегль, что у якоря карточки: судить о читаемости
-                  // надо по тому тексту, который на карточке и стоит.
-                  Text(
-                    sub.usedDisplay ?? sub.url,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme
-                        .emphasized(textTheme.headlineSmall)
-                        ?.copyWith(color: AppTheme.text(context)),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -219,6 +173,54 @@ class _CardVeilPreview extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Образец — это НАСТОЯЩАЯ карточка подписки, а не её изображение.
+///
+/// Нарисованный отдельно образец отвечает только на те вопросы, которые в него
+/// заложили: первая версия показывала подложку с двумя строками текста и на
+/// «выключил трафик — что изменится?» не отвечала никак. Дорисовывать в неё по
+/// блоку на каждую настройку — заводить вторую вёрстку карточки, которая
+/// разойдётся с первой на ближайшей же правке.
+///
+/// Поэтому здесь строится тот же [_SubItem], что и в списке, с той же подпиской.
+/// Отсюда три обёртки:
+///
+///  * [IgnorePointer] — образец показывает, а не работает: чипы, меню и
+///    обновление в нём нажиматься не должны;
+///  * [ExcludeSemantics] — иначе скринридер читает карточку дважды, второй раз
+///    посреди настроек;
+///  * своя [ProviderScope] — карточка в списке может быть свёрнута, а свёрнутая
+///    прячет ровно те части, которые в этой шторке и переключают.
+class _CardPreview extends StatelessWidget {
+  final Subscription sub;
+
+  const _CardPreview({required this.sub});
+
+  @override
+  Widget build(BuildContext context) {
+    return ProviderScope(
+      overrides: [
+        collapsedSubscriptionCardsProvider.overrideWith(_ExpandedCards.new),
+      ],
+      child: ExcludeSemantics(
+        child: IgnorePointer(
+          child: _SubItem(
+            sub: sub,
+            listIndex: 0,
+            onDelete: () {},
+            onRefresh: () async {},
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Ничего не свёрнуто — только для образца.
+class _ExpandedCards extends CollapsedSubscriptionCardsNotifier {
+  @override
+  Map<String, bool> build() => const <String, bool>{};
 }
 
 class _SheetSectionTitle extends StatelessWidget {
