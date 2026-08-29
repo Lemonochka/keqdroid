@@ -115,6 +115,10 @@ class AndroidTunnelBackend implements TunnelBackend {
         if (request.mihomoConfig != null && request.mihomoConfig!.isNotEmpty)
           'mihomoConfig': request.mihomoConfig,
         'coreEngine': 'chain',
+        // Режим сессии: `proxy` — ядро без VpnService, только локальные
+        // инбаунды. Нативная сторона по нему решает, спрашивать ли разрешение
+        // и поднимать ли интерфейс с tun2socks.
+        'tunnelMode': request.mode.storageValue,
         'socksPort': request.socksPort,
         'excludePackages': request.excludePackages,
         'includePackages': request.includePackages,

@@ -2004,6 +2004,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsCoreHint => '下次连接时生效 — 当前会话不会重启。';
 
   @override
+  String get settingsTunnelModeSection => '连接模式';
+
+  @override
+  String get settingsTunnelModeVpn => 'VPN';
+
+  @override
+  String get settingsTunnelModeVpnSubtitle => '设备的全部流量都经过隧道';
+
+  @override
+  String get settingsTunnelModeProxy => '代理';
+
+  @override
+  String get settingsTunnelModeProxySubtitle => '仅本地代理 — 不启用系统 VPN，不会自动接管流量';
+
+  @override
+  String get settingsTunnelModeHint => '代理模式下应用在 127.0.0.1 上开启 SOCKS 和 HTTP，本身不接管任何流量：请把应用或 Wi-Fi 代理设置指向它。端口见「设置 → 本地端口」。分应用路由和 DNS 拦截只在 VPN 模式下有效；AmneziaWG 服务器始终以 VPN 方式连接。';
+
+  @override
   String get settingsCoreAuto => '自动';
 
   @override

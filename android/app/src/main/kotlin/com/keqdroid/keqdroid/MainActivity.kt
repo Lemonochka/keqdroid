@@ -325,6 +325,16 @@ class MainActivity : FlutterFragmentActivity() {
                                 ?.filterIsInstance<String>() ?: emptyList()
                             val includePackages = call.argument<List<*>>("includePackages")
                                 ?.filterIsInstance<String>() ?: emptyList()
+                            // Отсутствующий режим — это старый Dart или чужой
+                            // вызов: поднимаем VPN, как было всегда.
+                            val tunnelMode =
+                                if (call.argument<String>("tunnelMode") ==
+                                    KeqdisVpnService.TUNNEL_MODE_PROXY
+                                ) {
+                                    KeqdisVpnService.TUNNEL_MODE_PROXY
+                                } else {
+                                    KeqdisVpnService.TUNNEL_MODE_VPN
+                                }
                             when (backend) {
                                 KeqdisVpnService.VPN_BACKEND_XRAY -> {
                                     val xrayConfig = call.argument<String>("xrayConfig") ?: run {
@@ -341,6 +351,7 @@ class MainActivity : FlutterFragmentActivity() {
                                         serverName,
                                         result,
                                         coreEngine,
+                                        tunnelMode = tunnelMode,
                                     )
                                 }
                                 KeqdisVpnService.VPN_BACKEND_MIHOMO -> {
@@ -361,6 +372,7 @@ class MainActivity : FlutterFragmentActivity() {
                                         KeqdisVpnService.VPN_BACKEND_MIHOMO,
                                         // Ядро читает YAML; наш JSON — его подмножество.
                                         "mihomo_config.yaml",
+                                        tunnelMode = tunnelMode,
                                     )
                                 }
                                 KeqdisVpnService.VPN_BACKEND_AWG -> {
@@ -705,8 +717,15 @@ class MainActivity : FlutterFragmentActivity() {
         // оставшийся от прошлой сессии чужой конфиг не подсунется новому ядру.
         backend: String = KeqdisVpnService.VPN_BACKEND_XRAY,
         configFileName: String = "xray_config.json",
+        tunnelMode: String = KeqdisVpnService.TUNNEL_MODE_VPN,
     ) {
-        if (VpnService.prepare(this) != null) {
+        // Разрешение на VPN спрашиваем ТОЛЬКО когда собираемся поднимать
+        // интерфейс. В режиме прокси establish() не вызывается вовсе, а значит
+        // и системный диалог не нужен: требовать его там — просить у человека
+        // право, которым не воспользуешься.
+        if (tunnelMode != KeqdisVpnService.TUNNEL_MODE_PROXY &&
+            VpnService.prepare(this) != null
+        ) {
             result.error("PERMISSION_DENIED", "VPN permission not granted", null)
             return
         }
@@ -747,6 +766,7 @@ class MainActivity : FlutterFragmentActivity() {
                 putExtra(KeqdisVpnService.EXTRA_VPN_BACKEND, backend)
                 putExtra(KeqdisVpnService.EXTRA_XRAY_CONFIG, xrayPath)
                 putExtra(KeqdisVpnService.EXTRA_CORE_ENGINE, coreEngine)
+                putExtra(KeqdisVpnService.EXTRA_TUNNEL_MODE, tunnelMode)
                 putExtra("socks_port", socksPort)
                 putStringArrayListExtra("exclude_packages", ArrayList(excludePackages))
                 putStringArrayListExtra("include_packages", ArrayList(includePackages))
