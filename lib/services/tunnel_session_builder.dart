@@ -34,6 +34,11 @@ class TunnelSessionBuilder {
     if (android && vpnBackend == VpnBackend.awg) {
       return ConnectionMode.tun;
     }
+    // Сохранённый режим на Android учитываем ТОЛЬКО если его выбирали руками.
+    // До 0.13.0 поле там не читалось вовсе, и в настройках у всех лежит
+    // десктопный дефолт `proxy`, которого никто не просил: уважить его молча —
+    // значит выключить туннель всему, что обновилось.
+    if (android && !settings.connectionModeChosen) return ConnectionMode.tun;
     return ConnectionMode.fromStorage(settings.connectionMode);
   }
 

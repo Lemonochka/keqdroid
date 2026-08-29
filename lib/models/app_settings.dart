@@ -52,8 +52,37 @@ class AppSettings {
   final XrayCoreSettings xrayCore;
   /// Desktop TUN: стек (system/gvisor/mixed), MTU и прочие опции sing-box-инбаунда.
   final TunSettings tun;
-  /// Desktop: `proxy` (только Xray) или `tun` (Xray → sing-box). См. [ConnectionMode].
+  /// `proxy` (только локальный прокси) или `tun` (полноценный туннель).
+  /// См. [ConnectionMode].
+  ///
+  /// Дефолт `proxy` — десктопный: там TUN требует прав администратора, и первое
+  /// подключение не должно упираться в UAC.
   final String connectionMode;
+
+  /// Режим выбран человеком, а не достался от дефолта.
+  ///
+  /// Нужен из-за истории поля. На Android режим до 0.13.0 не читался вовсе —
+  /// [TunnelSessionBuilder.resolveMode] возвращал `tun` не глядя, — поэтому у
+  /// КАЖДОЙ установки в настройках лежит десктопный дефолт `proxy`, который
+  /// никто не выбирал. Начни мы просто уважать сохранённое значение, и всё
+  /// обновившееся стадо разом переехало бы в режим «только прокси»: туннель не
+  /// поднимается, трафик мимо VPN, и с виду приложение сломалось.
+  ///
+  /// Поэтому на Android «не выбирали» читается как VPN, а флаг ставится ровно
+  /// тогда, когда режим переключили руками.
+  final bool connectionModeChosen;
+
+  /// Требовать логин с паролем у локального прокси в режиме «Прокси».
+  ///
+  /// Выключается ради потребителей, которым креды вписать некуда: системное
+  /// поле прокси у Wi-Fi знает только адрес и порт.
+  final bool proxyModeAuth;
+
+  /// Креды локального прокси. Хранятся, а не генерируются на каждый старт, как
+  /// сессионные: их вписывают в чужое приложение руками, и меняться под ним они
+  /// не должны. Пустые — ещё не создавались.
+  final String proxyModeUser;
+  final String proxyModePass;
   /// Desktop proxy: включать системный прокси Windows.
   final bool systemProxyEnabled;
   /// `system` — язык ОС, иначе `en` / `ru`.
@@ -154,6 +183,10 @@ class AppSettings {
     this.xrayCore = const XrayCoreSettings(),
     this.tun = const TunSettings(),
     this.connectionMode = 'proxy',
+    this.connectionModeChosen = false,
+    this.proxyModeAuth = true,
+    this.proxyModeUser = '',
+    this.proxyModePass = '',
     this.systemProxyEnabled = true,
     this.appLanguageCode = 'system',
     this.minimizeToTray = true,
@@ -202,6 +235,10 @@ class AppSettings {
     'xrayCore': xrayCore.toJson(),
     'tun': tun.toJson(),
     'connectionMode': connectionMode,
+    'connectionModeChosen': connectionModeChosen,
+    'proxyModeAuth': proxyModeAuth,
+    'proxyModeUser': proxyModeUser,
+    'proxyModePass': proxyModePass,
     'systemProxyEnabled': systemProxyEnabled,
     'appLanguageCode': appLanguageCode,
     'minimizeToTray': minimizeToTray,
@@ -276,6 +313,10 @@ class AppSettings {
       connectionMode: ConnectionMode.fromStorage(
         json['connectionMode'] as String?,
       ).storageValue,
+      connectionModeChosen: json['connectionModeChosen'] as bool? ?? false,
+      proxyModeAuth: json['proxyModeAuth'] as bool? ?? true,
+      proxyModeUser: json['proxyModeUser'] as String? ?? '',
+      proxyModePass: json['proxyModePass'] as String? ?? '',
       systemProxyEnabled: json['systemProxyEnabled'] as bool? ?? true,
       appLanguageCode: _normalizeLanguageCode(
         json['appLanguageCode'] as String?,
@@ -438,6 +479,10 @@ class AppSettings {
     XrayCoreSettings? xrayCore,
     TunSettings? tun,
     String? connectionMode,
+    bool? connectionModeChosen,
+    bool? proxyModeAuth,
+    String? proxyModeUser,
+    String? proxyModePass,
     bool? systemProxyEnabled,
     String? appLanguageCode,
     bool? minimizeToTray,
@@ -485,6 +530,10 @@ class AppSettings {
         xrayCore: xrayCore ?? this.xrayCore,
         tun: tun ?? this.tun,
         connectionMode: connectionMode ?? this.connectionMode,
+        connectionModeChosen: connectionModeChosen ?? this.connectionModeChosen,
+        proxyModeAuth: proxyModeAuth ?? this.proxyModeAuth,
+        proxyModeUser: proxyModeUser ?? this.proxyModeUser,
+        proxyModePass: proxyModePass ?? this.proxyModePass,
         systemProxyEnabled: systemProxyEnabled ?? this.systemProxyEnabled,
         appLanguageCode: appLanguageCode ?? this.appLanguageCode,
         minimizeToTray: minimizeToTray ?? this.minimizeToTray,
@@ -541,6 +590,10 @@ class AppSettings {
               xrayCore == other.xrayCore &&
               tun == other.tun &&
               connectionMode == other.connectionMode &&
+              connectionModeChosen == other.connectionModeChosen &&
+              proxyModeAuth == other.proxyModeAuth &&
+              proxyModeUser == other.proxyModeUser &&
+              proxyModePass == other.proxyModePass &&
               systemProxyEnabled == other.systemProxyEnabled &&
               appLanguageCode == other.appLanguageCode &&
               minimizeToTray == other.minimizeToTray &&
@@ -598,6 +651,10 @@ class AppSettings {
     xrayCore,
     tun,
     connectionMode,
+    connectionModeChosen,
+    proxyModeAuth,
+    proxyModeUser,
+    proxyModePass,
     systemProxyEnabled,
     appLanguageCode,
     minimizeToTray,

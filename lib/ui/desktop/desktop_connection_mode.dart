@@ -37,7 +37,10 @@ Future<void> applyDesktopConnectionMode(
         status: ref.read(vpnStateProvider).value?.status,
       );
       await ref.read(settingsNotifierProvider.notifier).save(
-            settings.copyWith(connectionMode: ConnectionMode.tun.storageValue),
+            settings.copyWith(
+              connectionMode: ConnectionMode.tun.storageValue,
+              connectionModeChosen: true,
+            ),
           );
       final ok = await WindowsDesktopService.restartAsAdministrator();
       if (!ok && context.mounted) {
@@ -69,7 +72,10 @@ Future<void> applyDesktopConnectionMode(
     }
   }
   await ref.read(settingsNotifierProvider.notifier).save(
-        settings.copyWith(connectionMode: next.storageValue),
+        settings.copyWith(
+          connectionMode: next.storageValue,
+          connectionModeChosen: true,
+        ),
       );
   if (wasActive) {
     try {

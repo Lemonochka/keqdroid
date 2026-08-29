@@ -2006,6 +2006,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsCoreHint => 'Gilt ab der nächsten Verbindung — die laufende Sitzung wird nicht neu gestartet.';
 
   @override
+  String get settingsProxyAuthTitle => 'Passwort für den lokalen Proxy';
+
+  @override
+  String get settingsProxyAuthSubtitle => 'Aus für Ziele ohne Eingabefeld dafür, etwa die WLAN-Proxy-Einstellungen';
+
+  @override
+  String get settingsProxyAuthUser => 'Benutzername';
+
+  @override
+  String get settingsProxyAuthPass => 'Passwort';
+
+  @override
   String get settingsTunnelModeSection => 'Verbindungsmodus';
 
   @override

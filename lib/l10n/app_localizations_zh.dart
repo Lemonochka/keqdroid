@@ -2004,6 +2004,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsCoreHint => '下次连接时生效 — 当前会话不会重启。';
 
   @override
+  String get settingsProxyAuthTitle => '本地代理的密码';
+
+  @override
+  String get settingsProxyAuthSubtitle => '对于无处填写的场景（例如 Wi-Fi 代理设置）请关闭';
+
+  @override
+  String get settingsProxyAuthUser => '用户名';
+
+  @override
+  String get settingsProxyAuthPass => '密码';
+
+  @override
   String get settingsTunnelModeSection => '连接模式';
 
   @override

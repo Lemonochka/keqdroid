@@ -2011,6 +2011,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsCoreHint => 'Применится на следующем подключении — текущая сессия не перезапускается.';
 
   @override
+  String get settingsProxyAuthTitle => 'Пароль для локального прокси';
+
+  @override
+  String get settingsProxyAuthSubtitle => 'Выключите для тех, кому его вписать некуда — например, для системного поля прокси у Wi-Fi';
+
+  @override
+  String get settingsProxyAuthUser => 'Логин';
+
+  @override
+  String get settingsProxyAuthPass => 'Пароль';
+
+  @override
   String get settingsTunnelModeSection => 'Режим подключения';
 
   @override
@@ -2026,7 +2038,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunnelModeProxySubtitle => 'Только локальный прокси — системный VPN не включается, сам по себе трафик не перехватывается';
 
   @override
-  String get settingsTunnelModeHint => 'В режиме «Прокси» приложение поднимает SOCKS и HTTP на 127.0.0.1 и ничего не перехватывает само: направьте на них приложение или настройки прокси Wi-Fi. Порты — в «Настройки → Локальные порты». Маршрутизация по приложениям и перехват DNS работают только в режиме VPN; серверы AmneziaWG всегда подключаются как VPN.';
+  String get settingsTunnelModeHint => 'В режиме «Прокси» приложение поднимает SOCKS и HTTP на 127.0.0.1 и ничего не перехватывает само: направьте на них приложение или настройки прокси Wi-Fi. Порты — в «Настройки → Локальные порты»; пароля локальный прокси в этом режиме не спрашивает — системному полю прокси у Wi-Fi его негде взять. Пока режим включён, им может пользоваться любое приложение на устройстве. Маршрутизация по приложениям и перехват DNS работают только в режиме VPN; серверы AmneziaWG всегда подключаются как VPN.';
 
   @override
   String get settingsCoreAuto => 'Автоматически';

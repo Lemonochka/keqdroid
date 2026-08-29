@@ -2006,6 +2006,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCoreHint => 'Applies on the next connection — the running session is not restarted.';
 
   @override
+  String get settingsProxyAuthTitle => 'Password for the local proxy';
+
+  @override
+  String get settingsProxyAuthSubtitle => 'Turn off for consumers with nowhere to enter it, like the Wi-Fi proxy fields';
+
+  @override
+  String get settingsProxyAuthUser => 'Username';
+
+  @override
+  String get settingsProxyAuthPass => 'Password';
+
+  @override
   String get settingsTunnelModeSection => 'Connection mode';
 
   @override
@@ -2021,7 +2033,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTunnelModeProxySubtitle => 'A local proxy only — no system VPN, nothing is captured by itself';
 
   @override
-  String get settingsTunnelModeHint => 'In Proxy mode the app opens SOCKS and HTTP on 127.0.0.1 and captures nothing on its own: point an app or the Wi-Fi proxy settings at it. The ports are in Settings → Local ports. Per-app routing and DNS interception belong to VPN mode; AmneziaWG servers always run as VPN.';
+  String get settingsTunnelModeHint => 'In Proxy mode the app opens SOCKS and HTTP on 127.0.0.1 and captures nothing on its own: point an app or the Wi-Fi proxy settings at it. The ports are in Settings → Local ports, and in this mode the local proxy asks for no password: the Wi-Fi proxy fields have nowhere to put one. Any app on the device can use it while the mode is on. Per-app routing and DNS interception belong to VPN mode; AmneziaWG servers always run as VPN.';
 
   @override
   String get settingsCoreAuto => 'Automatic';

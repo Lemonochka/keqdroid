@@ -414,7 +414,27 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
       // 1. забираем SOCKS5-креды у нативного сервиса
       final creds = await engine.fetchSocksCredentials();
-      Socks5Credentials().init(creds.username, creds.password);
+      // В режиме прокси креды вписывают руками в чужое приложение, поэтому там
+      // нужны ПОСТОЯННЫЕ, а не сессионные: нативные генерируются заново на
+      // каждое подключение, и настройка в стороннем приложении протухала бы
+      // после первого же реконнекта.
+      if (Platform.isAndroid &&
+          connectionMode == ConnectionMode.proxy &&
+          settings.proxyModeAuth) {
+        var user = settings.proxyModeUser;
+        var pass = settings.proxyModePass;
+        if (user.isEmpty || pass.isEmpty) {
+          user = randomProxyToken(12);
+          pass = randomProxyToken(20);
+          settings = settings.copyWith(proxyModeUser: user, proxyModePass: pass);
+          await ref
+              .read(settingsNotifierProvider.notifier)
+              .save(settings);
+        }
+        Socks5Credentials().init(user, pass);
+      } else {
+        Socks5Credentials().init(creds.username, creds.password);
+      }
 
       // 2. резолвим домен сервера заранее, чтобы direct-правило роутинга
       //    шло по IP, а не по домену (важно когда DNS сам идёт через прокси)
@@ -426,8 +446,18 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // auth on the localhost inbounds makes browsers prompt endlessly. Use
       // noauth on the loopback inbounds in desktop proxy mode (safe: they bind
       // to 127.0.0.1 only). AmneziaWG proxy is already noauth via wireproxy.
-      final desktopProxyNoAuth = (Platform.isWindows || Platform.isLinux) &&
-          connectionMode == ConnectionMode.proxy;
+      //
+      // На Android в режиме прокси — ровно та же причина, и она там жёстче.
+      // Пароль к локальному SOCKS придуман для tun2socks: он единственный, кто
+      // ходит в ядро в режиме VPN, и креды ему передаются в обход человека. В
+      // режиме прокси в ядро ходит ЧУЖОЕ приложение, а системному полю «прокси»
+      // у Wi-Fi негде взять логин с паролем — там только адрес и порт. Оставь
+      // мы auth, режим не работал бы вовсе: ядро отвечает `invalid username or
+      // password` на каждое соединение.
+      // На десктопе auth в прокси-режиме невозможен всегда (системный прокси и
+      // Firefox кред не шлют), на Android — настройка.
+      final proxyModeNoAuth = connectionMode == ConnectionMode.proxy &&
+          (!Platform.isAndroid || !settings.proxyModeAuth);
 
       // Ядро выбирает ФОРМАТ сервера, а настройка — только там, где формат
       // берут оба (обычная ссылка). Готовый конфиг исполняет то ядро, на языке
@@ -497,7 +527,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
               // одним SOCKS, а лишний слушающий порт на телефоне не нужен.
               httpPort: Platform.isAndroid ? null : settings.httpPort,
               resolvedServerIp: serverIp,
-              localInboundsNoAuth: desktopProxyNoAuth,
+              localInboundsNoAuth: proxyModeNoAuth,
               apiPort: mihomoApi.port,
               apiSecret: mihomoApi.secret,
               tun: mihomoTun,
@@ -574,7 +604,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
               server.config,
               settings,
               resolvedServerIp: serverIp,
-              localInboundsNoAuth: desktopProxyNoAuth,
+              localInboundsNoAuth: proxyModeNoAuth,
               geoIndex: customGeoIndex,
             );
 
