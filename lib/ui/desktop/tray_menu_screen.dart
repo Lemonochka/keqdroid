@@ -214,7 +214,10 @@ class _TrayMenuScreenState extends ConsumerState<TrayMenuScreen> {
           status: vpnStatus,
         );
         await settingsNotifier.save(
-          settings.copyWith(connectionMode: ConnectionMode.tun.storageValue),
+          settings.copyWith(
+              connectionMode: ConnectionMode.tun.storageValue,
+              connectionModeChosen: true,
+            ),
         );
         final ok = await WindowsDesktopService.restartAsAdministrator();
         if (!ok && navContext.mounted) {

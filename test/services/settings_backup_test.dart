@@ -36,6 +36,12 @@ const _machineLocalKeys = <String>{
   // тут вообще есть.
   'tun',
   'connectionMode',
+  // Вместе с самим режимом: «выбирали ли руками» — факт про эту установку, и на
+  // чужой машине он означал бы, что за человека уже что-то решили.
+  'connectionModeChosen',
+  'proxyModeAuth',
+  'proxyModeUser',
+  'proxyModePass',
   'systemProxyEnabled',
   'coreEngine',
   // Десктопные флаги: на телефоне бессмысленны, на другом десктопе — сюрприз.

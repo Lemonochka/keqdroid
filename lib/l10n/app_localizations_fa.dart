@@ -2006,6 +2006,18 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsCoreHint => 'از اتصال بعدی اعمال می‌شود — نشست فعلی راه‌اندازی مجدد نمی‌شود.';
 
   @override
+  String get settingsProxyAuthTitle => 'رمز عبور پروکسی محلی';
+
+  @override
+  String get settingsProxyAuthSubtitle => 'برای مواردی که جایی برای وارد کردن آن نیست، مانند تنظیمات پروکسی Wi-Fi، خاموش کنید';
+
+  @override
+  String get settingsProxyAuthUser => 'نام کاربری';
+
+  @override
+  String get settingsProxyAuthPass => 'رمز عبور';
+
+  @override
   String get settingsTunnelModeSection => 'حالت اتصال';
 
   @override

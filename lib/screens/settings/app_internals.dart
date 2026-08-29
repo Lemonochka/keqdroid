@@ -82,6 +82,7 @@ class _AppInternalsScreen extends ConsumerWidget {
           children: [
             _TunnelModeTile(mode: ConnectionMode.tun),
             _TunnelModeTile(mode: ConnectionMode.proxy),
+            _ProxyAuthTile(),
           ],
         ),
         Padding(
@@ -525,6 +526,80 @@ String _coreMismatchText(AppLocalizations l10n, VpnCoreSkip skip) =>
       VpnCoreSkip.platform => l10n.settingsCoreSkipPlatform,
     };
 
+/// Пароль локального прокси и сами креды. Видна только в режиме «Прокси»: в
+/// режиме VPN в ядро ходит один tun2socks, и креды ему передаются мимо человека.
+class _ProxyAuthTile extends ConsumerWidget {
+  const _ProxyAuthTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final settings = ref.watch(settingsNotifierProvider.select((a) => a.value));
+    final chosen = settings?.connectionModeChosen ?? false;
+    final mode = chosen
+        ? ConnectionMode.fromStorage(settings?.connectionMode)
+        : ConnectionMode.tun;
+    if (mode != ConnectionMode.proxy) return const SizedBox.shrink();
+
+    final on = settings?.proxyModeAuth ?? true;
+    final user = settings?.proxyModeUser ?? '';
+    final pass = settings?.proxyModePass ?? '';
+
+    Future<void> toggle(bool v) async {
+      final s = await ref.read(settingsNotifierProvider.future);
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .save(s.copyWith(proxyModeAuth: v));
+    }
+
+    return ExpressiveGroupTile(
+      padding: const EdgeInsets.all(16),
+      onTap: () => toggle(!on),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ExpressiveIconBadge(
+                icon: Icons.password_rounded,
+                accent: ExpressiveAccent.tertiary,
+              ),
+              const SizedBox(width: ExpressiveSpacing.large),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.settingsProxyAuthTitle,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(color: AppTheme.text(context)),
+                    ),
+                    Text(
+                      l10n.settingsProxyAuthSubtitle,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: AppTheme.textLight(context)),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(value: on, onChanged: toggle),
+            ],
+          ),
+          // Креды показываем только когда они есть: до первого подключения в
+          // этом режиме их ещё не создавали, и пустые строки читались бы как
+          // «пароль пустой».
+          if (on && user.isNotEmpty && pass.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _InternalsRow(label: l10n.settingsProxyAuthUser, value: user),
+            _InternalsRow(label: l10n.settingsProxyAuthPass, value: pass),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 /// Выбор режима: полноценный VPN или только локальный прокси.
 ///
 /// Два слова взяты не наугад. «VPN» — то, чем режим является для системы:
@@ -541,9 +616,15 @@ class _TunnelModeTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final current = ConnectionMode.fromStorage(
-      ref.watch(settingsNotifierProvider.select((a) => a.value?.connectionMode)),
+    final settingsValue = ref.watch(
+      settingsNotifierProvider.select((a) => a.value),
     );
+    // Пока режим не выбирали руками, показываем VPN — ровно то, что и будет
+    // подключено (см. TunnelSessionBuilder.resolveMode). Иначе экран показывал
+    // бы «Прокси», а подключался VPN.
+    final current = (settingsValue?.connectionModeChosen ?? false)
+        ? ConnectionMode.fromStorage(settingsValue?.connectionMode)
+        : ConnectionMode.tun;
     final selected = current == mode;
     final isProxy = mode == ConnectionMode.proxy;
 
@@ -551,7 +632,10 @@ class _TunnelModeTile extends ConsumerWidget {
       if (selected) return;
       final settings = await ref.read(settingsNotifierProvider.future);
       await ref.read(settingsNotifierProvider.notifier).save(
-            settings.copyWith(connectionMode: mode.storageValue),
+            settings.copyWith(
+              connectionMode: mode.storageValue,
+              connectionModeChosen: true,
+            ),
           );
     }
 
