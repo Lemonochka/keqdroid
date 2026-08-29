@@ -2006,6 +2006,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsCoreHint => 'Gilt ab der nächsten Verbindung — die laufende Sitzung wird nicht neu gestartet.';
 
   @override
+  String get settingsTunnelModeSection => 'Verbindungsmodus';
+
+  @override
+  String get settingsTunnelModeVpn => 'VPN';
+
+  @override
+  String get settingsTunnelModeVpnSubtitle => 'Der gesamte Geräteverkehr läuft durch den Tunnel';
+
+  @override
+  String get settingsTunnelModeProxy => 'Proxy';
+
+  @override
+  String get settingsTunnelModeProxySubtitle => 'Nur ein lokaler Proxy — kein System-VPN, es wird nichts von selbst umgeleitet';
+
+  @override
+  String get settingsTunnelModeHint => 'Im Proxy-Modus öffnet die App SOCKS und HTTP auf 127.0.0.1 und leitet von sich aus nichts um: richte eine App oder die WLAN-Proxy-Einstellungen darauf. Die Ports stehen unter „Einstellungen → Lokale Ports“. Routing pro App und DNS-Abfangen gibt es nur im VPN-Modus; AmneziaWG-Server laufen immer als VPN.';
+
+  @override
   String get settingsCoreAuto => 'Automatisch';
 
   @override

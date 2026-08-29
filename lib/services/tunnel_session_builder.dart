@@ -11,8 +11,29 @@ import '../utils/singbox_tun_config.dart';
 
 /// собирает TunnelSessionRequest под платформу и режим proxy/tun
 class TunnelSessionBuilder {
-  static ConnectionMode resolveMode(AppSettings settings) {
-    if (Platform.isAndroid) return ConnectionMode.tun;
+  /// Режим сессии из настроек — теперь и на Android.
+  ///
+  /// Раньше здесь стояло жёсткое `tun`: другого пути на Android не было, весь
+  /// трафик забирал VpnService. Режим «прокси» его не поднимает вовсе — ядро
+  /// слушает 127.0.0.1, а кого через него пускать, решает пользовательница в
+  /// настройках приложений или Wi-Fi.
+  ///
+  /// AmneziaWG — исключение, и не по нашей воле: на Android его исполняет
+  /// libwg-go, который сам владеет TUN и локального прокси не открывает вовсе
+  /// (на десктопе эту роль играет wireproxy, которого в APK нет). Для таких
+  /// серверов режим остаётся VPN, иначе подключение просто не к чему было бы
+  /// подключить.
+  /// [isAndroid] параметром, а не только из [Platform]: иначе ветку про AWG не
+  /// проверить — тесты идут на хосте, где `Platform.isAndroid` всегда false.
+  static ConnectionMode resolveMode(
+    AppSettings settings, {
+    VpnBackend vpnBackend = VpnBackend.xray,
+    bool? isAndroid,
+  }) {
+    final android = isAndroid ?? Platform.isAndroid;
+    if (android && vpnBackend == VpnBackend.awg) {
+      return ConnectionMode.tun;
+    }
     return ConnectionMode.fromStorage(settings.connectionMode);
   }
 
@@ -37,7 +58,7 @@ class TunnelSessionBuilder {
     /// метод синхронный, а перечисление интерфейсов — нет.
     bool hostHasIpv6 = false,
   }) {
-    final mode = modeOverride ?? resolveMode(settings);
+    final mode = modeOverride ?? resolveMode(settings, vpnBackend: vpnBackend);
     final isAwg = vpnBackend == VpnBackend.awg;
 
     // TUN на Windows: sing-box оборачивает tun→локальный SOCKS.

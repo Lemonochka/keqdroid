@@ -72,6 +72,29 @@ class _AppInternalsScreen extends ConsumerWidget {
       ExpressiveSectionHeader(l10n.settingsInternalsBuild),
       ExpressiveGroup(children: _buildRows(l10n, data.build)),
 
+      // Режим — выше ядер: он отвечает на более крупный вопрос («забирать ли
+      // весь трафик устройства»), чем то, каким бинарём исполнять сервер.
+      // Только на Android: на десктопе тот же выбор живёт в боковой панели,
+      // рядом с кнопкой подключения, и второй его копии тут не нужно.
+      if (Platform.isAndroid) ...[
+        ExpressiveSectionHeader(l10n.settingsTunnelModeSection),
+        const ExpressiveGroup(
+          children: [
+            _TunnelModeTile(mode: ConnectionMode.tun),
+            _TunnelModeTile(mode: ConnectionMode.proxy),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+          child: Text(
+            l10n.settingsTunnelModeHint,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textLight(context),
+                ),
+          ),
+        ),
+      ],
+
       ExpressiveSectionHeader(l10n.settingsInternalsCores),
       if (data.cores.isEmpty)
         ExpressiveGroup(
@@ -501,6 +524,84 @@ String _coreMismatchText(AppLocalizations l10n, VpnCoreSkip skip) =>
       VpnCoreSkip.clashConfig => l10n.settingsCoreSkipClash,
       VpnCoreSkip.platform => l10n.settingsCoreSkipPlatform,
     };
+
+/// Выбор режима: полноценный VPN или только локальный прокси.
+///
+/// Два слова взяты не наугад. «VPN» — то, чем режим является для системы:
+/// именно его показывает ключик в статусбаре и диалог разрешения. «Прокси» —
+/// то, чем становится приложение без туннеля: локальный SOCKS/HTTP, к которому
+/// приложения подключаются сами. Ни «TUN», ни «tun2socks» тут не звучат — это
+/// имена наших внутренностей, а не то, что выбирает человек.
+class _TunnelModeTile extends ConsumerWidget {
+  final ConnectionMode mode;
+
+  const _TunnelModeTile({required this.mode});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final current = ConnectionMode.fromStorage(
+      ref.watch(settingsNotifierProvider.select((a) => a.value?.connectionMode)),
+    );
+    final selected = current == mode;
+    final isProxy = mode == ConnectionMode.proxy;
+
+    Future<void> select() async {
+      if (selected) return;
+      final settings = await ref.read(settingsNotifierProvider.future);
+      await ref.read(settingsNotifierProvider.notifier).save(
+            settings.copyWith(connectionMode: mode.storageValue),
+          );
+    }
+
+    return ExpressiveGroupTile(
+      padding: const EdgeInsets.all(16),
+      onTap: select,
+      child: Row(
+        children: [
+          ExpressiveIconBadge(
+            icon: isProxy ? Icons.lan_rounded : Icons.vpn_lock_rounded,
+            accent: isProxy
+                ? ExpressiveAccent.secondary
+                : ExpressiveAccent.primary,
+          ),
+          const SizedBox(width: ExpressiveSpacing.large),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isProxy ? l10n.settingsTunnelModeProxy : l10n.settingsTunnelModeVpn,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text(context),
+                  ),
+                ),
+                Text(
+                  isProxy
+                      ? l10n.settingsTunnelModeProxySubtitle
+                      : l10n.settingsTunnelModeVpnSubtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textLight(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: ExpressiveSpacing.large),
+          Icon(
+            selected
+                ? Icons.radio_button_checked_rounded
+                : Icons.radio_button_unchecked_rounded,
+            color: selected
+                ? AppTheme.accent(context)
+                : AppTheme.textLight(context),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// «Само»: ядро выбирает формат сервера, а не пользователь.
 ///

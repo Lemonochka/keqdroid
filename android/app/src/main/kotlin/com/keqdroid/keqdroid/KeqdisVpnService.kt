@@ -52,6 +52,16 @@ class KeqdisVpnService : VpnService() {
         const val EXTRA_CORE_ENGINE    = "core_engine"
         const val CORE_ENGINE_CHAIN    = "chain"
         const val CORE_ENGINE_KEQRNEL  = "keqrnel"
+        // Режим сессии: поднимать системный VPN или только локальный прокси.
+        //
+        // В режиме прокси сервис остаётся foreground-сервисом (тип specialUse,
+        // не vpn — см. манифест), но VpnService.establish() не вызывается вовсе:
+        // нет ни интерфейса, ни tun2socks, ни диалога разрешения. Ядро просто
+        // слушает 127.0.0.1, а loopback на Android общий для всех приложений,
+        // так что настроить на него можно кого угодно.
+        const val EXTRA_TUNNEL_MODE    = "tunnel_mode"
+        const val TUNNEL_MODE_VPN      = "tun"
+        const val TUNNEL_MODE_PROXY    = "proxy"
         // Файл логов ядра в filesDir; читается getXrayLogs (надёжнее logcat на Android 13+).
         const val CORE_LOG_FILE        = "core_logs.txt"
         // Вердикт mihomo о собственном туннеле — единственный способ узнать,
@@ -95,6 +105,9 @@ class KeqdisVpnService : VpnService() {
         // переподключаться тем же движком, что и записанный configPath.
         const val KEY_QS_LAST_CORE_ENGINE = "qs_last_core_engine"
         const val KEY_QS_LAST_CORE_KIND   = "qs_last_core_kind"
+        // Режим последнего старта: плитка обязана переподключаться тем же, иначе
+        // из «только прокси» она молча поднимала бы полноценный VPN.
+        const val KEY_QS_LAST_TUNNEL_MODE = "qs_last_tunnel_mode"
         const val KEY_QS_LAST_SERVER_NAME = "qs_last_server_name"
         const val KEY_QS_LAST_EXCLUDE_PACKAGES = "qs_last_exclude_packages"
         const val KEY_QS_LAST_INCLUDE_PACKAGES = "qs_last_include_packages"
@@ -112,6 +125,7 @@ class KeqdisVpnService : VpnService() {
     @Volatile private var lastSocksPort: Int = 2080
     @Volatile private var lastCoreEngine: String = CORE_ENGINE_KEQRNEL
     @Volatile private var lastCoreKind: String = CORE_KIND_XRAY
+    @Volatile private var lastTunnelMode: String = TUNNEL_MODE_VPN
     @Volatile private var lastExcludePackages: List<String> = emptyList()
     @Volatile private var lastIncludePackages: List<String> = emptyList()
     @Volatile private var xrayPid:            Int                   = -1
@@ -285,6 +299,17 @@ class KeqdisVpnService : VpnService() {
                     if (backend == VPN_BACKEND_MIHOMO) CORE_KIND_MIHOMO else CORE_KIND_XRAY
                 lastCoreKind = coreKind
 
+                // Режим — по той же причине, что движок и ядро: плитка стартует
+                // по сохранённому, и «только прокси» не должен превращаться в
+                // полноценный VPN от одного нажатия по плитке.
+                val tunnelMode =
+                    if (intent.getStringExtra(EXTRA_TUNNEL_MODE) == TUNNEL_MODE_PROXY) {
+                        TUNNEL_MODE_PROXY
+                    } else {
+                        TUNNEL_MODE_VPN
+                    }
+                lastTunnelMode = tunnelMode
+
                 android.util.Log.d(
                     "KEQDIS",
                     "onStartCommand: backend=$backend core=$coreKind engine=$coreEngine config=$configPath"
@@ -297,6 +322,7 @@ class KeqdisVpnService : VpnService() {
                         .putString(KEY_QS_LAST_BACKEND, backend)
                         .putString(KEY_QS_LAST_CORE_ENGINE, coreEngine)
                         .putString(KEY_QS_LAST_CORE_KIND, coreKind)
+                        .putString(KEY_QS_LAST_TUNNEL_MODE, tunnelMode)
                         .putString(KEY_QS_LAST_XRAY_CONFIG, configPath)
                         .putInt(KEY_QS_LAST_SOCKS_PORT, socksPort)
                         .putString(KEY_QS_LAST_SOCKS_USERNAME, socksUsername)
@@ -318,6 +344,7 @@ class KeqdisVpnService : VpnService() {
                         startVpnWithXray(
                             startId, configPath, socksPort, excludePkgs, includePkgs,
                             socksNoAuth = false, coreEngine = coreEngine, coreKind = coreKind,
+                            tunnelMode = tunnelMode,
                         )
                     }
                 }
@@ -385,6 +412,7 @@ class KeqdisVpnService : VpnService() {
         socksNoAuth: Boolean = false,
         coreEngine: String = CORE_ENGINE_CHAIN,
         coreKind: String = CORE_KIND_XRAY,
+        tunnelMode: String = TUNNEL_MODE_VPN,
     ) = opMutex.withLock {
         // Под opMutex: предыдущий стоп уже завершил cleanup(), порт/процессы свободны.
         if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) {
@@ -425,6 +453,10 @@ class KeqdisVpnService : VpnService() {
             }
 
             val isMihomo = coreKind == CORE_KIND_MIHOMO
+            // Только локальный прокси: интерфейса нет, значит нет ни tun2socks,
+            // ни дескриптора для mihomo, ни ожидания его tun-листенера. Ядро
+            // поднимает свои инбаунды на 127.0.0.1 — этого достаточно.
+            val proxyOnly = tunnelMode == TUNNEL_MODE_PROXY
 
             // Порядок зависит от того, кто владеет туннелем.
             //
@@ -438,7 +470,7 @@ class KeqdisVpnService : VpnService() {
             //    исчезает tun2socks, а с ним лишняя пересылка каждого пакета
             //    через локальный SOCKS; появляются перехват DNS (`dns-hijack`)
             //    и настоящий UDP.
-            if (isMihomo) {
+            if (isMihomo && !proxyOnly) {
                 val tun = buildTunInterface(excludePkgs, includePkgs)
                 tunInterface = tun
                 val tunRawFd = tun.fd
@@ -449,6 +481,13 @@ class KeqdisVpnService : VpnService() {
                     xrayConfigPath,
                     coreKind,
                     tunFd = tunRawFd,
+                )
+            } else if (isMihomo) {
+                activeSocksPort = socksPort
+                xrayPid = startXray(
+                    getBinaryPath("libmihomo.so"),
+                    xrayConfigPath,
+                    coreKind,
                 )
             } else {
                 xrayPid = startXray(
@@ -478,9 +517,9 @@ class KeqdisVpnService : VpnService() {
             // гасит `tun.enable` и работает дальше. Снаружи всё выглядит
             // здоровым: порт слушается, прокси набирается, статус «подключено»,
             // и только пакеты из tun не читает никто.
-            if (isMihomo) awaitMihomoTun()
+            if (isMihomo && !proxyOnly) awaitMihomoTun()
 
-            if (!isMihomo) {
+            if (!isMihomo && !proxyOnly) {
                 // создаём TUN-интерфейс
                 val tun = buildTunInterface(excludePkgs, includePkgs)
                 tunInterface = tun
@@ -489,11 +528,23 @@ class KeqdisVpnService : VpnService() {
                 val tunRawFd = tun.fd
                 activeSocksPort = socksPort
                 startTun2Socks(tunRawFd, socksPort, socksNoAuth = socksNoAuth)
+            } else if (proxyOnly) {
+                // Порт всё равно объявляем активным: на него смотрят экран
+                // «Внутренности» и переподключение из плитки.
+                activeSocksPort = socksPort
             }
 
             startTime = System.currentTimeMillis()
             setStatus(VpnRunStatus.RUNNING)
-            showControlNotification("Connected", isConnected = true, isTransitioning = false)
+            // Текст уведомления называет режим: в режиме прокси системного
+            // «ключика» VPN в статусбаре нет, и без подписи непонятно, работает
+            // ли вообще что-нибудь — а адрес рядом избавляет от похода в
+            // настройки за ним.
+            showControlNotification(
+                if (proxyOnly) "Proxy · 127.0.0.1:$socksPort" else "Connected",
+                isConnected = true,
+                isTransitioning = false,
+            )
             startStatsLoop()
 
         } catch (e: Exception) {

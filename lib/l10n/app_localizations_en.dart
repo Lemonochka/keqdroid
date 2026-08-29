@@ -2006,6 +2006,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCoreHint => 'Applies on the next connection — the running session is not restarted.';
 
   @override
+  String get settingsTunnelModeSection => 'Connection mode';
+
+  @override
+  String get settingsTunnelModeVpn => 'VPN';
+
+  @override
+  String get settingsTunnelModeVpnSubtitle => 'All of the device\'s traffic goes through the tunnel';
+
+  @override
+  String get settingsTunnelModeProxy => 'Proxy';
+
+  @override
+  String get settingsTunnelModeProxySubtitle => 'A local proxy only — no system VPN, nothing is captured by itself';
+
+  @override
+  String get settingsTunnelModeHint => 'In Proxy mode the app opens SOCKS and HTTP on 127.0.0.1 and captures nothing on its own: point an app or the Wi-Fi proxy settings at it. The ports are in Settings → Local ports. Per-app routing and DNS interception belong to VPN mode; AmneziaWG servers always run as VPN.';
+
+  @override
   String get settingsCoreAuto => 'Automatic';
 
   @override

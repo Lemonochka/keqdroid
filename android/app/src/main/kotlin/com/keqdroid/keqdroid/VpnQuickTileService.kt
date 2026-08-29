@@ -202,6 +202,17 @@ class VpnQuickTileService : TileService() {
             action = KeqdisVpnService.ACTION_START
             putExtra(KeqdisVpnService.EXTRA_VPN_BACKEND, backend)
             putExtra(KeqdisVpnService.EXTRA_CORE_ENGINE, coreEngine)
+            // Режим прошлого старта — по той же причине, что движок и ядро: без
+            // него плитка поднимала бы полноценный VPN поверх настройки «только
+            // прокси», то есть тихо делала бы не то, что человек выбрал. И
+            // разрешения на VPN у неё для этого может не оказаться вовсе.
+            putExtra(
+                KeqdisVpnService.EXTRA_TUNNEL_MODE,
+                prefs.getString(
+                    KeqdisVpnService.KEY_QS_LAST_TUNNEL_MODE,
+                    KeqdisVpnService.TUNNEL_MODE_VPN,
+                ) ?: KeqdisVpnService.TUNNEL_MODE_VPN,
+            )
             putExtra(KeqdisVpnService.EXTRA_XRAY_CONFIG, xrayPath)
             putExtra("socks_port", port)
             putStringArrayListExtra("exclude_packages", ArrayList(exc))

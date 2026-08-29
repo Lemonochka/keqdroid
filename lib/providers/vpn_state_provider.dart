@@ -330,12 +330,18 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             )
           : const <String>[];
 
-      if (Platform.isAndroid) {
+      var connectionMode = TunnelSessionBuilder.resolveMode(
+        settings,
+        vpnBackend: isAwg ? VpnBackend.awg : VpnBackend.xray,
+      );
+
+      // Разрешение на VPN — только если сессия и правда поднимет интерфейс.
+      // В режиме «прокси» на Android establish() не вызывается, и системный
+      // диалог был бы просьбой о праве, которым не воспользуешься.
+      if (Platform.isAndroid && connectionMode != ConnectionMode.proxy) {
         final permitted = await engine.requestVpnPermission();
         if (!permitted) throw const VpnPermissionDeniedException();
       }
-
-      var connectionMode = TunnelSessionBuilder.resolveMode(settings);
       if ((Platform.isWindows || Platform.isLinux) &&
           connectionMode == ConnectionMode.proxy &&
           routingMode != AppRoutingMode.allProxy) {

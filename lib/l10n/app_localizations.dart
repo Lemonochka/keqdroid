@@ -3881,6 +3881,42 @@ abstract class AppLocalizations {
   /// **'Applies on the next connection — the running session is not restarted.'**
   String get settingsCoreHint;
 
+  /// No description provided for @settingsTunnelModeSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection mode'**
+  String get settingsTunnelModeSection;
+
+  /// No description provided for @settingsTunnelModeVpn.
+  ///
+  /// In en, this message translates to:
+  /// **'VPN'**
+  String get settingsTunnelModeVpn;
+
+  /// No description provided for @settingsTunnelModeVpnSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All of the device\'s traffic goes through the tunnel'**
+  String get settingsTunnelModeVpnSubtitle;
+
+  /// No description provided for @settingsTunnelModeProxy.
+  ///
+  /// In en, this message translates to:
+  /// **'Proxy'**
+  String get settingsTunnelModeProxy;
+
+  /// No description provided for @settingsTunnelModeProxySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A local proxy only — no system VPN, nothing is captured by itself'**
+  String get settingsTunnelModeProxySubtitle;
+
+  /// No description provided for @settingsTunnelModeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'In Proxy mode the app opens SOCKS and HTTP on 127.0.0.1 and captures nothing on its own: point an app or the Wi-Fi proxy settings at it. The ports are in Settings → Local ports. Per-app routing and DNS interception belong to VPN mode; AmneziaWG servers always run as VPN.'**
+  String get settingsTunnelModeHint;
+
   /// No description provided for @settingsCoreAuto.
   ///
   /// In en, this message translates to:

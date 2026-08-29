@@ -2006,6 +2006,24 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsCoreHint => 'از اتصال بعدی اعمال می‌شود — نشست فعلی راه‌اندازی مجدد نمی‌شود.';
 
   @override
+  String get settingsTunnelModeSection => 'حالت اتصال';
+
+  @override
+  String get settingsTunnelModeVpn => 'VPN';
+
+  @override
+  String get settingsTunnelModeVpnSubtitle => 'همه ترافیک دستگاه از تونل عبور می‌کند';
+
+  @override
+  String get settingsTunnelModeProxy => 'پروکسی';
+
+  @override
+  String get settingsTunnelModeProxySubtitle => 'فقط پروکسی محلی — VPN سیستم روشن نمی‌شود و چیزی خودبه‌خود گرفته نمی‌شود';
+
+  @override
+  String get settingsTunnelModeHint => 'در حالت پروکسی، برنامه SOCKS و HTTP را روی 127.0.0.1 باز می‌کند و خودش چیزی را نمی‌گیرد: برنامه یا تنظیمات پروکسی Wi-Fi را به آن اشاره دهید. پورت‌ها در «تنظیمات ← پورت‌های محلی» هستند. مسیریابی هر برنامه و رهگیری DNS فقط در حالت VPN کار می‌کند؛ سرورهای AmneziaWG همیشه به شکل VPN وصل می‌شوند.';
+
+  @override
   String get settingsCoreAuto => 'خودکار';
 
   @override

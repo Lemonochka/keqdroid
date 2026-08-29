@@ -2011,6 +2011,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsCoreHint => 'Применится на следующем подключении — текущая сессия не перезапускается.';
 
   @override
+  String get settingsTunnelModeSection => 'Режим подключения';
+
+  @override
+  String get settingsTunnelModeVpn => 'VPN';
+
+  @override
+  String get settingsTunnelModeVpnSubtitle => 'Весь трафик устройства идёт через туннель';
+
+  @override
+  String get settingsTunnelModeProxy => 'Прокси';
+
+  @override
+  String get settingsTunnelModeProxySubtitle => 'Только локальный прокси — системный VPN не включается, сам по себе трафик не перехватывается';
+
+  @override
+  String get settingsTunnelModeHint => 'В режиме «Прокси» приложение поднимает SOCKS и HTTP на 127.0.0.1 и ничего не перехватывает само: направьте на них приложение или настройки прокси Wi-Fi. Порты — в «Настройки → Локальные порты». Маршрутизация по приложениям и перехват DNS работают только в режиме VPN; серверы AmneziaWG всегда подключаются как VPN.';
+
+  @override
   String get settingsCoreAuto => 'Автоматически';
 
   @override
