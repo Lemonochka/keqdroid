@@ -358,9 +358,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get routingCheatSheetBody => 'قانون‌ها فقط یک فهرست‌اند: چه چیزی از کجا برود. هر خط یک دامنه، یک آی‌پی یا یک برچسب جغرافیایی است و کنارش عملکرد — مستقیم (دور زدن)، از داخل VPN (پروکسی)، یا مسدود.\n\n## دامنه‌ها\nvk.com — خود دامنه و همهٔ زیردامنه‌هایش\nru — هر چیزی که به ru. ختم شود (کلمهٔ خالی، بدون نقطه)\nexample.com. — فقط زیردامنه‌ها، نه خود دامنه\nfull:example.com — دقیقاً همین هاست، بدون زیردامنه\nregexp:… — عبارت منظم، اگر واقعاً لازم شد\n\n## آدرس‌های آی‌پی\n1.2.3.4 — یک آدرس\n10.0.0.0/8 — یک بازهٔ کامل (CIDR)\n\n## GeoIP — بر اساس کشور\ngeoip:ru — همهٔ آی‌پی‌های روسیه. به‌جای ru هر کشوری بگذارید: us، de، cn، ua، kz…\nبستهٔ آمادهٔ دیگری هم هست: geoip:private (شبکهٔ داخلی)، geoip:telegram، geoip:google.\nکشوری لازم دارید؟ همین است — geoip همهٔ کشورها را می‌شناسد.\n\n## GeoSite — فهرست‌های آماده\ngeosite:google، geosite:netflix، geosite:telegram، geosite:category-ads-all…\nاین‌ها کشور نیستند، دسته‌بندی سرویس‌اند که از قبل برایتان جمع شده.\nکشور اینجا تقریباً نیست (فقط geolocation-cn و geolocation-!cn)، پس کار کشوری با geoip است.\n\n## روی کامپیوتر (هستهٔ keqrnel)\nبخش جغرافیایی مثل موبایل کار می‌کند: xray داخل keqrnel تطابق را انجام می‌دهد. فقط باید geoip.dat و geosite.dat کنار keqdroid.exe باشند — در نسخهٔ رسمی از قبل آنجا هستند. اگر قوانین جغرافیایی نادیده گرفته می‌شوند، اول همین دو فایل را ببینید.\n\n## ترتیب\nاز بالا به پایین: اول مسدود، بعد سرور خودتان (همیشه مستقیم، وگرنه حلقه می‌شود)، بعد دور زدن، بعد پروکسی. هرچه ماند، از کلید «ترافیک بدون قانون» در بالا پیروی می‌کند.';
 
   @override
-  String get settingsRoutingSavedToast => 'مسیریابی به‌روز شد';
-
-  @override
   String settingsRoutingItemCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -431,21 +428,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String settingsLanSharingOnIp(Object ip) {
     return 'در حال اشتراک روی $ip';
   }
-
-  @override
-  String get settingsHwidTitle => 'ارسال شناسهٔ دستگاه (HWID)';
-
-  @override
-  String get settingsHwidEnabledRecommended => 'فعال (توصیه می‌شود)';
-
-  @override
-  String get settingsHwidDisabled => 'غیرفعال';
-
-  @override
-  String get settingsHwidEnabledHint => 'بعضی فروشنده‌ها برای به‌روزرسانی اشتراک و محدودیت تعداد دستگاه به HWID نیاز دارند.';
-
-  @override
-  String get settingsHwidDisabledHint => 'هدرهای HWID ارسال نمی‌شوند. اگر فروشنده اتصال به دستگاه را لازم بداند، بعضی اشتراک‌ها کار نمی‌کنند.';
 
   @override
   String get settingsDeviceIpListTitle => 'آدرس‌های آی‌پی دستگاه در شبکه:';
@@ -832,25 +814,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get subscriptionsSave => 'ذخیره';
 
   @override
-  String get subscriptionsMoveUp => 'انتقال به بالا';
-
-  @override
-  String get subscriptionsMoveDown => 'انتقال به پایین';
-
-  @override
-  String get subscriptionsAutoUpdate => 'به‌روزرسانی';
-
-  @override
-  String get subscriptionsOn => 'روشن';
-
-  @override
   String get subscriptionsOff => 'خاموش';
 
   @override
   String get subscriptionsExpired => 'منقضی شده';
-
-  @override
-  String get subscriptionsRefreshFailed => 'به‌روزرسانی ناموفق بود';
 
   @override
   String get subscriptionsEveryHour => 'هر ساعت';
@@ -922,9 +889,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversImportFile => 'وارد کردن از فایل';
 
   @override
-  String get serversNotSupported => 'در این نسخه پشتیبانی نمی‌شود';
-
-  @override
   String get serversAddServerTitle => 'افزودن سرور';
 
   @override
@@ -985,7 +949,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsBackupRestore => 'پشتیبان‌گیری و بازیابی';
 
   @override
-  String get settingsBackupRestoreSubtitle => 'خروجی و ورودی گرفتن از پروکسی هر برنامه، اشتراک‌ها و سرورها';
+  String get settingsBackupRestoreSubtitle => 'خروجی و ورودی گرفتن از پروکسی هر برنامه، اشتراک‌ها، سرورها و تنظیمات';
 
   @override
   String get settingsSelectAtLeastOne => 'برای خروجی گرفتن دست‌کم یک بخش را انتخاب کنید';
@@ -1018,6 +982,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsServersActive => 'سرورها (و سرور فعال)';
 
   @override
+  String get settingsAppSettings => 'تنظیمات برنامه';
+
+  @override
+  String get settingsAppSettingsHint => 'مسیریابی، DNS، ظاهر، پینگ و زبان. پورت‌ها، اشتراک‌گذاری در شبکه محلی و TUN همان‌گونه که روی این دستگاه هستند باقی می‌مانند.';
+
+  @override
   String get settingsImport => 'وارد کردن';
 
   @override
@@ -1045,9 +1015,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get settingsDebugModeOff => 'خاموش';
-
-  @override
-  String get settingsDebugModeHint => 'آمار زندهٔ VPN را روی کارت سرورها نشان می‌دهد و اجازهٔ دیدن گزارش‌های هسته را می‌دهد.';
 
   @override
   String get settingsOpenXrayLogs => 'گزارش‌های هسته';
@@ -1080,120 +1047,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsNewVersionAvailable => 'نسخهٔ جدید موجود است';
 
   @override
-  String settingsSize(Object size) {
-    return 'حجم: $size';
-  }
-
-  @override
   String get settingsDownloading => 'در حال دانلود...';
 
   @override
   String get settingsCheckForUpdates => 'بررسی به‌روزرسانی';
-
-  @override
-  String get settingsShareDeviceHwid => 'ارسال شناسهٔ دستگاه';
-
-  @override
-  String get settingsHwidWillBeSent => 'HWID همراه درخواست‌های اشتراک فرستاده می‌شود';
-
-  @override
-  String get settingsHwidNotShared => 'HWID فرستاده نمی‌شود';
-
-  @override
-  String get settingsHwidHint => 'با فعال بودن این گزینه، شناسهٔ یکتای دستگاه شما (HWID) برای سرورهای اشتراک فرستاده می‌شود. بعضی فروشنده‌ها برای اتصال اشتراک به دستگاه به آن نیاز دارند. برای حریم خصوصی بیشتر خاموشش کنید.';
-
-  @override
-  String get settingsRoutingRules => 'قوانین مسیریابی';
-
-  @override
-  String get settingsNoRules => 'قانونی ندارید';
-
-  @override
-  String get settingsAddCustomRule => 'افزودن قانون دلخواه';
-
-  @override
-  String get settingsAddRule => 'افزودن قانون';
-
-  @override
-  String get settingsEditRule => 'ویرایش قانون مسیریابی';
-
-  @override
-  String get settingsRuleName => 'نام قانون';
-
-  @override
-  String get settingsType => 'نوع';
-
-  @override
-  String get settingsAction => 'عملکرد';
-
-  @override
-  String get settingsValues => 'مقادیر (چه چیزی تطبیق داده شود)';
-
-  @override
-  String get settingsOrder => 'ترتیب (اولویت قانون)';
-
-  @override
-  String get settingsEnabled => 'فعال';
-
-  @override
-  String get settingsNameAndValuesRequired => 'نام و مقادیر الزامی است';
-
-  @override
-  String get settingsUseOnePerLine => 'هر مقدار را در یک خط بنویسید، یا با ویرگول جدا کنید.';
-
-  @override
-  String get settingsSmallerOrderFirst => 'عدد کوچک‌تر = زودتر بررسی می‌شود (مثلاً 1 قبل از 50)';
-
-  @override
-  String get settingsSmallerOrderWins => 'اگر دو قانون بتوانند یک ترافیک را بگیرند، قانونی که ترتیب کوچک‌تری دارد برنده است.';
-
-  @override
-  String get settingsSaveChanges => 'ذخیرهٔ تغییرات';
-
-  @override
-  String get settingsDeleteRule => 'حذف قانون';
-
-  @override
-  String get settingsAddRuleTooltip => 'افزودن قانون';
-
-  @override
-  String get settingsDomain => 'دامنه';
-
-  @override
-  String get settingsIpCidr => 'IP CIDR';
-
-  @override
-  String get settingsGeoIp => 'GeoIP';
-
-  @override
-  String get settingsGeosite => 'GeoSite';
-
-  @override
-  String get settingsProcess => 'پروسه';
-
-  @override
-  String get settingsProxy => 'پروکسی';
-
-  @override
-  String get settingsDirect => 'مستقیم';
-
-  @override
-  String get settingsBlock => 'مسدود';
-
-  @override
-  String get settingsEgDomain => 'مثلاً youtube.com، google+';
-
-  @override
-  String get settingsEgIpCidr => 'مثلاً 1.1.1.1/32، 192.168.0.0/16';
-
-  @override
-  String get settingsEgGeoip => 'مثلاً RU، US، DE';
-
-  @override
-  String get settingsEgGeosite => 'مثلاً category-ads-all';
-
-  @override
-  String get settingsEgProcess => 'مثلاً com.telegram.messenger';
 
   @override
   String settingsExportFailed(Object error) {
@@ -1214,9 +1071,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String settingsCheckFailedError(Object error) {
     return 'بررسی ناموفق بود: $error';
   }
-
-  @override
-  String get settingsNoXrayLogsYet => 'هنوز گزارشی از هسته نیست';
 
   @override
   String get settingsLanguageTitle => 'زبان';
@@ -1268,18 +1122,6 @@ class AppLocalizationsFa extends AppLocalizations {
   }
 
   @override
-  String get splitRunningApps => 'در حال اجرا';
-
-  @override
-  String get splitInstalledApps => 'نصب‌شده';
-
-  @override
-  String get splitCustomApps => 'موارد دستی';
-
-  @override
-  String get splitClearAll => 'پاک کردن همه';
-
-  @override
   String get splitProxyModeWarning => 'در حالت پروکسی، پروکسی هر برنامه اعمال نمی‌شود — همهٔ ترافیک از پروکسی سیستم رد می‌شود. برای اینکه قوانین هر برنامه کار کنند، حالت اتصال را از پنل کناری روی TUN بگذارید.';
 
   @override
@@ -1287,9 +1129,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get serversPingServer => 'پینگ سرور';
-
-  @override
-  String get serversHealthCheck => 'بررسی سلامت';
 
   @override
   String get serversCopyAddress => 'کپی آدرس سرور';
@@ -1307,27 +1146,16 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversDeleteServer => 'حذف سرور';
 
   @override
-  String get serversHealthCheckDesc => 'بررسی DNS، TCP و درستی کانفیگ';
-
-  @override
   String get settingsDebugHintDesktop => 'گزارش‌های نشست هسته را نشان می‌دهد. آمار زندهٔ VPN زیر دکمهٔ اتصال دیده می‌شود.';
 
   @override
   String get settingsDebugHintMobile => 'آمار زندهٔ VPN را روی کارت سرورها و گزارش‌های هسته را نشان می‌دهد.';
 
   @override
-  String serversErrorLoadingApps(Object error) {
-    return 'خطا در بارگذاری برنامه‌ها: $error';
-  }
-
-  @override
   String get desktopConnectionMode => 'حالت اتصال';
 
   @override
   String get desktopModeShort => 'حالت';
-
-  @override
-  String get desktopDisconnectBeforeModeChange => 'برای تغییر حالت اتصال، اول قطع کنید';
 
   @override
   String get settingsDesktopTitle => 'ویندوز';
@@ -1372,12 +1200,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get desktopTunAdminRestartFailed => 'اجرای دوباره با دسترسی مدیر ممکن نشد';
 
   @override
-  String get trayMenuTitle => 'KeqDroid';
-
-  @override
-  String get trayCloseMenu => 'بستن منو';
-
-  @override
   String get trayConnect => 'اتصال';
 
   @override
@@ -1388,9 +1210,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get trayExit => 'خروج';
-
-  @override
-  String get trayServersSection => 'سرورها';
 
   @override
   String get trayPickServer => 'انتخاب سرور…';
@@ -1461,40 +1280,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get serversEmptyGroupHint => 'این اشتراک سروری ندارد';
-
-  @override
-  String healthCheckChecksPassed(Object passed, Object total) {
-    return 'بررسی‌های موفق: $passed/$total';
-  }
-
-  @override
-  String get healthCheckServerFields => 'فیلدهای سرور';
-
-  @override
-  String get healthCheckDnsResolve => 'تبدیل نام به آی‌پی (DNS)';
-
-  @override
-  String get healthCheckTcpHandshake => 'دست‌دهی TCP';
-
-  @override
-  String get healthCheckConfigFormat => 'قالب کانفیگ';
-
-  @override
-  String get healthCheckNoIpResolved => 'آی‌پی به دست نیامد';
-
-  @override
-  String healthCheckDnsFailed(Object error) {
-    return 'ناموفق: $error';
-  }
-
-  @override
-  String get healthCheckUriFormat => 'قالب URI شناسایی شد';
-
-  @override
-  String get healthCheckMissingScheme => 'طرح URI وجود ندارد';
-
-  @override
-  String get healthCheckConfigEmpty => 'کانفیگ خالی است';
 
   @override
   String get statsInLabel => 'ورودی';
@@ -2178,9 +1963,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get chainEdit => 'Edit chain';
 
   @override
-  String get chainDuplicate => 'Duplicate chain';
-
-  @override
   String get chainDelete => 'Delete chain';
 
   @override
@@ -2343,6 +2125,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsInternalsUnavailable => '—';
 
   @override
+  String get appearanceUiScaleTitle => 'اندازه رابط کاربری';
+
+  @override
+  String get appearanceUiScaleSubtitle => 'روی اندازه متن سیستم اعمال می‌شود، پس ۱۰۰٪ یعنی «مانند سیستم». متن و ارتفاع سطرهای فهرست تغییر می‌کند؛ نمادها و فاصله‌ها ثابت می‌مانند.';
+
+  @override
   String get appearanceIconShapeTitle => 'شکل نمادها';
 
   @override
@@ -2362,12 +2150,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get subscriptionCardLookTitle => 'ظاهر کارت';
-
-  @override
-  String get subscriptionCardLookDefault => 'پیش‌فرض';
-
-  @override
-  String get subscriptionCardLookThemeOn => 'پس‌زمینه فعال';
 
   @override
   String get subscriptionCardVeilTitle => 'تیرگی تصویر';

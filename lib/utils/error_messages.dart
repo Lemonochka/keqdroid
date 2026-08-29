@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../core/exceptions.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 
@@ -154,7 +154,7 @@ UiErrorMessage explainError(Object error) {
       msg.contains('connection error') ||
       msg.contains('socketexception') ||
       msg.contains('network error') ||
-      error is TimeoutException) {
+      error is RequestTimeoutException) {
     return const UiErrorMessage(
       kind: UiErrorKind.network,
       code: UiErrorCode.network,

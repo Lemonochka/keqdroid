@@ -22,31 +22,15 @@ class SubscriptionFetchException extends NetworkException {
   const SubscriptionFetchException(super.message, {required this.url, super.cause});
 }
 
-class TimeoutException extends NetworkException {
-  const TimeoutException(super.message, {super.cause});
-}
-
-// парсинг
-
-class ParseException extends AppException {
-  final String? raw;
-
-  const ParseException(super.message, {this.raw, super.cause});
-}
-
-class UnsupportedProtocolException extends ParseException {
-  final String scheme;
-
-  const UnsupportedProtocolException(this.scheme)
-      : super('Unsupported protocol scheme: $scheme');
-}
-
-class InvalidBase64Exception extends ParseException {
-  const InvalidBase64Exception(super.message, {super.raw, super.cause});
-}
-
-class InvalidUriException extends ParseException {
-  const InvalidUriException(super.message, {super.raw, super.cause});
+/// Свой таймаут запроса — НЕ `dart:async`.
+///
+/// Имя с приставкой намеренно: раньше класс звался `TimeoutException`, и в
+/// файле, импортирующем и его, и `dart:async`, побеждал он (не-SDK объявление
+/// перекрывает одноимённое из `dart:`), а в остальных — SDK'шный. Получалось,
+/// что `on TimeoutException` в разных файлах ловил РАЗНОЕ, и по имени это никак
+/// не читалось.
+class RequestTimeoutException extends NetworkException {
+  const RequestTimeoutException(super.message, {super.cause});
 }
 
 // vpn / platform channel
@@ -75,10 +59,4 @@ class PlatformChannelException extends AppException {
 
 class StorageException extends AppException {
   const StorageException(super.message, {super.cause});
-}
-
-// конфиг
-
-class ConfigBuilderException extends AppException {
-  const ConfigBuilderException(super.message, {super.cause});
 }

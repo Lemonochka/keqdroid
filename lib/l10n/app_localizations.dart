@@ -767,12 +767,6 @@ abstract class AppLocalizations {
   /// **'Rules are just a list: what goes where. Each line is a domain, an IP, or a geo tag, and next to it the action — straight out (bypass), through the VPN (proxy), or blocked.\n\n## Domains\nvk.com — the domain itself and all its subdomains\nru — anything ending in .ru (a bare word, no dot)\n.example.com — subdomains only, not the domain itself\nfull:example.com — exactly this host, no subdomains\nregexp:… — a regex, if you really need to get fancy\n\n## IP addresses\n1.2.3.4 — a single address\n10.0.0.0/8 — a whole range (CIDR)\n\n## GeoIP — by country\ngeoip:ru — every Russian IP. Swap ru for any country: us, de, cn, ua, kz…\nPlus ready-made bundles: geoip:private (LAN), geoip:telegram, geoip:google.\nNeed it by country? This is the one — geoip knows them all.\n\n## GeoSite — ready-made lists\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nThese aren\'t countries but service categories someone already put together for you.\nHardly any countries here (just geolocation-cn and geolocation-!cn), so by-country is really geoip\'s job.\n\n## On PC (keqrnel core)\nGeo works the same as on the phone: the xray built into keqrnel does the matching. It just needs geoip.dat and geosite.dat sitting next to keqdroid.exe — a release build already has them there. If geo rules look ignored, check those two files first.\n\n## Order\nTop to bottom: block first, then your server (always direct, or you\'d get a loop), then bypass, then proxy. Whatever is left follows the Unmatched traffic switch up top.'**
   String get routingCheatSheetBody;
 
-  /// No description provided for @settingsRoutingSavedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Routing updated'**
-  String get settingsRoutingSavedToast;
-
   /// No description provided for @settingsRoutingItemCount.
   ///
   /// In en, this message translates to:
@@ -886,36 +880,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sharing on {ip}'**
   String settingsLanSharingOnIp(Object ip);
-
-  /// No description provided for @settingsHwidTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Send device HWID'**
-  String get settingsHwidTitle;
-
-  /// No description provided for @settingsHwidEnabledRecommended.
-  ///
-  /// In en, this message translates to:
-  /// **'Enabled (recommended)'**
-  String get settingsHwidEnabledRecommended;
-
-  /// No description provided for @settingsHwidDisabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Disabled'**
-  String get settingsHwidDisabled;
-
-  /// No description provided for @settingsHwidEnabledHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Some providers require HWID for subscription updates and device limits.'**
-  String get settingsHwidEnabledHint;
-
-  /// No description provided for @settingsHwidDisabledHint.
-  ///
-  /// In en, this message translates to:
-  /// **'HWID headers are not sent. Some subscriptions may fail if provider requires device binding.'**
-  String get settingsHwidDisabledHint;
 
   /// No description provided for @settingsDeviceIpListTitle.
   ///
@@ -1673,30 +1637,6 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get subscriptionsSave;
 
-  /// No description provided for @subscriptionsMoveUp.
-  ///
-  /// In en, this message translates to:
-  /// **'Move up'**
-  String get subscriptionsMoveUp;
-
-  /// No description provided for @subscriptionsMoveDown.
-  ///
-  /// In en, this message translates to:
-  /// **'Move down'**
-  String get subscriptionsMoveDown;
-
-  /// No description provided for @subscriptionsAutoUpdate.
-  ///
-  /// In en, this message translates to:
-  /// **'Auto-update'**
-  String get subscriptionsAutoUpdate;
-
-  /// No description provided for @subscriptionsOn.
-  ///
-  /// In en, this message translates to:
-  /// **'ON'**
-  String get subscriptionsOn;
-
   /// No description provided for @subscriptionsOff.
   ///
   /// In en, this message translates to:
@@ -1708,12 +1648,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Expired'**
   String get subscriptionsExpired;
-
-  /// No description provided for @subscriptionsRefreshFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Refresh failed'**
-  String get subscriptionsRefreshFailed;
 
   /// No description provided for @subscriptionsEveryHour.
   ///
@@ -1816,12 +1750,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Import file'**
   String get serversImportFile;
-
-  /// No description provided for @serversNotSupported.
-  ///
-  /// In en, this message translates to:
-  /// **'Not supported in this build'**
-  String get serversNotSupported;
 
   /// No description provided for @serversAddServerTitle.
   ///
@@ -1946,7 +1874,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsBackupRestoreSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Export/import split tunneling, subscriptions and servers'**
+  /// **'Export/import split tunneling, subscriptions, servers and settings'**
   String get settingsBackupRestoreSubtitle;
 
   /// No description provided for @settingsSelectAtLeastOne.
@@ -2009,6 +1937,18 @@ abstract class AppLocalizations {
   /// **'Servers (and active server)'**
   String get settingsServersActive;
 
+  /// No description provided for @settingsAppSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'App settings'**
+  String get settingsAppSettings;
+
+  /// No description provided for @settingsAppSettingsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing, DNS, appearance, ping and language. Ports, LAN sharing and TUN stay as they are on this machine.'**
+  String get settingsAppSettingsHint;
+
   /// No description provided for @settingsImport.
   ///
   /// In en, this message translates to:
@@ -2062,12 +2002,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Off'**
   String get settingsDebugModeOff;
-
-  /// No description provided for @settingsDebugModeHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Shows live VPN metrics in server cards and allows viewing core logs.'**
-  String get settingsDebugModeHint;
 
   /// No description provided for @settingsOpenXrayLogs.
   ///
@@ -2129,12 +2063,6 @@ abstract class AppLocalizations {
   /// **'New version available'**
   String get settingsNewVersionAvailable;
 
-  /// No description provided for @settingsSize.
-  ///
-  /// In en, this message translates to:
-  /// **'Size: {size}'**
-  String settingsSize(Object size);
-
   /// No description provided for @settingsDownloading.
   ///
   /// In en, this message translates to:
@@ -2146,216 +2074,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check for updates'**
   String get settingsCheckForUpdates;
-
-  /// No description provided for @settingsShareDeviceHwid.
-  ///
-  /// In en, this message translates to:
-  /// **'Share device HWID'**
-  String get settingsShareDeviceHwid;
-
-  /// No description provided for @settingsHwidWillBeSent.
-  ///
-  /// In en, this message translates to:
-  /// **'HWID will be sent with subscription requests'**
-  String get settingsHwidWillBeSent;
-
-  /// No description provided for @settingsHwidNotShared.
-  ///
-  /// In en, this message translates to:
-  /// **'HWID not shared'**
-  String get settingsHwidNotShared;
-
-  /// No description provided for @settingsHwidHint.
-  ///
-  /// In en, this message translates to:
-  /// **'When enabled, your device\'s unique ID (HWID) is sent to subscription servers. Required by some providers for HWID binding. Disable to increase privacy.'**
-  String get settingsHwidHint;
-
-  /// No description provided for @settingsRoutingRules.
-  ///
-  /// In en, this message translates to:
-  /// **'Routing Rules'**
-  String get settingsRoutingRules;
-
-  /// No description provided for @settingsNoRules.
-  ///
-  /// In en, this message translates to:
-  /// **'No rules'**
-  String get settingsNoRules;
-
-  /// No description provided for @settingsAddCustomRule.
-  ///
-  /// In en, this message translates to:
-  /// **'Add custom rule'**
-  String get settingsAddCustomRule;
-
-  /// No description provided for @settingsAddRule.
-  ///
-  /// In en, this message translates to:
-  /// **'Add rule'**
-  String get settingsAddRule;
-
-  /// No description provided for @settingsEditRule.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit routing rule'**
-  String get settingsEditRule;
-
-  /// No description provided for @settingsRuleName.
-  ///
-  /// In en, this message translates to:
-  /// **'Rule name'**
-  String get settingsRuleName;
-
-  /// No description provided for @settingsType.
-  ///
-  /// In en, this message translates to:
-  /// **'Type'**
-  String get settingsType;
-
-  /// No description provided for @settingsAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Action'**
-  String get settingsAction;
-
-  /// No description provided for @settingsValues.
-  ///
-  /// In en, this message translates to:
-  /// **'Values (what to match)'**
-  String get settingsValues;
-
-  /// No description provided for @settingsOrder.
-  ///
-  /// In en, this message translates to:
-  /// **'Order (rule priority)'**
-  String get settingsOrder;
-
-  /// No description provided for @settingsEnabled.
-  ///
-  /// In en, this message translates to:
-  /// **'Enabled'**
-  String get settingsEnabled;
-
-  /// No description provided for @settingsNameAndValuesRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Name and values are required'**
-  String get settingsNameAndValuesRequired;
-
-  /// No description provided for @settingsUseOnePerLine.
-  ///
-  /// In en, this message translates to:
-  /// **'Use one value per line, or separate with commas.'**
-  String get settingsUseOnePerLine;
-
-  /// No description provided for @settingsSmallerOrderFirst.
-  ///
-  /// In en, this message translates to:
-  /// **'Smaller number = checked earlier (e.g. 1 before 50)'**
-  String get settingsSmallerOrderFirst;
-
-  /// No description provided for @settingsSmallerOrderWins.
-  ///
-  /// In en, this message translates to:
-  /// **'If two rules can match the same traffic, the rule with smaller order wins.'**
-  String get settingsSmallerOrderWins;
-
-  /// No description provided for @settingsSaveChanges.
-  ///
-  /// In en, this message translates to:
-  /// **'Save changes'**
-  String get settingsSaveChanges;
-
-  /// No description provided for @settingsDeleteRule.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete rule'**
-  String get settingsDeleteRule;
-
-  /// No description provided for @settingsAddRuleTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Add rule'**
-  String get settingsAddRuleTooltip;
-
-  /// No description provided for @settingsDomain.
-  ///
-  /// In en, this message translates to:
-  /// **'Domain'**
-  String get settingsDomain;
-
-  /// No description provided for @settingsIpCidr.
-  ///
-  /// In en, this message translates to:
-  /// **'IP CIDR'**
-  String get settingsIpCidr;
-
-  /// No description provided for @settingsGeoIp.
-  ///
-  /// In en, this message translates to:
-  /// **'GeoIP'**
-  String get settingsGeoIp;
-
-  /// No description provided for @settingsGeosite.
-  ///
-  /// In en, this message translates to:
-  /// **'Geosite'**
-  String get settingsGeosite;
-
-  /// No description provided for @settingsProcess.
-  ///
-  /// In en, this message translates to:
-  /// **'Process'**
-  String get settingsProcess;
-
-  /// No description provided for @settingsProxy.
-  ///
-  /// In en, this message translates to:
-  /// **'Proxy'**
-  String get settingsProxy;
-
-  /// No description provided for @settingsDirect.
-  ///
-  /// In en, this message translates to:
-  /// **'Direct'**
-  String get settingsDirect;
-
-  /// No description provided for @settingsBlock.
-  ///
-  /// In en, this message translates to:
-  /// **'Block'**
-  String get settingsBlock;
-
-  /// No description provided for @settingsEgDomain.
-  ///
-  /// In en, this message translates to:
-  /// **'e.g. youtube.com, +google'**
-  String get settingsEgDomain;
-
-  /// No description provided for @settingsEgIpCidr.
-  ///
-  /// In en, this message translates to:
-  /// **'e.g. 1.1.1.1/32, 192.168.0.0/16'**
-  String get settingsEgIpCidr;
-
-  /// No description provided for @settingsEgGeoip.
-  ///
-  /// In en, this message translates to:
-  /// **'e.g. RU, US, DE'**
-  String get settingsEgGeoip;
-
-  /// No description provided for @settingsEgGeosite.
-  ///
-  /// In en, this message translates to:
-  /// **'e.g. category-ads-all'**
-  String get settingsEgGeosite;
-
-  /// No description provided for @settingsEgProcess.
-  ///
-  /// In en, this message translates to:
-  /// **'e.g. com.telegram.messenger'**
-  String get settingsEgProcess;
 
   /// No description provided for @settingsExportFailed.
   ///
@@ -2380,12 +2098,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check failed: {error}'**
   String settingsCheckFailedError(Object error);
-
-  /// No description provided for @settingsNoXrayLogsYet.
-  ///
-  /// In en, this message translates to:
-  /// **'No core logs yet'**
-  String get settingsNoXrayLogsYet;
 
   /// No description provided for @settingsLanguageTitle.
   ///
@@ -2477,30 +2189,6 @@ abstract class AppLocalizations {
   /// **'Added: {name}'**
   String splitAddAppAdded(Object name);
 
-  /// No description provided for @splitRunningApps.
-  ///
-  /// In en, this message translates to:
-  /// **'Running'**
-  String get splitRunningApps;
-
-  /// No description provided for @splitInstalledApps.
-  ///
-  /// In en, this message translates to:
-  /// **'Installed'**
-  String get splitInstalledApps;
-
-  /// No description provided for @splitCustomApps.
-  ///
-  /// In en, this message translates to:
-  /// **'Manual entries'**
-  String get splitCustomApps;
-
-  /// No description provided for @splitClearAll.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear all'**
-  String get splitClearAll;
-
   /// No description provided for @splitProxyModeWarning.
   ///
   /// In en, this message translates to:
@@ -2518,12 +2206,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ping server'**
   String get serversPingServer;
-
-  /// No description provided for @serversHealthCheck.
-  ///
-  /// In en, this message translates to:
-  /// **'Health check'**
-  String get serversHealthCheck;
 
   /// No description provided for @serversCopyAddress.
   ///
@@ -2555,12 +2237,6 @@ abstract class AppLocalizations {
   /// **'Delete server'**
   String get serversDeleteServer;
 
-  /// No description provided for @serversHealthCheckDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'DNS, TCP and config validation'**
-  String get serversHealthCheckDesc;
-
   /// No description provided for @settingsDebugHintDesktop.
   ///
   /// In en, this message translates to:
@@ -2573,12 +2249,6 @@ abstract class AppLocalizations {
   /// **'Shows live VPN metrics in server cards and core logs.'**
   String get settingsDebugHintMobile;
 
-  /// No description provided for @serversErrorLoadingApps.
-  ///
-  /// In en, this message translates to:
-  /// **'Error loading apps: {error}'**
-  String serversErrorLoadingApps(Object error);
-
   /// No description provided for @desktopConnectionMode.
   ///
   /// In en, this message translates to:
@@ -2590,12 +2260,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mode'**
   String get desktopModeShort;
-
-  /// No description provided for @desktopDisconnectBeforeModeChange.
-  ///
-  /// In en, this message translates to:
-  /// **'Disconnect before changing connection mode'**
-  String get desktopDisconnectBeforeModeChange;
 
   /// No description provided for @settingsDesktopTitle.
   ///
@@ -2681,18 +2345,6 @@ abstract class AppLocalizations {
   /// **'Could not restart as administrator'**
   String get desktopTunAdminRestartFailed;
 
-  /// No description provided for @trayMenuTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'KeqDroid'**
-  String get trayMenuTitle;
-
-  /// No description provided for @trayCloseMenu.
-  ///
-  /// In en, this message translates to:
-  /// **'Close menu'**
-  String get trayCloseMenu;
-
   /// No description provided for @trayConnect.
   ///
   /// In en, this message translates to:
@@ -2716,12 +2368,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Exit'**
   String get trayExit;
-
-  /// No description provided for @trayServersSection.
-  ///
-  /// In en, this message translates to:
-  /// **'Servers'**
-  String get trayServersSection;
 
   /// No description provided for @trayPickServer.
   ///
@@ -2854,66 +2500,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No servers in this subscription'**
   String get serversEmptyGroupHint;
-
-  /// No description provided for @healthCheckChecksPassed.
-  ///
-  /// In en, this message translates to:
-  /// **'Checks passed: {passed}/{total}'**
-  String healthCheckChecksPassed(Object passed, Object total);
-
-  /// No description provided for @healthCheckServerFields.
-  ///
-  /// In en, this message translates to:
-  /// **'Server fields'**
-  String get healthCheckServerFields;
-
-  /// No description provided for @healthCheckDnsResolve.
-  ///
-  /// In en, this message translates to:
-  /// **'DNS resolve'**
-  String get healthCheckDnsResolve;
-
-  /// No description provided for @healthCheckTcpHandshake.
-  ///
-  /// In en, this message translates to:
-  /// **'TCP handshake'**
-  String get healthCheckTcpHandshake;
-
-  /// No description provided for @healthCheckConfigFormat.
-  ///
-  /// In en, this message translates to:
-  /// **'Config format'**
-  String get healthCheckConfigFormat;
-
-  /// No description provided for @healthCheckNoIpResolved.
-  ///
-  /// In en, this message translates to:
-  /// **'No IP resolved'**
-  String get healthCheckNoIpResolved;
-
-  /// No description provided for @healthCheckDnsFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed: {error}'**
-  String healthCheckDnsFailed(Object error);
-
-  /// No description provided for @healthCheckUriFormat.
-  ///
-  /// In en, this message translates to:
-  /// **'URI format detected'**
-  String get healthCheckUriFormat;
-
-  /// No description provided for @healthCheckMissingScheme.
-  ///
-  /// In en, this message translates to:
-  /// **'Missing URI scheme'**
-  String get healthCheckMissingScheme;
-
-  /// No description provided for @healthCheckConfigEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'Config is empty'**
-  String get healthCheckConfigEmpty;
 
   /// No description provided for @statsInLabel.
   ///
@@ -4235,12 +3821,6 @@ abstract class AppLocalizations {
   /// **'Edit chain'**
   String get chainEdit;
 
-  /// No description provided for @chainDuplicate.
-  ///
-  /// In en, this message translates to:
-  /// **'Duplicate chain'**
-  String get chainDuplicate;
-
   /// No description provided for @chainDelete.
   ///
   /// In en, this message translates to:
@@ -4535,6 +4115,18 @@ abstract class AppLocalizations {
   /// **'—'**
   String get settingsInternalsUnavailable;
 
+  /// No description provided for @appearanceUiScaleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Interface size'**
+  String get appearanceUiScaleTitle;
+
+  /// No description provided for @appearanceUiScaleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied on top of the system text size, so 100% means \"as the system says\". Text and list rows resize; icons and spacing stay as they are.'**
+  String get appearanceUiScaleSubtitle;
+
   /// No description provided for @appearanceIconShapeTitle.
   ///
   /// In en, this message translates to:
@@ -4576,18 +4168,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Card look'**
   String get subscriptionCardLookTitle;
-
-  /// No description provided for @subscriptionCardLookDefault.
-  ///
-  /// In en, this message translates to:
-  /// **'Default'**
-  String get subscriptionCardLookDefault;
-
-  /// No description provided for @subscriptionCardLookThemeOn.
-  ///
-  /// In en, this message translates to:
-  /// **'Backdrop on'**
-  String get subscriptionCardLookThemeOn;
 
   /// No description provided for @subscriptionCardVeilTitle.
   ///

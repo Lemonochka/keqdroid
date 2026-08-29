@@ -358,9 +358,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routingCheatSheetBody => 'Rules are just a list: what goes where. Each line is a domain, an IP, or a geo tag, and next to it the action — straight out (bypass), through the VPN (proxy), or blocked.\n\n## Domains\nvk.com — the domain itself and all its subdomains\nru — anything ending in .ru (a bare word, no dot)\n.example.com — subdomains only, not the domain itself\nfull:example.com — exactly this host, no subdomains\nregexp:… — a regex, if you really need to get fancy\n\n## IP addresses\n1.2.3.4 — a single address\n10.0.0.0/8 — a whole range (CIDR)\n\n## GeoIP — by country\ngeoip:ru — every Russian IP. Swap ru for any country: us, de, cn, ua, kz…\nPlus ready-made bundles: geoip:private (LAN), geoip:telegram, geoip:google.\nNeed it by country? This is the one — geoip knows them all.\n\n## GeoSite — ready-made lists\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nThese aren\'t countries but service categories someone already put together for you.\nHardly any countries here (just geolocation-cn and geolocation-!cn), so by-country is really geoip\'s job.\n\n## On PC (keqrnel core)\nGeo works the same as on the phone: the xray built into keqrnel does the matching. It just needs geoip.dat and geosite.dat sitting next to keqdroid.exe — a release build already has them there. If geo rules look ignored, check those two files first.\n\n## Order\nTop to bottom: block first, then your server (always direct, or you\'d get a loop), then bypass, then proxy. Whatever is left follows the Unmatched traffic switch up top.';
 
   @override
-  String get settingsRoutingSavedToast => 'Routing updated';
-
-  @override
   String settingsRoutingItemCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -431,21 +428,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsLanSharingOnIp(Object ip) {
     return 'Sharing on $ip';
   }
-
-  @override
-  String get settingsHwidTitle => 'Send device HWID';
-
-  @override
-  String get settingsHwidEnabledRecommended => 'Enabled (recommended)';
-
-  @override
-  String get settingsHwidDisabled => 'Disabled';
-
-  @override
-  String get settingsHwidEnabledHint => 'Some providers require HWID for subscription updates and device limits.';
-
-  @override
-  String get settingsHwidDisabledHint => 'HWID headers are not sent. Some subscriptions may fail if provider requires device binding.';
 
   @override
   String get settingsDeviceIpListTitle => 'Device IP addresses on the network:';
@@ -832,25 +814,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subscriptionsSave => 'Save';
 
   @override
-  String get subscriptionsMoveUp => 'Move up';
-
-  @override
-  String get subscriptionsMoveDown => 'Move down';
-
-  @override
-  String get subscriptionsAutoUpdate => 'Auto-update';
-
-  @override
-  String get subscriptionsOn => 'ON';
-
-  @override
   String get subscriptionsOff => 'OFF';
 
   @override
   String get subscriptionsExpired => 'Expired';
-
-  @override
-  String get subscriptionsRefreshFailed => 'Refresh failed';
 
   @override
   String get subscriptionsEveryHour => 'Every hour';
@@ -922,9 +889,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversImportFile => 'Import file';
 
   @override
-  String get serversNotSupported => 'Not supported in this build';
-
-  @override
   String get serversAddServerTitle => 'Add Server';
 
   @override
@@ -985,7 +949,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsBackupRestore => 'Backup & restore';
 
   @override
-  String get settingsBackupRestoreSubtitle => 'Export/import split tunneling, subscriptions and servers';
+  String get settingsBackupRestoreSubtitle => 'Export/import split tunneling, subscriptions, servers and settings';
 
   @override
   String get settingsSelectAtLeastOne => 'Select at least one section to export';
@@ -1018,6 +982,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsServersActive => 'Servers (and active server)';
 
   @override
+  String get settingsAppSettings => 'App settings';
+
+  @override
+  String get settingsAppSettingsHint => 'Routing, DNS, appearance, ping and language. Ports, LAN sharing and TUN stay as they are on this machine.';
+
+  @override
   String get settingsImport => 'Import';
 
   @override
@@ -1045,9 +1015,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsDebugModeOff => 'Off';
-
-  @override
-  String get settingsDebugModeHint => 'Shows live VPN metrics in server cards and allows viewing core logs.';
 
   @override
   String get settingsOpenXrayLogs => 'Open core logs';
@@ -1080,120 +1047,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNewVersionAvailable => 'New version available';
 
   @override
-  String settingsSize(Object size) {
-    return 'Size: $size';
-  }
-
-  @override
   String get settingsDownloading => 'Downloading...';
 
   @override
   String get settingsCheckForUpdates => 'Check for updates';
-
-  @override
-  String get settingsShareDeviceHwid => 'Share device HWID';
-
-  @override
-  String get settingsHwidWillBeSent => 'HWID will be sent with subscription requests';
-
-  @override
-  String get settingsHwidNotShared => 'HWID not shared';
-
-  @override
-  String get settingsHwidHint => 'When enabled, your device\'s unique ID (HWID) is sent to subscription servers. Required by some providers for HWID binding. Disable to increase privacy.';
-
-  @override
-  String get settingsRoutingRules => 'Routing Rules';
-
-  @override
-  String get settingsNoRules => 'No rules';
-
-  @override
-  String get settingsAddCustomRule => 'Add custom rule';
-
-  @override
-  String get settingsAddRule => 'Add rule';
-
-  @override
-  String get settingsEditRule => 'Edit routing rule';
-
-  @override
-  String get settingsRuleName => 'Rule name';
-
-  @override
-  String get settingsType => 'Type';
-
-  @override
-  String get settingsAction => 'Action';
-
-  @override
-  String get settingsValues => 'Values (what to match)';
-
-  @override
-  String get settingsOrder => 'Order (rule priority)';
-
-  @override
-  String get settingsEnabled => 'Enabled';
-
-  @override
-  String get settingsNameAndValuesRequired => 'Name and values are required';
-
-  @override
-  String get settingsUseOnePerLine => 'Use one value per line, or separate with commas.';
-
-  @override
-  String get settingsSmallerOrderFirst => 'Smaller number = checked earlier (e.g. 1 before 50)';
-
-  @override
-  String get settingsSmallerOrderWins => 'If two rules can match the same traffic, the rule with smaller order wins.';
-
-  @override
-  String get settingsSaveChanges => 'Save changes';
-
-  @override
-  String get settingsDeleteRule => 'Delete rule';
-
-  @override
-  String get settingsAddRuleTooltip => 'Add rule';
-
-  @override
-  String get settingsDomain => 'Domain';
-
-  @override
-  String get settingsIpCidr => 'IP CIDR';
-
-  @override
-  String get settingsGeoIp => 'GeoIP';
-
-  @override
-  String get settingsGeosite => 'Geosite';
-
-  @override
-  String get settingsProcess => 'Process';
-
-  @override
-  String get settingsProxy => 'Proxy';
-
-  @override
-  String get settingsDirect => 'Direct';
-
-  @override
-  String get settingsBlock => 'Block';
-
-  @override
-  String get settingsEgDomain => 'e.g. youtube.com, +google';
-
-  @override
-  String get settingsEgIpCidr => 'e.g. 1.1.1.1/32, 192.168.0.0/16';
-
-  @override
-  String get settingsEgGeoip => 'e.g. RU, US, DE';
-
-  @override
-  String get settingsEgGeosite => 'e.g. category-ads-all';
-
-  @override
-  String get settingsEgProcess => 'e.g. com.telegram.messenger';
 
   @override
   String settingsExportFailed(Object error) {
@@ -1214,9 +1071,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsCheckFailedError(Object error) {
     return 'Check failed: $error';
   }
-
-  @override
-  String get settingsNoXrayLogsYet => 'No core logs yet';
 
   @override
   String get settingsLanguageTitle => 'Language';
@@ -1268,18 +1122,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get splitRunningApps => 'Running';
-
-  @override
-  String get splitInstalledApps => 'Installed';
-
-  @override
-  String get splitCustomApps => 'Manual entries';
-
-  @override
-  String get splitClearAll => 'Clear all';
-
-  @override
   String get splitProxyModeWarning => 'Split tunneling is not applied in Proxy mode — all traffic goes through the system proxy. Switch the connection mode to TUN (in the side panel) so per-process rules work.';
 
   @override
@@ -1287,9 +1129,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serversPingServer => 'Ping server';
-
-  @override
-  String get serversHealthCheck => 'Health check';
 
   @override
   String get serversCopyAddress => 'Copy server address';
@@ -1307,27 +1146,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversDeleteServer => 'Delete server';
 
   @override
-  String get serversHealthCheckDesc => 'DNS, TCP and config validation';
-
-  @override
   String get settingsDebugHintDesktop => 'Shows core session logs. Live VPN metrics are shown under the connect button.';
 
   @override
   String get settingsDebugHintMobile => 'Shows live VPN metrics in server cards and core logs.';
 
   @override
-  String serversErrorLoadingApps(Object error) {
-    return 'Error loading apps: $error';
-  }
-
-  @override
   String get desktopConnectionMode => 'Connection mode';
 
   @override
   String get desktopModeShort => 'Mode';
-
-  @override
-  String get desktopDisconnectBeforeModeChange => 'Disconnect before changing connection mode';
 
   @override
   String get settingsDesktopTitle => 'Windows';
@@ -1372,12 +1200,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopTunAdminRestartFailed => 'Could not restart as administrator';
 
   @override
-  String get trayMenuTitle => 'KeqDroid';
-
-  @override
-  String get trayCloseMenu => 'Close menu';
-
-  @override
   String get trayConnect => 'Connect';
 
   @override
@@ -1388,9 +1210,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trayExit => 'Exit';
-
-  @override
-  String get trayServersSection => 'Servers';
 
   @override
   String get trayPickServer => 'Select server…';
@@ -1461,40 +1280,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serversEmptyGroupHint => 'No servers in this subscription';
-
-  @override
-  String healthCheckChecksPassed(Object passed, Object total) {
-    return 'Checks passed: $passed/$total';
-  }
-
-  @override
-  String get healthCheckServerFields => 'Server fields';
-
-  @override
-  String get healthCheckDnsResolve => 'DNS resolve';
-
-  @override
-  String get healthCheckTcpHandshake => 'TCP handshake';
-
-  @override
-  String get healthCheckConfigFormat => 'Config format';
-
-  @override
-  String get healthCheckNoIpResolved => 'No IP resolved';
-
-  @override
-  String healthCheckDnsFailed(Object error) {
-    return 'Failed: $error';
-  }
-
-  @override
-  String get healthCheckUriFormat => 'URI format detected';
-
-  @override
-  String get healthCheckMissingScheme => 'Missing URI scheme';
-
-  @override
-  String get healthCheckConfigEmpty => 'Config is empty';
 
   @override
   String get statsInLabel => 'In';
@@ -2178,9 +1963,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chainEdit => 'Edit chain';
 
   @override
-  String get chainDuplicate => 'Duplicate chain';
-
-  @override
   String get chainDelete => 'Delete chain';
 
   @override
@@ -2343,6 +2125,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsInternalsUnavailable => '—';
 
   @override
+  String get appearanceUiScaleTitle => 'Interface size';
+
+  @override
+  String get appearanceUiScaleSubtitle => 'Applied on top of the system text size, so 100% means \"as the system says\". Text and list rows resize; icons and spacing stay as they are.';
+
+  @override
   String get appearanceIconShapeTitle => 'Icon shape';
 
   @override
@@ -2362,12 +2150,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subscriptionCardLookTitle => 'Card look';
-
-  @override
-  String get subscriptionCardLookDefault => 'Default';
-
-  @override
-  String get subscriptionCardLookThemeOn => 'Backdrop on';
 
   @override
   String get subscriptionCardVeilTitle => 'Image dimming';

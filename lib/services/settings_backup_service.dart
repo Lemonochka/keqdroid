@@ -1,13 +1,19 @@
 import 'dart:convert';
 
+import '../models/app_settings.dart';
 import '../models/server_item.dart';
 import '../models/subscription.dart';
+import 'card_image_service.dart';
 import 'storage_service.dart';
 
 enum BackupSection {
   splitTunneling,
   subscriptions,
   servers,
+
+  /// Настройки приложения — только те, что имеют смысл на другой машине.
+  /// См. [SettingsBackupService.portableSettingKeys].
+  appSettings,
 }
 
 class KeqdisBackup {
@@ -56,6 +62,56 @@ class KeqdisBackup {
 class SettingsBackupService {
   static const int currentVersion = 1;
 
+  /// Ключи [AppSettings.toJson], которые уезжают в бэкап.
+  ///
+  /// Список БЕЛЫЙ, и это принципиально. Всё остальное описывает конкретную
+  /// машину и её сеть — локальные порты, LAN-раздача вместе с её паролем,
+  /// параметры TUN, режим подключения, десктопные флаги вроде автозапуска, —
+  /// и на другой машине оно в лучшем случае бессмысленно, а в худшем ломает
+  /// подключение молча. Пароль LAN здесь ещё и потому, что бэкап — обычный
+  /// json-файл, которым легко поделиться.
+  ///
+  /// Новое поле настроек сюда само не попадает: чтобы забытое поле не осталось
+  /// незамеченным, тест требует разложить КАЖДЫЙ ключ `toJson()` либо сюда,
+  /// либо в свой список машинно-зависимых.
+  static const portableSettingKeys = <String>{
+    // маршрутизация
+    'directRules',
+    'proxyRules',
+    'blockedRules',
+    'finalOutbound',
+    // ядро и DNS
+    'xrayCore',
+    'vpnCore',
+    'mihomoFakeIp',
+    // поведение
+    'autoConnectLastServer',
+    'killSwitch',
+    'shareDeviceHwid',
+    'notifySubscriptionUpdates',
+    // пинг
+    'pingType',
+    'pingTestTarget',
+    'pingTestUrlCustom',
+    'pingKeepAlive',
+    // внешний вид
+    'darkTheme',
+    'followSystemTheme',
+    'themePresetId',
+    'iconShapeId',
+    'fontId',
+    'amoledBlack',
+    'serversTwoColumns',
+    'uiScale',
+    'hapticFeedback',
+    'showTrafficStats',
+    'showConnectionTime',
+    'showSpeedInNotification',
+    'showUptimeInNotification',
+    // язык
+    'appLanguageCode',
+  };
+
   static Future<KeqdisBackup> buildBackup(
     StorageService storage, {
     required Set<BackupSection> sections,
@@ -72,6 +128,13 @@ class SettingsBackupService {
     if (sections.contains(BackupSection.subscriptions)) {
       final subs = await storage.getSubscriptions();
       data['subscriptions'] = subs.map((s) => s.toJson()).toList();
+      // Тема, вуаль и состав карточки — обычные поля подписки и уезжают строкой
+      // выше. Своя картинка — файл в каталоге приложения, и без её байтов на
+      // новой машине от оформления остаётся только несуществующий id.
+      final images = await CardImageService.exportForThemes(
+        subs.map((s) => s.cardThemeId),
+      );
+      if (images.isNotEmpty) data['cardImages'] = images;
     }
 
     if (sections.contains(BackupSection.servers)) {
@@ -79,6 +142,14 @@ class SettingsBackupService {
       data['servers'] = {
         'activeServerId': storage.getActiveServerId(),
         'items': servers.map((s) => s.toJson()).toList(),
+      };
+    }
+
+    if (sections.contains(BackupSection.appSettings)) {
+      final json = (await storage.getSettings()).toJson();
+      data['appSettings'] = {
+        for (final key in portableSettingKeys)
+          if (json.containsKey(key)) key: json[key],
       };
     }
 
@@ -94,6 +165,7 @@ class SettingsBackupService {
     if (backup.data['splitTunneling'] is Map) s.add(BackupSection.splitTunneling);
     if (backup.data['subscriptions'] is List) s.add(BackupSection.subscriptions);
     if (backup.data['servers'] is Map) s.add(BackupSection.servers);
+    if (backup.data['appSettings'] is Map) s.add(BackupSection.appSettings);
     return s;
   }
 
@@ -118,6 +190,16 @@ class SettingsBackupService {
           .whereType<Map>()
           .map((e) => Subscription.fromJson(Map<String, dynamic>.from(e)))
           .toList();
+      // Картинки раскладываем ДО подписок: иначе первый кадр списка рисуется по
+      // теме, файла которой ещё нет на диске, и карточка мигает обычной.
+      final images = backup.data['cardImages'];
+      if (images is Map) {
+        await CardImageService.importAll({
+          for (final e in images.entries)
+            if (e.key is String && e.value is String)
+              e.key as String: e.value as String,
+        });
+      }
       await storage.saveSubscriptions(subs);
     }
 
@@ -140,6 +222,19 @@ class SettingsBackupService {
       } else if (activeId == null) {
         await storage.setActiveServerId(null);
       }
+    }
+
+    if (sections.contains(BackupSection.appSettings)) {
+      final raw = backup.data['appSettings'];
+      if (raw is! Map) throw FormatException('Invalid appSettings section');
+      // Поверх нынешних, а не вместо них: в бэкапе лежит только переносимая
+      // часть, и остальное (порты, LAN, TUN, режим подключения) обязано остаться
+      // от этой машины.
+      final merged = (await storage.getSettings()).toJson();
+      for (final key in portableSettingKeys) {
+        if (raw.containsKey(key)) merged[key] = raw[key];
+      }
+      await storage.saveSettings(AppSettings.fromJson(merged));
     }
   }
 }

@@ -316,6 +316,14 @@ class Subscription {
   ///
   /// [name] заменяется на название сервиса только если стоит автоматическое:
   /// имя, введённое пользовательницей, не перетирается никогда.
+  ///
+  /// Конструктор здесь вызывается руками, поэтому НОВОЕ ПОЛЕ МОДЕЛИ НАДО
+  /// ДОБАВИТЬ И СЮДА. Забытое поле не ломает сборку — оно просто берёт значение
+  /// по умолчанию, и настройка молча слетает на каждом обновлении подписки. Так
+  /// уже терялись [hiddenCardElements] и [cardVeil]: карточку настраивали, а
+  /// первое же обновление возвращало ей вид по умолчанию. Сторожит это тест
+  /// «обновление с заголовками не трогает ничего, кроме заголовков» — он
+  /// сравнивает `toJson()` целиком, так что ловит любое поле, а не перечисленные.
   Subscription withProfileHeaders({
     required String? title,
     required String? announce,
@@ -346,6 +354,8 @@ class Subscription {
       fetchIdentity: fetchIdentity,
       cardThemeId: cardThemeId,
       cardThemeInServers: cardThemeInServers,
+      hiddenCardElements: hiddenCardElements,
+      cardVeil: cardVeil,
     );
   }
 

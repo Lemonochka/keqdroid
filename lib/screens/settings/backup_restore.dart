@@ -11,6 +11,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
   bool _exportSplit = true;
   bool _exportSubs = true;
   bool _exportServers = true;
+  bool _exportSettings = true;
 
   bool _busy = false;
 
@@ -25,6 +26,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       if (_exportSplit) sections.add(BackupSection.splitTunneling);
       if (_exportSubs) sections.add(BackupSection.subscriptions);
       if (_exportServers) sections.add(BackupSection.servers);
+      if (_exportSettings) sections.add(BackupSection.appSettings);
         if (sections.isEmpty) {
           if (mounted) setState(() => _busy = false);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -104,6 +106,10 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       ref.invalidate(serversProvider);
       ref.invalidate(subscriptionsProvider);
       ref.invalidate(splitTunnelingProvider);
+      // Настройки живут отдельным нотифаером с собственным состоянием: без
+      // сброса импортированная тема и списки маршрутизации доехали бы до диска,
+      // а на экране остались прежними до перезапуска.
+      ref.invalidate(settingsNotifierProvider);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -123,6 +129,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
     var split = available.contains(BackupSection.splitTunneling);
     var subs = available.contains(BackupSection.subscriptions);
     var servers = available.contains(BackupSection.servers);
+    var settings = available.contains(BackupSection.appSettings);
 
     return showModalBottomSheet<Set<BackupSection>>(
       context: context,
@@ -149,6 +156,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
             if (split) s.add(BackupSection.splitTunneling);
             if (subs) s.add(BackupSection.subscriptions);
             if (servers) s.add(BackupSection.servers);
+            if (settings) s.add(BackupSection.appSettings);
             return s;
           }
 
@@ -186,6 +194,12 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                     value: servers,
                     enabled: available.contains(BackupSection.servers),
                     onChanged: (v) => setSheet(() => servers = v),
+                  ),
+                  checkbox(
+                    title: l10n.settingsAppSettings,
+                    value: settings,
+                    enabled: available.contains(BackupSection.appSettings),
+                    onChanged: (v) => setSheet(() => settings = v),
                   ),
                   const SizedBox(height: 10),
                   SizedBox(
@@ -249,6 +263,19 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                   activeThumbColor: AppTheme.accent(context),
                   title: Text(l10n.settingsServersActive),
                   onChanged: _busy ? null : (v) => setState(() => _exportServers = v),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _exportSettings,
+                  activeThumbColor: AppTheme.accent(context),
+                  title: Text(l10n.settingsAppSettings),
+                  subtitle: Text(
+                    l10n.settingsAppSettingsHint,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textLight(context),
+                        ),
+                  ),
+                  onChanged: _busy ? null : (v) => setState(() => _exportSettings = v),
                 ),
                 const SizedBox(height: 8),
                 SizedBox(

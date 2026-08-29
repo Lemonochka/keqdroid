@@ -1,4 +1,4 @@
-﻿part of '../servers_tab.dart';
+part of '../servers_tab.dart';
 
 /// Индикатор состояния туннеля в духе M3 Expressive (wavy progress indicator).
 ///
