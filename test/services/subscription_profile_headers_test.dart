@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/subscription.dart';
+import 'package:keqdroid/models/subscription_card_layout.dart';
+import 'package:keqdroid/models/subscription_card_theme.dart';
 import 'package:keqdroid/services/subscription_service.dart';
 
 /// Косметические заголовки подписки по XTLS Subscription Standards:
@@ -154,6 +156,71 @@ void main() {
         webPageUrl: null,
       );
       expect(kept.updateIntervalHours, 6);
+    });
+  });
+
+  group('обновление подписки не трогает её настройки', () {
+    // withProfileHeaders собирает Subscription конструктором вручную, поэтому
+    // забытое там поле не ломает сборку — оно просто берёт значение по
+    // умолчанию, и настройка молча слетает на КАЖДОМ обновлении. Так уже
+    // терялись состав карточки и затемнение подложки. Сверяем поэтому весь
+    // `toJson()`, а не список полей: новое поле модели попадает под проверку
+    // само, без правки теста.
+    final everything = Subscription(
+      id: 's1',
+      name: 'Моя подписка',
+      url: 'https://sub.example.com/abc',
+      lastUpdatedAt: DateTime.utc(2026, 8, 28, 12),
+      usedBytes: 123,
+      totalBytes: 456,
+      expiresAt: DateTime.utc(2026, 12, 31),
+      autoUpdate: false,
+      serverCount: 7,
+      updateIntervalHours: 6,
+      userAgent: 'Happ/3.20.4',
+      providerTitle: 'Тихий Интернет',
+      announce: 'Плановые работы в ночь на среду',
+      supportUrl: 'https://t.me/support',
+      webPageUrl: 'https://panel.example.com/sub',
+      fetchIdentity: const SubscriptionFetchIdentity(
+        enabled: true,
+        userAgent: 'Happ/3.20.4',
+      ),
+      cardThemeId: 'aurora',
+      cardThemeInServers: false,
+      hiddenCardElements: const {
+        SubscriptionCardElement.announce,
+        SubscriptionCardElement.meta,
+      },
+      cardVeil: CardVeil.strong,
+    );
+
+    test('заголовки пришли те же — не изменилось ни одно поле', () {
+      final updated = everything.withProfileHeaders(
+        title: everything.providerTitle,
+        announce: everything.announce,
+        supportUrl: everything.supportUrl,
+        webPageUrl: everything.webPageUrl,
+      );
+
+      expect(updated.toJson(), everything.toJson());
+    });
+
+    test('вид карточки переживает обновление', () {
+      // Отдельно от сверки json: в отчёте читают имя теста, и «вид карточки
+      // слетел» понятнее, чем «две мапы не совпали».
+      final updated = everything.withProfileHeaders(
+        title: 'Другое название',
+        announce: null,
+        supportUrl: null,
+        webPageUrl: null,
+      );
+
+      expect(updated.hiddenCardElements, everything.hiddenCardElements);
+      expect(updated.cardVeil, everything.cardVeil);
+      expect(updated.cardThemeId, everything.cardThemeId);
+      expect(updated.cardThemeInServers, everything.cardThemeInServers);
+      expect(updated.cardPreset, everything.cardPreset);
     });
   });
 

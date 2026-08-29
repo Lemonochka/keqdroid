@@ -106,6 +106,26 @@ class AppSettings {
   /// (установка polkit-правила) — окно больше не показываем.
   final bool linuxTunRememberDismissed;
 
+  /// Множитель размера интерфейса поверх системного.
+  ///
+  /// Именно ПОВЕРХ, а не вместо: системный масштаб — это настройка доступности,
+  /// и заменять его своим значением значит отобрать крупный шрифт у того, кто
+  /// выставил его в системе и до этой настройки не дошёл. Здесь 1.0 = «как
+  /// система», а всё остальное — поправка к ней.
+  ///
+  /// Масштабируется ТЕКСТ. Иконки и отступы заданы числами в полутора сотнях
+  /// мест и на этот множитель не смотрят; строки списка при этом подстроятся —
+  /// их высота считается через `MediaQuery.textScalerOf` (см. `servers_tab`).
+  final double uiScale;
+
+  /// Границы множителя. Снизу — читаемость, сверху — вёрстка: дальше строки
+  /// списка и чипы под кнопкой начинают переноситься и обрезаться.
+  static const minUiScale = 0.8;
+  static const maxUiScale = 1.4;
+
+  static double clampUiScale(double v) =>
+      v.isFinite ? v.clamp(minUiScale, maxUiScale) : 1.0;
+
   const AppSettings({
     this.localPort = 2080,
     this.httpPort = 2081,
@@ -151,6 +171,7 @@ class AppSettings {
     this.showUptimeInNotification = true,
     this.notifySubscriptionUpdates = true,
     this.linuxTunRememberDismissed = false,
+    this.uiScale = 1.0,
   });
 
   Map<String, dynamic> toJson() => {
@@ -198,6 +219,7 @@ class AppSettings {
     'showUptimeInNotification': showUptimeInNotification,
     'notifySubscriptionUpdates': notifySubscriptionUpdates,
     'linuxTunRememberDismissed': linuxTunRememberDismissed,
+    'uiScale': uiScale,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -276,6 +298,12 @@ class AppSettings {
           json['notifySubscriptionUpdates'] as bool? ?? true,
       linuxTunRememberDismissed:
           json['linuxTunRememberDismissed'] as bool? ?? false,
+      // Через clamp и проверку типа, а не приведением: значение приезжает и из
+      // бэкапа, который правят руками, — там и строка возможна, и границы у
+      // соседней версии могли быть шире.
+      uiScale: clampUiScale(
+        json['uiScale'] is num ? (json['uiScale'] as num).toDouble() : 1.0,
+      ),
     );
   }
 
@@ -427,6 +455,7 @@ class AppSettings {
     bool? showUptimeInNotification,
     bool? notifySubscriptionUpdates,
     bool? linuxTunRememberDismissed,
+    double? uiScale,
   }) =>
       AppSettings(
         localPort: localPort ?? this.localPort,
@@ -477,6 +506,7 @@ class AppSettings {
             notifySubscriptionUpdates ?? this.notifySubscriptionUpdates,
         linuxTunRememberDismissed:
             linuxTunRememberDismissed ?? this.linuxTunRememberDismissed,
+        uiScale: clampUiScale(uiScale ?? this.uiScale),
       );
 
   @override
@@ -527,6 +557,7 @@ class AppSettings {
               showUptimeInNotification == other.showUptimeInNotification &&
               notifySubscriptionUpdates == other.notifySubscriptionUpdates &&
               linuxTunRememberDismissed == other.linuxTunRememberDismissed &&
+              uiScale == other.uiScale &&
               _hotkeysEqual(hotkeys, other.hotkeys);
 
   static bool _hotkeysEqual(Map<String, String> a, Map<String, String> b) {
@@ -583,6 +614,7 @@ class AppSettings {
     showUptimeInNotification,
     notifySubscriptionUpdates,
     linuxTunRememberDismissed,
+    uiScale,
     // порядок ключей в Map не влияет: хэшируем отсортированные записи
     Object.hashAll(
       (hotkeys.entries.toList()

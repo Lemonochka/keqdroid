@@ -2,7 +2,7 @@ name: keqdroid
 description: "KEQDIS proxy/VPN client for Android and Windows."
 publish_to: 'none'
 
-version: 0.12.0+39
+version: 0.13.0+40
 
 environment:
   sdk: ^3.11.3
@@ -98,9 +98,6 @@ flutter:
     # GeoIP/Geosite DBs for xray routing (geoip:/geosite: rules on Android).
     - assets/bin/windows/geoip.dat
     - assets/bin/windows/geosite.dat
-    # Картинки для карточек подписок: объявлена папка целиком, чтобы добавление
-    # своей картинки не требовало правки pubspec. См. README внутри.
-    - assets/card_themes/
   # NOTE: core binaries (assets/bin/windows, assets/bin/linux) are deliberately
   # NOT Flutter assets. Flutter bundles assets into every platform, which dragged
   # the Windows .exe + Linux ELF + geo data into the Android APK (~150 MB of dead

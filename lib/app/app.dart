@@ -319,7 +319,15 @@ class _ThemedApp extends ConsumerWidget {
         // тикеры поддерева: волну-хедер, «дыхание» и полноэкранный kawaii-оверлей
         // (иначе он рендерил 60fps за кадром и жёг CPU в трее). Возвращается сам,
         // как только окно/меню снова на экране. См. desktopUiVisibleProvider.
-        return _VisibilityTickerGate(child: content);
+        final gated = _VisibilityTickerGate(child: content);
+        if (settings.uiScale == 1.0) return gated;
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: _ScaledTextScaler(mq.textScaler, settings.uiScale),
+          ),
+          child: gated,
+        );
       },
       locale: locale,
       localeResolutionCallback: (deviceLocale, supported) {
@@ -348,6 +356,43 @@ class _ThemedApp extends ConsumerWidget {
 /// Глушит тикеры всего поддерева, когда десктопный UI не на экране (окно скрыто
 /// в трей и меню трея закрыто). На платформах без трея desktopUiVisibleProvider
 /// всегда true — TickerMode включён, поведение не меняется.
+/// Системный масштаб текста, домноженный на [AppSettings.uiScale].
+///
+/// Обёртка вокруг системного, а не `TextScaler.linear(factor)`: на Android 14+
+/// системное масштабирование НЕЛИНЕЙНО — крупный текст растёт медленнее мелкого,
+/// чтобы заголовки не разносили вёрстку. Линейный множитель вместо системного
+/// эту кривую стёр бы, и у того, кто выкрутил шрифт в системе, интерфейс поехал
+/// бы сильнее, чем он просил.
+///
+/// `==`/`hashCode` обязательны: [MediaQuery] сравнивает данные, и объект без
+/// равенства заставлял бы перестраивать всё поддерево на каждый кадр.
+class _ScaledTextScaler extends TextScaler {
+  const _ScaledTextScaler(this.base, this.factor);
+
+  final TextScaler base;
+  final double factor;
+
+  @override
+  double scale(double fontSize) => base.scale(fontSize) * factor;
+
+  // Реализовать обязаны: геттер в [TextScaler] абстрактный, хотя и помечен
+  // устаревшим. Отсюда и ignore — не «мы игнорируем устаревшее», а «без него
+  // класс не компилируется».
+  @override
+  // ignore: deprecated_member_use
+  double get textScaleFactor => base.textScaleFactor * factor;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _ScaledTextScaler &&
+          other.base == base &&
+          other.factor == factor;
+
+  @override
+  int get hashCode => Object.hash(base, factor);
+}
+
 class _VisibilityTickerGate extends ConsumerWidget {
   final Widget child;
   const _VisibilityTickerGate({required this.child});

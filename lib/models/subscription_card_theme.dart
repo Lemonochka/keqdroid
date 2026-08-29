@@ -84,9 +84,11 @@ class CardVeilOverlay extends StatelessWidget {
 /// «вон ту», а заодно даёт списку лицо.
 ///
 /// Два вида подложек. Палитровые рисуются кодом из текущей цветовой схемы —
-/// значит перекрашиваются вместе с темой и не весят ничего. Картиночные берутся
-/// из ассетов: положить свои файлы можно, не трогая код, — см.
-/// `assets/card_themes/README.md`.
+/// значит перекрашиваются вместе с темой и не весят ничего. Картиночные бывают
+/// только своими: файл, который пользовательница выбрала сама, лежит в каталоге
+/// приложения. Встроенных картинок в каталоге тем нет намеренно — одна и та же
+/// картинка у всех не отличает подписку от подписки, а вес её платят все
+/// платформы сразу.
 ///
 /// Контраст держится тем, что подложка ложится ПОВЕРХ обычного цвета карточки
 /// полупрозрачной: текст на ней остаётся тем же `onSurface`, что и всюду, и
@@ -101,9 +103,6 @@ class SubscriptionCardTheme {
         asset = null;
 
   const SubscriptionCardTheme.palette(this.id, this.palette) : asset = null;
-
-  /// Картинка из ассетов. [id] совпадает с именем файла без расширения.
-  const SubscriptionCardTheme.image(this.id, this.asset) : palette = null;
 
   /// Своя картинка пользователя: лежит в каталоге приложения, а не в ассетах.
   /// В настройках подписки хранится как `file:<имя файла>`.
@@ -153,12 +152,7 @@ class SubscriptionCardTheme {
     final scheme = Theme.of(context).colorScheme;
     final asset = this.asset;
     if (asset != null) {
-      return _ImageBackground(
-        asset: asset,
-        scheme: scheme,
-        veil: veil,
-        fromFile: id.startsWith(filePrefix),
-      );
+      return _ImageBackground(asset: asset, scheme: scheme, veil: veil);
     }
     final palette = this.palette;
     if (palette == null) return const SizedBox.shrink();
@@ -243,15 +237,13 @@ class _ImageBackground extends StatelessWidget {
     required this.asset,
     required this.scheme,
     required this.veil,
-    this.fromFile = false,
   });
 
+  /// Полный путь к файлу картинки: своя картинка — единственный вид, встроенных
+  /// в ассетах нет.
   final String asset;
   final ColorScheme scheme;
   final CardVeil veil;
-
-  /// Своя картинка пользователя лежит файлом на диске, встроенная — в ассетах.
-  final bool fromFile;
 
   @override
   Widget build(BuildContext context) {
@@ -259,12 +251,10 @@ class _ImageBackground extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         Image(
-          image: fromFile
-              ? FileImage(File(asset)) as ImageProvider
-              : AssetImage(asset),
+          image: FileImage(File(asset)),
           fit: BoxFit.cover,
-          // Картинку выкинули из сборки или удалили с диска — карточка
-          // остаётся обычной, а не показывает сломанную картинку.
+          // Картинку удалили с диска — карточка остаётся обычной, а не
+          // показывает сломанную картинку.
           errorBuilder: (_, _, _) => const SizedBox.shrink(),
         ),
         // Вуаль цветом карточки: слева, под текстом, почти непрозрачная,

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -140,6 +141,74 @@ class CardImageService {
   /// Убрать все картинки подписки — при её удалении.
   static Future<void> remove(String subscriptionId) =>
       prune(subscriptionId, null);
+
+  /// Картинки карточек для бэкапа: `{имя файла: base64}` по id тем подписок.
+  ///
+  /// В бэкап уезжают САМИ БАЙТЫ, а не путь. Картинка лежит в каталоге
+  /// приложения, и на другой машине (или после переустановки) её там нет:
+  /// `cardThemeId` восстанавливался, [resolveCardTheme] файла не находил и молча
+  /// отдавал обычную карточку — со стороны «оформление не перенеслось».
+  static Future<Map<String, String>> exportForThemes(
+    Iterable<String> themeIds,
+  ) async {
+    final out = <String, String>{};
+    for (final id in themeIds) {
+      if (!id.startsWith(SubscriptionCardTheme.filePrefix)) continue;
+      final name = id.substring(SubscriptionCardTheme.filePrefix.length);
+      if (out.containsKey(name)) continue;
+      try {
+        final path = await resolvePath(id);
+        if (path == null) continue;
+        out[name] = base64.encode(await File(path).readAsBytes());
+      } catch (_) {
+        // Файл занят, исчез между проверкой и чтением, или path_provider не
+        // ответил и каталог неизвестен. Пропускаем картинку, а не роняем
+        // экспорт целиком: подписки и настройки в бэкапе дороже.
+      }
+    }
+    return out;
+  }
+
+  /// Разложить картинки из бэкапа обратно в каталог приложения.
+  ///
+  /// Файл бэкапа — данные откуда угодно, поэтому имена проверяются: ключ обязан
+  /// быть именно именем файла. Без этого `../../` в ключе писал бы куда угодно
+  /// за пределы каталога картинок.
+  static Future<void> importAll(Map<String, String> files) async {
+    if (files.isEmpty) return;
+    final dir = await _directory();
+    for (final entry in files.entries) {
+      if (!isSafeImageFileName(entry.key)) continue;
+      final List<int> bytes;
+      try {
+        bytes = base64.decode(entry.value);
+      } catch (_) {
+        continue; // не base64 — картинки просто не будет
+      }
+      if (bytes.isEmpty || bytes.length > maxRestoredBytes) continue;
+      try {
+        await File(p.join(dir.path, entry.key)).writeAsBytes(bytes, flush: true);
+      } catch (_) {
+        // Каталог только для чтения, диск полон: карточка останется обычной,
+        // но остальной импорт довести важнее.
+      }
+    }
+  }
+
+  /// Потолок на одну восстанавливаемую картинку. Своя укладывается в единицы
+  /// мегабайт ([maxWidth] px по ширине); всё, что сильно больше, — либо чужой
+  /// файл, либо мусор, и класть его на диск незачем.
+  static const maxRestoredBytes = 16 * 1024 * 1024;
+
+  /// Ключ из бэкапа — это имя файла, и ничего кроме.
+  static bool isSafeImageFileName(String name) {
+    if (name.isEmpty || name.length > 128) return false;
+    if (name == '.' || name == '..') return false;
+    if (name.contains(RegExp(r'[\\/:*?"<>|]'))) return false;
+    // Windows-разделители ловит regexp выше, POSIX — тоже; basename остаётся
+    // страховкой на случай форм, до которых regexp не добрался.
+    return p.basename(name) == name;
+  }
 
   /// Оставить у подписки только выбранную картинку, остальные — удалить.
   ///

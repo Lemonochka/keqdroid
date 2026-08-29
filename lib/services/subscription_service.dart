@@ -556,7 +556,7 @@ class SubscriptionService {
 
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
-        throw TimeoutException('Request timed out', cause: e);
+        throw RequestTimeoutException('Request timed out', cause: e);
       }
       throw SubscriptionFetchException(
         e.message ?? 'Network error',

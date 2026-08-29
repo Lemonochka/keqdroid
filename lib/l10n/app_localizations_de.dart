@@ -358,9 +358,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get routingCheatSheetBody => 'Regeln sind einfach eine Liste: was wohin geht. Jede Zeile ist eine Domain, eine IP oder ein Geo-Tag, daneben die Aktion: direkt raus (umgehen), über das VPN (Proxy) oder blockiert.\n\n## Domains\nvk.com — die Domain selbst und alle Subdomains\nru — alles, was auf .ru endet (einfach ein Wort ohne Punkt)\n.example.com — nur Subdomains, nicht die Domain selbst\nfull:example.com — genau dieser Host, keine Subdomains\nregexp:… — ein regulärer Ausdruck, wenn es kompliziert sein muss\n\n## IP-Adressen\n1.2.3.4 — eine einzelne Adresse\n10.0.0.0/8 — ein ganzer Bereich (CIDR)\n\n## GeoIP — nach Land\ngeoip:ru — alle russischen IPs. Statt ru jedes Land: us, de, cn, ua, kz…\nDazu fertige Pakete: geoip:private (LAN), geoip:telegram, geoip:google.\nNach Land? Genau dafür — geoip kennt sie alle.\n\n## GeoSite — fertige Listen\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nDas sind keine Länder, sondern Dienst-Kategorien, die jemand schon zusammengestellt hat.\nLänder gibt es hier kaum (nur geolocation-cn und geolocation-!cn), nach Land ist also eher geoip.\n\n## Am PC (Kern keqrnel)\nGeo funktioniert wie am Handy: das in keqrnel eingebaute xray macht den Abgleich. Es braucht nur geoip.dat und geosite.dat neben keqdroid.exe — im Release liegen sie schon dort. Wenn Geo-Regeln ignoriert wirken, prüf zuerst diese zwei Dateien.\n\n## Reihenfolge\nVon oben nach unten: erst Block, dann dein Server (immer direkt, sonst gibt es eine Schleife), dann Umgehen, dann Proxy. Alles Übrige folgt dem Schalter Übriger Datenverkehr oben.';
 
   @override
-  String get settingsRoutingSavedToast => 'Routing aktualisiert';
-
-  @override
   String settingsRoutingItemCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -431,21 +428,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String settingsLanSharingOnIp(Object ip) {
     return 'Freigabe auf $ip';
   }
-
-  @override
-  String get settingsHwidTitle => 'Geräte-HWID senden';
-
-  @override
-  String get settingsHwidEnabledRecommended => 'Aktiviert (empfohlen)';
-
-  @override
-  String get settingsHwidDisabled => 'Deaktiviert';
-
-  @override
-  String get settingsHwidEnabledHint => 'Einige Provider benötigen die HWID für Abonnement-Updates und Gerätelimits.';
-
-  @override
-  String get settingsHwidDisabledHint => 'HWID-Header werden nicht gesendet. Manche Abonnements schlagen fehl, wenn der Provider eine Gerätebindung verlangt.';
 
   @override
   String get settingsDeviceIpListTitle => 'IP-Adressen des Geräts im Netzwerk:';
@@ -832,25 +814,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get subscriptionsSave => 'Speichern';
 
   @override
-  String get subscriptionsMoveUp => 'Nach oben';
-
-  @override
-  String get subscriptionsMoveDown => 'Nach unten';
-
-  @override
-  String get subscriptionsAutoUpdate => 'Auto-Update';
-
-  @override
-  String get subscriptionsOn => 'EIN';
-
-  @override
   String get subscriptionsOff => 'AUS';
 
   @override
   String get subscriptionsExpired => 'Abgelaufen';
-
-  @override
-  String get subscriptionsRefreshFailed => 'Aktualisierung fehlgeschlagen';
 
   @override
   String get subscriptionsEveryHour => 'Jede Stunde';
@@ -922,9 +889,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serversImportFile => 'Datei importieren';
 
   @override
-  String get serversNotSupported => 'In diesem Build nicht unterstützt';
-
-  @override
   String get serversAddServerTitle => 'Server hinzufügen';
 
   @override
@@ -985,7 +949,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsBackupRestore => 'Sichern & wiederherstellen';
 
   @override
-  String get settingsBackupRestoreSubtitle => 'Split-Tunneling, Abonnements und Server exportieren/importieren';
+  String get settingsBackupRestoreSubtitle => 'Split-Tunneling, Abonnements, Server und Einstellungen exportieren/importieren';
 
   @override
   String get settingsSelectAtLeastOne => 'Wähle mindestens einen Abschnitt zum Exportieren';
@@ -1018,6 +982,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsServersActive => 'Server (und aktiver Server)';
 
   @override
+  String get settingsAppSettings => 'App-Einstellungen';
+
+  @override
+  String get settingsAppSettingsHint => 'Routing, DNS, Erscheinungsbild, Ping und Sprache. Ports, LAN-Freigabe und TUN bleiben so, wie sie auf diesem Gerät sind.';
+
+  @override
   String get settingsImport => 'Importieren';
 
   @override
@@ -1045,9 +1015,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsDebugModeOff => 'Aus';
-
-  @override
-  String get settingsDebugModeHint => 'Zeigt Live-VPN-Metriken in Serverkarten an und ermöglicht das Anzeigen der Xray-Kern-Logs.';
 
   @override
   String get settingsOpenXrayLogs => 'Xray-Logs öffnen';
@@ -1080,120 +1047,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsNewVersionAvailable => 'Neue Version verfügbar';
 
   @override
-  String settingsSize(Object size) {
-    return 'Größe: $size';
-  }
-
-  @override
   String get settingsDownloading => 'Wird heruntergeladen...';
 
   @override
   String get settingsCheckForUpdates => 'Nach Updates suchen';
-
-  @override
-  String get settingsShareDeviceHwid => 'Geräte-HWID teilen';
-
-  @override
-  String get settingsHwidWillBeSent => 'Die HWID wird mit Abonnement-Anfragen gesendet';
-
-  @override
-  String get settingsHwidNotShared => 'HWID wird nicht geteilt';
-
-  @override
-  String get settingsHwidHint => 'Wenn aktiviert, wird die eindeutige ID deines Geräts (HWID) an Abonnement-Server gesendet. Von manchen Providern für die HWID-Bindung erforderlich. Deaktivieren, um die Privatsphäre zu erhöhen.';
-
-  @override
-  String get settingsRoutingRules => 'Routing-Regeln';
-
-  @override
-  String get settingsNoRules => 'Keine Regeln';
-
-  @override
-  String get settingsAddCustomRule => 'Eigene Regel hinzufügen';
-
-  @override
-  String get settingsAddRule => 'Regel hinzufügen';
-
-  @override
-  String get settingsEditRule => 'Routing-Regel bearbeiten';
-
-  @override
-  String get settingsRuleName => 'Regelname';
-
-  @override
-  String get settingsType => 'Typ';
-
-  @override
-  String get settingsAction => 'Aktion';
-
-  @override
-  String get settingsValues => 'Werte (was zutreffen soll)';
-
-  @override
-  String get settingsOrder => 'Reihenfolge (Regelpriorität)';
-
-  @override
-  String get settingsEnabled => 'Aktiviert';
-
-  @override
-  String get settingsNameAndValuesRequired => 'Name und Werte sind erforderlich';
-
-  @override
-  String get settingsUseOnePerLine => 'Verwende einen Wert pro Zeile oder trenne sie durch Kommas.';
-
-  @override
-  String get settingsSmallerOrderFirst => 'Kleinere Zahl = früher geprüft (z. B. 1 vor 50)';
-
-  @override
-  String get settingsSmallerOrderWins => 'Wenn zwei Regeln denselben Verkehr betreffen, gewinnt die Regel mit der kleineren Reihenfolge.';
-
-  @override
-  String get settingsSaveChanges => 'Änderungen speichern';
-
-  @override
-  String get settingsDeleteRule => 'Regel löschen';
-
-  @override
-  String get settingsAddRuleTooltip => 'Regel hinzufügen';
-
-  @override
-  String get settingsDomain => 'Domain';
-
-  @override
-  String get settingsIpCidr => 'IP CIDR';
-
-  @override
-  String get settingsGeoIp => 'GeoIP';
-
-  @override
-  String get settingsGeosite => 'Geosite';
-
-  @override
-  String get settingsProcess => 'Prozess';
-
-  @override
-  String get settingsProxy => 'Proxy';
-
-  @override
-  String get settingsDirect => 'Direkt';
-
-  @override
-  String get settingsBlock => 'Blockieren';
-
-  @override
-  String get settingsEgDomain => 'z. B. youtube.com, +google';
-
-  @override
-  String get settingsEgIpCidr => 'z. B. 1.1.1.1/32, 192.168.0.0/16';
-
-  @override
-  String get settingsEgGeoip => 'z. B. RU, US, DE';
-
-  @override
-  String get settingsEgGeosite => 'z. B. category-ads-all';
-
-  @override
-  String get settingsEgProcess => 'z. B. com.telegram.messenger';
 
   @override
   String settingsExportFailed(Object error) {
@@ -1214,9 +1071,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String settingsCheckFailedError(Object error) {
     return 'Prüfung fehlgeschlagen: $error';
   }
-
-  @override
-  String get settingsNoXrayLogsYet => 'Noch keine Xray-Logs';
 
   @override
   String get settingsLanguageTitle => 'Sprache';
@@ -1268,18 +1122,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get splitRunningApps => 'Laufend';
-
-  @override
-  String get splitInstalledApps => 'Installiert';
-
-  @override
-  String get splitCustomApps => 'Manuelle Einträge';
-
-  @override
-  String get splitClearAll => 'Alle löschen';
-
-  @override
   String get splitProxyModeWarning => 'Im Proxy-Modus wird Split-Tunneling nicht angewendet — der gesamte Verkehr läuft über den System-Proxy. Wechsle den Verbindungsmodus auf TUN (im Seitenpanel), damit die Regeln pro Prozess wirken.';
 
   @override
@@ -1287,9 +1129,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get serversPingServer => 'Server anpingen';
-
-  @override
-  String get serversHealthCheck => 'Funktionsprüfung';
 
   @override
   String get serversCopyAddress => 'Serveradresse kopieren';
@@ -1307,27 +1146,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serversDeleteServer => 'Server löschen';
 
   @override
-  String get serversHealthCheckDesc => 'DNS-, TCP- und Konfigurationsprüfung';
-
-  @override
   String get settingsDebugHintDesktop => 'Zeigt Xray-Sitzungslogs an. Live-VPN-Metriken werden unter der Verbindungstaste angezeigt.';
 
   @override
   String get settingsDebugHintMobile => 'Zeigt Live-VPN-Metriken in Serverkarten und Xray-Logs an.';
 
   @override
-  String serversErrorLoadingApps(Object error) {
-    return 'Fehler beim Laden der Apps: $error';
-  }
-
-  @override
   String get desktopConnectionMode => 'Verbindungsmodus';
 
   @override
   String get desktopModeShort => 'Modus';
-
-  @override
-  String get desktopDisconnectBeforeModeChange => 'Trenne die Verbindung, bevor du den Verbindungsmodus änderst';
 
   @override
   String get settingsDesktopTitle => 'Windows';
@@ -1372,12 +1200,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get desktopTunAdminRestartFailed => 'Neustart als Administrator fehlgeschlagen';
 
   @override
-  String get trayMenuTitle => 'KeqDroid';
-
-  @override
-  String get trayCloseMenu => 'Menü schließen';
-
-  @override
   String get trayConnect => 'Verbinden';
 
   @override
@@ -1388,9 +1210,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trayExit => 'Beenden';
-
-  @override
-  String get trayServersSection => 'Server';
 
   @override
   String get trayPickServer => 'Server wählen…';
@@ -1461,40 +1280,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get serversEmptyGroupHint => 'Keine Server in diesem Abo';
-
-  @override
-  String healthCheckChecksPassed(Object passed, Object total) {
-    return 'Bestanden: $passed/$total';
-  }
-
-  @override
-  String get healthCheckServerFields => 'Serverfelder';
-
-  @override
-  String get healthCheckDnsResolve => 'DNS-Auflösung';
-
-  @override
-  String get healthCheckTcpHandshake => 'TCP-Handshake';
-
-  @override
-  String get healthCheckConfigFormat => 'Konfigurationsformat';
-
-  @override
-  String get healthCheckNoIpResolved => 'Keine IP aufgelöst';
-
-  @override
-  String healthCheckDnsFailed(Object error) {
-    return 'Fehler: $error';
-  }
-
-  @override
-  String get healthCheckUriFormat => 'URI-Format erkannt';
-
-  @override
-  String get healthCheckMissingScheme => 'URI-Schema fehlt';
-
-  @override
-  String get healthCheckConfigEmpty => 'Konfiguration ist leer';
 
   @override
   String get statsInLabel => 'In';
@@ -2178,9 +1963,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get chainEdit => 'Kette bearbeiten';
 
   @override
-  String get chainDuplicate => 'Kette duplizieren';
-
-  @override
   String get chainDelete => 'Kette löschen';
 
   @override
@@ -2343,6 +2125,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsInternalsUnavailable => '—';
 
   @override
+  String get appearanceUiScaleTitle => 'Oberflächengröße';
+
+  @override
+  String get appearanceUiScaleSubtitle => 'Wirkt zusätzlich zur Textgröße des Systems, 100% heißt also „wie im System“. Text und Zeilenhöhen ändern sich; Symbole und Abstände bleiben gleich.';
+
+  @override
   String get appearanceIconShapeTitle => 'Symbolform';
 
   @override
@@ -2362,12 +2150,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get subscriptionCardLookTitle => 'Kartendesign';
-
-  @override
-  String get subscriptionCardLookDefault => 'Standard';
-
-  @override
-  String get subscriptionCardLookThemeOn => 'Hintergrund aktiv';
 
   @override
   String get subscriptionCardVeilTitle => 'Bild abdunkeln';

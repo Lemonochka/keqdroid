@@ -358,9 +358,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get routingCheatSheetBody => 'Правила — это просто список: что куда отправить. Каждая строка — домен, IP или гео-метка, а рядом действие: напрямую (обход), через VPN (прокси) или в блок.\n\n## Домены\nvk.com — сам домен и все его поддомены\nru — всё, что оканчивается на .ru (просто слово без точки)\n.example.com — только поддомены, без самого домена\nfull:example.com — ровно этот адрес, без поддоменов\nregexp:… — если совсем надо, можно регуляркой\n\n## IP-адреса\n1.2.3.4 — один адрес\n10.0.0.0/8 — целый диапазон (CIDR)\n\n## GeoIP — по стране\ngeoip:ru — все российские IP. Вместо ru любая страна: us, de, cn, ua, kz…\nПлюс готовые пачки: geoip:private (локалка), geoip:telegram, geoip:google.\nНужно «по стране» — это сюда, geoip знает все.\n\n## GeoSite — готовые списки\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nЭто не страны, а категории сервисов, которые уже собрали за тебя.\nСтран тут почти нет (только geolocation-cn и geolocation-!cn), так что «по стране» — всё-таки geoip.\n\n## На ПК (ядро keqrnel)\nГео работает так же, как на телефоне: его считает встроенный в keqrnel xray. Нужно лишь, чтобы рядом с keqdroid.exe лежали geoip.dat и geosite.dat — в релизе они уже там. Если гео-правила будто не работают, первым делом проверь эти два файла.\n\n## Порядок\nСверху вниз: сначала блок, потом твой сервер (он всегда напрямую, иначе будет петля), потом обход, потом прокси. Всё, что не подошло, идёт по переключателю «Остальной трафик» вверху.';
 
   @override
-  String get settingsRoutingSavedToast => 'Маршрутизация обновлена';
-
-  @override
   String settingsRoutingItemCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -433,21 +430,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String settingsLanSharingOnIp(Object ip) {
     return 'Раздача на $ip';
   }
-
-  @override
-  String get settingsHwidTitle => 'Отправлять HWID устройства';
-
-  @override
-  String get settingsHwidEnabledRecommended => 'Включено (рекомендуется)';
-
-  @override
-  String get settingsHwidDisabled => 'Выключено';
-
-  @override
-  String get settingsHwidEnabledHint => 'Некоторые провайдеры требуют HWID для обновления подписок и лимитов устройств.';
-
-  @override
-  String get settingsHwidDisabledHint => 'Заголовки HWID не отправляются. Некоторые подписки могут не работать, если провайдер требует привязку устройства.';
 
   @override
   String get settingsDeviceIpListTitle => 'IP-адреса устройства в сети:';
@@ -834,25 +816,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get subscriptionsSave => 'Сохранить';
 
   @override
-  String get subscriptionsMoveUp => 'Переместить вверх';
-
-  @override
-  String get subscriptionsMoveDown => 'Переместить вниз';
-
-  @override
-  String get subscriptionsAutoUpdate => 'Обновление';
-
-  @override
-  String get subscriptionsOn => 'ВКЛ';
-
-  @override
   String get subscriptionsOff => 'ВЫКЛ';
 
   @override
   String get subscriptionsExpired => 'Истекла';
-
-  @override
-  String get subscriptionsRefreshFailed => 'Ошибка обновления';
 
   @override
   String get subscriptionsEveryHour => 'Каждый час';
@@ -924,9 +891,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversImportFile => 'Импорт из файла';
 
   @override
-  String get serversNotSupported => 'Не поддерживается в этой сборке';
-
-  @override
   String get serversAddServerTitle => 'Добавить сервер';
 
   @override
@@ -987,7 +951,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsBackupRestore => 'Резервное копирование';
 
   @override
-  String get settingsBackupRestoreSubtitle => 'Экспорт/импорт раздельного туннелирования, подписок и серверов';
+  String get settingsBackupRestoreSubtitle => 'Экспорт/импорт раздельного туннелирования, подписок, серверов и настроек';
 
   @override
   String get settingsSelectAtLeastOne => 'Выберите хотя бы один раздел для экспорта';
@@ -1020,6 +984,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsServersActive => 'Серверы (и активный сервер)';
 
   @override
+  String get settingsAppSettings => 'Настройки приложения';
+
+  @override
+  String get settingsAppSettingsHint => 'Маршрутизация, DNS, внешний вид, пинг и язык. Порты, LAN-раздача и TUN остаются как на этой машине.';
+
+  @override
   String get settingsImport => 'Импорт';
 
   @override
@@ -1047,9 +1017,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsDebugModeOff => 'Выключен';
-
-  @override
-  String get settingsDebugModeHint => 'Показывает живые метрики VPN на карточках серверов и позволяет просматривать логи ядра.';
 
   @override
   String get settingsOpenXrayLogs => 'Открыть логи ядра';
@@ -1082,120 +1049,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsNewVersionAvailable => 'Доступна новая версия';
 
   @override
-  String settingsSize(Object size) {
-    return 'Размер: $size';
-  }
-
-  @override
   String get settingsDownloading => 'Загрузка...';
 
   @override
   String get settingsCheckForUpdates => 'Проверить обновления';
-
-  @override
-  String get settingsShareDeviceHwid => 'Делиться HWID устройства';
-
-  @override
-  String get settingsHwidWillBeSent => 'HWID будет отправляться с запросами подписок';
-
-  @override
-  String get settingsHwidNotShared => 'HWID не передаётся';
-
-  @override
-  String get settingsHwidHint => 'Когда включено, уникальный ID вашего устройства (HWID) отправляется серверам подписок. Требуется некоторыми провайдерами для привязки HWID. Отключите для большей приватности.';
-
-  @override
-  String get settingsRoutingRules => 'Правила маршрутизации';
-
-  @override
-  String get settingsNoRules => 'Нет правил';
-
-  @override
-  String get settingsAddCustomRule => 'Добавить своё правило';
-
-  @override
-  String get settingsAddRule => 'Добавить правило';
-
-  @override
-  String get settingsEditRule => 'Редактировать правило маршрутизации';
-
-  @override
-  String get settingsRuleName => 'Название правила';
-
-  @override
-  String get settingsType => 'Тип';
-
-  @override
-  String get settingsAction => 'Действие';
-
-  @override
-  String get settingsValues => 'Значения (что сопоставлять)';
-
-  @override
-  String get settingsOrder => 'Порядок (приоритет правила)';
-
-  @override
-  String get settingsEnabled => 'Включено';
-
-  @override
-  String get settingsNameAndValuesRequired => 'Название и значения обязательны';
-
-  @override
-  String get settingsUseOnePerLine => 'По одному значению на строку или через запятую.';
-
-  @override
-  String get settingsSmallerOrderFirst => 'Меньшее число = проверяется раньше (например 1 перед 50)';
-
-  @override
-  String get settingsSmallerOrderWins => 'Если два правила могут совпасть с одним трафиком, побеждает правило с меньшим порядковым номером.';
-
-  @override
-  String get settingsSaveChanges => 'Сохранить изменения';
-
-  @override
-  String get settingsDeleteRule => 'Удалить правило';
-
-  @override
-  String get settingsAddRuleTooltip => 'Добавить правило';
-
-  @override
-  String get settingsDomain => 'Домен';
-
-  @override
-  String get settingsIpCidr => 'IP CIDR';
-
-  @override
-  String get settingsGeoIp => 'GeoIP';
-
-  @override
-  String get settingsGeosite => 'Geosite';
-
-  @override
-  String get settingsProcess => 'Процесс';
-
-  @override
-  String get settingsProxy => 'Прокси';
-
-  @override
-  String get settingsDirect => 'Direct';
-
-  @override
-  String get settingsBlock => 'Блокировка';
-
-  @override
-  String get settingsEgDomain => 'напр. youtube.com, +google';
-
-  @override
-  String get settingsEgIpCidr => 'напр. 1.1.1.1/32, 192.168.0.0/16';
-
-  @override
-  String get settingsEgGeoip => 'напр. RU, US, DE';
-
-  @override
-  String get settingsEgGeosite => 'напр. category-ads-all';
-
-  @override
-  String get settingsEgProcess => 'напр. com.telegram.messenger';
 
   @override
   String settingsExportFailed(Object error) {
@@ -1216,9 +1073,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String settingsCheckFailedError(Object error) {
     return 'Ошибка проверки: $error';
   }
-
-  @override
-  String get settingsNoXrayLogsYet => 'Логов ядра пока нет';
 
   @override
   String get settingsLanguageTitle => 'Язык';
@@ -1270,18 +1124,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get splitRunningApps => 'Запущены';
-
-  @override
-  String get splitInstalledApps => 'Установлены';
-
-  @override
-  String get splitCustomApps => 'Вручную';
-
-  @override
-  String get splitClearAll => 'Очистить всё';
-
-  @override
   String get splitProxyModeWarning => 'В режиме Proxy раздельное туннелирование не применяется — весь трафик идёт через системный прокси. Переключите режим подключения на TUN (в боковой панели), чтобы правила для процессов работали.';
 
   @override
@@ -1289,9 +1131,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get serversPingServer => 'Пропинговать сервер';
-
-  @override
-  String get serversHealthCheck => 'Проверка работоспособности';
 
   @override
   String get serversCopyAddress => 'Копировать адрес сервера';
@@ -1309,27 +1148,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversDeleteServer => 'Удалить сервер';
 
   @override
-  String get serversHealthCheckDesc => 'Проверка DNS, TCP и конфигурации';
-
-  @override
   String get settingsDebugHintDesktop => 'Показывает логи сессии Xray. Живые метрики VPN отображаются под кнопкой подключения.';
 
   @override
   String get settingsDebugHintMobile => 'Показывает живые метрики VPN в карточках серверов и логи Xray.';
 
   @override
-  String serversErrorLoadingApps(Object error) {
-    return 'Ошибка загрузки приложений: $error';
-  }
-
-  @override
   String get desktopConnectionMode => 'Режим подключения';
 
   @override
   String get desktopModeShort => 'Режим';
-
-  @override
-  String get desktopDisconnectBeforeModeChange => 'Отключитесь перед сменой режима подключения';
 
   @override
   String get settingsDesktopTitle => 'Windows';
@@ -1374,12 +1202,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get desktopTunAdminRestartFailed => 'Не удалось перезапустить от администратора';
 
   @override
-  String get trayMenuTitle => 'KeqDroid';
-
-  @override
-  String get trayCloseMenu => 'Закрыть меню';
-
-  @override
   String get trayConnect => 'Подключить';
 
   @override
@@ -1390,9 +1212,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get trayExit => 'Выход';
-
-  @override
-  String get trayServersSection => 'Серверы';
 
   @override
   String get trayPickServer => 'Выберите сервер…';
@@ -1463,40 +1282,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get serversEmptyGroupHint => 'В этой подписке нет серверов';
-
-  @override
-  String healthCheckChecksPassed(Object passed, Object total) {
-    return 'Проверок пройдено: $passed/$total';
-  }
-
-  @override
-  String get healthCheckServerFields => 'Поля сервера';
-
-  @override
-  String get healthCheckDnsResolve => 'DNS-резолв';
-
-  @override
-  String get healthCheckTcpHandshake => 'TCP-соединение';
-
-  @override
-  String get healthCheckConfigFormat => 'Формат конфига';
-
-  @override
-  String get healthCheckNoIpResolved => 'IP не получен';
-
-  @override
-  String healthCheckDnsFailed(Object error) {
-    return 'Ошибка: $error';
-  }
-
-  @override
-  String get healthCheckUriFormat => 'Формат URI распознан';
-
-  @override
-  String get healthCheckMissingScheme => 'Нет схемы URI';
-
-  @override
-  String get healthCheckConfigEmpty => 'Конфиг пуст';
 
   @override
   String get statsInLabel => 'Вх';
@@ -2181,9 +1966,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get chainEdit => 'Изменить цепочку';
 
   @override
-  String get chainDuplicate => 'Дублировать цепочку';
-
-  @override
   String get chainDelete => 'Удалить цепочку';
 
   @override
@@ -2348,6 +2130,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsInternalsUnavailable => '—';
 
   @override
+  String get appearanceUiScaleTitle => 'Размер интерфейса';
+
+  @override
+  String get appearanceUiScaleSubtitle => 'Применяется поверх системного размера текста, поэтому 100% — это «как в системе». Меняются текст и высота строк списка; иконки и отступы остаются прежними.';
+
+  @override
   String get appearanceIconShapeTitle => 'Форма иконок';
 
   @override
@@ -2367,12 +2155,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get subscriptionCardLookTitle => 'Оформление карточки';
-
-  @override
-  String get subscriptionCardLookDefault => 'По умолчанию';
-
-  @override
-  String get subscriptionCardLookThemeOn => 'Подложка выбрана';
 
   @override
   String get subscriptionCardVeilTitle => 'Затемнение картинки';

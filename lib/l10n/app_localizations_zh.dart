@@ -358,9 +358,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get routingCheatSheetBody => '规则就是一张清单：什么走哪里。每一行是一个域名、一个 IP 或一个地理标签，旁边写上动作：直连（绕过）、走 VPN（代理），或者屏蔽。\n\n## 域名\nvk.com — 这个域名本身和它所有子域名\nru — 所有以 .ru 结尾的（直接写个词，不带点）\n.example.com — 只匹配子域名，不含域名本身\nfull:example.com — 就这一个主机，不含子域名\nregexp:… — 实在需要花活儿时，用正则\n\n## IP 地址\n1.2.3.4 — 单个地址\n10.0.0.0/8 — 一整段（CIDR）\n\n## GeoIP — 按国家\ngeoip:ru — 所有俄罗斯 IP。把 ru 换成任意国家：us、de、cn、ua、kz……\n还有现成的包：geoip:private（局域网）、geoip:telegram、geoip:google。\n想按国家就用它——geoip 全都认得。\n\n## GeoSite — 现成清单\ngeosite:google、geosite:netflix、geosite:telegram、geosite:category-ads-all……\n这些不是国家，而是别人已经整理好的服务分类。\n这里几乎没有国家（只有 geolocation-cn 和 geolocation-!cn），所以按国家还得靠 geoip。\n\n## 在电脑上（keqrnel 内核）\n地理规则和手机上一样：由 keqrnel 内置的 xray 来匹配。只要 geoip.dat 和 geosite.dat 和 keqdroid.exe 放在一起就行——正式版里本来就有。要是地理规则好像没生效，先检查这两个文件。\n\n## 顺序\n从上到下：先屏蔽，再是你的服务器（始终直连，否则会成环），然后绕过，然后代理。剩下的都走上面「其余流量」那个开关。';
 
   @override
-  String get settingsRoutingSavedToast => '路由已更新';
-
-  @override
   String settingsRoutingItemCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -431,21 +428,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String settingsLanSharingOnIp(Object ip) {
     return '正在 $ip 上共享';
   }
-
-  @override
-  String get settingsHwidTitle => '发送设备 HWID';
-
-  @override
-  String get settingsHwidEnabledRecommended => '已启用（推荐）';
-
-  @override
-  String get settingsHwidDisabled => '已禁用';
-
-  @override
-  String get settingsHwidEnabledHint => '部分提供商需要 HWID 来进行订阅更新和设备数量限制。';
-
-  @override
-  String get settingsHwidDisabledHint => '不发送 HWID 头。如果提供商要求设备绑定，部分订阅可能会失败。';
 
   @override
   String get settingsDeviceIpListTitle => '设备在网络中的 IP 地址：';
@@ -832,25 +814,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subscriptionsSave => '保存';
 
   @override
-  String get subscriptionsMoveUp => '上移';
-
-  @override
-  String get subscriptionsMoveDown => '下移';
-
-  @override
-  String get subscriptionsAutoUpdate => '自动更新';
-
-  @override
-  String get subscriptionsOn => '开';
-
-  @override
   String get subscriptionsOff => '关';
 
   @override
   String get subscriptionsExpired => '已过期';
-
-  @override
-  String get subscriptionsRefreshFailed => '刷新失败';
 
   @override
   String get subscriptionsEveryHour => '每小时';
@@ -922,9 +889,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversImportFile => '导入文件';
 
   @override
-  String get serversNotSupported => '此版本不支持';
-
-  @override
   String get serversAddServerTitle => '添加服务器';
 
   @override
@@ -985,7 +949,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsBackupRestore => '备份与恢复';
 
   @override
-  String get settingsBackupRestoreSubtitle => '导出/导入分应用代理、订阅和服务器';
+  String get settingsBackupRestoreSubtitle => '导出/导入分应用代理、订阅、服务器和设置';
 
   @override
   String get settingsSelectAtLeastOne => '请至少选择一个要导出的部分';
@@ -1018,6 +982,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsServersActive => '服务器（及当前活动服务器）';
 
   @override
+  String get settingsAppSettings => '应用设置';
+
+  @override
+  String get settingsAppSettingsHint => '路由、DNS、外观、延迟测试和语言。端口、局域网共享和 TUN 保持本机原样。';
+
+  @override
   String get settingsImport => '导入';
 
   @override
@@ -1045,9 +1015,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsDebugModeOff => '关闭';
-
-  @override
-  String get settingsDebugModeHint => '在服务器卡片中显示实时 VPN 指标，并允许查看 Xray 内核日志。';
 
   @override
   String get settingsOpenXrayLogs => '打开 Xray 日志';
@@ -1080,120 +1047,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsNewVersionAvailable => '有新版本可用';
 
   @override
-  String settingsSize(Object size) {
-    return '大小：$size';
-  }
-
-  @override
   String get settingsDownloading => '正在下载...';
 
   @override
   String get settingsCheckForUpdates => '检查更新';
-
-  @override
-  String get settingsShareDeviceHwid => '共享设备 HWID';
-
-  @override
-  String get settingsHwidWillBeSent => 'HWID 将随订阅请求一起发送';
-
-  @override
-  String get settingsHwidNotShared => '不共享 HWID';
-
-  @override
-  String get settingsHwidHint => '启用后，你设备的唯一 ID（HWID）会被发送到订阅服务器。部分提供商需要它进行 HWID 绑定。禁用可提升隐私。';
-
-  @override
-  String get settingsRoutingRules => '路由规则';
-
-  @override
-  String get settingsNoRules => '无规则';
-
-  @override
-  String get settingsAddCustomRule => '添加自定义规则';
-
-  @override
-  String get settingsAddRule => '添加规则';
-
-  @override
-  String get settingsEditRule => '编辑路由规则';
-
-  @override
-  String get settingsRuleName => '规则名称';
-
-  @override
-  String get settingsType => '类型';
-
-  @override
-  String get settingsAction => '操作';
-
-  @override
-  String get settingsValues => '值（要匹配的内容）';
-
-  @override
-  String get settingsOrder => '顺序（规则优先级）';
-
-  @override
-  String get settingsEnabled => '已启用';
-
-  @override
-  String get settingsNameAndValuesRequired => '名称和值为必填项';
-
-  @override
-  String get settingsUseOnePerLine => '每行使用一个值，或用逗号分隔。';
-
-  @override
-  String get settingsSmallerOrderFirst => '数字越小 = 越早检查（例如 1 在 50 之前）';
-
-  @override
-  String get settingsSmallerOrderWins => '如果两条规则可匹配相同流量，则顺序较小的规则优先。';
-
-  @override
-  String get settingsSaveChanges => '保存更改';
-
-  @override
-  String get settingsDeleteRule => '删除规则';
-
-  @override
-  String get settingsAddRuleTooltip => '添加规则';
-
-  @override
-  String get settingsDomain => '域名';
-
-  @override
-  String get settingsIpCidr => 'IP CIDR';
-
-  @override
-  String get settingsGeoIp => 'GeoIP';
-
-  @override
-  String get settingsGeosite => 'Geosite';
-
-  @override
-  String get settingsProcess => '进程';
-
-  @override
-  String get settingsProxy => '代理';
-
-  @override
-  String get settingsDirect => '直连';
-
-  @override
-  String get settingsBlock => '阻止';
-
-  @override
-  String get settingsEgDomain => '例如 youtube.com, +google';
-
-  @override
-  String get settingsEgIpCidr => '例如 1.1.1.1/32, 192.168.0.0/16';
-
-  @override
-  String get settingsEgGeoip => '例如 RU, US, DE';
-
-  @override
-  String get settingsEgGeosite => '例如 category-ads-all';
-
-  @override
-  String get settingsEgProcess => '例如 com.telegram.messenger';
 
   @override
   String settingsExportFailed(Object error) {
@@ -1214,9 +1071,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String settingsCheckFailedError(Object error) {
     return '检查失败：$error';
   }
-
-  @override
-  String get settingsNoXrayLogsYet => '暂无 Xray 日志';
 
   @override
   String get settingsLanguageTitle => '语言';
@@ -1268,18 +1122,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get splitRunningApps => '运行中';
-
-  @override
-  String get splitInstalledApps => '已安装';
-
-  @override
-  String get splitCustomApps => '手动条目';
-
-  @override
-  String get splitClearAll => '全部清除';
-
-  @override
   String get splitProxyModeWarning => '在 Proxy 模式下不会应用分应用代理 — 所有流量都经过系统代理。请将连接模式切换为 TUN（在侧边栏中），这样按进程的规则才会生效。';
 
   @override
@@ -1287,9 +1129,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get serversPingServer => 'Ping 服务器';
-
-  @override
-  String get serversHealthCheck => '健康检查';
 
   @override
   String get serversCopyAddress => '复制服务器地址';
@@ -1307,27 +1146,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversDeleteServer => '删除服务器';
 
   @override
-  String get serversHealthCheckDesc => 'DNS、TCP 和配置校验';
-
-  @override
   String get settingsDebugHintDesktop => '显示 Xray 会话日志。实时 VPN 指标显示在连接按钮下方。';
 
   @override
   String get settingsDebugHintMobile => '在服务器卡片中显示实时 VPN 指标和 Xray 日志。';
 
   @override
-  String serversErrorLoadingApps(Object error) {
-    return '加载应用出错：$error';
-  }
-
-  @override
   String get desktopConnectionMode => '连接模式';
 
   @override
   String get desktopModeShort => '模式';
-
-  @override
-  String get desktopDisconnectBeforeModeChange => '更改连接模式前请先断开连接';
 
   @override
   String get settingsDesktopTitle => 'Windows';
@@ -1372,12 +1200,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get desktopTunAdminRestartFailed => '无法以管理员身份重启';
 
   @override
-  String get trayMenuTitle => 'KeqDroid';
-
-  @override
-  String get trayCloseMenu => '关闭菜单';
-
-  @override
   String get trayConnect => '连接';
 
   @override
@@ -1388,9 +1210,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get trayExit => '退出';
-
-  @override
-  String get trayServersSection => '服务器';
 
   @override
   String get trayPickServer => '选择服务器…';
@@ -1461,40 +1280,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get serversEmptyGroupHint => '此订阅中没有服务器';
-
-  @override
-  String healthCheckChecksPassed(Object passed, Object total) {
-    return '通过检查：$passed/$total';
-  }
-
-  @override
-  String get healthCheckServerFields => '服务器字段';
-
-  @override
-  String get healthCheckDnsResolve => 'DNS 解析';
-
-  @override
-  String get healthCheckTcpHandshake => 'TCP 握手';
-
-  @override
-  String get healthCheckConfigFormat => '配置格式';
-
-  @override
-  String get healthCheckNoIpResolved => '未解析到 IP';
-
-  @override
-  String healthCheckDnsFailed(Object error) {
-    return '失败：$error';
-  }
-
-  @override
-  String get healthCheckUriFormat => '已识别 URI 格式';
-
-  @override
-  String get healthCheckMissingScheme => '缺少 URI 协议头';
-
-  @override
-  String get healthCheckConfigEmpty => '配置为空';
 
   @override
   String get statsInLabel => '下载';
@@ -2177,9 +1962,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chainEdit => '编辑代理链';
 
   @override
-  String get chainDuplicate => '复制代理链';
-
-  @override
   String get chainDelete => '删除代理链';
 
   @override
@@ -2341,6 +2123,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsInternalsUnavailable => '—';
 
   @override
+  String get appearanceUiScaleTitle => '界面大小';
+
+  @override
+  String get appearanceUiScaleSubtitle => '在系统文字大小之上生效，因此 100% 即“与系统一致”。文字和列表行高会随之变化；图标和间距保持不变。';
+
+  @override
   String get appearanceIconShapeTitle => '图标形状';
 
   @override
@@ -2360,12 +2148,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get subscriptionCardLookTitle => '卡片外观';
-
-  @override
-  String get subscriptionCardLookDefault => '默认';
-
-  @override
-  String get subscriptionCardLookThemeOn => '已选背景';
 
   @override
   String get subscriptionCardVeilTitle => '图片压暗';

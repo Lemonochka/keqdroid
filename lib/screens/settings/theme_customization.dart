@@ -123,6 +123,14 @@ class _AppearanceGeneralTab extends StatelessWidget {
             onSelect: (id) => onSave(current.copyWith(fontId: id)),
           ),
           const SizedBox(height: 8),
+          // Рядом со шрифтом, а не в группе переключателей ниже: это про то же
+          // — каким текст выглядит, — и смотреть на результат удобно прямо
+          // здесь, потому что подпись под ползунком меняется вместе с ним.
+          _UiScalePicker(
+            value: current.uiScale,
+            onChanged: (v) => onSave(current.copyWith(uiScale: v)),
+          ),
+          const SizedBox(height: 8),
           _IconShapePicker(
             currentShapeId: current.iconShapeId,
             onSelect: (id) => onSave(current.copyWith(iconShapeId: id)),
@@ -645,6 +653,84 @@ class _AppearanceThemesTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Ползунок размера интерфейса: множитель поверх системного масштаба текста.
+///
+/// Значение пишется в настройки на каждое движение — «Сохранить» тут нет, и
+/// правильно: результат виден целиком, всей страницей сразу, и подбирают его
+/// глазами. Ради этого же ползунок стоит на экране, который сам под него
+/// перерисовывается.
+class _UiScalePicker extends StatelessWidget {
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  const _UiScalePicker({required this.value, required this.onChanged});
+
+  /// Шаг 5%: мельче — разницы между соседними положениями не видно, крупнее —
+  /// нужного размера можно не найти вовсе.
+  static const _step = 0.05;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final accent = AppTheme.accent(context);
+    final percent = (value * 100).round();
+    final divisions =
+        ((AppSettings.maxUiScale - AppSettings.minUiScale) / _step).round();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ExpressiveSectionHeader(
+          l10n.appearanceUiScaleTitle,
+          icon: Icons.format_size_rounded,
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: Slider(
+                value: value.clamp(
+                  AppSettings.minUiScale,
+                  AppSettings.maxUiScale,
+                ),
+                min: AppSettings.minUiScale,
+                max: AppSettings.maxUiScale,
+                divisions: divisions,
+                activeColor: accent,
+                label: '$percent%',
+                onChanged: onChanged,
+              ),
+            ),
+            // Ширина под самое длинное значение, иначе ползунок дёргается на
+            // каждом переходе через сотню процентов. Процент, а не «как в
+            // системе» на 100%: подпись под ползунком и так говорит, что это
+            // поправка к системному размеру, а строка переменной длины сдвигала
+            // бы ползунок ровно в тот момент, когда его тянут.
+            SizedBox(
+              width: 56,
+              child: Text(
+                '$percent%',
+                textAlign: TextAlign.end,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.text(context),
+                    ),
+              ),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, right: 4, bottom: 4),
+          child: Text(
+            l10n.appearanceUiScaleSubtitle,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textLight(context),
+                  height: 1.35,
+                ),
+          ),
+        ),
+      ],
     );
   }
 }
