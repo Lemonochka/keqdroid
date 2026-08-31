@@ -10,6 +10,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.Network
 import android.net.VpnService
 import android.os.Binder
 import android.os.IBinder
@@ -21,8 +23,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.amnezia.awg.GoBackend
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.net.URL
 import java.util.concurrent.atomic.AtomicLong
 
 enum class VpnRunStatus { STOPPED, STARTING, RUNNING, ERROR }
@@ -84,6 +88,22 @@ class KeqdisVpnService : VpnService() {
         const val TUN_ADDRESS          = "172.19.0.1"
         const val TUN_PREFIX           = 30
         const val TUN_MTU              = 1400
+        /// DNS-адрес, который отдаём системе на xray-ядре: второй хост нашей же
+        /// /30 — слушать на нём некому, и это ровно то, что нужно (см.
+        /// addDnsServer в buildTunInterface). Запрос всё равно уйдёт в tun0 и
+        /// попадёт в правило перехвата по порту 53 (`dns-out`/`dns-out-tun` в
+        /// config_gen). Держать в паре с `_androidTunDns` на стороне Dart.
+        const val TUN_DNS_ADDRESS      = "172.19.0.2"
+
+        /// А mihomo такой адрес отдавать НЕЛЬЗЯ: перехват DNS у него живёт в
+        /// tun-инбаунде (`dns-hijack: any:53`), а на Android туннель держит
+        /// VpnService — ядро работает через socks, и tun-инбаунда у него нет
+        /// вовсе. Перехватывать запрос нечем, для ядра это обычный UDP на
+        /// приватный адрес: правило про private (своё или авторское) уводит его
+        /// в direct, ядро открывает сокет на 172.19.0.2:53, где никто не
+        /// слушает, и резолва нет совсем. Публичный адрес хотя бы доезжает
+        /// через туннель и резолвится на выходе.
+        const val TUN_DNS_ADDRESS_NO_HIJACK = "8.8.8.8"
 
         // Broadcast action для кнопок уведомления
         const val BROADCAST_ACTION_CONNECT    = "com.keqdis.vpn.NOTIF_CONNECT"
@@ -112,7 +132,13 @@ class KeqdisVpnService : VpnService() {
         const val KEY_QS_LAST_EXCLUDE_PACKAGES = "qs_last_exclude_packages"
         const val KEY_QS_LAST_INCLUDE_PACKAGES = "qs_last_include_packages"
 
-        private const val UNDERLYING_UPDATE_MIN_INTERVAL_MS = 1_500L
+        /// Сколько ждать после смены сети, прежде чем рвать соединения ядра.
+        ///
+        /// Подъём Wi-Fi приходит не одним событием: сначала onAvailable, потом
+        /// валидация, потом смена capabilities — и каждое из них может увести
+        /// default network. Сбрасывать на каждое значило бы рвать сессию по три
+        /// раза подряд; замерено, что до устойчивого состояния проходит ~2 с.
+        private const val HANDOVER_DEBOUNCE_MS = 2_000L
     }
 
     // Credentials приходят через Intent от MainActivity — так они гарантированно совпадают с теми что были записаны в Xray конфиг
@@ -135,6 +161,15 @@ class KeqdisVpnService : VpnService() {
     @Volatile private var tunInterface:       ParcelFileDescriptor? = null
     @Volatile private var cleanupDone:       Boolean              = false
     @Volatile private var activeSocksPort:   Int                  = 2080
+
+    // Слежение за физической сетью под туннелем — см. startNetworkWatch().
+    @Volatile private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    // Живые НЕ-VPN сети в порядке появления: последняя и несёт трафик. Держим
+    // список, а не одну сеть, потому что весь вопрос ровно в том, осталась ли
+    // рядом с новой сетью работоспособной старая (см. onPhysicalNetworkUp).
+    private val liveNetworks = LinkedHashSet<Network>()
+    @Volatile private var watchStartedAt = 0L
+    @Volatile private var handoverJob: Job? = null
 
     // Сериализует start/stop/teardown: без этого быстрое перещёлкивание плитки в
     // шторке запускало новый старт поверх ещё идущего cleanup() предыдущего стопа —
@@ -546,6 +581,7 @@ class KeqdisVpnService : VpnService() {
                 isTransitioning = false,
             )
             startStatsLoop()
+            startNetworkWatch()
 
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) {
@@ -580,6 +616,10 @@ class KeqdisVpnService : VpnService() {
         // Статус → STOPPED до cleanup, чтобы плитка обновилась мгновенно,
         // а не после многосекундного убийства процессов.
         setStatus(VpnRunStatus.STOPPED)
+        // Отложенный сброс после смены сети сюда доехать уже не должен: ядро он
+        // не поднимет (статус не RUNNING), но и держать корутину незачем.
+        handoverJob?.cancel()
+        handoverJob = null
         showControlNotification("Disconnected", isConnected = false, isTransitioning = false)
         withContext(Dispatchers.Main) {
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -600,6 +640,8 @@ class KeqdisVpnService : VpnService() {
     }
 
     private suspend fun cleanup() {
+        stopNetworkWatch()
+
         val h = awgHandle
         if (h >= 0) {
             try { GoBackend.awgTurnOff(h) }
@@ -638,6 +680,235 @@ class KeqdisVpnService : VpnService() {
         uploadSpeed.set(0); downloadSpeed.set(0)
     }
 
+    // ── Смена физической сети ────────────────────────────────────────────────
+
+    /// Следит за тем, по какой сети ездит туннель, и чинит переезд на новую.
+    ///
+    /// Само по себе переключение Wi-Fi↔LTE система переживает: default network
+    /// у неё меняется за пару секунд, и НОВЫЕ соединения ядра сразу идут по
+    /// новой сети. Проблема в уже открытых — они остаются на старой, пока не
+    /// закроются сами, а закрываются они не быстро.
+    ///
+    /// Замерено на Pixel 6a (30.08.2026): после подъёма Wi-Fi сокеты ядра к
+    /// серверу оставались на LTE 78 секунд (5 → 4 на t+18s → 1 на t+58s → 0 на
+    /// t+78s). Всё это время трафик едет по мобильной сети — на том же канале
+    /// 0.18–0.24 МБ/с против 1.7–2.0 МБ/с по Wi-Fi, то есть примерно вдесятеро
+    /// медленнее при живом быстром Wi-Fi.
+    ///
+    /// Обратный переезд так не болеет: Wi-Fi исчезает вместе с интерфейсом,
+    /// сокеты гибнут с ним, и ядро переподключается мгновенно. Мобильная сеть
+    /// же остаётся CONNECTED всегда, поэтому старый путь не умирает — он просто
+    /// становится медленным, и порвать его некому. Отсюда асимметрия «туда
+    /// сразу, обратно долго», с которой всё и началось.
+    ///
+    /// Само ядро об этом узнать не может: у xray монитора сети нет вовсе, а у
+    /// mihomo он есть, но включается только вместе с `auto-route`/
+    /// `auto-detect-interface`, а те на Android обязаны быть выключены (netlink
+    /// запрещён с Android 14 — см. docs/PITFALLS.md). Значит рвать соединения
+    /// приходится снаружи.
+    /// Следим ЗА ФИЗИЧЕСКИМИ сетями, а не за «default» — на этом первый заход
+    /// и сломался.
+    ///
+    /// `registerDefaultNetworkCallback` в VPN-приложении отдаёт нашу же
+    /// VPN-сеть: владелец туннеля видит её своей default, хотя его uid из
+    /// туннеля и исключён. А VPN-сеть при переезде Wi-Fi↔LTE не меняется — тот
+    /// же netId живёт всю сессию, — так что колбэк молчал ровно тогда, когда
+    /// был нужен. В дампе это выглядело как `UnderlyingNetworks: [145]` у сети
+    /// 145, то есть туннель подложкой самому себе.
+    ///
+    /// Поэтому запрос с `NOT_VPN`: он приносит события по КАЖДОЙ физической
+    /// сети, а какая из них сейчас несёт трафик, выводим из порядка событий —
+    /// см. [liveNetworks].
+    private fun startNetworkWatch() {
+        if (networkCallback != null) return
+        val cm = getSystemService(ConnectivityManager::class.java) ?: return
+        val cb = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) = onPhysicalNetworkUp(network)
+            override fun onLost(network: Network) = onPhysicalNetworkDown(network)
+        }
+        val request = android.net.NetworkRequest.Builder()
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+            .build()
+        watchStartedAt = System.currentTimeMillis()
+        runCatching { cm.registerNetworkCallback(request, cb) }
+            .onSuccess { networkCallback = cb }
+            .onFailure { android.util.Log.w("KEQDIS", "network watch: register failed: ${it.message}") }
+    }
+
+    /// Снять слежение. Отложенный сброс здесь НЕ отменяется: сюда приходят в
+    /// том числе из самого сброса (cleanup при сорванном рестарте), и отмена
+    /// была бы отменой текущей корутины на середине обработки ошибки. Досидеть
+    /// свой delay безопасно — сброс первым делом смотрит на статус.
+    private fun stopNetworkWatch() {
+        networkCallback?.let { cb ->
+            runCatching {
+                getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(cb)
+            }
+        }
+        networkCallback = null
+        synchronized(liveNetworks) { liveNetworks.clear() }
+        watchStartedAt = 0L
+    }
+
+    /// Появилась физическая сеть.
+    ///
+    /// Переездом считаем только тот случай, когда РЯДОМ уже была другая живая
+    /// сеть: значит старая никуда не делась, соединения на ней живы, и рвать их
+    /// придётся нам. Если других нет — это первая сеть или возврат
+    /// единственной, и рвать нечего.
+    private fun onPhysicalNetworkUp(network: Network) {
+        val hadOther = synchronized(liveNetworks) {
+            val other = liveNetworks.any { it != network }
+            liveNetworks.add(network)
+            other
+        }
+        applyHuaweiUnderlying(network)
+        if (!hadOther) return
+        // Регистрация приносит все живые сети пачкой — на старте сессии это
+        // выглядит как переезд, хотя ничего не переезжало.
+        if (System.currentTimeMillis() - watchStartedAt < HANDOVER_DEBOUNCE_MS) return
+
+        android.util.Log.i("KEQDIS", "handover: network $network came up next to a live one")
+        handoverJob?.cancel()
+        handoverJob = serviceScope.launch {
+            delay(HANDOVER_DEBOUNCE_MS)
+            resetCoreConnections()
+        }
+    }
+
+    /// Сеть ушла — сокеты ушли с ней, рвать нечего. Только забываем её, иначе
+    /// её возвращение не будет считаться переездом.
+    private fun onPhysicalNetworkDown(network: Network) {
+        val remaining = synchronized(liveNetworks) {
+            liveNetworks.remove(network)
+            liveNetworks.lastOrNull()
+        }
+        remaining?.let { applyHuaweiUnderlying(it) }
+    }
+
+    /// Заставить ядро бросить соединения, оставшиеся на прошлой сети.
+    ///
+    /// У mihomo для этого есть RESTful API, и это дёшево: `DELETE /connections`
+    /// закрывает сессии, не трогая ни ядро, ни туннель — статус даже не мигнёт.
+    ///
+    /// У xray API тоже есть (и богатое), но команды «закрой активные
+    /// соединения» в нём нет, а соседние на эту роль не годятся — проверено на
+    /// живом ядре, не по документации:
+    ///
+    ///  * `api rmo` удаляет аутбаунд из менеджера, но уже установленные
+    ///    соединения через него продолжают работать: upstream-сокет оставался
+    ///    ESTABLISHED и через 10 секунд после удаления. Новые при этом падают —
+    ///    то есть один `rmo` только ломает связь, ничего не переселяя;
+    ///  * `api sib` (block by source IP) добавляет правило роутинга, а правила
+    ///    решают судьбу НОВОГО соединения: живой сокет пережил и его.
+    ///
+    /// Поэтому у xray остаётся перезапуск процесса ядра: секунда простоя против
+    /// полутора минут на медленном канале.
+    private suspend fun resetCoreConnections() {
+        if (status != VpnRunStatus.RUNNING) return
+        // AmneziaWG: сокет держит amneziawg-go, killProcess тут ни при чём, а
+        // своего «сбросить соединения» у GoBackend нет. Переезд лечится только
+        // пересозданием туннеля, и делать это молча под пользователем нельзя.
+        if (awgHandle >= 0) return
+
+        if (lastCoreKind == CORE_KIND_MIHOMO) {
+            if (closeMihomoConnections()) {
+                android.util.Log.i("KEQDIS", "handover: mihomo connections closed via API")
+            } else {
+                // Не повод перезапускать ядро: соединения рассосутся сами, а
+                // сорванный рестарт стоит дороже медленной минуты.
+                android.util.Log.w("KEQDIS", "handover: mihomo API did not answer, leaving connections as is")
+            }
+            return
+        }
+
+        restartCoreAfterHandover()
+    }
+
+    /// `DELETE /connections` у mihomo. false — API недоступен или отказал.
+    private suspend fun closeMihomoConnections(): Boolean = withContext(Dispatchers.IO) {
+        val creds = mihomoApiCredentials() ?: return@withContext false
+        val (port, secret) = creds
+        runCatching {
+            val conn = (URL("http://127.0.0.1:$port/connections").openConnection() as HttpURLConnection)
+                .apply {
+                    requestMethod = "DELETE"
+                    setRequestProperty("Authorization", "Bearer $secret")
+                    connectTimeout = 1500
+                    readTimeout = 1500
+                }
+            try { conn.responseCode in 200..299 } finally { conn.disconnect() }
+        }.getOrDefault(false)
+    }
+
+    /// Порт и `secret` API из конфига, который прямо сейчас исполняет ядро.
+    ///
+    /// Источник тот же, что у `MainActivity.getMihomoApi`, и намеренно
+    /// единственный: пару придумывает Dart, но сессию из плитки поднимает
+    /// сервис — второй путь означал бы второй источник правды.
+    private fun mihomoApiCredentials(): Pair<Int, String>? = runCatching {
+        val path = lastXrayConfigPath ?: return@runCatching null
+        val file = File(path)
+        if (!file.isFile) return@runCatching null
+        val json = org.json.JSONObject(file.readText(Charsets.UTF_8))
+        val port = json.optString("external-controller").substringAfterLast(':', "").toIntOrNull() ?: 0
+        val secret = json.optString("secret")
+        if (port <= 0 || secret.isEmpty()) null else port to secret
+    }.getOrNull()
+
+    /// Перезапуск ядра на месте: тот же конфиг, тот же порт, тот же TUN.
+    ///
+    /// tun2socks переживает: он открывает соединение к SOCKS на каждую сессию,
+    /// поэтому обрыв старых для него ничем не отличается от закрытия сессий
+    /// приложениями. Интерфейс не трогаем вовсе — иначе система показала бы
+    /// разрыв VPN, а его здесь нет.
+    private suspend fun restartCoreAfterHandover() = opMutex.withLock {
+        if (status != VpnRunStatus.RUNNING) return@withLock
+        val config = lastXrayConfigPath ?: return@withLock
+        val previousPid = xrayPid
+        if (previousPid <= 0) return@withLock
+        val port = activeSocksPort
+
+        try {
+            // Обнулить ДО убийства обязательно: монитор процесса (см. startXray)
+            // сверяет свой pid с xrayPid и на совпадении уводит сессию в ERROR
+            // с полным cleanup — то есть принял бы наш перезапуск за падение.
+            xrayPid = -1
+            runCatching { android.os.Process.killProcess(previousPid) }
+            withTimeoutOrNull(3000) {
+                while (File("/proc/$previousPid").exists()) delay(100)
+            }
+            // SIGKILL асинхронен: слушающий сокет освобождается не в тот же миг.
+            var waitedFree = 0
+            while (isPortOpen("127.0.0.1", port) && waitedFree < 2000) {
+                delay(100); waitedFree += 100
+            }
+
+            xrayPid = startXray(getBinaryPath("libxray.so"), config, lastCoreKind)
+
+            var waited = 0
+            while (!isPortOpen("127.0.0.1", port) && waited < 10000) {
+                delay(300); waited += 300
+            }
+            if (!isPortOpen("127.0.0.1", port)) {
+                throw IllegalStateException("SOCKS5 port $port not ready after handover restart")
+            }
+            android.util.Log.i("KEQDIS", "handover: core restarted pid=$xrayPid")
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            // Дальше сессия всё равно нежизнеспособна: ядра нет, tun2socks
+            // стучится в пустой порт. Ведём себя ровно как монитор при падении
+            // ядра, чтобы приложение и плитка увидели честный исход.
+            android.util.Log.e("KEQDIS", "handover: core restart failed: ${e.message}", e)
+            setStatus(VpnRunStatus.ERROR, "Core restart after network change failed")
+            cleanup()
+            cleanupDone = true
+            withContext(Dispatchers.Main) { stopForeground(STOP_FOREGROUND_REMOVE) }
+            showControlNotification("Error", isConnected = false, isTransitioning = false)
+        }
+    }
+
     // ── TUN interface ────────────────────────────────────────────────────────
 
     private fun buildTunInterface(exc: List<String>, inc: List<String>): ParcelFileDescriptor {
@@ -645,7 +916,29 @@ class KeqdisVpnService : VpnService() {
             .setMtu(TUN_MTU)
             .addAddress(TUN_ADDRESS, TUN_PREFIX)
             .addRoute("0.0.0.0", 0)
-            .addDnsServer("8.8.8.8")
+            // Адрес-пустышка из своей же /30, а НЕ публичный резолвер.
+            //
+            // С `8.8.8.8` весь системный DNS уходил мимо нашего перехвата:
+            // Private DNS в дефолтном режиме «Автоматически» пробует у DNS-сервера
+            // сети порт 853, у 8.8.8.8 DoT есть — валидация проходит, и дальше
+            // резолвер шлёт DoT на `8.8.8.8:853`. Правило перехвата ловит порт 53
+            // (см. dns-out в config_gen), 853 в него не попадает и уезжает в
+            // `final` как обычный трафик. Мимо перехвата уходят ОБА источника
+            // настроек разом: и dns-блок из настроек приложения, и авторский dns
+            // готового конфига — а каждый резолв платит TLS-хендшейком через
+            // туннель (замерено: 70–120 мс только на TCP до сервера).
+            //
+            // У 172.19.0.2 (второй хост той же /30, наш конец — TUN_ADDRESS)
+            // отвечать на 853 некому, валидация DoT проваливается, и система
+            // остаётся на обычном UDP-53 — том самом, который перехват ждёт.
+            //
+            // Работает это только там, где перехват есть, то есть на xray;
+            // почему mihomo остаётся на публичном адресе — см.
+            // TUN_DNS_ADDRESS_NO_HIJACK.
+            .addDnsServer(
+                if (lastCoreKind == CORE_KIND_MIHOMO) TUN_DNS_ADDRESS_NO_HIJACK
+                else TUN_DNS_ADDRESS
+            )
             .setSession("KEQDIS")
             .setBlocking(false)
 
@@ -718,8 +1011,8 @@ class KeqdisVpnService : VpnService() {
 
     /// Huawei/Honor: setUnderlyingNetworks нужен для establish() со split tunneling.
     private fun applyHuaweiUnderlying(b: Builder) {
+        if (!needsExplicitUnderlying()) return
         val manufacturer = Build.MANUFACTURER.uppercase()
-        if (manufacturer != "HUAWEI" && manufacturer != "HONOR") return
         try {
             val cm = getSystemService(android.net.ConnectivityManager::class.java)
             val activeNet = cm?.activeNetwork
@@ -731,6 +1024,25 @@ class KeqdisVpnService : VpnService() {
         } catch (e: Exception) {
             android.util.Log.w("KEQDIS", "buildTun: setUnderlyingNetworks failed on $manufacturer: ${e.message}")
         }
+    }
+
+    private fun needsExplicitUnderlying(): Boolean {
+        val manufacturer = Build.MANUFACTURER.uppercase()
+        return manufacturer == "HUAWEI" || manufacturer == "HONOR"
+    }
+
+    /// Переезд подложки на уже поднятом туннеле — продолжение того же костыля.
+    ///
+    /// Везде, кроме Huawei/Honor, подложку НЕ трогаем вовсе: система считает её
+    /// сама и делает это правильно, а наш вызов её только ломает — именно так
+    /// туннель и стал подложкой самому себе (см. startNetworkWatch). Там же,
+    /// где мы её задали руками при establish(), обновлять обязаны тоже руками:
+    /// иначе первая сеть сессии залипает навсегда.
+    private fun applyHuaweiUnderlying(network: Network) {
+        if (!needsExplicitUnderlying()) return
+        if (tunInterface == null) return   // режим прокси: establish() не звался
+        runCatching { setUnderlyingNetworks(arrayOf(network)) }
+            .onFailure { android.util.Log.w("KEQDIS", "handover: setUnderlyingNetworks failed: ${it.message}") }
     }
 
     // ── AmneziaWG ─────────────────────────────────────────────────────────────
@@ -777,6 +1089,9 @@ class KeqdisVpnService : VpnService() {
             setStatus(VpnRunStatus.RUNNING)
             showControlNotification("Connected", isConnected = true, isTransitioning = false)
             startStatsLoop()
+            // Соединения тут рвать нечего (см. resetCoreConnections), но
+            // подложку туннеля обновлять надо и в awg-режиме.
+            startNetworkWatch()
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) {
                 runCatching { cleanup() }

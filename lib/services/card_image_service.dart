@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../models/subscription_card_theme.dart';
+import 'file_dialog_service.dart';
 
 /// Почему картинку не взяли. Текст подбирает экран — здесь только причина.
 enum CardImageRejection {
@@ -69,11 +70,29 @@ class CardImageService {
   /// вообще: id в настройках есть, а куда за файлом идти — неизвестно.
   static Future<void> warmUp() async {
     try {
-      await _directoryPath();
+      await rescan();
     } catch (_) {
       // path_provider не ответил — своя картинка просто не покажется, а
       // приложение стартует: из-за фона карточки падать не за что.
     }
+  }
+
+  /// Перечитать, какие свои картинки есть на диске.
+  ///
+  /// Набор нужен синхронно ([SubscriptionCardTheme.customFiles]): `cardThemeId`
+  /// может ссылаться на картинку, которой нет — например подписка приехала из
+  /// бэкапа, а байты картинки в него не попали.
+  static Future<void> rescan() async {
+    final dir = Directory(await _directoryPath());
+    if (!dir.existsSync()) {
+      SubscriptionCardTheme.customFiles = <String>{};
+      return;
+    }
+    final names = <String>{};
+    await for (final entry in dir.list()) {
+      if (entry is File) names.add(p.basename(entry.path));
+    }
+    SubscriptionCardTheme.customFiles = names;
   }
 
   /// Каталог картинок. Однажды узнанный путь лежит в
@@ -102,10 +121,8 @@ class CardImageService {
   /// загрузках, его переименуют или удалят — и карточка облысеет. Своя копия
   /// принадлежит приложению и уезжает вместе с ним.
   static Future<CardImageResult> pick({required String subscriptionId}) async {
-    final picked = await FilePicker.pickFiles(
-      type: FileType.image,
-    );
-    final path = picked?.files.singleOrNull?.path;
+    final picked = await AppFileDialogs.pickFile(type: FileType.image);
+    final path = picked?.path;
     if (path == null) return const CardImageResult.cancelled();
 
     final rejection = await _validate(File(path));
@@ -123,6 +140,7 @@ class CardImageService {
     // «Сохранить», и отмена редактирования не должна оставлять карточку с
     // выбранной, но удалённой картинкой. Уборка — в [prune] при сохранении.
     await File(path).copy(p.join(dir.path, fileName));
+    SubscriptionCardTheme.customFiles?.add(fileName);
 
     return CardImageResult.picked(
       SubscriptionCardTheme.file(fileName, dir.path),
@@ -188,6 +206,7 @@ class CardImageService {
       if (bytes.isEmpty || bytes.length > maxRestoredBytes) continue;
       try {
         await File(p.join(dir.path, entry.key)).writeAsBytes(bytes, flush: true);
+        SubscriptionCardTheme.customFiles?.add(entry.key);
       } catch (_) {
         // Каталог только для чтения, диск полон: карточка останется обычной,
         // но остальной импорт довести важнее.
@@ -228,6 +247,7 @@ class CardImageService {
       if (name == keep || !_belongsTo(name, subscriptionId)) continue;
       try {
         await entry.delete();
+        SubscriptionCardTheme.customFiles?.remove(name);
       } catch (_) {
         // Занят другим процессом — уберётся при следующем сохранении.
       }

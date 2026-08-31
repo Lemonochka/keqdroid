@@ -113,34 +113,38 @@ class _CardLookSheet extends ConsumerWidget {
               if (cardTheme.hasImage) ...[
                 const SizedBox(height: 16),
                 _SheetSectionTitle(l10n.subscriptionCardVeilTitle),
-                Wrap(
-                  spacing: 8,
-                  children: [
+                // Выбор одного из взаимоисключающих вариантов — это связанная
+                // группа кнопок, а не набор чипов. `ChoiceChip` в M3 живёт для
+                // фильтров, где выбранных может быть несколько, и выбранный там
+                // помечается галочкой — она же съедала ширину у подписи.
+                ExpressiveConnectedButtons<CardVeil>(
+                  segments: [
                     for (final veil in CardVeil.values)
-                      ChoiceChip(
-                        label: Text(_veilLabel(l10n, veil)),
-                        selected: sub.cardVeil == veil,
-                        onSelected: (_) => _apply(ref, veil: veil),
+                      ExpressiveSegment(
+                        value: veil,
+                        label: _veilLabel(l10n, veil),
                       ),
                   ],
+                  selected: sub.cardVeil,
+                  onChanged: (veil) => _apply(ref, veil: veil),
                 ),
                 const SizedBox(height: 6),
                 _SheetHint(l10n.subscriptionCardVeilHint),
               ],
               const SizedBox(height: 16),
               _SheetSectionTitle(l10n.subscriptionCardContentTitle),
-              Wrap(
-                spacing: 8,
-                children: [
+              // Пресет — набор целиком, снимать его нечем; ровно поэтому здесь
+              // группа с одним выбранным, а не чипы с галочкой.
+              ExpressiveConnectedButtons<SubscriptionCardPreset>(
+                segments: [
                   for (final preset in SubscriptionCardPreset.selectable)
-                    ChoiceChip(
-                      label: Text(_presetLabel(l10n, preset)),
-                      selected: sub.cardPreset == preset,
-                      // Пресет — это набор целиком, поэтому и повторный тап по
-                      // выбранному его просто переставляет: снимать тут нечего.
-                      onSelected: (_) => _apply(ref, hidden: preset.hidden),
+                    ExpressiveSegment(
+                      value: preset,
+                      label: _presetLabel(l10n, preset),
                     ),
                 ],
+                selected: sub.cardPreset,
+                onChanged: (preset) => _apply(ref, hidden: preset.hidden),
               ),
               const SizedBox(height: 4),
               for (final element in SubscriptionCardElement.values)

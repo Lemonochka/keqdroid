@@ -60,3 +60,17 @@ class PlatformChannelException extends AppException {
 class StorageException extends AppException {
   const StorageException(super.message, {super.cause});
 }
+
+// файловые диалоги
+
+/// Показать системный диалог выбора файла нечем.
+///
+/// Только Linux: ни портала XDG с backend'ом FileChooser, ни
+/// zenity/qarma/kdialog. Своя ветка нужна, чтобы экран мог назвать
+/// недостающий пакет и предложить обходной путь — по одному тексту ошибки
+/// такое не разберёшь. См. `services/file_dialog_service.dart`.
+class FileDialogUnavailableException extends AppException {
+  const FileDialogUnavailableException({super.cause})
+      : super('No file dialog available: install xdg-desktop-portal-gtk, '
+            'zenity or kdialog');
+}

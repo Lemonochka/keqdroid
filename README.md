@@ -45,7 +45,7 @@
 ## Download
 
 Pre-built binaries are on [Releases](https://github.com/Lemonochka/keqdroid/releases).  
-Each release includes `.sha256` sidecars next to the files. The built-in updater checks the hash and refuses to install if the sidecar is missing or does not match.
+Every asset ships with a `.sha256` next to it. The built-in updater checks the hash and refuses to install when the sidecar is missing or does not match.
 
 | Platform | Files in release |
 |----------|------------------|
@@ -59,25 +59,42 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 
 ## Features
 
-**Connection**
-- subscription URLs, scheduled auto-update
-- manual server entry, config import, QR code scan (Android)
-- one-tap connect, auto-connect on system startup (Windows)
-- server checks: TCP, HTTP, ICMP, speed test
-- sort servers by ping, name or speed
+**Servers and subscriptions**
+- subscription URLs with scheduled auto-update; `keqdroid://` and `keqdis://` deep links from provider panels
+- manual entry, config import, QR code scan (Android)
+- proxy chains: traffic passes through several servers in the order you set
+- device identity per subscription — what the panel sees when the app fetches it
+- checks: TCP, HTTP, ICMP, speed test; sorting by ping, name or speed
 
 **Routing and tunnel**
-- rules: direct / via VPN / block; built-in list presets
+- three lists — direct, through the VPN, blocked — plus ready-made presets to start from
 - split tunnel: per-app on Android, per-program on Windows and Linux (TUN mode)
-- kill switch
+- **Connections** — a live list of where traffic is going and which rule sent it there
 
-**Other**
-- customizable hotkeys: connect/disconnect, TUN mode, best-ping server, show/hide window — system-wide on Windows, in-app on Linux
+**Appearance and data**
+- color presets, dark and light, Material You palette on Android
+- interface size, on top of the system text size
+- backup and restore: settings, servers, subscriptions with their images, split-tunnel lists
 - share the local proxy over LAN
-- color theme presets, dark and light mode, Material You palette on Android
-- settings export and import
-- Russian, English, Deutsch, 中文
+- hotkeys for connect/disconnect, TUN mode, best-ping server, show/hide window — system-wide on Windows, while the window is focused on Linux
+- English, Русский, Deutsch, 中文, فارسی
 - updates from GitHub Releases
+
+---
+
+## Cores
+
+Four cores ship inside the app. Which one runs a given server is decided by the server's format, not by preference — a ready-made config only makes sense to the core it was written for:
+
+| Server format | Runs on |
+|---------------|---------|
+| Links: `vless://` `vmess://` `trojan://` `ss://` `hy2://` | Xray or mihomo — your pick |
+| Ready-made Xray config (`.json`) | Xray |
+| Ready-made Clash / mihomo config | mihomo |
+| Proxy chain | Xray |
+| AmneziaWG profile (`.conf`) | amneziawg-go |
+
+The choice lives in **Settings → About** and applies to links, where both cores fit. **Automatic** leaves it to the format. When a server cannot run on the core you picked, the app says so on the spot instead of quietly switching — a silent fallback is exactly what makes "I selected mihomo and it says Xray" impossible to debug.
 
 ---
 
@@ -90,16 +107,13 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 | Trojan | `trojan://` |
 | Shadowsocks | `ss://` |
 | Hysteria 2 | `hysteria2://`, `hy2://` |
-| AmneziaWG | `.conf` |
-| Ready-made Xray config | whole `.json` config (paste, file, subscription) |
+| AmneziaWG | `.conf` profile |
+| Ready-made Xray config | whole `.json` (paste, file, subscription) |
+| Ready-made Clash config | whole config (paste, file, subscription) |
 
 Hysteria v1 is not supported.
 
-A ready-made config is used as its author wrote it — routing, DNS and outbound
-chains included; only the inbounds are replaced with the app's own. The name is
-read from the config's root `remarks`. The author's rules decide first; your own
-direct / proxy / block lists only see traffic those rules did not already match, and
-if the config ends with a catch-all — most do — they never come into play at all.
+A ready-made config runs as its author wrote it — routing, DNS and outbound chains included; only the inbounds are replaced with the app's own. The name comes from the config's root `remarks`. The author's rules decide first, and your own direct / proxy / block lists only see what those rules did not already match — if the config ends with a catch-all, and most do, they never come into play at all.
 
 ---
 
@@ -107,27 +121,30 @@ if the config ends with a catch-all — most do — they never come into play at
 
 ### Android
 
-- device-wide VPN; VPN permission on first connect
-- notification shade icon, Quick Settings tile
-- subscriptions update in the background
+| Mode | What it does |
+|------|--------------|
+| **VPN** | Everything on the device goes through the tunnel. VPN permission on first connect. |
+| **Proxy** | SOCKS and HTTP on `127.0.0.1`, nothing captured on its own — point an app or the Wi-Fi proxy settings at it. |
+
+Per-app routing and DNS interception belong to VPN mode; AmneziaWG servers always run as VPN. Notification shade icon and a Quick Settings tile; subscriptions update in the background.
 
 ### Windows
 
-| Mode | Description |
-|------|-------------|
+| Mode | What it does |
+|------|--------------|
 | **Proxy** | System proxy — browsers and most apps. No administrator rights. |
 | **TUN** | All traffic through a VPN adapter. Run as administrator. |
 
-The window minimizes to the tray and remembers its size and position. Launch at system startup with optional auto-connect. Global hotkeys are configured in Settings → Advanced → Hotkeys. Subscriptions refresh while the app is open.
+The window minimizes to the tray and remembers its size and position. Launch at system startup with optional auto-connect. Global hotkeys are in Settings → Advanced → Hotkeys. Subscriptions refresh while the app is open.
 
-**Settings location:** `%APPDATA%\com.keqdroid\keqdroid\` — not next to the exe. To move to another PC, use export/import in settings.
+**Settings location:** `%APPDATA%\com.keqdroid\keqdroid\` — not next to the exe. To move to another PC, use backup and restore in settings.
 
 ### Linux
 
-Debian/Arch, x86_64. Releases ship tar.gz, AppImage, deb; Arch users get a `PKGBUILD` in the release assets.
+Debian/Arch, x86_64. Releases ship tar.gz, AppImage and deb; Arch users get a `PKGBUILD` among the release assets.
 
-| Mode | Description |
-|------|-------------|
+| Mode | What it does |
+|------|--------------|
 | **Proxy** | No root |
 | **TUN** | Root via `pkexec` (polkit) on connect |
 
@@ -137,10 +154,10 @@ The window remembers its size and position; hotkeys work while the app window is
 
 ## Getting started
 
-1. **Subscriptions** — paste URL → «Add and fetch».
+1. **Subscriptions** — paste the URL, then «Add and fetch».
 2. **Servers** — pick a node.
 3. Connect.
-4. If needed — **Settings**: routing, split tunnel, hotkeys, Proxy/TUN mode (desktop).
+4. If needed — **Settings**: routing, split tunnel, hotkeys, connection mode.
 
 ---
 
@@ -158,14 +175,14 @@ flutter build windows --release  # Windows
 
 The Windows plugin list (`windows/flutter/app_plugins.cmake`) is checked in with Firebase (Android-only) already stripped, so a normal build just works. Re-run `powershell -File tool/sync_windows_plugins.ps1` only after adding or removing plugins.
 
-**Linux** — build on Linux or WSL only (the Windows SDK cannot target Linux):
+**Linux** — build on Linux or WSL only, the Windows SDK cannot target Linux:
 
 ```bash
 wsl -e bash /mnt/c/.../keqdroid/tool/build_linux_wsl.sh
 # binary: build/linux/x64/release/bundle/keqdroid
 ```
 
-Place required core binaries in `assets/bin/windows/` before a Windows build. Details — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
+Place the required core binaries in `assets/bin/windows/` before a Windows build — see [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
 
 ### Releases
 
@@ -177,7 +194,7 @@ powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
 ```
 
-Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to GitHub, attach a `.sha256` for every asset.
+Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, attach a `.sha256` for every asset — the updater treats a missing one as a reason to refuse.
 
 ---
 
@@ -224,7 +241,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 Скриншоты — [выше](#screenshots).
 
 Готовые сборки — в [Releases](https://github.com/Lemonochka/keqdroid/releases).  
-В каждом релизе лежат `.sha256` рядом с файлами: встроенный апдейтер проверяет хеш и не ставит обновление без совпадения.
+К каждому файлу приложен `.sha256`: встроенный апдейтер сверяет хеш и не ставит обновление, если файла с хешем нет или он не сошёлся.
 
 | Платформа | Файлы в релизе |
 |-----------|----------------|
@@ -238,25 +255,42 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 
 ## Возможности
 
-**Подключение**
-- подписки по URL, автообновление по расписанию
-- ручное добавление серверов, импорт конфигов, сканирование QR-кодов (Android)
-- подключение в одно нажатие, автоподключение при старте системы (Windows)
-- проверка серверов: TCP, HTTP, ICMP, тест скорости
-- сортировка серверов по пингу, имени или скорости
+**Серверы и подписки**
+- подписки по URL с автообновлением по расписанию; deep-ссылки `keqdroid://` и `keqdis://` из панелей провайдеров
+- ручное добавление, импорт конфигов, сканирование QR-кодов (Android)
+- цепочки прокси: трафик проходит через несколько серверов в заданном порядке
+- идентичность устройства для каждой подписки — то, каким приложение представляется панели при загрузке
+- проверки: TCP, HTTP, ICMP, тест скорости; сортировка по пингу, имени или скорости
 
 **Маршрутизация и туннель**
-- правила: напрямую / через VPN / блокировка; готовые пресеты списков
-- split tunnel: на Android — по приложениям, на Windows и Linux — по программам (в режиме TUN)
-- kill switch
+- три списка — напрямую, через VPN, блокировать — и готовые пресеты, чтобы начать
+- split tunnel: на Android по приложениям, на Windows и Linux по программам (режим TUN)
+- **Соединения** — живой список того, куда идёт трафик и какое правило его туда отправило
 
-**Прочее**
-- настраиваемые хоткеи: подключение, режим TUN, сервер с лучшим пингом, показать/скрыть окно — глобальные на Windows, внутри приложения на Linux
-- раздача локального прокси в LAN
-- цветовые пресеты темы, тёмный и светлый режим, палитра Material You на Android
-- экспорт и импорт настроек
-- русский, English, Deutsch, 中文
+**Оформление и данные**
+- цветовые пресеты, тёмная и светлая тема, палитра Material You на Android
+- размер интерфейса, поверх системного размера текста
+- резервная копия и восстановление: настройки, серверы, подписки вместе с их картинками, списки split tunnel
+- раздача локального прокси в локальную сеть
+- хоткеи на подключение, режим TUN, сервер с лучшим пингом, показать/скрыть окно — глобальные на Windows, в фокусе окна на Linux
+- English, Русский, Deutsch, 中文, فارسی
 - обновление из GitHub Releases
+
+---
+
+## Ядра
+
+Внутри приложения четыре ядра. Какое исполняет конкретный сервер, решает формат этого сервера, а не предпочтение: готовый конфиг понятен только тому ядру, для которого он написан.
+
+| Формат сервера | Исполняет |
+|----------------|-----------|
+| Ссылки: `vless://` `vmess://` `trojan://` `ss://` `hy2://` | Xray или mihomo — на выбор |
+| Готовый конфиг Xray (`.json`) | Xray |
+| Готовый конфиг Clash / mihomo | mihomo |
+| Цепочка прокси | Xray |
+| Профиль AmneziaWG (`.conf`) | amneziawg-go |
+
+Выбор живёт в **Настройки → О приложении** и касается ссылок — там подходят оба ядра. **Автоматически** отдаёт решение формату. Если сервер не может поехать на выбранном ядре, приложение скажет об этом сразу, а не переключится молча: именно тихий откат превращает «включила mihomo, а пишет Xray» в неразрешимую загадку.
 
 ---
 
@@ -269,16 +303,13 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually to Gi
 | Trojan | `trojan://` |
 | Shadowsocks | `ss://` |
 | Hysteria 2 | `hysteria2://`, `hy2://` |
-| AmneziaWG | `.conf` |
+| AmneziaWG | профиль `.conf` |
 | Готовый конфиг Xray | `.json` целиком (вставка, файл, подписка) |
+| Готовый конфиг Clash | конфиг целиком (вставка, файл, подписка) |
 
 Hysteria v1 не поддерживается.
 
-Готовый конфиг исполняется так, как его написал автор: роутинг, DNS и цепочки
-аутбаундов остаются его, подменяются только инбаунды на собственные. Имя берётся
-из корневого `remarks`. Первыми решают авторские правила, и до твоих списков
-обход/прокси/блок доходит только то, что они не поймали; а если конфиг кончается
-catch-all-правилом — так почти всегда — не доходит вовсе.
+Готовый конфиг исполняется так, как его написал автор: роутинг, DNS и цепочки аутбаундов остаются его, подменяются только инбаунды на собственные. Имя берётся из корневого `remarks`. Первыми решают авторские правила, и до списков обход / прокси / блок доходит только то, что они не поймали, — а если конфиг кончается catch-all-правилом, как бывает почти всегда, не доходит вовсе.
 
 ---
 
@@ -286,27 +317,30 @@ catch-all-правилом — так почти всегда — не дохо�
 
 ### Android
 
-- VPN на всё устройство; при первом подключении — разрешение VPN
-- уведомление в шторке, плитка в быстрых настройках
-- подписки обновляются в фоне
+| Режим | Что делает |
+|-------|------------|
+| **VPN** | Через туннель идёт всё устройство. При первом подключении — разрешение VPN. |
+| **Proxy** | SOCKS и HTTP на `127.0.0.1`, сам по себе не перехватывает ничего — на него нужно направить программу или настройки прокси в Wi-Fi. |
+
+Маршрутизация по приложениям и перехват DNS живут в режиме VPN; серверы AmneziaWG всегда идут как VPN. Значок в шторке и плитка в быстрых настройках; подписки обновляются в фоне.
 
 ### Windows
 
-| Режим | Описание |
-|-------|----------|
+| Режим | Что делает |
+|-------|------------|
 | **Proxy** | Системный прокси — браузеры и большинство программ. Без прав администратора. |
 | **TUN** | Весь трафик через VPN-адаптер. Запуск от имени администратора. |
 
-Окно сворачивается в трей и запоминает свой размер и позицию. Автозапуск вместе с системой с опциональным автоподключением. Глобальные хоткеи настраиваются в Настройки → Расширенные → Горячие клавиши. Подписки обновляются, пока приложение открыто.
+Окно сворачивается в трей и запоминает свой размер и позицию. Автозапуск вместе с системой, при желании с автоподключением. Глобальные хоткеи — в Настройки → Расширенные → Горячие клавиши. Подписки обновляются, пока приложение открыто.
 
-**Где лежат настройки:** `%APPDATA%\com.keqdroid\keqdroid\` — не в папке с exe. Перенос на другой ПК: экспорт/импорт в настройках.
+**Где лежат настройки:** `%APPDATA%\com.keqdroid\keqdroid\` — не в папке с exe. Перенос на другой ПК: резервная копия и восстановление в настройках.
 
 ### Linux
 
 Debian/Arch, x86_64. В релизе — tar.gz, AppImage, deb; для Arch среди файлов релиза есть `PKGBUILD`.
 
-| Режим | Описание |
-|-------|----------|
+| Режим | Что делает |
+|-------|------------|
 | **Proxy** | Без root |
 | **TUN** | Root через `pkexec` (polkit) при подключении |
 
@@ -316,10 +350,10 @@ Debian/Arch, x86_64. В релизе — tar.gz, AppImage, deb; для Arch ср
 
 ## Начало работы
 
-1. **Подписки** — URL → «Добавить и загрузить».
+1. **Подписки** — вставить URL, затем «Добавить и загрузить».
 2. **Серверы** — выбрать узел.
 3. Подключиться.
-4. При необходимости — **Настройки**: маршрутизация, split tunnel, хоткеи, режим Proxy/TUN (десктоп).
+4. При необходимости — **Настройки**: маршрутизация, split tunnel, хоткеи, режим подключения.
 
 ---
 
@@ -337,14 +371,14 @@ flutter build windows --release  # Windows
 
 Список Windows-плагинов (`windows/flutter/app_plugins.cmake`) лежит в репозитории уже без Firebase (он только для Android), так что обычная сборка работает сразу. Перезапускать `powershell -File tool/sync_windows_plugins.ps1` нужно только после добавления или удаления плагинов.
 
-**Linux** — только на Linux или в WSL (Windows SDK для Linux не подходит):
+**Linux** — только на Linux или в WSL, Windows SDK для Linux не подходит:
 
 ```bash
 wsl -e bash /mnt/c/.../keqdroid/tool/build_linux_wsl.sh
 # бинарь: build/linux/x64/release/bundle/keqdroid
 ```
 
-Для Windows перед сборкой положите нужные бинарники ядра в `assets/bin/windows/`. Подробнее — [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
+Для Windows перед сборкой нужно положить бинарники ядер в `assets/bin/windows/` — см. [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
 
 ### Релизы
 
@@ -356,7 +390,7 @@ powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
 ```
 
-Версия и тег `vX.Y.Z` — из `pubspec.yaml`. При ручной заливке на GitHub не забудьте `.sha256` к каждому файлу.
+Версия и тег `vX.Y.Z` берутся из `pubspec.yaml`. При ручной заливке к каждому файлу нужен `.sha256` — без него апдейтер откажется ставить обновление.
 
 ---
 
@@ -367,4 +401,4 @@ powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFi
 ---
 
 <p align="center">✦ ˚ · . &nbsp; ˚ʚ♡ɞ˚ &nbsp; . · ˚ ✦</p>
-<p align="center"><sub>made with ♡ · Flutter + Xray + sing-box</sub></p>
+<p align="center"><sub>made with ♡ · Flutter + Xray + mihomo + sing-box</sub></p>

@@ -35,6 +35,7 @@ import '../tunnel/local_port_plan.dart';
 import '../tunnel/vpn_backend.dart';
 import '../utils/app_locale.dart';
 import '../utils/awg_profile.dart';
+import '../utils/awg_uri.dart';
 import '../utils/config_gen.dart';
 import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';

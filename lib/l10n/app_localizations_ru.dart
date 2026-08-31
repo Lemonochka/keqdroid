@@ -894,7 +894,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversAddServerTitle => 'Добавить сервер';
 
   @override
-  String get serversPasteVlessHint => 'Вставьте vless://, vmess://, trojan://, ss://, hysteria2:// или hy2:// (по одному на строку) либо конфиг целиком: JSON Xray, YAML Clash, .conf AmneziaWG';
+  String get serversPasteVlessHint => 'Вставьте vless://, vmess://, trojan://, ss://, hysteria2://, hy2:// или wg:// (по одному на строку) либо конфиг целиком: JSON Xray, YAML Clash, .conf AmneziaWG';
 
   @override
   String get serversPasteHint => 'vless://… или hy2://host:port?auth=…';
@@ -1443,6 +1443,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorUnknownAction => 'Повторите операцию. Если ошибка повторяется, проверьте сервер и настройки приложения.';
 
   @override
+  String get errorFileDialogMessage => 'В этой сессии нечем показать выбор файла: нет ни backend\'а портала XDG, ни zenity/kdialog.';
+
+  @override
+  String get errorFileDialogAction => 'Установите xdg-desktop-portal-gtk (или zenity) либо вставьте текст конфига вместо выбора файла.';
+
+  @override
   String get errorTunAdminTitle => 'Требуется разрешение';
 
   @override
@@ -1474,6 +1480,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorUnknownTitle => 'Не удалось выполнить';
+
+  @override
+  String get errorFileDialogTitle => 'Нет диалога выбора файла';
 
   @override
   String get serversPin => 'Закрепить сервер';

@@ -17,6 +17,7 @@ enum UiErrorCode {
   subUrlInvalid,
   subUrlInsecureHttp,
   network,
+  fileDialogUnavailable,
   unknown,
 }
 
@@ -42,6 +43,19 @@ class UiErrorMessage {
 UiErrorMessage explainError(Object error) {
   final raw = error.toString();
   final msg = raw.toLowerCase();
+
+  // Раньше всех текстовых веток: это разбор по типу, а не по словам.
+  if (error is FileDialogUnavailableException) {
+    return const UiErrorMessage(
+      kind: UiErrorKind.config,
+      code: UiErrorCode.fileDialogUnavailable,
+      title: 'File Dialog Unavailable',
+      message: 'This desktop session has no file chooser: neither an XDG '
+          'portal backend nor zenity/kdialog.',
+      action: 'Install xdg-desktop-portal-gtk (or zenity), or paste the '
+          'config text instead of picking a file.',
+    );
+  }
 
   if (error is VpnPermissionDeniedException ||
       msg.contains('permission denied') ||
@@ -198,6 +212,7 @@ UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
     UiErrorCode.subUrlInvalid => l10n.errorSubUrlInvalidTitle,
     UiErrorCode.subUrlInsecureHttp => l10n.errorSubInsecureHttpTitle,
     UiErrorCode.network => l10n.errorNetworkTitle,
+    UiErrorCode.fileDialogUnavailable => l10n.errorFileDialogTitle,
     UiErrorCode.unknown => l10n.errorUnknownTitle,
   };
   final (message, action) = switch (base.code) {
@@ -240,6 +255,10 @@ UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
     UiErrorCode.network => (
         l10n.errorNetworkMessage,
         l10n.errorNetworkAction,
+      ),
+    UiErrorCode.fileDialogUnavailable => (
+        l10n.errorFileDialogMessage,
+        l10n.errorFileDialogAction,
       ),
     // unknown: message — вычищенный текст исходной ошибки (динамический,
     // перевести нельзя), локализуем только рекомендацию.

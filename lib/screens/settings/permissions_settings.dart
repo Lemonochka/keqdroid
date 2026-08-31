@@ -248,11 +248,7 @@ class _LinuxTunPasswordlessTileState
       activeThumbColor: accent,
       activeTrackColor: accent.withValues(alpha: 0.32),
       secondary: _busy
-          ? SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2, color: accent),
-            )
+          ? ShapeLoadingIndicator(size: 24, color: accent)
           : Icon(Icons.lock_open_rounded, color: accent),
       title: Text(l10n.settingsPermTunPasswordlessTitle),
       subtitle: Text(l10n.settingsPermTunPasswordlessSubtitle),

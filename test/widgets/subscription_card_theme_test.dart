@@ -8,6 +8,7 @@ import 'package:keqdroid/models/subscription_card_layout.dart';
 import 'package:keqdroid/models/subscription_card_theme.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/subscriptions_tab.dart';
+import 'package:keqdroid/shared/ui/expressive_button_group.dart';
 
 import '../helpers/test_storage.dart';
 
@@ -115,6 +116,34 @@ void main() {
     test('своя картинка без известного каталога — обычная карточка', () {
       SubscriptionCardTheme.customDirectory = null;
       expect(resolveCardTheme('file:sub-17.jpg').isPlain, isTrue);
+    });
+
+    test('картинки нет на диске — тема обычная, а не «с картинкой»', () {
+      // Так приезжает подписка из бэкапа, в который сама картинка не попала:
+      // `cardThemeId` есть, файла нет. Считать такую тему картинкой нельзя —
+      // шапка группы вырастала на полосу растворения, а показывать было нечего.
+      SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
+      SubscriptionCardTheme.customFiles = {'sub-17.jpg'};
+      addTearDown(() {
+        SubscriptionCardTheme.customDirectory = null;
+        SubscriptionCardTheme.customFiles = null;
+      });
+
+      expect(resolveCardTheme('file:sub-17.jpg').hasImage, isTrue);
+
+      final missing = resolveCardTheme('file:sub-99.jpg');
+      expect(missing.isPlain, isTrue);
+      expect(missing.hasImage, isFalse);
+    });
+
+    test('каталог ещё не читали — картинка считается живой', () {
+      // null у customFiles значит «не знаем», и это НЕ повод прятать оформление:
+      // список каталога мог не удаться, а карточка обязана остаться прежней.
+      SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
+      SubscriptionCardTheme.customFiles = null;
+      addTearDown(() => SubscriptionCardTheme.customDirectory = null);
+
+      expect(resolveCardTheme('file:sub-17.jpg').hasImage, isTrue);
     });
 
     test('удалённая тема откатывается к обычной карточке, а не падает', () {
@@ -490,13 +519,13 @@ void main() {
       expect(announce.value, isFalse, reason: 'компактная прячет объявление');
       expect(usage.value, isTrue, reason: 'трафик компактная оставляет');
 
-      final compact = tester.widget<ChoiceChip>(
-        find.ancestor(
-          of: find.text('Compact'),
-          matching: find.byType(ChoiceChip),
-        ),
+      // Пресет выбирается связанной группой кнопок, а не чипами: у чипа в M3
+      // роль фильтра (выбранных может быть несколько), а пресет — набор целиком.
+      final presets = tester
+          .widget<ExpressiveConnectedButtons<SubscriptionCardPreset>>(
+        find.byType(ExpressiveConnectedButtons<SubscriptionCardPreset>),
       );
-      expect(compact.selected, isTrue);
+      expect(presets.selected, SubscriptionCardPreset.compact);
     });
   });
 }

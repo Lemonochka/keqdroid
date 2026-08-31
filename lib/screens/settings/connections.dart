@@ -144,9 +144,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
         ),
       ),
       body: _loading
-          ? Center(
-              child: CircularProgressIndicator(color: AppTheme.accent(context)),
-            )
+          ? const Center(child: ShapeLoadingIndicator())
           : Column(
               children: [
                 Padding(

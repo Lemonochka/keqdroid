@@ -214,6 +214,8 @@ ThemeData buildAppTheme(
     navigationBarTheme: components.navigationBar,
     popupMenuTheme: components.popupMenu,
     segmentedButtonTheme: components.segmentedButton,
+    progressIndicatorTheme: components.progressIndicator,
+    sliderTheme: components.slider,
     bottomSheetTheme: components.sheet,
     dialogTheme: flair
         ? components.dialog.copyWith(

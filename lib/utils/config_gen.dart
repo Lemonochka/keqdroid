@@ -82,6 +82,12 @@ class ConfigGeneratorV2 {
     '::1/128', 'fc00::/7', 'fe80::/10',
   };
 
+  /// DNS-адрес, который VpnService отдаёт системе на Android — второй хост
+  /// подсети TUN (`KeqdisVpnService.TUN_DNS_ADDRESS`, держать в паре с ним).
+  /// Слушать на нём некому и не должно: запрос приходит в tun2socks и обязан
+  /// попасть в перехват, а не наружу.
+  static const String _androidTunDns = '172.19.0.2';
+
   /// Пароль на LAN-инбаунды включается только полной парой логин+пароль:
   /// половинчатый ввод даёт noauth, а не пустой логин/пароль в accounts.
   static bool _lanAuthEnabled(AppSettings settings) =>
@@ -584,7 +590,11 @@ class ConfigGeneratorV2 {
       ],
       proxiedDoh: settings.finalOutbound == AppSettings.finalOutboundProxy,
     );
-    final effectiveDns = custom.authorDns ?? fallbackDns;
+    // Авторский блок плюс наш резерв в хвосте — см. [CustomXrayConfig.mergeDns].
+    // Считается тем же методом, что кладётся в конфиг, иначе проверки ниже
+    // (fakedns, «резолверу нужен роутинг») судили бы о другом dns-блоке.
+    final effectiveDns =
+        CustomXrayConfig.mergeDns(custom.authorDns, fallbackDns) ?? fallbackDns;
 
     // fakedns — единственный случай, когда перехват DNS всё ЛОМАЕТ, а не чинит.
     // Ядро отдало бы приложению адрес из фейкового пула, а достать из такого
@@ -607,6 +617,33 @@ class ConfigGeneratorV2 {
           'type': 'field',
           'ruleTag': 'dns-out',
           'inboundTag': inboundTags,
+          'port': '53',
+          'network': 'tcp,udp',
+          'outboundTag': dnsOutTag,
+        },
+    ];
+
+    // Тот же перехват, но по СЛУЖЕБНОМУ адресу TUN — и он обязан стоять ПЕРЕД
+    // авторскими правилами, в отличие от общего выше.
+    //
+    // Системный резолвер на Android ходит на адрес из [_androidTunDns], а он
+    // лежит в приватном диапазоне. Авторское `geoip:private -> direct` есть
+    // почти в каждом готовом конфиге, и оно забирает запрос себе раньше:
+    // ядро честно открывает сокет на 172.19.0.2:53 наружу, где никто не
+    // слушает, и резолва нет вовсе — снаружи это «подключился, а интернета
+    // нет». Ровно та же грабля, что у sing-box на десктопе (см. hijack-dns по
+    // порту в singbox_tun_config).
+    //
+    // Принцип «автор разложил DNS сам — решает он» это не ломает: правило
+    // матчит один служебный адрес, которого в авторском конфиге быть не может,
+    // а общий перехват по порту 53 остаётся ПОСЛЕ авторских правил.
+    final tunDnsRules = <Map<String, dynamic>>[
+      if (interceptDns)
+        {
+          'type': 'field',
+          'ruleTag': 'dns-out-tun',
+          'inboundTag': inboundTags,
+          'ip': ['$_androidTunDns/32'],
           'port': '53',
           'network': 'tcp,udp',
           'outboundTag': dnsOutTag,
@@ -682,7 +719,7 @@ class ConfigGeneratorV2 {
       // него не из локальной сети. Пропусти вперёд авторское правило — и любой
       // запрос снаружи, попавший под него, уедет в туннель раньше запрета,
       // то есть прокси станет открытым для интернета.
-      prependRules: lanRules,
+      prependRules: [...lanRules, ...tunDnsRules],
       appendRules: appendRules,
       geoIndex: geoIndex,
     );

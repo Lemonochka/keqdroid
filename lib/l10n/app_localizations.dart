@@ -1760,7 +1760,7 @@ abstract class AppLocalizations {
   /// No description provided for @serversPasteVlessHint.
   ///
   /// In en, this message translates to:
-  /// **'Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line), or a whole config: Xray JSON, Clash YAML, AmneziaWG .conf'**
+  /// **'Paste vless://, vmess://, trojan://, ss://, hysteria2://, hy2:// or wg:// (one per line), or a whole config: Xray JSON, Clash YAML, AmneziaWG .conf'**
   String get serversPasteVlessHint;
 
   /// No description provided for @serversPasteHint.
@@ -2807,6 +2807,18 @@ abstract class AppLocalizations {
   /// **'Retry operation. If issue repeats, check server and app settings.'**
   String get errorUnknownAction;
 
+  /// No description provided for @errorFileDialogMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This desktop session has no file chooser: neither an XDG portal backend nor zenity/kdialog.'**
+  String get errorFileDialogMessage;
+
+  /// No description provided for @errorFileDialogAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Install xdg-desktop-portal-gtk (or zenity), or paste the config text instead of picking a file.'**
+  String get errorFileDialogAction;
+
   /// No description provided for @errorTunAdminTitle.
   ///
   /// In en, this message translates to:
@@ -2872,6 +2884,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Operation Failed'**
   String get errorUnknownTitle;
+
+  /// No description provided for @errorFileDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No File Dialog'**
+  String get errorFileDialogTitle;
 
   /// No description provided for @serversPin.
   ///

@@ -16,9 +16,12 @@ import 'package:keqdroid/shared/ui/haptics.dart';
 import 'package:keqdroid/shared/ui/server_group_anchors.dart';
 import 'package:keqdroid/shared/ui/scroll_jump_overlay.dart';
 import 'package:keqdroid/shared/ui/server_row.dart';
+import 'package:keqdroid/shared/ui/shape_morph.dart';
+import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
 import '../core/app_logger.dart';
+import '../core/exceptions.dart';
 import '../models/app_settings.dart';
 import '../models/server_group.dart';
 import '../models/server_item.dart';
@@ -26,6 +29,7 @@ import '../models/server_name_utils.dart';
 import '../models/subscription.dart';
 import '../models/subscription_card_theme.dart';
 import '../providers/providers.dart';
+import '../services/file_dialog_service.dart';
 import '../services/ping_service.dart';
 import '../services/subscription_accent_service.dart';
 import '../services/vpn_engine.dart';
@@ -59,8 +63,6 @@ class ServersTab extends ConsumerStatefulWidget {
 
 class _ServersTabState extends ConsumerState<ServersTab>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  late final AnimationController _breathCtrl;
-  late final Animation<double> _breathAnim;
   late final AnimationController _waveCtrl;
   late final AnimationController _stateCtrl;
 
@@ -72,14 +74,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     VpnNativeBridge.registerLaunchHandler(_onNativeMethodCall);
-    _breathCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
-    _breathAnim = Tween<double>(
-      begin: 1.0,
-      end: 1.05,
-    ).animate(CurvedAnimation(parent: _breathCtrl, curve: Curves.easeInOut));
     _waveCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -112,7 +106,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     VpnNativeBridge.registerLaunchHandler(null);
-    _breathCtrl.dispose();
     _waveCtrl.dispose();
     _stateCtrl.dispose();
     super.dispose();
@@ -201,10 +194,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
     final run = _appInForeground && (_serversTabVisible || vpnActive);
     if (run) {
       if (!_waveCtrl.isAnimating) _waveCtrl.repeat();
-      if (!_breathCtrl.isAnimating) _breathCtrl.repeat(reverse: true);
     } else {
       _waveCtrl.stop();
-      _breathCtrl.stop();
     }
   }
 
@@ -384,7 +375,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
       if (nextStatus == VpnStatus.connecting ||
           nextStatus == VpnStatus.disconnecting) {
-        if (!_breathCtrl.isAnimating) _breathCtrl.repeat(reverse: true);
         if (!_waveCtrl.isAnimating) _waveCtrl.repeat();
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -394,7 +384,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
     });
 
     // Видимость вкладки — только listen, НЕ watch: она влияет лишь на явные
-    // контроллеры (wave/breath) через _syncHeaderAnimations, а watch
+    // контроллер волны через _syncHeaderAnimations, а watch
     // перестраивал бы весь таб (хедер + список) прямо в кадре свайпа.
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       ref.listen<int>(homeTabIndexProvider, (prev, next) {
@@ -428,10 +418,15 @@ class _ServersTabState extends ConsumerState<ServersTab>
     // состоянии «подключается», чтобы переход был одной плавной дугой.
     final isConnected =
         vpnStatus == VpnStatus.connected && !serverSwitchInProgress;
+    // `disconnecting` сюда НЕ входит, и это не упрощение.
+    //
+    // Отключение мгновенное, но флаг заводил кнопку в состояние «идёт работа»:
+    // на пути в отключённый вид успевал появиться индикатор, дожить до
+    // доводки и только потом уступить место неактивной кнопке. Лишний кадр
+    // там, где нечего ждать. Тапабельность на `disconnecting` гасится ниже
+    // отдельно, по самому статусу.
     final isConnecting =
-        serverSwitchInProgress ||
-        vpnStatus == VpnStatus.connecting ||
-        vpnStatus == VpnStatus.disconnecting;
+        serverSwitchInProgress || vpnStatus == VpnStatus.connecting;
 
     final isDesktop = PlatformBootstrap.isDesktop;
     // Высота волны ПОСТОЯННА. Раньше она ужималась на connecting/connected,
@@ -446,22 +441,23 @@ class _ServersTabState extends ConsumerState<ServersTab>
       padding: EdgeInsets.fromLTRB(24, topPad, 24, 8),
       child: Column(
         children: [
-              // При connected «дыхание» и blur-тень перерисовываются каждый
-              // кадр — boundary не даёт им тянуть перерисовку всего хедера.
+              // Кнопка анимируется на нажатии и на смене иконки — boundary не
+              // даёт этим перерисовкам тянуть за собой весь хедер.
+              //
+              // «Дыхания» здесь больше нет. Медленный ScaleTransition (1.0 →
+              // 1.05, 2 с) масштабировал всю кнопку вместе с её blur-тенью
+              // каждый кадр: пересчёт тени на дробном масштабе давал видимое
+              // дёрганье вместо плавной пульсации. Состояние подключения и так
+              // видно по цвету круга, иконке и волне под ним.
               RepaintBoundary(
-                child: ScaleTransition(
-                  scale: (isConnected || isConnecting)
-                      ? _breathAnim
-                      : const AlwaysStoppedAnimation(1.0),
-                  child: _ConnectButton(
-                    isConnected: isConnected,
-                    isConnecting: isConnecting,
-                    // connecting остаётся тапабельным — это отмена попытки;
-                    // блокируем только disconnecting (гасить уже нечего).
-                    onTap: vpnStatus == VpnStatus.disconnecting
-                        ? null
-                        : () => _toggleVpn(vpnStatus),
-                  ),
+                child: _ConnectButton(
+                  isConnected: isConnected,
+                  isConnecting: isConnecting,
+                  // connecting остаётся тапабельным — это отмена попытки;
+                  // блокируем только disconnecting (гасить уже нечего).
+                  onTap: vpnStatus == VpnStatus.disconnecting
+                      ? null
+                      : () => _toggleVpn(vpnStatus),
                 ),
               ),
               const SizedBox(height: 18),
@@ -780,7 +776,10 @@ class _ServersTabState extends ConsumerState<ServersTab>
   Future<void> _importConfigFile(BuildContext ctx) async {
     String? content;
     try {
-      final file = await FilePicker.pickFile(type: FileType.any);
+      final file = await AppFileDialogs.pickFile(
+        dialogTitle: AppLocalizations.of(ctx)!.serversImportFile,
+        type: FileType.any,
+      );
       if (file == null) return;
       if (file.path != null && file.path!.isNotEmpty) {
         content = await File(file.path!).readAsString();
@@ -788,7 +787,22 @@ class _ServersTabState extends ConsumerState<ServersTab>
         content = utf8.decode(await file.readAsBytes(), allowMalformed: true);
       }
     } catch (e) {
-      if (ctx.mounted) _showImportError(ctx, e);
+      if (!ctx.mounted) return;
+      // Показать выбор файла в этой сессии нечем — обходной путь предлагаем
+      // тут же, кнопкой: тот же .conf принимает и вставка текстом.
+      _showImportError(
+        ctx,
+        e,
+        detailed: e is FileDialogUnavailableException,
+        action: e is FileDialogUnavailableException
+            ? SnackBarAction(
+                label: AppLocalizations.of(ctx)!.serversPasteLinks,
+                onPressed: () {
+                  if (ctx.mounted) _showPasteLinksSheet(ctx);
+                },
+              )
+            : null,
+      );
       return;
     }
 
@@ -829,14 +843,26 @@ class _ServersTabState extends ConsumerState<ServersTab>
     return (added: added, firstError: firstError);
   }
 
-  void _showImportError(BuildContext ctx, Object e) {
+  /// [detailed] дописывает к тексту рекомендацию: обычно она лишняя, но там,
+  /// где чинить нужно не конфиг, а систему («поставьте портал»), ошибка без
+  /// неё — просто отказ без выхода.
+  void _showImportError(
+    BuildContext ctx,
+    Object e, {
+    bool detailed = false,
+    SnackBarAction? action,
+  }) {
     ScaffoldMessenger.of(ctx).showSnackBar(
       SnackBar(
-        content: Text(_shortError(e, ctx)),
+        content: Text(
+          detailed ? friendlyErrorDetailed(e, ctx) : _shortError(e, ctx),
+        ),
         backgroundColor: AppTheme.red(ctx),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
-        duration: const Duration(seconds: 5),
+        action: action,
+        // С кнопкой снекбар нужно успеть не только прочитать, но и нажать.
+        duration: Duration(seconds: action != null ? 10 : 5),
       ),
     );
   }
@@ -978,13 +1004,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
                           }
                         },
                   child: loading
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppTheme.onAccentContainer(ctx),
-                          ),
+                      ? ShapeLoadingIndicator(
+                          size: 20,
+                          color: AppTheme.onAccentContainer(ctx),
                         )
                       : Text(
                           l10n.serversAdd,

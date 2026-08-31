@@ -30,12 +30,13 @@ class ServerRow extends StatelessWidget {
   /// Тип пинга для порогов цвета (у url и tcp шкалы разные).
   final PingType pingColorType;
 
-  /// Цвет текста. null — обычный [AppTheme.text]; на поднятом сегменте сюда
+  /// Цвет текста. null — обычный [AppTheme.text]; на выбранном сегменте сюда
   /// приходит `onSecondaryContainer`.
   final Color? foreground;
 
-  /// Бейдж протокола на непрозрачной подложке — так он не сливается с заливкой
-  /// поднятого сегмента и выглядит как у соседних строк.
+  /// Строка выбрана — это меняет бейдж протокола дважды: подложка становится
+  /// непрозрачной (иначе полупрозрачный тон сводится с заливкой сегмента и
+  /// надпись проваливается по контрасту), а форма — пилюлей вместо углов в 4dp.
   final bool opaqueBadge;
 
   /// Имя усиленным начертанием (у M3E это и есть роль выбранного пункта).
@@ -55,8 +56,11 @@ class ServerRow extends StatelessWidget {
     this.trailing,
   });
 
-  /// Высота строки в списках серверов. Общая, чтобы сетка в две колонки и
-  /// `mainAxisExtent` не разъезжались с одноколоночным списком.
+  /// ШАГ строки в списках серверов — вместе с зазором между сегментами, а не
+  /// высота самого контейнера (та меньше ровно на зазор `ExpressiveListSegment.gap`).
+  ///
+  /// Общая константа, чтобы сетка в две колонки, `mainAxisExtent` и смещение
+  /// якоря активного сервера считались от одного числа.
   static const double height = 76;
 
   @override
@@ -74,7 +78,10 @@ class ServerRow extends StatelessWidget {
         : protocolColor.withValues(alpha: 0.15);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      // Отступ leading-слота по спеке списка — 16dp от края контейнера.
+      padding: const EdgeInsets.symmetric(
+        horizontal: ExpressiveSpacing.large,
+      ),
       child: Row(
         children: [
           ServerAvatar(
@@ -84,7 +91,7 @@ class ServerRow extends StatelessWidget {
             // отличает её от обычного сервера той же страны.
             chainHops: isChain ? server.chainConfig!.hops.length : null,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: ExpressiveSpacing.medium),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -95,14 +102,16 @@ class ServerRow extends StatelessWidget {
                   children: [
                     if (server.isPinned)
                       Padding(
-                        padding: const EdgeInsetsDirectional.only(end: 4),
+                        padding: const EdgeInsetsDirectional.only(
+                          end: ExpressiveSpacing.extraSmall,
+                        ),
                         child: Transform.rotate(
                           // слегка наклонённая канцелярская кнопка — как
                           // «приколотый» пин в мессенджерах
                           angle: 45 * pi / 180,
                           child: Icon(
                             Icons.push_pin_rounded,
-                            size: 13,
+                            size: ExpressiveIconSize.inline,
                             color: foreground ?? AppTheme.accent(context),
                           ),
                         ),
@@ -112,9 +121,12 @@ class ServerRow extends StatelessWidget {
                         ServerNameUtils.formatForDisplay(
                           ServerNameUtils.cleanDisplayName(server.displayName),
                         ),
+                        // Имя пункта списка — роль `bodyLarge`: это label text
+                        // по токенам списка, а не заголовок. Выбранный сервер
+                        // отличается ВЕСОМ (усиленный вариант), а не кеглем.
                         style: (emphasizeTitle
-                                ? textTheme.emphasized(textTheme.titleSmall)
-                                : textTheme.titleSmall)
+                                ? textTheme.emphasized(textTheme.bodyLarge)
+                                : textTheme.bodyLarge)
                             ?.copyWith(color: textColor),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -122,7 +134,7 @@ class ServerRow extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: ExpressiveSpacing.hairline),
                 Row(
                   children: [
                     // У цепочки на месте бейджа протокола — сам маршрут:
@@ -139,13 +151,19 @@ class ServerRow extends StatelessWidget {
                       Flexible(
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 1,
+                            horizontal: ExpressiveSpacing.small,
+                            vertical: ExpressiveSpacing.hairline,
                           ),
                           decoration: BoxDecoration(
                             color: badgeBackground,
+                            // Форму бейджа ведёт выбор — тем же правилом, что
+                            // форму самого сегмента: у невыбранных углы 4dp,
+                            // у выбранного пилюля. Одинаковая пилюля на всех
+                            // строках этот перепад съедала.
                             borderRadius: ExpressiveShape.radius(
-                              ExpressiveShape.extraSmall,
+                              opaqueBadge
+                                  ? ExpressiveShape.full
+                                  : ExpressiveShape.extraSmall,
                             ),
                           ),
                           child: Text(
@@ -158,7 +176,7 @@ class ServerRow extends StatelessWidget {
                           ),
                         ),
                       ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: ExpressiveSpacing.small),
                     Flexible(
                       child: Text(
                         ltrIsolate(
@@ -168,8 +186,10 @@ class ServerRow extends StatelessWidget {
                               : (lastTestedAt != null ? 'N/A' : '- ms'),
                         ),
                         // Пинг — числовой показатель, у M3 это роль label, а
-                        // не body: плотнее и заметнее при том же кегле.
-                        style: textTheme.labelMedium?.copyWith(
+                        // не body: плотнее и заметнее при том же кегле. Кегль
+                        // берём supporting-строки списка (14sp), иначе рядом с
+                        // 16sp именем вторая строка проваливается.
+                        style: textTheme.labelLarge?.copyWith(
                           color: pingMs != null
                               ? pingQualityColor(context, pingMs!, pingColorType)
                               : mutedColor,
@@ -184,7 +204,7 @@ class ServerRow extends StatelessWidget {
             ),
           ),
           if (trailing != null) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: ExpressiveSpacing.small),
             trailing!,
           ],
         ],

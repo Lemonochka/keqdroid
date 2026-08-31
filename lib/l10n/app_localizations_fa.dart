@@ -892,7 +892,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversAddServerTitle => 'افزودن سرور';
 
   @override
-  String get serversPasteVlessHint => 'لینک vless://، vmess://، trojan://، ss://، hysteria2:// یا hy2:// را بچسبانید (هر کدام در یک خط)، یا یک کانفیگ کامل: JSON برای Xray، YAML برای Clash، ‎.conf برای AmneziaWG';
+  String get serversPasteVlessHint => 'لینک vless://، vmess://، trojan://، ss://، hysteria2://، hy2:// یا wg:// را بچسبانید (هر کدام در یک خط)، یا یک کانفیگ کامل: JSON برای Xray، YAML برای Clash، ‎.conf برای AmneziaWG';
 
   @override
   String get serversPasteHint => '…//:vless یا …?hy2://host:port=auth';
@@ -1441,6 +1441,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get errorUnknownAction => 'دوباره تلاش کنید. اگر تکرار شد، سرور و تنظیمات برنامه را بررسی کنید.';
 
   @override
+  String get errorFileDialogMessage => 'این نشست دسکتاپ هیچ انتخابگر فایلی ندارد: نه backend پرتال XDG و نه zenity/kdialog.';
+
+  @override
+  String get errorFileDialogAction => 'بستهٔ xdg-desktop-portal-gtk (یا zenity) را نصب کنید، یا به‌جای انتخاب فایل متن پیکربندی را بچسبانید.';
+
+  @override
   String get errorTunAdminTitle => 'نیاز به مجوز';
 
   @override
@@ -1472,6 +1478,9 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get errorUnknownTitle => 'عملیات ناموفق';
+
+  @override
+  String get errorFileDialogTitle => 'بدون پنجرهٔ انتخاب فایل';
 
   @override
   String get serversPin => 'سنجاق کردن سرور';

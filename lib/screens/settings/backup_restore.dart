@@ -17,6 +17,13 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
 
   AppLocalizations get l10n => AppLocalizations.of(context)!;
 
+  /// Отсутствие системного диалога объясняем словами и с рекомендацией: имя
+  /// класса исключения человеку не подсказывает, какой пакет он не поставил.
+  /// Остальное показываем как есть — там текст ошибки и есть суть.
+  String _failureReason(Object e) => e is FileDialogUnavailableException
+      ? friendlyErrorDetailed(e, context)
+      : '$e';
+
   Future<void> _export() async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -41,7 +48,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       final stamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
       final fileName = 'keqdis-backup-$stamp.json';
 
-      final savedPath = await FilePicker.saveFile(
+      final savedPath = await AppFileDialogs.saveFile(
         dialogTitle: l10n.settingsSelectLocation,
         fileName: fileName,
         bytes: Uint8List.fromList(utf8.encode(jsonText)),
@@ -64,7 +71,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsExportFailed('$e')), backgroundColor: AppTheme.red(context)),
+        SnackBar(content: Text(l10n.settingsExportFailed(_failureReason(e))), backgroundColor: AppTheme.red(context)),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -75,11 +82,11 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final picked = await FilePicker.pickFiles(
+      final res = await AppFileDialogs.pickFile(
+        dialogTitle: l10n.settingsImportBackup,
         type: FileType.custom,
         allowedExtensions: const ['json', 'keqdis'],
       );
-      final res = picked?.files.single;
       if (res == null) return;
 
       final bytes = await res.readAsBytes();
@@ -118,7 +125,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsImportFailed('$e')), backgroundColor: AppTheme.red(context)),
+        SnackBar(content: Text(l10n.settingsImportFailed(_failureReason(e))), backgroundColor: AppTheme.red(context)),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -289,14 +296,10 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                     ),
                     onPressed: _busy ? null : _export,
                     icon: _busy
-                        ? SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.onAccentContainer(context),
-                      ),
-                    )
+                        ? ShapeLoadingIndicator(
+                            size: 16,
+                            color: AppTheme.onAccentContainer(context),
+                          )
                         : const Icon(Icons.download_rounded),
                     label: Text(_busy ? l10n.settingsWorking : l10n.settingsExportFile),
                   ),

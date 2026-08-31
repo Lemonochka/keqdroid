@@ -1,14 +1,19 @@
 part of '../servers_tab.dart';
 
+/// Trailing-слот строки сервера: контейнер XSmall-иконки M3E.
+const _trailingSlotSize = 32.0;
+
 class _ServerTile extends ConsumerWidget {
   final ServerItem server;
   final bool isActive;
-  final bool isFirst;
-  final bool isLast;
-  /// Скругление углов тайла. По умолчанию — нижние углы у последнего тайла
-  /// (одноколоночный список); сетка в две колонки передаёт своё (у нижнего
-  /// ряда скругляется только внешний угол каждой колонки).
-  final BorderRadius? radius;
+
+  /// Форма сегмента. Считает её список ([ExpressiveListSegment.segmentRadius]):
+  /// только он знает, где у тайла сосед, а где край группы.
+  final BorderRadius radius;
+
+  /// Поля сегмента внутри шага списка — из них и набирается зазор между
+  /// строками (см. [ExpressiveListSegment.segmentMargin]).
+  final EdgeInsets margin;
 
   /// Цвета, выведенные из картинки подписки. null — у подписки нет своей
   /// подложки (или сервер добавлен руками), тогда тайл живёт на ролях темы,
@@ -22,9 +27,8 @@ class _ServerTile extends ConsumerWidget {
     super.key,
     required this.server,
     required this.isActive,
-    required this.isFirst,
-    required this.isLast,
-    this.radius,
+    required this.radius,
+    required this.margin,
     this.accent,
     required this.onTap,
     required this.onDelete,
@@ -78,17 +82,10 @@ class _ServerTile extends ConsumerWidget {
             vpnStatus == VpnStatus.connecting ||
             vpnStatus == VpnStatus.disconnecting);
 
-    final radius = this.radius ??
-        BorderRadius.vertical(
-          bottom: isLast
-              ? const Radius.circular(ExpressiveShape.extraLarge)
-              : Radius.zero,
-        );
-
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    // Акцент подписки подменяет РОЛЬ, а не отдельный цвет: и заливка поднятого
+    // Акцент подписки подменяет РОЛЬ, а не отдельный цвет: и заливка выбранного
     // сегмента, и текст на нём берутся из одной тональной схемы, поэтому
     // контраст остаётся выверенным при любой картинке. Подписи «серверов
     // вообще» (пинг, протокол) остаются на ролях темы — иначе список стал бы
@@ -97,50 +94,36 @@ class _ServerTile extends ConsumerWidget {
     final accentColor = accent?.seed ?? AppTheme.accent(context);
     final textLightColor = AppTheme.textLight(context);
 
-    // Активный сервер «поднимается» из группы отдельным сегментом: свои
-    // скругления, отступ от краёв и заливка secondaryContainer.
+    // Активный сервер — ВЫБРАННЫЙ СЕГМЕНТ списка, по спеке expressive-списка:
+    // форма морфится к 16dp по кругу, заливка уходит в цветной контейнер. Ни
+    // подъёма, ни отступа, ни подсветки поверх — выделение несут контейнер и
+    // его форма, и больше ничего.
     //
-    // Это подход M3E к выбранному пункту списка — форма плюс цветной
-    // контейнер. Прежняя подсветка (accent на 13% альфы) отличала активный
-    // сервер только чуть более светлым фоном, а на AMOLED-чёрном не читалась
-    // почти никак. В две колонки приём не работает — там подсветка обязана
-    // растворяться к середине карточки, поэтому режим остаётся градиентным.
-    // Активный сервер «поднимается» из группы отдельным сегментом — и в одну
-    // колонку, и в сетке.
-    //
-    // В сетке раньше стоял градиент, растворявший подсветку к середине
-    // карточки: сплошная заливка на всю ширину плитки давала жёсткую
-    // вертикальную линию на стыке колонок. Поднятый сегмент отступает от краёв
-    // со всех сторон, поэтому стыка нет вовсе — приём решает исходную задачу
-    // прямее, чем обходной градиент.
-    final isLifted = isActive;
-    final liftedRadius = ExpressiveShape.radius(ExpressiveShape.largeIncreased);
-    const liftedInset = EdgeInsets.symmetric(horizontal: 6, vertical: 3);
-
-    final activeDecoration = BoxDecoration(
-      color: accent?.container ?? scheme.secondaryContainer,
-    );
-    final restDecoration = BoxDecoration(
-      color: accent?.surface(AppTheme.card(context)) ?? AppTheme.card(context),
-    );
+    // Прежде тайл «поднимался» из группы (свой inset 6×3 и радиус 20). Приём
+    // понадобился ровно потому, что строки стояли встык и отличить одну из них
+    // было нечем; в сегментированном списке зазор уже есть у всех, и выбранной
+    // строке достаточно перестать быть квадратной.
+    final tileColor =
+        accent?.surface(AppTheme.card(context)) ?? AppTheme.card(context);
+    final selectedColor = accent?.container ?? scheme.secondaryContainer;
 
     // Сам ряд — общий с выбором узлов цепочки (shared/ui/server_row.dart).
-    // Плитка добавляет к нему только подсветку активного, форму и жесты.
+    // Плитка добавляет к нему только состояние выбора, форму и жесты.
     //
     // Цвет протокола — идентичность сервера, и на выбранной строке его терять
     // нельзя. Но полупрозрачная подложка поверх secondaryContainer сводит тон
     // бейджа с тоном контейнера, и надпись проваливается по контрасту. Поэтому
-    // на поднятом сегменте бейдж встаёт на собственную непрозрачную подложку —
+    // на выбранном сегменте бейдж встаёт на собственную непрозрачную подложку —
     // ту же, на которой живут бейджи остальных строк.
     final rowBody = ServerRow(
       server: server,
       pingMs: pingMs,
       lastTestedAt: lastTestedAt,
       pingColorType: pingColorType,
-      foreground: isLifted
+      foreground: isActive
           ? (accent?.onContainer ?? scheme.onSecondaryContainer)
           : null,
-      opaqueBadge: isLifted,
+      opaqueBadge: isActive,
       // Активный сервер отличается ВЕСОМ, а не размером: у M3E это и есть
       // роль усиленного варианта.
       emphasizeTitle: isActive,
@@ -159,56 +142,30 @@ class _ServerTile extends ConsumerWidget {
     // доступности/autofill включает семантику реально, а её геометрия
     // пересчитывается на каждом кадре свайпа — чем меньше узлов, тем дешевле.
     //
-    // Высота строки задаётся снаружи отступа сегмента: у поднятого тайла
-    // отступ съедает часть высоты, а шаг списка обязан остаться прежним —
-    // иначе сетка в две колонки и `mainAxisExtent` разъедутся.
+    // Внешний SizedBox — ШАГ списка, а не высота сегмента: зазор набирается
+    // полями внутри него. От шага считаются `mainAxisExtent` сетки и смещение
+    // якоря активного сервера, и он обязан остаться прежним.
     return RepaintBoundary(
       child: MergeSemantics(
         child: SizedBox(
           height: _subCardRowHeight,
-          // Отступ, форма и заливка едут от ОДНОГО значения.
-          //
-          // Раньше это были три независимые implicit-анимации (AnimatedPadding
-          // + TweenAnimationBuilder + AnimatedContainer). Каждая при перебивке
-          // стартует со своего текущего значения, и на быстром переборе
-          // серверов они расходились: радиус успевал дойти до квадрата, пока
-          // отступ и подсветка ещё ехали, — отсюда квадратные обводки. Один
-          // контроллер такой рассинхрон исключает по построению.
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(end: isActive ? 1 : 0),
-            duration: ExpressiveMotion.durationFast,
-            curve: ExpressiveMotion.emphasized,
-            builder: (context, t, child) {
-              return Padding(
-                padding: EdgeInsets.lerp(EdgeInsets.zero, liftedInset, t)!,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.lerp(radius, liftedRadius, t)!,
-                  clipBehavior: Clip.antiAlias,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration.lerp(
-                      restDecoration,
-                      activeDecoration,
-                      t,
-                    )!,
-                    child: child,
-                  ),
-                ),
-              );
-            },
-            child: Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                onTap: () {
-                  AppHaptics.selection();
-                  onTap();
-                },
-                onLongPress: () => _showOptions(context, ref),
-                // на десктопе правый клик открывает то же меню
-                onSecondaryTap: () => _showOptions(context, ref),
-                splashColor: accentColor.withValues(alpha: 0.2),
-                highlightColor: accentColor.withValues(alpha: 0.08),
-                child: rowBody,
-              ),
+          child: Padding(
+            padding: margin,
+            child: ExpressiveListSegment(
+              radius: radius,
+              selected: isActive,
+              color: tileColor,
+              selectedColor: selectedColor,
+              onTap: () {
+                AppHaptics.selection();
+                onTap();
+              },
+              onLongPress: () => _showOptions(context, ref),
+              // на десктопе правый клик открывает то же меню
+              onSecondaryTap: () => _showOptions(context, ref),
+              splashColor: accentColor.withValues(alpha: 0.2),
+              highlightColor: accentColor.withValues(alpha: 0.08),
+              child: rowBody,
             ),
           ),
         ),
@@ -242,33 +199,57 @@ class _ServerTile extends ConsumerWidget {
       center = SizedBox(
         // один ключ для обоих спиннеров — крутилка не мигает при ping↔connect.
         key: const ValueKey('spinner'),
-        width: 18,
-        height: 18,
-        child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
+        width: ExpressiveIconSize.medium,
+        height: ExpressiveIconSize.medium,
+        child: ShapeLoadingIndicator(
+          size: ExpressiveIconSize.medium,
+          color: accentColor,
+        ),
       );
     } else if (isConnected) {
       bgColor = green.withValues(alpha: 0.25);
-      center = Icon(Icons.pause_rounded, key: const ValueKey('pause'), size: 18, color: green);
+      center = Icon(
+        Icons.pause_rounded,
+        key: const ValueKey('pause'),
+        size: ExpressiveIconSize.medium,
+        color: green,
+      );
     } else if (isActive) {
       bgColor = accentColor.withValues(alpha: 0.18);
-      center =
-          Icon(Icons.play_arrow_rounded, key: const ValueKey('play'), size: 18, color: accentColor);
+      // Тот же глиф, что в главной кнопке подключения: outlined, пока не
+      // подключено, и filled `pause_rounded`, когда подключено. Кружок в строке
+      // сервера — тот же переключатель, только маленький, и разные треугольники
+      // в двух местах читались как недосмотр.
+      center = Icon(
+        Icons.play_arrow_outlined,
+        key: const ValueKey('play'),
+        size: ExpressiveIconSize.medium,
+        color: accentColor,
+      );
     } else {
       bgColor = Colors.transparent;
-      center = Icon(Icons.chevron_right_rounded, key: const ValueKey('idle'), color: textLightColor);
+      center = Icon(
+        Icons.chevron_right_rounded,
+        key: const ValueKey('idle'),
+        size: ExpressiveIconSize.medium,
+        color: textLightColor,
+      );
     }
 
+    // Кружок ровно с XSmall-иконкой M3E (32dp контейнер, 20dp глиф): у списка
+    // это trailing-слот, а не отдельная кнопка — вся строка и есть одна цель
+    // нажатия, поэтому 48dp здесь набирать нечем и незачем.
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 360),
-      curve: Curves.easeInOutCubic,
-      width: 34,
-      height: 34,
+      duration: ExpressiveMotion.durationDefault,
+      curve: ExpressiveMotion.emphasized,
+      width: _trailingSlotSize,
+      height: _trailingSlotSize,
       alignment: Alignment.center,
       decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
+        duration: ExpressiveMotion.durationFast,
+        switchInCurve: ExpressiveMotion.emphasizedDecelerate,
+        switchOutCurve: ExpressiveMotion.emphasizedAccelerate,
         transitionBuilder: (child, animation) => FadeTransition(
           opacity: animation,
           child: ScaleTransition(

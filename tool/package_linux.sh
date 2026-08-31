@@ -156,7 +156,7 @@ Architecture: $ARCH_DEB
 Maintainer: $MAINTAINER
 Installed-Size: $INSTALLED_KB
 Depends: libgtk-3-0, libglib2.0-0, libstdc++6, zlib1g, libayatana-appindicator3-1
-Recommends: polkit-1 | policykit-1, gnome-shell-extension-appindicator
+Recommends: polkit-1 | policykit-1, gnome-shell-extension-appindicator, xdg-desktop-portal-gtk | xdg-desktop-portal-kde | xdg-desktop-portal-gnome | zenity
 Description: KEQDIS proxy/VPN client
  Xray / sing-box / AmneziaWG client with proxy and TUN modes.
  TUN mode requests root via pkexec (polkit) at connect time.
@@ -220,7 +220,9 @@ url="https://github.com/$GH_OWNER/$GH_REPO"
 license=('custom')
 depends=('gtk3' 'glibc' 'libayatana-appindicator')
 optdepends=('polkit: TUN mode (root via pkexec)'
-            'gnome-shell-extension-appindicator: tray icon on GNOME')
+            'gnome-shell-extension-appindicator: tray icon on GNOME'
+            'xdg-desktop-portal-gtk: file dialogs (import/export, any portal backend works)'
+            'zenity: file dialogs without an xdg-desktop-portal backend')
 provides=('$APP')
 conflicts=('$APP')
 source=("\$pkgname-\$pkgver.tar.gz::https://github.com/$GH_OWNER/$GH_REPO/releases/download/v\$pkgver/$APP-\$pkgver-linux-x64.tar.gz")

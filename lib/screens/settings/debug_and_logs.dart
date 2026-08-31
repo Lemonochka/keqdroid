@@ -162,7 +162,7 @@ class _XrayLogsScreenState extends ConsumerState<_XrayLogsScreen> {
         ),
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator(color: AppTheme.accent(context)))
+          ? const Center(child: ShapeLoadingIndicator())
           : Padding(
         padding: const EdgeInsets.all(12),
         child: Container(
