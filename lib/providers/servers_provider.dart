@@ -157,7 +157,7 @@ class ServersNotifier extends Notifier<ServersState> {
   }
 
   Future<void> addManual(String rawConfig) async {
-    final config = rawConfig.trim();
+    final config = normalizeImportedConfig(rawConfig);
     final validationError = validateServerConfig(config);
     if (validationError != null) throw Exception(validationError);
     if (state.servers.any((s) => s.config == config)) {
@@ -189,7 +189,7 @@ class ServersNotifier extends Notifier<ServersState> {
   /// Замена конфига сервера из GUI-редактора. Для подписочных серверов взводит
   /// configOverridden, чтобы правка пережила обновление подписки.
   Future<void> updateConfig(String id, String rawConfig) async {
-    final config = rawConfig.trim();
+    final config = normalizeImportedConfig(rawConfig);
     final validationError = validateServerConfig(config);
     if (validationError != null) throw Exception(validationError);
     if (state.servers.any((s) => s.id != id && s.config == config)) {
@@ -234,6 +234,23 @@ class ServersNotifier extends Notifier<ServersState> {
     state = state.copyWith(servers: list);
   }
 
+  /// Ссылка `wg://` — тот же AmneziaWG, только в одну строку: разворачиваем её
+  /// в `.conf` на входе, и дальше по приложению живёт один формат. Хранить
+  /// ссылку как есть было бы дешевле на импорте и дороже везде потом — имя,
+  /// пинг, редактор, wireproxy и UAPI написаны под `.conf`.
+  ///
+  /// Битую ссылку отдаём обратно нетронутой: её причину назовёт
+  /// [validateServerConfig], и сообщение будет одно, а не два разных.
+  static String normalizeImportedConfig(String rawConfig) {
+    final trimmed = rawConfig.trim();
+    if (!AwgUri.looksLikeUri(trimmed)) return trimmed;
+    try {
+      return AwgUri.toConf(trimmed);
+    } on ArgumentError {
+      return trimmed;
+    }
+  }
+
   static String? validateServerConfig(String rawConfig) {
     if (rawConfig.isEmpty) return 'Configuration is empty';
 
@@ -248,6 +265,18 @@ class ServersNotifier extends Notifier<ServersState> {
         AwgProfile.parse(rawConfig);
       } catch (e) {
         return 'Invalid AmneziaWG config: $e';
+      }
+      return null;
+    }
+
+    // Ссылку проверяем развёрнутой: сюда она попадает только если
+    // [normalizeImportedConfig] развернуть её не смог, и сказать надо, чего
+    // в ней не хватает, а не «Unsupported format» на формат, который мы знаем.
+    if (AwgUri.looksLikeUri(rawConfig)) {
+      try {
+        AwgProfile.parse(AwgUri.toConf(rawConfig));
+      } catch (e) {
+        return 'Invalid AmneziaWG link: $e';
       }
       return null;
     }
@@ -272,7 +301,7 @@ class ServersNotifier extends Notifier<ServersState> {
         lower.startsWith('hysteria://') ||
         lower.startsWith('hysteria2://') ||
         lower.startsWith('hy2://'))) {
-      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, an Xray JSON config, a Clash YAML config or an AmneziaWG .conf';
+      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, wg://, an Xray JSON config, a Clash YAML config or an AmneziaWG .conf';
     }
 
     if (lower.startsWith('vmess://')) {

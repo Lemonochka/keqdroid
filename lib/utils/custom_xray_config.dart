@@ -163,12 +163,70 @@ class CustomXrayConfig {
   /// Авторский `dns`-блок — если он есть и в нём действительно есть серверы.
   /// `null` значит «резолвить нечем», и генератор подставляет свой (см.
   /// параметр `dns` у [buildSessionConfig]).
+  ///
+  /// Сам по себе он больше не единственный источник: [mergeDns] дописывает
+  /// после него наш резерв.
   Map<String, dynamic>? get authorDns {
     final raw = json['dns'];
     if (raw is! Map) return null;
     final servers = raw['servers'];
     if (servers is! List || servers.isEmpty) return null;
     return _asStringMap(raw);
+  }
+
+  /// Авторский dns-блок с нашими резолверами, дописанными В КОНЕЦ списка.
+  ///
+  /// Автор остаётся первым и решает всё, пока отвечает: xray опрашивает
+  /// серверы по порядку, и до хвоста очередь не доходит вовсе. Хвост нужен для
+  /// случая, когда авторский резолвер физически недостижим, а сам туннель жив.
+  ///
+  /// Так ломается связка «российский входной узел + публичный резолвер по
+  /// UDP»: на мосту в РФ исходящий `udp:1.1.1.1:53` режет DPI, ядро получает
+  /// `record not found` на КАЖДЫЙ домен, и подключённый туннель не резолвит
+  /// ничего — при живом TCP. Наш хвост ходит DoH по 443, то есть тем же
+  /// транспортом, который на таком узле работает.
+  ///
+  /// Что в хвост НЕ попадает: записи с `domains` — это части нашей раскладки
+  /// (bootstrap адреса сервера, сплит Direct-доменов), и в авторском блоке они
+  /// были бы уже не резервом, а вмешательством в его решения. Дубликаты по
+  /// адресу тоже отсекаются; разный транспорт к одному адресу дубликатом не
+  /// считается — именно в нём весь смысл (`1.1.1.1` по UDP молчит,
+  /// `https://1.1.1.1/dns-query` отвечает).
+  ///
+  /// `disableFallback` автора не трогаем: с ним ядро дальше первого сервера не
+  /// пойдёт, и это его осознанный выбор — резерв просто останется лежать.
+  static Map<String, dynamic>? mergeDns(
+    Map<String, dynamic>? author,
+    Map<String, dynamic>? fallback,
+  ) {
+    if (author == null) return fallback;
+    if (fallback == null) return author;
+
+    final authorServers = (author['servers'] as List?) ?? const [];
+    final seen = <String>{
+      for (final server in authorServers) _dnsServerAddress(server),
+    }..remove('');
+
+    final tail = <Object?>[];
+    for (final server in (fallback['servers'] as List?) ?? const []) {
+      if (server is Map && server['domains'] != null) continue;
+      final address = _dnsServerAddress(server);
+      if (address.isEmpty || !seen.add(address)) continue;
+      tail.add(server);
+    }
+
+    if (tail.isEmpty) return author;
+    return <String, dynamic>{
+      ...author,
+      'servers': [...authorServers, ...tail],
+    };
+  }
+
+  /// Адрес dns-сервера в любой из форм xray: строкой или объектом с `address`.
+  static String _dnsServerAddress(Object? server) {
+    if (server is String) return server.trim();
+    if (server is Map) return server['address']?.toString().trim() ?? '';
+    return '';
   }
 
   /// Конфиг для сессии: авторские аутбаунды/роутинг/dns + наши инбаунды и
@@ -215,7 +273,8 @@ class CustomXrayConfig {
 
     out['inbounds'] = inbounds;
 
-    if (authorDns == null && dns != null) out['dns'] = dns;
+    final mergedDns = mergeDns(authorDns, dns);
+    if (mergedDns != null) out['dns'] = mergedDns;
 
     if (prependRules.isNotEmpty || appendRules.isNotEmpty) {
       final routing = Map<String, dynamic>.from(

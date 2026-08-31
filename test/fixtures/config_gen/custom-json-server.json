@@ -95,6 +95,20 @@
     "rules": [
       {
         "type": "field",
+        "ruleTag": "dns-out-tun",
+        "inboundTag": [
+          "socks-in",
+          "http-in"
+        ],
+        "ip": [
+          "172.19.0.2/32"
+        ],
+        "port": "53",
+        "network": "tcp,udp",
+        "outboundTag": "keq-dns-out"
+      },
+      {
+        "type": "field",
         "ruleTag": "dns-out",
         "inboundTag": [
           "socks-in",

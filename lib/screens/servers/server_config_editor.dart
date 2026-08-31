@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/scrolled_under.dart';
 
 import '../../models/server_item.dart';
@@ -621,13 +622,9 @@ class _ServerConfigEditorScreenState
               ),
               onPressed: _saving ? null : _save,
               child: _saving
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.onAccentContainer(context),
-                      ),
+                  ? ShapeLoadingIndicator(
+                      size: 20,
+                      color: AppTheme.onAccentContainer(context),
                     )
                   : Text(
                       l10n.subscriptionsSave,

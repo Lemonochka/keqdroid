@@ -18,8 +18,10 @@ import 'package:keqdroid/models/ping_test_config.dart';
 import 'package:keqdroid/models/routing_rule.dart';
 import 'package:keqdroid/models/tun_settings.dart';
 import 'package:keqdroid/models/xray_core_settings.dart';
+import 'package:keqdroid/core/exceptions.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/services/app_internals_service.dart';
+import 'package:keqdroid/services/file_dialog_service.dart';
 import 'package:keqdroid/services/connections_service.dart';
 import 'package:keqdroid/services/debug_log_service.dart';
 import 'package:keqdroid/services/hotkey_service.dart';
@@ -34,6 +36,7 @@ import 'package:keqdroid/shared/ui/expressive_elements.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/expressive_page.dart';
 import 'package:keqdroid/shared/ui/scrolled_under.dart';
+import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:keqdroid/services/update_service.dart';
 import 'package:keqdroid/shared/ui/update_dialog.dart';
@@ -659,14 +662,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (checking)
-                        SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: statusColor,
-                          ),
-                        )
+                        ShapeLoadingIndicator(size: 12, color: statusColor)
                       else
                         Icon(statusIcon, size: 14, color: statusColor),
                       const SizedBox(width: 6),
@@ -689,11 +685,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                 IconButton(
                   onPressed: checking ? null : _forceCheck,
                   icon: checking
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: accent),
-                        )
+                      ? ShapeLoadingIndicator(size: 20, color: accent)
                       : const Icon(Icons.refresh_rounded),
                   tooltip: l10n.settingsCheckForUpdates,
                   padding: EdgeInsets.zero,

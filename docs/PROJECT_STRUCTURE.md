@@ -64,6 +64,7 @@ lib/
 │   ├── hotkey_service.dart      диспетчер хоткеев (Windows — глобальные, Linux — в окне)
 │   ├── debug_log_service.dart   сбор/экспорт отладочных логов
 │   ├── settings_backup_service.dart  экспорт/импорт настроек (.json/.keqdis)
+│   ├── file_dialog_service.dart  системные диалоги файла (Linux: портал XDG → zenity/kdialog)
 │   ├── notification_service.dart локальные уведомления (Android)
 │   ├── background_service.dart  WorkManager: фоновое обновление подписок (Android)
 │   ├── desktop_background_service.dart / linux_background_service.dart  десктоп-фон
@@ -90,6 +91,7 @@ lib/
 │   ├── routing_entry.dart     разбор смешанных списков правил (домены/IP/geoip)
 │   ├── routing_presets.dart   готовые списки direct/proxy/block
 │   ├── awg_profile.dart / hysteria_uri.dart  парсинг AWG .conf и Hysteria-ссылок
+│   ├── awg_uri.dart           wg://-ссылка → .conf (разворачивается на импорте)
 │   ├── subscription_url.dart / subscription_diff.dart  нормализация URL, дифф серверов
 │   ├── socks5_credentials.dart  кеш кредов локального SOCKS
 │   ├── clipboard_import.dart  импорт конфигов из буфера

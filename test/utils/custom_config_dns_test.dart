@@ -234,9 +234,23 @@ void main() {
       }
     });
 
-    test('авторский dns-блок остаётся авторским', () {
+    test('авторские dns-серверы идут первыми, наш резерв — за ними', () {
       final config = _build(_withAuthorDns, _clearedAndBlocked);
-      expect((config['dns'] as Map)['servers'], ['1.1.1.1', '1.0.0.1']);
+      final servers = (config['dns'] as Map)['servers'] as List;
+
+      // Пока авторский резолвер отвечает, до хвоста очередь не доходит: ядро
+      // опрашивает серверы по порядку. Автор как решал, так и решает.
+      expect(servers.take(2), ['1.1.1.1', '1.0.0.1']);
+
+      // Хвост нужен там, где авторский резолвер недостижим при живом туннеле:
+      // на входном узле в РФ исходящий udp:53 к публичным адресам режет DPI, и
+      // без резерва конфиг не резолвит вообще ничего. Резерв ходит по 443.
+      final tail = servers.skip(2).toList();
+      expect(tail, isNotEmpty);
+      expect(
+        tail.any((s) => '${(s as Map)['address']}'.contains('/dns-query')),
+        isTrue,
+      );
     });
 
     test('без авторского dns подставляется свой', () {

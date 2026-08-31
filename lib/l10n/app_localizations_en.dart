@@ -892,7 +892,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversAddServerTitle => 'Add Server';
 
   @override
-  String get serversPasteVlessHint => 'Paste vless://, vmess://, trojan://, ss://, hysteria2:// or hy2:// (one per line), or a whole config: Xray JSON, Clash YAML, AmneziaWG .conf';
+  String get serversPasteVlessHint => 'Paste vless://, vmess://, trojan://, ss://, hysteria2://, hy2:// or wg:// (one per line), or a whole config: Xray JSON, Clash YAML, AmneziaWG .conf';
 
   @override
   String get serversPasteHint => 'vless://… or hy2://host:port?auth=…';
@@ -1441,6 +1441,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorUnknownAction => 'Retry operation. If issue repeats, check server and app settings.';
 
   @override
+  String get errorFileDialogMessage => 'This desktop session has no file chooser: neither an XDG portal backend nor zenity/kdialog.';
+
+  @override
+  String get errorFileDialogAction => 'Install xdg-desktop-portal-gtk (or zenity), or paste the config text instead of picking a file.';
+
+  @override
   String get errorTunAdminTitle => 'Permission Required';
 
   @override
@@ -1472,6 +1478,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorUnknownTitle => 'Operation Failed';
+
+  @override
+  String get errorFileDialogTitle => 'No File Dialog';
 
   @override
   String get serversPin => 'Pin server';

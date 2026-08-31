@@ -11,7 +11,9 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
+import 'package:keqdroid/shared/ui/expressive_button_group.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
+import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -44,7 +46,6 @@ class SubscriptionsTab extends ConsumerWidget {
     // кэшируем цвета
     final bgColor = AppTheme.bg(context);
     final textColor = AppTheme.text(context);
-    final accentColor = AppTheme.accent(context);
     final accentContainerColor = AppTheme.accentContainer(context);
     final onAccentContainerColor = AppTheme.onAccentContainer(context);
 
@@ -75,8 +76,8 @@ class SubscriptionsTab extends ConsumerWidget {
                   Expanded(
                     child: subsAsync.when(
                       skipLoadingOnReload: true,
-                      loading: () => Center(
-                        child: CircularProgressIndicator(color: accentColor),
+                      loading: () => const Center(
+                        child: ShapeLoadingIndicator(),
                       ),
                       error: (e, _) => _SubsErrorView(
                         error: e,
@@ -387,13 +388,9 @@ class SubscriptionsTab extends ConsumerWidget {
                           }
                         },
                   child: loading
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: onAccentContainerColor,
-                          ),
+                      ? ShapeLoadingIndicator(
+                          size: 20,
+                          color: onAccentContainerColor,
                         )
                       : Text(
                           l10n.subscriptionsAddAndFetch,
@@ -591,9 +588,11 @@ class _SubItemState extends ConsumerState<_SubItem> {
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: cardRadius,
+          // Нейтральная тень как высота — см. то же в server_groups.
           boxShadow: [
             BoxShadow(
-              color: accentColor.withValues(alpha: 0.12),
+              color:
+                  Theme.of(context).colorScheme.shadow.withValues(alpha: 0.10),
               blurRadius: 12,
               offset: const Offset(0, 3),
             ),
@@ -696,14 +695,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                   SizedBox(width: isDesktop ? 12 : 4),
                   IconButton(
                     icon: isRefreshing
-                        ? SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: accentColor,
-                            ),
-                          )
+                        ? ShapeLoadingIndicator(size: 18, color: accentColor)
                         : Icon(
                             Icons.refresh_rounded,
                             size: 20,
@@ -1754,8 +1746,15 @@ class _CardThemePickerState extends State<_CardThemePicker> {
 
   Future<void> _pick() async {
     final l10n = AppLocalizations.of(context)!;
-    final result =
-        await CardImageService.pick(subscriptionId: widget.subscriptionId);
+    final CardImageResult result;
+    try {
+      result = await CardImageService.pick(subscriptionId: widget.subscriptionId);
+    } catch (e) {
+      // Системный выбор файла может не открыться вовсе (Linux без портала и
+      // без zenity) — причину показываем там же, где и отказ по картинке.
+      if (mounted) setState(() => _error = friendlyErrorDetailed(e, context));
+      return;
+    }
     if (result.cancelled || !mounted) return;
 
     final rejection = result.rejection;
@@ -1780,7 +1779,6 @@ class _CardThemePickerState extends State<_CardThemePicker> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final accent = AppTheme.accent(context);
     final currentId = widget.currentId;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1794,77 +1792,47 @@ class _CardThemePickerState extends State<_CardThemePicker> {
                 ),
           ),
         ),
+        // Карусель M3, а не полоса одинаковых миниатюр.
+        //
+        // Раскладка multi-browse: крупный элемент, средний и мелкий, и они
+        // меняют размер по мере прокрутки — выбор картинки этим и живёт, крупный
+        // элемент показывает её так, как она ляжет на карточку, а прежние
+        // одинаковые 92 px не показывали толком ничего.
+        //
+        // Числа из измерений спеки: радиус элемента 28dp, между элементами 8dp
+        // (по 4 вокруг каждого — это и есть умолчание `padding`).
         SizedBox(
-          height: 64,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            // +1 — кнопка «своя картинка» первым слотом. Раньше там стояла
-            // пустая карточка «без темы»: место занимала, а делать с ней было
-            // нечего. Отказаться от темы можно, выбрав её же повторно.
-            itemCount: kSubscriptionCardThemes.length + 1,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (context, index) {
+          height: _cardThemeCarouselHeight,
+          child: CarouselView.weighted(
+            flexWeights: const [3, 2, 1],
+            consumeMaxWeight: true,
+            itemSnapping: true,
+            padding: const EdgeInsets.all(ExpressiveSpacing.extraSmall),
+            shape: RoundedRectangleBorder(
+              borderRadius: ExpressiveShape.radius(ExpressiveShape.extraLarge),
+            ),
+            backgroundColor: AppTheme.card(context),
+            // Первым элементом — «своя картинка». Раньше там стояла пустая
+            // карточка «без темы»: место занимала, а делать с ней было нечего.
+            // Отказаться от темы можно, выбрав её же повторно.
+            onTap: (index) {
               if (index == 0) {
-                return _CustomImageSlot(themeId: currentId, onTap: _pick);
+                unawaited(_pick());
+                return;
               }
-              final i = index - 1;
-              final theme = kSubscriptionCardThemes[i];
-              final selected = theme.id == currentId;
-              return GestureDetector(
-                // Повторный тап по выбранной теме снимает её.
-                onTap: () => widget.onSelect(selected ? '' : theme.id),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: 92,
-                  decoration: BoxDecoration(
-                    color: AppTheme.card(context),
-                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                    border: Border.all(
-                      color: selected ? accent : AppTheme.divider(context),
-                      width: selected ? 2 : 1,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(
-                      ExpressiveShape.large - 2,
-                    ),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        // Образец с ТЕМ ЖЕ затемнением, что выбрано у карточки:
-                        // иначе картинка в слайдере и на карточке выглядели бы
-                        // по-разному, а слайдер для того и нужен, чтобы выбрать
-                        // по виду.
-                        theme.background(context, veil: widget.veil),
-                        if (theme.isPlain)
-                          Center(
-                            child: Text(
-                              l10n.subscriptionCardThemeNone,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: AppTheme.textLight(context),
-                                  ),
-                            ),
-                          ),
-                        if (selected)
-                          Align(
-                            alignment: AlignmentDirectional.bottomEnd,
-                            child: Padding(
-                              padding: const EdgeInsets.all(4),
-                              child: Icon(
-                                Icons.check_circle_rounded,
-                                size: 16,
-                                color: accent,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
+              final theme = kSubscriptionCardThemes[index - 1];
+              // Повторный тап по выбранной теме снимает её.
+              widget.onSelect(theme.id == currentId ? '' : theme.id);
             },
+            children: [
+              _CustomImageSlot(themeId: currentId),
+              for (final theme in kSubscriptionCardThemes)
+                _CardThemeSlot(
+                  theme: theme,
+                  veil: widget.veil,
+                  selected: theme.id == currentId,
+                ),
+            ],
           ),
         ),
         if (_error != null)
@@ -1917,32 +1885,113 @@ class _CardThemePickerState extends State<_CardThemePicker> {
 /// Путь к файлу слот достаёт сам по id темы, а не получает сверху: иначе его
 /// пришлось бы асинхронно резолвить при открытии шторки и протаскивать через
 /// весь редактор ради одной картинки.
+/// Высота карусели тем: элемент плюс отступы `padding` сверху и снизу.
+///
+/// Крупный элемент карусели заметно шире прежних 92 px, и низкая полоса рядом с
+/// ним читалась бы обрезком: пропорции элемента должны напоминать саму карточку.
+const _cardThemeCarouselHeight = 88.0;
+
+/// Содержимое элемента карусели, которое не должно ездить при прокрутке.
+///
+/// Элемент карусели непрерывно меняет ширину — в этом весь смысл раскладки
+/// multi-browse. Центрированное содержимое пересчитывает свою позицию на каждый
+/// такой кадр и потому бегает туда-сюда внутри сжимающегося элемента: движение
+/// есть, а смысла в нём нет.
+///
+/// Поэтому содержимое держится за ЛЕВЫЙ край и стоит на месте, а лишнее просто
+/// уезжает под обрез — так же, как уезжает под него картинка.
+class _CarouselLabel extends StatelessWidget {
+  const _CarouselLabel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: ExpressiveSpacing.large,
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// Кольцо выбранного элемента карусели.
+///
+/// Обводкой по всему краю, а не рамкой снаружи: элементы карусели меняют ширину
+/// на ходу и обрезаются её формой, так что рамке снаружи просто негде жить.
+/// Радиус тот же, что у карусели, — кольцо ложится ровно по её краю.
+class _CardThemeRing extends StatelessWidget {
+  const _CardThemeRing();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: ExpressiveShape.radius(ExpressiveShape.extraLarge),
+        border: Border.all(color: AppTheme.accent(context), width: 3),
+      ),
+    );
+  }
+}
+
+/// Элемент карусели с готовой темой.
+class _CardThemeSlot extends StatelessWidget {
+  const _CardThemeSlot({
+    required this.theme,
+    required this.veil,
+    required this.selected,
+  });
+
+  final SubscriptionCardTheme theme;
+  final CardVeil veil;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Образец с ТЕМ ЖЕ затемнением, что выбрано у карточки: иначе картинка
+        // в карусели и на карточке выглядели бы по-разному, а выбирают здесь
+        // именно по виду.
+        theme.background(context, veil: veil),
+        if (theme.isPlain)
+          _CarouselLabel(
+            child: Text(
+              l10n.subscriptionCardThemeNone,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.clip,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textLight(context),
+                  ),
+            ),
+          ),
+        if (selected) const _CardThemeRing(),
+      ],
+    );
+  }
+}
+
 class _CustomImageSlot extends StatelessWidget {
   final String themeId;
-  final VoidCallback onTap;
 
-  const _CustomImageSlot({required this.themeId, required this.onTap});
+  const _CustomImageSlot({required this.themeId});
 
   @override
   Widget build(BuildContext context) {
     final accent = AppTheme.accent(context);
     final selected = themeId.startsWith(SubscriptionCardTheme.filePrefix);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 92,
-        decoration: BoxDecoration(
-          color: AppTheme.card(context),
-          borderRadius: BorderRadius.circular(ExpressiveShape.large),
-          border: Border.all(
-            color: selected ? accent : AppTheme.divider(context),
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(ExpressiveShape.large - 2),
-          child: FutureBuilder<String?>(
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+          FutureBuilder<String?>(
             // Ключ по id: сменили картинку — future пересоздаётся и миниатюра
             // обновляется, иначе на месте новой осталась бы старая.
             key: ValueKey(themeId),
@@ -1950,25 +1999,31 @@ class _CustomImageSlot extends StatelessWidget {
             builder: (context, snapshot) {
               final path = snapshot.data;
               if (path == null) {
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      selected
-                          ? Icons.image_not_supported_rounded
-                          : Icons.add_photo_alternate_rounded,
-                      size: 22,
-                      color: accent,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      CardImageService.sizeHint,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppTheme.textLight(context),
-                          ),
-                    ),
-                  ],
+                return _CarouselLabel(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        selected
+                            ? Icons.image_not_supported_rounded
+                            : Icons.add_photo_alternate_rounded,
+                        size: ExpressiveIconSize.large,
+                        color: accent,
+                      ),
+                      const SizedBox(height: ExpressiveSpacing.extraSmall),
+                      Text(
+                        CardImageService.sizeHint,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.clip,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppTheme.textLight(context),
+                            ),
+                      ),
+                    ],
+                  ),
                 );
               }
               return Stack(
@@ -1979,15 +2034,17 @@ class _CustomImageSlot extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
+                  // За левый край, как и подписи: у правого края элемент
+                  // карусели сжимается, и значок ехал бы по картинке.
                   Align(
-                    alignment: AlignmentDirectional.bottomEnd,
+                    alignment: AlignmentDirectional.bottomStart,
                     child: Padding(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(ExpressiveSpacing.small),
                       child: Icon(
                         selected
                             ? Icons.check_circle_rounded
                             : Icons.edit_rounded,
-                        size: 16,
+                        size: ExpressiveIconSize.medium,
                         color: accent,
                       ),
                     ),
@@ -1996,8 +2053,8 @@ class _CustomImageSlot extends StatelessWidget {
               );
             },
           ),
-        ),
-      ),
+        if (selected) const _CardThemeRing(),
+      ],
     );
   }
 }

@@ -52,7 +52,7 @@ class _AppInternalsScreen extends ConsumerWidget {
         _ => const [
             Padding(
               padding: EdgeInsets.symmetric(vertical: 48),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: ShapeLoadingIndicator()),
             ),
           ],
       },

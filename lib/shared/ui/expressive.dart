@@ -32,8 +32,12 @@ abstract final class ExpressiveShape {
   /// индикаторов выбора, а не исключение.
   static const double full = 9999;
 
+  /// Каким радиусом пилюля реально РИСУЕТСЯ. Именно это значение лежит в готовых
+  /// `BorderRadius`, поэтому его знает и [pressedCorner].
+  static const double _renderedFull = 999;
+
   static BorderRadius radius(double corner) =>
-      BorderRadius.circular(corner == full ? 999 : corner);
+      BorderRadius.circular(corner == full ? _renderedFull : corner);
 
   static RoundedRectangleBorder border(double corner) =>
       RoundedRectangleBorder(borderRadius: radius(corner));
@@ -50,6 +54,11 @@ abstract final class ExpressiveShape {
   /// остаётся визуально круглым, а потом схлопывается рывком.
   static double pressedCorner(double corner) => switch (corner) {
         full => full,
+        // В готовой геометрии пилюля приезжает не как [full], а как её
+        // отрисовочный радиус из [radius] — и морфить его нельзя ровно по той
+        // же причине. Без этой ветки нажатие на пилюлю сваливало её углы с 999
+        // до 20: почти вся анимация выглядит кругом, а в конце рывок.
+        >= _renderedFull => corner,
         >= extraLarge => largeIncreased,
         >= large => medium,
         >= small => extraSmall,
@@ -289,6 +298,8 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
   ListTileThemeData listTile,
   PopupMenuThemeData popupMenu,
   SegmentedButtonThemeData segmentedButton,
+  ProgressIndicatorThemeData progressIndicator,
+  SliderThemeData slider,
 }) buildExpressiveComponentThemes(ColorScheme scheme) {
   // Кнопки у M3E — пилюли: это самая заметная форма всего языка.
   final buttonShape = ExpressiveShape.border(ExpressiveShape.full);
@@ -412,6 +423,23 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       ),
     ),
+    // Полоса прогресса и слайдер: обновлённая спека вместо версии 2023.
+    //
+    // Флаг `year2023` во Flutter по умолчанию `true`, то есть виджеты рисуются
+    // по СТАРОЙ спецификации, пока не сказано обратное. Отсюда и брались
+    // сплошная полоса без зазора и круглая ручка слайдера — тот самый «старый
+    // дизайн», хотя тема везде M3.
+    //
+    // Что меняется: у полосы появляются скруглённые концы, зазор между
+    // пройденной и оставшейся частью и точка-стоп в конце; у слайдера ручка
+    // становится вертикальной палочкой, а трек — с зазором.
+    // Сам флаг помечен deprecated, и это НЕ повод его не ставить: он временный
+    // и исчезнет, когда новый вид станет умолчанием. Пока он есть, «не
+    // использовать устаревшее» означало бы остаться на спеке 2023.
+    // ignore: deprecated_member_use
+    progressIndicator: const ProgressIndicatorThemeData(year2023: false),
+    // ignore: deprecated_member_use
+    slider: const SliderThemeData(year2023: false),
     // Всплывающее меню — отдельная поверхность, а не «текст поверх экрана»:
     // без своего контейнера пункты не читались как выбор.
     popupMenu: PopupMenuThemeData(

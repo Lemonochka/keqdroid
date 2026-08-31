@@ -9,6 +9,7 @@ import 'package:keqdroid/shared/ui/haptics.dart';
 import 'package:keqdroid/shared/ui/server_avatar.dart';
 import 'package:keqdroid/shared/ui/scrolled_under.dart';
 import 'package:keqdroid/shared/ui/server_row.dart';
+import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
 import '../../models/app_settings.dart';
@@ -282,9 +283,10 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
         color: AppTheme.card(context),
         borderRadius: ExpressiveShape.radius(ExpressiveShape.extraLarge),
         border: Border.all(color: AppTheme.divider(context), width: 1),
+        // Нейтральная тень как высота — см. то же в server_groups.
         boxShadow: [
           BoxShadow(
-            color: AppTheme.accent(context).withValues(alpha: 0.12),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.10),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -456,13 +458,9 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
             ),
           ),
           child: _saving
-              ? SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppTheme.onAccentContainer(context),
-                  ),
+              ? ShapeLoadingIndicator(
+                  size: 20,
+                  color: AppTheme.onAccentContainer(context),
                 )
               : Text(l10n.chainSave),
         ),

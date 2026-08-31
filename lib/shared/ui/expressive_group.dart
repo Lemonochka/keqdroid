@@ -402,3 +402,211 @@ class _ExpressiveGroupTileState extends State<ExpressiveGroupTile>
     );
   }
 }
+
+/// Сегмент выразительного списка (M3 Expressive «expressive list»).
+///
+/// Спека переписала списки: baseline-вариант — строки встык, квадратные углы,
+/// разделители — помечен «not recommended», и на его месте теперь
+/// сегментированный список. Разница не косметическая, а структурная:
+///
+///  * строки — **отдельные залитые контейнеры с зазорами**; разделители спека
+///    оставляет только неконтейнерным спискам («use gaps for contained lists»);
+///  * **выбор показывается морфингом формы**: у невыбранного сегмента 4dp на
+///    внутренних углах и 16dp на внешних, у выбранного — 16dp по кругу. Ни
+///    подъёма, ни обводки, ни градиента: контейнер и его форма и есть выделение.
+///
+/// Нажатие форму НЕ морфит — в отличие от [ExpressiveGroupTile]. У сегмента с
+/// углами 4dp морфить нечего (шкала там уже упирается в квадрат), а спека для
+/// списков описывает нажатие только слоем состояния. Обратная связь — рипл.
+///
+/// Форму сегмента считает владелец списка ([segmentRadius]): только он знает,
+/// где у сегмента сосед, а где край группы.
+class ExpressiveListSegment extends StatefulWidget {
+  final Widget child;
+
+  /// Форма НЕвыбранного сегмента.
+  final BorderRadius radius;
+
+  final bool selected;
+
+  /// Заливка сегмента и его выбранного состояния.
+  final Color color;
+  final Color selectedColor;
+
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+
+  /// На десктопе правым кликом обычно открывают то же, что длинным нажатием.
+  final VoidCallback? onSecondaryTap;
+
+  final Color? splashColor;
+  final Color? highlightColor;
+
+  /// Углы выбранного сегмента — 16dp по кругу.
+  static const double selectedCorner = ExpressiveShape.large;
+
+  /// Внутренние углы (там, где у сегмента сосед).
+  static const double innerCorner = ExpressiveShape.extraSmall;
+
+  /// Внешние углы (край группы).
+  static const double outerCorner = ExpressiveShape.large;
+
+  /// Зазор между сегментами. В отличие от [ExpressiveGroup] с его волосяным
+  /// швом, список разделяет именно зазор: он и заменяет собой дивайдеры.
+  static const double gap = ExpressiveSpacing.extraSmall;
+
+  const ExpressiveListSegment({
+    super.key,
+    required this.child,
+    required this.radius,
+    required this.color,
+    required this.selectedColor,
+    this.selected = false,
+    this.onTap,
+    this.onLongPress,
+    this.onSecondaryTap,
+    this.splashColor,
+    this.highlightColor,
+  });
+
+  /// Форма сегмента по его месту в группе.
+  ///
+  /// [columns] = 1 — обычный список; больше — сетка, и тогда внешним считается
+  /// угол, за которым нет соседа. Нечётный хвост учитывается: у последней
+  /// плитки в неполном ряду правые углы такие же внешние, как у края группы, —
+  /// справа от неё пустой фон, а не сосед.
+  ///
+  /// [endCorner] — углы низа ПОСЛЕДНЕГО ряда. Задавать его нужно, когда список
+  /// упирается в скруглённый угол своего контейнера: там радиус сегмента обязан
+  /// быть КОНЦЕНТРИЧЕН контейнеру, то есть равен его радиусу минус отступ.
+  /// Иначе дуги расходятся: вдоль прямых краёв поле нормальное, а на углу
+  /// схлопывается почти в ноль, и сегмент выпирает за дугу контейнера.
+  static BorderRadius segmentRadius({
+    required int index,
+    required int count,
+    int columns = 1,
+    double? endCorner,
+  }) {
+    final row = index ~/ columns;
+    final col = index % columns;
+    final rows = (count + columns - 1) ~/ columns;
+
+    final isTop = row == 0;
+    // Снизу пусто и тогда, когда ряд последний, и когда прямо под плиткой уже
+    // кончились серверы (нечётный хвост в сетке).
+    final isLastRow = row == rows - 1;
+    final isBottom = isLastRow || index + columns >= count;
+    final isStart = col == 0;
+    final isEnd = col == columns - 1 || index == count - 1;
+
+    const outer = Radius.circular(outerCorner);
+    const inner = Radius.circular(innerCorner);
+    // Концентричный радиус — только у настоящего последнего ряда: у плитки над
+    // нечётным хвостом снизу тоже пусто, но до края контейнера ей далеко.
+    final end = isLastRow && endCorner != null
+        ? Radius.circular(endCorner)
+        : outer;
+    return BorderRadius.only(
+      topLeft: isTop && isStart ? outer : inner,
+      topRight: isTop && isEnd ? outer : inner,
+      bottomLeft: isBottom && isStart ? end : inner,
+      bottomRight: isBottom && isEnd ? end : inner,
+    );
+  }
+
+  /// Отступы сегмента внутри шага списка.
+  ///
+  /// Зазор набирается ПОЛЯМИ САМОГО СЕГМЕНТА, а не расстоянием между ячейками:
+  /// шаг списка (`ServerRow.height`) остаётся прежним, и от него по-прежнему
+  /// считаются `mainAxisExtent` сетки и смещение якоря активного сервера.
+  /// Иначе пришлось бы править обе формулы в трёх местах ради четырёх пикселей.
+  static EdgeInsets segmentMargin({required int index, int columns = 1}) {
+    const half = gap / 2;
+    if (columns == 1) {
+      return const EdgeInsets.fromLTRB(gap, half, gap, half);
+    }
+    final col = index % columns;
+    return EdgeInsets.fromLTRB(
+      col == 0 ? gap : half,
+      half,
+      col == columns - 1 ? gap : half,
+      half,
+    );
+  }
+
+  @override
+  State<ExpressiveListSegment> createState() => _ExpressiveListSegmentState();
+}
+
+class _ExpressiveListSegmentState extends State<ExpressiveListSegment>
+    with TickerProviderStateMixin {
+  /// Форма и заливка едут РАЗНЫМИ пружинами — так их делит спека движения:
+  /// форма пространственна и слегка отскакивает, цвет критически задемпфирован,
+  /// потому что колебание яркости читается как дефект.
+  late final AnimationController _shape = AnimationController.unbounded(
+    vsync: this,
+  )..value = widget.selected ? 1 : 0;
+  late final AnimationController _tint = AnimationController.unbounded(
+    vsync: this,
+  )..value = widget.selected ? 1 : 0;
+
+  @override
+  void didUpdateWidget(covariant ExpressiveListSegment oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selected == widget.selected) return;
+    final target = widget.selected ? 1.0 : 0.0;
+    ExpressiveMotion.springTo(
+      _shape,
+      target,
+      spring: ExpressiveMotion.spatialDefault,
+    );
+    ExpressiveMotion.springTo(
+      _tint,
+      target,
+      spring: ExpressiveMotion.effectsDefault,
+    );
+  }
+
+  @override
+  void dispose() {
+    _shape.dispose();
+    _tint.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedRadius = ExpressiveShape.radius(
+      ExpressiveListSegment.selectedCorner,
+    );
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_shape, _tint]),
+      builder: (context, child) {
+        // Пружина уходит за единицу — форме это лишнее (углы «переморфились» бы
+        // дальше выбранных 16dp), поэтому под лерп значение зажимаем.
+        final shape = _shape.value.clamp(0.0, 1.0);
+        final tint = _tint.value.clamp(0.0, 1.0);
+        return ClipRRect(
+          borderRadius: BorderRadius.lerp(
+            widget.radius,
+            selectedRadius,
+            shape,
+          )!,
+          child: Material(
+            color: Color.lerp(widget.color, widget.selectedColor, tint),
+            child: child,
+          ),
+        );
+      },
+      child: InkWell(
+        onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        onSecondaryTap: widget.onSecondaryTap,
+        splashColor: widget.splashColor,
+        highlightColor: widget.highlightColor,
+        child: widget.child,
+      ),
+    );
+  }
+}

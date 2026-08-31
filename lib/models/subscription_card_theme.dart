@@ -123,6 +123,25 @@ class SubscriptionCardTheme {
   /// обычная карточка, а не как исключение (так же ведут себя тесты).
   static String? customDirectory;
 
+  /// Имена своих картинок, которые РЕАЛЬНО лежат в [customDirectory].
+  ///
+  /// Бэкап хранит `cardThemeId` и байты картинки порознь, и они расходятся:
+  /// подписка приезжает с `file:<имя>`, а самой картинки в бэкапе не оказалось
+  /// (её не смогли прочитать при экспорте, файл потеряли, бэкап собран другой
+  /// версией). Тема при этом считалась «с картинкой»: шапка группы вырастала на
+  /// полосу растворения, тумблер «показывать в списке серверов» стоял
+  /// включённым — а показывать было нечего.
+  ///
+  /// Держим набор именно здесь и синхронно: [resolveCardTheme] зовут из build,
+  /// и ходить в файловую систему на каждую перерисовку списка нельзя.
+  /// Заполняется один раз на старте (`CardImageService.warmUp`) и правится
+  /// теми же операциями, что пишут и удаляют файлы.
+  ///
+  /// null — каталог ещё не читали или прочитать не смогли. Тогда тема с
+  /// картинкой считается живой: скрывать оформление из-за неудачи со списком
+  /// каталога хуже, чем показать пустую подложку.
+  static Set<String>? customFiles;
+
   /// Уезжает в настройки подписки — переименование сбросит выбор на «без темы».
   final String id;
 
@@ -221,10 +240,15 @@ SubscriptionCardTheme resolveCardTheme(String? id) {
   if (id.startsWith(SubscriptionCardTheme.filePrefix)) {
     final directory = SubscriptionCardTheme.customDirectory;
     if (directory == null) return const SubscriptionCardTheme.plain();
-    return SubscriptionCardTheme.file(
-      id.substring(SubscriptionCardTheme.filePrefix.length),
-      directory,
-    );
+    final name = id.substring(SubscriptionCardTheme.filePrefix.length);
+    // Записи о картинке мало — нужен сам файл. Иначе подписка из бэкапа без
+    // картинки числилась бы темой «с картинкой»: пустая полоса в шапке группы
+    // и включённый тумблер про то, чего нет. См. [SubscriptionCardTheme.customFiles].
+    final known = SubscriptionCardTheme.customFiles;
+    if (known != null && !known.contains(name)) {
+      return const SubscriptionCardTheme.plain();
+    }
+    return SubscriptionCardTheme.file(name, directory);
   }
   for (final theme in kSubscriptionCardThemes) {
     if (theme.id == id) return theme;

@@ -316,8 +316,12 @@ void main() {
       expect(authorRules.first['ip'], ['185.73.195.0/24']);
       expect(authorRules.last['outboundTag'], 'proxy');
 
-      // Dns и аутбаунды — авторские.
-      expect((config['dns'] as Map)['servers'], ['1.1.1.1', '1.0.0.1']);
+      // Dns и аутбаунды — авторские: серверы автора первые и в своём порядке,
+      // наш резерв лежит после них (см. CustomXrayConfig.mergeDns).
+      expect(
+        ((config['dns'] as Map)['servers'] as List).take(2),
+        ['1.1.1.1', '1.0.0.1'],
+      );
       expect(
         ((config['outbounds'] as List).first as Map)['streamSettings'],
         {'network': 'tcp', 'security': 'reality'},

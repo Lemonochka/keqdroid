@@ -892,7 +892,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serversAddServerTitle => 'Server hinzufügen';
 
   @override
-  String get serversPasteVlessHint => 'Füge vless://, vmess://, trojan://, ss://, hysteria2:// oder hy2:// ein (eine pro Zeile) oder eine komplette Konfiguration: Xray-JSON, Clash-YAML, AmneziaWG-.conf';
+  String get serversPasteVlessHint => 'Füge vless://, vmess://, trojan://, ss://, hysteria2://, hy2:// oder wg:// ein (eine pro Zeile) oder eine komplette Konfiguration: Xray-JSON, Clash-YAML, AmneziaWG-.conf';
 
   @override
   String get serversPasteHint => 'vless://… oder hy2://host:port?auth=…';
@@ -1441,6 +1441,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get errorUnknownAction => 'Versuche es erneut. Tritt der Fehler weiterhin auf, prüfe Server und App-Einstellungen.';
 
   @override
+  String get errorFileDialogMessage => 'Diese Desktop-Sitzung hat keine Dateiauswahl: weder ein XDG-Portal-Backend noch zenity/kdialog.';
+
+  @override
+  String get errorFileDialogAction => 'Installiere xdg-desktop-portal-gtk (oder zenity) oder füge den Konfigurationstext ein, statt eine Datei zu wählen.';
+
+  @override
   String get errorTunAdminTitle => 'Berechtigung erforderlich';
 
   @override
@@ -1472,6 +1478,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get errorUnknownTitle => 'Vorgang fehlgeschlagen';
+
+  @override
+  String get errorFileDialogTitle => 'Kein Dateidialog';
 
   @override
   String get serversPin => 'Server anheften';

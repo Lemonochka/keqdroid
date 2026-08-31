@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- registerDefaultNetworkCallback в KeqdisVpnService: без него смена
+         Wi-Fi/LTE проходит незамеченной. В merged-манифест разрешение и так
+         приезжало от плагинов, но полагаться на чужую транзитивную зависимость
+         в том, без чего фича молча перестаёт работать, нельзя. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />

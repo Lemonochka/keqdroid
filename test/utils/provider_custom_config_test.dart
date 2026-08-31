@@ -104,7 +104,12 @@ void main() {
     test("the author's dns and domainStrategy survive untouched", () {
       final config = build();
 
-      expect((config['dns'] as Map)['servers'], ['1.1.1.1', '1.0.0.1']);
+      // Авторские резолверы первые и нетронутые; за ними наш резерв на случай,
+      // когда до авторских не достучаться (см. CustomXrayConfig.mergeDns).
+      expect(
+        ((config['dns'] as Map)['servers'] as List).take(2),
+        ['1.1.1.1', '1.0.0.1'],
+      );
       expect(_routing(config)['domainStrategy'], 'IPIfNonMatch');
     });
 

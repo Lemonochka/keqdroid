@@ -9,13 +9,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
 import '../models/app_info.dart';
 import '../providers/providers.dart';
 import '../platform/platform_bootstrap.dart';
+import '../services/file_dialog_service.dart';
 import '../tunnel/connection_mode.dart';
 import '../tunnel/tunnel_state.dart';
+import '../utils/error_messages.dart';
 import '../utils/process_name_utils.dart';
 
 const _kRussianPackagePrefixes = <String>[
@@ -219,9 +222,14 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     final ctrl = TextEditingController();
     var pickedPath = '';
 
+    // Почему не открылся выбор файла — прямо в диалоге: снекбар Scaffold
+    // рисует под ним, и объяснение осталось бы за модальным барьером.
+    String? pickError;
+
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
         backgroundColor: AppTheme.card(context),
         title: Text(l10n.splitAddAppTitle),
         content: Column(
@@ -240,19 +248,37 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
                 alignment: AlignmentDirectional.centerStart,
                 child: TextButton.icon(
                   onPressed: () async {
-                    final r = await FilePicker.pickFiles(
-                      type: FileType.custom,
-                      allowedExtensions: const ['exe'],
-                    );
-                    if (r != null && r.files.single.path != null) {
-                      pickedPath = r.files.single.path!;
-                      ctrl.text = pickedPath;
+                    try {
+                      final r = await AppFileDialogs.pickFile(
+                        dialogTitle: l10n.splitAddAppPickFile,
+                        type: FileType.custom,
+                        allowedExtensions: const ['exe'],
+                      );
+                      if (r?.path != null) {
+                        pickedPath = r!.path!;
+                        ctrl.text = pickedPath;
+                      }
+                    } catch (e) {
+                      // Путь всё ещё можно вписать руками в поле выше —
+                      // поэтому только объясняем, а диалог не закрываем.
+                      setDialogState(
+                        () => pickError = friendlyErrorDetailed(e, ctx),
+                      );
                     }
                   },
                   icon: const Icon(Icons.folder_open_rounded, size: 18),
                   label: Text(l10n.splitAddAppPickFile),
                 ),
               ),
+              if (pickError != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  pickError!,
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.red(ctx),
+                      ),
+                ),
+              ],
             ],
           ],
         ),
@@ -266,6 +292,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
             child: Text(l10n.splitAddApp),
           ),
         ],
+        ),
       ),
     );
 
@@ -489,9 +516,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
             _SearchBar(controller: _searchCtrl),
             Expanded(
               child: appsAsync.when(
-                loading: () => Center(
-                  child: CircularProgressIndicator(color: AppTheme.accent(context), strokeWidth: 2),
-                ),
+                loading: () => const Center(child: ShapeLoadingIndicator()),
                 error: (e, _) => Center(
                   child: Text(AppLocalizations.of(context)!.splitFailedLoadApps(e.toString()),
                       style: TextStyle(color: AppTheme.textLight(context))),
@@ -633,12 +658,16 @@ class _ModeSelector extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppTheme.accent(context),
                     borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                    boxShadow:[
+                    // Нейтральная тень как высота — см. то же в server_groups.
+                    boxShadow: [
                       BoxShadow(
-                        color: AppTheme.accent(context).withValues(alpha: 0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .shadow
+                            .withValues(alpha: 0.20),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
-                      )
+                      ),
                     ],
                   ),
                 ),

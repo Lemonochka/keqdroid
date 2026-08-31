@@ -17,9 +17,7 @@ class _ServersListPanel extends ConsumerWidget {
     final subs = ref.watch(subscriptionsProvider).value ?? [];
 
     if (serversState.isLoading) {
-      return Center(
-        child: CircularProgressIndicator(color: AppTheme.accent(context)),
-      );
+      return const Center(child: ShapeLoadingIndicator());
     }
     if (subs.isEmpty && serversState.servers.isEmpty) {
       return emptyState;
@@ -198,10 +196,9 @@ class _GroupHeaderBackground extends StatelessWidget {
     if (!_showsImage(sub)) return child;
     final theme = resolveCardTheme(sub!.cardThemeId);
 
-    // Внутренний радиус на 1 меньше внешнего: шапка живёт под рамкой
-    // DecoratedSliver, и совпадающий радиус оставлял бы вдоль дуги волосяную
-    // полоску картинки поверх линии рамки.
-    const outer = ExpressiveShape.extraLarge - 1;
+    // Радиус ровно карточный: рамки у группы больше нет, и «минус пиксель»,
+    // которым от неё уходили, оставлял бы вдоль дуги полоску фона.
+    const outer = ExpressiveShape.extraLarge;
     // Доля высоты, на которой стоит строка заголовка. Ниже — только картинка.
     final headerFraction = collapsed
         ? 1.0
@@ -296,9 +293,10 @@ const _listTopFadeSolidStop =
 /// высота строки группы совпадает с высотой [_ServerTile]
 const _subCardRowHeight = ServerRow.height;
 
+/// Действия в шапке группы — XSmall-кнопка M3E: контейнер 32dp, глиф 20dp.
 const _subCardHeaderIconSize = 32.0;
-const _subCardHeaderActionGap = 8.0;
-const _subCardHeaderIntervalGap = 10.0;
+const _subCardHeaderActionGap = ExpressiveSpacing.small;
+const _subCardHeaderIntervalGap = ExpressiveSpacing.small;
 
 Widget _subCardHeaderIconButton({
   required String tooltip,
@@ -488,6 +486,8 @@ class _SubCardState extends ConsumerState<_SubCard> {
         offsetInGroup: collapsed
             ? null
             : _GroupHeaderBackground.heightFor(sub, collapsed: false) +
+                // разделитель шапки и списка сегментов
+                ExpressiveListSegment.gap / 2 +
                 row * _subCardRowHeight,
       );
     } else {
@@ -498,10 +498,15 @@ class _SubCardState extends ConsumerState<_SubCard> {
 
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
     final accent = _accent;
-    final cardColor = accent?.surface(AppTheme.card(context)) ??
-        AppTheme.card(context);
-    final dividerColor = accent?.outline(AppTheme.divider(context)) ??
-        AppTheme.divider(context);
+    final scheme = Theme.of(context).colorScheme;
+    // Группа — поверхность УРОВНЕМ НИЖЕ своих сегментов.
+    //
+    // Раньше карточка группы и строки в ней были одного цвета, и разделить их
+    // было нечем, кроме рамки. Иерархию в M3 несут уровни `surfaceContainer`:
+    // перепад уровня и делает строки залитыми пунктами ВНУТРИ контейнера, а не
+    // полосами НА нём.
+    final groupColor = accent?.surface(scheme.surfaceContainerLow) ??
+        scheme.surfaceContainerLow;
     // Иконки шапки и спиннеры уводим в цвет подписки — это те самые элементы,
     // что уже есть на её карточке (обновление, «12h»), и связь читается без
     // единого нового пикселя.
@@ -511,24 +516,22 @@ class _SubCardState extends ConsumerState<_SubCard> {
     // Sliver-карточка: DecoratedSliver рисует фон/рамку/тень на всю длину
     // группы (включая невидимую часть), а тайлы строятся лениво SliverList'ом.
     return DecoratedSliver(
+      // Заливка и форма — и всё. Здесь стояли одновременно рамка, тень и
+      // заливка, то есть три варианта карточки M3 сразу (outlined + elevated +
+      // filled); ни один контейнер приложения так больше не выглядит, и именно
+      // это делало список серверов «вставленным из другого приложения».
       decoration: BoxDecoration(
-        color: cardColor,
-        // Группа серверов — «поверхность», а не карточка: extraLarge, чтобы
-        // читался контраст с формой поднятого активного тайла внутри.
+        color: groupColor,
+        // Группа серверов — «поверхность», а не карточка: extraLarge, заметно
+        // крупнее 16dp у сегментов внутри.
         borderRadius: ExpressiveShape.radius(ExpressiveShape.extraLarge),
-        border: Border.all(color: dividerColor, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: accentColor.withValues(alpha: 0.12),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
       ),
       sliver: SliverPadding(
-        // 1px со всех сторон — чтобы контент не перекрывал рамку декорации
-        // (в отличие от Container, DecoratedSliver не вставляет отступ рамки).
-        padding: const EdgeInsets.all(1),
+        // Снизу — вторая половина зазора последнего сегмента (первую он
+        // отступает сам), чтобы поля группы были одинаковы со всех сторон.
+        padding: EdgeInsets.only(
+          bottom: collapsed ? 0 : ExpressiveListSegment.gap / 2,
+        ),
         sliver: SliverMainAxisGroup(
           slivers: [
             SliverToBoxAdapter(
@@ -546,7 +549,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                   ),
                   child: _GroupHeaderBackground(
                     subscription: sub,
-                    surface: cardColor,
+                    surface: groupColor,
                     // Свёрнутая группа — это только шапка, и снизу у неё тоже
                     // край карточки: не скругли мы его, картинка вылезла бы
                     // прямыми углами из-под скруглённой рамки.
@@ -579,23 +582,22 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   SizedBox(
-                                    width: 32,
+                                    width: _subCardHeaderIconSize,
                                     height: _subCardHeaderIconSize,
                                     child: Center(
                                       child: AnimatedRotation(
                                         turns: collapsed ? -0.25 : 0,
-                                        duration: const Duration(
-                                          milliseconds: 200,
-                                        ),
+                                        duration: ExpressiveMotion.durationFast,
+                                        curve: ExpressiveMotion.emphasized,
                                         child: Icon(
                                           Icons.expand_more_rounded,
-                                          size: 22,
+                                          size: ExpressiveIconSize.medium,
                                           color: textLightColor,
                                         ),
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: ExpressiveSpacing.small),
                                   Expanded(
                                     child: Text(
                                       title,
@@ -616,7 +618,9 @@ class _SubCardState extends ConsumerState<_SubCard> {
                         ),
 
                         Padding(
-                          padding: const EdgeInsetsDirectional.only(start: 6),
+                          padding: const EdgeInsetsDirectional.only(
+                            start: ExpressiveSpacing.small,
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -625,19 +629,21 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                 // и до сих пор об этом ничем не сообщал.
                                 Material(
                                   color: accentColor.withValues(alpha: 0.18),
+                                  // Маленькая метка-действие у M3E — пилюля,
+                                  // как и бейдж протокола в строке сервера.
                                   shape: ExpressiveShape.border(
-                                    ExpressiveShape.small,
+                                    ExpressiveShape.full,
                                   ),
                                   child: InkWell(
                                     onTap: () =>
                                         _showIntervalPicker(context, sub),
                                     customBorder: ExpressiveShape.border(
-                                      ExpressiveShape.small,
+                                      ExpressiveShape.full,
                                     ),
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
+                                        horizontal: ExpressiveSpacing.small,
+                                        vertical: ExpressiveSpacing.extraSmall,
                                       ),
                                       child: Text(
                                         '${sub.updateIntervalHours}h',
@@ -668,7 +674,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                   sortMode == ServerSortMode.defaultOrder
                                       ? Icons.sort_rounded
                                       : sortMode.icon,
-                                  size: 18,
+                                  size: ExpressiveIconSize.medium,
                                   color: sortMode == ServerSortMode.defaultOrder
                                       ? textLightColor
                                       : accentColor,
@@ -702,17 +708,13 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                           }
                                         },
                                   icon: isRefreshing
-                                      ? SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: accentColor,
-                                          ),
+                                      ? ShapeLoadingIndicator(
+                                          size: ExpressiveIconSize.medium,
+                                          color: accentColor,
                                         )
                                       : Icon(
                                           Icons.refresh_rounded,
-                                          size: 18,
+                                          size: ExpressiveIconSize.medium,
                                           color: hasRefreshError
                                               ? AppTheme.red(context)
                                               : textLightColor,
@@ -744,17 +746,13 @@ class _SubCardState extends ConsumerState<_SubCard> {
                                         }
                                       },
                                 icon: isPingingAll
-                                    ? SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: accentColor,
-                                        ),
+                                    ? ShapeLoadingIndicator(
+                                        size: ExpressiveIconSize.medium,
+                                        color: accentColor,
                                       )
                                     : Icon(
                                         Icons.network_ping_rounded,
-                                        size: 18,
+                                        size: ExpressiveIconSize.medium,
                                         color: textLightColor,
                                       ),
                               ),
@@ -770,6 +768,14 @@ class _SubCardState extends ConsumerState<_SubCard> {
               ),
               ),
             ),
+
+            // Первая половина зазора между шапкой и верхним сегментом: вторую
+            // сегмент отступает сам, и вместе выходит ровно [gap] — столько же,
+            // сколько между сегментами.
+            if (!collapsed)
+              const SliverToBoxAdapter(
+                child: SizedBox(height: ExpressiveListSegment.gap / 2),
+              ),
 
             // Свёрнутая группа — просто без sliver'а тайлов. Никакого
             // AnimatedSize вокруг: он требует построить все тайлы разом и
@@ -812,43 +818,46 @@ class _SubCardState extends ConsumerState<_SubCard> {
       );
     }
 
+    // Форму и поля сегмента считает список: только он знает, где у тайла сосед,
+    // а где край группы. Нечётный хвост в сетке при этом получается сам собой —
+    // у одинокой нижней плитки справа не сосед, а фон группы.
+    final columns = twoColumns ? 2 : 1;
+    Widget tileAt(int index) {
+      final server = servers[index];
+      return _ServerTile(
+        key: ValueKey(server.id),
+        server: server,
+        isActive: server.id == activeServerId,
+        accent: accent,
+        radius: ExpressiveListSegment.segmentRadius(
+          index: index,
+          count: servers.length,
+          columns: columns,
+          // Низ последнего ряда упирается в скруглённый угол карточки группы,
+          // и радиус там обязан быть концентричным её собственному: тот же
+          // центр дуги, поле по 4dp со всех сторон. Со спековыми 16dp поле на
+          // углу схлопывалось, и последний сервер выпирал за край списка.
+          endCorner:
+              ExpressiveShape.extraLarge - ExpressiveListSegment.gap,
+        ),
+        margin: ExpressiveListSegment.segmentMargin(
+          index: index,
+          columns: columns,
+        ),
+        onTap: () => widget.onSelectServer(server),
+        onDelete: () => ref.read(serversProvider.notifier).delete(server.id),
+        onPing: () => ref.read(serversProvider.notifier).pingSingle(server.id),
+      );
+    }
+
     if (twoColumns) {
-      // Нижний ряд: при нечётном числе серверов последняя плитка одна слева,
-      // пустая правая половина — фон карточки (DecoratedSliver) со своим
-      // скруглением. У плиток нижнего ряда скругляется только внешний угол.
-      final lastRowStart =
-          servers.length.isEven ? servers.length - 2 : servers.length - 1;
       return SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           mainAxisExtent: _subCardRowHeight,
         ),
         delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final server = servers[index];
-            final inLastRow = index >= lastRowStart;
-            return _ServerTile(
-              key: ValueKey(server.id),
-              server: server,
-              isActive: server.id == activeServerId,
-              isFirst: index < 2,
-              isLast: inLastRow,
-              accent: accent,
-              radius: BorderRadius.only(
-                bottomLeft: inLastRow && index.isEven
-                    ? const Radius.circular(ExpressiveShape.extraLarge)
-                    : Radius.zero,
-                bottomRight: inLastRow && index.isOdd
-                    ? const Radius.circular(ExpressiveShape.extraLarge)
-                    : Radius.zero,
-              ),
-              onTap: () => widget.onSelectServer(server),
-              onDelete: () =>
-                  ref.read(serversProvider.notifier).delete(server.id),
-              onPing: () =>
-                  ref.read(serversProvider.notifier).pingSingle(server.id),
-            );
-          },
+          (context, index) => tileAt(index),
           childCount: servers.length,
           addAutomaticKeepAlives: false,
           // _ServerTile сам оборачивается в RepaintBoundary — не дублируем.
@@ -859,19 +868,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
 
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-        (context, index) => _ServerTile(
-          key: ValueKey(servers[index].id),
-          server: servers[index],
-          isActive: servers[index].id == activeServerId,
-          isFirst: index == 0,
-          isLast: index == servers.length - 1,
-          accent: accent,
-          onTap: () => widget.onSelectServer(servers[index]),
-          onDelete: () =>
-              ref.read(serversProvider.notifier).delete(servers[index].id),
-          onPing: () =>
-              ref.read(serversProvider.notifier).pingSingle(servers[index].id),
-        ),
+        (context, index) => tileAt(index),
         childCount: servers.length,
         addAutomaticKeepAlives: false,
         // _ServerTile сам оборачивается в RepaintBoundary — не дублируем.

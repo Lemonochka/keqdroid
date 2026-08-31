@@ -26,6 +26,7 @@ import '../../services/vpn_engine.dart';
 import '../../services/windows_desktop_service.dart';
 import '../../tunnel/linux_tunnel_backend.dart';
 import '../../shared/ui/app_theme.dart';
+import '../../shared/ui/expressive_button_group.dart';
 import '../../shared/ui/update_dialog.dart';
 import '../../utils/clipboard_import.dart';
 import 'desktop_connection_mode.dart';
@@ -787,23 +788,22 @@ class _ConnectionModeChip extends ConsumerWidget {
                 ?.copyWith(color: Theme.of(context).colorScheme.primary),
           ),
         ),
-        SegmentedButton<ConnectionMode>(
+        ExpressiveConnectedButtons<ConnectionMode>(
           segments: const [
-            ButtonSegment(
+            ExpressiveSegment(
               value: ConnectionMode.proxy,
-              label: Text('Proxy'),
-              icon: Icon(Icons.lan_rounded, size: 16),
+              label: 'Proxy',
+              icon: Icons.lan_rounded,
             ),
-            ButtonSegment(
+            ExpressiveSegment(
               value: ConnectionMode.tun,
-              label: Text('TUN'),
-              icon: Icon(Icons.vpn_lock_rounded, size: 16),
+              label: 'TUN',
+              icon: Icons.vpn_lock_rounded,
             ),
           ],
-          selected: {mode},
-          onSelectionChanged: (selected) {
-            applyDesktopConnectionMode(context, ref, settings, selected.first);
-          },
+          selected: mode,
+          onChanged: (next) =>
+              applyDesktopConnectionMode(context, ref, settings, next),
         ),
       ],
     );

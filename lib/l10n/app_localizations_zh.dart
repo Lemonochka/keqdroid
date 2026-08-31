@@ -892,7 +892,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversAddServerTitle => '添加服务器';
 
   @override
-  String get serversPasteVlessHint => '粘贴 vless://、vmess://、trojan://、ss://、hysteria2:// 或 hy2://（每行一个），或整份配置：Xray JSON、Clash YAML、AmneziaWG .conf';
+  String get serversPasteVlessHint => '粘贴 vless://、vmess://、trojan://、ss://、hysteria2://、hy2:// 或 wg://（每行一个），或整份配置：Xray JSON、Clash YAML、AmneziaWG .conf';
 
   @override
   String get serversPasteHint => 'vless://… 或 hy2://host:port?auth=…';
@@ -1441,6 +1441,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorUnknownAction => '请重试。若问题重复出现，请检查服务器和应用设置。';
 
   @override
+  String get errorFileDialogMessage => '当前桌面会话没有文件选择器：既没有 XDG 门户后端，也没有 zenity/kdialog。';
+
+  @override
+  String get errorFileDialogAction => '请安装 xdg-desktop-portal-gtk（或 zenity），或直接粘贴配置文本代替选择文件。';
+
+  @override
   String get errorTunAdminTitle => '需要授权';
 
   @override
@@ -1472,6 +1478,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorUnknownTitle => '操作失败';
+
+  @override
+  String get errorFileDialogTitle => '没有文件选择器';
 
   @override
   String get serversPin => '置顶服务器';
