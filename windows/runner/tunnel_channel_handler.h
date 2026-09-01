@@ -17,13 +17,6 @@ void KeqdisSetPendingDeepLink(const std::string& url);
 // A link forwarded by a second instance while this one is already running.
 void KeqdisRequestDeepLink(const std::string& url);
 
-// Right-click on the tray icon — open the Flutter tray menu.
-void KeqdisRequestTrayMenu();
-
-// Tray popup dismissed from native side (click outside / focus loss).
-void KeqdisNotifyTrayMenuClosed();
-void KeqdisNotifyTrayMenuClosedImmediate();
-
 // WM_HOTKEY: forward the triggered global-hotkey action to Dart.
 void KeqdisNotifyHotkeyPressed(const std::string& action);
 

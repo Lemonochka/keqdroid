@@ -42,6 +42,13 @@ abstract final class ExpressiveShape {
   static RoundedRectangleBorder border(double corner) =>
       RoundedRectangleBorder(borderRadius: radius(corner));
 
+  /// Рамка текстового поля: свой токен формы (`extraSmall`) и одна линия.
+  static OutlineInputBorder inputBorder(Color color, {double width = 1}) =>
+      OutlineInputBorder(
+        borderRadius: radius(extraSmall),
+        borderSide: BorderSide(color: color, width: width),
+      );
+
   /// Форма для нажатого состояния: M3E морфит углы к более «сжатой» форме.
   /// Морфинг делаем интерполяцией между двумя ShapeBorder — Flutter умеет
   /// лерпить RoundedRectangleBorder, отдельный shape-morph API не нужен.
@@ -296,6 +303,7 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
   FloatingActionButtonThemeData fab,
   NavigationBarThemeData navigationBar,
   ListTileThemeData listTile,
+  InputDecorationThemeData inputDecoration,
   PopupMenuThemeData popupMenu,
   SegmentedButtonThemeData segmentedButton,
   ProgressIndicatorThemeData progressIndicator,
@@ -390,13 +398,41 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
     textButton: TextButtonThemeData(
       style: TextButton.styleFrom(shape: buttonShape),
     ),
+    // Размер FAB — 68, ровно посередине между спековыми ступенями, и это
+    // отступление с причиной.
+    //
+    // Ladder у M3E такой: FAB 56, Medium 80, Large 96. Базовые 56 мелковаты для
+    // главного действия экрана (а маленький FAB на 40 спека и вовсе пометила
+    // «not recommended, use a larger size»), Medium на 80 — уже великоват и
+    // забирает внимание у списка. Между ними в шкале пусто, поэтому середина.
+    //
+    // Пропорции при этом остаются спековыми: глиф 24 из 68 — те же 35%, что у
+    // Medium (28 из 80), а угол 20 из 68 — те же 29%, что у базового FAB
+    // (16 из 56). То есть кнопка чужого размера, но не чужих пропорций.
+    //
+    // Размеры живут здесь, а не на экранах: FAB'ов в приложении три (серверы,
+    // подписки, раздельное туннелирование), и заданные по месту они разъехались
+    // бы на первой же правке — так уже было с глифом на 26 против глифа по
+    // умолчанию на 24.
+    //
+    // Подпись расширенного FAB спека увела с labelLarge на titleMedium — это в
+    // `buildAppTheme`, где уже собрана шкала с выбранным шрифтом.
     fab: FloatingActionButtonThemeData(
       // У M3E FAB заметно менее круглый, чем у M2 — это узнаваемая деталь.
-      shape: ExpressiveShape.border(ExpressiveShape.large),
-      elevation: 0,
-      focusElevation: 0,
-      hoverElevation: 0,
-      highlightElevation: 0,
+      shape: ExpressiveShape.border(ExpressiveShape.largeIncreased),
+      sizeConstraints: const BoxConstraints.tightFor(width: 68, height: 68),
+      extendedSizeConstraints: const BoxConstraints.tightFor(height: 68),
+      extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
+      extendedIconLabelSpacing: 12,
+      iconSize: ExpressiveIconSize.large,
+      // Тень у FAB — не украшение: он единственный элемент, который физически
+      // висит НАД прокручивающимся содержимым, и уровень 3 с подъёмом до 4 под
+      // курсором прописан в его состояниях. Ноль, стоявший здесь, экраны всё
+      // равно перебивали по месту.
+      elevation: 3,
+      focusElevation: 3,
+      hoverElevation: 4,
+      highlightElevation: 3,
     ),
     navigationBar: NavigationBarThemeData(
       surfaceTintColor: Colors.transparent,
@@ -410,6 +446,41 @@ TextTheme buildExpressiveTextTheme(Brightness brightness) {
     listTile: ListTileThemeData(
       shape: ExpressiveShape.border(ExpressiveShape.large),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    ),
+    // Поля ввода. Их тут не было вовсе, и каждый экран рисовал своё: где
+    // заливка с полной рамкой и радиусом 12 (это не filled и не outlined, а
+    // помесь), где свои цвета фокуса, где свои отступы. Отсюда и ощущение, что
+    // формы приложения собраны из разных наборов.
+    //
+    // Берём OUTLINED — второй из двух вариантов спеки. Он честнее внутри наших
+    // карточек: filled пришлось бы красить уровнем выше карточки, а на
+    // динамических тёмных темах эти уровни сходятся, и поле пропадало бы.
+    //
+    // Радиус — `extraSmall` (4), как велит токен формы текстового поля. Да, он
+    // заметно острее окружающих карточек: у M3 это осознанно, поле не должно
+    // читаться как ещё одна карточка.
+    inputDecoration: InputDecorationThemeData(
+      filled: false,
+      // 56dp контейнер по спеке набирается сам из отступов и кегля; здесь
+      // задаём только горизонтальные 16 (12 — когда есть иконки, это Flutter
+      // разруливает сам).
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: ExpressiveShape.inputBorder(scheme.outline),
+      enabledBorder: ExpressiveShape.inputBorder(scheme.outline),
+      // Фокус — та же линия вдвое толще и цветом primary: это единственное
+      // состояние, которое обязано быть заметно боковым зрением.
+      focusedBorder: ExpressiveShape.inputBorder(scheme.primary, width: 2),
+      errorBorder: ExpressiveShape.inputBorder(scheme.error),
+      focusedErrorBorder: ExpressiveShape.inputBorder(scheme.error, width: 2),
+      disabledBorder: ExpressiveShape.inputBorder(
+        scheme.onSurface.withValues(alpha: 0.12),
+      ),
+      hintStyle: TextStyle(color: scheme.onSurfaceVariant),
+      helperStyle: TextStyle(color: scheme.onSurfaceVariant),
+      labelStyle: TextStyle(color: scheme.onSurfaceVariant),
+      floatingLabelStyle: TextStyle(color: scheme.primary),
+      prefixIconColor: scheme.onSurfaceVariant,
+      suffixIconColor: scheme.onSurfaceVariant,
     ),
     // Переключатель-сегменты: снаружи пилюля, выбранный сегмент —
     // secondaryContainer, тем же цветом, что выбранное во всём приложении.

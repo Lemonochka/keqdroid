@@ -24,6 +24,7 @@ import '../../screens/subscriptions_tab.dart';
 import '../../services/update_service.dart';
 import '../../services/vpn_engine.dart';
 import '../../services/windows_desktop_service.dart';
+import '../../services/windows_tray_menu.dart';
 import '../../tunnel/linux_tunnel_backend.dart';
 import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/expressive_button_group.dart';
@@ -31,7 +32,6 @@ import '../../shared/ui/update_dialog.dart';
 import '../../utils/clipboard_import.dart';
 import 'desktop_connection_mode.dart';
 import 'sidebar_group_nav.dart';
-import 'tray_menu_screen.dart';
 
 /// desktop shell: фиксированный sidebar + вкладки (без NavigationRail — на windows ломается layout)
 class DesktopHomeScreen extends ConsumerStatefulWidget {
@@ -67,8 +67,6 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     VpnNativeBridge.registerAutostartHandler(
       () => _maybeAutostartConnect(force: true),
     );
-    VpnNativeBridge.registerTrayMenuHandler(_onTrayMenuOpen);
-    VpnNativeBridge.registerTrayMenuCloseHandler(_onTrayMenuClose);
     VpnNativeBridge.registerWindowVisibilityHandler(_onWindowVisibility);
     HotkeyService.onPressed = _onHotkeyAction;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -174,7 +172,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       }
     }
     if (!mounted) return;
-    await applyDesktopConnectionMode(context, ref, settings, next);
+    await applyDesktopConnectionMode(context, DesktopModeDeps.of(ref), settings, next);
   }
 
   /// Переключиться на сервер с наименьшим пингом (speed-замеры не считаются).
@@ -382,50 +380,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     if (Platform.isLinux) LinuxBackgroundService.instance.onQuit = null;
     HotkeyService.onPressed = null;
     VpnNativeBridge.registerAutostartHandler(null);
-    VpnNativeBridge.registerTrayMenuHandler(null);
-    VpnNativeBridge.registerTrayMenuCloseHandler(null);
     VpnNativeBridge.registerWindowVisibilityHandler(null);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-  }
-
-  Future<void> _onTrayMenuOpen(MethodCall call) async {
-    if (!mounted) return;
-
-    final args = call.arguments;
-    final map = args is Map ? args : null;
-    final anchorX = (map?['x'] as num?)?.toDouble() ?? 0;
-    final anchorY = (map?['y'] as num?)?.toDouble() ?? 0;
-
-    final servers = ref.read(serversProvider).servers;
-    final settings =
-        ref.read(settingsNotifierProvider).value ?? const AppSettings();
-    // Ровно как themeMode в app.dart: яркость приложения задаёт ТОЛЬКО
-    // settings.darkTheme (followSystemTheme переключает цветовую схему, а не
-    // яркость) — иначе при системной тёмной теме трей был тёмным на светлом
-    // приложении.
-    final darkTheme = settings.darkTheme;
-
-    ref.read(trayMenuVisibleProvider.notifier).set(true);
-    WidgetsBinding.instance.ensureVisualUpdate();
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) return;
-
-    await WindowsDesktopService.showTrayMenu(
-      anchorX: anchorX,
-      anchorY: anchorY,
-      width: TrayMenuScreen.width,
-      height: TrayMenuScreen.estimateHeight(
-        serverCount: servers.length,
-        serversExpanded: false,
-      ),
-      darkTheme: darkTheme,
-    );
-  }
-
-  Future<void> _onTrayMenuClose() async {
-    if (!mounted) return;
-    ref.read(trayMenuVisibleProvider.notifier).set(false);
   }
 
   /// Нативный трей сообщил, скрыто окно (SW_HIDE) или восстановлено. Это
@@ -470,20 +427,10 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       );
     });
 
-    final trayMenuVisible = ref.watch(trayMenuVisibleProvider);
-    if (trayMenuVisible) {
-      return const TrayMenuScreen();
-    }
-
-    // Окно трея использует то же самое окно приложения и сужает его до ширины
-    // попапа (~288px). При показе/скрытии трея есть переходные кадры, где флаг
-    // меню уже снят, а окно ещё узкое (или наоборот). Чтобы обычные вкладки не
-    // раскладывались на ширине попапа и не ловили RenderFlex overflow, не строим
-    // их, пока окно сужено. Как только окно вернётся к нормальному размеру —
-    // MediaQuery вызовет rebuild и вкладки появятся.
-    if (MediaQuery.sizeOf(context).width < 480) {
-      return ColoredBox(color: AppTheme.bg(context));
-    }
+    // Меню трея на Windows — нативное; держим его живым, пока жив экран.
+    // Окно при этом никто не сужает, поэтому ни ветки «показываем меню вместо
+    // приложения», ни порога ширины против overflow вкладок больше нет.
+    ref.watch(windowsTrayMenuProvider);
 
     final l10n = AppLocalizations.of(context)!;
     ref.listen<AsyncValue<UpdateInfo?>>(updateInfoProvider, (prev, next) {
@@ -749,7 +696,7 @@ class _ConnectionModeMenuButton extends ConsumerWidget {
         size: 22,
       ),
       onSelected: (next) =>
-          applyDesktopConnectionMode(context, ref, settings, next),
+          applyDesktopConnectionMode(context, DesktopModeDeps.of(ref), settings, next),
       itemBuilder: (context) => [
         CheckedPopupMenuItem(
           value: ConnectionMode.proxy,
@@ -803,7 +750,7 @@ class _ConnectionModeChip extends ConsumerWidget {
           ],
           selected: mode,
           onChanged: (next) =>
-              applyDesktopConnectionMode(context, ref, settings, next),
+              applyDesktopConnectionMode(context, DesktopModeDeps.of(ref), settings, next),
         ),
       ],
     );

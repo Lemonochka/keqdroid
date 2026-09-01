@@ -64,6 +64,16 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            // `abiFilters` выше до чужих библиотек не достаёт: ML Kit из
+            // mobile_scanner приносит libbarhopper_v3.so в AAR, и в APK
+            // приезжали ВСЕ три её сборки — x86_64 на 5.9 МБ и armeabi-v7a на
+            // 3.2 МБ поверх нужной arm64. Работать на этих архитектурах
+            // приложению всё равно нечем: ядра собраны только под arm64.
+            excludes += listOf(
+                "**/x86/**",
+                "**/x86_64/**",
+                "**/armeabi-v7a/**",
+            )
         }
     }
 
@@ -77,6 +87,15 @@ android {
     }
 
     buildTypes {
+        // Профильная сборка подписывается тем же ключом, что и релизная.
+        //
+        // Иначе её невозможно поставить поверх установленного релиза
+        // (INSTALL_FAILED_UPDATE_INCOMPATIBLE), а единственный выход — удалить
+        // приложение вместе со всеми подписками и настройками. Профилировать
+        // приходится именно на реальном устройстве с реальными данными, так
+        // что цена «чистой» отладочной подписи здесь — потерянный аккаунт.
+        maybeCreate("profile").signingConfig = signingConfigs.getByName("release")
+
         release {
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true

@@ -7,4 +7,5 @@
     <string name="tile_connecting">Verbindung…</string>
     <string name="tile_error_start">VPN konnte nicht über die Schnelleinstellungen gestartet werden — Keqdis öffnen</string>
     <string name="tile_error_open_app">Keqdis konnte nicht geöffnet werden — App manuell starten</string>
+    <string name="tile_error_autostart">Das System hat den Start blockiert. Erlaube Autostart und Hintergrundaktivität für Keqdis in den Systemeinstellungen.</string>
 </resources>

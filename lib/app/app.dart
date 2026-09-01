@@ -16,6 +16,14 @@ import '../utils/app_locale.dart';
 
 const kSeedFallback = Color(0xFFFFAEBC);
 
+/// Корневой навигатор приложения.
+///
+/// Нужен тем, кто живёт вне дерева виджетов и всё-таки обязан показать диалог:
+/// меню трея на Windows — нативное (его рисует сама система), а переключение в
+/// TUN спрашивает про перезапуск с правами администратора. Спросить не у кого,
+/// если контекста нет.
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 class ThemePreset {
   final String id;
   final String name;
@@ -97,16 +105,24 @@ ColorScheme _lavenderMilkScheme(Brightness brightness) {
   );
 }
 
+/// Пресеты, которые с виду разные, а на выходе давали одну и ту же схему.
+///
+/// Так вышло из-за `tonalSpot`: он строит палитру по ТОНУ сида и нормализует
+/// насыщенность, поэтому два непохожих на глаз цвета с близким тоном дают
+/// одинаковые роли. Замер разницы по акцентным ролям (0..255): Forest↔Mint —
+/// 0.5, Sunset↔Ruby — 2.3, Ocean↔Cobalt — 3.7, тогда как у заведомо разных тем
+/// разрыв 10 и больше. То есть в списке лежали три пары одинаковых плиток.
+///
+/// Оставлены Mint, Sunset и Ocean; Forest, Ruby и Cobalt убраны — см.
+/// [_kRetiredPresets], который уводит их прежних владельцев к близнецу, а не к
+/// дефолту.
 const kThemePresets = <ThemePreset>[
   ThemePreset(id: 'ocean', name: 'Ocean', seed: Color(0xFF3A86FF)),
-  ThemePreset(id: 'forest', name: 'Forest', seed: Color(0xFF2A9D8F)),
   ThemePreset(id: 'sunset', name: 'Sunset', seed: Color(0xFFEF476F)),
   ThemePreset(id: 'violet', name: 'Violet', seed: Color(0xFF7B2CBF)),
   ThemePreset(id: 'amber', name: 'Amber', seed: Color(0xFFFB8500)),
   ThemePreset(id: 'mono', name: 'Monochrome', seed: Color(0xFF607D8B)),
-  ThemePreset(id: 'ruby', name: 'Ruby', seed: Color(0xFFDC2F45)),
   ThemePreset(id: 'mint', name: 'Mint', seed: Color(0xFF2EC4B6)),
-  ThemePreset(id: 'cobalt', name: 'Cobalt', seed: Color(0xFF4361EE)),
   ThemePreset(id: 'rose', name: 'Rose', seed: Color(0xFFE76FAD)),
   // id остался «sakura_sky» с двухцветных времён: он сохранён в настройках
   // пользователей, смена уронила бы их на дефолтный ocean.
@@ -130,22 +146,51 @@ const kThemePresets = <ThemePreset>[
   ),
 ];
 
+/// Удалённые пресеты → тот из оставшихся, который выглядит так же.
+///
+/// Без этой таблицы `resolveThemePreset` уронил бы их владельцев на дефолтный
+/// Ocean, то есть человек с зелёной темой обнаружил бы синюю — при том что
+/// удалили мы ровно КОПИЮ его темы и внешне меняться не должно ничего. Id живут
+/// в сохранённых настройках и в резервных копиях, поэтому таблица остаётся
+/// навсегда, а не до следующего релиза.
+const _kRetiredPresets = <String, String>{
+  'forest': 'mint',
+  'ruby': 'sunset',
+  'cobalt': 'ocean',
+};
+
 ThemePreset resolveThemePreset(String id) {
+  final live = _kRetiredPresets[id] ?? id;
   return kThemePresets.firstWhere(
-    (p) => p.id == id,
+    (p) => p.id == live,
     orElse: () => kThemePresets.first,
   );
 }
 
-ColorScheme buildPresetScheme(ThemePreset preset, Brightness brightness) {
-  final custom = preset.schemeBuilder;
-  if (custom != null) return custom(brightness);
-  return ColorScheme.fromSeed(
-    seedColor: preset.seed,
-    brightness: brightness,
-    dynamicSchemeVariant: preset.variant,
-  );
-}
+/// Готовые схемы пресетов: ключ — (id, яркость).
+///
+/// `ColorScheme.fromSeed` — это полный расчёт динамической схемы по HCT, и
+/// стоит он не наносекунды: двенадцать пресетов на десктопе считаются 8 мс
+/// (замер), на телефоне втрое дольше. А считать их приходится ЦЕЛИКОМ и на
+/// каждом кадре: экран выбора темы строит все двенадцать превью сразу, а
+/// `AnimatedTheme` внутри MaterialApp пересобирает поддерево на каждом кадре
+/// перехода светлая↔тёмная. То есть расчёт палитр выпадал ровно на те 350 мс,
+/// когда пользователь смотрит на анимацию, — отсюда и рывки при смене темы.
+///
+/// Кешировать безопасно: функция чистая, `ColorScheme` неизменяем, а размер
+/// кеша сверху ограничен числом пресетов на две яркости.
+final Map<(String, Brightness), ColorScheme> _presetSchemeCache = {};
+
+ColorScheme buildPresetScheme(ThemePreset preset, Brightness brightness) =>
+    _presetSchemeCache.putIfAbsent((preset.id, brightness), () {
+      final custom = preset.schemeBuilder;
+      if (custom != null) return custom(brightness);
+      return ColorScheme.fromSeed(
+        seedColor: preset.seed,
+        brightness: brightness,
+        dynamicSchemeVariant: preset.variant,
+      );
+    });
 
 /// Чёрный AMOLED-фон поверх любой тёмной схемы.
 ///
@@ -172,17 +217,68 @@ ColorScheme applyAmoledBlack(ColorScheme scheme) {
   );
 }
 
+/// Ключ кеша готовых тем.
+typedef _AppThemeKey = ({
+  ColorScheme scheme,
+  bool flair,
+  String? fontFamily,
+  IconShape iconShape,
+});
+
+/// Собранные `ThemeData` — по одной на набор аргументов.
+///
+/// Сборка темы стоит дорого: `ThemeData` разрешает десятки компонентных
+/// подтем, а рядом строится ещё и выразительная шкала типографики. На кадре,
+/// где меняется настройка, `_ThemedApp` собирает СРАЗУ ДВЕ темы — светлую и
+/// тёмную, — и замер на Pixel 6a показал 35–48 мс сборки на этом кадре. При
+/// бюджете 16.7 мс это два-три пропущенных кадра ровно в момент нажатия:
+/// именно они читались рывком в начале перехода.
+///
+/// Кешируется по полному набору аргументов, а `ThemeData` неизменяема, так что
+/// отдавать один и тот же объект безопасно — и даже полезно: `AnimatedTheme`
+/// сверяет темы по идентичности и не перезапускает анимацию впустую.
+///
+/// Кеш маленький и с потолком: пользователь ходит между двумя-тремя палитрами,
+/// а вот динамические схемы Android меняются вместе с обоями, и держать их все
+/// вечно незачем.
+final Map<_AppThemeKey, ThemeData> _appThemeCache = {};
+const int _appThemeCacheLimit = 8;
+
 ThemeData buildAppTheme(
   ColorScheme scheme, {
   bool flair = false,
   String? fontFamily,
   IconShape iconShape = IconShape.circle,
 }) {
+  final key = (
+    scheme: scheme,
+    flair: flair,
+    fontFamily: fontFamily,
+    iconShape: iconShape,
+  );
+  final cached = _appThemeCache[key];
+  if (cached != null) return cached;
+  final built = _buildAppTheme(scheme, flair, fontFamily, iconShape);
+  // Простое вытеснение целиком: набор ключей крошечный, и держать LRU ради
+  // восьми записей дороже, чем изредка пересобрать тему.
+  if (_appThemeCache.length >= _appThemeCacheLimit) _appThemeCache.clear();
+  return _appThemeCache[key] = built;
+}
+
+ThemeData _buildAppTheme(
+  ColorScheme scheme,
+  bool flair,
+  String? fontFamily,
+  IconShape iconShape,
+) {
   // Токены M3 Expressive: шкала форм, выразительные веса типографики и
   // компонентные темы. Экраны, пока живущие на хардкоде, от этого не ломаются —
   // они просто ещё не переехали (см. миграцию по этапам).
   final components = buildExpressiveComponentThemes(scheme);
   final expressiveText = buildExpressiveTextTheme(scheme.brightness);
+  final textTheme = fontFamily == null
+      ? expressiveText
+      : expressiveText.apply(fontFamily: fontFamily);
 
   return ThemeData(
     colorScheme: scheme,
@@ -190,15 +286,19 @@ ThemeData buildAppTheme(
     // Форма кружков-иконок едет расширением темы: так её видит любой
     // ExpressiveIconBadge, не таща за собой ни настройки, ни провайдеры.
     extensions: [ExpressiveIconShapeTheme(shape: iconShape)],
-    textTheme: fontFamily == null
-        ? expressiveText
-        : expressiveText.apply(fontFamily: fontFamily),
+    textTheme: textTheme,
     chipTheme: components.chip,
     filledButtonTheme: components.filledButton,
     outlinedButtonTheme: components.outlinedButton,
     textButtonTheme: components.textButton,
-    floatingActionButtonTheme: components.fab,
+    // Подпись расширенного FAB — `titleMedium`: выразительное обновление увело
+    // её с `labelLarge`. Стиль берём из УЖЕ собранной шкалы, а не собираем в
+    // компонентной теме: там нет ни выбранного шрифта, ни его метрик.
+    floatingActionButtonTheme: components.fab.copyWith(
+      extendedTextStyle: textTheme.titleMedium,
+    ),
     listTileTheme: components.listTile,
+    inputDecorationTheme: components.inputDecoration,
     // Шрифт приходит из выбора пользователя (см. _ThemedApp): flair-пресеты по
     // умолчанию несут Comfortaa, но пользователь может сменить его в любой теме.
     // Прочие «финтифлюшки» (усиленные скругления) остаются привязаны к flair.
@@ -306,6 +406,16 @@ class _ThemedApp extends ConsumerWidget {
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       debugShowCheckedModeBanner: false,
       themeMode: settings.darkTheme ? ThemeMode.dark : ThemeMode.light,
+      // Тема переключается МГНОВЕННО, без покадрового лерпа. Это не экономия на
+      // красоте, а замер: штатный `AnimatedTheme` пересобирает всё поддерево на
+      // каждом кадре перехода, а поддерево здесь — три живых вкладки PageView
+      // плюс открытый поверх экран. Один такой пересбор стоит 55 мс на Pixel 6a,
+      // и двадцать один кадр подряд по 55 мс — это не анимация, а затор: кадры
+      // уходили с задержкой 230–280 мс, и смена темы выглядела зависанием.
+      //
+      // Пересбор при смене темы неизбежен, но нужен он ровно один. Так и
+      // сделано: одна короткая задержка вместо трёхсот миллисекунд каши.
+      themeAnimationDuration: Duration.zero,
       theme: buildAppTheme(useSystem ? lightScheme : customLight,
           flair: flair, fontFamily: fontFamily, iconShape: iconShape),
       darkTheme: buildAppTheme(dark(useSystem ? darkScheme : customDark),
@@ -350,6 +460,7 @@ class _ThemedApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+      navigatorKey: rootNavigatorKey,
       home: home,
     );
   }

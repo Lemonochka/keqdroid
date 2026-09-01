@@ -523,9 +523,13 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
               server.config,
               settings,
               socksPort: settings.localPort,
-              // HTTP-инбаунд — только на десктопе: под tun2socks в ядро ходят
-              // одним SOCKS, а лишний слушающий порт на телефоне не нужен.
-              httpPort: Platform.isAndroid ? null : settings.httpPort,
+              // HTTP-инбаунд нужен и на Android, а не только на десктопе: под
+              // tun2socks в ядро ходят одним SOCKS, но само приложение ходит
+              // через локальный HTTP-прокси — `Dart HttpClient` не умеет SOCKS
+              // вовсе, а свой пакет исключён из TUN. Без этого порта проверка
+              // обновлений на mihomo падала с «connection refused»: xray
+              // http-in поднимает всегда (config_gen), mihomo — не поднимал.
+              httpPort: settings.httpPort,
               resolvedServerIp: serverIp,
               localInboundsNoAuth: proxyModeNoAuth,
               apiPort: mihomoApi.port,

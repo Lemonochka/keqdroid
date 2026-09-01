@@ -5,8 +5,8 @@ namespace {
 constexpr wchar_t kRegistryKey[] = L"Software\\KeqDroid";
 constexpr wchar_t kPlacementValue[] = L"MainWindowPlacement";
 
-// Anything smaller than this is a corrupt record or the tray popup, never a
-// size the user actually dragged the main window to.
+// Anything smaller than this is a corrupt record, never a size the user
+// actually dragged the main window to.
 constexpr int kMinSavedWidth = 400;
 constexpr int kMinSavedHeight = 300;
 
@@ -80,13 +80,6 @@ bool KeqdroidRestoreWindowPlacement(HWND hwnd, bool* out_maximized) {
 
 void KeqdroidSaveWindowPlacement(HWND hwnd) {
   if (hwnd == nullptr || !::IsWindow(hwnd)) {
-    return;
-  }
-
-  // The tray popup reuses this HWND with WS_POPUP styling — persisting that
-  // state would reopen the app as a ~288px captionless sliver.
-  const LONG style = ::GetWindowLongW(hwnd, GWL_STYLE);
-  if ((style & WS_CAPTION) == 0) {
     return;
   }
 

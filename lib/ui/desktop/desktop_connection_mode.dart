@@ -11,13 +11,46 @@ import '../../services/windows_desktop_service.dart';
 import '../../shared/ui/app_theme.dart';
 import '../../utils/error_messages.dart';
 
+/// То немногое из провайдеров, что нужно переключателю режима.
+///
+/// Раньше сюда передавался `WidgetRef`. Но зовёт эту функцию не только экран:
+/// меню трея на Windows живёт в провайдере, и у него есть только `Ref`. Общего
+/// предка у `Ref` и `WidgetRef` нет, а принять сам `ref.read` мешает то, что
+/// `ProviderListenable` из flutter_riverpod наружу не экспортируется. Поэтому
+/// зависимости передаются явно — заодно видно, что функция вообще трогает.
+class DesktopModeDeps {
+  const DesktopModeDeps({
+    required this.vpn,
+    required this.settings,
+    required this.status,
+  });
+
+  final VpnStateNotifier vpn;
+  final SettingsNotifier settings;
+
+  /// Функцией, а не значением: статус перечитывается после await'ов.
+  final VpnStatus? Function() status;
+
+  factory DesktopModeDeps.of(WidgetRef ref) => DesktopModeDeps(
+        vpn: ref.read(vpnStateProvider.notifier),
+        settings: ref.read(settingsNotifierProvider.notifier),
+        status: () => ref.read(vpnStateProvider).value?.status,
+      );
+
+  factory DesktopModeDeps.ofRef(Ref ref) => DesktopModeDeps(
+        vpn: ref.read(vpnStateProvider.notifier),
+        settings: ref.read(settingsNotifierProvider.notifier),
+        status: () => ref.read(vpnStateProvider).value?.status,
+      );
+}
+
 /// Переключение Proxy/TUN на desktop (sidebar, tray, хоткей).
 /// При активном туннеле режим меняется с автоматическим переподключением
 /// (disconnect → save → connect) — как это всегда делал хоткей, вместо
 /// отказа «сначала отключитесь».
 Future<void> applyDesktopConnectionMode(
   BuildContext context,
-  WidgetRef ref,
+  DesktopModeDeps deps,
   AppSettings settings,
   ConnectionMode next,
 ) async {
@@ -33,10 +66,10 @@ Future<void> applyDesktopConnectionMode(
       if (restart != true) return;
 
       await stopSessionBeforeElevation(
-        notifier: ref.read(vpnStateProvider.notifier),
-        status: ref.read(vpnStateProvider).value?.status,
+        notifier: deps.vpn,
+        status: deps.status(),
       );
-      await ref.read(settingsNotifierProvider.notifier).save(
+      await deps.settings.save(
             settings.copyWith(
               connectionMode: ConnectionMode.tun.storageValue,
               connectionModeChosen: true,
@@ -56,12 +89,12 @@ Future<void> applyDesktopConnectionMode(
     }
   }
 
-  final status = ref.read(vpnStateProvider).value?.status;
+  final status = deps.status();
   final wasActive =
       status == VpnStatus.connected || status == VpnStatus.connecting;
   if (wasActive) {
     try {
-      await ref.read(vpnStateProvider.notifier).disconnect();
+      await deps.vpn.disconnect();
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -71,7 +104,7 @@ Future<void> applyDesktopConnectionMode(
       return;
     }
   }
-  await ref.read(settingsNotifierProvider.notifier).save(
+  await deps.settings.save(
         settings.copyWith(
           connectionMode: next.storageValue,
           connectionModeChosen: true,
@@ -79,7 +112,7 @@ Future<void> applyDesktopConnectionMode(
       );
   if (wasActive) {
     try {
-      await ref.read(vpnStateProvider.notifier).connect();
+      await deps.vpn.connect();
     } catch (e) {
       // Ошибка уже лежит в state (её покажет круг подключения); снекбар —
       // немедленная подсказка, если пользователь смотрит на sidebar/трей.

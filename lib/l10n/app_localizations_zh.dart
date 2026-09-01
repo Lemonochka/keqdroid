@@ -1671,6 +1671,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceShowTimeSubtitle => '连接按钮下方的会话时长';
 
   @override
+  String get appearanceWaveLatencyColor => '按延迟为指示条着色';
+
+  @override
+  String get appearanceWaveLatencyColorSubtitle => '连接按钮下方的指示条会按当前服务器的延迟显示绿色、橙色或红色。关闭后保持主题强调色。';
+
+  @override
   String get appearanceFontTitle => '字体';
 
   @override
@@ -2105,6 +2111,20 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String settingsInternalsGeoCodes(int count) {
     return '条目：$count';
+  }
+
+  @override
+  String get settingsInternalsGeoTrimmed => '国家数据库为精简版';
+
+  @override
+  String get settingsInternalsGeoTrimmedHint => '其中只有应用预设需要的代码。涉及其他国家的规则会在连接前被丢弃。';
+
+  @override
+  String get settingsInternalsGeoDownload => '下载完整数据库';
+
+  @override
+  String settingsInternalsGeoDownloadFailed(String error) {
+    return '下载失败：$error';
   }
 
   @override

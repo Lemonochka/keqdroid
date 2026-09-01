@@ -5,11 +5,25 @@ import 'haptics.dart';
 
 /// Один вариант в [ExpressiveConnectedButtons].
 class ExpressiveSegment<T> {
-  const ExpressiveSegment({required this.value, required this.label, this.icon});
+  const ExpressiveSegment({
+    required this.value,
+    required this.label,
+    this.icon,
+    this.iconColor,
+  });
 
   final T value;
   final String label;
   final IconData? icon;
+
+  /// Цвет иконки в НЕвыбранном состоянии.
+  ///
+  /// Нужен там, где варианты сами по себе цветные по смыслу — «блокировать»
+  /// красным, «мимо VPN» зелёным. У выбранного цвет всё равно уходит в
+  /// `onPrimary`: он на заливке акцента, и своего оттенка там быть не может.
+  /// Так смысловая раскраска остаётся видна, а контракт цветов компонента не
+  /// ломается.
+  final Color? iconColor;
 }
 
 /// Connected button group — замена `SegmentedButton` из M3 Expressive.
@@ -227,8 +241,8 @@ class _SegmentState<T> extends State<_Segment<T>>
           press,
         )!;
         final shape = RoundedRectangleBorder(borderRadius: radius);
-        final foreground = Color.lerp(
-          scheme.onSurfaceVariant,
+        final iconColor = Color.lerp(
+          widget.segment.iconColor ?? scheme.onSurfaceVariant,
           scheme.onPrimary,
           tint,
         )!;
@@ -262,7 +276,7 @@ class _SegmentState<T> extends State<_Segment<T>>
                       Icon(
                         widget.segment.icon,
                         size: ExpressiveIconSize.inline,
-                        color: foreground,
+                        color: iconColor,
                       ),
                       const SizedBox(width: ExpressiveSpacing.small),
                     ],

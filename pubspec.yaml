@@ -2,7 +2,7 @@ name: keqdroid
 description: "KEQDIS proxy/VPN client for Android and Windows."
 publish_to: 'none'
 
-version: 0.14.0+41
+version: 0.15.0+42
 
 environment:
   sdk: ^3.11.3
@@ -47,6 +47,16 @@ dependencies:
   # тулингом, но разбираем его мы сами (см. utils/custom_clash_config.dart) —
   # значит зависимость наша, прямая.
   yaml: ^3.1.3
+
+# tray_manager собирает меню трея на Windows одним вызовом TrackPopupMenu, и в
+# опубликованном пакете он сделан с двумя отступлениями от документации Win32:
+# меню не закрывается по клику мимо и уезжает под панель задач. Из Dart это не
+# лечится — параметров у метода нет. Копия с патчем на три строки лежит в
+# third_party/tray_manager, разбор — в его PATCH.md.
+dependency_overrides:
+  tray_manager:
+    path: third_party/tray_manager
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -89,14 +99,26 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon.png
+    # Иконка трея: .ico, а не .png — Windows берёт из него кадр нужного размера.
+    - assets/tray_icon.ico
     - assets/icon_foreground.png
     - assets/icon_windows_launcher.png
     # OFL-лицензии шрифтов обязаны ехать вместе со шрифтами в дистрибутиве.
     - assets/fonts/Comfortaa-OFL.txt
     - assets/fonts/Montserrat-OFL.txt
     - assets/fonts/Rubik-OFL.txt
-    # GeoIP/Geosite DBs for xray routing (geoip:/geosite: rules on Android).
-    - assets/bin/windows/geoip.dat
+    # Geo DBs for xray/mihomo routing (geoip:/geosite: rules on Android).
+    #
+    # geoip ships TRIMMED: the full v2fly base is 23.5 MB of which 58% is five
+    # countries no default rule mentions, while everything the app can emit by
+    # itself fits in 0.6 MB (tool/geo_lite.dart builds it, XrayGeoAssets
+    # extracts it). Whatever a user's own rule needs beyond that is downloaded
+    # on demand — see GeoBaseDownloader.
+    #
+    # geosite ships whole: its needed codes are already 44.5% of the file, and
+    # with 1534 codes in there a user rule hits a missing one far too easily to
+    # trade that for half a megabyte.
+    - assets/geo/geoip-lite.dat
     - assets/bin/windows/geosite.dat
   # NOTE: core binaries (assets/bin/windows, assets/bin/linux) are deliberately
   # NOT Flutter assets. Flutter bundles assets into every platform, which dragged

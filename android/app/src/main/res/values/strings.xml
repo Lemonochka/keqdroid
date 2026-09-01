@@ -12,4 +12,5 @@
     <string name="tile_connecting">Connecting…</string>
     <string name="tile_error_start">Couldn\'t start the VPN from Quick Settings — open Keqdis</string>
     <string name="tile_error_open_app">Couldn\'t open Keqdis — launch it manually to connect</string>
+    <string name="tile_error_autostart">The system blocked the start. Allow autostart / background activity for Keqdis in the system settings.</string>
 </resources>

@@ -1671,6 +1671,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceShowTimeSubtitle => 'نشان دادن مدت نشست زیر دکمهٔ اتصال';
 
   @override
+  String get appearanceWaveLatencyColor => 'رنگ نوار بر پایهٔ تأخیر';
+
+  @override
+  String get appearanceWaveLatencyColorSubtitle => 'نوار زیر دکمهٔ اتصال بر پایهٔ پینگ سرور فعال سبز، نارنجی یا قرمز می‌شود. خاموش باشد، رنگ تأکید پوسته را نگه می‌دارد.';
+
+  @override
   String get appearanceFontTitle => 'قلم';
 
   @override
@@ -2107,6 +2113,20 @@ class AppLocalizationsFa extends AppLocalizations {
   @override
   String settingsInternalsGeoCodes(int count) {
     return 'کدها: $count';
+  }
+
+  @override
+  String get settingsInternalsGeoTrimmed => 'پایگاه دادهٔ کشورها کوتاه‌شده است';
+
+  @override
+  String get settingsInternalsGeoTrimmedHint => 'فقط کدهایی را دارد که پیش‌تنظیم‌های خود برنامه لازم دارند. قانونی که کشور دیگری را نام ببرد، پیش از اتصال حذف می‌شود.';
+
+  @override
+  String get settingsInternalsGeoDownload => 'دریافت پایگاه دادهٔ کامل';
+
+  @override
+  String settingsInternalsGeoDownloadFailed(String error) {
+    return 'دریافت ناموفق بود: $error';
   }
 
   @override

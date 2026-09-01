@@ -146,6 +146,10 @@ class _AppInternalsScreen extends ConsumerWidget {
       ExpressiveGroup(
         children: [
           for (final base in data.geoBases) _GeoTile(base: base),
+          // Догрузка полной базы стран — только там, где вшита урезанная.
+          // На десктопе рядом с бинарником лежит полная, качать нечего.
+          if (GeoBaseDownloader.isSupported && _geoipIsTrimmed(data.geoBases))
+            const _GeoDownloadTile(),
         ],
       ),
 
@@ -402,6 +406,74 @@ class _CoreTile extends StatelessWidget {
         CoreRole.tun => l10n.settingsInternalsRoleTun,
         CoreRole.amneziawg => l10n.settingsInternalsRoleAwg,
       };
+}
+
+/// Урезана ли база стран — по числу кодов в ней самой, а не по флажку в
+/// настройках: флажок разъедется с диском, коды и есть диск.
+bool _geoipIsTrimmed(List<GeoBaseInfo> bases) {
+  for (final b in bases) {
+    if (b.name != 'geoip.dat') continue;
+    return !b.missing && b.codeCount < GeoAssetIndex.fullGeoipCodeThreshold;
+  }
+  return false;
+}
+
+/// Кнопка догрузки полной базы стран.
+///
+/// Стоит прямо под строками гео-баз, потому что решение принимается по ним же:
+/// человек видит «кодов: 4» и рядом объяснение с кнопкой, а не ищет настройку
+/// в другом месте.
+class _GeoDownloadTile extends ConsumerStatefulWidget {
+  const _GeoDownloadTile();
+
+  @override
+  ConsumerState<_GeoDownloadTile> createState() => _GeoDownloadTileState();
+}
+
+class _GeoDownloadTileState extends ConsumerState<_GeoDownloadTile> {
+  bool _busy = false;
+  double _progress = 0;
+  String? _error;
+
+  Future<void> _download() async {
+    setState(() {
+      _busy = true;
+      _progress = 0;
+      _error = null;
+    });
+    try {
+      await GeoBaseDownloader.install(
+        onProgress: (p) {
+          if (mounted) setState(() => _progress = p);
+        },
+      );
+      if (!mounted) return;
+      // Панель читает размеры и число кодов при построении, поэтому после
+      // подмены базы её надо перечитать — иначе останется «кодов: 4».
+      ref.invalidate(_appInternalsProvider);
+    } catch (e) {
+      if (mounted) setState(() => _error = '$e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return ExpressiveActionTile(
+      icon: Icons.public_rounded,
+      title: l10n.settingsInternalsGeoDownload,
+      subtitle: _error != null
+          ? l10n.settingsInternalsGeoDownloadFailed(_error!)
+          : (_busy
+              ? '${(_progress * 100).round()}%'
+              : l10n.settingsInternalsGeoTrimmedHint),
+      accent: ExpressiveAccent.tertiary,
+      danger: _error != null,
+      onTap: _busy ? () {} : _download,
+    );
+  }
 }
 
 class _GeoTile extends StatelessWidget {

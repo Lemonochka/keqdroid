@@ -99,7 +99,13 @@ if ($LASTEXITCODE -ne 0) { throw "flutter pub get failed" }
 # --- Android ---------------------------------------------------------------
 if (-not $SkipAndroid) {
   Write-Step "Building Android APK"
-  flutter build apk --release
+  # --target-platform android-arm64 — не «оптимизация на всякий случай».
+  # Без него Flutter компилирует свой движок и AOT-снимок Dart ещё под
+  # armeabi-v7a и x86_64: это 22.5 МБ из 87.5 в опубликованном APK. Работать там
+  # приложению всё равно нечем — все четыре ядра собраны только под arm64
+  # (`abiFilters` в android/app/build.gradle.kts), так что на этих архитектурах
+  # оно устанавливалось и не поднимало туннель.
+  flutter build apk --release --target-platform android-arm64
   if ($LASTEXITCODE -ne 0) { throw "flutter build apk failed" }
 
   $apkSrc = Join-Path $repoRoot 'build\app\outputs\flutter-apk\app-release.apk'
@@ -152,6 +158,25 @@ if (-not $SkipWindows) {
     Write-Host "    $core OK ($([math]::Round($size / 1MB, 1)) MB)"
   }
 
+  # Гео-базы в бандле лежат ДВАЖДЫ, и вторая копия — мёртвый груз.
+  #
+  # Рядом с exe их кладёт CMake, оттуда их и читает ядро (GeoAssetService._geoDir
+  # на Windows возвращает каталог рядом с исполняемым файлом). Вторая копия
+  # приезжает во flutter_assets: базы объявлены ассетами Flutter ради ANDROID —
+  # там их достаёт XrayGeoAssets через AssetManager, — а Flutter пакует ассеты во
+  # все платформы разом. На десктопе этот путь не читает никто.
+  #
+  # Цена дубля: 6.0 МБ в zip и 27.5 МБ на диске после установки. Linux-упаковщик
+  # вырезает его давно (tool/package_linux.sh), Windows — не вырезал.
+  foreach ($dup in @('data\flutter_assets\assets\bin\windows',
+                     'data\flutter_assets\assets\geo')) {
+    $dupPath = Join-Path $relDir $dup
+    if (Test-Path -LiteralPath $dupPath) {
+      Remove-Item -LiteralPath $dupPath -Recurse -Force
+      Write-Host "    pruned $dup"
+    }
+  }
+
   $zipOut = Join-Path $outDir "keqdroid-windows-x64-$version.zip"
   if (Test-Path -LiteralPath $zipOut) { Remove-Item -LiteralPath $zipOut -Force }
   # Zip the contents so keqdroid.exe sits at the archive root (the updater's
@@ -161,6 +186,20 @@ if (-not $SkipWindows) {
 }
 
 # --- Verify sidecars match (cheap sanity) ----------------------------------
+# --- Full geo database ------------------------------------------------------
+# The APK carries a trimmed geoip.dat (four codes, 0.6 MB) — see
+# tool/geo_lite.dart. GeoBaseDownloader fetches the full one from the LATEST
+# release, so every release has to carry it, checksum included: the downloader
+# refuses an asset whose .sha256 is missing or does not match, exactly like the
+# app updater does.
+Write-Step "Publishing the full geo database"
+$geoSrc = Join-Path $repoRoot 'assets\bin\windows\geoip.dat'
+if (-not (Test-Path -LiteralPath $geoSrc)) { throw "full geoip.dat not found at $geoSrc" }
+$geoOut = Join-Path $outDir 'geoip.dat'
+Copy-Item -LiteralPath $geoSrc -Destination $geoOut -Force
+Write-Sha256Sidecar $geoOut
+Write-Host ("    geoip.dat OK ({0} MB)" -f [math]::Round((Get-Item -LiteralPath $geoOut).Length / 1MB, 1))
+
 Write-Step "Verifying sidecars"
 Get-ChildItem -LiteralPath $outDir -Filter '*.sha256' | ForEach-Object {
   $asset = $_.FullName.Substring(0, $_.FullName.Length - '.sha256'.Length)

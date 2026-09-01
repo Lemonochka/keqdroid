@@ -75,26 +75,19 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _typeTab(
-                      context,
-                      label: l10n.settingsRoutingGeoPickerGeosite,
-                      selected: _geosite,
-                      onTap: () => setState(() => _geosite = true),
-                    ),
+              ExpressiveConnectedButtons<bool>(
+                segments: [
+                  ExpressiveSegment(
+                    value: true,
+                    label: l10n.settingsRoutingGeoPickerGeosite,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _typeTab(
-                      context,
-                      label: l10n.settingsRoutingGeoPickerGeoip,
-                      selected: !_geosite,
-                      onTap: () => setState(() => _geosite = false),
-                    ),
+                  ExpressiveSegment(
+                    value: false,
+                    label: l10n.settingsRoutingGeoPickerGeoip,
                   ),
                 ],
+                selected: _geosite,
+                onChanged: (v) => setState(() => _geosite = v),
               ),
               const SizedBox(height: 10),
               TextField(
@@ -104,21 +97,10 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
                 .textTheme
                 .bodyMedium
                 ?.copyWith(color: AppTheme.text(context)),
+                // Рамка, заливка и цвета — из темы поля ввода.
                 decoration: InputDecoration(
-                  isDense: true,
-                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                  prefixIcon: const Icon(Icons.search_rounded),
                   hintText: l10n.settingsRoutingGeoPickerSearchHint,
-                  hintStyle: TextStyle(color: AppTheme.textLight(context)),
-                  filled: true,
-                  fillColor: AppTheme.inset(context),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                    borderSide: BorderSide(color: AppTheme.divider(context)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                    borderSide: BorderSide(color: AppTheme.divider(context)),
-                  ),
                 ),
                 onChanged: (v) => setState(() => _query = v),
               ),
@@ -160,37 +142,6 @@ class _GeoCodePickerSheetState extends State<_GeoCodePickerSheet> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _typeTab(
-    BuildContext context, {
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    final color = AppTheme.accent(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.14) : AppTheme.bg(context),
-          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-          border: Border.all(
-            color: selected ? color : AppTheme.divider(context),
-            width: selected ? 1.6 : 1,
-          ),
-        ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? color : AppTheme.text(context),
-              ),
         ),
       ),
     );
@@ -287,7 +238,6 @@ class _RuleEditorDialogState extends State<_RuleEditorDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final accent = AppTheme.accent(context);
     final isEdit = widget.existing != null;
     return AlertDialog(
       backgroundColor: AppTheme.card(context),
@@ -335,23 +285,15 @@ class _RuleEditorDialogState extends State<_RuleEditorDialog> {
                   ?.copyWith(color: AppTheme.textLight(context)),
             ),
             const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
+            // Связанная группа, а не чипы: у чипа в M3 роль фильтра, где
+            // выбранных бывает несколько, а тип совпадения ровно один.
+            ExpressiveConnectedButtons<RuleType>(
+              segments: [
                 for (final t in _types)
-                  ChoiceChip(
-                    label: Text(_ruleTypeLabel(l10n, t)),
-                    selected: _type == t,
-                    onSelected: (_) => setState(() => _type = t),
-                    selectedColor: accent.withValues(alpha: 0.18),
-                    labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: _type == t ? accent : AppTheme.text(context),
-                          fontWeight:
-                              _type == t ? FontWeight.w700 : FontWeight.w500,
-                        ),
-                  ),
+                  ExpressiveSegment(value: t, label: _ruleTypeLabel(l10n, t)),
               ],
+              selected: _type,
+              onChanged: (t) => setState(() => _type = t),
             ),
             const SizedBox(height: 16),
             Text(
@@ -362,26 +304,20 @@ class _RuleEditorDialogState extends State<_RuleEditorDialog> {
                   ?.copyWith(color: AppTheme.textLight(context)),
             ),
             const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
+            // Действий тоже ровно одно. Смысловой цвет остаётся на иконках
+            // невыбранных — на заливке акцента своего оттенка быть не может.
+            ExpressiveConnectedButtons<RuleAction>(
+              segments: [
                 for (final a in _actions)
-                  ChoiceChip(
-                    label: Text(_ruleActionLabel(l10n, a)),
-                    selected: _action == a,
-                    onSelected: (_) => setState(() => _action = a),
-                    selectedColor:
-                        _ruleActionColor(context, a).withValues(alpha: 0.18),
-                    labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: _action == a
-                              ? _ruleActionColor(context, a)
-                              : AppTheme.text(context),
-                          fontWeight:
-                              _action == a ? FontWeight.w700 : FontWeight.w500,
-                        ),
+                  ExpressiveSegment(
+                    value: a,
+                    label: _ruleActionLabel(l10n, a),
+                    icon: _ruleActionIcon(a),
+                    iconColor: _ruleActionColor(context, a),
                   ),
               ],
+              selected: _action,
+              onChanged: (a) => setState(() => _action = a),
             ),
           ],
         ),

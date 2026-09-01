@@ -226,6 +226,11 @@ Color _latencyColor(
   ServerItem? server,
   AppSettings settings,
 ) {
+  // Канал выключен — индикатор живёт на акценте темы. Выключают его не от
+  // ненужности: цвет тут меняется от смены сервера и от переизмерения пинга, а
+  // красный на главном экране читается как авария, даже когда речь о трёхстах
+  // миллисекундах.
+  if (!settings.waveLatencyColor) return AppTheme.accent(context);
   final ping = server?.pingMs;
   // Пинг не измерен — не врём цветом, показываем нейтральный акцент.
   if (server == null || ping == null || ping <= 0) {

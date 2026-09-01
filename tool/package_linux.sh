@@ -67,6 +67,9 @@ PAYLOAD="$WORK/payload"
 mkdir -p "$PAYLOAD"
 cp -a "$BUNDLE/." "$PAYLOAD/"
 rm -rf "$PAYLOAD/data/flutter_assets/assets/bin/windows"
+# И урезанная geoip — она ассет Flutter ради Android; на десктопе рядом с
+# бинарником лежит полная база, которую и читает ядро.
+rm -rf "$PAYLOAD/data/flutter_assets/assets/geo"
 echo "payload size: $(du -sh "$PAYLOAD" | cut -f1)"
 
 # --- bundle the AppIndicator library chain ----------------------------------

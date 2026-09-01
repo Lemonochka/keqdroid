@@ -106,6 +106,7 @@ class SettingsBackupService {
     'hapticFeedback',
     'showTrafficStats',
     'showConnectionTime',
+    'waveLatencyColor',
     'showSpeedInNotification',
     'showUptimeInNotification',
     // язык

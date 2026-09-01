@@ -20,8 +20,12 @@ class GeoAssetService {
   /// рантайме не меняются, а разбор дёргается на каждое подключение.
   static Future<GeoAssetIndex> index() => _cached ??= _load();
 
+  /// Сбросить кэш индекса. Нужен после подмены базы на диске — иначе
+  /// санитайзер продолжит судить о правилах по старому списку кодов.
+  static void invalidate() => _cached = null;
+
   /// Только для тестов: сбросить кэш.
-  static void resetCacheForTests() => _cached = null;
+  static void resetCacheForTests() => invalidate();
 
   static Future<GeoAssetIndex> _load() async {
     try {
@@ -58,14 +62,25 @@ class GeoAssetService {
   /// Выброшенное пишем в лог — правило исчезает из маршрутизации молча, и это
   /// единственный след, по которому можно понять, почему.
   static Future<AppSettings> sanitizeRules(AppSettings settings) async {
-    final result = stripUnknownGeoTokens(settings, await index());
+    final assets = await index();
+    final result = stripUnknownGeoTokens(settings, assets);
     if (result.dropped.isNotEmpty) {
+      // Отдельная подсказка про урезанную базу: «правило исчезло» и «страны в
+      // базе нет, её надо догрузить» — разные диагнозы, а выглядят одинаково.
+      final trimmedBase = !assets.hasFullGeoip &&
+          result.dropped.any((t) => t.toLowerCase().startsWith('geoip:'));
       AppLogger.instance.warn(
         'Routing rules: dropped ${result.dropped.length} geo entries missing '
         'from the bundled geoip/geosite databases (they would abort the core '
-        'at config load): ${result.dropped.join(', ')}',
+        'at config load): ${result.dropped.join(', ')}'
+        '${trimmedBase ? ' — the bundled country database is the trimmed one; '
+            'download the full base in Settings -> About -> Internals' : ''}',
       );
     }
     return result.settings;
   }
+
+  /// Полная ли база стран сейчас на диске — по ней экран «Внутренности»
+  /// решает, предлагать ли догрузку.
+  static Future<bool> hasFullGeoip() async => (await index()).hasFullGeoip;
 }
