@@ -7,4 +7,5 @@
     <string name="tile_connecting">Подключение…</string>
     <string name="tile_error_start">Не удалось запустить VPN из шторки — откройте Keqdis</string>
     <string name="tile_error_open_app">Не удалось открыть Keqdis — запустите приложение вручную</string>
+    <string name="tile_error_autostart">Система не дала запуститься. Разрешите автозапуск и фоновую работу Keqdis в настройках системы.</string>
 </resources>

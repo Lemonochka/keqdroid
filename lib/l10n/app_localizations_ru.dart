@@ -1673,6 +1673,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceShowTimeSubtitle => 'Чип длительности сессии под кнопкой подключения';
 
   @override
+  String get appearanceWaveLatencyColor => 'Красить индикатор по задержке';
+
+  @override
+  String get appearanceWaveLatencyColorSubtitle => 'Полоса под кнопкой подключения становится зелёной, оранжевой или красной по пингу активного сервера. Выключено — остаётся в акценте темы.';
+
+  @override
   String get appearanceFontTitle => 'Шрифт';
 
   @override
@@ -2112,6 +2118,20 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String settingsInternalsGeoCodes(int count) {
     return 'кодов: $count';
+  }
+
+  @override
+  String get settingsInternalsGeoTrimmed => 'База стран урезанная';
+
+  @override
+  String get settingsInternalsGeoTrimmedHint => 'В ней только коды, которые нужны пресетам самого приложения. Правило с любой другой страной отбрасывается перед подключением.';
+
+  @override
+  String get settingsInternalsGeoDownload => 'Скачать полную базу';
+
+  @override
+  String settingsInternalsGeoDownloadFailed(String error) {
+    return 'Не удалось скачать: $error';
   }
 
   @override

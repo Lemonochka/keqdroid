@@ -24,10 +24,34 @@ class _ConnectButton extends StatefulWidget {
   State<_ConnectButton> createState() => _ConnectButtonState();
 }
 
+/// Тикеров у кнопки ТРИ, а не один: свой на нажатие плюс два внутри
+/// [ShapeMorphCycle] (морфинг фигуры и независимое вращение). С
+/// `SingleTickerProviderStateMixin` это падало ассертом при первом же создании
+/// цикла — то есть в debug фигур на кнопке не было вовсе, а в release ассерт
+/// вырезан, и вместо падения ломался `TickerMode`: со скрытого экрана
+/// продолжал тикать только последний созданный тикер.
 class _ConnectButtonState extends State<_ConnectButton>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   /// `XLargeIconButtonTokens.ContainerHeight`.
   static const double _size = 136;
+
+  /// Углы включённого состояния — ОСОЗНАННОЕ отступление от спеки.
+  ///
+  /// Таблица углов кнопок-иконок даёт для размера XL квадратную форму в 28dp, и
+  /// раньше стояло ровно оно. Формально верно, на глаз — нет: на стороне в
+  /// 136dp это пятая часть, и включённая кнопка читается просто квадратом. На
+  /// сорока восьми она остаётся отличимой от круга (в этом весь смысл смены
+  /// формы), но перестаёт быть углом.
+  ///
+  /// 48 — не произвольное число, а `extraExtraLarge` нашей шкалы форм: шаг,
+  /// заведённый как раз под «геройские» элементы, а кнопка подключения ровно
+  /// такой и есть — единственный объект такого размера во всём приложении.
+  static const double _selectedCorner = ExpressiveShape.extraExtraLarge;
+
+  /// Нажатая форма. Спека сжимает XL с 28 до 16, то есть примерно на 40%; та же
+  /// доля от сорока восьми — двадцать восемь. Так нажатие остаётся заметным и
+  /// на круге, и на включённой форме.
+  static const double _pressedCorner = ExpressiveShape.extraLarge;
 
   /// `XLargeIconButtonTokens.IconSize`.
   static const double _iconSize = 40;
@@ -264,12 +288,10 @@ class _ConnectButtonState extends State<_ConnectButton>
     double selected, {
     BorderSide side = BorderSide.none,
   }) {
-    // Значения — из XLargeIconButtonTokens: не выбрана CornerFull, выбрана
-    // CornerExtraLarge (28), нажата CornerLarge (16).
     final rest = ShapeBorder.lerp(
       CircleBorder(side: side),
       RoundedRectangleBorder(
-        borderRadius: ExpressiveShape.radius(ExpressiveShape.extraLarge),
+        borderRadius: ExpressiveShape.radius(_selectedCorner),
         side: side,
       ),
       selected,
@@ -277,7 +299,7 @@ class _ConnectButtonState extends State<_ConnectButton>
     return ShapeBorder.lerp(
       rest,
       RoundedRectangleBorder(
-        borderRadius: ExpressiveShape.radius(ExpressiveShape.large),
+        borderRadius: ExpressiveShape.radius(_pressedCorner),
         side: side,
       ),
       press,

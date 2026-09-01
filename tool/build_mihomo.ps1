@@ -19,6 +19,10 @@
 # config fine and then dies on start with "gVisor is not included in this
 # build", which reads as "TUN did not start" and nothing else.
 #
+# They also carry no_tailscale and no_zerotier, which drop two whole embedded
+# network stacks the client can never reach - see $BuildTags below for the
+# numbers and the reasoning.
+#
 # Desktop binaries are deliberately NOT stripped: a stripped, unsigned exe next
 # to the app is a Defender heuristic (see docs/PITFALLS.md). Android keeps
 # -s -w because there it is APK size and nothing else.
@@ -131,6 +135,26 @@ finally { Pop-Location }
 # //go:linkname, which Go 1.23+ refuses by default.
 $versionFlag = '-X "github.com/metacubex/mihomo/constant.Version={0}"' -f $Version
 
+# Теги сборки.
+#
+#   with_gvisor  - обязателен, см. шапку файла.
+#   no_tailscale - выкидывает клиент Tailscale.
+#   no_zerotier  - выкидывает клиент ZeroTier.
+#
+# Последние два — не экономия на спичках: каждый тянет собственный сетевой стек,
+# и вдвоём они дают 8.4 МБ из 52 у android-бинарника (52 232 545 -> 43 385 185
+# при прочих равных, замерено на v1.19.30). В скачиваемом APK это −2.9 МБ.
+#
+# Выкинуть их можно потому, что это mesh-VPN, а не прокси: наш генератор их не
+# выпускает, а в подписочных Clash-конфигах их не бывает. Остальные экзотические
+# аутбаунды (mieru, anytls, masque, openvpn, ssh, snell, ssr) тегов не имеют, и
+# резать их пришлось бы форком — а чужие конфиги клиент импортирует как серверы,
+# и какой протокол принесут завтра, мы не выбираем.
+#
+# Побочный эффект ровно как у gvisor: конфиг с `type: tailscale` не запустится,
+# ядро скажет, что этого в сборке нет.
+$BuildTags = "with_gvisor,no_tailscale,no_zerotier"
+
 function Build-Mihomo {
     param(
         [string]$Goos,
@@ -152,7 +176,7 @@ function Build-Mihomo {
         if ($Cc) { $env:CC = $Cc }
 
         Write-Host "Building $Label ..."
-        & $go.Source build -trimpath -buildvcs=false -tags with_gvisor `
+        & $go.Source build -trimpath -buildvcs=false -tags $BuildTags `
             -ldflags $Ldflags `
             -o $OutPath .
         if ($LASTEXITCODE -ne 0) { Write-Error "go build failed for $Label" }

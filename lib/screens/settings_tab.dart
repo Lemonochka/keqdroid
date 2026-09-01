@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ import 'package:keqdroid/core/exceptions.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/services/app_internals_service.dart';
 import 'package:keqdroid/services/file_dialog_service.dart';
+import 'package:keqdroid/services/geo_base_downloader.dart';
 import 'package:keqdroid/services/connections_service.dart';
 import 'package:keqdroid/services/debug_log_service.dart';
 import 'package:keqdroid/services/hotkey_service.dart';
@@ -33,8 +35,10 @@ import 'package:keqdroid/screens/settings/connection_tile.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
+import 'package:keqdroid/shared/ui/expressive_button_group.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/expressive_page.dart';
+import 'package:keqdroid/shared/ui/horizontal_mouse_scroll.dart';
 import 'package:keqdroid/shared/ui/scrolled_under.dart';
 import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
@@ -53,6 +57,7 @@ import 'package:keqdroid/utils/vpn_core_support.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/screens/split_tunneling_screen.dart';
 import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
+import 'package:keqdroid/tunnel/local_port_plan.dart';
 import 'package:keqdroid/ui/responsive/desktop_page_layout.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -87,116 +92,118 @@ class SettingsTab extends ConsumerWidget {
         child: DesktopPageLayout(
           maxWidth: 720,
           child: Column(
-          children: [
-            Expanded(
-              child: SmoothScroll(
-                builder: (context, controller) => ListView(
-                  controller: controller,
-                  physics: const ClampingScrollPhysics(),
-                  padding: EdgeInsets.fromLTRB(
-                    tabContentHorizontalInset(),
-                    24,
-                    tabContentHorizontalInset(),
-                    24,
-                  ),
-                  children: [
-                  Text(
-                    l10n.settingsTitle,
-                    // Заголовок экрана — headline, а не title: у M3E крупный
-                    // заголовок и есть якорь иерархии страницы.
-                    style: Theme.of(context).textTheme
-                        .emphasized(Theme.of(context).textTheme.headlineMedium)
-                        ?.copyWith(color: AppTheme.text(context)),
-                  ),
-                  const SizedBox(height: 20),
-                  // Containment: пункты собраны в группы по смыслу — «как
-                  // выглядит», «как ходит трафик», «данные». Прежние шесть
-                  // одинаковых карточек с равными зазорами не говорили о
-                  // связях между пунктами вообще.
-                  ExpressiveGroup(
+            children: [
+              Expanded(
+                child: SmoothScroll(
+                  builder: (context, controller) => ListView(
+                    controller: controller,
+                    physics: const ClampingScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      tabContentHorizontalInset(),
+                      24,
+                      tabContentHorizontalInset(),
+                      24,
+                    ),
                     children: [
-                      _ThemeCustomizationCard(settingsAsync: settingsAsync),
-                      _LanguageSettingsCard(settingsAsync: settingsAsync),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ExpressiveGroup(
-                    children: [
-                      _LanSharingCard(settingsAsync: settingsAsync),
-                      const _SplitTunnelingSettingsCard(),
-                      if (Platform.isWindows)
-                        _SettingsCard(
-                          title: l10n.settingsDesktopTitle,
-                          subtitle: l10n.settingsDesktopSubtitle,
-                          icon: Icons.desktop_windows_rounded,
-                          accent: ExpressiveAccent.secondary,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  const _WindowsDesktopSettingsScreen(),
+                      Text(
+                        l10n.settingsTitle,
+                        // Заголовок экрана — headline, а не title: у M3E крупный
+                        // заголовок и есть якорь иерархии страницы.
+                        style: Theme.of(context).textTheme
+                            .emphasized(
+                              Theme.of(context).textTheme.headlineMedium,
+                            )
+                            ?.copyWith(color: AppTheme.text(context)),
+                      ),
+                      const SizedBox(height: 20),
+                      // Containment: пункты собраны в группы по смыслу — «как
+                      // выглядит», «как ходит трафик», «данные». Прежние шесть
+                      // одинаковых карточек с равными зазорами не говорили о
+                      // связях между пунктами вообще.
+                      ExpressiveGroup(
+                        children: [
+                          _ThemeCustomizationCard(settingsAsync: settingsAsync),
+                          _LanguageSettingsCard(settingsAsync: settingsAsync),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ExpressiveGroup(
+                        children: [
+                          _LanSharingCard(settingsAsync: settingsAsync),
+                          const _SplitTunnelingSettingsCard(),
+                          if (Platform.isWindows)
+                            _SettingsCard(
+                              title: l10n.settingsDesktopTitle,
+                              subtitle: l10n.settingsDesktopSubtitle,
+                              icon: Icons.desktop_windows_rounded,
+                              accent: ExpressiveAccent.secondary,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const _WindowsDesktopSettingsScreen(),
+                                ),
+                              ),
+                            ),
+                          _SettingsCard(
+                            title: l10n.settingsAdvanced,
+                            subtitle: l10n.settingsAdvancedSubtitle,
+                            icon: Icons.tune_rounded,
+                            accent: ExpressiveAccent.primary,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const _AdvancedSettingsScreen(),
+                              ),
                             ),
                           ),
-                        ),
-                      _SettingsCard(
-                        title: l10n.settingsAdvanced,
-                        subtitle: l10n.settingsAdvancedSubtitle,
-                        icon: Icons.tune_rounded,
-                        accent: ExpressiveAccent.primary,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const _AdvancedSettingsScreen(),
-                          ),
-                        ),
+                        ],
                       ),
+                      const SizedBox(height: 16),
+                      ExpressiveGroup(
+                        children: [
+                          _SettingsCard(
+                            title: l10n.settingsBackupRestore,
+                            subtitle: l10n.settingsBackupRestoreSubtitle,
+                            icon: Icons.cloud_upload_rounded,
+                            accent: ExpressiveAccent.secondary,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const _BackupRestoreScreen(),
+                              ),
+                            ),
+                          ),
+                          _SettingsCard(
+                            title: l10n.settingsInternalsTitle,
+                            subtitle: l10n.settingsInternalsSubtitle,
+                            icon: Icons.info_rounded,
+                            accent: ExpressiveAccent.tertiary,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const _AppInternalsScreen(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  ExpressiveGroup(
-                    children: [
-                      _SettingsCard(
-                        title: l10n.settingsBackupRestore,
-                        subtitle: l10n.settingsBackupRestoreSubtitle,
-                        icon: Icons.cloud_upload_rounded,
-                        accent: ExpressiveAccent.secondary,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const _BackupRestoreScreen(),
-                          ),
-                        ),
-                      ),
-                      _SettingsCard(
-                        title: l10n.settingsInternalsTitle,
-                        subtitle: l10n.settingsInternalsSubtitle,
-                        icon: Icons.info_rounded,
-                        accent: ExpressiveAccent.tertiary,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const _AppInternalsScreen(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                ],
                 ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                tabContentHorizontalInset(),
-                0,
-                tabContentHorizontalInset(),
-                24,
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  tabContentHorizontalInset(),
+                  0,
+                  tabContentHorizontalInset(),
+                  24,
+                ),
+                child: const _AppVersionSection(),
               ),
-              child: const _AppVersionSection(),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );
@@ -224,7 +231,11 @@ class _LanguageSettingsCard extends ConsumerWidget {
     );
   }
 
-  void _showLanguageSheet(BuildContext context, WidgetRef ref, AppSettings current) {
+  void _showLanguageSheet(
+    BuildContext context,
+    WidgetRef ref,
+    AppSettings current,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final options = <(String code, String label)>[
@@ -253,7 +264,9 @@ class _LanguageSettingsCard extends ConsumerWidget {
             return Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerLow,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(ExpressiveShape.extraLarge)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(ExpressiveShape.extraLarge),
+                ),
               ),
               child: Column(
                 children: [
@@ -270,7 +283,9 @@ class _LanguageSettingsCard extends ConsumerWidget {
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                     child: Text(
                       l10n.settingsLanguageSheetTitle,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.text(context)),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: AppTheme.text(context),
+                      ),
                     ),
                   ),
                   Expanded(
@@ -297,13 +312,19 @@ class _LanguageSettingsCard extends ConsumerWidget {
                             color: selected
                                 ? scheme.secondaryContainer
                                 : scheme.surfaceContainerHigh,
-                            borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                            borderRadius: BorderRadius.circular(
+                              ExpressiveShape.large,
+                            ),
                             child: InkWell(
-                              borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                              borderRadius: BorderRadius.circular(
+                                ExpressiveShape.large,
+                              ),
                               onTap: () async {
                                 await ref
                                     .read(settingsNotifierProvider.notifier)
-                                    .save(current.copyWith(appLanguageCode: code));
+                                    .save(
+                                      current.copyWith(appLanguageCode: code),
+                                    );
                                 if (ctx.mounted) Navigator.pop(ctx);
                               },
                               child: Padding(
@@ -318,21 +339,26 @@ class _LanguageSettingsCard extends ConsumerWidget {
                                         label,
                                         // Вес — из шкалы, а не руками: у
                                         // выбранного усиленный вариант роли.
-                                        style: (selected
-                                                ? textTheme.emphasized(
-                                                    textTheme.bodyLarge)
-                                                : textTheme.bodyLarge)
-                                            ?.copyWith(
-                                          color: selected
-                                              ? scheme.onSecondaryContainer
-                                              : AppTheme.text(context),
-                                        ),
+                                        style:
+                                            (selected
+                                                    ? textTheme.emphasized(
+                                                        textTheme.bodyLarge,
+                                                      )
+                                                    : textTheme.bodyLarge)
+                                                ?.copyWith(
+                                                  color: selected
+                                                      ? scheme
+                                                            .onSecondaryContainer
+                                                      : AppTheme.text(context),
+                                                ),
                                       ),
                                     ),
                                     if (selected)
-                                      Icon(Icons.check_circle_rounded,
-                                          color: scheme.onSecondaryContainer,
-                                          size: 22),
+                                      Icon(
+                                        Icons.check_circle_rounded,
+                                        color: scheme.onSecondaryContainer,
+                                        size: 22,
+                                      ),
                                   ],
                                 ),
                               ),
@@ -459,7 +485,9 @@ Future<bool> _confirmReset(
           Expanded(
             child: Text(
               l10n.settingsResetConfirmTitle,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: textColor),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(color: textColor),
             ),
           ),
         ],
@@ -549,10 +577,14 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
         force: true,
         viaLocalProxy: tunnelHasLocalHttpProxy(
           vpnConnected: vpn?.status == VpnStatus.connected,
-          awgBackend: activeServer != null &&
+          awgBackend:
+              activeServer != null &&
               AwgProfile.isAwgConfig(activeServer.config),
         ),
-        httpPort: settings.httpPort,
+        // Порт активной сессии, а не из настроек: когда настроенный был занят,
+        // ядро слушает подменённый (см. LocalPortPlan). Автопроверка в
+        // updateInfoProvider давно берёт его отсюда, ручная — брала из настроек.
+        httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),
       );
       if (!mounted) return;
 
@@ -564,14 +596,20 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded, color: AppTheme.bg(context), size: 20),
+                Icon(
+                  Icons.check_circle_rounded,
+                  color: AppTheme.bg(context),
+                  size: 20,
+                ),
                 const SizedBox(width: 10),
                 Text(l10n.settingsLatestVersionInstalled),
               ],
             ),
             backgroundColor: AppTheme.green(context),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -582,14 +620,20 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.error_outline_rounded, color: AppTheme.bg(context), size: 20),
+              Icon(
+                Icons.error_outline_rounded,
+                color: AppTheme.bg(context),
+                size: 20,
+              ),
               const SizedBox(width: 10),
               Expanded(child: Text(l10n.settingsCheckFailedError('$e'))),
             ],
           ),
           backgroundColor: AppTheme.red(context),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+          ),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -628,121 +672,143 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
       statusIcon = Icons.check_circle_outline_rounded;
     }
 
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final onContainer = Theme.of(context).colorScheme.onSecondaryContainer;
+    final statusLabel = checking
+        ? l10n.settingsChecking
+        : error
+        ? l10n.settingsCheckFailed
+        : updateAvailable
+        ? l10n.settingsUpdateAvailable
+        : l10n.settingsUpToDate;
+    final textTheme = Theme.of(context).textTheme;
+
+    // Блок живёт в карточке, как и всё остальное на этом экране. Раньше он
+    // стоял голой строкой на фоне страницы, под линией разделителя, — и потому
+    // читался обрывком чужого экрана.
+    return ExpressiveCard(
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.settingsAppVersion,
+                      style: textTheme
+                          .emphasized(textTheme.titleMedium)
+                          ?.copyWith(color: textColor),
+                    ),
+                    const SizedBox(height: ExpressiveSpacing.hairline),
+                    // Версия и состояние проверки — одной строкой поддержки, как
+                    // у пункта списка M3.
+                    //
+                    // Прежде состояние сидело в «чипе»: заливка на 15% альфы и
+                    // рамка на 30% от того же цвета. Чипом это не было — у чипа в
+                    // M3 роль действия, фильтра или ввода, а по этому нажать
+                    // нельзя вовсе. Тонированная плашка ради статуса — приём из
+                    // M2; цвет и иконки говорят то же самое и без неё.
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: ExpressiveSpacing.small,
+                      children: [
+                        Text(
+                          ltrIsolate('v$_version'),
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: subtitleColor,
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (checking)
+                              ShapeLoadingIndicator(
+                                size: ExpressiveIconSize.inline,
+                                color: statusColor,
+                              )
+                            else
+                              Icon(
+                                statusIcon,
+                                size: ExpressiveIconSize.inline,
+                                color: statusColor,
+                              ),
+                            const SizedBox(width: ExpressiveSpacing.extraSmall),
+                            Text(
+                              statusLabel,
+                              style: textTheme.labelLarge?.copyWith(
+                                color: statusColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: ExpressiveSpacing.small),
+              // Настоящая filled tonal icon button вместо самодельной: своя
+              // заливка, свой размер и своя форма у неё уже есть.
+              IconButton.filledTonal(
+                onPressed: checking ? null : _forceCheck,
+                icon: checking
+                    ? ShapeLoadingIndicator(
+                        size: ExpressiveIconSize.large,
+                        color: accent,
+                      )
+                    : const Icon(Icons.refresh_rounded),
+                tooltip: l10n.settingsCheckForUpdates,
+              ),
+            ],
+          ),
+          if (updateInfo != null) ...[
+            const SizedBox(height: ExpressiveSpacing.large),
+            // Плашка «есть обновление» — на роли схемы, а не на альфе от акцента.
+            // Заливка 10% с рамкой 30% того же цвета — тонировка из M2; у M3 это
+            // контейнерная роль, и контраст в ней уже выверен под обе яркости.
+            Container(
+              padding: const EdgeInsets.all(ExpressiveSpacing.large),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.secondaryContainer,
+                borderRadius: ExpressiveShape.radius(ExpressiveShape.large),
+              ),
+              child: Row(
                 children: [
-                  Text(
-                    l10n.settingsAppVersion,
-                    style: TextStyle(fontWeight: FontWeight.w600, color: textColor),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.settingsNewVersionAvailable,
+                          style: textTheme.titleSmall?.copyWith(
+                            color: onContainer,
+                          ),
+                        ),
+                        const SizedBox(height: ExpressiveSpacing.hairline),
+                        Text(
+                          'v${updateInfo.displayLatestVersion} (${updateInfo.formattedSize})',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: onContainer.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  Text(
-                    ltrIsolate('v$_version'),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: subtitleColor),
+                  const SizedBox(width: ExpressiveSpacing.medium),
+                  // Форма и отступы кнопки — из темы: пилюля M3E, а не свои 12dp.
+                  FilledButton.icon(
+                    onPressed: () => showUpdateDialog(context, updateInfo),
+                    icon: const Icon(Icons.download_rounded),
+                    label: Text(l10n.updateActionNow),
                   ),
                 ],
               ),
             ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                    border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (checking)
-                        ShapeLoadingIndicator(size: 12, color: statusColor)
-                      else
-                        Icon(statusIcon, size: 14, color: statusColor),
-                      const SizedBox(width: 6),
-                      Text(
-                        checking
-                            ? l10n.settingsChecking
-                            : error
-                                ? l10n.settingsCheckFailed
-                                : updateAvailable
-                                    ? l10n.settingsUpdateAvailable
-                                    : l10n.settingsUpToDate,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: statusColor),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: checking ? null : _forceCheck,
-                  icon: checking
-                      ? ShapeLoadingIndicator(size: 20, color: accent)
-                      : const Icon(Icons.refresh_rounded),
-                  tooltip: l10n.settingsCheckForUpdates,
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                  style: IconButton.styleFrom(
-                    backgroundColor: AppTheme.inset(context),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
-                  ),
-                ),
-              ],
-            ),
           ],
-        ),
-        if (updateInfo != null) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-              border: Border.all(color: accent.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.settingsNewVersionAvailable,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(color: textColor),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'v${updateInfo.displayLatestVersion} (${updateInfo.formattedSize})',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: subtitleColor),
-                      ),
-                    ],
-                  ),
-                ),
-                FilledButton.icon(
-                  onPressed: () => showUpdateDialog(context, updateInfo),
-                  icon: const Icon(Icons.download_rounded, size: 18),
-                  label: Text(l10n.updateActionNow),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: accent,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
-      ],
+      ),
     );
   }
 }
-

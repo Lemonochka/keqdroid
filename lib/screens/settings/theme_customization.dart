@@ -166,25 +166,23 @@ class _AppearanceGeneralTab extends StatelessWidget {
                 onChanged: (v) =>
                     onSave(current.copyWith(showConnectionTime: v)),
               ),
+              _AppearanceSwitchTile(
+                icon: Icons.palette_rounded,
+                title: l10n.appearanceWaveLatencyColor,
+                subtitle: l10n.appearanceWaveLatencyColorSubtitle,
+                value: current.waveLatencyColor,
+                onChanged: (v) => onSave(current.copyWith(waveLatencyColor: v)),
+              ),
             ],
           ),
-          ExpressiveSectionHeader(l10n.appearanceSectionFeel),
-          ExpressiveGroup(
-            children: [
-              _AppearanceSwitchTile(
-                icon: Icons.contrast_rounded,
-                title: l10n.appearanceAmoled,
-                // Переключатель гасим на светлой теме, а не прячем: иначе он
-                // «пропадает» и его ищут.
-                subtitle: current.darkTheme
-                    ? l10n.appearanceAmoledSubtitle
-                    : l10n.appearanceAmoledNeedsDark,
-                value: current.amoledBlack,
-                onChanged: current.darkTheme
-                    ? (v) => onSave(current.copyWith(amoledBlack: v))
-                    : null,
-              ),
-              if (!PlatformBootstrap.isDesktop)
+          // AMOLED уехал на вкладку «Темы», к выбору светлой/тёмной: он и есть
+          // поправка к тёмной схеме и без неё не работает. Здесь от секции
+          // остаётся одна вибрация, которой на десктопе нет вовсе — поэтому
+          // прячем секцию целиком, а не оставляем заголовок над пустой группой.
+          if (!PlatformBootstrap.isDesktop) ...[
+            ExpressiveSectionHeader(l10n.appearanceSectionFeel),
+            ExpressiveGroup(
+              children: [
                 _AppearanceSwitchTile(
                   icon: Icons.vibration_rounded,
                   title: l10n.appearanceHaptics,
@@ -193,8 +191,9 @@ class _AppearanceGeneralTab extends StatelessWidget {
                   onChanged: (v) =>
                       onSave(current.copyWith(hapticFeedback: v)),
                 ),
-            ],
-          ),
+              ],
+            ),
+          ],
           ExpressiveSectionHeader(l10n.appearanceNotifSectionTitle),
           ExpressiveGroup(
             children: [
@@ -316,7 +315,7 @@ class _AppearanceSwitchTile extends StatelessWidget {
 /// Образцы рисуются настоящим [ExpressiveIconBadge] с явно заданной формой, а
 /// не картинкой: превью, нарисованное отдельно, рано или поздно расходится с
 /// тем, что видно на экранах.
-class _IconShapePicker extends StatelessWidget {
+class _IconShapePicker extends StatefulWidget {
   final String currentShapeId;
   final ValueChanged<String> onSelect;
   const _IconShapePicker({
@@ -325,10 +324,25 @@ class _IconShapePicker extends StatelessWidget {
   });
 
   @override
+  State<_IconShapePicker> createState() => _IconShapePickerState();
+}
+
+class _IconShapePickerState extends State<_IconShapePicker> {
+  /// Ради колеса мыши: без своего контроллера ряд форм на десктопе не листается
+  /// вовсе, а в узком окне ещё и уезжает за край (см. [HorizontalMouseScroll]).
+  final ScrollController _shapes = ScrollController();
+
+  @override
+  void dispose() {
+    _shapes.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final accent = AppTheme.accent(context);
-    final current = IconShape.fromId(currentShapeId);
+    final current = IconShape.fromId(widget.currentShapeId);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -343,19 +357,23 @@ class _IconShapePicker extends StatelessWidget {
         // подпись нужна одна, а не шесть.
         SizedBox(
           height: 60,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: IconShape.values.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (context, i) {
-              final shape = IconShape.values[i];
-              return _ShapeSwatch(
-                shape: shape,
-                label: _shapeLabel(l10n, shape),
-                selected: shape == current,
-                onTap: () => onSelect(shape.id),
-              );
-            },
+          child: HorizontalMouseScroll(
+            controller: _shapes,
+            child: ListView.separated(
+              controller: _shapes,
+              scrollDirection: Axis.horizontal,
+              itemCount: IconShape.values.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, i) {
+                final shape = IconShape.values[i];
+                return _ShapeSwatch(
+                  shape: shape,
+                  label: _shapeLabel(l10n, shape),
+                  selected: shape == current,
+                  onTap: () => widget.onSelect(shape.id),
+                );
+              },
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -563,97 +581,124 @@ class _AppearanceThemesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final controlsAccent = AppTheme.accent(context);
-    final previewDark = current.darkTheme;
     final isDesktop = PlatformBootstrap.isDesktop;
+    // Сетка пресетов — отдельный сливер, а не виджет внутри списка.
+    //
+    // Раньше она стояла в `ListView` как `GridView(shrinkWrap: true)`, и это
+    // стоило дорого: shrinkWrap заставляет сливер разложить ВСЕ элементы, чтобы
+    // узнать свою высоту, то есть все двенадцать плиток собирались и
+    // раскладывались на каждом кадре — включая девять, которых на экране нет.
+    // А кадров таких много: `AnimatedTheme` пересобирает поддерево все 350 мс
+    // перехода светлая↔тёмная. В сливере строятся только видимые.
     return SmoothScroll(
-      builder: (context, controller) => ListView(
+      builder: (context, controller) => CustomScrollView(
         controller: controller,
-        padding: const EdgeInsets.all(16),
-        children: [
-          SwitchListTile(
-            value: current.followSystemTheme,
-            onChanged: (v) => onSave(current.copyWith(followSystemTheme: v)),
-            activeThumbColor: controlsAccent,
-            activeTrackColor: controlsAccent.withValues(alpha: 0.32),
-            secondary: Icon(
-              isDesktop ? Icons.desktop_windows_rounded : Icons.android_rounded,
-              color: controlsAccent,
-            ),
-            title: Text(
-              isDesktop ? l10n.themeUseSystemColors : l10n.themeUseDynamicColors,
-            ),
-            subtitle: Text(
-              isDesktop
-                  ? l10n.themeUseSystemColorsSubtitle
-                  : l10n.themeUseDynamicColorsSubtitle,
-            ),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList.list(children: _controls(context, l10n, isDesktop)),
           ),
-          const SizedBox(height: 12),
-          _LightDarkThemeSlider(
-            isDark: current.darkTheme,
-            accentColor: controlsAccent,
-            onChanged: (isDark) => onSave(current.copyWith(darkTheme: isDark)),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            current.followSystemTheme
-                ? (isDesktop ? l10n.themeSystemPaletteHint : l10n.themeDynamicPaletteHint)
-                : l10n.themeCustomPaletteHint,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-          ),
-          const SizedBox(height: 14),
-          Text(l10n.themeColorThemesTitle,
-              style: TextStyle(color: AppTheme.text(context), fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final maxW = constraints.maxWidth;
-              final crossCount = isDesktop
-                  ? (maxW >= 820 ? 4 : maxW >= 560 ? 3 : 2)
-                  : 2;
-              final aspectRatio = isDesktop ? 1.35 : 0.72;
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: kThemePresets.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossCount,
-                  mainAxisSpacing: isDesktop ? 10 : 12,
-                  crossAxisSpacing: isDesktop ? 10 : 12,
-                  childAspectRatio: aspectRatio,
-                ),
-                itemBuilder: (context, i) {
-                  final p = kThemePresets[i];
-                  final selected =
-                      !current.followSystemTheme && p.id == current.themePresetId;
-                  final scheme = buildPresetScheme(
-                    p,
-                    previewDark ? Brightness.dark : Brightness.light,
-                  );
-                  return GestureDetector(
-                    // Выбор пресета отключает системные цвета: пока
-                    // followSystemTheme включён, пресет не применяется и
-                    // галочка не рисуется — тап выглядел бы «ничего не делает».
-                    onTap: () => onSave(current.copyWith(
-                      themePresetId: p.id,
-                      followSystemTheme: false,
-                    )),
-                    child: _ThemePreviewCard(
-                      name: p.name,
-                      scheme: scheme,
-                      darkPreview: previewDark,
-                      selected: selected,
-                      compact: isDesktop,
-                    ),
-                  );
-                },
-              );
-            },
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            sliver: _ThemePresetGrid(current: current, onSave: onSave),
           ),
         ],
       ),
     );
+  }
+
+  /// Всё, что стоит над сеткой: выбор яркости, источник палитры и заголовок.
+  List<Widget> _controls(
+    BuildContext context,
+    AppLocalizations l10n,
+    bool isDesktop,
+  ) {
+    return [
+          // Светлая/тёмная — связанная группа M3E, а не самодельный ползунок с
+          // бегунком. Тот держал выбор на одной заливке: форма выбранной
+          // половины не менялась вовсе, хотя у связанной группы именно она и
+          // есть индикатор. Подпись на бегунке к тому же красилась в
+          // `AppTheme.bg` — цвет фона на месте роли `onPrimary`, — и в AMOLED
+          // выходила чёрным по акценту.
+          ExpressiveConnectedButtons<bool>(
+            segments: [
+              ExpressiveSegment(
+                value: false,
+                label: l10n.themeModeLight,
+                icon: Icons.light_mode_rounded,
+              ),
+              ExpressiveSegment(
+                value: true,
+                label: l10n.themeModeDark,
+                icon: Icons.dark_mode_rounded,
+              ),
+            ],
+            selected: current.darkTheme,
+            onChanged: (v) => onSave(current.copyWith(darkTheme: v)),
+            // Размер M (56): группа стоит первой на экране и отвечает за самый
+            // частый выбор на нём.
+            height: 56,
+          ),
+          const SizedBox(height: ExpressiveSpacing.large),
+          // Источник палитры — такой же сегмент группы, как переключатели на
+          // соседней вкладке. Голый `SwitchListTile` на фоне был последним
+          // следом старого экрана: чужая анатомия строки (иконка без
+          // контейнера, свои отступы, своя высота) и никакого containment.
+          ExpressiveGroup(
+            children: [
+              // AMOLED стоит первым и сразу под выбором светлой/тёмной: это
+              // поправка к тёмной схеме, и на светлой она погашена. Пока он
+              // жил на соседней вкладке рядом с вибрацией, «почему выключено»
+              // было не ответить, не уходя с экрана.
+              _AppearanceSwitchTile(
+                icon: Icons.contrast_rounded,
+                title: l10n.appearanceAmoled,
+                // Гасим, а не прячем: иначе он «пропадает» и его ищут.
+                subtitle: current.darkTheme
+                    ? l10n.appearanceAmoledSubtitle
+                    : l10n.appearanceAmoledNeedsDark,
+                value: current.amoledBlack,
+                onChanged: current.darkTheme
+                    ? (v) => onSave(current.copyWith(amoledBlack: v))
+                    : null,
+              ),
+              _AppearanceSwitchTile(
+                icon: isDesktop
+                    ? Icons.desktop_windows_rounded
+                    : Icons.android_rounded,
+                title: isDesktop
+                    ? l10n.themeUseSystemColors
+                    : l10n.themeUseDynamicColors,
+                subtitle: isDesktop
+                    ? l10n.themeUseSystemColorsSubtitle
+                    : l10n.themeUseDynamicColorsSubtitle,
+                value: current.followSystemTheme,
+                onChanged: (v) =>
+                    onSave(current.copyWith(followSystemTheme: v)),
+              ),
+            ],
+          ),
+          // Подпись под группой — тем же приёмом, что и пояснение под ползунком
+          // масштаба: отступ 4 слева, роль `bodySmall` на `onSurfaceVariant`.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+            child: Text(
+              current.followSystemTheme
+                  ? (isDesktop
+                      ? l10n.themeSystemPaletteHint
+                      : l10n.themeDynamicPaletteHint)
+                  : l10n.themeCustomPaletteHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textLight(context),
+                    height: 1.35,
+                  ),
+            ),
+          ),
+          ExpressiveSectionHeader(
+            l10n.themeColorThemesTitle,
+            icon: Icons.palette_rounded,
+          ),
+        ];
   }
 }
 
@@ -735,429 +780,475 @@ class _UiScalePicker extends StatelessWidget {
   }
 }
 
-class _LightDarkThemeSlider extends StatelessWidget {
-  final bool isDark;
-  final Color accentColor;
-  final ValueChanged<bool> onChanged;
-  const _LightDarkThemeSlider({
-    required this.isDark,
-    required this.accentColor,
-    required this.onChanged,
+/// Сетка пресетов.
+///
+/// Плитки — те же сегменты списка, что и строки серверов
+/// ([ExpressiveListSegment]): выбор несут заливка и морф формы. Прежде его
+/// показывала рамка в 2 px цветом САМОГО пресета — на светлых палитрах её было
+/// не разглядеть, а на тёмных она спорила с картинкой внутри.
+///
+/// Обвязка плитки живёт в ТЕКУЩЕЙ теме приложения, а миниатюра внутри — в
+/// цветах пресета. Это не небрежность: рамка с подписью — орган управления и
+/// обязана выглядеть как остальной экран, а картинка внутри показывает чужую
+/// палитру. Пока в цвета пресета красилась и обвязка, выбранная плитка на
+/// светлой теме и невыбранная на тёмной различались меньше, чем две соседние.
+class _ThemePresetGrid extends StatelessWidget {
+  final AppSettings current;
+  final Future<void> Function(AppSettings) onSave;
+  const _ThemePresetGrid({required this.current, required this.onSave});
+
+  /// Поля плитки вокруг миниатюры.
+  static const double _padding = 10;
+
+  /// Ширина, к которой стремится плитка. Колонки считаются от неё, а не от
+  /// платформы: `isDesktop ? 4 : 2` давал в узком окне десктопа плитки в
+  /// пол-экрана, а на планшете — две колонки на 800 px.
+  static const double _targetTileWidth = 190;
+
+  /// Палитра пресета в том виде, в каком её увидит пользователь: в текущей
+  /// яркости и с учётом AMOLED.
+  ColorScheme _previewScheme(ThemePreset preset) {
+    final scheme = buildPresetScheme(
+      preset,
+      current.darkTheme ? Brightness.dark : Brightness.light,
+    );
+    return current.amoledBlack ? applyAmoledBlack(scheme) : scheme;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final iconShape = ExpressiveIconShapeTheme.of(context);
+
+    // Ширину берём из сливерных ограничений: обычный LayoutBuilder внутри
+    // CustomScrollView не поставить, а `crossAxisExtent` — это ровно та же
+    // ширина, уже за вычетом SliverPadding.
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final columns = (constraints.crossAxisExtent / _targetTileWidth)
+            .floor()
+            .clamp(2, 6);
+        final tileWidth = constraints.crossAxisExtent / columns;
+        // Высота плитки СЧИТАЕТСЯ, а не задаётся пропорцией. Пропорций было
+        // две — 0.72 на телефоне и 1.35 на десктопе, — и под каждую рисовалась
+        // своя раскладка превью. Здесь раскладка одна, а высота ровно такая,
+        // какую просит миниатюра в своём масштабе плюс строка с названием.
+        final mockWidth =
+            tileWidth - ExpressiveListSegment.gap * 2 - _padding * 2;
+        final labelHeight = MediaQuery.textScalerOf(context)
+                .scale(theme.textTheme.labelLarge?.fontSize ?? 14) *
+            1.4;
+        final tileHeight = _padding * 2 +
+            mockWidth / _ThemeScreenMock.aspectRatio +
+            ExpressiveSpacing.small +
+            labelHeight +
+            ExpressiveListSegment.gap;
+
+        return SliverGrid.builder(
+          itemCount: kThemePresets.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            // Зазор набирается полями самих сегментов (segmentMargin), как в
+            // списке серверов, — иначе крайние плитки встали бы уже остальных.
+            mainAxisSpacing: 0,
+            crossAxisSpacing: 0,
+            mainAxisExtent: tileHeight,
+          ),
+          itemBuilder: (context, i) {
+            final preset = kThemePresets[i];
+            // Сравниваем с РАЗРЕШЁННЫМ id, а не с сохранённым: у того, кто
+            // сидел на удалённом пресете, в настройках так и лежит «forest», и
+            // прямое сравнение не отметило бы галочкой ни одну плитку — экран
+            // выглядел бы «тема не выбрана».
+            final selected = !current.followSystemTheme &&
+                preset.id == resolveThemePreset(current.themePresetId).id;
+            return Padding(
+              padding: ExpressiveListSegment.segmentMargin(
+                index: i,
+                columns: columns,
+              ),
+              child: ExpressiveListSegment(
+                radius: ExpressiveListSegment.segmentRadius(
+                  index: i,
+                  count: kThemePresets.length,
+                  columns: columns,
+                ),
+                selected: selected,
+                color: scheme.surfaceContainerHigh,
+                selectedColor: scheme.secondaryContainer,
+                // Выбор пресета отключает системные цвета: пока
+                // followSystemTheme включён, пресет не применяется и галочка не
+                // рисуется — тап выглядел бы «ничего не делает».
+                onTap: () => onSave(current.copyWith(
+                  themePresetId: preset.id,
+                  followSystemTheme: false,
+                )),
+                child: _ThemePresetTile(
+                  name: preset.name,
+                  // AMOLED учитывается: он чернит фон поверх ЛЮБОЙ тёмной
+                  // схемы, и без него превью показывало бы не тот экран,
+                  // который получится. Лестница контейнеров при этом остаётся
+                  // обычной, поэтому список и навигация в миниатюре не
+                  // сливаются с фоном — ровно как в приложении.
+                  scheme: _previewScheme(preset),
+                  iconShape: iconShape,
+                  selected: selected,
+                  padding: _padding,
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Содержимое плитки: миниатюра экрана и строка с названием.
+class _ThemePresetTile extends StatelessWidget {
+  final String name;
+  final ColorScheme scheme;
+  final IconShape iconShape;
+  final bool selected;
+  final double padding;
+
+  const _ThemePresetTile({
+    required this.name,
+    required this.scheme,
+    required this.iconShape,
+    required this.selected,
+    required this.padding,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bg = AppTheme.inset(context);
-    final border = AppTheme.divider(context);
-    final thumb = accentColor;
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(ExpressiveShape.extraLarge),
-        border: Border.all(color: border),
-      ),
-      child: LayoutBuilder(
-        builder: (context, c) {
-          final thumbW = (c.maxWidth - 8) / 2;
-          return Stack(
-            children: [
-              AnimatedAlign(
-                duration: const Duration(milliseconds: 150),
-                curve: Curves.easeOutCubic,
-                // Directional: подписи «светлая/тёмная» зеркалятся в RTL, и
-                // бегунок должен ехать вместе с ними, а не по физическим
-                // сторонам экрана.
-                alignment: isDark
-                    ? AlignmentDirectional.centerEnd
-                    : AlignmentDirectional.centerStart,
-                child: RepaintBoundary(
-                  child: Container(
-                    width: thumbW,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: thumb,
-                      borderRadius: BorderRadius.circular(ExpressiveShape.extraLarge),
-                    ),
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  _sliderItem(
-                    context,
-                    active: !isDark,
-                    icon: Icons.light_mode_rounded,
-                    label: AppLocalizations.of(context)!.themeModeLight,
-                    onTap: () => onChanged(false),
-                  ),
-                  _sliderItem(
-                    context,
-                    active: isDark,
-                    icon: Icons.dark_mode_rounded,
-                    label: AppLocalizations.of(context)!.themeModeDark,
-                    onTap: () => onChanged(true),
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
+    final theme = Theme.of(context);
+    final appScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    final labelColor =
+        selected ? appScheme.onSecondaryContainer : appScheme.onSurface;
 
-  Widget _sliderItem(
-      BuildContext context, {
-        required bool active,
-        required IconData icon,
-        required String label,
-        required VoidCallback onTap,
-      }) {
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(ExpressiveShape.extraLarge),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+    return Padding(
+      padding: EdgeInsets.all(padding),
+      child: Column(
+        children: [
+          Expanded(
+            // Миниатюра нарисована в своём масштабе и ужимается сюда целиком:
+            // так толщины линий и пропорции одинаковы при любой ширине плитки.
+            child: FittedBox(
+              child: _ThemeScreenMock(scheme: scheme, iconShape: iconShape),
+            ),
+          ),
+          const SizedBox(height: ExpressiveSpacing.small),
+          Row(
             children: [
-              Icon(
-                icon,
-                size: 18,
-                color: active ? AppTheme.bg(context) : AppTheme.textLight(context),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: active ? AppTheme.bg(context) : AppTheme.text(context),
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  // Выбранное отличается ВЕСОМ, а не кеглем — как имя активного
+                  // сервера в списке.
+                  style: (selected
+                          ? textTheme.emphasized(textTheme.labelLarge)
+                          : textTheme.labelLarge)
+                      ?.copyWith(color: labelColor),
                 ),
+              ),
+              // Слот под галочку занят всегда: иначе название пересобиралось бы
+              // по ширине в момент выбора и дёргалось.
+              SizedBox(
+                width: ExpressiveIconSize.inline,
+                height: ExpressiveIconSize.inline,
+                child: selected
+                    ? Icon(
+                        Icons.check_rounded,
+                        size: ExpressiveIconSize.inline,
+                        color: appScheme.onSecondaryContainer,
+                      )
+                    : null,
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class _ThemePreviewCard extends StatelessWidget {
-  final String name;
+/// Миниатюра главного экрана в цветах пресета.
+///
+/// Показывает ровно то, что видно в приложении: кнопку подключения (её форму и
+/// цвет в состоянии «подключено»), строку статуса, волну-индикатор под ней, два
+/// сегмента списка серверов — верхний выбранный — и нижнюю навигацию с
+/// пилюлей-индикатором. Прежнее превью осталось от интерфейса, которого давно
+/// нет: круг с play, градиентная полоска поперёк карточки, «карточки подписок»
+/// с шевронами и три иконки в пилюле снизу.
+///
+/// Кружок сервера подчиняется выбранной форме иконок — той же, что в списке.
+///
+/// Масштаб честный, но не буквальный: экран целиком (360×800) в плитку сетки не
+/// влезает ни при какой пропорции, поэтому миниатюра сжата по вертикали —
+/// элементы узнаваемы, а высоты подобраны под 120×160.
+class _ThemeScreenMock extends StatelessWidget {
   final ColorScheme scheme;
-  final bool darkPreview;
-  final bool selected;
-  final bool compact;
-  const _ThemePreviewCard({
-    required this.name,
-    required this.scheme,
-    required this.darkPreview,
-    required this.selected,
-    this.compact = false,
-  });
+  final IconShape iconShape;
+
+  const _ThemeScreenMock({required this.scheme, required this.iconShape});
+
+  static const double width = 120;
+  static const double height = 160;
+  static const double aspectRatio = width / height;
 
   @override
   Widget build(BuildContext context) {
-    final bg = scheme.surface;
-    final card = darkPreview ? scheme.surfaceContainer : scheme.surfaceContainerHigh;
-    final cardBorder = scheme.outlineVariant.withValues(alpha: darkPreview ? 0.45 : 0.65);
-    if (compact) {
-      return Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-          border: Border.all(
-            color: selected ? scheme.primary : scheme.outlineVariant,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurface),
-                  ),
-                ),
-                Icon(
-                  selected ? Icons.check_circle_rounded : Icons.palette_rounded,
-                  size: 16,
-                  color: selected ? scheme.primary : scheme.onSurfaceVariant,
-                ),
-              ],
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: cardBorder),
-                  ),
-                  child: Icon(Icons.play_arrow_rounded, size: 16, color: scheme.onPrimaryContainer),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _miniSubscriptionCard(
-                    bg: card,
-                    border: cardBorder,
-                    text: scheme.onSurface,
-                    subText: scheme.onSurfaceVariant,
-                    accent: scheme.primary,
-                    height: 24,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
     return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(ExpressiveShape.large),
-        border: Border.all(
-          color: selected ? scheme.primary : scheme.outlineVariant,
-          width: selected ? 2 : 1,
+      width: width,
+      height: height,
+      clipBehavior: Clip.antiAlias,
+      decoration: ShapeDecoration(
+        color: scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          // Волосяная обводка отделяет миниатюру от плитки, когда палитра
+          // пресета почти совпадает с текущей темой.
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.6),
+            width: 0.8,
+          ),
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(name, style: TextStyle(color: scheme.onSurface, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          Center(
-            child: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: card,
-                shape: BoxShape.circle,
-                border: Border.all(color: cardBorder),
+          const SizedBox(height: 9),
+          // Кнопка «подключено»: заливка primary, иконка паузы, угол в той же
+          // доле от размера, что у настоящей (48 из 136).
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: ShapeDecoration(
+              color: scheme.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(Icons.play_arrow_rounded, size: 23, color: scheme.onSurface),
             ),
-          ),
-          const SizedBox(height: 6),
-          Center(
-            child: Container(
-              width: 84,
-              height: 4,
-              decoration: BoxDecoration(
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.42),
-                borderRadius: BorderRadius.circular(ExpressiveShape.full),
-              ),
+            child: Icon(
+              Icons.pause_rounded,
+              size: 16,
+              color: scheme.onPrimary,
             ),
           ),
           const SizedBox(height: 7),
-          Container(
-            height: 2,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(ExpressiveShape.full),
-              gradient: LinearGradient(
-                colors: [
-                  scheme.secondary.withValues(alpha: 0.0),
-                  scheme.secondary,
-                  scheme.secondary.withValues(alpha: 0.0),
+          _bar(52, 4, scheme.onSurface.withValues(alpha: 0.9)),
+          const SizedBox(height: 3),
+          _bar(30, 3, scheme.onSurfaceVariant.withValues(alpha: 0.75)),
+          const SizedBox(height: 7),
+          SizedBox(
+            width: 96,
+            height: 8,
+            child: CustomPaint(
+              painter: _MockWavePainter(
+                color: scheme.primary,
+                track: scheme.secondaryContainer,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _serverRow(selected: true),
+          const SizedBox(height: 2),
+          _serverRow(selected: false),
+          const Spacer(),
+          _bottomNav(),
+          const SizedBox(height: 7),
+        ],
+      ),
+    );
+  }
+
+  static Widget _bar(double width, double height, Color color) => Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(height / 2),
+        ),
+      );
+
+  static Widget _dot(double size, Color color) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
+
+  /// Сегмент списка серверов: кружок страны, имя, бейдж протокола и пинг,
+  /// кружок действия справа.
+  Widget _serverRow({required bool selected}) {
+    final fg = selected ? scheme.onSecondaryContainer : scheme.onSurface;
+    final muted = selected
+        ? scheme.onSecondaryContainer.withValues(alpha: 0.7)
+        : scheme.onSurfaceVariant;
+    return Container(
+      height: 22,
+      margin: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      decoration: BoxDecoration(
+        color:
+            selected ? scheme.secondaryContainer : scheme.surfaceContainerHigh,
+        // Углы настоящих сегментов (16 снаружи, 4 на стыке), уменьшенные вместе
+        // со строкой: выбранный круглый со всех сторон, у соседа сверху стык.
+        borderRadius: selected
+            ? BorderRadius.circular(5)
+            : const BorderRadius.vertical(
+                top: Radius.circular(1.5),
+                bottom: Radius.circular(5),
+              ),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 13,
+            height: 13,
+            child: DecoratedBox(
+              decoration: ShapeDecoration(
+                // Кружки берут контейнерные роли, а не один акцент: превью
+                // заодно показывает, какими выйдут иконки и чипы.
+                color: selected
+                    ? scheme.tertiaryContainer
+                    : scheme.primaryContainer,
+                shape: iconShape.border(13),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _bar(28, 3, fg.withValues(alpha: 0.85)),
+              const SizedBox(height: 3),
+              Row(
+                children: [
+                  _bar(11, 2.5, selected ? fg : scheme.secondary),
+                  const SizedBox(width: 3),
+                  _bar(8, 2.5, muted),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 7),
-          _miniSubscriptionCard(
-            bg: card,
-            border: cardBorder,
-            text: scheme.onSurface,
-            subText: scheme.onSurfaceVariant,
-            accent: scheme.primary,
-          ),
-          const SizedBox(height: 4),
-          _miniSubscriptionCard(
-            bg: card,
-            border: cardBorder,
-            text: scheme.onSurface,
-            subText: scheme.onSurfaceVariant,
-            accent: scheme.secondary,
+            ],
           ),
           const Spacer(),
-          Container(
-            height: 18,
-            decoration: BoxDecoration(
-              color: card,
-              borderRadius: BorderRadius.circular(ExpressiveShape.full),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Icon(Icons.hub_rounded, size: 10, color: scheme.onSurface),
-                Icon(Icons.public_rounded, size: 10, color: scheme.onSurfaceVariant),
-                Icon(Icons.settings_rounded, size: 10, color: scheme.onSurfaceVariant),
-              ],
-            ),
-          ),
-          const SizedBox(height: 5),
-          Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                selected ? Icons.check_rounded : Icons.palette_rounded,
-                size: 16,
-                color: scheme.onPrimaryContainer,
-              ),
-            ),
+          _dot(
+            9,
+            selected
+                ? scheme.onSecondaryContainer.withValues(alpha: 0.2)
+                : scheme.primary.withValues(alpha: 0.15),
           ),
         ],
       ),
     );
   }
 
-  Widget _miniSubscriptionCard({
-    required Color bg,
-    required Color border,
-    required Color text,
-    required Color subText,
-    required Color accent,
-    double height = 29,
-  }) {
-    if (height <= 26) {
-      return Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(ExpressiveShape.small),
-          border: Border.all(color: border),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        alignment: Alignment.center,
+  /// Нижняя навигация: пилюля-индикатор с иконкой и подписью в один ряд — та
+  /// самая горизонтальная раскладка, ради которой в приложении своя реализация
+  /// навбара.
+  Widget _bottomNav() => SizedBox(
+        height: 14,
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             Container(
-              width: 4,
-              height: 4,
+              padding: const EdgeInsets.symmetric(horizontal: 5),
               decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.85),
-                shape: BoxShape.circle,
+                color: scheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _dot(5, scheme.onSecondaryContainer),
+                  const SizedBox(width: 3),
+                  _bar(
+                    12,
+                    2.5,
+                    scheme.onSecondaryContainer.withValues(alpha: 0.9),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Container(
-                height: 2,
-                decoration: BoxDecoration(
-                  color: text.withValues(alpha: 0.75),
-                  borderRadius: BorderRadius.circular(ExpressiveShape.full),
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Container(
-              width: 3,
-              height: 3,
-              decoration: BoxDecoration(
-                color: subText.withValues(alpha: 0.7),
-                shape: BoxShape.circle,
-              ),
-            ),
+            _dot(5.5, scheme.onSurfaceVariant),
+            _dot(5.5, scheme.onSurfaceVariant),
           ],
         ),
+      );
+}
+
+/// Волна-индикатор миниатюры — уменьшенная копия той, что на главном экране:
+/// синусоида штрихом с круглыми торцами, зазор, короткий хвост трека и
+/// точка-стоп в его конце.
+class _MockWavePainter extends CustomPainter {
+  final Color color;
+  final Color track;
+
+  const _MockWavePainter({required this.color, required this.track});
+
+  static const double _thickness = 3;
+  static const double _amplitude = 1.5;
+  static const double _wavelength = 13;
+
+  /// Хвост трека справа: у настоящего индикатора активная часть до края не
+  /// доходит — соединение это состояние, а не задача с концом.
+  static const double _tail = 13;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final mid = size.height / 2;
+    // Круглый торец выходит за конец отрезка на радиус штриха.
+    final cap = _thickness / 2;
+    final left = cap;
+    final right = size.width - cap;
+    if (right <= left) return;
+    final activeRight = math.max(left, right - _tail);
+
+    double waveY(double x) =>
+        mid + _amplitude * math.sin(2 * math.pi * x / _wavelength);
+
+    final path = Path()..moveTo(left, waveY(left));
+    for (var x = left + 1; x < activeRight; x += 1) {
+      path.lineTo(x, waveY(x));
+    }
+    path.lineTo(activeRight, waveY(activeRight));
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _thickness
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    // Зазор меряется между ВИДИМЫМИ краями, а drawLine берёт центры торцов.
+    final trackStart = activeRight + _thickness + 2;
+    if (trackStart < right) {
+      canvas.drawLine(
+        Offset(trackStart, mid),
+        Offset(right, mid),
+        Paint()
+          ..color = track
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = _thickness
+          ..strokeCap = StrokeCap.round,
       );
     }
-    return Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(ExpressiveShape.small),
-          border: Border.all(color: border),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 3, 4, 2),
-              child: Row(
-                children: [
-                  Container(
-                    width: 3,
-                    height: 3,
-                    decoration: BoxDecoration(color: text.withValues(alpha: 0.8), shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 3),
-                  Container(
-                    width: 26,
-                    height: 2,
-                    decoration: BoxDecoration(
-                      color: text.withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(ExpressiveShape.full),
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    width: 4,
-                    height: 4,
-                    decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-              height: 13,
-              decoration: BoxDecoration(
-                color: subText.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(ExpressiveShape.extraSmall),
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 4),
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(color: accent.withValues(alpha: 0.85), shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 4),
-                  Container(
-                    width: 20,
-                    height: 2,
-                    decoration: BoxDecoration(
-                      color: text.withValues(alpha: 0.78),
-                      borderRadius: BorderRadius.circular(ExpressiveShape.full),
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  Container(
-                    width: 11,
-                    height: 1.8,
-                    decoration: BoxDecoration(
-                      color: subText.withValues(alpha: 0.72),
-                      borderRadius: BorderRadius.circular(ExpressiveShape.full),
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(Icons.chevron_right_rounded, size: 8, color: subText),
-                  const SizedBox(width: 2),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
+    canvas.drawCircle(
+      Offset(right, mid),
+      _thickness / 2,
+      Paint()..color = color,
+    );
   }
+
+  @override
+  bool shouldRepaint(_MockWavePainter old) =>
+      old.color != color || old.track != track;
 }

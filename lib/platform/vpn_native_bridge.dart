@@ -15,13 +15,11 @@ class VpnNativeBridge {
   static bool get supportsNotificationLaunch => Platform.isAndroid;
   static bool get supportsDeepLinks => Platform.isAndroid || Platform.isWindows;
   static bool get supportsAutostartNotification => Platform.isWindows;
-  static bool get supportsTrayMenu => Platform.isWindows;
+  static bool get supportsWindowVisibilityEvents => Platform.isWindows;
   static bool get supportsGlobalHotkeys => Platform.isWindows;
 
   static Future<void> Function(MethodCall call)? _launchHandler;
   static Future<void> Function()? _autostartHandler;
-  static Future<void> Function(MethodCall call)? _trayMenuHandler;
-  static Future<void> Function()? _trayMenuCloseHandler;
   static void Function(bool visible)? _windowVisibilityHandler;
 
   static Future<String?> getLaunchAction() async {
@@ -161,20 +159,6 @@ class VpnNativeBridge {
     _syncMethodCallHandler();
   }
 
-  static void registerTrayMenuHandler(
-    Future<void> Function(MethodCall call)? handler,
-  ) {
-    _trayMenuHandler = handler;
-    _syncMethodCallHandler();
-  }
-
-  static void registerTrayMenuCloseHandler(
-    Future<void> Function()? handler,
-  ) {
-    _trayMenuCloseHandler = handler;
-    _syncMethodCallHandler();
-  }
-
   /// Windows: окно скрыто в трей / восстановлено (нативный `onWindowVisibility`).
   static void registerWindowVisibilityHandler(
     void Function(bool visible)? handler,
@@ -188,7 +172,7 @@ class VpnNativeBridge {
         supportsDeepLinks ||
         supportsAutostartNotification ||
         supportsSystemAccentEvents ||
-        supportsTrayMenu;
+        supportsWindowVisibilityEvents;
     if (!needsHandler) {
       channel.setMethodCallHandler(null);
       return;
@@ -198,15 +182,7 @@ class VpnNativeBridge {
         await _autostartHandler?.call();
         return;
       }
-      if (call.method == 'onTrayMenuOpen' && supportsTrayMenu) {
-        await _trayMenuHandler?.call(call);
-        return;
-      }
-      if (call.method == 'onTrayMenuClose' && supportsTrayMenu) {
-        await _trayMenuCloseHandler?.call();
-        return;
-      }
-      if (call.method == 'onWindowVisibility' && supportsTrayMenu) {
+      if (call.method == 'onWindowVisibility' && supportsWindowVisibilityEvents) {
         final args = call.arguments;
         final visible = args is Map ? args['visible'] as bool? ?? true : true;
         _windowVisibilityHandler?.call(visible);

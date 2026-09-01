@@ -115,6 +115,22 @@ class KeqdisVpnService : VpnService() {
         // SharedPreferences keys used by Quick Settings tile.
         const val PREFS_QS = "keqdis_vpn_prefs"
         const val KEY_QS_STATUS = "qs_status"
+
+        /// Тот же статус, но В ПАМЯТИ ПРОЦЕССА, а не на диске.
+        ///
+        /// Записанный в prefs статус переживает смерть процесса, и это его
+        /// свойство ломает плитку: систему (особенно OEM-прошивки вроде MIUI)
+        /// никто не обязывает дать сервису доработать до `onDestroy`, поэтому
+        /// после убийства приложения в `qs_status` остаётся «connected», хотя
+        /// туннеля нет. Плитка верила записи и на нажатие слала ACTION_STOP —
+        /// человек видел, что плитка дёрнулась и ничего не произошло.
+        ///
+        /// Это поле начинается с «disconnected» при каждом запуске процесса,
+        /// поэтому расхождение с prefs и означает ровно «запись протухла».
+        @JvmStatic
+        @Volatile
+        var liveStatus: String = "disconnected"
+            private set
         const val KEY_QS_ERROR = "qs_error"
         const val KEY_QS_LAST_XRAY_CONFIG = "qs_last_xray_config"
         const val KEY_QS_LAST_SOCKS_USERNAME = "qs_last_socks_username"
@@ -1550,6 +1566,8 @@ class KeqdisVpnService : VpnService() {
             VpnRunStatus.RUNNING  -> "connected"
             VpnRunStatus.ERROR    -> "error"
         }
+        // Тот же статус в памяти процесса — см. [liveStatus].
+        liveStatus = statusStr
 
         // Log transitions to final states for QS tile debugging
         if (s == VpnRunStatus.STOPPED || s == VpnRunStatus.RUNNING || s == VpnRunStatus.ERROR) {

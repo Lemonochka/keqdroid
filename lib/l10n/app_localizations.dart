@@ -3263,6 +3263,18 @@ abstract class AppLocalizations {
   /// **'Session duration chip under the connect button'**
   String get appearanceShowTimeSubtitle;
 
+  /// No description provided for @appearanceWaveLatencyColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour the indicator by latency'**
+  String get appearanceWaveLatencyColor;
+
+  /// No description provided for @appearanceWaveLatencyColorSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The bar under the connect button turns green, amber or red by the active server\'s ping. Off keeps it in the theme accent.'**
+  String get appearanceWaveLatencyColorSubtitle;
+
   /// No description provided for @appearanceFontTitle.
   ///
   /// In en, this message translates to:
@@ -4084,6 +4096,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'codes: {count}'**
   String settingsInternalsGeoCodes(int count);
+
+  /// No description provided for @settingsInternalsGeoTrimmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Country database is the trimmed one'**
+  String get settingsInternalsGeoTrimmed;
+
+  /// No description provided for @settingsInternalsGeoTrimmedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'It carries only the codes the app\'s own presets need. A rule naming any other country is dropped before connecting.'**
+  String get settingsInternalsGeoTrimmedHint;
+
+  /// No description provided for @settingsInternalsGeoDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download the full database'**
+  String get settingsInternalsGeoDownload;
+
+  /// No description provided for @settingsInternalsGeoDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not download: {error}'**
+  String settingsInternalsGeoDownloadFailed(String error);
 
   /// No description provided for @settingsInternalsStatus.
   ///

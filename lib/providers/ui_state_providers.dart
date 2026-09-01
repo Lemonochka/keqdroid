@@ -65,13 +65,6 @@ class VpnServerSwitchInProgressNotifier extends Notifier<bool> {
   void set(bool value) => state = value;
 }
 
-class TrayMenuVisibleNotifier extends Notifier<bool> {
-  @override
-  bool build() => false;
-
-  void set(bool value) => state = value;
-}
-
 /// desktop: правда ли окно на экране. На Windows его выставляет нативный трей
 /// (onWindowVisibility) при скрытии/восстановлении окна — Flutter-lifecycle на
 /// SW_HIDE отдаёт лишь `inactive`, поэтому это отдельный авторитетный сигнал,
@@ -130,19 +123,20 @@ final vpnServerSwitchInProgressProvider =
   VpnServerSwitchInProgressNotifier.new,
 );
 
-final trayMenuVisibleProvider =
-    NotifierProvider<TrayMenuVisibleNotifier, bool>(TrayMenuVisibleNotifier.new);
-
 final desktopWindowVisibleProvider =
     NotifierProvider<DesktopWindowVisibleNotifier, bool>(
   DesktopWindowVisibleNotifier.new,
 );
 
-/// Видно ли пользователю UI на десктопе: либо окно на экране, либо открыт
-/// попап меню трея. Ложь только когда всё реально скрыто в трее — тогда
-/// глобальный TickerMode (app.dart) глушит все анимации (волна, kawaii-оверлей),
-/// а vpnEngine — секундный опрос трафика, чтобы не жечь CPU в фоне.
+/// Видно ли пользователю UI на десктопе. Ложь, когда окно скрыто в трее —
+/// тогда глобальный TickerMode (app.dart) глушит все анимации (волна,
+/// kawaii-оверлей), а vpnEngine — секундный опрос трафика, чтобы не жечь CPU
+/// в фоне.
+///
+/// Раньше сюда входило и «открыт попап меню трея»: меню рисовал Flutter в том
+/// же окне, и на время показа окно считалось видимым. Меню стало нативным — его
+/// рисует Windows, наше окно при этом остаётся скрытым, и глушить его анимации
+/// правильно.
 final desktopUiVisibleProvider = Provider<bool>((ref) {
-  return ref.watch(desktopWindowVisibleProvider) ||
-      ref.watch(trayMenuVisibleProvider);
+  return ref.watch(desktopWindowVisibleProvider);
 });

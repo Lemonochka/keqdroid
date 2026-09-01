@@ -13,6 +13,7 @@ import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
 import 'package:keqdroid/shared/ui/expressive_button_group.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
+import 'package:keqdroid/shared/ui/horizontal_mouse_scroll.dart';
 import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:path_provider/path_provider.dart';
@@ -1741,8 +1742,18 @@ class _CardThemePicker extends StatefulWidget {
 }
 
 class _CardThemePickerState extends State<_CardThemePicker> {
-  /// Почему картинку не взяли — под самим слайдером.
+  /// Почему картинку не взяли — под самой каруселью.
   String? _error;
+
+  /// Свой контроллер нужен ради колеса мыши: карусель без него на десктопе
+  /// не листается вовсе (см. [HorizontalMouseScroll]).
+  final CarouselController _carousel = CarouselController();
+
+  @override
+  void dispose() {
+    _carousel.dispose();
+    super.dispose();
+  }
 
   Future<void> _pick() async {
     final l10n = AppLocalizations.of(context)!;
@@ -1803,7 +1814,10 @@ class _CardThemePickerState extends State<_CardThemePicker> {
         // (по 4 вокруг каждого — это и есть умолчание `padding`).
         SizedBox(
           height: _cardThemeCarouselHeight,
-          child: CarouselView.weighted(
+          child: HorizontalMouseScroll(
+            controller: _carousel,
+            child: CarouselView.weighted(
+            controller: _carousel,
             flexWeights: const [3, 2, 1],
             consumeMaxWeight: true,
             itemSnapping: true,
@@ -1833,6 +1847,7 @@ class _CardThemePickerState extends State<_CardThemePicker> {
                   selected: theme.id == currentId,
                 ),
             ],
+            ),
           ),
         ),
         if (_error != null)

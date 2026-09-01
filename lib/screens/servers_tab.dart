@@ -211,7 +211,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
       } else {
         // Windows шлёт пуш без ссылки: она лежит у натива и ждёт, пока её
         // заберут. Так ссылка не теряется, если вкладка сейчас не построена
-        // (открыто меню трея — DesktopHomeScreen отдаёт TrayMenuScreen).
+        // (например, приложение свёрнуто в трей).
         await _checkPendingDeepLink();
       }
       return;
@@ -629,19 +629,18 @@ class _ServersTabState extends ConsumerState<ServersTab>
                   ),
                 ),
               ),
+              // Отступ от края — 16 по спеке. Размер, форма, глиф и тень
+              // приходят из темы FAB: здесь их переопределяли по месту, и
+              // кнопка разъезжалась с двумя другими такими же в приложении.
               Positioned(
-                right: 20,
-                bottom: 20,
+                right: 16,
+                bottom: 16,
                 child: FloatingActionButton(
                   heroTag: 'servers_add_server_fab',
                   backgroundColor: AppTheme.accentContainer(context),
                   foregroundColor: AppTheme.onAccentContainer(context),
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                  ),
                   onPressed: () => _showAddServerDialog(context),
-                  child: const Icon(Icons.add_rounded, size: 26),
+                  child: const Icon(Icons.add_rounded),
                 ),
               ),
             ],

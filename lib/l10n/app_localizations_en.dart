@@ -1671,6 +1671,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceShowTimeSubtitle => 'Session duration chip under the connect button';
 
   @override
+  String get appearanceWaveLatencyColor => 'Colour the indicator by latency';
+
+  @override
+  String get appearanceWaveLatencyColorSubtitle => 'The bar under the connect button turns green, amber or red by the active server\'s ping. Off keeps it in the theme accent.';
+
+  @override
   String get appearanceFontTitle => 'Font';
 
   @override
@@ -2107,6 +2113,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String settingsInternalsGeoCodes(int count) {
     return 'codes: $count';
+  }
+
+  @override
+  String get settingsInternalsGeoTrimmed => 'Country database is the trimmed one';
+
+  @override
+  String get settingsInternalsGeoTrimmedHint => 'It carries only the codes the app\'s own presets need. A rule naming any other country is dropped before connecting.';
+
+  @override
+  String get settingsInternalsGeoDownload => 'Download the full database';
+
+  @override
+  String settingsInternalsGeoDownloadFailed(String error) {
+    return 'Could not download: $error';
   }
 
   @override

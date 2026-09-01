@@ -23,6 +23,12 @@ Color _ruleActionColor(BuildContext context, RuleAction a) => switch (a) {
       RuleAction.block => AppTheme.red(context),
     };
 
+IconData _ruleActionIcon(RuleAction a) => switch (a) {
+      RuleAction.direct => Icons.call_made_rounded,
+      RuleAction.proxy => Icons.public_rounded,
+      RuleAction.block => Icons.block_rounded,
+    };
+
 class _RoutingScreen extends ConsumerStatefulWidget {
   const _RoutingScreen();
 
@@ -180,11 +186,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         _ => Icons.tune_rounded,
       };
 
-  Color _presetColor(BuildContext context, RoutingField f) => switch (f) {
-        RoutingField.direct => AppTheme.green(context),
-        RoutingField.proxy => AppTheme.accent(context),
-        RoutingField.blocked => AppTheme.red(context),
-      };
 
   static int _countEntries(String raw) => raw
       .split(RegExp(r'[\n,]'))
@@ -348,70 +349,28 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                 ?.copyWith(color: AppTheme.textLight(context)),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              for (final value in AppSettings.finalOutbounds) ...[
-                Expanded(
-                  child: _finalSegment(
-                    context: context,
-                    label: _finalLabel(l10n, value),
-                    icon: _finalIcon(value),
-                    color: _finalColor(context, value),
-                    selected: current == value,
-                    onTap: () => _saveFinalOutbound(value),
-                  ),
+          // Связанная группа кнопок вместо трёх самодельных плиток с рамкой в
+          // 2px и заливкой на 14% альфы: выбор одного из взаимоисключающих
+          // вариантов — ровно её работа, а прежний вид был кнопкой-переключателем
+          // из M2. Смысловой цвет остаётся на иконках невыбранных.
+          ExpressiveConnectedButtons<String>(
+            segments: [
+              for (final value in AppSettings.finalOutbounds)
+                ExpressiveSegment(
+                  value: value,
+                  label: _finalLabel(l10n, value),
+                  icon: _finalIcon(value),
+                  iconColor: _finalColor(context, value),
                 ),
-                if (value != AppSettings.finalOutbounds.last)
-                  const SizedBox(width: 8),
-              ],
             ],
+            selected: current,
+            onChanged: _saveFinalOutbound,
           ),
         ],
       ),
     );
   }
 
-  Widget _finalSegment({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    required Color color,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-        decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.14) : AppTheme.bg(context),
-          borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-          border: Border.all(
-            color: selected ? color : AppTheme.divider(context),
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(icon,
-                size: 20,
-                color: selected ? color : AppTheme.textLight(context)),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? color : AppTheme.text(context),
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ── Структурированные правила (RoutingRule) ────────────────────────────────
 
@@ -715,58 +674,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       ),
     );
   }
-
-  /// Строка пресета в выпадающем списке.
-  ///
-  /// `DropdownButton` текущее значение никак не помечает — он просто
-  /// прокручивает к нему список. Из-за этого меню читалось как набор подписей,
-  /// по которым непонятно, выбор ли это вообще и что уже выбрано. Выбранный
-  /// пункт берёт secondaryContainer и галочку — тот же язык, что у активного
-  /// сервера и чипа статуса.
-  Widget _presetMenuRow(
-    BuildContext context,
-    AppLocalizations l10n,
-    RoutingPreset preset, {
-    required bool selected,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final color = _presetColor(context, preset.field);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: selected
-          ? BoxDecoration(
-              color: scheme.secondaryContainer,
-              borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
-            )
-          : null,
-      child: Row(
-        children: [
-          Icon(_presetIcon(preset.id), size: 18, color: color),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _presetTitle(l10n, preset.id),
-              overflow: TextOverflow.ellipsis,
-              style:
-                  (selected
-                          ? textTheme.emphasized(textTheme.bodyMedium)
-                          : textTheme.bodyMedium)
-                      ?.copyWith(
-                        color: selected
-                            ? scheme.onSecondaryContainer
-                            : AppTheme.text(context),
-                      ),
-            ),
-          ),
-          if (selected)
-            Icon(Icons.check_rounded, size: 18, color: scheme.onSecondaryContainer),
-        ],
-      ),
-    );
-  }
-
   Widget _presetsCard(BuildContext context, AppLocalizations l10n) {
     return ExpressiveCard(
       child:Column(
@@ -788,126 +695,113 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                 ?.copyWith(color: AppTheme.textLight(context)),
           ),
           const SizedBox(height: 12),
-          _presetDropdown(context, l10n),
+          _presetPicker(context, l10n),
         ],
       ),
     );
   }
 
-  Widget _presetDropdown(BuildContext context, AppLocalizations l10n) {
-    RoutingPreset? findSelected() {
-      for (final p in RoutingPresets.all) {
-        if (p.id == _selectedPresetId) return p;
-      }
-      return null;
+  RoutingPreset? _selectedPreset() {
+    for (final preset in RoutingPresets.all) {
+      if (preset.id == _selectedPresetId) return preset;
     }
+    return null;
+  }
 
-    final selected = findSelected();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  /// Выбор пресета шторкой, а не `DropdownButton`.
+  ///
+  /// `DropdownButton` — компонент M2: своя рамка, своя стрелка, а выбранное он
+  /// никак не помечает, просто прокручивает к нему список. Шторка со строками
+  /// [ExpressiveActionTile] — тот же способ выбора, что уже стоит у сортировки
+  /// серверов и интервала обновления подписки, и в неё помещается описание
+  /// пресета, которому в закрытом списке места не было вовсе.
+  Widget _presetPicker(BuildContext context, AppLocalizations l10n) {
+    final selected = _selectedPreset();
+    // Одной строкой: выбор и кнопка рядом, а не друг под другом.
+    //
+    // Описание пресета сюда не выводим — оно есть в шторке, ровно там, где по
+    // нему и принимают решение. Здесь оно занимало третью строку и повторяло
+    // то, что человек только что прочитал при выборе.
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  // Поле стоит внутри карточки, поэтому берёт уровень ВЫШЕ неё.
-                  // Здесь был AppTheme.bg — в AMOLED это чистый чёрный, и поле
-                  // сливалось в дыру без намёка на то, что по нему жмут.
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    isExpanded: true,
-                    value: _selectedPresetId,
-                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                    hint: Text(
-                      l10n.settingsRoutingPresetChoose,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: AppTheme.textLight(context)),
-                    ),
-                    dropdownColor: AppTheme.card(context),
-                    icon: Icon(
-                      Icons.arrow_drop_down_rounded,
-                      color: AppTheme.textLight(context),
-                    ),
-                    // Закрытое поле — без обёртки подсветки: её отступы не
-                    // влезают в высоту кнопки и обрезают строку снизу.
-                    selectedItemBuilder: (context) => RoutingPresets.all
-                        .map(
-                          (preset) => Align(
-                            alignment: AlignmentDirectional.centerStart,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  _presetIcon(preset.id),
-                                  size: 18,
-                                  color: _presetColor(context, preset.field),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    _presetTitle(l10n, preset.id),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                    style: Theme.of(context).textTheme.bodyMedium
-                                        ?.copyWith(color: AppTheme.text(context)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    items: RoutingPresets.all
-                        .map(
-                          (preset) => DropdownMenuItem<String>(
-                            value: preset.id,
-                            child: _presetMenuRow(
-                              context,
-                              l10n,
-                              preset,
-                              selected: preset.id == _selectedPresetId,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (id) => setState(() => _selectedPresetId = id),
-                  ),
-                ),
+        Expanded(
+          child: ExpressiveGroup(
+            children: [
+              ExpressiveActionTile(
+                icon: selected == null
+                    ? Icons.tune_rounded
+                    : _presetIcon(selected.id),
+                title: selected == null
+                    ? l10n.settingsRoutingPresetChoose
+                    : _presetTitle(l10n, selected.id),
+                onTap: () => unawaited(_showPresetSheet(context, l10n)),
               ),
-            ),
-            const SizedBox(width: 10),
-            FilledButton.icon(
-              onPressed: selected == null
-                  ? null
-                  : () => _applyPreset(
-                        selected,
-                        _presetTitle(l10n, selected.id),
-                      ),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: Text(l10n.settingsRoutingPresetAdd),
-            ),
-          ],
-        ),
-        if (selected != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _presetDesc(l10n, selected.id),
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: AppTheme.textLight(context)),
+            ],
           ),
-        ],
+        ),
+        const SizedBox(width: ExpressiveSpacing.medium),
+        FilledButton.icon(
+          onPressed: selected == null
+              ? null
+              : () => _applyPreset(selected, _presetTitle(l10n, selected.id)),
+          icon: const Icon(Icons.add_rounded),
+          label: Text(l10n.settingsRoutingPresetAdd),
+        ),
       ],
     );
   }
+
+  Future<void> _showPresetSheet(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) async {
+    final theme = Theme.of(context);
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.8,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                  child: Text(
+                    l10n.settingsRoutingPresetsTitle,
+                    style: theme.textTheme
+                        .emphasized(theme.textTheme.titleMedium)
+                        ?.copyWith(color: AppTheme.text(context)),
+                  ),
+                ),
+                ExpressiveGroup(
+                  children: [
+                    for (final preset in RoutingPresets.all)
+                      ExpressiveActionTile(
+                        icon: _presetIcon(preset.id),
+                        title: _presetTitle(l10n, preset.id),
+                        subtitle: _presetDesc(l10n, preset.id),
+                        selected: preset.id == _selectedPresetId,
+                        onTap: () => Navigator.pop(ctx, preset.id),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    setState(() => _selectedPresetId = chosen);
+  }
+
 
   Widget _section({
     required BuildContext context,
@@ -992,34 +886,13 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                 .textTheme
                 .bodyMedium
                 ?.copyWith(color: AppTheme.text(context)),
+            // Форма, рамка, цвета фокуса и стили подсказок — из темы
+            // (`buildExpressiveComponentThemes.inputDecoration`). Здесь остаётся
+            // только то, что относится к этому конкретному полю: сам текст
+            // подсказки и пояснение под ним.
             decoration: InputDecoration(
-              isDense: true,
               hintText: hint,
-              hintStyle: TextStyle(color: AppTheme.textLight(context)),
               helperText: l10n.settingsRoutingValuesHint,
-              helperStyle: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: AppTheme.textLight(context)),
-              filled: true,
-              // inset (surfaceContainerLowest) заметно контрастнее карточки, чем
-              // bg/surface — на дынамик-тёмных темах, где surface ≈
-              // surfaceContainerHigh, поле иначе сливалось с карточкой.
-              fillColor: AppTheme.inset(context),
-              // Явная граница: заливки мало, когда тона поверхностей близки —
-              // тогда поле выглядело как текст без рамки (видно было только на ПК).
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                borderSide: BorderSide(color: AppTheme.divider(context)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                borderSide: BorderSide(color: AppTheme.divider(context)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                borderSide: BorderSide(color: AppTheme.accent(context), width: 1.5),
-              ),
             ),
             onChanged: (_) => _scheduleSave(),
           ),

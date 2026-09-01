@@ -3,7 +3,10 @@
 
 #include <windows.h>
 
-// System tray: hide on WM_CLOSE, restore from icon / menu.
+// Окно и трей: скрытие по WM_CLOSE, возврат на экран, выход.
+//
+// Саму иконку в трее и её меню держит tray_manager на стороне Dart
+// (lib/services/windows_tray_menu.dart) — здесь только окно.
 void WindowsTrayInit(HWND hwnd);
 void WindowsTrayDispose(HWND hwnd);
 void WindowsTraySetMinimizeToTray(bool enabled);
@@ -13,14 +16,6 @@ bool WindowsTrayActivateMainWindow();
 bool WindowsTrayRestoreMainWindow();
 // Hotkey "show/hide window": visible window hides to tray, hidden restores.
 bool WindowsTrayToggleMainWindow();
-void WindowsTrayShowMenuPopup(HWND hwnd,
-                              int anchor_x,
-                              int anchor_y,
-                              int width,
-                              int height,
-                              bool dark_theme);
-void WindowsTrayHideMenuPopup(HWND hwnd, bool activate_main);
-void WindowsTrayResizeMenuPopup(HWND hwnd, int width, int height);
 void WindowsTrayExitApplication(HWND hwnd);
 bool WindowsTrayHandleMessage(HWND hwnd,
                               UINT message,

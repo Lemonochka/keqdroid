@@ -167,9 +167,19 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     return ref.read(storageProvider).getSettings();
   }
 
+  /// Состояние обновляется ДО записи на диск, а не после неё.
+  ///
+  /// `saveSettings` уходит в SharedPreferences через платформенный канал, и
+  /// пока летел этот круговой рейс, интерфейс стоял: между нажатием на
+  /// «Тёмная» и собственно сменой темы была пауза, которая читалась залипанием
+  /// переключателя. Настройка — не транзакция, подтверждать её записью незачем.
+  ///
+  /// Порядок записей от перестановки не страдает: StorageService выстраивает
+  /// их в одну очередь в порядке ВЫЗОВА (см. `_serial`), а состояние здесь
+  /// меняется в том же порядке.
   Future<void> save(AppSettings settings) async {
-    await ref.read(storageProvider).saveSettings(settings);
     state = AsyncData(settings);
+    await ref.read(storageProvider).saveSettings(settings);
   }
 
   Future<void> reset() async {

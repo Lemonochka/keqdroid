@@ -149,8 +149,30 @@ class VpnQuickTileService : TileService() {
             ?: "disconnected").lowercase()
         android.util.Log.d("KEQDIS_QS", "onClick: status=$status")
 
-        // Работает (или залип на connecting) — глушим напрямую, без toggle.
-        if (status in ACTIVE_STATUSES) {
+        // Запись в prefs переживает смерть процесса, а туннель — нет.
+        //
+        // На агрессивных прошивках (MIUI/HyperOS) приложение убивают, не дав
+        // сервису доработать до `onDestroy`, и в `qs_status` навсегда остаётся
+        // «connected». Плитка верила записи, слала ACTION_STOP в мёртвый сервис
+        // и человек видел ровно «плитка дёрнулась, ничего не случилось».
+        // Приложение при этом подключалось нормально — отсюда и жалоба «из
+        // шторки тишина, приходится проваливаться внутрь».
+        //
+        // Сверяем с [KeqdisVpnService.liveStatus]: оно живёт в памяти процесса и
+        // после его перезапуска равно «disconnected». Расходится с prefs —
+        // значит запись протухла, чиним и идём подключаться.
+        val live = KeqdisVpnService.liveStatus.lowercase()
+        if (status in ACTIVE_STATUSES && live !in ACTIVE_STATUSES) {
+            android.util.Log.w(
+                "KEQDIS_QS",
+                "onClick: stale persisted status '$status' (live='$live') → healing and connecting",
+            )
+            getSharedPreferences(KeqdisVpnService.PREFS_QS, MODE_PRIVATE)
+                .edit()
+                .putString(KeqdisVpnService.KEY_QS_STATUS, "disconnected")
+                .apply()
+        } else if (status in ACTIVE_STATUSES) {
+            // Работает (или залип на connecting) — глушим напрямую, без toggle.
             startService(Intent(this, KeqdisVpnService::class.java).apply {
                 action = KeqdisVpnService.ACTION_STOP
             })
@@ -231,8 +253,37 @@ class VpnQuickTileService : TileService() {
             // проглотить нельзя — уводим человека в приложение, оттуда старт
             // разрешён всегда.
             android.util.Log.e("KEQDIS_QS", "onClick: service start refused by system: $e")
+            toast(R.string.tile_error_autostart)
             openAppForConnect()
+            return
         }
+        verifyStarted()
+    }
+
+    /// Проверяет, что сервис действительно поднялся, и говорит вслух, если нет.
+    ///
+    /// Нужно потому, что отказ бывает БЕЗ исключения. `startForegroundService`
+    /// возвращает управление нормально, а прошивка (MIUI/HyperOS и родня с
+    /// «Автозапуском») убивает процесс следом или не даёт ему выйти на передний
+    /// план — снаружи это ровно «плитка дёрнулась и тишина», без единого следа.
+    ///
+    /// Сверяемся с [KeqdisVpnService.liveStatus]: он живёт в памяти процесса, и
+    /// если через паузу там всё ещё «disconnected», старта не случилось.
+    ///
+    /// Задержка — компромисс. Меньше секунды не хватает даже здоровому старту
+    /// (сервис успевает только создаться), больше трёх — человек уже закрыл
+    /// шторку и тоста не увидит.
+    private fun verifyStarted() {
+        android.os.Handler(mainLooper).postDelayed({
+            val live = KeqdisVpnService.liveStatus.lowercase()
+            if (live !in ACTIVE_STATUSES) {
+                android.util.Log.e(
+                    "KEQDIS_QS",
+                    "onClick: service did not come up (live='$live') — likely blocked by the OEM",
+                )
+                toast(R.string.tile_error_autostart)
+            }
+        }, 2500)
     }
 
     private fun openAppForConnect() {
@@ -286,12 +337,25 @@ class VpnQuickTileService : TileService() {
     private fun updateTileFromPrefs() {
         if (Build.VERSION.SDK_INT < 24) return
 
-        val status = getSharedPreferences(KeqdisVpnService.PREFS_QS, MODE_PRIVATE)
+        val persisted = getSharedPreferences(KeqdisVpnService.PREFS_QS, MODE_PRIVATE)
             .getString(KeqdisVpnService.KEY_QS_STATUS, "disconnected")
             ?.lowercase()
             ?: "disconnected"
 
-        android.util.Log.d("KEQDIS_QS", "updateTileFromPrefs: status=$status")
+        // Та же сверка, что и в [handleClick]: запись пережила процесс, а
+        // туннель — нет. Без неё плитка ещё и ГОРИТ включённой при выключенном
+        // VPN, то есть врёт до первого нажатия.
+        val live = KeqdisVpnService.liveStatus.lowercase()
+        val status = if (persisted in ACTIVE_STATUSES && live !in ACTIVE_STATUSES) {
+            "disconnected"
+        } else {
+            persisted
+        }
+
+        android.util.Log.d(
+            "KEQDIS_QS",
+            "updateTileFromPrefs: status=$status (persisted=$persisted, live=$live)",
+        )
 
         val tileObj = qsTile
         if (tileObj == null) {

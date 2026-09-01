@@ -30,6 +30,19 @@ class GeoAssetIndex {
 
   bool get isEmpty => geoipCodes.isEmpty && geositeCodes.isEmpty;
 
+  /// Порог, за которым база geoip считается полной.
+  ///
+  /// Судим по числу кодов, а не по флажку в настройках: флажок разъезжается с
+  /// тем, что реально лежит на диске (файл подменили, откатили, восстановили из
+  /// бэкапа), а коды — это и есть сам файл. Во вшитой урезанной базе их четыре,
+  /// в полной v2fly — 263, поэтому любой порог между ними надёжен.
+  static const fullGeoipCodeThreshold = 32;
+
+  /// Полная ли база стран на диске. Урезанная едет в APK, полная догружается
+  /// (`GeoBaseDownloader`) — и от этого зависит, стоит ли объяснять человеку
+  /// пропавшее правило нехваткой базы.
+  bool get hasFullGeoip => geoipCodes.length >= fullGeoipCodeThreshold;
+
   /// Читает обе базы из каталога [dir] (там, где их ищет само ядро через
   /// `XRAY_LOCATION_ASSET`). Отсутствующий файл — пустое множество, не ошибка.
   static Future<GeoAssetIndex> fromDirectory(String dir) async {

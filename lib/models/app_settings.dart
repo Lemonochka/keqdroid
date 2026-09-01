@@ -125,6 +125,14 @@ class AppSettings {
   final bool showTrafficStats;
   /// Чип времени подключения под кнопкой подключения.
   final bool showConnectionTime;
+
+  /// Красить индикатор под кнопкой по задержке активного сервера.
+  ///
+  /// Выключенный оставляет индикатору акцент темы. Канал полезный, но не всем:
+  /// цвет там меняется от смены сервера и от переизмерения пинга, а зелёный,
+  /// оранжевый и красный на главном экране читаются как тревога, даже когда
+  /// речь всего лишь о трёхстах миллисекундах.
+  final bool waveLatencyColor;
   /// Показывать скорость (↓/↑) в системном уведомлении VPN.
   final bool showSpeedInNotification;
   /// Показывать время подключения (аптайм) в системном уведомлении VPN.
@@ -200,6 +208,7 @@ class AppSettings {
     this.hapticFeedback = true,
     this.showTrafficStats = true,
     this.showConnectionTime = true,
+    this.waveLatencyColor = true,
     this.showSpeedInNotification = true,
     this.showUptimeInNotification = true,
     this.notifySubscriptionUpdates = true,
@@ -252,6 +261,7 @@ class AppSettings {
     'hapticFeedback': hapticFeedback,
     'showTrafficStats': showTrafficStats,
     'showConnectionTime': showConnectionTime,
+    'waveLatencyColor': waveLatencyColor,
     'showSpeedInNotification': showSpeedInNotification,
     'showUptimeInNotification': showUptimeInNotification,
     'notifySubscriptionUpdates': notifySubscriptionUpdates,
@@ -332,6 +342,7 @@ class AppSettings {
       hapticFeedback: json['hapticFeedback'] as bool? ?? true,
       showTrafficStats: json['showTrafficStats'] as bool? ?? true,
       showConnectionTime: json['showConnectionTime'] as bool? ?? true,
+      waveLatencyColor: json['waveLatencyColor'] as bool? ?? true,
       showSpeedInNotification: json['showSpeedInNotification'] as bool? ?? true,
       showUptimeInNotification:
           json['showUptimeInNotification'] as bool? ?? true,
@@ -496,6 +507,7 @@ class AppSettings {
     bool? hapticFeedback,
     bool? showTrafficStats,
     bool? showConnectionTime,
+    bool? waveLatencyColor,
     bool? showSpeedInNotification,
     bool? showUptimeInNotification,
     bool? notifySubscriptionUpdates,
@@ -547,6 +559,7 @@ class AppSettings {
         hapticFeedback: hapticFeedback ?? this.hapticFeedback,
         showTrafficStats: showTrafficStats ?? this.showTrafficStats,
         showConnectionTime: showConnectionTime ?? this.showConnectionTime,
+        waveLatencyColor: waveLatencyColor ?? this.waveLatencyColor,
         showSpeedInNotification:
             showSpeedInNotification ?? this.showSpeedInNotification,
         showUptimeInNotification:
@@ -606,6 +619,7 @@ class AppSettings {
               hapticFeedback == other.hapticFeedback &&
               showTrafficStats == other.showTrafficStats &&
               showConnectionTime == other.showConnectionTime &&
+              waveLatencyColor == other.waveLatencyColor &&
               showSpeedInNotification == other.showSpeedInNotification &&
               showUptimeInNotification == other.showUptimeInNotification &&
               notifySubscriptionUpdates == other.notifySubscriptionUpdates &&
@@ -667,6 +681,7 @@ class AppSettings {
     hapticFeedback,
     showTrafficStats,
     showConnectionTime,
+    waveLatencyColor,
     showSpeedInNotification,
     showUptimeInNotification,
     notifySubscriptionUpdates,

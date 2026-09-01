@@ -747,6 +747,8 @@
   "appearanceShowTrafficSubtitle": "Speed and data usage chips under the connect button",
   "appearanceShowTime": "Show connection time",
   "appearanceShowTimeSubtitle": "Session duration chip under the connect button",
+  "appearanceWaveLatencyColor": "Colour the indicator by latency",
+  "appearanceWaveLatencyColorSubtitle": "The bar under the connect button turns green, amber or red by the active server's ping. Off keeps it in the theme accent.",
   "appearanceFontTitle": "Font",
   "appearanceFontSystem": "System",
   "settingsResetConfirmTitle": "Reset settings?",
@@ -933,6 +935,17 @@
     "placeholders": {
       "count": {
         "type": "int"
+      }
+    }
+  },
+  "settingsInternalsGeoTrimmed": "Country database is the trimmed one",
+  "settingsInternalsGeoTrimmedHint": "It carries only the codes the app's own presets need. A rule naming any other country is dropped before connecting.",
+  "settingsInternalsGeoDownload": "Download the full database",
+  "settingsInternalsGeoDownloadFailed": "Could not download: {error}",
+  "@settingsInternalsGeoDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
     }
   },

@@ -7,4 +7,5 @@
     <string name="tile_connecting">正在连接…</string>
     <string name="tile_error_start">无法从快捷设置启动 VPN — 请打开 Keqdis</string>
     <string name="tile_error_open_app">无法打开 Keqdis — 请手动启动应用</string>
+    <string name="tile_error_autostart">系统阻止了启动。请在系统设置中允许 Keqdis 自启动和后台运行。</string>
 </resources>
