@@ -32,6 +32,21 @@ class VpnNativeBridge {
     await channel.invokeMethod<void>('clearLaunchAction');
   }
 
+  /// Цвет фона окна Android. Нативная тема окна переключается СИСТЕМНОЙ тёмной
+  /// темой, а наша — своей настройкой, поэтому цвет присылаем сами; натив его
+  /// запоминает и красит окно ещё до первого кадра на следующем старте.
+  /// Подробности — в `_syncAndroidWindowBackground` (app/app.dart).
+  static Future<void> setWindowBackgroundColor(int argb) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await channel.invokeMethod<void>('setWindowBackgroundColor', {
+        'color': argb,
+      });
+    } on PlatformException {
+      // Косметика: окно просто останется прежнего цвета.
+    }
+  }
+
   /// Ссылка vless://… или keqdroid://install-config?url=…, с которой систему
   /// попросили открыть приложение. Одноразовая: натив отдаёт и забывает её.
   ///

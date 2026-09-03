@@ -93,6 +93,10 @@ class UpdateResult {
 class SubscriptionService {
   final StorageService _storage;
   final Dio _dio;
+
+  /// Порт локального HTTP-инбаунда ядра на момент запроса (null — напрямую).
+  /// Нужен и вне dio: HttpClient-фолбэк ниже поднимает свой клиент.
+  final LocalProxyPortResolver? _localProxyPort;
   String? _cachedHwid;
   String? _cachedDeviceModel;
   static const MethodChannel _platform = MethodChannel('keqdis_vpn_channel');
@@ -131,13 +135,23 @@ class SubscriptionService {
     return _appUserAgentCache;
   }
 
-  SubscriptionService(this._storage, {Dio? dio, int? proxyHttpPort})
-      : _dio = dio ?? _buildDio(proxyHttpPort: proxyHttpPort);
+  SubscriptionService(
+    this._storage, {
+    Dio? dio,
+    LocalProxyPortResolver? localProxyPort,
+  })  : _localProxyPort = localProxyPort,
+        _dio = dio ?? _buildDio(localProxyPort: localProxyPort);
 
-  /// dio с опциональным локальным HTTP-прокси (порт keqrnel/xray HTTP inbound).
-  /// нужно в фоновом workmanager-изоляте, чтобы апдейт подписок шёл через туннель.
-  /// без [proxyHttpPort] работает напрямую.
-  static Dio _buildDio({int? proxyHttpPort}) {
+  /// dio с опциональным локальным HTTP-прокси (порт keqrnel/xray/mihomo HTTP
+  /// inbound). Обязателен при включённом VPN: на Android собственный пакет
+  /// исключён из TUN (`addDisallowedApplication` в KeqdisVpnService), на
+  /// десктопе туннель тоже мимо процесса приложения — без прокси запрос к
+  /// подписке уходит напрямую к провайдеру и упирается в его блокировку, хотя
+  /// в браузере та же ссылка открывается.
+  ///
+  /// Резолвер спрашивается на каждый запрос: VPN включают и выключают, пока
+  /// сервис живёт. Без [localProxyPort] работает напрямую.
+  static Dio _buildDio({LocalProxyPortResolver? localProxyPort}) {
     final dio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 30),
@@ -148,12 +162,8 @@ class SubscriptionService {
       },
     ));
 
-    if (proxyHttpPort != null) {
-      configureDioForActiveVpn(
-        dio,
-        useLocalProxy: true,
-        httpPort: proxyHttpPort,
-      );
+    if (localProxyPort != null) {
+      configureDioForLocalVpnProxy(dio, localProxyPort);
     }
 
     return dio;
@@ -327,7 +337,9 @@ class SubscriptionService {
         : const <String, String>{};
     // Закреплённый подпиской UA: перебор запасных при нём запрещён — иначе
     // подмена молча схлопывается обратно в наш обычный клиентский UA.
-    final pinnedUserAgent = identity.activeUserAgent;
+    // Введён руками, поэтому тоже чистится до ASCII: кириллица в значении
+    // заголовка роняет запрос в dart:io ещё до отправки.
+    final pinnedUserAgent = _asciiHeaderValueOrNull(identity.activeUserAgent);
 
     try {
       final result = await _fetchWithRetry(
@@ -668,6 +680,13 @@ class SubscriptionService {
       try {
         client = HttpClient()
           ..connectionTimeout = const Duration(seconds: 15);
+        // Свой клиент мимо dio — прокси ему надо выдать отдельно, иначе
+        // фолбэк уходит напрямую при живом туннеле и умирает на блокировке
+        // ровно там, где основной запрос уже проехал бы.
+        final resolveProxy = _localProxyPort;
+        if (resolveProxy != null) {
+          configureHttpClientForLocalVpnProxy(client, resolveProxy);
+        }
         final uri = Uri.parse(candidate);
         final req = await client.getUrl(uri);
         req.headers.set(
@@ -915,18 +934,46 @@ class SubscriptionService {
     final model = _trimmedOrNull(overrideModel) ?? await _getDeviceModel();
     final osVersion =
         _trimmedOrNull(overrideOsVersion) ?? Platform.operatingSystemVersion;
+    // Значения ОБЯЗАНЫ быть ASCII: Platform.operatingSystemVersion на
+    // локализованной Windows отдаёт «"Майкрософт Windows 11 Pro" 10.0 (Build
+    // 26100)», localHostname тоже бывает кириллическим, и dart:io роняет весь
+    // запрос с FormatException ещё до сети — снаружи это выглядело «Ошибкой
+    // сети» на любом обновлении подписки.
+    final osAscii = _asciiHeaderValue(os, fallback: Platform.operatingSystem);
+    final verAscii = _asciiHeaderValue(osVersion, fallback: 'unknown');
+    final modelAscii = _asciiHeaderValue(model, fallback: 'Unknown Device');
     return {
       'x-hwid': hwid, // required by remnawave
       // алиасы для панелей со строгой проверкой регистра/имени
       'X-HWID': hwid,
       'hwid': hwid,
-      'x-device-os': os,
-      'X-Device-Os': os,
-      'x-ver-os': osVersion,
-      'X-Ver-Os': osVersion,
-      'x-device-model': model,
-      'X-Device-Model': model,
+      'x-device-os': osAscii,
+      'X-Device-Os': osAscii,
+      'x-ver-os': verAscii,
+      'X-Ver-Os': verAscii,
+      'x-device-model': modelAscii,
+      'X-Device-Model': modelAscii,
     };
+  }
+
+  /// Печатный ASCII для значения HTTP-заголовка: не-ASCII выбрасывается,
+  /// осиротевшие кавычки схлопываются («"Майкрософт Windows 11 Pro" 10.0» →
+  /// «10.0»). Если от строки не осталось ни буквы, ни цифры (имя устройства
+  /// целиком кириллицей превратилось бы в «-»), берётся [fallback].
+  static String _asciiHeaderValue(String value, {required String fallback}) {
+    final cleaned = value
+        .replaceAll(RegExp(r'[^\x20-\x7E]'), '')
+        .replaceAll('""', '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return RegExp(r'[A-Za-z0-9]').hasMatch(cleaned) ? cleaned : fallback;
+  }
+
+  static String? _asciiHeaderValueOrNull(String? value) {
+    final trimmed = _trimmedOrNull(value);
+    if (trimmed == null) return null;
+    final cleaned = _asciiHeaderValue(trimmed, fallback: '');
+    return cleaned.isEmpty ? null : cleaned;
   }
 
   static String? _trimmedOrNull(String? value) {

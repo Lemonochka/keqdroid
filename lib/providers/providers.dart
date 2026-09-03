@@ -102,8 +102,40 @@ final serverSortModesProvider =
   ServerSortModesNotifier.new,
 );
 
+/// Порт локального HTTP-инбаунда ядра, если через него сейчас можно выйти в
+/// сеть; null — идти напрямую.
+///
+/// Считается на каждый запрос, а не при сборке сервиса: сервис подписок живёт
+/// всё время работы приложения, а VPN за это время включают и выключают.
+int? _activeLocalHttpProxyPort(Ref ref, StorageService storage) {
+  final vpnConnected =
+      ref.read(vpnStateProvider).value?.status == VpnStatus.connected;
+  final active = ref.read(serversProvider).activeServer;
+  final awgBackend = active != null && AwgProfile.isAwgConfig(active.config);
+  if (!tunnelHasLocalHttpProxy(
+    vpnConnected: vpnConnected,
+    awgBackend: awgBackend,
+  )) {
+    return null;
+  }
+  // Порт активной сессии, а не из настроек: когда настроенный был занят,
+  // ядро слушает подменённый (см. [LocalPortPlan]). Сессионные порты ставит
+  // только десктоп — на Android подмены нет, там настройка и есть правда.
+  return ActiveLocalPorts().httpPort ??
+      storage.cachedSettings?.httpPort ??
+      const AppSettings().httpPort;
+}
+
 final subscriptionServiceProvider = Provider<SubscriptionService>((ref) {
-  return SubscriptionService(ref.read(storageProvider));
+  final storage = ref.read(storageProvider);
+  // Без этого обновление подписки уходит мимо туннеля: на Android пакет
+  // приложения исключён из TUN, и заблокированный провайдером домен подписки
+  // остаётся недоступен при включённом VPN — при том что в браузере
+  // открывается.
+  return SubscriptionService(
+    storage,
+    localProxyPort: () => _activeLocalHttpProxyPort(ref, storage),
+  );
 });
 
 final vpnEngineProvider = Provider<VpnEngine>((ref) {

@@ -17,6 +17,7 @@ class StorageService {
   static const _kIncludePkgs   = 'keqdis_include_packages';
   static const _kSettings      = 'keqdis_settings';
   static const _kSocksPort     = 'keqdis_socks_port';
+  static const _kActiveHttpPort = 'keqdis_active_http_port';
   static const _kHwid          = 'keqdis_hwid';
   static const _kWindowBounds  = 'keqdis_window_bounds';
   static const _kSortModes     = 'keqdis_server_sort_modes';
@@ -291,6 +292,11 @@ class StorageService {
 
   // настройки
 
+  /// Настройки из кэша без await; null — [getSettings] ещё ни разу не звали.
+  /// Для синхронных путей вроде HttpClient.findProxy, которому ответ нужен
+  /// прямо в момент запроса.
+  AppSettings? get cachedSettings => _settingsCache;
+
   Future<AppSettings> getSettings() async {
     final cached = _settingsCache;
     if (cached != null) return cached;
@@ -318,6 +324,21 @@ class StorageService {
 
   Future<void> setSocksPort(int port) =>
       _serial(() => _prefs.setInt(_kSocksPort, port));
+
+  /// HTTP-инбаунд живой сессии; null — VPN не подключён.
+  ///
+  /// Пишется на диск, а не только в ActiveLocalPorts, ради фоновых изолятов:
+  /// WorkManager на Android живёт в своём изоляте и синглтонов главного не
+  /// видит, а обновлять подписки мимо туннеля ему нельзя.
+  int? getActiveLocalHttpPort() => _prefs.getInt(_kActiveHttpPort);
+
+  Future<void> setActiveLocalHttpPort(int? port) => _serial(() async {
+        if (port == null) {
+          await _prefs.remove(_kActiveHttpPort);
+        } else {
+          await _prefs.setInt(_kActiveHttpPort, port);
+        }
+      });
 
   // hwid
 

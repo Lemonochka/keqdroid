@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io' show Platform;
+
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,6 +10,7 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import '../models/app_font.dart';
 import '../models/app_settings.dart';
 import '../models/icon_shape.dart';
+import '../platform/vpn_native_bridge.dart';
 import '../providers/providers.dart';
 import '../shared/ui/expressive.dart';
 import '../shared/ui/expressive_elements.dart';
@@ -366,6 +370,27 @@ class KeqdisApp extends ConsumerWidget {
   }
 }
 
+/// Фон окна Android держим равным поверхности приложения.
+///
+/// `NormalTheme` в `styles.xml` наследуется от `Theme.Light`/`Theme.Black`, то
+/// есть переключается СИСТЕМНОЙ тёмной темой. Тема приложения выбирается своей
+/// настройкой и с системной не связана: у человека со светлой системой и тёмным
+/// приложением фон окна оставался белым. Виден он там, где поверхность Flutter
+/// не достаёт до края экрана, — на HyperOS под панелью навигации остаётся
+/// полоска в несколько пикселей, и она светилась белым поперёк всего низа.
+///
+/// Зовётся из `build`, поэтому дедуплицируется по цвету и уходит в нативку
+/// отложенно: дёргать канал во время сборки дерева нельзя.
+Color? _lastWindowBackground;
+
+void _syncAndroidWindowBackground(Color surface) {
+  if (!Platform.isAndroid || surface == _lastWindowBackground) return;
+  _lastWindowBackground = surface;
+  scheduleMicrotask(
+    () => VpnNativeBridge.setWindowBackgroundColor(surface.toARGB32()),
+  );
+}
+
 class _ThemedApp extends ConsumerWidget {
   final ColorScheme lightScheme;
   final ColorScheme darkScheme;
@@ -401,6 +426,14 @@ class _ThemedApp extends ConsumerWidget {
     final iconShape = IconShape.fromId(settings.iconShapeId);
 
     final locale = localeFromSettings(settings);
+
+    // Фон окна Android — под ту схему, которая реально на экране (см.
+    // [_syncAndroidWindowBackground]).
+    _syncAndroidWindowBackground(
+      settings.darkTheme
+          ? dark(useSystem ? darkScheme : customDark).surface
+          : (useSystem ? lightScheme : customLight).surface,
+    );
 
     return MaterialApp(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,

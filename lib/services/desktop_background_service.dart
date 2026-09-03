@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 
 import '../core/app_logger.dart';
+import '../utils/local_vpn_proxy.dart';
 import 'storage_service.dart';
 import 'subscription_service.dart';
 
@@ -46,7 +47,12 @@ class DesktopBackgroundService {
     try {
       WidgetsFlutterBinding.ensureInitialized();
       final storage = await StorageService.init();
-      final service = SubscriptionService(storage);
+      // Статический путь без riverpod: состояние VPN недоступно, поэтому порт
+      // живой сессии берём с диска — его пишет connect/disconnect.
+      final proxyPort = await resolveLocalProxyForBackground(
+        storage.getActiveLocalHttpPort(),
+      );
+      final service = SubscriptionService(storage, localProxyPort: proxyPort);
       final due = await service.getDueForUpdate(
         defaultInterval: const Duration(hours: 1),
       );
