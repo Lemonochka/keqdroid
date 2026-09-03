@@ -29,7 +29,7 @@
   &nbsp;·&nbsp;
   <a href="https://t.me/keqdroid">Telegram chat</a>
   &nbsp;·&nbsp;
-  <a href="docs/README.md">Developer docs</a>
+  <a href="docs/BUILD.md">Build from source</a>
 </p>
 
 ---
@@ -163,7 +163,7 @@ The window remembers its size and position; hotkeys work while the app window is
 
 ## Development
 
-Full docs in [`docs/`](docs/README.md): onboarding, architecture, project map, glossary, pitfalls.
+Environment, per-platform builds, tests and releases: [`docs/BUILD.md`](docs/BUILD.md).
 
 ### Build
 
@@ -231,7 +231,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, atta
   &nbsp;·&nbsp;
   <a href="https://t.me/keqdroid">Чат в Telegram</a>
   &nbsp;·&nbsp;
-  <a href="docs/README.md">Документация для разработчиков</a>
+  <a href="docs/BUILD.md#русский">Сборка из исходников</a>
 </p>
 
 ---
@@ -359,7 +359,7 @@ Debian/Arch, x86_64. В релизе — tar.gz, AppImage, deb; для Arch ср
 
 ## Разработка
 
-Полная документация — в [`docs/`](docs/README.md): онбординг, архитектура, карта проекта, словарь, грабли.
+Окружение, сборка под каждую платформу, тесты и релизы — [`docs/BUILD.md`](docs/BUILD.md#русский).
 
 ### Сборка
 
