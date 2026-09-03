@@ -185,13 +185,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsRoutingResetDone => 'Routing-Regeln zurückgesetzt';
 
   @override
-  String get settingsRoutingHeaderDesc => 'Lege fest, welche Seiten direkt am VPN vorbei gehen, welche zwingend hindurch geleitet und welche blockiert werden. Beginne mit einem Preset und passe dann jede Liste unten an.';
+  String get settingsRoutingHeaderDesc => 'Welche Seiten am VPN vorbei gehen, welche hindurch und welche blockiert werden';
 
   @override
   String get settingsRoutingPresetsTitle => 'Schnelle Presets';
 
   @override
-  String get settingsRoutingPresetsHint => 'Wähle eine kuratierte Liste und füge sie zur passenden Liste unten hinzu. Einträge können danach bearbeitet oder entfernt werden.';
+  String get settingsRoutingPresetsHint => 'Fertige Liste — landet im Feld unten';
 
   @override
   String get settingsRoutingPresetChoose => 'Preset wählen…';
@@ -275,9 +275,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsRoutingBlockDesc => 'Domains und IPs hier werden verworfen und verbinden nie.';
-
-  @override
-  String get settingsRoutingSyntaxHint => 'Jede Liste akzeptiert Domains und IPs zusammen, durch Komma oder Zeilenumbruch getrennt:\n• ru — jeder *.ru-Host (ein Wort ohne Punkt = Domain-Suffix)\n• vk.com — diese Domain und ihre Subdomains\n• .example.com — nur Subdomains\n• 10.0.0.0/8 oder 1.2.3.4 — IP-Adresse oder CIDR-Bereich\n• geoip:ru / geosite:refilter — GeoIP/Geosite-Codes aus den mitgelieferten Datenbanken\nPrivate/LAN-IPs und dein Server bleiben automatisch direkt.';
 
   @override
   String get settingsRoutingValuesHint => 'Eine pro Zeile oder durch Komma getrennt';
@@ -392,22 +389,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get themeUseDynamicColors => 'Dynamische Android-Farben verwenden';
 
   @override
-  String get themeUseDynamicColorsSubtitle => 'Dynamische Android-Farben verwenden, wenn verfügbar';
+  String get themeUseDynamicColorsSubtitle => 'Wenn Android sie liefert';
 
   @override
-  String get themeDynamicPaletteHint => 'Die dynamische Android-Palette ist aktiv. Hell/Dunkel funktioniert unabhängig.';
-
-  @override
-  String get themeSystemPaletteHint => 'Die System-Akzentpalette ist aktiv. Hell/Dunkel funktioniert unabhängig.';
+  String get themePaletteHint => 'Hell/Dunkel schaltet weiterhin separat';
 
   @override
   String get themeUseSystemColors => 'System-Akzentfarben verwenden';
 
   @override
-  String get themeUseSystemColorsSubtitle => 'Akzentfarben von Windows oder Linux übernehmen, wenn verfügbar';
-
-  @override
-  String get themeCustomPaletteHint => 'Die benutzerdefinierte Palette ist aktiv. Hell/Dunkel funktioniert unabhängig.';
+  String get themeUseSystemColorsSubtitle => 'Akzentfarbe von Windows oder Linux';
 
   @override
   String get themeColorThemesTitle => 'Farbthemen';
@@ -457,7 +448,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsLocalPortsTitle => 'Lokale Proxy-Ports';
 
   @override
-  String get settingsLocalPortsHint => 'Listen-Ports der lokalen SOCKS5- und HTTP-Proxys (Standard 2080 / 2081). Werden bei der nächsten Verbindung angewendet. Die beiden Ports müssen sich unterscheiden.';
+  String get settingsLocalPortsHint => 'SOCKS5 und HTTP, Standard 2080 / 2081, müssen verschieden sein. Gilt ab der nächsten Verbindung.';
 
   @override
   String get settingsPortInvalid => 'Geben Sie einen Port zwischen 1 und 65535 ein';
@@ -528,22 +519,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXraySniffingRouteOnly => 'Sniffing nur für Routing';
 
   @override
-  String get settingsXrayCoreIntro => 'Diese Optionen werden in die generierte Xray-Konfiguration eingefügt. Ändere sie nur, wenn du weißt, was sie bewirken.';
-
-  @override
   String get settingsXrayDnsDefaultNote => 'Standard: Cloudflare und Google DoH';
 
   @override
   String get settingsXrayXmuxParamsTitle => 'Feineinstellung';
 
   @override
-  String get settingsXrayXmuxParamsHint => 'Leer lassen, um die Xray-Standardwerte zu verwenden. Werte können eine Zahl oder ein Bereich sein (z. B. 16-32).';
+  String get settingsXrayXmuxParamsHint => 'Leer nutzt den Xray-Standard. Zahl oder Bereich, z. B. 16-32.';
 
   @override
   String get settingsXraySniffingHint => 'Zielprotokoll und Domain aus dem eingehenden Verkehr erkennen';
 
   @override
-  String get settingsXraySniffingRouteOnlyHint => 'Aus (Standard): die erkannte Domain wird zum Ziel und wird erneut aufgelöst — bei direkten Routen lokal, bei Proxy-Routen auf dem Server. An: die Domain wählt nur die Regel, verbunden wird weiterhin mit der Adresse der App — und die ist falsch, sobald sie von einem Resolver jenseits des Tunnels stammt.';
+  String get settingsXraySniffingRouteOnlyHint => 'Die erkannte Domain wählt nur die Regel; verbunden wird zur Adresse der App.';
 
   @override
   String get settingsXrayResetDefaults => 'Auf Standard zurücksetzen';
@@ -570,6 +558,36 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayXmuxHKeepAlivePeriod => 'Keep-Alive-Intervall (Sek.)';
 
   @override
+  String get settingsXrayFragmentSection => 'Fragmentierung';
+
+  @override
+  String get settingsXrayFragmentEnable => 'TLS-ClientHello aufteilen';
+
+  @override
+  String get settingsXrayFragmentEnableHint => 'Das erste Paket geht in Stücken raus, DPI liest die SNI nicht. Nur Xray-Kern.';
+
+  @override
+  String get settingsXrayFragmentPacketsTitle => 'Was aufgeteilt wird';
+
+  @override
+  String get settingsXrayFragmentPacketsTlsHello => 'Nur TLS-ClientHello';
+
+  @override
+  String get settingsXrayFragmentPacketsFirst => 'Erste Pakete des Streams';
+
+  @override
+  String get settingsXrayFragmentParamsTitle => 'Stückgröße und Pause';
+
+  @override
+  String get settingsXrayFragmentParamsHint => 'Zahl oder Bereich, z. B. 100-200.';
+
+  @override
+  String get settingsXrayFragmentLength => 'Größe, Bytes';
+
+  @override
+  String get settingsXrayFragmentInterval => 'Pause, ms';
+
+  @override
   String get settingsTunSection => 'TUN-Modus';
 
   @override
@@ -579,13 +597,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTunStackTitle => 'Netzwerk-Stack';
 
   @override
-  String get settingsTunStackSystemHint => 'Kernel-TCP/IP-Stack — am schnellsten, terminiert unter Windows TCP jedoch über einen Listener an der TUN-Adresse und braucht eine Windows-Firewall-Regel; greift die Regel nicht, startet der Tunnel ganz ohne Datenverkehr';
+  String get settingsTunStackSystemHint => 'OS-Stack: am schnellsten, braucht unter Windows eine Firewall-Regel.';
 
   @override
-  String get settingsTunStackGvisorHint => 'Userspace-Stack — Standard. Läuft vollständig im Core, braucht daher weder Listener noch Firewall-Regeln; etwas langsamer. Erfordert einen mit gVisor gebauten Core (Cores aus App 0.7.1 und älter beenden sich mit Code 1)';
+  String get settingsTunStackGvisorHint => 'Userspace-Stack: kein Listener, keine Firewall-Regeln, etwas langsamer. Braucht einen Kern mit gVisor.';
 
   @override
-  String get settingsTunStackMixedHint => 'gVisor für TCP, system für UDP. Erfordert einen mit gVisor gebauten Core (Cores aus App 0.7.1 und älter beenden sich mit Code 1)';
+  String get settingsTunStackMixedHint => 'gVisor für TCP, system für UDP. Braucht einen Kern mit gVisor.';
 
   @override
   String get settingsTunMtu => 'MTU';
@@ -627,13 +645,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTunAutoRoute => 'Auto Route';
 
   @override
-  String get settingsTunAutoRouteHint => 'Fügt Systemrouten automatisch in den Tunnel ein. Nur deaktivieren, wenn Routen manuell verwaltet werden — sonst erreicht kein Traffic das TUN';
+  String get settingsTunAutoRouteHint => 'Fügt Systemrouten in den Tunnel ein. Ohne sie erreicht nichts das TUN.';
 
   @override
   String get settingsTunIpv6 => 'IPv6 im Tunnel halten';
 
   @override
-  String get settingsTunIpv6Hint => 'Ein TUN-Interface mit nur einer IPv4-Adresse bekommt keine IPv6-Routen: Auf Dual-Stack-Rechnern läuft IPv6-Verkehr am Tunnel vorbei — an den Routing-Regeln und am Proxy vorbei. Aktiviert erhält das Interface auch eine IPv6-Adresse und der IPv6-Ausgang wird geschlossen, sodass Anwendungen sofort auf IPv4 zurückfallen, das bereits im Tunnel liegt. Die Adresse wird nur gesetzt, wenn der Rechner wirklich globales IPv6 hat. Nur Kern xray/keqrnel';
+  String get settingsTunIpv6Hint => 'Gibt dem TUN-Interface eine IPv6-Adresse; sonst läuft aller IPv6 am Tunnel vorbei. Nur Xray/keqrnel-Kern.';
 
   @override
   String get settingsMihomoSection => 'mihomo-Kern';
@@ -642,7 +660,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsMihomoFakeIp => 'Fake IP';
 
   @override
-  String get settingsMihomoFakeIpHint => 'Der Kern beantwortet DNS mit einer Platzhalter-Adresse statt der echten: Auflösungen sind sofort da, und Domain-Regeln hängen nicht mehr am Sniffing. Dafür müssen IP-Regeln vor dem Vergleich erneut aufgelöst werden — dieselben Routing-Listen verhalten sich also etwas anders als unter Xray. Gilt nur dort, wo mihomo den Tunnel selbst besitzt: TUN-Modus und Android.';
+  String get settingsMihomoFakeIpHint => 'Sofortige Auflösung über Fake-Adressen. Nur wo mihomo den Tunnel besitzt: TUN und Android.';
 
   @override
   String get settingsPingTitle => 'Server-Ping';
@@ -675,7 +693,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsPingKeepAlive => 'Keep-alive';
 
   @override
-  String get settingsPingKeepAliveHint => 'Sendet zwei Anfragen über eine Verbindung und behält die bessere: Das Ergebnis ist die Antwortzeit des Servers ohne die Kosten des Verbindungsaufbaus. Ausgeschaltet wird die gesamte Anfrage samt Handshake gemessen — größere Werte, näher an dem, worauf ein Browser wartet.';
+  String get settingsPingKeepAliveHint => 'Antwortzeit ohne Handshake. Aus — die ganze Anfrage, wie ein Browser sie sieht';
 
   @override
   String get settingsPingMethodSpeed => 'Geschwindigkeitstest';
@@ -970,7 +988,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsImportBackup => 'Sicherung importieren';
 
   @override
-  String get settingsChooseWhatToImport => 'Wähle, was importiert werden soll (ausgewählte Abschnitte ersetzen deine aktuellen Daten).';
+  String get settingsChooseWhatToImport => 'Ausgewählte Abschnitte ersetzen deine aktuellen Daten';
 
   @override
   String get settingsSplitTunnelingApps => 'Split-Tunneling-Apps';
@@ -985,7 +1003,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAppSettings => 'App-Einstellungen';
 
   @override
-  String get settingsAppSettingsHint => 'Routing, DNS, Erscheinungsbild, Ping und Sprache. Ports, LAN-Freigabe und TUN bleiben so, wie sie auf diesem Gerät sind.';
+  String get settingsAppSettingsHint => 'Routing, DNS, Aussehen, Ping, Sprache. Nicht Ports, LAN-Freigabe, TUN.';
 
   @override
   String get settingsImport => 'Importieren';
@@ -994,10 +1012,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsExport => 'Exportieren';
 
   @override
-  String get settingsCreateFileToSave => 'Erstelle eine Datei, die du speichern und auf einem anderen Gerät importieren kannst.';
+  String get settingsCreateFileToSave => 'Die Datei lässt sich auf ein anderes Gerät mitnehmen';
 
   @override
-  String get settingsPickExportedFile => 'Wähle eine zuvor exportierte Datei und stelle ausgewählte Abschnitte wieder her.';
+  String get settingsPickExportedFile => 'Was wiederhergestellt wird, wählst du nach der Datei';
 
   @override
   String get settingsWorking => 'Wird ausgeführt...';
@@ -1286,6 +1304,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get statsTimeLabel => 'Zeit';
+
+  @override
+  String get statsDownloadLabel => 'Empfangsrate';
+
+  @override
+  String get statsUploadLabel => 'Senderate';
 
   @override
   String get qrScanTitle => 'QR-Code scannen';
@@ -1647,7 +1671,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appearanceAmoled => 'Reines Schwarz (AMOLED)';
 
   @override
-  String get appearanceAmoledSubtitle => 'Echt schwarzer Hintergrund im dunklen Design — spart Strom auf OLED-Displays';
+  String get appearanceAmoledSubtitle => 'Echtes Schwarz im dunklen Design — spart Strom auf OLED';
 
   @override
   String get appearanceAmoledNeedsDark => 'Verfügbar bei aktiviertem dunklen Design';
@@ -1674,7 +1698,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appearanceWaveLatencyColor => 'Anzeige nach Latenz färben';
 
   @override
-  String get appearanceWaveLatencyColorSubtitle => 'Der Balken unter dem Verbindungsknopf wird nach dem Ping des aktiven Servers grün, orange oder rot. Aus behält die Akzentfarbe des Themes.';
+  String get appearanceWaveLatencyColorSubtitle => 'Grün, orange oder rot nach dem Ping des aktiven Servers';
 
   @override
   String get appearanceFontTitle => 'Schriftart';
@@ -2024,7 +2048,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsProxyAuthTitle => 'Passwort für den lokalen Proxy';
 
   @override
-  String get settingsProxyAuthSubtitle => 'Aus für Ziele ohne Eingabefeld dafür, etwa die WLAN-Proxy-Einstellungen';
+  String get settingsProxyAuthSubtitle => 'Ausschalten, wo es kein Feld dafür gibt — etwa beim WLAN-Proxy';
 
   @override
   String get settingsProxyAuthUser => 'Benutzername';
@@ -2045,22 +2069,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTunnelModeProxy => 'Proxy';
 
   @override
-  String get settingsTunnelModeProxySubtitle => 'Nur ein lokaler Proxy — kein System-VPN, es wird nichts von selbst umgeleitet';
+  String get settingsTunnelModeProxySubtitle => 'Nur lokaler Proxy, kein System-VPN';
 
   @override
-  String get settingsTunnelModeHint => 'Im Proxy-Modus öffnet die App SOCKS und HTTP auf 127.0.0.1 und leitet von sich aus nichts um: richte eine App oder die WLAN-Proxy-Einstellungen darauf. Die Ports stehen unter „Einstellungen → Lokale Ports“. Routing pro App und DNS-Abfangen gibt es nur im VPN-Modus; AmneziaWG-Server laufen immer als VPN.';
+  String get settingsTunnelModeHint => 'Proxy-Modus startet SOCKS und HTTP auf 127.0.0.1 — richte eine App oder das WLAN darauf. Der Proxy steht jeder App auf dem Gerät offen. Per-App-Routing und DNS-Abfang gibt es nur im VPN-Modus.';
 
   @override
   String get settingsCoreAuto => 'Automatisch';
 
   @override
-  String get settingsCoreAutoSubtitle => 'Der Kern richtet sich nach dem Format des Servers: Links laufen auf Xray, fertige Konfigurationen auf dem Kern, für den sie geschrieben sind.';
+  String get settingsCoreAutoSubtitle => 'Links gehen an Xray, fertige Konfigurationen an ihren eigenen Kern';
 
   @override
   String get settingsCoreSkipClash => 'Der aktive Server ist eine fertige Clash-Konfiguration — sie läuft unabhängig von der Kernauswahl nur auf mihomo.';
 
   @override
-  String get settingsCoreSkipCustom => 'Der aktive Server ist eine fertige Xray-JSON-Konfiguration (Routing und DNS stammen vom Anbieter) und läuft deshalb unabhängig von der Kernauswahl über libxray. Für mihomo wird ein Abo mit gewöhnlichen vless:// / vmess://-Links benötigt — ändere die Client-Identität in den Abo-Einstellungen.';
+  String get settingsCoreSkipCustom => 'Der aktive Server ist eine fertige Xray-JSON-Konfiguration und läuft daher unabhängig vom gewählten Kern über libxray. mihomo braucht ein Abo mit normalen Links.';
 
   @override
   String get settingsCoreSkipChain => 'Der aktive Server ist eine Proxy-Kette: Ihre Knoten hängen an Xrays dialerProxy, sie läuft deshalb unabhängig von der Kernauswahl über libxray.';
@@ -2119,7 +2143,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsInternalsGeoTrimmed => 'Länderdatenbank ist die gekürzte';
 
   @override
-  String get settingsInternalsGeoTrimmedHint => 'Sie enthält nur die Codes, die die Voreinstellungen der App brauchen. Eine Regel mit einem anderen Land wird vor dem Verbinden verworfen.';
+  String get settingsInternalsGeoTrimmedHint => 'Nur die Codes, die die Presets der App brauchen; eine Regel mit anderem Land wird verworfen.';
 
   @override
   String get settingsInternalsGeoDownload => 'Vollständige Datenbank laden';
@@ -2187,7 +2211,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appearanceUiScaleTitle => 'Oberflächengröße';
 
   @override
-  String get appearanceUiScaleSubtitle => 'Wirkt zusätzlich zur Textgröße des Systems, 100% heißt also „wie im System“. Text und Zeilenhöhen ändern sich; Symbole und Abstände bleiben gleich.';
+  String get appearanceUiScaleSubtitle => 'Zusätzlich zur Textgröße des Systems. Nur Text und Zeilenhöhen.';
 
   @override
   String get appearanceIconShapeTitle => 'Symbolform';

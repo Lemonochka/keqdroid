@@ -185,13 +185,13 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsRoutingResetDone => 'قوانین مسیریابی بازنشانی شد';
 
   @override
-  String get settingsRoutingHeaderDesc => 'تعیین کنید کدام سایت‌ها مستقیم و بدون VPN بروند، کدام حتماً از VPN رد شوند و کدام مسدود باشند. برای شروع سریع یک قالب آماده بردارید و بعد فهرست‌های پایین را دقیق‌تر کنید.';
+  String get settingsRoutingHeaderDesc => 'کدام سایت‌ها مستقیم بروند، کدام از VPN رد شوند و کدام مسدود باشند';
 
   @override
   String get settingsRoutingPresetsTitle => 'قالب‌های آماده';
 
   @override
-  String get settingsRoutingPresetsHint => 'یک فهرست آماده انتخاب کنید تا به فهرست متناظر پایین اضافه شود. بعداً می‌توانید موارد آن را ویرایش یا حذف کنید.';
+  String get settingsRoutingPresetsHint => 'فهرست آماده — به کادر پایین اضافه می‌شود';
 
   @override
   String get settingsRoutingPresetChoose => 'انتخاب قالب…';
@@ -275,9 +275,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get settingsRoutingBlockDesc => 'دامنه‌ها و آی‌پی‌های این فهرست حذف می‌شوند و اصلاً وصل نمی‌شوند.';
-
-  @override
-  String get settingsRoutingSyntaxHint => 'هر فهرست هم دامنه می‌پذیرد هم آی‌پی، جدا شده با ویرگول یا خط جدید:\n• ru — هر هاستی که به ru. ختم شود (کلمهٔ خالی = پسوند دامنه)\n• vk.com — همان دامنه و زیردامنه‌هایش\n• example.com. — فقط زیردامنه‌ها\n• 10.0.0.0/8 یا 1.2.3.4 — آدرس آی‌پی یا بازهٔ CIDR\n• geoip:ru / geosite:refilter — کدهای GeoIP/GeoSite از پایگاه دادهٔ همراه برنامه\nآی‌پی‌های شبکهٔ داخلی و خود سرور شما همیشه خودکار مستقیم می‌مانند.';
 
   @override
   String get settingsRoutingValuesHint => 'هر مورد در یک خط، یا جدا شده با ویرگول';
@@ -392,22 +389,16 @@ class AppLocalizationsFa extends AppLocalizations {
   String get themeUseDynamicColors => 'استفاده از رنگ‌های پویای اندروید';
 
   @override
-  String get themeUseDynamicColorsSubtitle => 'در صورت پشتیبانی، از رنگ‌های پویای اندروید استفاده شود';
+  String get themeUseDynamicColorsSubtitle => 'اگر اندروید آن‌ها را بدهد';
 
   @override
-  String get themeDynamicPaletteHint => 'پالت پویای اندروید فعال است. حالت روشن و تیره جداگانه کار می‌کنند.';
-
-  @override
-  String get themeSystemPaletteHint => 'پالت رنگ تأکیدی سیستم فعال است. حالت روشن و تیره جداگانه کار می‌کنند.';
+  String get themePaletteHint => 'روشن/تیره جداگانه عوض می‌شود';
 
   @override
   String get themeUseSystemColors => 'استفاده از رنگ تأکیدی سیستم';
 
   @override
-  String get themeUseSystemColorsSubtitle => 'در صورت پشتیبانی، از رنگ تأکیدی ویندوز یا لینوکس پیروی کن';
-
-  @override
-  String get themeCustomPaletteHint => 'پالت دلخواه فعال است. حالت روشن و تیره جداگانه کار می‌کنند.';
+  String get themeUseSystemColorsSubtitle => 'رنگ تأکیدی ویندوز یا لینوکس';
 
   @override
   String get themeColorThemesTitle => 'پوسته‌های رنگی';
@@ -457,7 +448,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsLocalPortsTitle => 'پورت‌های پروکسی محلی';
 
   @override
-  String get settingsLocalPortsHint => 'پورت‌های شنود پروکسی محلی SOCKS5 و HTTP (پیش‌فرض 2080 / 2081). از اتصال بعدی اعمال می‌شود. دو پورت باید متفاوت باشند.';
+  String get settingsLocalPortsHint => 'SOCKS5 و HTTP، پیش‌فرض 2080 / 2081 و باید متفاوت باشند. از اتصال بعدی اعمال می‌شود.';
 
   @override
   String get settingsPortInvalid => 'پورتی بین 1 تا 65535 وارد کنید';
@@ -528,22 +519,19 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXraySniffingRouteOnly => 'شناسایی فقط برای مسیریابی';
 
   @override
-  String get settingsXrayCoreIntro => 'این گزینه‌ها مستقیم داخل کانفیگ ساخته‌شدهٔ Xray می‌روند. فقط وقتی تغییرشان دهید که بدانید چه کار می‌کنند.';
-
-  @override
   String get settingsXrayDnsDefaultNote => 'پیش‌فرض: DoH کلادفلر و گوگل';
 
   @override
   String get settingsXrayXmuxParamsTitle => 'تنظیم دقیق';
 
   @override
-  String get settingsXrayXmuxParamsHint => 'خالی بگذارید تا مقادیر پیش‌فرض Xray به کار برود. مقدار می‌تواند عدد یا بازه باشد (مثلاً 16-32).';
+  String get settingsXrayXmuxParamsHint => 'خالی یعنی پیش‌فرض Xray. یک عدد یا یک بازه، مثلاً 16-32.';
 
   @override
   String get settingsXraySniffingHint => 'تشخیص پروتکل و دامنهٔ مقصد از روی ترافیک ورودی';
 
   @override
-  String get settingsXraySniffingRouteOnlyHint => 'خاموش (پیش‌فرض): دامنهٔ شناسایی‌شده مقصد می‌شود و دوباره ترجمه می‌شود — برای مسیر مستقیم به‌صورت محلی و برای مسیر پروکسی روی سرور. روشن: دامنه فقط قاعده را انتخاب می‌کند و اتصال به همان نشانی‌ای می‌رود که برنامه داده — و هر وقت آن نشانی از یک ریزالور آن‌سوی تونل آمده باشد، نادرست است.';
+  String get settingsXraySniffingRouteOnlyHint => 'دامنهٔ شناسایی‌شده فقط قانون را انتخاب می‌کند؛ اتصال به نشانی برنامه می‌رود.';
 
   @override
   String get settingsXrayResetDefaults => 'بازگشت به پیش‌فرض';
@@ -570,6 +558,36 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayXmuxHKeepAlivePeriod => 'دورهٔ keep-alive (ثانیه)';
 
   @override
+  String get settingsXrayFragmentSection => 'تکه‌تکه‌سازی';
+
+  @override
+  String get settingsXrayFragmentEnable => 'تکه‌تکه کردن TLS ClientHello';
+
+  @override
+  String get settingsXrayFragmentEnableHint => 'بستهٔ نخست تکه‌تکه می‌رود و DPI نمی‌تواند SNI را بخواند. فقط هستهٔ Xray.';
+
+  @override
+  String get settingsXrayFragmentPacketsTitle => 'چه چیزی تکه شود';
+
+  @override
+  String get settingsXrayFragmentPacketsTlsHello => 'فقط TLS ClientHello';
+
+  @override
+  String get settingsXrayFragmentPacketsFirst => 'بسته‌های نخست جریان';
+
+  @override
+  String get settingsXrayFragmentParamsTitle => 'اندازهٔ تکه و مکث';
+
+  @override
+  String get settingsXrayFragmentParamsHint => 'یک عدد یا یک بازه، مثلاً 100-200.';
+
+  @override
+  String get settingsXrayFragmentLength => 'اندازه، بایت';
+
+  @override
+  String get settingsXrayFragmentInterval => 'مکث، میلی‌ثانیه';
+
+  @override
   String get settingsTunSection => 'حالت TUN';
 
   @override
@@ -579,13 +597,13 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsTunStackTitle => 'پشتهٔ شبکه';
 
   @override
-  String get settingsTunStackSystemHint => 'پشتهٔ TCP/IP هسته — سریع‌ترین، اما در ویندوز TCP را با یک شنونده روی نشانی TUN پایان می‌دهد و به قاعدهٔ Windows Firewall نیاز دارد؛ اگر آن قاعده ثبت نشود، تونل بالا می‌آید ولی هیچ ترافیکی رد نمی‌شود';
+  String get settingsTunStackSystemHint => 'پشتهٔ سیستم‌عامل: سریع‌ترین، در ویندوز به قاعدهٔ فایروال نیاز دارد.';
 
   @override
-  String get settingsTunStackGvisorHint => 'پشتهٔ فضای کاربر — پیش‌فرض. کاملاً داخل هسته اجرا می‌شود، پس نه شنونده می‌خواهد و نه قاعدهٔ فایروال؛ کمی کندتر. به هسته‌ای با gVisor نیاز دارد (هسته‌های نسخهٔ 0.7.1 و قدیمی‌تر با کد 1 بسته می‌شوند)';
+  String get settingsTunStackGvisorHint => 'پشتهٔ فضای کاربر: نه شنونده، نه قاعدهٔ فایروال، کمی کندتر. به هستهٔ ساخته‌شده با gVisor نیاز دارد.';
 
   @override
-  String get settingsTunStackMixedHint => 'gVisor برای TCP و system برای UDP. به هسته‌ای با gVisor نیاز دارد (هسته‌های نسخهٔ 0.7.1 و قدیمی‌تر با کد 1 بسته می‌شوند)';
+  String get settingsTunStackMixedHint => 'gVisor برای TCP، system برای UDP. به هستهٔ ساخته‌شده با gVisor نیاز دارد.';
 
   @override
   String get settingsTunMtu => 'MTU';
@@ -627,13 +645,13 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsTunAutoRoute => 'مسیر خودکار';
 
   @override
-  String get settingsTunAutoRouteHint => 'مسیرهای سیستم را خودکار به تونل اضافه می‌کند. فقط اگر مسیرها را خودتان مدیریت می‌کنید خاموش کنید — بدون آن هیچ ترافیکی وارد TUN نمی‌شود';
+  String get settingsTunAutoRouteHint => 'مسیرهای سیستم را به تونل می‌افزاید. بدون آن چیزی به TUN نمی‌رسد.';
 
   @override
   String get settingsTunIpv6 => 'IPv6 را داخل تونل نگه دار';
 
   @override
-  String get settingsTunIpv6Hint => 'رابط TUN که تنها نشانی IPv4 دارد هیچ مسیر IPv6 نمی‌گیرد، پس روی دستگاه دوپشته‌ای تمام ترافیک IPv6 از کنار تونل می‌رود — از کنار قاعده‌های مسیریابی و از کنار پراکسی. با روشن بودن این گزینه رابط نشانی IPv6 هم می‌گیرد و خروج IPv6 بسته می‌شود، پس برنامه‌ها فوراً به IPv4 که از پیش در تونل است بازمی‌گردند. نشانی تنها زمانی افزوده می‌شود که دستگاه واقعاً IPv6 جهانی داشته باشد. فقط هستهٔ xray/keqrnel';
+  String get settingsTunIpv6Hint => 'به رابط TUN نشانی IPv6 می‌دهد؛ بدون آن همهٔ IPv6 از تونل بیرون می‌ماند. فقط هستهٔ Xray/keqrnel.';
 
   @override
   String get settingsMihomoSection => 'هسته mihomo';
@@ -642,7 +660,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsMihomoFakeIp => 'Fake IP';
 
   @override
-  String get settingsMihomoFakeIpHint => 'هسته به‌جای نشانی واقعی، نشانی جایگزین به DNS پاسخ می‌دهد: تفکیک نام آنی می‌شود و قاعده‌های دامنه دیگر به sniffing وابسته نیستند. در عوض قاعده‌های IP پیش از تطبیق باید دوباره تفکیک شوند، پس همان فهرست‌های مسیریابی کمی متفاوت از Xray رفتار می‌کنند. فقط جایی اثر دارد که تونل در اختیار خود mihomo است — حالت TUN و اندروید.';
+  String get settingsMihomoFakeIpHint => 'تفکیک آنی با نشانی‌های ساختگی. فقط جایی که تونل با mihomo است: TUN و اندروید.';
 
   @override
   String get settingsPingTitle => 'پینگ سرور';
@@ -675,7 +693,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsPingKeepAlive => 'Keep-alive';
 
   @override
-  String get settingsPingKeepAliveHint => 'دو درخواست را روی یک اتصال می‌فرستد و بهترین را برمی‌دارد: نتیجه زمان پاسخ سرور بدون هزینهٔ برقراری اتصال است. با خاموش کردن آن کل درخواست همراه با دست‌دادن اندازه‌گیری می‌شود — عددها بزرگ‌تر و نزدیک‌تر به چیزی که مرورگر منتظرش می‌ماند.';
+  String get settingsPingKeepAliveHint => 'زمان پاسخ بدون دست‌دادن. خاموش — کل درخواست، همان‌طور که مرورگر می‌بیند';
 
   @override
   String get settingsPingMethodSpeed => 'تست سرعت';
@@ -970,7 +988,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsImportBackup => 'وارد کردن پشتیبان';
 
   @override
-  String get settingsChooseWhatToImport => 'انتخاب کنید چه چیزی وارد شود (بخش‌های انتخاب‌شده جای داده‌های فعلی شما را می‌گیرند).';
+  String get settingsChooseWhatToImport => 'بخش‌های انتخاب‌شده جای داده‌های فعلی را می‌گیرند';
 
   @override
   String get settingsSplitTunnelingApps => 'برنامه‌های پروکسی هر برنامه';
@@ -985,7 +1003,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsAppSettings => 'تنظیمات برنامه';
 
   @override
-  String get settingsAppSettingsHint => 'مسیریابی، DNS، ظاهر، پینگ و زبان. پورت‌ها، اشتراک‌گذاری در شبکه محلی و TUN همان‌گونه که روی این دستگاه هستند باقی می‌مانند.';
+  String get settingsAppSettingsHint => 'مسیریابی، DNS، ظاهر، پینگ، زبان. پورت‌ها، اشتراک شبکهٔ محلی و TUN نه.';
 
   @override
   String get settingsImport => 'وارد کردن';
@@ -994,10 +1012,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsExport => 'خروجی';
 
   @override
-  String get settingsCreateFileToSave => 'فایلی بسازید که بتوانید ذخیره کنید و روی دستگاه دیگری وارد کنید.';
+  String get settingsCreateFileToSave => 'فایل را می‌توان به دستگاه دیگری برد';
 
   @override
-  String get settingsPickExportedFile => 'فایلی که قبلاً خروجی گرفته‌اید انتخاب کنید تا بخش‌های انتخاب‌شده بازیابی شوند.';
+  String get settingsPickExportedFile => 'بعد از انتخاب فایل، بخش‌ها را انتخاب می‌کنید';
 
   @override
   String get settingsWorking => 'در حال انجام...';
@@ -1286,6 +1304,12 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get statsTimeLabel => 'زمان';
+
+  @override
+  String get statsDownloadLabel => 'سرعت دریافت';
+
+  @override
+  String get statsUploadLabel => 'سرعت ارسال';
 
   @override
   String get qrScanTitle => 'اسکن کد QR';
@@ -1647,7 +1671,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceAmoled => 'مشکی کامل (AMOLED)';
 
   @override
-  String get appearanceAmoledSubtitle => 'پس‌زمینهٔ کاملاً مشکی در پوستهٔ تیره — روی نمایشگر OLED باتری کمتری می‌برد';
+  String get appearanceAmoledSubtitle => 'مشکی واقعی در پوستهٔ تیره — روی OLED کم‌مصرف‌تر';
 
   @override
   String get appearanceAmoledNeedsDark => 'با روشن بودن پوستهٔ تیره در دسترس است';
@@ -1674,7 +1698,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceWaveLatencyColor => 'رنگ نوار بر پایهٔ تأخیر';
 
   @override
-  String get appearanceWaveLatencyColorSubtitle => 'نوار زیر دکمهٔ اتصال بر پایهٔ پینگ سرور فعال سبز، نارنجی یا قرمز می‌شود. خاموش باشد، رنگ تأکید پوسته را نگه می‌دارد.';
+  String get appearanceWaveLatencyColorSubtitle => 'سبز، نارنجی یا قرمز بر پایهٔ پینگ سرور فعال';
 
   @override
   String get appearanceFontTitle => 'قلم';
@@ -2024,7 +2048,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsProxyAuthTitle => 'رمز عبور پروکسی محلی';
 
   @override
-  String get settingsProxyAuthSubtitle => 'برای مواردی که جایی برای وارد کردن آن نیست، مانند تنظیمات پروکسی Wi-Fi، خاموش کنید';
+  String get settingsProxyAuthSubtitle => 'جایی که جای وارد کردن آن نیست خاموش کنید — مثلاً فیلد پروکسی وای‌فای';
 
   @override
   String get settingsProxyAuthUser => 'نام کاربری';
@@ -2045,22 +2069,22 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsTunnelModeProxy => 'پروکسی';
 
   @override
-  String get settingsTunnelModeProxySubtitle => 'فقط پروکسی محلی — VPN سیستم روشن نمی‌شود و چیزی خودبه‌خود گرفته نمی‌شود';
+  String get settingsTunnelModeProxySubtitle => 'فقط پروکسی محلی، بدون VPN سیستمی';
 
   @override
-  String get settingsTunnelModeHint => 'در حالت پروکسی، برنامه SOCKS و HTTP را روی 127.0.0.1 باز می‌کند و خودش چیزی را نمی‌گیرد: برنامه یا تنظیمات پروکسی Wi-Fi را به آن اشاره دهید. پورت‌ها در «تنظیمات ← پورت‌های محلی» هستند. مسیریابی هر برنامه و رهگیری DNS فقط در حالت VPN کار می‌کند؛ سرورهای AmneziaWG همیشه به شکل VPN وصل می‌شوند.';
+  String get settingsTunnelModeHint => 'حالت پروکسی، SOCKS و HTTP را روی 127.0.0.1 بالا می‌آورد — برنامه یا وای‌فای را به آن‌ها بدهید. این پروکسی برای هر برنامه‌ای روی دستگاه باز است. مسیریابی هر برنامه و رهگیری DNS فقط در حالت VPN کار می‌کند.';
 
   @override
   String get settingsCoreAuto => 'خودکار';
 
   @override
-  String get settingsCoreAutoSubtitle => 'هسته را قالبِ سرور تعیین می‌کند: لینک‌ها روی Xray و پیکربندی‌های آماده روی همان هسته‌ای که برایش نوشته شده‌اند اجرا می‌شوند.';
+  String get settingsCoreAutoSubtitle => 'لینک‌ها به Xray می‌روند و پیکربندی‌های آماده به هستهٔ خودشان';
 
   @override
   String get settingsCoreSkipClash => 'سرور فعال یک پیکربندی آمادهٔ Clash است — صرف‌نظر از هستهٔ انتخاب‌شده تنها mihomo آن را اجرا می‌کند.';
 
   @override
-  String get settingsCoreSkipCustom => 'سرور فعال یک پیکربندی آمادهٔ JSON برای Xray است (مسیریابی و DNS آن از سمت ارائه‌دهنده می‌آید)، بنابراین صرف‌نظر از هستهٔ انتخاب‌شده با libxray اجرا می‌شود. برای استفاده از mihomo به اشتراکی نیاز است که لینک‌های ساده vless:// / vmess:// بدهد — هویت کلاینت را در تنظیمات اشتراک عوض کنید.';
+  String get settingsCoreSkipCustom => 'سرور فعال یک پیکربندی آمادهٔ JSON برای Xray است، پس صرف‌نظر از هستهٔ انتخابی با libxray اجرا می‌شود. mihomo به اشتراکی با لینک‌های معمولی نیاز دارد.';
 
   @override
   String get settingsCoreSkipChain => 'سرور فعال یک زنجیره است: گره‌های آن با dialerProxy در Xray به هم وصل شده‌اند، پس صرف‌نظر از هستهٔ انتخاب‌شده با libxray اجرا می‌شود.';
@@ -2119,7 +2143,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsInternalsGeoTrimmed => 'پایگاه دادهٔ کشورها کوتاه‌شده است';
 
   @override
-  String get settingsInternalsGeoTrimmedHint => 'فقط کدهایی را دارد که پیش‌تنظیم‌های خود برنامه لازم دارند. قانونی که کشور دیگری را نام ببرد، پیش از اتصال حذف می‌شود.';
+  String get settingsInternalsGeoTrimmedHint => 'فقط کدهایی که پیش‌تنظیم‌های خود برنامه لازم دارند؛ قاعده با کشور دیگر کنار گذاشته می‌شود.';
 
   @override
   String get settingsInternalsGeoDownload => 'دریافت پایگاه دادهٔ کامل';
@@ -2187,7 +2211,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceUiScaleTitle => 'اندازه رابط کاربری';
 
   @override
-  String get appearanceUiScaleSubtitle => 'روی اندازه متن سیستم اعمال می‌شود، پس ۱۰۰٪ یعنی «مانند سیستم». متن و ارتفاع سطرهای فهرست تغییر می‌کند؛ نمادها و فاصله‌ها ثابت می‌مانند.';
+  String get appearanceUiScaleSubtitle => 'روی اندازهٔ متن سیستم. فقط متن و سطرهای فهرست.';
 
   @override
   String get appearanceIconShapeTitle => 'شکل نمادها';

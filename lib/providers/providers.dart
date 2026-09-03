@@ -20,6 +20,7 @@ import '../models/subscription.dart';
 import '../models/subscription_card_layout.dart';
 import '../models/subscription_card_theme.dart';
 import '../models/xray_core_settings.dart';
+import '../services/app_icon_cache.dart';
 import '../services/card_image_service.dart';
 import '../services/geo_asset_service.dart';
 import '../services/notification_service.dart';
@@ -170,6 +171,12 @@ final vpnEngineProvider = Provider<VpnEngine>((ref) {
   ref.onDispose(engine.dispose);
   return engine;
 });
+
+/// Кэш иконок процессов: живёт на всё приложение, а не на экран, — иначе
+/// повторный вход в раздельное туннелирование доставал бы те же иконки заново.
+final appIconCacheProvider = Provider<AppIconCache>(
+  (ref) => AppIconCache(ref.read(vpnEngineProvider).getAppIcon),
+);
 
 /// Интервал самопроверки обновлений на живом процессе: десктоп неделями висит
 /// в трее без перезапуска, и без перепроверки новый релиз виден только вручную.

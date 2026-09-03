@@ -19,6 +19,7 @@ import 'package:keqdroid/shared/ui/server_row.dart';
 import 'package:keqdroid/shared/ui/shape_morph.dart';
 import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
+import 'package:keqdroid/shared/ui/stat_strip.dart';
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';

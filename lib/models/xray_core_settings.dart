@@ -21,6 +21,25 @@ class XrayCoreSettings {
   final String xmuxHMaxReusableSecs;
   final int xmuxHKeepAlivePeriod;
 
+  /// Фрагментация TLS ClientHello (`fragment` у freedom-аутбаунда xray).
+  ///
+  /// Режет первый пакет соединения на куски, чтобы DPI не увидел SNI целиком.
+  /// Работает ТОЛЬКО на xray-пути: у mihomo такой опции нет вовсе
+  /// (MetaCubeX/mihomo#1046 висит открытым), у sing-box своя `tls_fragment`,
+  /// и наш десктопный TUN-конфиг её не использует — там дозванивается xray
+  /// внутри keqrnel, то есть эта же настройка.
+  final bool fragmentEnabled;
+
+  /// `tlshello` (только ClientHello) или `1-3` (первые N записей потока).
+  final String fragmentPackets;
+
+  /// Размер куска в байтах: число или диапазон `100-200`.
+  final String fragmentLength;
+
+  /// Пауза между кусками в миллисекундах: число или диапазон `10-20`.
+  /// `0` с `tlshello` — разрезать ClientHello, но отправить одним пакетом.
+  final String fragmentInterval;
+
   final bool sniffingEnabled;
 
   /// `true` — снифер только подсказывает роутингу домен, соединение уходит на
@@ -52,11 +71,32 @@ class XrayCoreSettings {
     this.xmuxHMaxRequestTimes = '',
     this.xmuxHMaxReusableSecs = '',
     this.xmuxHKeepAlivePeriod = 0,
+    this.fragmentEnabled = false,
+    this.fragmentPackets = fragmentPacketsTlsHello,
+    this.fragmentLength = defaultFragmentLength,
+    this.fragmentInterval = defaultFragmentInterval,
     this.sniffingEnabled = true,
     this.sniffingRouteOnly = false,
   });
 
   static const logLevels = ['none', 'error', 'warning', 'info', 'debug'];
+
+  /// Режет только TLS ClientHello — то, ради чего фрагментация и нужна.
+  static const fragmentPacketsTlsHello = 'tlshello';
+
+  /// Режет первые записи TCP-потока независимо от того, TLS там или нет.
+  static const fragmentPacketsFirstPackets = '1-3';
+
+  /// Оба значения, которые документирует xray. Свободного ввода тут нет
+  /// намеренно: `packets` вне этого списка ядро не понимает, а ошибка вылезет
+  /// не в настройках, а на подключении — «SOCKS port not ready» без причины.
+  static const fragmentPacketModes = [
+    fragmentPacketsTlsHello,
+    fragmentPacketsFirstPackets,
+  ];
+
+  static const defaultFragmentLength = '100-200';
+  static const defaultFragmentInterval = '10-20';
   static const dnsQueryStrategies = [
     'UseIPv4',
     'UseIPv6',
@@ -81,6 +121,10 @@ class XrayCoreSettings {
         'xmuxHMaxRequestTimes': xmuxHMaxRequestTimes,
         'xmuxHMaxReusableSecs': xmuxHMaxReusableSecs,
         'xmuxHKeepAlivePeriod': xmuxHKeepAlivePeriod,
+        'fragmentEnabled': fragmentEnabled,
+        'fragmentPackets': fragmentPackets,
+        'fragmentLength': fragmentLength,
+        'fragmentInterval': fragmentInterval,
         'sniffingEnabled': sniffingEnabled,
         'sniffingRouteOnly': sniffingRouteOnly,
       };
@@ -98,6 +142,7 @@ class XrayCoreSettings {
     final log = str('logLevel', 'warning');
     final domain = str('routingDomainStrategy', 'AsIs');
     final query = str('dnsQueryStrategy', 'UseIPv4');
+    final packets = str('fragmentPackets', fragmentPacketsTlsHello);
     return XrayCoreSettings(
       logLevel: logLevels.contains(log) ? log : 'warning',
       routingDomainStrategy:
@@ -115,6 +160,14 @@ class XrayCoreSettings {
       xmuxHMaxRequestTimes: json['xmuxHMaxRequestTimes'] as String? ?? '',
       xmuxHMaxReusableSecs: json['xmuxHMaxReusableSecs'] as String? ?? '',
       xmuxHKeepAlivePeriod: i('xmuxHKeepAlivePeriod', 0),
+      fragmentEnabled: b('fragmentEnabled', false),
+      // Неизвестный режим — не повод отдать ядру мусор: откатываемся на
+      // tlshello, как если бы фрагментацию только что включили.
+      fragmentPackets: fragmentPacketModes.contains(packets)
+          ? packets
+          : fragmentPacketsTlsHello,
+      fragmentLength: str('fragmentLength', defaultFragmentLength),
+      fragmentInterval: str('fragmentInterval', defaultFragmentInterval),
       sniffingEnabled: b('sniffingEnabled', true),
       sniffingRouteOnly: b('sniffingRouteOnly', false),
     );
@@ -135,6 +188,10 @@ class XrayCoreSettings {
     String? xmuxHMaxRequestTimes,
     String? xmuxHMaxReusableSecs,
     int? xmuxHKeepAlivePeriod,
+    bool? fragmentEnabled,
+    String? fragmentPackets,
+    String? fragmentLength,
+    String? fragmentInterval,
     bool? sniffingEnabled,
     bool? sniffingRouteOnly,
   }) =>
@@ -158,6 +215,10 @@ class XrayCoreSettings {
             xmuxHMaxReusableSecs ?? this.xmuxHMaxReusableSecs,
         xmuxHKeepAlivePeriod:
             xmuxHKeepAlivePeriod ?? this.xmuxHKeepAlivePeriod,
+        fragmentEnabled: fragmentEnabled ?? this.fragmentEnabled,
+        fragmentPackets: fragmentPackets ?? this.fragmentPackets,
+        fragmentLength: fragmentLength ?? this.fragmentLength,
+        fragmentInterval: fragmentInterval ?? this.fragmentInterval,
         sniffingEnabled: sniffingEnabled ?? this.sniffingEnabled,
         sniffingRouteOnly: sniffingRouteOnly ?? this.sniffingRouteOnly,
       );
@@ -473,6 +534,35 @@ class XrayCoreSettings {
     return v;
   }
 
+  /// `settings.fragment` для freedom-аутбаунда, или `null` — фрагментация
+  /// выключена и аутбаунд заводить не нужно.
+  ///
+  /// `length` и `interval` ядру нужны ОБА: freedom с одним лишь `packets`
+  /// не поднимается, поэтому пустое или кривое поле подменяется дефолтом, а
+  /// не выбрасывается. Цена ошибки тут несимметричная — пустая строка в
+  /// настройках стоила бы не «фрагментация без длины», а неработающего
+  /// подключения с невнятной ошибкой порта.
+  Map<String, dynamic>? buildFragmentMap() {
+    if (!fragmentEnabled) return null;
+    final packets = fragmentPackets.trim();
+    return {
+      'packets': fragmentPacketModes.contains(packets)
+          ? packets
+          : fragmentPacketsTlsHello,
+      'length': _fragmentRange(fragmentLength, defaultFragmentLength),
+      'interval': _fragmentRange(fragmentInterval, defaultFragmentInterval),
+    };
+  }
+
+  /// Число или диапазон `N-M`; всё остальное — [fallback]. Пустой верхней
+  /// границы (`100-`) ядро не прощает, поэтому регексп строгий с обеих сторон.
+  static Object _fragmentRange(String raw, String fallback) {
+    final v = raw.trim();
+    return _parseRangeValue(
+      RegExp(r'^\d+(-\d+)?$').hasMatch(v) ? v : fallback,
+    );
+  }
+
   Map<String, dynamic> buildSniffing() => {
         'enabled': sniffingEnabled,
         'destOverride': ['http', 'tls', 'quic'],
@@ -498,6 +588,10 @@ class XrayCoreSettings {
           xmuxHMaxRequestTimes == other.xmuxHMaxRequestTimes &&
           xmuxHMaxReusableSecs == other.xmuxHMaxReusableSecs &&
           xmuxHKeepAlivePeriod == other.xmuxHKeepAlivePeriod &&
+          fragmentEnabled == other.fragmentEnabled &&
+          fragmentPackets == other.fragmentPackets &&
+          fragmentLength == other.fragmentLength &&
+          fragmentInterval == other.fragmentInterval &&
           sniffingEnabled == other.sniffingEnabled &&
           sniffingRouteOnly == other.sniffingRouteOnly;
 
@@ -517,6 +611,10 @@ class XrayCoreSettings {
         xmuxHMaxRequestTimes,
         xmuxHMaxReusableSecs,
         xmuxHKeepAlivePeriod,
+        fragmentEnabled,
+        fragmentPackets,
+        fragmentLength,
+        fragmentInterval,
         sniffingEnabled,
         sniffingRouteOnly,
       );

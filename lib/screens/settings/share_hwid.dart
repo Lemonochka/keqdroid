@@ -23,45 +23,37 @@ class _ShareHwidCard extends ConsumerWidget {
 
     return ExpressiveGroupTile(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      // Абзаца под строкой больше нет: он пересказывал ту же строку состояния
+      // под заголовком («HWID уходит с запросами подписки» / «не передаётся»),
+      // только длиннее.
+      child: Row(
         children: [
-          Row(
-            children: [
-              ExpressiveIconBadge(
-                icon: Icons.fingerprint_rounded,
-                accent: iconAccent,
-              ),
-              const SizedBox(width: ExpressiveSpacing.large),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Share device HWID',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: AppTheme.text(context),
-                      ),
-                    ),
-                    Text(
-                      enabled ? 'HWID will be sent with subscription requests' : 'HWID not shared',
-                      style: textTheme.bodyMedium?.copyWith(color: enabled ? AppTheme.accent(context) : AppTheme.textLight(context)),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                value: enabled,
-                activeThumbColor: AppTheme.accent(context),
-                onChanged: save,
-              ),
-            ],
+          ExpressiveIconBadge(
+            icon: Icons.fingerprint_rounded,
+            accent: iconAccent,
           ),
-          const SizedBox(height: 10),
-          Text(
-            'When enabled, your device\'s unique ID (HWID) is sent to subscription servers. '
-            'Required by some providers for HWID binding. Disable to increase privacy.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context), height: 1.35),
+          const SizedBox(width: ExpressiveSpacing.large),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Share device HWID',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: AppTheme.text(context),
+                  ),
+                ),
+                Text(
+                  enabled ? 'HWID will be sent with subscription requests' : 'HWID not shared',
+                  style: textTheme.bodyMedium?.copyWith(color: enabled ? AppTheme.accent(context) : AppTheme.textLight(context)),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: enabled,
+            activeThumbColor: AppTheme.accent(context),
+            onChanged: save,
           ),
         ],
       ),

@@ -1464,8 +1464,28 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
             result->Success(flutter::EncodableValue(std::string()));
             return;
           }
-          const std::string icon = GetWindowsAppIconBase64(Utf8ToWide(path_utf8));
-          result->Success(flutter::EncodableValue(icon));
+          // Выемка иконки — рабочему потоку, как и прочая тяжёлая работа в
+          // этом файле.
+          //
+          // Достать иконку из exe и закодировать её в PNG — это единицы
+          // миллисекунд, и раньше они тратились ПРЯМО на потоке платформы, он
+          // же поток UI. Список раздельного туннелирования просит по иконке на
+          // каждую появившуюся строку, так что при быстрой прокрутке поток,
+          // обязанный разбирать ввод и кадры, стоял в этих вызовах десятками
+          // подряд — отсюда и рывки. Здесь он только принимает вызов и отдаёт
+          // ответ, когда тот готов.
+          std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>
+              shared_result = std::move(result);
+          std::thread([path = Utf8ToWide(path_utf8), shared_result]() {
+            // Оболочечные API (`SHDefExtractIcon`, `SHGetFileInfo`) требуют
+            // инициализированного COM на СВОЁМ потоке.
+            const HRESULT com = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+            const std::string icon = GetWindowsAppIconBase64(path);
+            if (SUCCEEDED(com)) ::CoUninitialize();
+            PostToPlatformThread([shared_result, icon]() {
+              shared_result->Success(flutter::EncodableValue(icon));
+            });
+          }).detach();
           return;
         }
 

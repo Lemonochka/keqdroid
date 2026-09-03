@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
+import 'package:keqdroid/shared/ui/expressive_group.dart';
+import 'package:keqdroid/shared/ui/haptics.dart';
 import 'package:keqdroid/shared/ui/scrolled_under.dart';
 import 'dart:typed_data';
 
@@ -15,11 +17,13 @@ import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import '../models/app_info.dart';
 import '../providers/providers.dart';
 import '../platform/platform_bootstrap.dart';
+import '../services/app_icon_cache.dart';
 import '../services/file_dialog_service.dart';
 import '../tunnel/connection_mode.dart';
 import '../tunnel/tunnel_state.dart';
 import '../utils/error_messages.dart';
 import '../utils/process_name_utils.dart';
+import '../utils/split_tunneling_entries.dart';
 
 const _kRussianPackagePrefixes = <String>[
   'ru.yandex.', 'com.yandex.',
@@ -133,6 +137,10 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
   bool _showSystem = false;
   late final AnimationController _fadeCtrl;
 
+  /// Ниже этой высоты окна крупный заголовок не показываем — значение и повод
+  /// те же, что у `ExpressivePage._largeTitleMinHeight`.
+  static const double _largeTitleMinHeight = 600;
+
   List<AppInfo> _allApps = [];
   List<AppInfo> _displayList = [];
   bool get _isDesktop => PlatformBootstrap.isDesktop;
@@ -140,8 +148,10 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 350))
-      ..forward();
+    _fadeCtrl = AnimationController(
+      vsync: this,
+      duration: ExpressiveMotion.durationDefault,
+    )..forward();
     _searchCtrl.addListener(_onSearch);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadMode());
   }
@@ -173,34 +183,51 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     setState(() { _mode = mode; });
   }
 
+  /// Записи, которых нет в списке процессов, — добавленные руками exe.
+  ///
+  /// Сравнение идёт по ключу [splitEntryKey], а не по сырой строке. Раньше
+  /// `known` собирался в нижнем регистре, а сохранённые имена — нет: Windows
+  /// отдаёт `Discord.exe`, в списках оседает `Discord.exe`, и проверка
+  /// `known.contains('Discord.exe')` не находила `discord.exe`. Каждое
+  /// выбранное приложение считалось «добавленным руками» и приписывалось в
+  /// начало списка ВТОРОЙ строкой — без пути и без иконки.
+  ///
+  /// Хуже того, слияние повторялось поверх уже слитого списка на каждое
+  /// изменение выбора, и лишняя строка прибавлялась к каждой галочке снова и
+  /// снова: отсюда и три-четыре одинаковых Discord.exe подряд.
   List<AppInfo> _mergeCustomApps(List<AppInfo> apps) {
     final split = ref.read(splitTunnelingProvider);
-    final known = apps.map((a) => a.packageName.toLowerCase()).toSet();
-    final customIds = <String>{
-      ...split.includePackages,
-      ...split.excludePackages,
-    }..removeWhere(known.contains);
-    if (customIds.isEmpty) return apps;
-    final custom = customIds
-        .map(
-          (id) => AppInfo(
-            packageName: normalizeProcessName(id),
-            appName: id.contains(r'\') || id.contains('/')
-                ? id.split(RegExp(r'[\\/]')).last
-                : id,
-          ),
-        )
-        .toList();
+    final seen = apps.map((a) => splitEntryKey(a.packageName)).toSet();
+    final custom = <AppInfo>[];
+    for (final id in {...split.includePackages, ...split.excludePackages}) {
+      final key = splitEntryKey(id);
+      // `add` возвращает false и на «уже есть в списке», и на второй вариант
+      // того же имени в самих списках (`Telegram.exe` рядом с `telegram.exe`).
+      if (key.isEmpty || !seen.add(key)) continue;
+      custom.add(
+        AppInfo(
+          packageName: normalizeProcessName(id),
+          appName: id.contains(r'\') || id.contains('/')
+              ? id.split(RegExp(r'[\\/]')).last
+              : id,
+        ),
+      );
+    }
+    if (custom.isEmpty) return apps;
     return [...custom, ...apps];
   }
 
   void _applyInitialSort(List<AppInfo> apps) {
     final split = ref.read(splitTunnelingProvider);
-    final checked = _checkedSet(split);
-    final merged = _mergeCustomApps(apps);
+    final checkedKeys = _checkedSet(split).map(splitEntryKey).toSet();
+    // Схлопывание — страховка на случай, если дубли придут откуда-то ещё
+    // (список процессов, накопленное состояние прошлых версий): экран не
+    // должен показывать одно приложение дважды ни при каких входных данных.
+    final merged = dedupeSplitEntries(_mergeCustomApps(apps));
+    bool isChecked(AppInfo a) => checkedKeys.contains(splitEntryKey(a.packageName));
     _allApps = [
-      ...merged.where((a) => checked.contains(a.packageName)),
-      ...merged.where((a) => !checked.contains(a.packageName)),
+      ...merged.where(isChecked),
+      ...merged.where((a) => !isChecked(a)),
     ];
     if (_query.isEmpty) {
       _displayList = List.of(_allApps);
@@ -229,8 +256,10 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
+        // Заливка и форма — из `dialogTheme`: локальный `backgroundColor`
+        // повторял тот же `surfaceContainerHigh`, но мимо темы, и в flair-темах
+        // диалог не получал их усиленных скруглений.
         builder: (ctx, setDialogState) => AlertDialog(
-        backgroundColor: AppTheme.card(context),
         title: Text(l10n.splitAddAppTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -474,52 +503,126 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     final tunnelActive = vpnStatus == VpnStatus.connected ||
         vpnStatus == VpnStatus.connecting;
 
+    final l10n = AppLocalizations.of(context)!;
+
+    // Экран собран одной прокруткой, а не шапкой поверх `Column` с `Expanded`.
+    // Так он начинается крупным заголовком, как остальные подэкраны настроек
+    // (см. `ExpressivePage`), режим и предупреждения уезжают вместе с
+    // содержимым, а поиск остаётся прилипшим под шапкой — он нужен на любой
+    // позиции списка в пару сотен строк.
+    final showFab = _isDesktop && _mode != TunnelMode.all;
+
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
-      appBar: ExpressiveScrolledUnderBar(
-        builder: (context, background) =>
-            _buildAppBar(checked, appsLoaded: appsLoaded, background: background),
-      ),
-      floatingActionButton: _isDesktop && _mode != TunnelMode.all
+      floatingActionButton: showFab
           ? FloatingActionButton.extended(
               onPressed: _showAddAppDialog,
               icon: const Icon(Icons.add_rounded),
-              label: Text(AppLocalizations.of(context)!.splitAddApp),
+              label: Text(l10n.splitAddApp),
             )
           : null,
       body: FadeTransition(
         opacity: _fadeCtrl,
-        child: Column(
-          children: [
-            _ModeSelector(current: _mode, onChanged: _setMode),
-            // Списки include/exclude читаются только в момент connect() —
-            // при активном туннеле изменения вступят в силу лишь после
-            // переподключения, и без подсказки это выглядит как «не работает».
-            if (tunnelActive)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: ExpressiveNotice(
-                  color: AppTheme.orange(context),
-                  icon: Icons.info_outline_rounded,
-                  text: AppLocalizations.of(context)!
-                      .splitTunnelingReconnectHint,
+        child: SmoothScroll(
+          builder: (context, controller) => CustomScrollView(
+            controller: controller,
+            slivers: [
+              ExpressiveScrolledUnderBuilder(
+                builder: (context, background) {
+                  final actions =
+                      _appBarActions(l10n, checked, appsLoaded: appsLoaded);
+                  // Правило крупного заголовка — то же, что у `ExpressivePage`:
+                  // на невысоком вьюпорте (окно из трея) 152dp шапки съели бы
+                  // половину экрана, а длинный заголовок в узком окне ещё и
+                  // разъехался бы на три строки.
+                  return MediaQuery.sizeOf(context).height >= _largeTitleMinHeight
+                      ? SliverAppBar.large(
+                          title: Text(l10n.splitTunnelingTitle),
+                          backgroundColor: background,
+                          actions: actions,
+                        )
+                      : SliverAppBar(
+                          title: Text(l10n.splitTunnelingTitle),
+                          pinned: true,
+                          backgroundColor: background,
+                          actions: actions,
+                        );
+                },
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  ExpressiveSpacing.large,
+                  ExpressiveSpacing.none,
+                  ExpressiveSpacing.large,
+                  ExpressiveSpacing.small,
+                ),
+                sliver: SliverList.list(
+                  children: [
+                    _ModeSelector(current: _mode, onChanged: _setMode),
+                    // Списки include/exclude читаются только в момент connect() —
+                    // при активном туннеле изменения вступят в силу лишь после
+                    // переподключения, и без подсказки это выглядит как «не работает».
+                    if (tunnelActive) ...[
+                      const SizedBox(height: ExpressiveSpacing.medium),
+                      ExpressiveNotice(
+                        color: AppTheme.orange(context),
+                        icon: Icons.info_outline_rounded,
+                        text: l10n.splitTunnelingReconnectHint,
+                      ),
+                    ],
+                    if (proxyModeOnDesktop && _mode != TunnelMode.all) ...[
+                      const SizedBox(height: ExpressiveSpacing.medium),
+                      ExpressiveNotice(
+                        color: AppTheme.orange(context),
+                        text: l10n.splitProxyModeWarning,
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            if (proxyModeOnDesktop && _mode != TunnelMode.all)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: ExpressiveNotice(
-                  color: AppTheme.orange(context),
-                  text: AppLocalizations.of(context)!.splitProxyModeWarning,
+              // Поиск красится тем же цветом, что и шапка над ним: прилипшая
+              // полоса обязана быть с ней одной поверхностью, иначе под шапкой
+              // едет вторая, другого тона.
+              ExpressiveScrolledUnderBuilder(
+                builder: (context, background) => SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _SearchHeaderDelegate(
+                    controller: _searchCtrl,
+                    hintText: l10n.splitSearchHint,
+                    background: background,
+                  ),
                 ),
               ),
-            _SearchBar(controller: _searchCtrl),
-            Expanded(
-              child: appsAsync.when(
-                loading: () => const Center(child: ShapeLoadingIndicator()),
-                error: (e, _) => Center(
-                  child: Text(AppLocalizations.of(context)!.splitFailedLoadApps(e.toString()),
-                      style: TextStyle(color: AppTheme.textLight(context))),
+              if (checked > 0 && _mode != TunnelMode.all)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: ExpressiveSpacing.large,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: ExpressiveSectionHeader(
+                      l10n.splitSelectedAppsCount(checked),
+                    ),
+                  ),
+                ),
+              appsAsync.when(
+                loading: () => const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: ShapeLoadingIndicator()),
+                ),
+                error: (e, _) => SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(ExpressiveSpacing.extraLarge),
+                      child: Text(
+                        l10n.splitFailedLoadApps(e.toString()),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.textLight(context),
+                            ),
+                      ),
+                    ),
+                  ),
                 ),
                 data: (apps) {
                   final filteredApps = _showSystem
@@ -539,241 +642,269 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
                     includePackages: includePackages,
                     excludePackages: excludePackages,
                     onToggle: _toggle,
+                    hasFab: showFab,
                   );
                 },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  AppBar _buildAppBar(
+  List<Widget> _appBarActions(
+    AppLocalizations l10n,
     int checked, {
     required bool appsLoaded,
-    required Color background,
   }) {
-    final l10n = AppLocalizations.of(context)!;
-    return AppBar(
-      backgroundColor: background,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l10n.splitTunnelingTitle,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.text(context))),
-          if (checked > 0 && _mode != TunnelMode.all)
-            Text(l10n.splitSelectedAppsCount(checked),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context))),
-        ],
-      ),
-      actions: [
-        IconButton(
-          tooltip: _showSystem ? l10n.splitHideSystemApps : l10n.splitShowSystemApps,
-          icon: Icon(
-            _showSystem
-                ? (_isDesktop ? Icons.computer_rounded : Icons.android_rounded)
-                : (_isDesktop ? Icons.computer_rounded : Icons.android_rounded),
-            size: 20,
-            color: _showSystem ? AppTheme.accent(context) : AppTheme.textLight(context),
-          ),
-          onPressed: () {
-            setState(() {
-              _showSystem = !_showSystem;
-              _allApps = [];
-            });
-          },
+    return [
+      // Показ системных — переключаемая иконка-кнопка M3: включённое состояние
+      // несёт её собственный контейнер, а не подмена цвета иконки вручную.
+      IconButton(
+        tooltip:
+            _showSystem ? l10n.splitHideSystemApps : l10n.splitShowSystemApps,
+        isSelected: _showSystem,
+        icon: Icon(
+          _isDesktop ? Icons.computer_outlined : Icons.android_outlined,
         ),
-        if (!_isDesktop &&
-            (_mode == TunnelMode.excludeOnly || _mode == TunnelMode.all))
-          IconButton(
-            tooltip: l10n.splitAddRussianAppsBypass,
-            icon: const _RuFlagIcon(),
-            onPressed: appsLoaded ? _addRussianApps : null,
-          ),
-        if (_mode != TunnelMode.all && checked > 0)
-          TextButton(
-            onPressed: () {
-              if (_mode == TunnelMode.includeOnly) {
-                ref.read(splitTunnelingProvider.notifier).clearIncludes();
-              } else {
-                ref.read(splitTunnelingProvider.notifier).clearExcludes();
-              }
-            },
-            child: Text(l10n.splitClear, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight(context))),
-          ),
-      ],
-    );
+        selectedIcon: Icon(
+          _isDesktop ? Icons.computer_rounded : Icons.android_rounded,
+        ),
+        onPressed: () {
+          setState(() {
+            _showSystem = !_showSystem;
+            _allApps = [];
+          });
+        },
+      ),
+      if (!_isDesktop &&
+          (_mode == TunnelMode.excludeOnly || _mode == TunnelMode.all))
+        IconButton(
+          tooltip: l10n.splitAddRussianAppsBypass,
+          icon: const _RuFlagIcon(),
+          onPressed: appsLoaded ? _addRussianApps : null,
+        ),
+      if (_mode != TunnelMode.all && checked > 0)
+        TextButton(
+          onPressed: () {
+            if (_mode == TunnelMode.includeOnly) {
+              ref.read(splitTunnelingProvider.notifier).clearIncludes();
+            } else {
+              ref.read(splitTunnelingProvider.notifier).clearExcludes();
+            }
+          },
+          child: Text(l10n.splitClear),
+        ),
+    ];
   }
 }
 
-// селектор режимов
+/// Селектор режимов: три сегмента списка M3E.
+///
+/// Был самодельный переключатель из M2 — общая рамка, две тени и подсветка,
+/// ездящая под подписями через `AnimatedAlign`. Теперь выбор несут ровно те же
+/// средства, что у строк серверов и плиток тем: заливка `secondaryContainer` и
+/// морф формы (внутренние углы 4dp → 16dp у выбранного), причём пружинами из
+/// спеки движения, а не кривой с длительностью.
+///
+/// Почему не [ExpressiveConnectedButtons], штатная замена сегментированной
+/// кнопки: её подписи живут в одну строку с многоточием, а «Все кроме
+/// выбранных» и «Только выбранные» в треть ширины телефона не влезают — от
+/// режима осталось бы «Все кр…». Сегменты списка дают ту же анатомию выбора и
+/// две строки под подпись.
 class _ModeSelector extends StatelessWidget {
   final TunnelMode current;
   final void Function(TunnelMode) onChanged;
   const _ModeSelector({required this.current, required this.onChanged});
 
+  /// Высота сегмента: иконка, зазор и две строки подписи `labelMedium`.
+  static const double _height = 78;
+
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final onPrimary = Theme.of(context).colorScheme.onPrimary;
     final modes = TunnelMode.values;
-    final currentIndex = modes.indexOf(current);
-
-    final alignmentX = -1.0 + (currentIndex * (2.0 / (modes.length - 1)));
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppTheme.card(context),
-        borderRadius: BorderRadius.circular(ExpressiveShape.largeIncreased),
-        border: Border.all(
-          color: AppTheme.divider(context).withValues(alpha: 0.5),
-          width: 1,
-        ),
-        boxShadow:[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
+    return SizedBox(
+      height: _height,
+      child: Row(
+        children: [
+          for (var i = 0; i < modes.length; i++)
+            Expanded(child: _segment(context, modes, i)),
         ],
       ),
-      child: IntrinsicHeight(
-        child: Stack(
-          children:[
-            AnimatedAlign(
-              // Directional, а не Alignment: подсветка позиционируется по
-              // индексу режима, а Row с подписями сам зеркалится в RTL. С
-              // обычным Alignment (-1 всегда физически слева) они разъезжались,
-              // и в персидской локали подсветка стояла под чужой подписью.
-              alignment: AlignmentDirectional(alignmentX, 0),
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOutCubic,
-              child: FractionallySizedBox(
-                widthFactor: 1 / modes.length,
-                heightFactor: 1.0,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.accent(context),
-                    borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                    // Нейтральная тень как высота — см. то же в server_groups.
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .shadow
-                            .withValues(alpha: 0.20),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+    );
+  }
 
-            Row(
-              children: modes.map((mode) {
-                final active = mode == current;
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => onChanged(mode),
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children:[
-                          Icon(
-                            mode.icon,
-                            size: 18,
-                            color: active ? onPrimary : AppTheme.textLight(context),
-                          ),
-                          const SizedBox(height: 3),
-                          AnimatedDefaultTextStyle(
-                            duration: const Duration(milliseconds: 200),
-                            // AnimatedDefaultTextStyle требует не-null стиль,
-                            // поэтому роль берём с fallback, а не через `?.`.
-                            style: (Theme.of(context).textTheme.labelSmall ??
-                                    const TextStyle())
-                                .copyWith(
-                              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                              color: active ? onPrimary : AppTheme.textLight(context),
-                            ),
-                            child: Text(
-                              mode.label(l10n),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
+  Widget _segment(BuildContext context, List<TunnelMode> modes, int index) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final mode = modes[index];
+    final selected = mode == current;
+    final foreground =
+        selected ? scheme.onSecondaryContainer : scheme.onSurfaceVariant;
+
+    return Padding(
+      padding: ExpressiveListSegment.segmentMargin(
+        index: index,
+        columns: modes.length,
+      ),
+      child: ExpressiveListSegment(
+        radius: ExpressiveListSegment.segmentRadius(
+          index: index,
+          count: modes.length,
+          columns: modes.length,
+        ),
+        selected: selected,
+        color: scheme.surfaceContainerHigh,
+        selectedColor: scheme.secondaryContainer,
+        splashColor: scheme.primary.withValues(alpha: 0.2),
+        highlightColor: scheme.primary.withValues(alpha: 0.08),
+        onTap: () {
+          if (selected) return;
+          AppHaptics.selection();
+          onChanged(mode);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: ExpressiveSpacing.small,
+            vertical: ExpressiveSpacing.small,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                mode.icon,
+                size: ExpressiveIconSize.medium,
+                color: foreground,
+              ),
+              const SizedBox(height: ExpressiveSpacing.extraSmall),
+              Text(
+                mode.label(l10n),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: (selected
+                        ? theme.textTheme.emphasized(theme.textTheme.labelMedium)
+                        : theme.textTheme.labelMedium)
+                    ?.copyWith(color: foreground),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-
-// поиск
-class _SearchBar extends StatelessWidget {
+/// Прилипшая полоса поиска.
+///
+/// Живёт слайвером, а не строкой в `Column`: список длиной в пару сотен строк
+/// без прилипшего поиска заставлял бы прокручивать вверх ради каждого запроса.
+class _SearchHeaderDelegate extends SliverPersistentHeaderDelegate {
   final TextEditingController controller;
-  const _SearchBar({required this.controller});
+  final String hintText;
+
+  /// Цвет шапки над полосой. Прилипшая полоса обязана быть с ней ОДНОЙ
+  /// поверхностью, иначе под шапкой едет вторая, другого тона.
+  final Color background;
+
+  const _SearchHeaderDelegate({
+    required this.controller,
+    required this.hintText,
+    required this.background,
+  });
+
+  /// Контейнер поиска по спеке — 56dp; поля сверху и снизу держат его на
+  /// расстоянии от шапки и первой строки списка.
+  static const double _barHeight = 56;
+  static const double _verticalPadding = ExpressiveSpacing.small;
+
+  @override
+  double get minExtent => _barHeight + _verticalPadding * 2;
+
+  @override
+  double get maxExtent => minExtent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      color: background,
+      padding: const EdgeInsets.symmetric(
+        horizontal: ExpressiveSpacing.large,
+        vertical: _verticalPadding,
+      ),
+      child: _SearchField(controller: controller, hintText: hintText),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _SearchHeaderDelegate old) =>
+      old.controller != controller ||
+      old.hintText != hintText ||
+      old.background != background;
+}
+
+/// Поиск на штатном `SearchBar` M3.
+///
+/// Было текстовое поле с собственной тенью, рамкой в полупрозрачный
+/// `outlineVariant` и радиусом 16 — ни filled, ни outlined, а помесь. У M3
+/// поиск — отдельный компонент со своей анатомией: пилюля, заливка контейнера
+/// и никакой тени.
+class _SearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hintText;
+  const _SearchField({required this.controller, required this.hintText});
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(ExpressiveShape.large),
-          boxShadow:[
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    // Кнопку очистки показываем по СОДЕРЖИМОМУ поля, а не по перестройке
+    // экрана: делегат прилипшей шапки пересобирается только при смене своих
+    // полей, и без этой подписки крестик появлялся бы через раз.
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, _) => SearchBar(
+        controller: controller,
+        hintText: hintText,
+        elevation: const WidgetStatePropertyAll(0),
+        backgroundColor: WidgetStatePropertyAll(scheme.surfaceContainerHigh),
+        overlayColor: WidgetStatePropertyAll(
+          scheme.onSurface.withValues(alpha: 0.08),
         ),
-        child: TextField(
-          controller: controller,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.text(context)),
-          decoration: InputDecoration(
-            hintText: l10n.splitSearchHint,
-            hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight(context).withValues(alpha: 0.6)),
-            prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textLight(context), size: 20),
-            suffixIcon: controller.text.isNotEmpty
-                ? IconButton(
-              icon: Icon(Icons.close_rounded, color: AppTheme.textLight(context), size: 18),
+        shape: WidgetStatePropertyAll(
+          ExpressiveShape.border(ExpressiveShape.full),
+        ),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: ExpressiveSpacing.large),
+        ),
+        textStyle: WidgetStatePropertyAll(
+          theme.textTheme.bodyLarge?.copyWith(color: scheme.onSurface),
+        ),
+        hintStyle: WidgetStatePropertyAll(
+          theme.textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        leading: Icon(
+          Icons.search_rounded,
+          size: ExpressiveIconSize.large,
+          color: scheme.onSurfaceVariant,
+        ),
+        trailing: [
+          if (value.text.isNotEmpty)
+            IconButton(
+              tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+              icon: const Icon(Icons.close_rounded),
+              iconSize: ExpressiveIconSize.medium,
+              color: scheme.onSurfaceVariant,
               onPressed: controller.clear,
-              padding: EdgeInsets.zero,
-            )
-                : null,
-            filled: true,
-            fillColor: AppTheme.card(context),
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(ExpressiveShape.large),
-              borderSide: BorderSide(color: AppTheme.divider(context).withValues(alpha: 0.5), width: 1),
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(ExpressiveShape.large),
-              borderSide: BorderSide(color: AppTheme.divider(context).withValues(alpha: 0.5), width: 1),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(ExpressiveShape.large),
-              borderSide: BorderSide(color: AppTheme.accent(context), width: 1.5),
-            ),
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -787,185 +918,268 @@ class _AppList extends StatelessWidget {
   final Set<String> excludePackages;
   final void Function(String) onToggle;
 
+  /// Есть ли над списком расширенный FAB. Если есть — последняя строка должна
+  /// уезжать из-под него, иначе до неё не дотянуться.
+  final bool hasFab;
+
   const _AppList({
     required this.apps,
     required this.mode,
     required this.includePackages,
     required this.excludePackages,
     required this.onToggle,
+    required this.hasFab,
   });
 
-  bool _isChecked(String pkg) => switch (mode) {
-        TunnelMode.all => false,
-        TunnelMode.includeOnly => includePackages.contains(pkg),
-        TunnelMode.excludeOnly => excludePackages.contains(pkg),
+  /// Отмеченные — ключами, а не сырыми строками: сохранённый `telegram.exe` и
+  /// пришедший из системы `Telegram.exe` — одна и та же строка списка, и
+  /// галочка обязана стоять в обоих случаях. Считаем один раз на построение
+  /// списка, а не на каждую из сотен строк.
+  Set<String> _checkedKeys() => switch (mode) {
+        TunnelMode.all => const <String>{},
+        TunnelMode.includeOnly => includePackages.map(splitEntryKey).toSet(),
+        TunnelMode.excludeOnly => excludePackages.map(splitEntryKey).toSet(),
       };
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
     if (apps.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children:[
-            Icon(Icons.search_off_rounded, size: 40, color: AppTheme.accent(context).withValues(alpha: 0.4)),
-            const SizedBox(height: 10),
-            Text(l10n.splitNoAppsFound,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight(context))),
-          ],
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.search_off_rounded,
+                size: ExpressiveIconSize.extraLarge,
+                color: scheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: ExpressiveSpacing.medium),
+              Text(
+                l10n.splitNoAppsFound,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-
-    return SmoothScroll(
-      builder: (context, controller) => ListView.separated(
-        controller: controller,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        itemCount: apps.length,
-        addAutomaticKeepAlives: false,
-        addRepaintBoundaries: true,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
-        itemBuilder: (_, i) {
-          final app = apps[i];
-          final checked = _isChecked(app.packageName);
-
-          return _AppTile(
-            key: ValueKey(app.packageName),
-            app: app,
-            checked: checked,
-            mode: mode,
-            onTap: mode == TunnelMode.all ? null : () => onToggle(app.packageName),
-          );
-        },
+    // Строки — сегменты одного списка, а не отдельные карточки с зазором в
+    // 10px: зазор набирается полями САМОГО сегмента, поэтому шаг списка
+    // остаётся постоянным и его можно отдать `SliverFixedExtentList` — тот не
+    // раскладывает каждую строку ради высоты. На списке в пару сотен
+    // приложений это и есть разница между рывками и ровной прокруткой.
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        ExpressiveSpacing.large,
+        ExpressiveSpacing.none,
+        ExpressiveSpacing.large,
+        // 88 — высота расширенного FAB с его полями: ровно столько нужно, чтобы
+        // последняя строка не пряталась под кнопкой.
+        hasFab ? 88 : ExpressiveSpacing.extraLarge,
+      ),
+      sliver: _AppListBody(
+        apps: apps,
+        mode: mode,
+        checkedKeys: _checkedKeys(),
+        onToggle: onToggle,
       ),
     );
   }
 }
 
-// строка приложения
+/// Тело списка вынесено отдельным виджетом: набор отмеченных считается один
+/// раз на построение, а не в каждом `itemBuilder`.
+class _AppListBody extends ConsumerWidget {
+  final List<AppInfo> apps;
+  final TunnelMode mode;
+  final Set<String> checkedKeys;
+  final void Function(String) onToggle;
+
+  const _AppListBody({
+    required this.apps,
+    required this.mode,
+    required this.checkedKeys,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Кэш иконок берём ОДИН раз на список, а не в каждой строке: строка с
+    // собственным `ConsumerStatefulWidget` тащила бы за собой ещё и область
+    // зависимостей Riverpod — на сотнях строк это не бесплатно.
+    final iconCache = ref.read(appIconCacheProvider);
+    return SliverFixedExtentList.builder(
+      itemExtent: _AppTile.height,
+      itemCount: apps.length,
+      // Строка и так завёрнута в свой `RepaintBoundary`, а держать её живой
+      // после ухода с экрана незачем: обе обёртки — это по два лишних виджета
+      // на КАЖДУЮ строку, а их тут пара сотен.
+      addAutomaticKeepAlives: false,
+      addRepaintBoundaries: false,
+      itemBuilder: (context, i) {
+        final app = apps[i];
+        return _AppTile(
+          key: ValueKey(app.packageName),
+          app: app,
+          iconCache: iconCache,
+          checked: checkedKeys.contains(splitEntryKey(app.packageName)),
+          mode: mode,
+          radius: ExpressiveListSegment.segmentRadius(
+            index: i,
+            count: apps.length,
+          ),
+          margin: ExpressiveListSegment.segmentMargin(index: i),
+          onTap:
+              mode == TunnelMode.all ? null : () => onToggle(app.packageName),
+        );
+      },
+    );
+  }
+}
+
+/// Строка приложения — сегмент списка M3E.
+///
+/// Была карточка с собственной рамкой: невыбранная в полупрозрачный
+/// `outlineVariant`, выбранная — в акцент толщиной 1.5px поверх заливки на 10%
+/// альфы. Рамка на КАЖДОЙ строке и есть тот самый шум, от которого у M3E
+/// уходят к контейнерам: теперь строку отделяет заливка, а выбор несут морф
+/// формы и `secondaryContainer` — ровно как у строк серверов.
 class _AppTile extends StatelessWidget {
   final AppInfo app;
   final bool checked;
   final TunnelMode mode;
+
+  /// Форма сегмента: считает её список — только он знает, где у строки сосед,
+  /// а где край группы.
+  final BorderRadius radius;
+
+  /// Поля сегмента внутри шага списка; из них набирается зазор между строками.
+  final EdgeInsets margin;
+
   final VoidCallback? onTap;
+
+  /// Кэш иконок приходит сверху — см. комментарий в [_AppListBody].
+  final AppIconCache iconCache;
+
+  /// ШАГ списка вместе с зазором — от него живёт `SliverFixedExtentList`.
+  /// 40dp иконки и две строки текста укладываются в 72 с полями по 8.
+  static const double height = 72;
+
+  /// Размер индикатора выбора: XSmall-контейнер иконки M3E.
+  static const double _markSize = 24;
 
   const _AppTile({
     super.key,
     required this.app,
     required this.checked,
     required this.mode,
+    required this.radius,
+    required this.margin,
     required this.onTap,
+    required this.iconCache,
   });
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(ExpressiveShape.large);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final foreground =
+        checked ? scheme.onSecondaryContainer : scheme.onSurface;
+    final muted = checked
+        ? scheme.onSecondaryContainer.withValues(alpha: 0.7)
+        : scheme.onSurfaceVariant;
+    final titleStyle = checked
+        ? theme.textTheme.emphasized(theme.textTheme.bodyLarge)
+        : theme.textTheme.bodyLarge;
 
-    return Material(
-      color: checked ? AppTheme.accent(context).withValues(alpha: 0.1) : AppTheme.card(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: radius,
-        side: BorderSide(
-          color: checked
-              ? AppTheme.accent(context)
-              : AppTheme.divider(context).withValues(alpha: 0.5),
-          width: checked ? 1.5 : 1.0,
-        ),
-      ),
-      child: InkWell(
-        borderRadius: radius,
-        onTap: onTap,
-        splashColor: AppTheme.accent(context).withValues(alpha: 0.2),
+    return RepaintBoundary(
+      child: MergeSemantics(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children:[
-              // иконка приложения
-              _AppIcon(
-                iconBase64: app.iconBase64,
-                appName: app.appName,
-                iconPath: app.installPath,
+          padding: margin,
+          child: ExpressiveListSegment(
+            radius: radius,
+            selected: checked,
+            color: scheme.surfaceContainerHigh,
+            selectedColor: scheme.secondaryContainer,
+            onTap: onTap == null
+                ? null
+                : () {
+                    AppHaptics.selection();
+                    onTap!();
+                  },
+            splashColor: scheme.primary.withValues(alpha: 0.2),
+            highlightColor: scheme.primary.withValues(alpha: 0.08),
+            child: Padding(
+              // Отступ leading-слота по спеке списка — 16dp от края контейнера.
+              padding: const EdgeInsets.symmetric(
+                horizontal: ExpressiveSpacing.large,
               ),
-              const SizedBox(width: 14),
-              // название и package
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children:[
-                    Row(
+              child: Row(
+                children: [
+                  _AppIcon(
+                    iconBase64: app.iconBase64,
+                    appName: app.appName,
+                    iconPath: app.installPath,
+                    cache: iconCache,
+                  ),
+                  const SizedBox(width: ExpressiveSpacing.medium),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            app.appName,
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.text(context), fontWeight: checked ? FontWeight.w700 : FontWeight.w600),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                app.appName,
+                                style: titleStyle?.copyWith(color: foreground),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            // Процесс запущен — точка, а не «●» в плашке:
+                            // символ жил на своей типографике и прыгал по
+                            // базовой линии между шрифтами тем.
+                            if (app.isRunning) ...[
+                              const SizedBox(width: ExpressiveSpacing.small),
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.green(context),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        if (app.isRunning) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.green(context)
-                                  .withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(ExpressiveShape.small),
-                            ),
-                            child: Text(
-                              '●',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.green(context)),
-                            ),
-                          ),
-                        ],
+                        const SizedBox(height: 2),
+                        Text(
+                          app.installPath ?? app.packageName,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: muted),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      app.installPath ?? app.packageName,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              if (mode != TunnelMode.all)
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  transitionBuilder: (Widget child, Animation<double> animation) {
-                    return ScaleTransition(scale: animation, child: child);
-                  },
-                  child: checked
-                      ? Container(
-                    key: const ValueKey('checked'),
-                    width: 26, height: 26,
-                    decoration: BoxDecoration(
-                      color: mode == TunnelMode.includeOnly
-                          ? AppTheme.green(context)
-                          : AppTheme.orange(context),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
-                  )
-                      : Container(
-                    key: const ValueKey('unchecked'),
-                    width: 26, height: 26,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: AppTheme.divider(context).withValues(alpha: 0.8),
-                        width: 2,
-                      ),
-                      shape: BoxShape.circle,
-                    ),
                   ),
-                ),
-            ],
+                  if (mode != TunnelMode.all) ...[
+                    const SizedBox(width: ExpressiveSpacing.medium),
+                    _SelectionMark(checked: checked, mode: mode),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -973,32 +1187,89 @@ class _AppTile extends StatelessWidget {
   }
 }
 
+/// Отметка выбора: зелёная у «только выбранные», оранжевая у «кроме выбранных».
+///
+/// Смысловой цвет здесь остаётся сознательно: строка одинаково «выбрана» в
+/// обоих режимах, но в одном она идёт В туннель, а в другом мимо него, и
+/// перепутать их дорого.
+class _SelectionMark extends StatelessWidget {
+  final bool checked;
+  final TunnelMode mode;
+  const _SelectionMark({required this.checked, required this.mode});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final markColor = mode == TunnelMode.includeOnly
+        ? AppTheme.green(context)
+        : AppTheme.orange(context);
+
+    return AnimatedSwitcher(
+      duration: ExpressiveMotion.durationFast,
+      switchInCurve: ExpressiveMotion.emphasized,
+      transitionBuilder: (child, animation) =>
+          ScaleTransition(scale: animation, child: child),
+      child: checked
+          ? Container(
+              key: const ValueKey('checked'),
+              width: _AppTile._markSize,
+              height: _AppTile._markSize,
+              decoration: BoxDecoration(color: markColor, shape: BoxShape.circle),
+              child: Icon(
+                Icons.check_rounded,
+                size: ExpressiveIconSize.inline,
+                color: scheme.surface,
+              ),
+            )
+          : Container(
+              key: const ValueKey('unchecked'),
+              width: _AppTile._markSize,
+              height: _AppTile._markSize,
+              decoration: BoxDecoration(
+                border: Border.all(color: scheme.outline, width: 2),
+                shape: BoxShape.circle,
+              ),
+            ),
+    );
+  }
+}
+
 // иконка приложения, exe-иконки на windows подгружаем лениво, вне горячего пути списка
-class _AppIcon extends ConsumerStatefulWidget {
+class _AppIcon extends StatefulWidget {
   final String? iconBase64;
   final String appName;
   final String? iconPath;
+
+  /// Кэш приходит сверху, а не берётся из провайдера здесь: строка списка не
+  /// должна тащить за собой область зависимостей Riverpod ради одного чтения.
+  final AppIconCache cache;
+
   const _AppIcon({
     required this.iconBase64,
     required this.appName,
+    required this.cache,
     this.iconPath,
   });
 
   @override
-  ConsumerState<_AppIcon> createState() => _AppIconState();
+  State<_AppIcon> createState() => _AppIconState();
 }
 
-class _AppIconState extends ConsumerState<_AppIcon> {
+class _AppIconState extends State<_AppIcon> {
   Uint8List? _bytes;
-  bool _loadingIcon = false;
+
+  AppIconCache get _cache => widget.cache;
+
+  /// Путь, по которому мы сейчас числимся в очереди кэша: по нему же и
+  /// отписываемся. Хранить отдельно от `widget.iconPath` обязательно — в
+  /// `dispose` виджет может уже нести другой путь.
+  String? _pendingPath;
 
   @override
   void initState() {
     super.initState();
     _applyIcon(widget.iconBase64);
-    if (_bytes == null && widget.iconPath != null && widget.iconPath!.isNotEmpty) {
-      _loadIconLazy();
-    }
+    if (_bytes == null) _loadIcon();
   }
 
   @override
@@ -1007,12 +1278,16 @@ class _AppIconState extends ConsumerState<_AppIcon> {
     if (old.iconBase64 != widget.iconBase64) {
       _applyIcon(widget.iconBase64);
     }
-    if (_bytes == null &&
-        old.iconPath != widget.iconPath &&
-        widget.iconPath != null &&
-        widget.iconPath!.isNotEmpty) {
-      _loadIconLazy();
+    if (old.iconPath != widget.iconPath) {
+      _releasePending();
+      if (_bytes == null) _loadIcon();
     }
+  }
+
+  @override
+  void dispose() {
+    _releasePending();
+    super.dispose();
   }
 
   void _applyIcon(String? src) {
@@ -1027,32 +1302,55 @@ class _AppIconState extends ConsumerState<_AppIcon> {
     }
   }
 
-  Future<void> _loadIconLazy() async {
-    if (_loadingIcon || !mounted) return;
-    _loadingIcon = true;
-    final path = widget.iconPath!;
-    try {
-      final b64 = await ref.read(vpnEngineProvider).getAppIcon(path);
-      if (!mounted || b64 == null || b64.isEmpty) return;
-      setState(() => _applyIcon(b64));
-    } finally {
-      _loadingIcon = false;
-    }
+  void _releasePending() {
+    final path = _pendingPath;
+    if (path == null) return;
+    _pendingPath = null;
+    _cache.release(path);
   }
+
+  /// Иконка через общий кэш.
+  ///
+  /// Раньше каждая строка при появлении дёргала нативную выемку сама, без
+  /// кэша: на быстрой прокрутке поток платформы разбирал десятки таких
+  /// вызовов подряд, и список рвало. Уже добытая иконка теперь ставится
+  /// СРАЗУ, без кадра с буквой-заглушкой, а строка, улетевшая с экрана до
+  /// своей очереди, запрос забирает.
+  void _loadIcon() {
+    final path = widget.iconPath;
+    if (path == null || path.isEmpty) return;
+    if (_cache.has(path)) {
+      _bytes = _cache.peek(path);
+      return;
+    }
+    _pendingPath = path;
+    _cache.request(path).then((bytes) {
+      if (!mounted || bytes == null) return;
+      setState(() => _bytes = bytes);
+    });
+  }
+
+  /// Leading-слот строки по спеке списка M3E.
+  static const double _size = 40;
 
   @override
   Widget build(BuildContext context) {
     if (_bytes != null) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+        borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
         child: Image.memory(
           _bytes!,
-          width: 42, height: 42,
+          width: _size,
+          height: _size,
           fit: BoxFit.cover,
           gaplessPlayback: true,
-          // Декодируем под фактические 42lp: исходные иконки бывают до
+          // Иконка приезжает крупнее слота (нативная часть просит 128 и
+          // спускается вниз), поэтому здесь она УМЕНЬШАЕТСЯ — а на уменьшении
+          // качество фильтра как раз и видно.
+          filterQuality: FilterQuality.medium,
+          // Декодируем под фактический размер слота: исходные иконки бывают до
           // 512×512, полноразмерный декод раздувал image cache в разы.
-          cacheWidth: (42 * MediaQuery.devicePixelRatioOf(context)).round(),
+          cacheWidth: (_size * MediaQuery.devicePixelRatioOf(context)).round(),
           errorBuilder: (context, error, stackTrace) => _fallback(context),
         ),
       );
@@ -1060,19 +1358,28 @@ class _AppIconState extends ConsumerState<_AppIcon> {
     return _fallback(context);
   }
 
-  Widget _fallback(BuildContext context) => Container(
-    width: 42, height: 42,
-    decoration: BoxDecoration(
-      color: AppTheme.accent(context).withValues(alpha: 0.3),
-      borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-    ),
-    child: Center(
-      child: Text(
-        widget.appName.isNotEmpty ? widget.appName[0].toUpperCase() : '?',
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.text(context)),
+  /// Приложение без иконки — буква в контейнере роли, а не акцент на 30%
+  /// альфы: полупрозрачность сводилась с заливкой строки, и на выбранной
+  /// кружок съезжал в другой оттенок.
+  Widget _fallback(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: _size,
+      height: _size,
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
       ),
-    ),
-  );
+      child: Center(
+        child: Text(
+          widget.appName.isNotEmpty ? widget.appName[0].toUpperCase() : '?',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: scheme.onPrimaryContainer,
+              ),
+        ),
+      ),
+    );
+  }
 }
 // флаг ru в круге (иконка в appbar)
 class _RuFlagIcon extends StatelessWidget {

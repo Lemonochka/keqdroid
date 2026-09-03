@@ -428,7 +428,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingHeaderDesc.
   ///
   /// In en, this message translates to:
-  /// **'Decide which sites go directly past the VPN, which are forced through it, and which are blocked. Use a preset for a quick start, then fine-tune each list below.'**
+  /// **'Which sites go past the VPN, which through it, and which are blocked'**
   String get settingsRoutingHeaderDesc;
 
   /// No description provided for @settingsRoutingPresetsTitle.
@@ -440,7 +440,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetsHint.
   ///
   /// In en, this message translates to:
-  /// **'Pick a curated list and add it to the matching list below. You can edit or remove entries afterwards.'**
+  /// **'A ready-made list, added to the field below'**
   String get settingsRoutingPresetsHint;
 
   /// No description provided for @settingsRoutingPresetChoose.
@@ -604,12 +604,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Domains and IPs here are dropped and never connect.'**
   String get settingsRoutingBlockDesc;
-
-  /// No description provided for @settingsRoutingSyntaxHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Each list accepts domains and IPs together, comma- or line-separated:\n• ru — every *.ru host (a bare word = domain suffix)\n• vk.com — that domain and its subdomains\n• .example.com — subdomains only\n• 10.0.0.0/8 or 1.2.3.4 — IP address or CIDR range\n• geoip:ru / geosite:refilter — GeoIP/Geosite codes from the bundled databases\nPrivate/LAN IPs and your server always stay direct automatically.'**
-  String get settingsRoutingSyntaxHint;
 
   /// No description provided for @settingsRoutingValuesHint.
   ///
@@ -812,20 +806,14 @@ abstract class AppLocalizations {
   /// No description provided for @themeUseDynamicColorsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Use Android dynamic colors when available'**
+  /// **'When Android provides them'**
   String get themeUseDynamicColorsSubtitle;
 
-  /// No description provided for @themeDynamicPaletteHint.
+  /// No description provided for @themePaletteHint.
   ///
   /// In en, this message translates to:
-  /// **'Dynamic Android palette is active. Light/Dark works independently.'**
-  String get themeDynamicPaletteHint;
-
-  /// No description provided for @themeSystemPaletteHint.
-  ///
-  /// In en, this message translates to:
-  /// **'System accent palette is active. Light/Dark works independently.'**
-  String get themeSystemPaletteHint;
+  /// **'Light/Dark still switches on its own'**
+  String get themePaletteHint;
 
   /// No description provided for @themeUseSystemColors.
   ///
@@ -836,14 +824,8 @@ abstract class AppLocalizations {
   /// No description provided for @themeUseSystemColorsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Follow Windows or Linux accent colors when available'**
+  /// **'From the Windows or Linux accent'**
   String get themeUseSystemColorsSubtitle;
-
-  /// No description provided for @themeCustomPaletteHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom palette is active. Light/Dark works independently.'**
-  String get themeCustomPaletteHint;
 
   /// No description provided for @themeColorThemesTitle.
   ///
@@ -938,7 +920,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLocalPortsHint.
   ///
   /// In en, this message translates to:
-  /// **'Listen ports for the local SOCKS5 and HTTP proxies (defaults 2080 / 2081). Applied on the next connection. The two ports must differ.'**
+  /// **'SOCKS5 and HTTP, default 2080 / 2081, must differ. Applied on next connection.'**
   String get settingsLocalPortsHint;
 
   /// No description provided for @settingsPortInvalid.
@@ -1073,12 +1055,6 @@ abstract class AppLocalizations {
   /// **'Sniffing route only'**
   String get settingsXraySniffingRouteOnly;
 
-  /// No description provided for @settingsXrayCoreIntro.
-  ///
-  /// In en, this message translates to:
-  /// **'These options are injected into the generated Xray config. Change only if you know what they do.'**
-  String get settingsXrayCoreIntro;
-
   /// No description provided for @settingsXrayDnsDefaultNote.
   ///
   /// In en, this message translates to:
@@ -1094,7 +1070,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXrayXmuxParamsHint.
   ///
   /// In en, this message translates to:
-  /// **'Leave empty to use Xray defaults. Values can be a number or range (e.g. 16-32).'**
+  /// **'Blank uses the Xray default. A number or a range, e.g. 16-32.'**
   String get settingsXrayXmuxParamsHint;
 
   /// No description provided for @settingsXraySniffingHint.
@@ -1106,7 +1082,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXraySniffingRouteOnlyHint.
   ///
   /// In en, this message translates to:
-  /// **'Off (default): the sniffed domain becomes the destination, so it is resolved again — locally for direct routes, on the server for proxied ones. On: the domain is used only to pick a rule, and the connection still goes to the address the app supplied — which is wrong whenever that address came from a resolver on the far side of the tunnel (RU sites then load over a direct route to a foreign CDN node).'**
+  /// **'The sniffed domain only picks the routing rule; the connection still goes to the address the app gave.'**
   String get settingsXraySniffingRouteOnlyHint;
 
   /// No description provided for @settingsXrayResetDefaults.
@@ -1157,6 +1133,66 @@ abstract class AppLocalizations {
   /// **'Keep-alive period (sec)'**
   String get settingsXrayXmuxHKeepAlivePeriod;
 
+  /// No description provided for @settingsXrayFragmentSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Fragmentation'**
+  String get settingsXrayFragmentSection;
+
+  /// No description provided for @settingsXrayFragmentEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Split the TLS ClientHello'**
+  String get settingsXrayFragmentEnable;
+
+  /// No description provided for @settingsXrayFragmentEnableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The first packet goes out in pieces, so DPI cannot read the SNI. Xray core only.'**
+  String get settingsXrayFragmentEnableHint;
+
+  /// No description provided for @settingsXrayFragmentPacketsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What to split'**
+  String get settingsXrayFragmentPacketsTitle;
+
+  /// No description provided for @settingsXrayFragmentPacketsTlsHello.
+  ///
+  /// In en, this message translates to:
+  /// **'TLS ClientHello only'**
+  String get settingsXrayFragmentPacketsTlsHello;
+
+  /// No description provided for @settingsXrayFragmentPacketsFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'First packets of the stream'**
+  String get settingsXrayFragmentPacketsFirst;
+
+  /// No description provided for @settingsXrayFragmentParamsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Piece size and delay'**
+  String get settingsXrayFragmentParamsTitle;
+
+  /// No description provided for @settingsXrayFragmentParamsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A number or a range, e.g. 100-200.'**
+  String get settingsXrayFragmentParamsHint;
+
+  /// No description provided for @settingsXrayFragmentLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Size, bytes'**
+  String get settingsXrayFragmentLength;
+
+  /// No description provided for @settingsXrayFragmentInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Delay, ms'**
+  String get settingsXrayFragmentInterval;
+
   /// No description provided for @settingsTunSection.
   ///
   /// In en, this message translates to:
@@ -1178,19 +1214,19 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunStackSystemHint.
   ///
   /// In en, this message translates to:
-  /// **'OS kernel TCP/IP stack — fastest, but on Windows it terminates TCP on a listener at the TUN address and needs a Windows Firewall rule; when that rule does not stick, the tunnel comes up with no traffic at all'**
+  /// **'OS stack: the fastest, needs a firewall rule on Windows.'**
   String get settingsTunStackSystemHint;
 
   /// No description provided for @settingsTunStackGvisorHint.
   ///
   /// In en, this message translates to:
-  /// **'Userspace stack — default. Runs entirely inside the core, so it needs neither a listener nor firewall rules; a bit slower. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)'**
+  /// **'Userspace stack: no listener, no firewall rules, slightly slower. Needs a core built with gVisor.'**
   String get settingsTunStackGvisorHint;
 
   /// No description provided for @settingsTunStackMixedHint.
   ///
   /// In en, this message translates to:
-  /// **'gVisor for TCP, system for UDP. Needs a core built with gVisor (cores from app 0.7.1 and older exit with code 1)'**
+  /// **'gVisor for TCP, system for UDP. Needs a core built with gVisor.'**
   String get settingsTunStackMixedHint;
 
   /// No description provided for @settingsTunMtu.
@@ -1274,7 +1310,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunAutoRouteHint.
   ///
   /// In en, this message translates to:
-  /// **'Adds system routes into the tunnel automatically. Disable only if you manage routes yourself — without it no traffic enters the TUN'**
+  /// **'Adds system routes into the tunnel. Without it nothing reaches TUN.'**
   String get settingsTunAutoRouteHint;
 
   /// No description provided for @settingsTunIpv6.
@@ -1286,7 +1322,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunIpv6Hint.
   ///
   /// In en, this message translates to:
-  /// **'A TUN interface with only an IPv4 address gets no IPv6 routes, so on a dual-stack machine IPv6 traffic goes around the tunnel — past the routing rules and past the proxy. With this on the interface also gets an IPv6 address and IPv6 egress is closed, so apps fall back to IPv4, which is already tunnelled. The address is added only when the machine really has global IPv6. Xray/keqrnel core only'**
+  /// **'Gives the TUN interface an IPv6 address; without it all IPv6 bypasses the tunnel. Xray/keqrnel core only.'**
   String get settingsTunIpv6Hint;
 
   /// No description provided for @settingsMihomoSection.
@@ -1304,7 +1340,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsMihomoFakeIpHint.
   ///
   /// In en, this message translates to:
-  /// **'Answers DNS with a placeholder address instead of the real one: lookups become instant and domain rules stop depending on sniffing. In exchange, IP rules have to be resolved again before they can match, so the same routing lists behave a little differently than on Xray. Applies only where mihomo owns the tunnel — TUN mode and Android.'**
+  /// **'Instant resolution via fake addresses. Only where mihomo owns the tunnel: TUN and Android.'**
   String get settingsMihomoFakeIpHint;
 
   /// No description provided for @settingsPingTitle.
@@ -1370,7 +1406,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPingKeepAliveHint.
   ///
   /// In en, this message translates to:
-  /// **'Sends two requests over one connection and keeps the better one, so the result is the server\'s response time without the cost of opening the connection. Turn it off to measure a full request, handshake included — larger numbers, closer to what a browser waits for.'**
+  /// **'Response time without the handshake. Off — the whole request, as a browser sees it'**
   String get settingsPingKeepAliveHint;
 
   /// No description provided for @settingsPingMethodSpeed.
@@ -1916,7 +1952,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsChooseWhatToImport.
   ///
   /// In en, this message translates to:
-  /// **'Choose what to import (selected sections will replace your current data).'**
+  /// **'Selected sections replace your current data'**
   String get settingsChooseWhatToImport;
 
   /// No description provided for @settingsSplitTunnelingApps.
@@ -1946,7 +1982,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAppSettingsHint.
   ///
   /// In en, this message translates to:
-  /// **'Routing, DNS, appearance, ping and language. Ports, LAN sharing and TUN stay as they are on this machine.'**
+  /// **'Routing, DNS, appearance, ping, language. Not ports, LAN sharing or TUN.'**
   String get settingsAppSettingsHint;
 
   /// No description provided for @settingsImport.
@@ -1964,13 +2000,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCreateFileToSave.
   ///
   /// In en, this message translates to:
-  /// **'Create a file you can save and import on another device.'**
+  /// **'The file can be moved to another device'**
   String get settingsCreateFileToSave;
 
   /// No description provided for @settingsPickExportedFile.
   ///
   /// In en, this message translates to:
-  /// **'Pick a previously exported file and restore selected sections.'**
+  /// **'You pick what to restore after choosing the file'**
   String get settingsPickExportedFile;
 
   /// No description provided for @settingsWorking.
@@ -2512,6 +2548,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Time'**
   String get statsTimeLabel;
+
+  /// No description provided for @statsDownloadLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Download speed'**
+  String get statsDownloadLabel;
+
+  /// No description provided for @statsUploadLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload speed'**
+  String get statsUploadLabel;
 
   /// No description provided for @qrScanTitle.
   ///
@@ -3218,7 +3266,7 @@ abstract class AppLocalizations {
   /// No description provided for @appearanceAmoledSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'True black background in the dark theme — saves power on OLED screens'**
+  /// **'True black in the dark theme — saves OLED power'**
   String get appearanceAmoledSubtitle;
 
   /// No description provided for @appearanceAmoledNeedsDark.
@@ -3272,7 +3320,7 @@ abstract class AppLocalizations {
   /// No description provided for @appearanceWaveLatencyColorSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'The bar under the connect button turns green, amber or red by the active server\'s ping. Off keeps it in the theme accent.'**
+  /// **'Green, amber or red by the active server\'s ping'**
   String get appearanceWaveLatencyColorSubtitle;
 
   /// No description provided for @appearanceFontTitle.
@@ -3920,7 +3968,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsProxyAuthSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Turn off for consumers with nowhere to enter it, like the Wi-Fi proxy fields'**
+  /// **'Turn off where there is nowhere to enter it — the Wi-Fi proxy field, for one'**
   String get settingsProxyAuthSubtitle;
 
   /// No description provided for @settingsProxyAuthUser.
@@ -3962,13 +4010,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunnelModeProxySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'A local proxy only — no system VPN, nothing is captured by itself'**
+  /// **'Local proxy only, no system VPN'**
   String get settingsTunnelModeProxySubtitle;
 
   /// No description provided for @settingsTunnelModeHint.
   ///
   /// In en, this message translates to:
-  /// **'In Proxy mode the app opens SOCKS and HTTP on 127.0.0.1 and captures nothing on its own: point an app or the Wi-Fi proxy settings at it. The ports are in Settings → Local ports, and in this mode the local proxy asks for no password: the Wi-Fi proxy fields have nowhere to put one. Any app on the device can use it while the mode is on. Per-app routing and DNS interception belong to VPN mode; AmneziaWG servers always run as VPN.'**
+  /// **'Proxy mode runs SOCKS and HTTP on 127.0.0.1 — point an app or Wi-Fi at them. The proxy is open to every app on the device. Per-app routing and DNS interception need VPN mode.'**
   String get settingsTunnelModeHint;
 
   /// No description provided for @settingsCoreAuto.
@@ -3980,7 +4028,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCoreAutoSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'The core is picked by the server\'s format: links run on Xray, ready-made configs run on the core they are written for.'**
+  /// **'Links go to Xray, ready-made configs to their own core'**
   String get settingsCoreAutoSubtitle;
 
   /// No description provided for @settingsCoreSkipClash.
@@ -3992,7 +4040,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCoreSkipCustom.
   ///
   /// In en, this message translates to:
-  /// **'The active server is a ready-made Xray JSON config (its routing and DNS come from the provider), so it runs on libxray no matter which core is selected. To use mihomo, take a subscription that hands out plain vless:// / vmess:// links — switch the client identity in the subscription\'s settings.'**
+  /// **'The active server is a ready-made Xray JSON config, so it runs on libxray whatever core you pick. mihomo needs a subscription with plain links.'**
   String get settingsCoreSkipCustom;
 
   /// No description provided for @settingsCoreSkipChain.
@@ -4106,7 +4154,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsInternalsGeoTrimmedHint.
   ///
   /// In en, this message translates to:
-  /// **'It carries only the codes the app\'s own presets need. A rule naming any other country is dropped before connecting.'**
+  /// **'Only the codes the app\'s own presets need; a rule with any other country is dropped.'**
   String get settingsInternalsGeoTrimmedHint;
 
   /// No description provided for @settingsInternalsGeoDownload.
@@ -4238,7 +4286,7 @@ abstract class AppLocalizations {
   /// No description provided for @appearanceUiScaleSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Applied on top of the system text size, so 100% means \"as the system says\". Text and list rows resize; icons and spacing stay as they are.'**
+  /// **'On top of the system text size. Text and list rows only.'**
   String get appearanceUiScaleSubtitle;
 
   /// No description provided for @appearanceIconShapeTitle.

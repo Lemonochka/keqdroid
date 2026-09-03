@@ -422,6 +422,86 @@ class ConfigGeneratorV2 {
     outbound['streamSettings'] = stream;
   }
 
+  /// Тег freedom-аутбаунда, который режет ClientHello.
+  static const String _fragmentTag = 'fragment';
+
+  /// Включает фрагментацию и возвращает аутбаунд, который её исполняет
+  /// (`null` — выключена или применять её не к чему).
+  ///
+  /// Подцепляется к САМОМУ ВНЕШНЕМУ аутбаунду — тому, который реально
+  /// открывает сокет наружу. В цепочке это входной узел: у остальных уже стоит
+  /// свой `dialerProxy` на предыдущее звено, и вторая подмена просто разорвала
+  /// бы цепочку. Резать имеет смысл только внешний сокет: пакеты внутренних
+  /// звеньев уже едут внутри чужого шифрованного потока, и DPI провайдера их
+  /// всё равно не разбирает.
+  static Map<String, dynamic>? _applyFragment(
+    List<Map<String, dynamic>> proxyOutbounds,
+    XrayCoreSettings core,
+  ) {
+    final fragment = core.buildFragmentMap();
+    if (fragment == null) return null;
+
+    for (final outbound in proxyOutbounds) {
+      final stream = outbound['streamSettings'] as Map<String, dynamic>?;
+      final sockopt = stream?['sockopt'] as Map<String, dynamic>?;
+      final dialer = sockopt?['dialerProxy']?.toString() ?? '';
+      // Уже дозванивается через другое звено — значит не внешний.
+      if (dialer.isNotEmpty) continue;
+      // UDP-транспорт резать нечем: ClientHello там нет вовсе, а dialerProxy
+      // поверх hysteria ядро встречает «udphop requires being at the outermost
+      // level» и роняет соединение целиком (та же грабля, что и в цепочках).
+      if (_isDatagramOutbound(outbound)) return null;
+
+      final newStream = Map<String, dynamic>.from(
+        stream ?? const <String, dynamic>{},
+      );
+      final newSockopt = Map<String, dynamic>.from(
+        sockopt ?? const <String, dynamic>{},
+      );
+      newSockopt['dialerProxy'] = _fragmentTag;
+      // `domainStrategy` отсюда НЕ убираем, в отличие от цепочки: там адрес
+      // резолвит предыдущий узел удалённо, а тут дозвон остаётся локальным,
+      // просто уходит на аутбаунд ниже. Он же и резолвит — своей настройкой.
+      newStream['sockopt'] = newSockopt;
+      outbound['streamSettings'] = newStream;
+
+      return {
+        'protocol': 'freedom',
+        'tag': _fragmentTag,
+        'settings': {
+          // Тот же резолв, что и у прокси-аутбаунда без фрагментации: домен
+          // сервера должен идти через DNS-блок конфига, а не через системный
+          // резолвер Go — на Android его просто нет (см.
+          // [_applyServerDomainStrategy]).
+          'domainStrategy': _freedomDomainStrategy(core),
+          'fragment': fragment,
+        },
+      };
+    }
+    return null;
+  }
+
+  /// Семейство адресов для резолва внутри freedom — из queryStrategy DNS,
+  /// как и в [_applyServerDomainStrategy].
+  static String _freedomDomainStrategy(XrayCoreSettings core) =>
+      switch (core.dnsQueryStrategy) {
+        'UseIPv4' => 'UseIPv4',
+        'UseIPv6' => 'UseIPv6',
+        _ => 'UseIP',
+      };
+
+  /// Едет ли аутбаунд по UDP: hysteria2 (`network: hysteria`) и mKCP/QUIC из
+  /// параметра `type` ссылки.
+  static bool _isDatagramOutbound(Map<String, dynamic> outbound) {
+    if (outbound['protocol'] == 'hysteria') return true;
+    final network = (outbound['streamSettings']
+                as Map<String, dynamic>?)?['network']
+            ?.toString()
+            .toLowerCase() ??
+        '';
+    return const {'hysteria', 'kcp', 'mkcp', 'quic'}.contains(network);
+  }
+
   /// Разделители списков правил — и запятая, и перевод строки: UI обещает «по
   /// одному в строке или через запятую», а сплит только по ',' склеивал
   /// построчные записи в один несрабатывающий токен.
@@ -1622,6 +1702,13 @@ class ConfigGeneratorV2 {
           };
     rules.add(rule('final', {'outboundTag': finalTag, 'network': 'tcp,udp'}));
 
+    // Фрагментация ClientHello. Сам прокси-аутбаунд резать пакеты не умеет —
+    // это делает freedom, поэтому наружу дозванивается он, а прокси-аутбаунд
+    // ходит к нему через dialerProxy. В ping-режиме включаем на тех же
+    // условиях: проба обязана дозваниваться ровно так же, как потом боевое
+    // соединение, иначе зелёный пинг ничего не обещает.
+    final fragmentOutbound = _applyFragment(proxyOutbounds, core);
+
     final inbounds = _buildInbounds(
       settings,
       pingSocksPort: pingSocksPort,
@@ -1637,6 +1724,9 @@ class ConfigGeneratorV2 {
         ...proxyOutbounds,
         {'protocol': 'freedom', 'tag': 'direct'},
         {'protocol': 'blackhole', 'tag': 'block'},
+        // Не раньше прокси-аутбаунда: первый в списке у xray считается
+        // основным, и всё, что не попало в правила, ушло бы в обход туннеля.
+        ?fragmentOutbound,
         // Тег из правила `dns-out`; в ping-режиме правила нет, и аутбаунд с
         // несуществующим тегом только раздувал бы конфиг пробы.
         if (!isPingMode)

@@ -185,13 +185,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsRoutingResetDone => 'Правила маршрутизации сброшены';
 
   @override
-  String get settingsRoutingHeaderDesc => 'Выберите, какие сайты идут напрямую мимо VPN, какие принудительно через него, а какие блокируются. Начните с пресета, затем при необходимости отредактируйте списки ниже.';
+  String get settingsRoutingHeaderDesc => 'Какие сайты идут мимо VPN, какие через него, а какие блокируются';
 
   @override
   String get settingsRoutingPresetsTitle => 'Быстрые пресеты';
 
   @override
-  String get settingsRoutingPresetsHint => 'Выберите готовый список и добавьте его в соответствующее поле ниже. После этого его можно отредактировать.';
+  String get settingsRoutingPresetsHint => 'Готовый список — добавится в поле ниже';
 
   @override
   String get settingsRoutingPresetChoose => 'Выберите пресет…';
@@ -275,9 +275,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsRoutingBlockDesc => 'Домены и IP из этого списка блокируются и не подключаются.';
-
-  @override
-  String get settingsRoutingSyntaxHint => 'Каждое поле принимает домены и IP вместе, через запятую или с новой строки:\n• ru — любой хост *.ru (слово без точки = суффикс домена)\n• vk.com — этот домен и его поддомены\n• .example.com — только поддомены\n• 10.0.0.0/8 или 1.2.3.4 — IP-адрес или диапазон CIDR\n• geoip:ru / geosite:refilter — коды GeoIP/Geosite из поставляемых баз\nПриватные IP локальной сети и ваш сервер всегда идут напрямую автоматически.';
 
   @override
   String get settingsRoutingValuesHint => 'По одному в строке или через запятую';
@@ -394,22 +391,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get themeUseDynamicColors => 'Использовать тему Android';
 
   @override
-  String get themeUseDynamicColorsSubtitle => 'Использовать цветовую тему Android';
+  String get themeUseDynamicColorsSubtitle => 'Если Android их отдаёт';
 
   @override
-  String get themeDynamicPaletteHint => 'Активна динамическая палитра Android. Светлая/тёмная работают независимо.';
-
-  @override
-  String get themeSystemPaletteHint => 'Активна системная палитра. Светлая/тёмная работают независимо.';
+  String get themePaletteHint => 'Светлая/тёмная переключается отдельно';
 
   @override
   String get themeUseSystemColors => 'Использовать системные цвета';
 
   @override
-  String get themeUseSystemColorsSubtitle => 'Цвета из акцента Windows или Linux, если доступны';
-
-  @override
-  String get themeCustomPaletteHint => 'Активна пользовательская палитра. Светлая/тёмная работают независимо.';
+  String get themeUseSystemColorsSubtitle => 'Акцент Windows или Linux';
 
   @override
   String get themeColorThemesTitle => 'Цветовые темы';
@@ -459,7 +450,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsLocalPortsTitle => 'Локальные порты прокси';
 
   @override
-  String get settingsLocalPortsHint => 'Порты прослушивания локальных прокси SOCKS5 и HTTP (по умолчанию 2080 / 2081). Применяются при следующем подключении. Порты должны отличаться друг от друга.';
+  String get settingsLocalPortsHint => 'SOCKS5 и HTTP, по умолчанию 2080 / 2081, должны отличаться. Применятся при следующем подключении.';
 
   @override
   String get settingsPortInvalid => 'Введите порт от 1 до 65535';
@@ -530,22 +521,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXraySniffingRouteOnly => 'Sniffing route only';
 
   @override
-  String get settingsXrayCoreIntro => 'Параметры попадают в конфиг Xray при подключении. Меняйте и добавляйте свои значения только если знаете для чего они используются';
-
-  @override
   String get settingsXrayDnsDefaultNote => 'По умолчанию: DoH Cloudflare и Google';
 
   @override
   String get settingsXrayXmuxParamsTitle => 'Тонкая настройка';
 
   @override
-  String get settingsXrayXmuxParamsHint => 'Пустое поле — значение по умолчанию Xray. Можно число или диапазон (например 16-32).';
+  String get settingsXrayXmuxParamsHint => 'Пусто — дефолт Xray. Число или диапазон, например 16-32.';
 
   @override
   String get settingsXraySniffingHint => 'Определять протокол и домен назначения по входящему трафику';
 
   @override
-  String get settingsXraySniffingRouteOnlyHint => 'Выключено (по умолчанию): домен из снифера становится адресом назначения, и его резолвят заново — для прямого маршрута локально, для проксируемого на сервере. Включено: домен нужен только для выбора правила, а соединение идёт на адрес от приложения — а он неверный всякий раз, когда пришёл от резолвера по ту сторону туннеля (ру-сайты тогда идут напрямую к зарубежному узлу CDN).';
+  String get settingsXraySniffingRouteOnlyHint => 'Домен из снифера только выбирает правило, а соединение идёт на адрес от приложения.';
 
   @override
   String get settingsXrayResetDefaults => 'Сбросить настройки';
@@ -572,6 +560,36 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayXmuxHKeepAlivePeriod => 'Keep-alive (сек)';
 
   @override
+  String get settingsXrayFragmentSection => 'Фрагментация';
+
+  @override
+  String get settingsXrayFragmentEnable => 'Резать TLS ClientHello';
+
+  @override
+  String get settingsXrayFragmentEnableHint => 'Первый пакет уходит кусками, и DPI не видит SNI. Только ядро xray.';
+
+  @override
+  String get settingsXrayFragmentPacketsTitle => 'Что резать';
+
+  @override
+  String get settingsXrayFragmentPacketsTlsHello => 'Только TLS ClientHello';
+
+  @override
+  String get settingsXrayFragmentPacketsFirst => 'Первые пакеты потока';
+
+  @override
+  String get settingsXrayFragmentParamsTitle => 'Размер куска и пауза';
+
+  @override
+  String get settingsXrayFragmentParamsHint => 'Число или диапазон, например 100-200.';
+
+  @override
+  String get settingsXrayFragmentLength => 'Размер, байты';
+
+  @override
+  String get settingsXrayFragmentInterval => 'Пауза, мс';
+
+  @override
   String get settingsTunSection => 'TUN-режим';
 
   @override
@@ -581,13 +599,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunStackTitle => 'Сетевой стек';
 
   @override
-  String get settingsTunStackSystemHint => 'Стек ядра ОС — самый быстрый, но на Windows терминирует TCP листенером на адресе TUN и требует правила Windows Firewall; если правило не встало, туннель поднимается вообще без трафика';
+  String get settingsTunStackSystemHint => 'Стек ОС: самый быстрый, на Windows требует правило фаервола.';
 
   @override
-  String get settingsTunStackGvisorHint => 'Userspace-стек — по умолчанию. Работает целиком внутри ядра, поэтому ему не нужны ни листенер, ни правила фаервола; чуть медленнее. Нужно ядро, собранное с gVisor (ядра из приложения 0.7.1 и старше падают с кодом 1)';
+  String get settingsTunStackGvisorHint => 'Userspace-стек: ни листенера, ни правил фаервола, чуть медленнее. Нужно ядро с gVisor.';
 
   @override
-  String get settingsTunStackMixedHint => 'gVisor для TCP, system для UDP. Нужно ядро, собранное с gVisor (ядра из приложения 0.7.1 и старше падают с кодом 1)';
+  String get settingsTunStackMixedHint => 'gVisor для TCP, system для UDP. Нужно ядро с gVisor.';
 
   @override
   String get settingsTunMtu => 'MTU';
@@ -629,13 +647,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunAutoRoute => 'Auto route';
 
   @override
-  String get settingsTunAutoRouteHint => 'Автоматически добавляет системные маршруты в туннель. Выключайте только при ручном управлении маршрутами — без него трафик в TUN не попадает';
+  String get settingsTunAutoRouteHint => 'Добавляет системные маршруты в туннель. Без него трафик в TUN не попадает.';
 
   @override
   String get settingsTunIpv6 => 'Не выпускать IPv6 мимо туннеля';
 
   @override
-  String get settingsTunIpv6Hint => 'TUN-интерфейс с одним только IPv4-адресом не получает IPv6-маршрутов, поэтому на двухстековой машине весь IPv6 идёт мимо туннеля — мимо правил роутинга и мимо прокси. С включённой опцией интерфейс получает и IPv6-адрес, а выход IPv6 наружу закрывается: приложения сразу откатываются на IPv4, который уже в туннеле. Адрес заводится только тогда, когда глобальный IPv6 у машины действительно есть. Только ядро xray/keqrnel';
+  String get settingsTunIpv6Hint => 'Даёт TUN-интерфейсу IPv6-адрес, иначе весь IPv6 идёт мимо туннеля. Только ядро xray/keqrnel.';
 
   @override
   String get settingsMihomoSection => 'Ядро mihomo';
@@ -644,7 +662,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsMihomoFakeIp => 'Fake IP';
 
   @override
-  String get settingsMihomoFakeIpHint => 'Ядро отвечает на DNS подменным адресом вместо настоящего: резолв мгновенный, а доменные правила перестают зависеть от снифинга. Взамен IP-правила приходится доразрешать перед сравнением, поэтому те же списки роутинга ведут себя не совсем как на Xray. Действует только там, где туннелем владеет mihomo, — режим TUN и Android.';
+  String get settingsMihomoFakeIpHint => 'Мгновенный резолв подменными адресами. Только там, где туннелем владеет mihomo: TUN и Android.';
 
   @override
   String get settingsPingTitle => 'Пинг серверов';
@@ -677,7 +695,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPingKeepAlive => 'Keep-alive';
 
   @override
-  String get settingsPingKeepAliveHint => 'Шлёт два запроса по одному соединению и берёт лучший: результат — время ответа сервера без стоимости установки соединения. Выключите, чтобы мерить запрос целиком, вместе с рукопожатием: числа будут больше и ближе к тому, сколько ждёт браузер.';
+  String get settingsPingKeepAliveHint => 'Время ответа без рукопожатия. Выключено — запрос целиком, как его ждёт браузер';
 
   @override
   String get settingsPingMethodSpeed => 'Тест скорости';
@@ -972,7 +990,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsImportBackup => 'Импорт резервной копии';
 
   @override
-  String get settingsChooseWhatToImport => 'Выберите что импортировать (выбранные разделы заменят текущие данные).';
+  String get settingsChooseWhatToImport => 'Выбранные разделы заменят текущие данные';
 
   @override
   String get settingsSplitTunnelingApps => 'Приложения раздельного туннелирования';
@@ -987,7 +1005,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsAppSettings => 'Настройки приложения';
 
   @override
-  String get settingsAppSettingsHint => 'Маршрутизация, DNS, внешний вид, пинг и язык. Порты, LAN-раздача и TUN остаются как на этой машине.';
+  String get settingsAppSettingsHint => 'Маршрутизация, DNS, вид, пинг, язык. Порты, LAN и TUN — нет.';
 
   @override
   String get settingsImport => 'Импорт';
@@ -996,10 +1014,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsExport => 'Экспорт';
 
   @override
-  String get settingsCreateFileToSave => 'Создайте файл, который можно сохранить и импортировать на другом устройстве.';
+  String get settingsCreateFileToSave => 'Файл можно перенести на другое устройство';
 
   @override
-  String get settingsPickExportedFile => 'Выберите ранее экспортированный файл и восстановите выбранные разделы.';
+  String get settingsPickExportedFile => 'Что восстановить — выберете после файла';
 
   @override
   String get settingsWorking => 'Работаем...';
@@ -1288,6 +1306,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get statsTimeLabel => 'Время';
+
+  @override
+  String get statsDownloadLabel => 'Скорость приёма';
+
+  @override
+  String get statsUploadLabel => 'Скорость отдачи';
 
   @override
   String get qrScanTitle => 'Сканировать QR-код';
@@ -1649,7 +1673,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceAmoled => 'Чистый чёрный (AMOLED)';
 
   @override
-  String get appearanceAmoledSubtitle => 'По-настоящему чёрный фон в тёмной теме — экономит заряд на OLED-экранах';
+  String get appearanceAmoledSubtitle => 'Чистый чёрный фон в тёмной теме — экономит заряд OLED';
 
   @override
   String get appearanceAmoledNeedsDark => 'Доступно при включённой тёмной теме';
@@ -1676,7 +1700,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceWaveLatencyColor => 'Красить индикатор по задержке';
 
   @override
-  String get appearanceWaveLatencyColorSubtitle => 'Полоса под кнопкой подключения становится зелёной, оранжевой или красной по пингу активного сервера. Выключено — остаётся в акценте темы.';
+  String get appearanceWaveLatencyColorSubtitle => 'Зелёная, оранжевая или красная по пингу активного сервера';
 
   @override
   String get appearanceFontTitle => 'Шрифт';
@@ -2029,7 +2053,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsProxyAuthTitle => 'Пароль для локального прокси';
 
   @override
-  String get settingsProxyAuthSubtitle => 'Выключите для тех, кому его вписать некуда — например, для системного поля прокси у Wi-Fi';
+  String get settingsProxyAuthSubtitle => 'Выключите там, где пароль вписать некуда — например, в поле прокси у Wi-Fi';
 
   @override
   String get settingsProxyAuthUser => 'Логин';
@@ -2050,22 +2074,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunnelModeProxy => 'Прокси';
 
   @override
-  String get settingsTunnelModeProxySubtitle => 'Только локальный прокси — системный VPN не включается, сам по себе трафик не перехватывается';
+  String get settingsTunnelModeProxySubtitle => 'Только локальный прокси, системный VPN не включается';
 
   @override
-  String get settingsTunnelModeHint => 'В режиме «Прокси» приложение поднимает SOCKS и HTTP на 127.0.0.1 и ничего не перехватывает само: направьте на них приложение или настройки прокси Wi-Fi. Порты — в «Настройки → Локальные порты»; пароля локальный прокси в этом режиме не спрашивает — системному полю прокси у Wi-Fi его негде взять. Пока режим включён, им может пользоваться любое приложение на устройстве. Маршрутизация по приложениям и перехват DNS работают только в режиме VPN; серверы AmneziaWG всегда подключаются как VPN.';
+  String get settingsTunnelModeHint => '«Прокси» поднимает SOCKS и HTTP на 127.0.0.1 — направьте на них приложение или Wi-Fi. Прокси открыт любому приложению на устройстве. Маршрутизация по приложениям и перехват DNS — только в VPN.';
 
   @override
   String get settingsCoreAuto => 'Автоматически';
 
   @override
-  String get settingsCoreAutoSubtitle => 'Ядро выбирает формат сервера: ссылки идут на Xray, готовые конфиги — на то ядро, на языке которого написаны.';
+  String get settingsCoreAutoSubtitle => 'Ссылки идут на Xray, готовые конфиги — на своё ядро';
 
   @override
   String get settingsCoreSkipClash => 'Активный сервер — готовый конфиг Clash: его исполняет только mihomo, при любом выборе ядра.';
 
   @override
-  String get settingsCoreSkipCustom => 'Активный сервер — готовый JSON-конфиг Xray (роутинг и DNS в нём от провайдера), поэтому он идёт через libxray при любом выборе ядра. Чтобы работал mihomo, нужна подписка с обычными ссылками vless:// / vmess:// — поменяйте идентичность клиента в настройках подписки.';
+  String get settingsCoreSkipCustom => 'Активный сервер — готовый JSON-конфиг Xray: идёт через libxray при любом выборе ядра. Для mihomo нужна подписка с обычными ссылками.';
 
   @override
   String get settingsCoreSkipChain => 'Активный сервер — цепочка: её узлы связаны через dialerProxy Xray, поэтому она идёт через libxray при любом выборе ядра.';
@@ -2124,7 +2148,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsInternalsGeoTrimmed => 'База стран урезанная';
 
   @override
-  String get settingsInternalsGeoTrimmedHint => 'В ней только коды, которые нужны пресетам самого приложения. Правило с любой другой страной отбрасывается перед подключением.';
+  String get settingsInternalsGeoTrimmedHint => 'Только коды для пресетов приложения; правило с другой страной отбрасывается.';
 
   @override
   String get settingsInternalsGeoDownload => 'Скачать полную базу';
@@ -2192,7 +2216,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceUiScaleTitle => 'Размер интерфейса';
 
   @override
-  String get appearanceUiScaleSubtitle => 'Применяется поверх системного размера текста, поэтому 100% — это «как в системе». Меняются текст и высота строк списка; иконки и отступы остаются прежними.';
+  String get appearanceUiScaleSubtitle => 'Поверх системного размера текста. Только текст и строки списка.';
 
   @override
   String get appearanceIconShapeTitle => 'Форма иконок';

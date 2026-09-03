@@ -185,13 +185,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingResetDone => '路由规则已重置';
 
   @override
-  String get settingsRoutingHeaderDesc => '决定哪些站点直接绕过 VPN、哪些强制经过 VPN、哪些被阻止。可先使用预设快速开始，然后再微调下方的每个列表。';
+  String get settingsRoutingHeaderDesc => '哪些站点绕过 VPN、哪些经过 VPN、哪些被阻止';
 
   @override
   String get settingsRoutingPresetsTitle => '快速预设';
 
   @override
-  String get settingsRoutingPresetsHint => '选择一个精选列表并将其添加到下方对应的列表。之后可以编辑或删除条目。';
+  String get settingsRoutingPresetsHint => '精选列表，添加到下方对应字段';
 
   @override
   String get settingsRoutingPresetChoose => '选择预设…';
@@ -275,9 +275,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsRoutingBlockDesc => '此列表中的域名和 IP 将被丢弃且永不连接。';
-
-  @override
-  String get settingsRoutingSyntaxHint => '每个列表可同时填写域名和 IP，用逗号或换行分隔：\n• ru — 所有 *.ru 主机（不带点的词 = 域名后缀）\n• vk.com — 该域名及其子域名\n• .example.com — 仅子域名\n• 10.0.0.0/8 或 1.2.3.4 — IP 地址或 CIDR 范围\n• geoip:ru / geosite:refilter — 内置数据库中的 GeoIP/Geosite 代码\n私有/局域网 IP 和你的服务器始终自动直连。';
 
   @override
   String get settingsRoutingValuesHint => '每行一个，或用逗号分隔';
@@ -392,22 +389,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeUseDynamicColors => '使用 Android 动态颜色';
 
   @override
-  String get themeUseDynamicColorsSubtitle => '在可用时使用 Android 动态颜色';
+  String get themeUseDynamicColorsSubtitle => '在 Android 提供时';
 
   @override
-  String get themeDynamicPaletteHint => 'Android 动态调色板已启用。浅色/深色可独立工作。';
-
-  @override
-  String get themeSystemPaletteHint => '系统强调色调色板已启用。浅色/深色可独立工作。';
+  String get themePaletteHint => '浅色/深色仍可单独切换';
 
   @override
   String get themeUseSystemColors => '使用系统强调色';
 
   @override
-  String get themeUseSystemColorsSubtitle => '在可用时跟随 Windows 或 Linux 的强调色';
-
-  @override
-  String get themeCustomPaletteHint => '自定义调色板已启用。浅色/深色可独立工作。';
+  String get themeUseSystemColorsSubtitle => '来自 Windows 或 Linux 的强调色';
 
   @override
   String get themeColorThemesTitle => '颜色主题';
@@ -457,7 +448,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLocalPortsTitle => '本地代理端口';
 
   @override
-  String get settingsLocalPortsHint => '本地 SOCKS5 和 HTTP 代理的监听端口（默认 2080 / 2081）。将在下次连接时生效。两个端口必须不同。';
+  String get settingsLocalPortsHint => 'SOCKS5 与 HTTP，默认 2080 / 2081，须不同。下次连接时生效。';
 
   @override
   String get settingsPortInvalid => '请输入 1 到 65535 之间的端口';
@@ -528,22 +519,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXraySniffingRouteOnly => '仅用于路由的嗅探';
 
   @override
-  String get settingsXrayCoreIntro => '这些选项会被注入到生成的 Xray 配置中。仅在你了解其作用时才更改。';
-
-  @override
   String get settingsXrayDnsDefaultNote => '默认：Cloudflare 和 Google DoH';
 
   @override
   String get settingsXrayXmuxParamsTitle => '微调';
 
   @override
-  String get settingsXrayXmuxParamsHint => '留空以使用 Xray 默认值。可以是数字或范围（例如 16-32）。';
+  String get settingsXrayXmuxParamsHint => '留空使用 Xray 默认值。数字或范围，例如 16-32。';
 
   @override
   String get settingsXraySniffingHint => '从入站流量中检测目标协议和域名';
 
   @override
-  String get settingsXraySniffingRouteOnlyHint => '关闭（默认）：嗅探到的域名成为目标地址并被重新解析 —— 直连走本地解析，代理走服务端解析。开启：域名只用于匹配规则，连接仍发往应用给出的地址；只要该地址来自隧道另一端的解析器，它就是错的（此时国内站点会直连到境外 CDN 节点）。';
+  String get settingsXraySniffingRouteOnlyHint => '嗅探到的域名只用于选择规则，连接仍走应用给出的地址。';
 
   @override
   String get settingsXrayResetDefaults => '重置为默认值';
@@ -570,6 +558,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayXmuxHKeepAlivePeriod => '保活周期（秒）';
 
   @override
+  String get settingsXrayFragmentSection => '分片';
+
+  @override
+  String get settingsXrayFragmentEnable => '拆分 TLS ClientHello';
+
+  @override
+  String get settingsXrayFragmentEnableHint => '首包分片发送，DPI 读不到 SNI。仅 Xray 内核。';
+
+  @override
+  String get settingsXrayFragmentPacketsTitle => '拆分对象';
+
+  @override
+  String get settingsXrayFragmentPacketsTlsHello => '仅 TLS ClientHello';
+
+  @override
+  String get settingsXrayFragmentPacketsFirst => '数据流的前几个包';
+
+  @override
+  String get settingsXrayFragmentParamsTitle => '分片大小与间隔';
+
+  @override
+  String get settingsXrayFragmentParamsHint => '数字或范围，例如 100-200。';
+
+  @override
+  String get settingsXrayFragmentLength => '大小（字节）';
+
+  @override
+  String get settingsXrayFragmentInterval => '间隔（毫秒）';
+
+  @override
   String get settingsTunSection => 'TUN 模式';
 
   @override
@@ -579,13 +597,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunStackTitle => '网络栈';
 
   @override
-  String get settingsTunStackSystemHint => '内核 TCP/IP 栈 — 最快，但在 Windows 上它用 TUN 地址上的监听器终结 TCP，需要一条 Windows 防火墙规则；规则未生效时隧道虽已建立却完全没有流量';
+  String get settingsTunStackSystemHint => '系统协议栈：最快，Windows 上需要防火墙规则。';
 
   @override
-  String get settingsTunStackGvisorHint => '用户态网络栈 — 默认。完全运行在内核进程内，既不需要监听器也不需要防火墙规则；稍慢。需要包含 gVisor 的内核（0.7.1 及更早版本自带的内核会以代码 1 退出）';
+  String get settingsTunStackGvisorHint => '用户态协议栈：不需要监听器和防火墙规则，稍慢。需要带 gVisor 的内核。';
 
   @override
-  String get settingsTunStackMixedHint => 'TCP 用 gVisor，UDP 用 system。需要包含 gVisor 的内核（0.7.1 及更早版本自带的内核会以代码 1 退出）';
+  String get settingsTunStackMixedHint => 'TCP 用 gVisor，UDP 用 system。需要带 gVisor 的内核。';
 
   @override
   String get settingsTunMtu => 'MTU';
@@ -627,13 +645,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunAutoRoute => '自动路由 (auto route)';
 
   @override
-  String get settingsTunAutoRouteHint => '自动将系统路由指向隧道。仅在手动管理路由时关闭 — 否则流量不会进入 TUN';
+  String get settingsTunAutoRouteHint => '把系统路由加入隧道。关闭后流量不会进入 TUN。';
 
   @override
   String get settingsTunIpv6 => '把 IPv6 留在隧道内';
 
   @override
-  String get settingsTunIpv6Hint => '只有 IPv4 地址的 TUN 接口不会获得 IPv6 路由，因此在双栈机器上所有 IPv6 流量都会绕过隧道 — 绕过路由规则，也绕过代理。开启后接口同时获得 IPv6 地址，并关闭 IPv6 出口，应用会立即回退到已在隧道中的 IPv4。仅当机器确实拥有全球 IPv6 时才会添加该地址。仅限 xray/keqrnel 内核';
+  String get settingsTunIpv6Hint => '为 TUN 接口分配 IPv6 地址；否则所有 IPv6 都绕过隧道。仅 Xray/keqrnel 内核。';
 
   @override
   String get settingsMihomoSection => 'mihomo 内核';
@@ -642,7 +660,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsMihomoFakeIp => 'Fake IP';
 
   @override
-  String get settingsMihomoFakeIpHint => '内核用虚拟地址而非真实地址回应 DNS：解析瞬间完成，域名规则也不再依赖嗅探。代价是 IP 规则在匹配前需要重新解析，因此同一套路由列表的行为与 Xray 略有不同。仅在 mihomo 自己持有隧道时生效 — TUN 模式与 Android。';
+  String get settingsMihomoFakeIpHint => '用假地址即时解析。仅在 mihomo 掌管隧道时生效：TUN 与 Android。';
 
   @override
   String get settingsPingTitle => '服务器 Ping';
@@ -675,7 +693,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPingKeepAlive => 'Keep-alive';
 
   @override
-  String get settingsPingKeepAliveHint => '在同一连接上发送两次请求并取较优的一次：结果是服务器的响应时间，不含建立连接的开销。关闭后测量完整请求（含握手）——数值更大，更接近浏览器实际的等待时间。';
+  String get settingsPingKeepAliveHint => '响应时间，不含握手。关闭则测量完整请求，更接近浏览器的等待';
 
   @override
   String get settingsPingMethodSpeed => '速度测试';
@@ -970,7 +988,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsImportBackup => '导入备份';
 
   @override
-  String get settingsChooseWhatToImport => '选择要导入的内容（所选部分将替换你当前的数据）。';
+  String get settingsChooseWhatToImport => '所选部分将替换当前数据';
 
   @override
   String get settingsSplitTunnelingApps => '分应用代理的应用';
@@ -985,7 +1003,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAppSettings => '应用设置';
 
   @override
-  String get settingsAppSettingsHint => '路由、DNS、外观、延迟测试和语言。端口、局域网共享和 TUN 保持本机原样。';
+  String get settingsAppSettingsHint => '路由、DNS、外观、延迟、语言。端口、局域网共享和 TUN 除外。';
 
   @override
   String get settingsImport => '导入';
@@ -994,10 +1012,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsExport => '导出';
 
   @override
-  String get settingsCreateFileToSave => '创建一个可以保存并在其他设备上导入的文件。';
+  String get settingsCreateFileToSave => '文件可以拿到其他设备导入';
 
   @override
-  String get settingsPickExportedFile => '选择先前导出的文件并恢复所选部分。';
+  String get settingsPickExportedFile => '选好文件后再挑要恢复的部分';
 
   @override
   String get settingsWorking => '处理中...';
@@ -1286,6 +1304,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get statsTimeLabel => '时长';
+
+  @override
+  String get statsDownloadLabel => '下载速度';
+
+  @override
+  String get statsUploadLabel => '上传速度';
 
   @override
   String get qrScanTitle => '扫描二维码';
@@ -1647,7 +1671,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceAmoled => '纯黑 (AMOLED)';
 
   @override
-  String get appearanceAmoledSubtitle => '深色主题使用纯黑背景，在 OLED 屏幕上更省电';
+  String get appearanceAmoledSubtitle => '深色主题用纯黑背景，OLED 更省电';
 
   @override
   String get appearanceAmoledNeedsDark => '需要开启深色主题';
@@ -1674,7 +1698,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceWaveLatencyColor => '按延迟为指示条着色';
 
   @override
-  String get appearanceWaveLatencyColorSubtitle => '连接按钮下方的指示条会按当前服务器的延迟显示绿色、橙色或红色。关闭后保持主题强调色。';
+  String get appearanceWaveLatencyColorSubtitle => '按当前服务器的延迟显示绿色、橙色或红色';
 
   @override
   String get appearanceFontTitle => '字体';
@@ -2022,7 +2046,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsProxyAuthTitle => '本地代理的密码';
 
   @override
-  String get settingsProxyAuthSubtitle => '对于无处填写的场景（例如 Wi-Fi 代理设置）请关闭';
+  String get settingsProxyAuthSubtitle => '在没有地方填写密码时关闭，例如 Wi-Fi 的代理设置';
 
   @override
   String get settingsProxyAuthUser => '用户名';
@@ -2043,22 +2067,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunnelModeProxy => '代理';
 
   @override
-  String get settingsTunnelModeProxySubtitle => '仅本地代理 — 不启用系统 VPN，不会自动接管流量';
+  String get settingsTunnelModeProxySubtitle => '仅本地代理，不启用系统 VPN';
 
   @override
-  String get settingsTunnelModeHint => '代理模式下应用在 127.0.0.1 上开启 SOCKS 和 HTTP，本身不接管任何流量：请把应用或 Wi-Fi 代理设置指向它。端口见「设置 → 本地端口」。分应用路由和 DNS 拦截只在 VPN 模式下有效；AmneziaWG 服务器始终以 VPN 方式连接。';
+  String get settingsTunnelModeHint => '代理模式在 127.0.0.1 上启动 SOCKS 和 HTTP，把应用或 Wi-Fi 指过去即可。该代理对设备上任何应用开放。分应用路由和 DNS 拦截仅在 VPN 模式下可用。';
 
   @override
   String get settingsCoreAuto => '自动';
 
   @override
-  String get settingsCoreAutoSubtitle => '由服务器的格式决定内核：链接走 Xray，现成配置走它所使用的那个内核。';
+  String get settingsCoreAutoSubtitle => '链接交给 Xray，现成配置交给各自的内核';
 
   @override
   String get settingsCoreSkipClash => '当前服务器是现成的 Clash 配置 —— 无论选择哪个内核，都只能由 mihomo 运行。';
 
   @override
-  String get settingsCoreSkipCustom => '当前服务器是现成的 Xray JSON 配置（其路由与 DNS 来自机场），因此无论选择哪个内核都由 libxray 运行。要使用 mihomo，需要下发普通 vless:// / vmess:// 链接的订阅 — 请在订阅设置中更换客户端标识。';
+  String get settingsCoreSkipCustom => '当前服务器是现成的 Xray JSON 配置，因此无论选择哪个内核都由 libxray 运行。mihomo 需要普通链接的订阅。';
 
   @override
   String get settingsCoreSkipChain => '当前服务器是代理链：各节点通过 Xray 的 dialerProxy 串联，因此无论选择哪个内核都由 libxray 运行。';
@@ -2117,7 +2141,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsInternalsGeoTrimmed => '国家数据库为精简版';
 
   @override
-  String get settingsInternalsGeoTrimmedHint => '其中只有应用预设需要的代码。涉及其他国家的规则会在连接前被丢弃。';
+  String get settingsInternalsGeoTrimmedHint => '只含应用自身预设需要的代码；使用其他国家的规则会被丢弃。';
 
   @override
   String get settingsInternalsGeoDownload => '下载完整数据库';
@@ -2185,7 +2209,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceUiScaleTitle => '界面大小';
 
   @override
-  String get appearanceUiScaleSubtitle => '在系统文字大小之上生效，因此 100% 即“与系统一致”。文字和列表行高会随之变化；图标和间距保持不变。';
+  String get appearanceUiScaleSubtitle => '在系统文字大小之上生效，仅影响文字和列表行高';
 
   @override
   String get appearanceIconShapeTitle => '图标形状';
