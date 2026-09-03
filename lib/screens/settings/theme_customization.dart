@@ -680,14 +680,16 @@ class _AppearanceThemesTab extends StatelessWidget {
           ),
           // Подпись под группой — тем же приёмом, что и пояснение под ползунком
           // масштаба: отступ 4 слева, роль `bodySmall` на `onSurfaceVariant`.
+          //
+          // Раньше здесь было три текста — «активна динамическая/системная/
+          // пользовательская палитра» — и все три заканчивались одной и той же
+          // фразой. Какая палитра активна, видно по переключателю прямо над
+          // подписью; неочевидна только независимость светлой и тёмной, её и
+          // говорим.
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
             child: Text(
-              current.followSystemTheme
-                  ? (isDesktop
-                      ? l10n.themeSystemPaletteHint
-                      : l10n.themeDynamicPaletteHint)
-                  : l10n.themeCustomPaletteHint,
+              l10n.themePaletteHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppTheme.textLight(context),
                     height: 1.35,

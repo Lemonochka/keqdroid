@@ -75,17 +75,29 @@ class SplitTunnelingNotifier extends Notifier<SplitTunnelingState> {
     );
   }
 
+  /// Снятие отметки без учёта регистра.
+  ///
+  /// `Telegram.exe` из списка процессов Windows и `telegram.exe`, сохранённый
+  /// старой версией, — одно приложение: правило по нему всё равно уходит в
+  /// обеих формах ([processNameMatchVariants]). Пока сравнение шло по сырой
+  /// строке, повторное нажатие по такой строке не снимало отметку, а клало в
+  /// список ВТОРУЮ запись, и на экране появлялся близнец.
+  static Set<String> _togglePackage(Set<String> current, String pkg) {
+    final key = pkg.toLowerCase();
+    final next = {...current}..removeWhere((e) => e.toLowerCase() == key);
+    if (next.length == current.length) next.add(pkg);
+    return next;
+  }
+
   Future<void> toggleExclude(String pkg) async {
-    final set = {...state.excludePackages};
-    if (!set.add(pkg)) set.remove(pkg);
+    final set = _togglePackage(state.excludePackages, pkg);
     await ref.read(storageProvider).setExcludePackages(set.toList());
     await ref.read(storageProvider).setIncludePackages([]);
     state = state.copyWith(excludePackages: set, includePackages: const {});
   }
 
   Future<void> toggleInclude(String pkg) async {
-    final set = {...state.includePackages};
-    if (!set.add(pkg)) set.remove(pkg);
+    final set = _togglePackage(state.includePackages, pkg);
     await ref.read(storageProvider).setIncludePackages(set.toList());
     await ref.read(storageProvider).setExcludePackages([]);
     state = state.copyWith(includePackages: set, excludePackages: const {});

@@ -285,8 +285,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           ),
           const SizedBox(height: 16),
           _advancedRulesCard(context, l10n),
-          const SizedBox(height: 16),
-          _syntaxLegend(context, l10n),
         ],
     );
   }
@@ -628,26 +626,10 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     return out;
   }
 
-  Widget _syntaxLegend(BuildContext context, AppLocalizations l10n) {
-    return ExpressiveCard(
-      child:Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.help_outline_rounded, size: 18, color: AppTheme.textLight(context)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              l10n.settingsRoutingSyntaxHint,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    height: 1.5,
-                    color: AppTheme.textLight(context),
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Шпаргалки по синтаксису внизу экрана больше нет: она слово в слово
+  // повторяла первые строки шторки «Как писать правила», которая открывается
+  // кнопкой в шапке — та же справка, только полная. Подсказка формата осталась
+  // там, где её читают: `hintText` каждого поля показывает готовый пример.
 
   Widget _intro(BuildContext context, AppLocalizations l10n) {
     return Container(

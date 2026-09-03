@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <map>
+#include <mutex>
 #include <set>
 #include <string>
 #include <vector>
@@ -32,11 +33,17 @@ struct AppEntry {
 };
 
 ULONG_PTR g_gdiplus_token = 0;
+std::once_flag g_gdiplus_once;
 
+// Выемку иконок теперь зовут с рабочих потоков (см. `getAppIcon` в
+// tunnel_channel_handler.cpp), поэтому инициализация GDI+ обязана быть
+// однократной при любой гонке: два потока, одновременно прошедшие проверку
+// `token != 0`, стартовали бы библиотеку дважды.
 void EnsureGdiplus() {
-  if (g_gdiplus_token != 0) return;
-  Gdiplus::GdiplusStartupInput input;
-  Gdiplus::GdiplusStartup(&g_gdiplus_token, &input, nullptr);
+  std::call_once(g_gdiplus_once, []() {
+    Gdiplus::GdiplusStartupInput input;
+    Gdiplus::GdiplusStartup(&g_gdiplus_token, &input, nullptr);
+  });
 }
 
 std::string WideToUtf8(const std::wstring& wide) {
@@ -108,6 +115,34 @@ int GetEncoderClsid(const WCHAR* format, CLSID* pClsid) {
   return -1;
 }
 
+// Иконка нужного КЕГЛЯ, а не «системного большого».
+//
+// `ExtractIconW` всегда отдаёт SM_CXICON, то есть 32×32. В слоте списка (40dp)
+// при масштабе экрана 125–150% такая иконка растягивается до 50–60 физических
+// пикселей — отсюда и мыло. `SHDefExtractIconW` умеет просить КОНКРЕТНЫЙ
+// размер и берёт из ресурса подходящий вариант: у современных приложений в exe
+// лежат 256 и 128, у старых — 48.
+//
+// Идём сверху вниз и останавливаемся на первом, который система отдала
+// целиком (`S_OK`): на `S_FALSE` она сообщает, что такого варианта нет и
+// вернула бы растянутый — а растягивать мы и сами умеем, только качеством это
+// не назвать.
+HICON ExtractIconAtSize(const std::wstring& path, int index) {
+  // Только СТАНДАРТНЫЕ размеры ресурса (256 не просим — он тяжелее кодируется,
+  // а слот списка 40dp): на нестандартный вроде 96 система вернула бы S_OK с
+  // растянутым 64, и вся затея с чёткостью пропала бы даром.
+  static const int kSizes[] = {128, 64, 48};
+  for (const int size : kSizes) {
+    HICON icon = nullptr;
+    const HRESULT hr = SHDefExtractIconW(path.c_str(), index, 0, &icon, nullptr,
+                                         static_cast<UINT>(size));
+    if (icon == reinterpret_cast<HICON>(1)) icon = nullptr;
+    if (hr == S_OK && icon != nullptr) return icon;
+    if (icon != nullptr) DestroyIcon(icon);
+  }
+  return nullptr;
+}
+
 std::string IconFileToBase64Png(const std::wstring& icon_source) {
   if (icon_source.empty()) return {};
   EnsureGdiplus();
@@ -123,10 +158,13 @@ std::string IconFileToBase64Png(const std::wstring& icon_source) {
 
   HICON hicon = nullptr;
   if (PathFileExistsW(path.c_str())) {
-    hicon = ExtractIconW(nullptr, path.c_str(), index);
-    // ExtractIconW returns (HICON)1 when the file exists but has no icon at index.
-    if (hicon == reinterpret_cast<HICON>(1)) {
-      hicon = nullptr;
+    hicon = ExtractIconAtSize(path, index);
+    if (!hicon) {
+      hicon = ExtractIconW(nullptr, path.c_str(), index);
+      // ExtractIconW returns (HICON)1 when the file exists but has no icon at index.
+      if (hicon == reinterpret_cast<HICON>(1)) {
+        hicon = nullptr;
+      }
     }
     if (!hicon) {
       SHFILEINFOW sfi = {};

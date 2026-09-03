@@ -17,22 +17,22 @@ class _XrayCoreSectionHeader extends StatelessWidget {
       ExpressiveSectionHeader(title, icon: icon);
 }
 
-Widget _xraySettingsDivider(BuildContext context) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Divider(height: 1, color: AppTheme.divider(context)),
-    );
-
+/// Карточка секции — ровно та же, что на остальных подэкранах настроек
+/// (см. `card()` в ping/lan/permissions).
+///
+/// Волосяных дивайдеров внутри больше нет. В M3E строки разделяет containment,
+/// а не линия: карточка уже сказала «это одна группа», и рисовать внутри неё
+/// ещё и границы — значит говорить это дважды. Отдельная группа отделяется
+/// заголовком секции, а не швом.
 Widget _xraySettingsCard(BuildContext context, {required List<Widget> children}) =>
-    Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      // Отступ карточка задаёт нулевой: содержимое здесь — ListTile'ы, они
-      // приносят свои внутренние поля сами.
-      child: ExpressiveCard(
-        padding: EdgeInsets.zero,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
-        ),
+    ExpressiveCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: ExpressiveSpacing.extraSmall,
+        vertical: ExpressiveSpacing.extraSmall,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       ),
     );
 
@@ -101,33 +101,27 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
     );
   }
 
-  /// One radio row. Selection is driven by an enclosing [RadioGroup] ancestor,
-  /// so the tile itself only declares its [value].
+  /// Строка выбора. Значение подхватывает [RadioGroup] выше по дереву, поэтому
+  /// сама строка объявляет только [value].
+  ///
+  /// Ни `dense`, ни `visualDensity.compact`, ни собственных стилей текста тут
+  /// больше нет: строки этого экрана были на полкегля мельче и на восемь
+  /// пикселей теснее, чем такие же строки на всех остальных подэкранах. Разница
+  /// слишком мала, чтобы прочитаться как решение, и ровно настолько велика,
+  /// чтобы прочитаться как небрежность.
   Widget _choiceTile({
     required BuildContext context,
     required String value,
     required Color accent,
     required String title,
     String? subtitle,
-  }) {
-    return RadioListTile<String>(
-      value: value,
-      activeColor: accent,
-      dense: true,
-      visualDensity: VisualDensity.compact,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-      title: Text(
-        title,
-        style: Theme.of(context)
-            .textTheme
-            .bodyMedium
-            ?.copyWith(color: AppTheme.text(context)),
-      ),
-      subtitle: subtitle != null
-          ? Text(subtitle, style: _xrayTileSubtitleStyle(context))
-          : null,
-    );
-  }
+  }) =>
+      RadioListTile<String>(
+        value: value,
+        activeColor: accent,
+        title: Text(title),
+        subtitle: subtitle == null ? null : Text(subtitle),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -159,35 +153,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
         ),
       ],
       children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.only(bottom: 4),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(ExpressiveShape.largeIncreased),
-              border: Border.all(color: accent.withValues(alpha: 0.22)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ExpressiveIconBadge(
-                  icon: Icons.settings_ethernet_rounded,
-                  background: accent.withValues(alpha: 0.16),
-                  foreground: accent,
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    l10n.settingsXrayCoreIntro,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.text(context),
-                          height: 1.4,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Вводной плашки «параметры уходят в конфиг, меняйте осторожно»
+          // здесь больше нет. Она не сообщала ничего, чего не сообщает
+          // название экрана, зато первым делом занимала полтора сантиметра
+          // высоты и отодвигала настройки вниз.
           const _LocalPortsSection(),
           _XrayCoreSectionHeader(icon: Icons.dns_rounded, title: l10n.settingsXrayDnsSection),
           _xraySettingsCard(
@@ -202,14 +171,12 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   core.dnsUseCustom
                       ? l10n.settingsXrayDnsCustomHint
                       : l10n.settingsXrayDnsDefaultNote,
-                  style: _xrayTileSubtitleStyle(context),
                 ),
               ),
               AnimatedCrossFade(
                 firstChild: const SizedBox.shrink(),
                 secondChild: Column(
                   children: [
-                    _xraySettingsDivider(context),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                       child: _DnsServersField(
@@ -227,7 +194,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                 duration: const Duration(milliseconds: 200),
                 sizeCurve: Curves.easeOutCubic,
               ),
-              _xraySettingsDivider(context),
               SwitchListTile(
                 value: core.dnsSplitDirectDomains,
                 onChanged: (v) =>
@@ -236,12 +202,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                 title: Text(l10n.settingsXrayDnsSplitDirect),
                 subtitle: Text(
                   l10n.settingsXrayDnsSplitDirectHint,
-                  style: _xrayTileSubtitleStyle(context),
                 ),
               ),
-              _xraySettingsDivider(context),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(
                   l10n.settingsXrayDnsQueryStrategy,
                   style: Theme.of(context)
@@ -267,7 +231,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   ],
                 ),
               ),
-              _xraySettingsDivider(context),
               SwitchListTile(
                 value: core.dnsDisableCache,
                 onChanged: (v) =>
@@ -288,7 +251,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                 title: Text(l10n.settingsXrayXmuxEnable),
                 subtitle: Text(
                   l10n.settingsXrayXmuxEnableHint,
-                  style: _xrayTileSubtitleStyle(context),
                 ),
               ),
               AnimatedCrossFade(
@@ -296,9 +258,8 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                 secondChild: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _xraySettingsDivider(context),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -312,18 +273,23 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                           const SizedBox(height: 4),
                           Text(
                             l10n.settingsXrayXmuxParamsHint,
-                            style: _xrayTileSubtitleStyle(context),
                           ),
                         ],
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      // Утопленная подложка под парой полей: роль поверхности
+                      // вместо полупрозрачного фона с рамкой. Рамка тут была
+                      // третьей границей подряд (страница → карточка → панель),
+                      // а тональной ступеньки для вложенности достаточно.
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: AppTheme.bg(context).withValues(alpha: 0.45),
-                          borderRadius: BorderRadius.circular(ExpressiveShape.large),
-                          border: Border.all(color: AppTheme.divider(context)),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerLowest,
+                          borderRadius:
+                              ExpressiveShape.radius(ExpressiveShape.large),
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(12),
@@ -440,12 +406,146 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
               ),
             ],
           ),
+          _XrayCoreSectionHeader(
+            icon: Icons.content_cut_rounded,
+            title: l10n.settingsXrayFragmentSection,
+          ),
+          _xraySettingsCard(
+            context,
+            children: [
+              SwitchListTile(
+                value: core.fragmentEnabled,
+                onChanged: (v) =>
+                    _save(settings, core.copyWith(fragmentEnabled: v)),
+                activeThumbColor: accent,
+                title: Text(l10n.settingsXrayFragmentEnable),
+                subtitle: Text(
+                  l10n.settingsXrayFragmentEnableHint,
+                ),
+              ),
+              AnimatedCrossFade(
+                firstChild: const SizedBox.shrink(),
+                secondChild: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Text(
+                        l10n.settingsXrayFragmentPacketsTitle,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleSmall
+                            ?.copyWith(color: AppTheme.text(context)),
+                      ),
+                    ),
+                    RadioGroup<String>(
+                      groupValue: core.fragmentPackets,
+                      onChanged: (v) {
+                        if (v != null) {
+                          _save(settings, core.copyWith(fragmentPackets: v));
+                        }
+                      },
+                      child: Column(
+                        children: [
+                          for (final mode in XrayCoreSettings.fragmentPacketModes)
+                            _choiceTile(
+                              context: context,
+                              value: mode,
+                              accent: accent,
+                              title: mode ==
+                                      XrayCoreSettings.fragmentPacketsTlsHello
+                                  ? l10n.settingsXrayFragmentPacketsTlsHello
+                                  : l10n.settingsXrayFragmentPacketsFirst,
+                              subtitle: mode,
+                            ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.settingsXrayFragmentParamsTitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(color: AppTheme.text(context)),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.settingsXrayFragmentParamsHint,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerLowest,
+                          borderRadius:
+                              ExpressiveShape.radius(ExpressiveShape.large),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: _XrayCoreTextField(
+                                  key: ValueKey(
+                                    'fragment_len_${core.fragmentLength}',
+                                  ),
+                                  label: l10n.settingsXrayFragmentLength,
+                                  hint: XrayCoreSettings.defaultFragmentLength,
+                                  initialValue: core.fragmentLength,
+                                  onSave: (v) => _save(
+                                    settings,
+                                    core.copyWith(fragmentLength: v),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _XrayCoreTextField(
+                                  key: ValueKey(
+                                    'fragment_int_${core.fragmentInterval}',
+                                  ),
+                                  label: l10n.settingsXrayFragmentInterval,
+                                  hint:
+                                      XrayCoreSettings.defaultFragmentInterval,
+                                  initialValue: core.fragmentInterval,
+                                  onSave: (v) => _save(
+                                    settings,
+                                    core.copyWith(fragmentInterval: v),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                crossFadeState: core.fragmentEnabled
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 220),
+                sizeCurve: Curves.easeOutCubic,
+              ),
+            ],
+          ),
           _XrayCoreSectionHeader(icon: Icons.tune_rounded, title: l10n.settingsXrayGeneralSection),
           _xraySettingsCard(
             context,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(
                   l10n.settingsXrayLogLevel,
                   style: Theme.of(context)
@@ -471,9 +571,8 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   ],
                 ),
               ),
-              _xraySettingsDivider(context),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(
                   l10n.settingsXrayDomainStrategy,
                   style: Theme.of(context)
@@ -501,7 +600,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   ],
                 ),
               ),
-              _xraySettingsDivider(context),
               SwitchListTile(
                 value: core.sniffingEnabled,
                 onChanged: (v) {
@@ -517,7 +615,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                 title: Text(l10n.settingsXraySniffing),
                 subtitle: Text(
                   l10n.settingsXraySniffingHint,
-                  style: _xrayTileSubtitleStyle(context),
                 ),
               ),
               AnimatedOpacity(
@@ -532,7 +629,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   title: Text(l10n.settingsXraySniffingRouteOnly),
                   subtitle: Text(
                     l10n.settingsXraySniffingRouteOnlyHint,
-                    style: _xrayTileSubtitleStyle(context),
                   ),
                 ),
               ),
@@ -549,10 +645,9 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
               context,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Text(
                     l10n.settingsTunSectionNote,
-                    style: _xrayTileSubtitleStyle(context),
                   ),
                 ),
                 Padding(
@@ -596,9 +691,8 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                     ],
                   ),
                 ),
-                _xraySettingsDivider(context),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -650,22 +744,19 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                       Expanded(
                         child: Text(
                           l10n.settingsTunMtuHint,
-                          style: _xrayTileSubtitleStyle(context),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           l10n.settingsTunUdpTimeoutHint,
-                          style: _xrayTileSubtitleStyle(context),
                         ),
                       ),
                     ],
                   ),
                 ),
-                _xraySettingsDivider(context),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   child: Text(
                     l10n.settingsTunStrictRouteTitle,
                     style: Theme.of(context)
@@ -678,7 +769,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
                   child: Text(
                     l10n.settingsTunStrictRouteHint,
-                    style: _xrayTileSubtitleStyle(context),
                   ),
                 ),
                 RadioGroup<String>(
@@ -712,7 +802,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                     ],
                   ),
                 ),
-                _xraySettingsDivider(context),
                 AnimatedOpacity(
                   opacity: tun.stack != TunSettings.stackSystem ? 1 : 0.45,
                   duration: const Duration(milliseconds: 180),
@@ -728,11 +817,9 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                     title: Text(l10n.settingsTunEin),
                     subtitle: Text(
                       l10n.settingsTunEinHint,
-                      style: _xrayTileSubtitleStyle(context),
                     ),
                   ),
                 ),
-                _xraySettingsDivider(context),
                 SwitchListTile(
                   value: tun.autoRoute,
                   onChanged: (v) =>
@@ -741,10 +828,8 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   title: Text(l10n.settingsTunAutoRoute),
                   subtitle: Text(
                     l10n.settingsTunAutoRouteHint,
-                    style: _xrayTileSubtitleStyle(context),
                   ),
                 ),
-                _xraySettingsDivider(context),
                 SwitchListTile(
                   value: tun.blockIpv6Leak,
                   onChanged: (v) =>
@@ -753,7 +838,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                   title: Text(l10n.settingsTunIpv6),
                   subtitle: Text(
                     l10n.settingsTunIpv6Hint,
-                    style: _xrayTileSubtitleStyle(context),
                   ),
                 ),
               ],
@@ -776,7 +860,6 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
                 title: Text(l10n.settingsMihomoFakeIp),
                 subtitle: Text(
                   l10n.settingsMihomoFakeIpHint,
-                  style: _xrayTileSubtitleStyle(context),
                 ),
               ),
             ],
