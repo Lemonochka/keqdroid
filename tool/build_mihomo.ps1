@@ -24,7 +24,7 @@
 # numbers and the reasoning.
 #
 # Desktop binaries are deliberately NOT stripped: a stripped, unsigned exe next
-# to the app is a Defender heuristic (see docs/PITFALLS.md). Android keeps
+# to the app is a Defender heuristic. Android keeps
 # -s -w because there it is APK size and nothing else.
 #
 # The build is NOT stock upstream: tool/patches/*.patch are applied first and

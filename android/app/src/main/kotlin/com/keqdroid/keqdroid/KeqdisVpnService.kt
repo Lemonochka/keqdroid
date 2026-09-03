@@ -720,7 +720,7 @@ class KeqdisVpnService : VpnService() {
     /// Само ядро об этом узнать не может: у xray монитора сети нет вовсе, а у
     /// mihomo он есть, но включается только вместе с `auto-route`/
     /// `auto-detect-interface`, а те на Android обязаны быть выключены (netlink
-    /// запрещён с Android 14 — см. docs/PITFALLS.md). Значит рвать соединения
+    /// запрещён с Android 14). Значит рвать соединения
     /// приходится снаружи.
     /// Следим ЗА ФИЗИЧЕСКИМИ сетями, а не за «default» — на этом первый заход
     /// и сломался.
@@ -1663,22 +1663,15 @@ class KeqdisVpnService : VpnService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val serverSuffix = currentServerName
-            ?.takeIf { it.isNotBlank() }
-            ?.let { " · $it" }
-            ?: ""
+        // Заголовок — только сервер: статус живёт во второй строке (Connected /
+        // Connecting… / Disconnected / текст ошибки), и «VPN Connected · сервер»
+        // над «Connected» дублировал её. Заодно уходит старая ловушка, когда
+        // «VPN Disconnected · сервер» стояло над «Connecting…» и читалось как
+        // противоречие.
+        val title = currentServerName?.takeIf { it.isNotBlank() } ?: "VPN"
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID_CONTROL)
-            .setContentTitle(
-                when {
-                    isConnected -> "VPN Connected$serverSuffix"
-                    // Во время подключения/отключения не пишем «Disconnected»:
-                    // сочетание «VPN Disconnected · сервер» + «Connecting…» читалось
-                    // как противоречие/зависание.
-                    isTransitioning -> "VPN$serverSuffix"
-                    else -> "VPN Disconnected$serverSuffix"
-                }
-            )
+            .setContentTitle(title)
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(contentIntent)

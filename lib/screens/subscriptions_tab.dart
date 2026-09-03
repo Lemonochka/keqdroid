@@ -1654,7 +1654,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: redColor,
-              foregroundColor: Colors.white,
+              foregroundColor: AppTheme.onRed(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(ExpressiveShape.medium),
               ),
