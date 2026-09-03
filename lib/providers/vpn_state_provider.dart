@@ -55,6 +55,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   void _applyNativeState(VpnState s) {
     _restoreSocksCredentialsIfNeeded(s);
     _syncMihomoApiSession(s);
+    _persistActiveLocalHttpPort(s.status);
     if (_serverSwitchInProgress && s.status == VpnStatus.error) return;
     if (_connectInFlight) {
       // Реальный неуспех попытки ловит _awaitNativeConnectOutcome, поэтому
@@ -80,6 +81,40 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       return;
     }
     state = AsyncData(s);
+  }
+
+  /// Порт HTTP-инбаунда живой сессии — на диск, для фоновых изолятов.
+  ///
+  /// Они обновляют подписки, не видя ни riverpod-состояния, ни ActiveLocalPorts
+  /// (синглтон живёт в своём изоляте), а идти мимо туннеля им нельзя: пакет
+  /// приложения исключён из TUN. Пробы порта тут мало — на 2081 может слушать
+  /// другой VPN-клиент, и подписка с токеном ушла бы через него.
+  void _persistActiveLocalHttpPort(VpnStatus status) {
+    final storage = ref.read(storageProvider);
+    if (status != VpnStatus.connected) {
+      // Сброс идёт без единого await: иначе запись подключения, застрявшая на
+      // чтении настроек, воскресила бы порт уже после отключения.
+      if (storage.getActiveLocalHttpPort() != null) {
+        unawaited(storage.setActiveLocalHttpPort(null));
+      }
+      return;
+    }
+    unawaited(_writeActiveLocalHttpPort(storage));
+  }
+
+  Future<void> _writeActiveLocalHttpPort(StorageService storage) async {
+    // Сессионный порт ставит только десктоп (LocalPortResolver); на Android
+    // подмены нет — там правда в настройках, и читать её надо через
+    // getSettings: кэш может быть ещё холодным, и на диск уехал бы дефолтный
+    // порт вместо настроенного.
+    final port =
+        ActiveLocalPorts().httpPort ?? (await storage.getSettings()).httpPort;
+    if (!ref.mounted) return;
+    // За время чтения статус мог смениться — не воскрешаем порт после отключения
+    if (state.value?.status != VpnStatus.connected) return;
+    // _applyNativeState зовётся и на каждый тик телеметрии — пишем только смену
+    if (storage.getActiveLocalHttpPort() == port) return;
+    await storage.setActiveLocalHttpPort(port);
   }
 
   bool _credsRestoreInFlight = false;
@@ -713,6 +748,11 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     } finally {
       _connectInFlight = false;
       _awaitingSessionStart = false;
+      // Ветки connect() присваивают state напрямую, мимо _applyNativeState —
+      // порт сессии на диск кладём здесь, каким бы ни был исход.
+      _persistActiveLocalHttpPort(
+        state.value?.status ?? VpnStatus.disconnected,
+      );
     }
   }
 
@@ -745,6 +785,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     // Порты сессии больше ничего не слушает — апдейтер обязан вернуться к
     // настройке, а не стучаться в подменённый порт умершего ядра.
     ActiveLocalPorts().clear();
+    _persistActiveLocalHttpPort(VpnStatus.disconnecting);
     try {
       await ref.read(vpnEngineProvider).stopVpn();
     } catch (e, st) {

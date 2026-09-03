@@ -56,6 +56,10 @@ class MainActivity : FlutterFragmentActivity() {
             LAUNCH_ACTION_DISCONNECT,
         )
         private const val ICON_SIZE_PX   = 96
+        // Фон окна: держим отдельно от FlutterSharedPreferences — читаем его в
+        // onCreate, до того как Flutter вообще поднялся.
+        private const val PREFS_WINDOW = "keqdis_window"
+        private const val KEY_WINDOW_BACKGROUND = "window_background"
         private const val DEFAULT_SPEED_TEST_URL =
             "https://speed.cloudflare.com/__down?bytes=2000000"
 
@@ -138,7 +142,36 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Фон окна — цвет ПРИЛОЖЕНИЯ, а не системной темы.
+        //
+        // NormalTheme в styles.xml наследуется от Theme.Light/Theme.Black, то
+        // есть переключается СИСТЕМНОЙ тёмной темой, а тема приложения
+        // выбирается своей настройкой. У человека со светлой системой и тёмным
+        // приложением фон окна оставался белым, и там, где поверхность Flutter
+        // не достаёт до края экрана (на HyperOS под панелью навигации остаётся
+        // полоска в несколько пикселей), он и торчал белой полосой.
+        //
+        // Цвет присылает Dart на каждую смену темы; здесь берём запомненный,
+        // чтобы окно было правильным ещё до первого кадра.
+        rememberedWindowBackground()?.let { applyWindowBackground(it) }
         pendingDeepLink = deepLinkFrom(intent)
+    }
+
+    private fun applyWindowBackground(color: Int) {
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(color))
+    }
+
+    private fun rememberWindowBackground(color: Int) {
+        getSharedPreferences(PREFS_WINDOW, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_WINDOW_BACKGROUND, color)
+            .apply()
+    }
+
+    private fun rememberedWindowBackground(): Int? {
+        val prefs = getSharedPreferences(PREFS_WINDOW, Context.MODE_PRIVATE)
+        if (!prefs.contains(KEY_WINDOW_BACKGROUND)) return null
+        return prefs.getInt(KEY_WINDOW_BACKGROUND, 0)
     }
 
     private fun deepLinkFrom(intent: Intent?): String? =
@@ -317,6 +350,17 @@ class MainActivity : FlutterFragmentActivity() {
             .also { ch ->
                 ch.setMethodCallHandler { call, result ->
                     when (call.method) {
+                        "setWindowBackgroundColor" -> {
+                            val color = call.argument<Int>("color")
+                            if (color == null) {
+                                result.error("INVALID_ARGS", "Missing color", null)
+                            } else {
+                                rememberWindowBackground(color)
+                                applyWindowBackground(color)
+                                result.success(null)
+                            }
+                        }
+
                         "startVpn" -> {
                             val backend = call.argument<String>("vpnBackend") ?: "xray"
                             val socksPort       = call.argument<Int>("socksPort") ?: 2080

@@ -8,6 +8,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../core/app_logger.dart';
+import '../utils/local_vpn_proxy.dart';
 import 'storage_service.dart';
 import 'subscription_service.dart';
 
@@ -32,8 +33,17 @@ void callbackDispatcher() {
 
       final storage = await StorageService.init();
 
-      // vpn в фоне может быть выключен — прокси не форсим, retry разрулит сеть
-      final service = SubscriptionService(storage);
+      // Состояния туннеля в этом изоляте нет вовсе, поэтому порт живой сессии
+      // читаем с диска — его пишет главный изолят при подключении. Идти мимо
+      // туннеля нельзя: пакет приложения исключён из TUN, и заблокированный
+      // домен подписки при включённом VPN остаётся недоступен.
+      // reload: значение писал другой изолят, снимок SharedPreferences этого
+      // мог устареть.
+      await storage.reloadFromDisk();
+      final proxyPort = await resolveLocalProxyForBackground(
+        storage.getActiveLocalHttpPort(),
+      );
+      final service = SubscriptionService(storage, localProxyPort: proxyPort);
 
       // обновляем только то, у чего вышел интервал.
       // defaultInterval = 1 ч — фоллбэк, если updateIntervalHours не задан

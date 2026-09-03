@@ -21,6 +21,19 @@ void main() {
       expect(all.first.name, 'B');
     });
 
+    test('порт живой сессии переживает круг запись→чтение→сброс', () async {
+      // Его читает фоновый изолят: без записанного порта он обновляет
+      // подписки напрямую, а это мимо туннеля.
+      final storage = await buildStorageService();
+      expect(storage.getActiveLocalHttpPort(), isNull);
+
+      await storage.setActiveLocalHttpPort(2081);
+      expect(storage.getActiveLocalHttpPort(), 2081);
+
+      await storage.setActiveLocalHttpPort(null);
+      expect(storage.getActiveLocalHttpPort(), isNull);
+    });
+
     test('replaceServersBySubscription keeps other subscriptions', () async {
       final storage = await buildStorageService();
       final s1 = ServerItem.fromRaw('vless://id@one.com:443', subscriptionId: 'sub-a');

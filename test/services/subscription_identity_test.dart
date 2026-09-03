@@ -102,6 +102,36 @@ void main() {
       expect(adapter.header('x-ver-os'), '17.6');
     });
 
+    test('не-ASCII в полях устройства чистится до ASCII', () async {
+      // dart:io кидает FormatException на кириллицу в значении заголовка и
+      // роняет ВЕСЬ запрос ещё до сети. На русской Windows это прилетало само
+      // из Platform.operatingSystemVersion («"Майкрософт Windows 11 Pro" 10.0
+      // (Build 26100)»), и любое обновление подписки падало «Ошибкой сети».
+      final adapter = plainAdapter();
+      final service = serviceWith(adapter);
+
+      await service.fetchRaw(
+        'https://example.com/sub',
+        identity: const SubscriptionFetchIdentity(
+          enabled: true,
+          userAgent: 'Хапп',
+          deviceOs: 'Виндовс',
+          deviceModel: 'ПК',
+          osVersion: '"Майкрософт Windows 11 Pro" 10.0 (Build 26100)',
+        ),
+      );
+
+      final ascii = matches(RegExp(r'^[\x20-\x7E]+$'));
+      // ASCII-часть значения сохраняется (версия сборки ещё пригодится
+      // панели), выброшена только кириллица
+      expect(adapter.header('x-ver-os'), '" Windows 11 Pro" 10.0 (Build 26100)');
+      // от значения не осталось ни буквы, ни цифры → значение устройства
+      expect(adapter.header('x-device-os'), ascii);
+      expect(adapter.header('x-device-model'), ascii);
+      expect(adapter.header('User-Agent'), ascii);
+      expect(adapter.header('User-Agent'), isNot(contains('Хапп')));
+    });
+
     test('leaves unset fields on the real device values', () async {
       final adapter = plainAdapter();
       final service = serviceWith(adapter);
