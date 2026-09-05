@@ -506,6 +506,137 @@ class _SubsErrorView extends StatelessWidget {
   }
 }
 
+/// Человекочитаемое «когда это было».
+///
+/// Функция верхнего уровня, а не метод состояния: тем же самым пользуются
+/// вынесенные плашки, а состояния карточки у них нет.
+String _subFormatDate(BuildContext context, DateTime dt) {
+  final l10n = AppLocalizations.of(context)!;
+  final now = DateTime.now();
+  final diff = now.difference(dt);
+  if (diff.inMinutes < 1) return l10n.subscriptionsJustNow;
+  if (diff.inHours < 1) return l10n.subscriptionsMinutesAgo(diff.inMinutes);
+  if (diff.inDays < 1) return l10n.subscriptionsHoursAgo(diff.inHours);
+  return l10n.subscriptionsDaysAgo(diff.inDays);
+}
+
+/// Объявление провайдера на карточке подписки.
+///
+/// Отдельный виджет, а не кусок общего `build()`: у него своя подписка на то,
+/// свёрнута ли карточка, поэтому сворачивание перерисовывает плашку, а не всю
+/// карточку целиком.
+class _SubAnnounceBanner extends ConsumerWidget {
+  const _SubAnnounceBanner({required this.sub});
+
+  final Subscription sub;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final collapsed = ref.watch(
+      collapsedSubscriptionCardsProvider.select((m) => m[sub.id] ?? false),
+    );
+    return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.tertiaryContainer,
+            borderRadius: ExpressiveShape.radius(
+              ExpressiveShape.medium,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.campaign_rounded,
+                size: 18,
+                color: Theme.of(context).colorScheme.onTertiaryContainer,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  sub.announce!,
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onTertiaryContainer,
+                      ),
+                  maxLines: collapsed ? 2 : null,
+                  overflow: collapsed
+                      ? TextOverflow.ellipsis
+                      : TextOverflow.clip,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+  }
+}
+
+/// Плашка истёкшей подписки.
+class _SubExpiredBanner extends StatelessWidget {
+  const _SubExpiredBanner({required this.sub});
+
+  final Subscription sub;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final redColor = AppTheme.red(context);
+    final textLightColor = AppTheme.textLight(context);
+    return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            color: redColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+            border: Border.all(color: redColor.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.timer_off_rounded, size: 15, color: redColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      sub.expiresAt != null
+                          ? l10n.subscriptionsExpiredOn(
+                              _subFormatDate(context, sub.expiresAt!),
+                            )
+                          : l10n.subscriptionsExpired,
+                      style: Theme.of(context).textTheme
+                          .emphasized(
+                            Theme.of(context).textTheme.labelMedium,
+                          )
+                          ?.copyWith(color: redColor),
+                    ),
+                    Text(
+                      l10n.subscriptionsExpiredHint,
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: textLightColor),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+  }
+}
+
 class _SubItem extends ConsumerStatefulWidget {
   final Subscription sub;
   final int listIndex;
@@ -757,92 +888,8 @@ class _SubItemState extends ConsumerState<_SubItem> {
             // органа управления заводить не пришлось, чевron уже есть.
             if (sub.announce != null &&
                 sub.showsCard(SubscriptionCardElement.announce))
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.tertiaryContainer,
-                    borderRadius: ExpressiveShape.radius(
-                      ExpressiveShape.medium,
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.campaign_rounded,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.onTertiaryContainer,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          sub.announce!,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onTertiaryContainer,
-                              ),
-                          maxLines: collapsed ? 2 : null,
-                          overflow: collapsed
-                              ? TextOverflow.ellipsis
-                              : TextOverflow.clip,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            if (sub.isExpired)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: redColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-                    border: Border.all(color: redColor.withValues(alpha: 0.35)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.timer_off_rounded, size: 15, color: redColor),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              sub.expiresAt != null
-                                  ? l10n.subscriptionsExpiredOn(
-                                      _formatDate(sub.expiresAt!),
-                                    )
-                                  : l10n.subscriptionsExpired,
-                              style: Theme.of(context).textTheme
-                                  .emphasized(
-                                    Theme.of(context).textTheme.labelMedium,
-                                  )
-                                  ?.copyWith(color: redColor),
-                            ),
-                            Text(
-                              l10n.subscriptionsExpiredHint,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: textLightColor),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              _SubAnnounceBanner(sub: sub),
+            if (sub.isExpired) _SubExpiredBanner(sub: sub),
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 220),
               crossFadeState: collapsed
@@ -1674,15 +1721,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
     );
   }
 
-  String _formatDate(DateTime dt) {
-    final l10n = AppLocalizations.of(context)!;
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return l10n.subscriptionsJustNow;
-    if (diff.inHours < 1) return l10n.subscriptionsMinutesAgo(diff.inMinutes);
-    if (diff.inDays < 1) return l10n.subscriptionsHoursAgo(diff.inHours);
-    return l10n.subscriptionsDaysAgo(diff.inDays);
-  }
+  String _formatDate(DateTime dt) => _subFormatDate(context, dt);
 
   String _formatExpiry(DateTime dt) {
     final l10n = AppLocalizations.of(context)!;
