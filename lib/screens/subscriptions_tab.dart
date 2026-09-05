@@ -637,6 +637,408 @@ class _SubExpiredBanner extends StatelessWidget {
   }
 }
 
+/// Подписка отдана по http, а не https.
+///
+/// С 0.7.6 такие адреса не обновляются (`isSafeUrl` принимает только https),
+/// поэтому карточка предлагает починить схему.
+bool _subIsInsecureHttp(Subscription sub) =>
+    sub.url.trim().toLowerCase().startsWith('http://');
+
+/// Открыть ссылку провайдера, пожаловавшись, если не вышло.
+Future<void> _subOpenProviderLink(BuildContext context, String url) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final l10n = AppLocalizations.of(context)!;
+  final ok = await openExternalLink(url);
+  if (ok) return;
+  messenger.showSnackBar(
+    SnackBar(content: Text(l10n.subscriptionsLinkOpenFailed)),
+  );
+}
+
+/// Выбор интервала автообновления подписки.
+void _subShowIntervalPicker(
+  BuildContext context,
+  WidgetRef ref,
+  Subscription sub,
+) {
+  const options = [1, 3, 6, 12, 24, 48, 72];
+  // В состоянии карточки `l10n` — геттер, поэтому метод обходился без
+  // объявления. Функции верхнего уровня его взять неоткуда.
+  final l10n = AppLocalizations.of(context)!;
+  final textLightColor = AppTheme.textLight(context);
+  final textColor = AppTheme.text(context);
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) {
+      final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
+      return SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(bottom: 12),
+            children: [
+              Text(
+                l10n.subscriptionsAutoUpdateInterval,
+                textAlign: TextAlign.center,
+                style: Theme.of(ctx)
+                    .textTheme
+                    .emphasized(Theme.of(ctx).textTheme.titleLarge)
+                    ?.copyWith(color: textColor),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.subscriptionsCurrentInterval(sub.updateIntervalHours),
+                textAlign: TextAlign.center,
+                style: Theme.of(ctx)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: textLightColor),
+              ),
+              const SizedBox(height: 12),
+              // Это выбор, а не список действий: текущий интервал виден
+              // заливкой сегмента, а не только жирной подписью с галочкой.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ExpressiveGroup(
+                  children: [
+                    // Выключение живёт здесь, а не отдельным значком в
+                    // карточке: это одна настройка, и орган управления у неё
+                    // должен быть один.
+                    ExpressiveActionTile(
+                      icon: Icons.update_disabled_rounded,
+                      title: l10n.subscriptionsAutoUpdateOff,
+                      selected: !sub.autoUpdate,
+                      onTap: () {
+                        ref
+                            .read(subscriptionsProvider.notifier)
+                            .setUpdateSchedule(sub.id, autoUpdate: false);
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                    for (final h in options)
+                      ExpressiveActionTile(
+                        icon: h < 24
+                            ? Icons.schedule_rounded
+                            : Icons.calendar_today_rounded,
+                        title: h == 1
+                            ? l10n.subscriptionsEveryHour
+                            : h < 24
+                            ? l10n.subscriptionsEveryHours(h)
+                            : h == 24
+                            ? l10n.subscriptionsEveryDay
+                            : l10n.subscriptionsEveryDays(h ~/ 24),
+                        selected:
+                            sub.autoUpdate && h == sub.updateIntervalHours,
+                        onTap: () {
+                          // Выбор интервала означает «включить и поставить
+                          // его» — одной операцией, а не двумя подряд.
+                          ref
+                              .read(subscriptionsProvider.notifier)
+                              .setUpdateSchedule(
+                                sub.id,
+                                autoUpdate: true,
+                                hours: h,
+                              );
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// «Сколько осталось» до конца подписки.
+String _subFormatExpiry(BuildContext context, DateTime dt) {
+  final l10n = AppLocalizations.of(context)!;
+  final diff = dt.difference(DateTime.now());
+  if (diff.isNegative) return l10n.subscriptionsExpired;
+  if (diff.inDays >= 1) return l10n.subscriptionsInDays(diff.inDays);
+  if (diff.inHours >= 1) return l10n.subscriptionsInHours(diff.inHours);
+  return l10n.subscriptionsSoon;
+}
+
+/// Раскрывающиеся подробности карточки подписки: трафик, срок, интервал
+/// обновления, ссылки провайдера.
+///
+/// Отдельный виджет, а не кусок общего `build()`: он сам подписан на то,
+/// свёрнута ли карточка и не сорвалось ли обновление, поэтому и разворачивание,
+/// и ошибка обновления перерисовывают подробности, а не всю карточку. Карточка
+/// рисуется на каждую подписку в списке, так что это повторяется столько раз,
+/// сколько у человека подписок.
+class _SubCardDetails extends ConsumerWidget {
+  const _SubCardDetails({required this.sub, required this.onSwitchToHttps});
+
+  final Subscription sub;
+
+  /// Починка http-подписки живёт в состоянии карточки: она дёргает
+  /// `widget.onRefresh()` и смотрит на `mounted`, поэтому наверх не поднимается
+  /// и приходит сюда обработчиком.
+  final VoidCallback onSwitchToHttps;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final collapsed = ref.watch(
+      collapsedSubscriptionCardsProvider.select((m) => m[sub.id] ?? false),
+    );
+    final refreshError = ref.watch(
+      subscriptionRefreshErrorsProvider.select((m) => m[sub.id]),
+    );
+    final hasRefreshError = refreshError != null;
+    final pct = sub.usagePercent;
+    // Состав карточки — настройка подписки (редактор оформления). Убрать можно
+    // только оформление и факты второго плана: предупреждения о просроченной
+    // подписке, о `http` и о неудачном обновлении рисуются всегда, что бы ни
+    // было выбрано, — спрятанная проблема выглядит как её отсутствие.
+    final showsUsage = sub.showsCard(SubscriptionCardElement.usage);
+    final textColor = AppTheme.text(context);
+    final textLightColor = AppTheme.textLight(context);
+    final accentColor = AppTheme.accent(context);
+    final redColor = AppTheme.red(context);
+    final orangeColor = AppTheme.orange(context);
+    return AnimatedCrossFade(
+        duration: const Duration(milliseconds: 220),
+        crossFadeState: collapsed
+            ? CrossFadeState.showSecond
+            : CrossFadeState.showFirst,
+        firstChild: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ЯКОРЬ карточки: сколько потрачено, крупно.
+              //
+              // Раньше всё содержимое было набрано одним мелким кеглем —
+              // URL, трафик, срок, интервал, — и глазу не за что было
+              // зацепиться, приходилось читать подряд. Размер здесь и
+              // делает иерархию: у M3E это один из пяти механизмов
+              // наравне с цветом и формой.
+              if (sub.usedDisplay != null && showsUsage)
+                // «Потрачено / лимит» — одно значение из двух виджетов, и
+                // порядок в нём держит LtrBlock, а не изолят: в персидской
+                // локали Row зеркалился, и вместо `621.8 GiB / 100 GiB`
+                // на экране получалось `/ 100 GiB 621.8 GiB`. Изолят чинил
+                // каждый кусок по отдельности и на порядок детей не влиял.
+                LtrBlock(
+                  child: Row(
+                    // Row обязан обжимать содержимое: растянутый на всю
+                    // ширину, он утащил бы блок к левому краю, а по-
+                    // персидски он должен стоять у правого.
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        sub.usedDisplay!,
+                        style: Theme.of(context).textTheme
+                            .emphasized(
+                              Theme.of(context).textTheme.headlineSmall,
+                            )
+                            ?.copyWith(color: textColor),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '/ ${sub.limitDisplay}',
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(color: textLightColor),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_subIsInsecureHttp(sub))
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_open_rounded, size: 14, color: orangeColor),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          l10n.subInsecureHttpWarning,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: orangeColor),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: onSwitchToHttps,
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                          ),
+                        ),
+                        child: Text(
+                          l10n.subSwitchToHttps,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: accentColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (pct != null && showsUsage) ...[
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(ExpressiveShape.extraSmall),
+                  child: LinearProgressIndicator(
+                    value: pct,
+                    minHeight: 5,
+                    backgroundColor: accentColor.withValues(alpha: 0.2),
+                    valueColor: AlwaysStoppedAnimation(
+                      pct > 0.9
+                          ? redColor
+                          : pct > 0.7
+                          ? orangeColor
+                          : accentColor,
+                    ),
+                  ),
+                ),
+              ],
+              if (hasRefreshError) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: redColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(ExpressiveShape.small),
+                    border: Border.all(
+                      color: redColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 14,
+                        color: redColor,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          refreshError,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: redColor),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              // МЕТА: факты второго плана — одной тихой строкой.
+              //
+              // Раньше срок годности стоял в ряду с чипами управления, а
+              // «когда обновлялось» — этажом выше рядом с трафиком. Два
+              // однородных факта в разных местах и разных ролях; теперь
+              // они вместе и оба `labelMedium`.
+              if (sub.showsCard(SubscriptionCardElement.meta)) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (sub.expiresAt != null) ...[
+                    Icon(
+                      Icons.timer_rounded,
+                      size: 14,
+                      color: sub.isExpired ? redColor : textLightColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      sub.isExpired
+                          ? l10n.subscriptionsExpired
+                          : _subFormatExpiry(context, sub.expiresAt!),
+                      style: Theme.of(context).textTheme.labelMedium
+                          ?.copyWith(
+                            color: sub.isExpired
+                                ? redColor
+                                : textLightColor,
+                          ),
+                    ),
+                  ],
+                  if (sub.lastUpdatedAt != null) ...[
+                    const Spacer(),
+                    Text(
+                      _subFormatDate(context, sub.lastUpdatedAt!),
+                      style: Theme.of(context).textTheme.labelMedium
+                          ?.copyWith(color: textLightColor),
+                    ),
+                  ],
+                ],
+              ),
+              ],
+              // УПРАВЛЕНИЕ: чипы одного вида в одном ряду.
+              //
+              // Автообновление было тремя элементами — подпись, значок
+              // ON/OFF и интервал с карандашом — ради одной настройки, и
+              // переключалось скрытым тапом по значку. Теперь это один
+              // чип: он же показывает состояние, он же открывает выбор,
+              // где «Выключить» стоит первым пунктом.
+              if (sub.showsCard(SubscriptionCardElement.actions)) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  // Настройка приложения — primary; ссылки провайдера —
+                  // secondary и tertiary. Три роли, три разных чипа: ряд
+                  // перестаёт быть однородной полосой.
+                  _CardChip(
+                    icon: Icons.update_rounded,
+                    label: sub.autoUpdate
+                        ? l10n.subscriptionsIntervalShort(
+                            sub.updateIntervalHours,
+                          )
+                        : l10n.subscriptionsOff,
+                    accent: ExpressiveAccent.primary,
+                    muted: !sub.autoUpdate,
+                    onTap: () => _subShowIntervalPicker(context, ref, sub),
+                  ),
+                  if (sub.webPageUrl != null)
+                    _CardChip(
+                      icon: Icons.open_in_new_rounded,
+                      label: l10n.subscriptionsProviderPage,
+                      accent: ExpressiveAccent.secondary,
+                      onTap: () =>
+                          _subOpenProviderLink(context, sub.webPageUrl!),
+                    ),
+                  if (sub.supportUrl != null)
+                    _CardChip(
+                      icon: Icons.support_agent_rounded,
+                      label: l10n.subscriptionsSupport,
+                      accent: ExpressiveAccent.tertiary,
+                      onTap: () =>
+                          _subOpenProviderLink(context, sub.supportUrl!),
+                    ),
+                ],
+              ),
+              ],
+            ],
+          ),
+        ),
+        secondChild: const SizedBox(height: 10),
+      );
+  }
+}
+
 class _SubItem extends ConsumerStatefulWidget {
   final Subscription sub;
   final int listIndex;
@@ -656,9 +1058,6 @@ class _SubItem extends ConsumerStatefulWidget {
 
 class _SubItemState extends ConsumerState<_SubItem> {
   AppLocalizations get l10n => AppLocalizations.of(context)!;
-
-  bool get _isInsecureHttp =>
-      widget.sub.url.trim().toLowerCase().startsWith('http://');
 
   /// Точечный фикс для http-подписки: с 0.7.6 такие не обновляются
   /// (isSafeUrl принимает только https). Меняем схему и сразу пробуем обновить.
@@ -695,7 +1094,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
       subscriptionRefreshErrorsProvider.select((m) => m[sub.id]),
     );
     final hasRefreshError = refreshError != null;
-    final pct = sub.usagePercent;
 
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
     final cardColor = AppTheme.card(context);
@@ -703,17 +1101,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
     final textLightColor = AppTheme.textLight(context);
     final accentColor = AppTheme.accent(context);
     final redColor = AppTheme.red(context);
-    final orangeColor = AppTheme.orange(context);
     final isDesktop = PlatformBootstrap.isDesktop;
 
     final cardTheme = resolveCardTheme(sub.cardThemeId);
     final cardRadius = BorderRadius.circular(ExpressiveShape.largeIncreased);
-
-    // Состав карточки — настройка подписки (редактор оформления). Убрать можно
-    // только оформление и факты второго плана: предупреждения о просроченной
-    // подписке, о `http` и о неудачном обновлении рисуются всегда, что бы ни
-    // было выбрано, — спрятанная проблема выглядит как её отсутствие.
-    final showsUsage = sub.showsCard(SubscriptionCardElement.usage);
 
     return RepaintBoundary(
       child: Container(
@@ -890,236 +1281,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 sub.showsCard(SubscriptionCardElement.announce))
               _SubAnnounceBanner(sub: sub),
             if (sub.isExpired) _SubExpiredBanner(sub: sub),
-            AnimatedCrossFade(
-              duration: const Duration(milliseconds: 220),
-              crossFadeState: collapsed
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
-              firstChild: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ЯКОРЬ карточки: сколько потрачено, крупно.
-                    //
-                    // Раньше всё содержимое было набрано одним мелким кеглем —
-                    // URL, трафик, срок, интервал, — и глазу не за что было
-                    // зацепиться, приходилось читать подряд. Размер здесь и
-                    // делает иерархию: у M3E это один из пяти механизмов
-                    // наравне с цветом и формой.
-                    if (sub.usedDisplay != null && showsUsage)
-                      // «Потрачено / лимит» — одно значение из двух виджетов, и
-                      // порядок в нём держит LtrBlock, а не изолят: в персидской
-                      // локали Row зеркалился, и вместо `621.8 GiB / 100 GiB`
-                      // на экране получалось `/ 100 GiB 621.8 GiB`. Изолят чинил
-                      // каждый кусок по отдельности и на порядок детей не влиял.
-                      LtrBlock(
-                        child: Row(
-                          // Row обязан обжимать содержимое: растянутый на всю
-                          // ширину, он утащил бы блок к левому краю, а по-
-                          // персидски он должен стоять у правого.
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              sub.usedDisplay!,
-                              style: Theme.of(context).textTheme
-                                  .emphasized(
-                                    Theme.of(context).textTheme.headlineSmall,
-                                  )
-                                  ?.copyWith(color: textColor),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '/ ${sub.limitDisplay}',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(color: textLightColor),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (_isInsecureHttp)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Row(
-                          children: [
-                            Icon(Icons.lock_open_rounded, size: 14, color: orangeColor),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                l10n.subInsecureHttpWarning,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: orangeColor),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: _switchToHttps,
-                              style: TextButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                              ),
-                              child: Text(
-                                l10n.subSwitchToHttps,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: accentColor),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (pct != null && showsUsage) ...[
-                      const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(ExpressiveShape.extraSmall),
-                        child: LinearProgressIndicator(
-                          value: pct,
-                          minHeight: 5,
-                          backgroundColor: accentColor.withValues(alpha: 0.2),
-                          valueColor: AlwaysStoppedAnimation(
-                            pct > 0.9
-                                ? redColor
-                                : pct > 0.7
-                                ? orangeColor
-                                : accentColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (hasRefreshError) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: redColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(ExpressiveShape.small),
-                          border: Border.all(
-                            color: redColor.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.error_outline_rounded,
-                              size: 14,
-                              color: redColor,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                refreshError,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: redColor),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    // МЕТА: факты второго плана — одной тихой строкой.
-                    //
-                    // Раньше срок годности стоял в ряду с чипами управления, а
-                    // «когда обновлялось» — этажом выше рядом с трафиком. Два
-                    // однородных факта в разных местах и разных ролях; теперь
-                    // они вместе и оба `labelMedium`.
-                    if (sub.showsCard(SubscriptionCardElement.meta)) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        if (sub.expiresAt != null) ...[
-                          Icon(
-                            Icons.timer_rounded,
-                            size: 14,
-                            color: sub.isExpired ? redColor : textLightColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            sub.isExpired
-                                ? l10n.subscriptionsExpired
-                                : _formatExpiry(sub.expiresAt!),
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(
-                                  color: sub.isExpired
-                                      ? redColor
-                                      : textLightColor,
-                                ),
-                          ),
-                        ],
-                        if (sub.lastUpdatedAt != null) ...[
-                          const Spacer(),
-                          Text(
-                            _formatDate(sub.lastUpdatedAt!),
-                            style: Theme.of(context).textTheme.labelMedium
-                                ?.copyWith(color: textLightColor),
-                          ),
-                        ],
-                      ],
-                    ),
-                    ],
-                    // УПРАВЛЕНИЕ: чипы одного вида в одном ряду.
-                    //
-                    // Автообновление было тремя элементами — подпись, значок
-                    // ON/OFF и интервал с карандашом — ради одной настройки, и
-                    // переключалось скрытым тапом по значку. Теперь это один
-                    // чип: он же показывает состояние, он же открывает выбор,
-                    // где «Выключить» стоит первым пунктом.
-                    if (sub.showsCard(SubscriptionCardElement.actions)) ...[
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        // Настройка приложения — primary; ссылки провайдера —
-                        // secondary и tertiary. Три роли, три разных чипа: ряд
-                        // перестаёт быть однородной полосой.
-                        _CardChip(
-                          icon: Icons.update_rounded,
-                          label: sub.autoUpdate
-                              ? l10n.subscriptionsIntervalShort(
-                                  sub.updateIntervalHours,
-                                )
-                              : l10n.subscriptionsOff,
-                          accent: ExpressiveAccent.primary,
-                          muted: !sub.autoUpdate,
-                          onTap: () => _showIntervalPicker(context, sub),
-                        ),
-                        if (sub.webPageUrl != null)
-                          _CardChip(
-                            icon: Icons.open_in_new_rounded,
-                            label: l10n.subscriptionsProviderPage,
-                            accent: ExpressiveAccent.secondary,
-                            onTap: () =>
-                                _openProviderLink(context, sub.webPageUrl!),
-                          ),
-                        if (sub.supportUrl != null)
-                          _CardChip(
-                            icon: Icons.support_agent_rounded,
-                            label: l10n.subscriptionsSupport,
-                            accent: ExpressiveAccent.tertiary,
-                            onTap: () =>
-                                _openProviderLink(context, sub.supportUrl!),
-                          ),
-                      ],
-                    ),
-                    ],
-                  ],
-                ),
-              ),
-              secondChild: const SizedBox(height: 10),
-            ),
+            _SubCardDetails(sub: sub, onSwitchToHttps: _switchToHttps),
               ],
             ),
           ],
@@ -1447,15 +1609,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
 
   /// Открывает ссылку провайдера, а если открыть нечем — говорит об этом,
   /// вместо того чтобы молча ничего не сделать.
-  Future<void> _openProviderLink(BuildContext context, String url) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final ok = await openExternalLink(url);
-    if (ok) return;
-    messenger.showSnackBar(
-      SnackBar(content: Text(l10n.subscriptionsLinkOpenFailed)),
-    );
-  }
 
   /// Лист «Поделиться»: показывает QR подписки + ссылку и шарит их через
   /// системный share (QR как PNG-файл + текст ссылки) — можно кинуть другу.
@@ -1568,99 +1721,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
     }
   }
 
-  void _showIntervalPicker(BuildContext context, Subscription sub) {
-    const options = [1, 3, 6, 12, 24, 48, 72];
-    final textLightColor = AppTheme.textLight(context);
-    final textColor = AppTheme.text(context);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) {
-        final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
-        return SafeArea(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.only(bottom: 12),
-              children: [
-                Text(
-                  l10n.subscriptionsAutoUpdateInterval,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(ctx)
-                      .textTheme
-                      .emphasized(Theme.of(ctx).textTheme.titleLarge)
-                      ?.copyWith(color: textColor),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.subscriptionsCurrentInterval(sub.updateIntervalHours),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(ctx)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: textLightColor),
-                ),
-                const SizedBox(height: 12),
-                // Это выбор, а не список действий: текущий интервал виден
-                // заливкой сегмента, а не только жирной подписью с галочкой.
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: ExpressiveGroup(
-                    children: [
-                      // Выключение живёт здесь, а не отдельным значком в
-                      // карточке: это одна настройка, и орган управления у неё
-                      // должен быть один.
-                      ExpressiveActionTile(
-                        icon: Icons.update_disabled_rounded,
-                        title: l10n.subscriptionsAutoUpdateOff,
-                        selected: !sub.autoUpdate,
-                        onTap: () {
-                          ref
-                              .read(subscriptionsProvider.notifier)
-                              .setUpdateSchedule(sub.id, autoUpdate: false);
-                          Navigator.pop(ctx);
-                        },
-                      ),
-                      for (final h in options)
-                        ExpressiveActionTile(
-                          icon: h < 24
-                              ? Icons.schedule_rounded
-                              : Icons.calendar_today_rounded,
-                          title: h == 1
-                              ? l10n.subscriptionsEveryHour
-                              : h < 24
-                              ? l10n.subscriptionsEveryHours(h)
-                              : h == 24
-                              ? l10n.subscriptionsEveryDay
-                              : l10n.subscriptionsEveryDays(h ~/ 24),
-                          selected:
-                              sub.autoUpdate && h == sub.updateIntervalHours,
-                          onTap: () {
-                            // Выбор интервала означает «включить и поставить
-                            // его» — одной операцией, а не двумя подряд.
-                            ref
-                                .read(subscriptionsProvider.notifier)
-                                .setUpdateSchedule(
-                                  sub.id,
-                                  autoUpdate: true,
-                                  hours: h,
-                                );
-                            Navigator.pop(ctx);
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   void _showDeleteConfirmation(BuildContext context) {
     final sub = widget.sub;
@@ -1721,16 +1781,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
     );
   }
 
-  String _formatDate(DateTime dt) => _subFormatDate(context, dt);
-
-  String _formatExpiry(DateTime dt) {
-    final l10n = AppLocalizations.of(context)!;
-    final diff = dt.difference(DateTime.now());
-    if (diff.isNegative) return l10n.subscriptionsExpired;
-    if (diff.inDays >= 1) return l10n.subscriptionsInDays(diff.inDays);
-    if (diff.inHours >= 1) return l10n.subscriptionsInHours(diff.inHours);
-    return l10n.subscriptionsSoon;
-  }
 }
 
 /// Ссылка провайдера в карточке подписки.
