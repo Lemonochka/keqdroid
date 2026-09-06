@@ -514,12 +514,22 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   /// as a GLOBAL keyboard handler (not a Focus.onKeyEvent) so it fires regardless
   /// of which widget holds focus — the Focus-based version never received events
   /// on Linux/GTK. Matches the PHYSICAL V key, so it works on any layout (on
-  /// ЙЦУКЕН the logical key is "м"). A focused text field keeps its own paste.
+  /// ЙЦУКЕН the logical key is "м"). A focused text field keeps its own paste,
+  /// and so does anything opened on top of the tab — see the checks below.
   bool _onGlobalKey(KeyEvent event) {
     if (event is! KeyDownEvent || !mounted) return false;
     final mod = HardwareKeyboard.instance.isControlPressed ||
         HardwareKeyboard.instance.isMetaPressed;
     if (!mod || event.physicalKey != PhysicalKeyboardKey.keyV) return false;
+    // Что-то открыто поверх вкладки — Ctrl+V принадлежит ему, а не нам.
+    //
+    // Проверки фокуса ниже для этого мало, и это была настоящая ошибка: пока
+    // человек не щёлкнул в поле формы добавления, фокуса в тексте нет, и
+    // Ctrl+V добавлял подписку МИМО открытой формы. Форма при этом оставалась
+    // на экране, человек дозаполнял её и жал «загрузить» — и получал «уже
+    // добавлена», не понимая, откуда она взялась.
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return false;
     // Don't hijack paste while the user is typing in a text field.
     if (FocusManager.instance.primaryFocus?.context?.widget is EditableText) {
       return false;
