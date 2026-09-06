@@ -324,6 +324,444 @@ Widget _subCardHeaderIconButton({
   );
 }
 
+void _serverGroupSortMenu(
+  WidgetRef ref,
+  BuildContext context,
+  String collapseKey,
+  ServerSortMode current,
+) {
+  final l10n = context.l10n;
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (ctx) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ExpressiveSectionHeader(l10n.serversSortTitle),
+            // Это выбор, а не список действий: текущий режим виден заливкой
+            // и галочкой, а не только чуть более жирной подписью.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: ExpressiveGroup(
+                children: [
+                  for (final mode in ServerSortMode.values)
+                    ExpressiveActionTile(
+                      icon: mode.icon,
+                      title: mode.label(l10n),
+                      selected: mode == current,
+                      onTap: () {
+                        ref.read(serverSortModesProvider.notifier).update(
+                              (m) => {...m, collapseKey: mode.name},
+                            );
+                        Navigator.of(ctx).pop();
+                      },
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+void _serverGroupIntervalPicker(
+  WidgetRef ref,
+  BuildContext context,
+  Subscription sub,
+) {
+  const options = [1, 3, 6, 12, 24, 48, 72];
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) {
+      final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
+      return SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(bottom: 12),
+            children: [
+              Text(
+                context.l10n.subscriptionsAutoUpdateInterval,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme
+                    .emphasized(Theme.of(context).textTheme.titleLarge)
+                    ?.copyWith(color: AppTheme.text(context)),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                context.l10n.subscriptionsCurrentInterval(
+                  sub.updateIntervalHours,
+                ),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
+              ),
+              const SizedBox(height: 12),
+              // Тот же вид, что у пикера интервала в карточке подписки:
+              // выбор, а не список действий, поэтому текущее значение
+              // заливается сегментом, а не отличается жирной подписью.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ExpressiveGroup(
+                  children: [
+                    // «Выключить» есть и здесь: пикер тот же самый, и
+                    // расходиться со шторкой из карточки подписки он не
+                    // должен.
+                    ExpressiveActionTile(
+                      icon: Icons.update_disabled_rounded,
+                      title: context.l10n.subscriptionsAutoUpdateOff,
+                      selected: !sub.autoUpdate,
+                      onTap: () {
+                        ref
+                            .read(subscriptionsProvider.notifier)
+                            .setUpdateSchedule(sub.id, autoUpdate: false);
+                        Navigator.of(ctx).pop();
+                      },
+                    ),
+                    for (final h in options)
+                      ExpressiveActionTile(
+                        icon: h < 24
+                            ? Icons.schedule_rounded
+                            : Icons.calendar_today_rounded,
+                        title: h == 1
+                            ? context.l10n.subscriptionsEveryHour
+                            : h < 24
+                            ? context.l10n.subscriptionsEveryHours(h)
+                            : h == 24
+                            ? context.l10n.subscriptionsEveryDay
+                            : context.l10n.subscriptionsEveryDays(h ~/ 24),
+                        selected:
+                            sub.autoUpdate && h == sub.updateIntervalHours,
+                        onTap: () {
+                          ref
+                              .read(subscriptionsProvider.notifier)
+                              .setUpdateSchedule(
+                                sub.id,
+                                autoUpdate: true,
+                                hours: h,
+                              );
+                          Navigator.pop(ctx);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Шапка группы серверов: название, счётчики, сортировка, обновление, пинг.
+///
+/// Отдельный виджет, а не кусок общего `build()`: он сам подписан на то,
+/// свёрнута ли группа, идёт ли обновление и не пингуется ли она — поэтому
+/// вращение любой из этих кнопок перерисовывает шапку, а не всю группу вместе
+/// со списком серверов под ней.
+class _ServerGroupHeader extends ConsumerWidget {
+  const _ServerGroupHeader({
+    required this.subscription,
+    required this.servers,
+    required this.groupKey,
+    required this.groupTitle,
+    required this.onRefresh,
+    required this.onPingAll,
+    required this.accent,
+  });
+
+  final Subscription? subscription;
+  final List<ServerItem> servers;
+  final String? groupKey;
+  final String? groupTitle;
+  final Future<void> Function()? onRefresh;
+  final Future<void> Function() onPingAll;
+
+  /// Акцент подписки разрешается асинхронно в состоянии карточки, поэтому
+  /// шапка его не вычисляет, а получает.
+  final SubscriptionAccent? accent;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sub = subscription;
+    final collapseKey = groupKey ?? sub?.id ?? ServersNotifier.manualGroupKey;
+    final collapsed = ref.watch(
+      collapsedServerGroupsProvider.select((m) => m[collapseKey] ?? false),
+    );
+    final sortMode = ServerSortMode.fromName(
+      ref.watch(serverSortModesProvider.select((m) => m[collapseKey])),
+    );
+    final isRefreshing =
+        sub != null &&
+        ref.watch(
+          subscriptionRefreshingIdsProvider.select(
+            (ids) => ids.contains(sub.id),
+          ),
+        );
+    final hasRefreshError =
+        sub != null &&
+        ref.watch(
+          subscriptionRefreshErrorsProvider.select(
+            (m) => m.containsKey(sub.id),
+          ),
+        );
+    final scheme = Theme.of(context).colorScheme;
+    final groupColor =
+        accent?.surface(scheme.surfaceContainerLow) ??
+        scheme.surfaceContainerLow;
+    // Иконки шапки и спиннеры уводим в цвет подписки — это те самые элементы,
+    // что уже есть на её карточке (обновление, «12h»), и связь читается без
+    // единого нового пикселя.
+    final accentColor = accent?.seed ?? AppTheme.accent(context);
+    final textLightColor = AppTheme.textLight(context);
+    final pingScope = collapseKey;
+    final isPingingAll = ref.watch(
+      pingingScopesProvider.select((scopes) => scopes.contains(pingScope)),
+    );
+    final title =
+        groupTitle ??
+        (sub != null
+            ? '${sub.name}  |  ${ltrIsolate(sub.usageLabel)}'
+            : context.l10n.serversManualGroup);
+    return ServerGroupAnchor(
+        groupKey: collapseKey,
+        child: RepaintBoundary(
+        child: SizedBox(
+          height: _GroupHeaderBackground.heightFor(
+            sub,
+            collapsed: collapsed,
+          ),
+          child: _GroupHeaderBackground(
+            subscription: sub,
+            surface: groupColor,
+            // Свёрнутая группа — это только шапка, и снизу у неё тоже
+            // край карточки: не скругли мы его, картинка вылезла бы
+            // прямыми углами из-под скруглённой рамки.
+            collapsed: collapsed,
+            child: Center(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Шеврон и заголовок в общем Expanded: при узкой ширине
+                // (напр. кадр во время сворачивания окна в трей) они
+                // сжимаются вместе, а ряд иконок справа не вызывает overflow.
+                Expanded(
+                  // Шеврон + заголовок + tap — один семантический узел
+                  // (см. комментарий в _ServerTile).
+                  child: MergeSemantics(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => ref
+                          .read(collapsedServerGroupsProvider.notifier)
+                          .update(
+                            (m) => {...m, collapseKey: !collapsed},
+                          ),
+                      onLongPress: () {
+                        HapticFeedback.mediumImpact();
+                        _serverGroupSortMenu(ref, context, collapseKey, sortMode);
+                      },
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: _subCardHeaderIconSize,
+                            height: _subCardHeaderIconSize,
+                            child: Center(
+                              child: AnimatedRotation(
+                                turns: collapsed ? -0.25 : 0,
+                                duration: ExpressiveMotion.durationFast,
+                                curve: ExpressiveMotion.emphasized,
+                                child: Icon(
+                                  Icons.expand_more_rounded,
+                                  size: ExpressiveIconSize.medium,
+                                  color: textLightColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: ExpressiveSpacing.small),
+                          Expanded(
+                            child: Text(
+                              title,
+                              // Заголовок группы — роль подзаголовка
+                              // списка в M3, а не свой кегль 13.
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(color: textLightColor),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    start: ExpressiveSpacing.small,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (sub != null && sub.autoUpdate) ...[
+                        // InkWell, а не GestureDetector: чип нажимается,
+                        // и до сих пор об этом ничем не сообщал.
+                        Material(
+                          color: accentColor.withValues(alpha: 0.18),
+                          // Маленькая метка-действие у M3E — пилюля,
+                          // как и бейдж протокола в строке сервера.
+                          shape: ExpressiveShape.border(
+                            ExpressiveShape.full,
+                          ),
+                          child: InkWell(
+                            onTap: () =>
+                                _serverGroupIntervalPicker(ref, context, sub),
+                            customBorder: ExpressiveShape.border(
+                              ExpressiveShape.full,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: ExpressiveSpacing.small,
+                                vertical: ExpressiveSpacing.extraSmall,
+                              ),
+                              child: Text(
+                                '${sub.updateIntervalHours}h',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(color: accentColor),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(
+                          width: _subCardHeaderIntervalGap,
+                        ),
+                      ],
+                      // Явная кнопка сортировки: long-press по шапке
+                      // остаётся, но на десктопе он неоткрываем мышью
+                      // интуитивно — иконка делает функцию видимой.
+                      _subCardHeaderIconButton(
+                        tooltip:
+                            AppLocalizations.of(context)!.serversSortTitle,
+                        onPressed: () => _serverGroupSortMenu(ref, 
+                          context,
+                          collapseKey,
+                          sortMode,
+                        ),
+                        icon: Icon(
+                          sortMode == ServerSortMode.defaultOrder
+                              ? Icons.sort_rounded
+                              : sortMode.icon,
+                          size: ExpressiveIconSize.medium,
+                          color: sortMode == ServerSortMode.defaultOrder
+                              ? textLightColor
+                              : accentColor,
+                        ),
+                      ),
+                      const SizedBox(width: _subCardHeaderActionGap),
+                      if (onRefresh != null) ...[
+                        _subCardHeaderIconButton(
+                          tooltip: AppLocalizations.of(
+                            context,
+                          )!.serversRefreshSubscription,
+                          onPressed: isRefreshing
+                              ? null
+                              : () async {
+                                  try {
+                                    await onRefresh!.call();
+                                  } catch (e) {
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(
+                                      context,
+                                    ).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          _shortError(e),
+                                        ),
+                                        backgroundColor: AppTheme.red(
+                                          context,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                          icon: isRefreshing
+                              ? ShapeLoadingIndicator(
+                                  size: ExpressiveIconSize.medium,
+                                  color: accentColor,
+                                )
+                              : Icon(
+                                  Icons.refresh_rounded,
+                                  size: ExpressiveIconSize.medium,
+                                  color: hasRefreshError
+                                      ? AppTheme.red(context)
+                                      : textLightColor,
+                                ),
+                        ),
+                        const SizedBox(width: _subCardHeaderActionGap),
+                      ],
+                      _subCardHeaderIconButton(
+                        tooltip: AppLocalizations.of(
+                          context,
+                        )!.serversPingAll,
+                        onPressed: isPingingAll
+                            ? null
+                            : () async {
+                                try {
+                                  await onPingAll();
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(
+                                    context,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text(_shortError(e)),
+                                      backgroundColor: AppTheme.red(
+                                        context,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                        icon: isPingingAll
+                            ? ShapeLoadingIndicator(
+                                size: ExpressiveIconSize.medium,
+                                color: accentColor,
+                              )
+                            : Icon(
+                                Icons.network_ping_rounded,
+                                size: ExpressiveIconSize.medium,
+                                color: textLightColor,
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        ),
+        ),
+      ),
+      );
+  }
+}
+
 class _SubCard extends ConsumerStatefulWidget {
   final Subscription? subscription;
   final List<ServerItem> servers;
@@ -440,31 +878,11 @@ class _SubCardState extends ConsumerState<_SubCard> {
       ref.watch(serverSortModesProvider.select((m) => m[collapseKey])),
     );
     final sortedServers = _sortedFor(widget.servers, sortMode);
-    final isRefreshing =
-        sub != null &&
-        ref.watch(
-          subscriptionRefreshingIdsProvider.select(
-            (ids) => ids.contains(sub.id),
-          ),
-        );
-    final hasRefreshError =
-        sub != null &&
-        ref.watch(
-          subscriptionRefreshErrorsProvider.select(
-            (m) => m.containsKey(sub.id),
-          ),
-        );
-    final pingScope = collapseKey;
-    final isPingingAll = ref.watch(
-      pingingScopesProvider.select((scopes) => scopes.contains(pingScope)),
-    );
+    // Обновление, ошибка, пинг и заголовок здесь больше не нужны: на них
+    // подписана сама шапка, и перерисовывается от них она одна.
     final activeServerId = ref.watch(
       serversProvider.select((s) => s.activeServerId),
     );
-    final title = widget.groupTitle ??
-        (sub != null
-            ? '${sub.name}  |  ${ltrIsolate(sub.usageLabel)}'
-            : context.l10n.serversManualGroup);
 
     // Где стоит активный сервер — для прыжка к нему с главного экрана.
     //
@@ -507,10 +925,6 @@ class _SubCardState extends ConsumerState<_SubCard> {
     // полосами НА нём.
     final groupColor = accent?.surface(scheme.surfaceContainerLow) ??
         scheme.surfaceContainerLow;
-    // Иконки шапки и спиннеры уводим в цвет подписки — это те самые элементы,
-    // что уже есть на её карточке (обновление, «12h»), и связь читается без
-    // единого нового пикселя.
-    final accentColor = accent?.seed ?? AppTheme.accent(context);
     final textLightColor = AppTheme.textLight(context);
 
     // Sliver-карточка: DecoratedSliver рисует фон/рамку/тень на всю длину
@@ -539,233 +953,14 @@ class _SubCardState extends ConsumerState<_SubCard> {
               // сама sliver-карточка: `SliverToBoxAdapter` строит и раскладывает
               // ребёнка всегда, даже когда группа далеко за экраном, так что у
               // якоря есть живой render object и посчитанное смещение.
-              child: ServerGroupAnchor(
-                groupKey: collapseKey,
-                child: RepaintBoundary(
-                child: SizedBox(
-                  height: _GroupHeaderBackground.heightFor(
-                    sub,
-                    collapsed: collapsed,
-                  ),
-                  child: _GroupHeaderBackground(
-                    subscription: sub,
-                    surface: groupColor,
-                    // Свёрнутая группа — это только шапка, и снизу у неё тоже
-                    // край карточки: не скругли мы его, картинка вылезла бы
-                    // прямыми углами из-под скруглённой рамки.
-                    collapsed: collapsed,
-                    child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Шеврон и заголовок в общем Expanded: при узкой ширине
-                        // (напр. кадр во время сворачивания окна в трей) они
-                        // сжимаются вместе, а ряд иконок справа не вызывает overflow.
-                        Expanded(
-                          // Шеврон + заголовок + tap — один семантический узел
-                          // (см. комментарий в _ServerTile).
-                          child: MergeSemantics(
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => ref
-                                  .read(collapsedServerGroupsProvider.notifier)
-                                  .update(
-                                    (m) => {...m, collapseKey: !collapsed},
-                                  ),
-                              onLongPress: () {
-                                HapticFeedback.mediumImpact();
-                                _showSortMenu(context, collapseKey, sortMode);
-                              },
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  SizedBox(
-                                    width: _subCardHeaderIconSize,
-                                    height: _subCardHeaderIconSize,
-                                    child: Center(
-                                      child: AnimatedRotation(
-                                        turns: collapsed ? -0.25 : 0,
-                                        duration: ExpressiveMotion.durationFast,
-                                        curve: ExpressiveMotion.emphasized,
-                                        child: Icon(
-                                          Icons.expand_more_rounded,
-                                          size: ExpressiveIconSize.medium,
-                                          color: textLightColor,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: ExpressiveSpacing.small),
-                                  Expanded(
-                                    child: Text(
-                                      title,
-                                      // Заголовок группы — роль подзаголовка
-                                      // списка в M3, а не свой кегль 13.
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(color: textLightColor),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        Padding(
-                          padding: const EdgeInsetsDirectional.only(
-                            start: ExpressiveSpacing.small,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (sub != null && sub.autoUpdate) ...[
-                                // InkWell, а не GestureDetector: чип нажимается,
-                                // и до сих пор об этом ничем не сообщал.
-                                Material(
-                                  color: accentColor.withValues(alpha: 0.18),
-                                  // Маленькая метка-действие у M3E — пилюля,
-                                  // как и бейдж протокола в строке сервера.
-                                  shape: ExpressiveShape.border(
-                                    ExpressiveShape.full,
-                                  ),
-                                  child: InkWell(
-                                    onTap: () =>
-                                        _showIntervalPicker(context, sub),
-                                    customBorder: ExpressiveShape.border(
-                                      ExpressiveShape.full,
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: ExpressiveSpacing.small,
-                                        vertical: ExpressiveSpacing.extraSmall,
-                                      ),
-                                      child: Text(
-                                        '${sub.updateIntervalHours}h',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelSmall
-                                            ?.copyWith(color: accentColor),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(
-                                  width: _subCardHeaderIntervalGap,
-                                ),
-                              ],
-                              // Явная кнопка сортировки: long-press по шапке
-                              // остаётся, но на десктопе он неоткрываем мышью
-                              // интуитивно — иконка делает функцию видимой.
-                              _subCardHeaderIconButton(
-                                tooltip:
-                                    AppLocalizations.of(context)!.serversSortTitle,
-                                onPressed: () => _showSortMenu(
-                                  context,
-                                  collapseKey,
-                                  sortMode,
-                                ),
-                                icon: Icon(
-                                  sortMode == ServerSortMode.defaultOrder
-                                      ? Icons.sort_rounded
-                                      : sortMode.icon,
-                                  size: ExpressiveIconSize.medium,
-                                  color: sortMode == ServerSortMode.defaultOrder
-                                      ? textLightColor
-                                      : accentColor,
-                                ),
-                              ),
-                              const SizedBox(width: _subCardHeaderActionGap),
-                              if (widget.onRefresh != null) ...[
-                                _subCardHeaderIconButton(
-                                  tooltip: AppLocalizations.of(
-                                    context,
-                                  )!.serversRefreshSubscription,
-                                  onPressed: isRefreshing
-                                      ? null
-                                      : () async {
-                                          try {
-                                            await widget.onRefresh!.call();
-                                          } catch (e) {
-                                            if (!context.mounted) return;
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  _shortError(e),
-                                                ),
-                                                backgroundColor: AppTheme.red(
-                                                  context,
-                                                ),
-                                              ),
-                                            );
-                                          }
-                                        },
-                                  icon: isRefreshing
-                                      ? ShapeLoadingIndicator(
-                                          size: ExpressiveIconSize.medium,
-                                          color: accentColor,
-                                        )
-                                      : Icon(
-                                          Icons.refresh_rounded,
-                                          size: ExpressiveIconSize.medium,
-                                          color: hasRefreshError
-                                              ? AppTheme.red(context)
-                                              : textLightColor,
-                                        ),
-                                ),
-                                const SizedBox(width: _subCardHeaderActionGap),
-                              ],
-                              _subCardHeaderIconButton(
-                                tooltip: AppLocalizations.of(
-                                  context,
-                                )!.serversPingAll,
-                                onPressed: isPingingAll
-                                    ? null
-                                    : () async {
-                                        try {
-                                          await widget.onPingAll();
-                                        } catch (e) {
-                                          if (!context.mounted) return;
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(_shortError(e)),
-                                              backgroundColor: AppTheme.red(
-                                                context,
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                icon: isPingingAll
-                                    ? ShapeLoadingIndicator(
-                                        size: ExpressiveIconSize.medium,
-                                        color: accentColor,
-                                      )
-                                    : Icon(
-                                        Icons.network_ping_rounded,
-                                        size: ExpressiveIconSize.medium,
-                                        color: textLightColor,
-                                      ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                ),
-                ),
-              ),
+              child: _ServerGroupHeader(
+                subscription: widget.subscription,
+                servers: widget.servers,
+                groupKey: widget.groupKey,
+                groupTitle: widget.groupTitle,
+                onRefresh: widget.onRefresh,
+                onPingAll: widget.onPingAll,
+                accent: _accent,
               ),
             ),
 
@@ -878,135 +1073,4 @@ class _SubCardState extends ConsumerState<_SubCard> {
   }
 
   /// Долгое нажатие на шапку группы → выбор сортировки серверов.
-  void _showSortMenu(
-    BuildContext context,
-    String collapseKey,
-    ServerSortMode current,
-  ) {
-    final l10n = context.l10n;
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ExpressiveSectionHeader(l10n.serversSortTitle),
-              // Это выбор, а не список действий: текущий режим виден заливкой
-              // и галочкой, а не только чуть более жирной подписью.
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ExpressiveGroup(
-                  children: [
-                    for (final mode in ServerSortMode.values)
-                      ExpressiveActionTile(
-                        icon: mode.icon,
-                        title: mode.label(l10n),
-                        selected: mode == current,
-                        onTap: () {
-                          ref.read(serverSortModesProvider.notifier).update(
-                                (m) => {...m, collapseKey: mode.name},
-                              );
-                          Navigator.of(ctx).pop();
-                        },
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showIntervalPicker(BuildContext context, Subscription sub) {
-    const options = [1, 3, 6, 12, 24, 48, 72];
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) {
-        final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
-        return SafeArea(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.only(bottom: 12),
-              children: [
-                Text(
-                  context.l10n.subscriptionsAutoUpdateInterval,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme
-                      .emphasized(Theme.of(context).textTheme.titleLarge)
-                      ?.copyWith(color: AppTheme.text(context)),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  context.l10n.subscriptionsCurrentInterval(
-                    sub.updateIntervalHours,
-                  ),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-                ),
-                const SizedBox(height: 12),
-                // Тот же вид, что у пикера интервала в карточке подписки:
-                // выбор, а не список действий, поэтому текущее значение
-                // заливается сегментом, а не отличается жирной подписью.
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: ExpressiveGroup(
-                    children: [
-                      // «Выключить» есть и здесь: пикер тот же самый, и
-                      // расходиться со шторкой из карточки подписки он не
-                      // должен.
-                      ExpressiveActionTile(
-                        icon: Icons.update_disabled_rounded,
-                        title: context.l10n.subscriptionsAutoUpdateOff,
-                        selected: !sub.autoUpdate,
-                        onTap: () {
-                          ref
-                              .read(subscriptionsProvider.notifier)
-                              .setUpdateSchedule(sub.id, autoUpdate: false);
-                          Navigator.of(ctx).pop();
-                        },
-                      ),
-                      for (final h in options)
-                        ExpressiveActionTile(
-                          icon: h < 24
-                              ? Icons.schedule_rounded
-                              : Icons.calendar_today_rounded,
-                          title: h == 1
-                              ? context.l10n.subscriptionsEveryHour
-                              : h < 24
-                              ? context.l10n.subscriptionsEveryHours(h)
-                              : h == 24
-                              ? context.l10n.subscriptionsEveryDay
-                              : context.l10n.subscriptionsEveryDays(h ~/ 24),
-                          selected:
-                              sub.autoUpdate && h == sub.updateIntervalHours,
-                          onTap: () {
-                            ref
-                                .read(subscriptionsProvider.notifier)
-                                .setUpdateSchedule(
-                                  sub.id,
-                                  autoUpdate: true,
-                                  hours: h,
-                                );
-                            Navigator.pop(ctx);
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 }
