@@ -501,27 +501,44 @@ class _GameOverOverlay extends StatelessWidget {
     return ClipRRect(
       borderRadius: const BorderRadius.all(Radius.circular(28)),
       child: ColoredBox(
-        color: skin.scheme.scrim.withValues(alpha: 0.62),
+        // Затемнение только гасит стакан под карточкой. Текст на нём не живёт:
+        // у затемнения нет своей on-роли, и любой подобранный цвет ломается на
+        // другой яркости темы.
+        color: skin.scheme.scrim.withValues(alpha: 0.55),
         child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                isBest ? labels.newBest : labels.gameOver,
-                textAlign: TextAlign.center,
-                style: text.headlineSmall?.copyWith(
-                  color: skin.scheme.onPrimary,
-                  fontWeight: FontWeight.w700,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+            decoration: BoxDecoration(
+              color: skin.overlay,
+              borderRadius: const BorderRadius.all(Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isBest ? labels.newBest : labels.gameOver,
+                  textAlign: TextAlign.center,
+                  style: text.headlineSmall?.copyWith(
+                    // Новый рекорд — единственное, ради чего сюда смотрят
+                    // дважды, поэтому он и единственное здесь цветное.
+                    color: isBest ? skin.scheme.primary : skin.onOverlay,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '$score',
-                style: text.titleLarge?.copyWith(color: skin.scheme.onPrimary),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(onPressed: onRestart, child: Text(labels.restart)),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  '$score',
+                  style: text.headlineMedium?.copyWith(
+                    color: skin.onOverlay,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton(onPressed: onRestart, child: Text(labels.restart)),
+              ],
+            ),
           ),
         ),
       ),

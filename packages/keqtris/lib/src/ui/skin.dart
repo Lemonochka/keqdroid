@@ -21,6 +21,18 @@ class KeqtrisSkin {
   final Color gridLine;
   final Color ghost;
 
+  /// Подложка карточки конца партии и текст на ней.
+  ///
+  /// Отдельная пара, а не «что-нибудь поверх затемнения»: на затемнённом
+  /// стакане нет роли, к которой привязан контраст, и подобранный на глаз цвет
+  /// живёт ровно до смены яркости темы. Первая версия брала `onPrimary` — цвет
+  /// для текста НА primary — и в тёмной теме он оказывался тёмным на тёмном.
+  ///
+  /// Пара `surfaceContainerHighest` + `onSurface` контрастна по построению
+  /// схемы, в обеих яркостях и при любом акценте. Это сторожит тест.
+  final Color overlay;
+  final Color onOverlay;
+
   const KeqtrisSkin({
     required this.scheme,
     required this.pieces,
@@ -28,6 +40,8 @@ class KeqtrisSkin {
     required this.wellOutline,
     required this.gridLine,
     required this.ghost,
+    required this.overlay,
+    required this.onOverlay,
   });
 
   /// Канон Guideline. Ниже они пересаживаются на тон темы, но оттенок — отсюда.
@@ -62,6 +76,8 @@ class KeqtrisSkin {
       // таблицу и спорит с фигурами за внимание.
       gridLine: scheme.outlineVariant.withValues(alpha: dark ? 0.22 : 0.30),
       ghost: scheme.onSurfaceVariant.withValues(alpha: 0.30),
+      overlay: scheme.surfaceContainerHighest,
+      onOverlay: scheme.onSurface,
     );
   }
 
