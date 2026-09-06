@@ -55,6 +55,257 @@ part 'servers/connection_stats.dart';
 part 'servers/connect_button.dart';
 part 'servers/wave_header.dart';
 
+Widget _serversStatusText(
+  BuildContext context,
+  VoidCallback onJumpToActive,
+  VpnStatus status,
+  String? errorMessage,
+  ServerItem? activeServer,
+) {
+  final l10n = AppLocalizations.of(context)!;
+  final textTheme = Theme.of(context).textTheme;
+  if (status == VpnStatus.connected && activeServer != null) {
+    final cleanName = ServerNameUtils.formatForDisplay(
+      ServerNameUtils.cleanDisplayName(activeServer.displayName),
+    );
+    final scheme = Theme.of(context).colorScheme;
+    // Тональный чип-пилюля вместо обводки: у M3E это штатный вид «активного»
+    // статуса, и он же даёт главному экрану второй цветовой акцент после
+    // кнопки. Тот же secondaryContainer носит активный сервер в списке —
+    // цвет читается как «вот это выбрано» на обоих экранах.
+    //
+    // Чип же и увозит к своему серверу в списке: он единственный на экране
+    // называет активный сервер по имени, а найти его строку среди полусотни
+    // других можно было только свайпами — при том, что приложение и так
+    // знает, где она.
+    final shape = RoundedRectangleBorder(
+      borderRadius: ExpressiveShape.radius(ExpressiveShape.full),
+    );
+    return Tooltip(
+      key: const ValueKey('connected'),
+      message: l10n.serversJumpToActive,
+      waitDuration: const Duration(milliseconds: 600),
+      child: Material(
+        color: scheme.secondaryContainer,
+        shape: shape,
+        child: InkWell(
+          onTap: onJumpToActive,
+          customBorder: shape,
+          child: Semantics(
+            button: true,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: _ServersTabState._statusChipVerticalPadding,
+              ),
+              child: Text(
+                l10n.vpnConnectedTo(cleanName),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: _ServersTabState._statusChipTextStyle(textTheme)
+                    ?.copyWith(color: scheme.onSecondaryContainer),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  } else {
+    final statusKey = switch (status) {
+      VpnStatus.connected => 'connected',
+      VpnStatus.connecting => 'connecting',
+      VpnStatus.disconnecting => 'disconnecting',
+      VpnStatus.error => 'error',
+      _ => activeServer != null ? 'ready' : 'no-server',
+    };
+    final label = switch (status) {
+      VpnStatus.connecting => l10n.vpnConnecting,
+      VpnStatus.disconnecting => l10n.vpnDisconnecting,
+      VpnStatus.error => _vpnErrorStatusLabel(errorMessage, context),
+      // connected, но activeServer == null (активный сервер удалили при
+      // живом туннеле) — показываем «подключено», а не «выберите сервер»
+      VpnStatus.connected => l10n.vpnConnectedGeneric,
+      _ =>
+        activeServer != null
+            ? l10n.vpnTapToConnect(
+                ServerNameUtils.formatForDisplay(
+                  ServerNameUtils.cleanDisplayName(activeServer.displayName),
+                ),
+              )
+            : l10n.vpnSelectServer,
+    };
+    return Text(
+      label,
+      key: ValueKey(statusKey),
+      textAlign: TextAlign.center,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: textTheme.bodyMedium?.copyWith(
+        color: AppTheme.textLight(context),
+      ),
+    );
+  }
+}
+
+/// Шапка вкладки серверов: волна, круг подключения, статус и чипы трафика.
+///
+/// Отдельный виджет, а не кусок общего `build()`: он сам подписан на состояние
+/// VPN, поэтому смена статуса перерисовывает шапку, а не вкладку вместе со
+/// списком серверов под ней — а список тут самая дорогая часть.
+class _ConnectHeader extends ConsumerWidget {
+  const _ConnectHeader({
+    required this.stateCtrl,
+    required this.waveCtrl,
+    required this.onToggle,
+    required this.onJumpToActive,
+  });
+
+  /// Контроллеры принадлежат состоянию вкладки: оно заводит их в initState и
+  /// само сводит с состоянием VPN. Шапка только рисует по ним.
+  final AnimationController stateCtrl;
+  final AnimationController waveCtrl;
+
+  final void Function(VpnStatus) onToggle;
+  final VoidCallback onJumpToActive;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vpnStatus = ref.watch(
+      vpnStateProvider.select((a) => a.value?.status ?? VpnStatus.disconnected),
+    );
+    final vpnErrorMessage = ref.watch(
+      vpnStateProvider.select((a) => a.value?.errorMessage),
+    );
+    final serverSwitchInProgress = ref.watch(vpnServerSwitchInProgressProvider);
+    final activeServer = ref.watch(
+      serversProvider.select((s) => s.activeServer),
+    );
+    // При смене сервера на активном VPN движок на миг проходит через
+    // `disconnected` (старый сервер отключается перед подключением нового).
+    // Без учёта serverSwitchInProgress круг проваливался в серый «неактивный»
+    // вид (spinner → серый → spinner). Пока идёт переключение — держим круг в
+    // состоянии «подключается», чтобы переход был одной плавной дугой.
+    final isConnected =
+        vpnStatus == VpnStatus.connected && !serverSwitchInProgress;
+    // `disconnecting` сюда НЕ входит, и это не упрощение.
+    //
+    // Отключение мгновенное, но флаг заводил кнопку в состояние «идёт работа»:
+    // на пути в отключённый вид успевал появиться индикатор, дожить до
+    // доводки и только потом уступить место неактивной кнопке. Лишний кадр
+    // там, где нечего ждать. Тапабельность на `disconnecting` гасится ниже
+    // отдельно, по самому статусу.
+    final isConnecting =
+        serverSwitchInProgress || vpnStatus == VpnStatus.connecting;
+
+    final isDesktop = PlatformBootstrap.isDesktop;
+    // Высота волны ПОСТОЯННА. Раньше она ужималась на connecting/connected,
+    // чтобы шапка не разрасталась от чипов трафика, но менялась мгновенно —
+    // и всё выше списка прыгало и слегка уменьшалось в момент подключения.
+    // Единственное, что теперь меняет высоту шапки, — появление чипов, а его
+    // плавно разводит AnimatedSize ниже.
+    final waveHeight = isDesktop ? 40.0 : 36.0;
+    final topPad = isDesktop ? 20.0 : MediaQuery.of(context).padding.top + 24;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, topPad, 24, 8),
+      child: Column(
+        children: [
+              // Кнопка анимируется на нажатии и на смене иконки — boundary не
+              // даёт этим перерисовкам тянуть за собой весь хедер.
+              //
+              // «Дыхания» здесь больше нет. Медленный ScaleTransition (1.0 →
+              // 1.05, 2 с) масштабировал всю кнопку вместе с её blur-тенью
+              // каждый кадр: пересчёт тени на дробном масштабе давал видимое
+              // дёрганье вместо плавной пульсации. Состояние подключения и так
+              // видно по цвету круга, иконке и волне под ним.
+              RepaintBoundary(
+                child: _ConnectButton(
+                  isConnected: isConnected,
+                  isConnecting: isConnecting,
+                  // connecting остаётся тапабельным — это отмена попытки;
+                  // блокируем только disconnecting (гасить уже нечего).
+                  onTap: vpnStatus == VpnStatus.disconnecting
+                      ? null
+                      : () => onToggle(vpnStatus),
+                ),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                // Высота под статус ФИКСИРОВАНА и рассчитана на две строки.
+                // Имена серверов разной длины занимают то одну строку, то две,
+                // и шапка меняла высоту при переключении сервера — волна и
+                // список под ней подпрыгивали.
+                height: _ServersTabState._statusAreaHeight(context),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: AnimatedSwitcher(
+                    duration: ExpressiveMotion.durationFast,
+                    child: _serversStatusText(context, onJumpToActive, 
+                      serverSwitchInProgress && vpnStatus == VpnStatus.error
+                          ? VpnStatus.connecting
+                          : vpnStatus,
+                      serverSwitchInProgress ? null : vpnErrorMessage,
+                      activeServer,
+                    ),
+                  ),
+                ),
+              ),
+              if (vpnStatus == VpnStatus.error &&
+                  vpnErrorMessage != null &&
+                  !serverSwitchInProgress)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    friendlyError(vpnErrorMessage, context),
+                    textAlign: TextAlign.center,
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.red(context)),
+                  ),
+                ),
+              // Скорость/трафик/время. Появление плавное: AnimatedSize
+              // раздвигает место (контент ниже не прыгает), а чипы всплывают
+              // снизу с фейдом; дефолтный клип AnimatedSize обрезает их на
+              // входе — эффект «из тумана снизу».
+              AnimatedSize(
+                duration: const Duration(milliseconds: 380),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 420),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.45),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: isConnected
+                      ? const _ConnectionStats(key: ValueKey('stats'))
+                      : const SizedBox(
+                          key: ValueKey('stats-hidden'),
+                          width: double.infinity,
+                        ),
+                ),
+              ),
+          // Отступ до волны тоже постоянный — он прыгал вместе с её высотой.
+          const SizedBox(height: 20),
+          _WavePaintWidget(
+            waveCtrl: waveCtrl,
+            stateCtrl: stateCtrl,
+            height: waveHeight,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class ServersTab extends ConsumerStatefulWidget {
   const ServersTab({super.key});
 
@@ -401,144 +652,18 @@ class _ServersTabState extends ConsumerState<ServersTab>
       });
     }
 
-    final vpnStatus = ref.watch(
-      vpnStateProvider.select((a) => a.value?.status ?? VpnStatus.disconnected),
-    );
-    final vpnErrorMessage = ref.watch(
-      vpnStateProvider.select((a) => a.value?.errorMessage),
-    );
-    final serverSwitchInProgress = ref.watch(vpnServerSwitchInProgressProvider);
-    final activeServer = ref.watch(
-      serversProvider.select((s) => s.activeServer),
-    );
-
-    // При смене сервера на активном VPN движок на миг проходит через
-    // `disconnected` (старый сервер отключается перед подключением нового).
-    // Без учёта serverSwitchInProgress круг проваливался в серый «неактивный»
-    // вид (spinner → серый → spinner). Пока идёт переключение — держим круг в
-    // состоянии «подключается», чтобы переход был одной плавной дугой.
-    final isConnected =
-        vpnStatus == VpnStatus.connected && !serverSwitchInProgress;
-    // `disconnecting` сюда НЕ входит, и это не упрощение.
-    //
-    // Отключение мгновенное, но флаг заводил кнопку в состояние «идёт работа»:
-    // на пути в отключённый вид успевал появиться индикатор, дожить до
-    // доводки и только потом уступить место неактивной кнопке. Лишний кадр
-    // там, где нечего ждать. Тапабельность на `disconnecting` гасится ниже
-    // отдельно, по самому статусу.
-    final isConnecting =
-        serverSwitchInProgress || vpnStatus == VpnStatus.connecting;
-
+    // Состояние VPN здесь больше не читается: на него подписана сама шапка, и
+    // смена статуса перерисовывает её, а не вкладку со списком серверов.
     final isDesktop = PlatformBootstrap.isDesktop;
-    // Высота волны ПОСТОЯННА. Раньше она ужималась на connecting/connected,
-    // чтобы шапка не разрасталась от чипов трафика, но менялась мгновенно —
-    // и всё выше списка прыгало и слегка уменьшалось в момент подключения.
-    // Единственное, что теперь меняет высоту шапки, — появление чипов, а его
-    // плавно разводит AnimatedSize ниже.
-    final waveHeight = isDesktop ? 40.0 : 36.0;
-    final topPad = isDesktop ? 20.0 : MediaQuery.of(context).padding.top + 24;
-
-    final connectHeader = Padding(
-      padding: EdgeInsets.fromLTRB(24, topPad, 24, 8),
-      child: Column(
-        children: [
-              // Кнопка анимируется на нажатии и на смене иконки — boundary не
-              // даёт этим перерисовкам тянуть за собой весь хедер.
-              //
-              // «Дыхания» здесь больше нет. Медленный ScaleTransition (1.0 →
-              // 1.05, 2 с) масштабировал всю кнопку вместе с её blur-тенью
-              // каждый кадр: пересчёт тени на дробном масштабе давал видимое
-              // дёрганье вместо плавной пульсации. Состояние подключения и так
-              // видно по цвету круга, иконке и волне под ним.
-              RepaintBoundary(
-                child: _ConnectButton(
-                  isConnected: isConnected,
-                  isConnecting: isConnecting,
-                  // connecting остаётся тапабельным — это отмена попытки;
-                  // блокируем только disconnecting (гасить уже нечего).
-                  onTap: vpnStatus == VpnStatus.disconnecting
-                      ? null
-                      : () => _toggleVpn(vpnStatus),
-                ),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                // Высота под статус ФИКСИРОВАНА и рассчитана на две строки.
-                // Имена серверов разной длины занимают то одну строку, то две,
-                // и шапка меняла высоту при переключении сервера — волна и
-                // список под ней подпрыгивали.
-                height: _statusAreaHeight(context),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: AnimatedSwitcher(
-                    duration: ExpressiveMotion.durationFast,
-                    child: _statusText(
-                      serverSwitchInProgress && vpnStatus == VpnStatus.error
-                          ? VpnStatus.connecting
-                          : vpnStatus,
-                      serverSwitchInProgress ? null : vpnErrorMessage,
-                      activeServer,
-                    ),
-                  ),
-                ),
-              ),
-              if (vpnStatus == VpnStatus.error &&
-                  vpnErrorMessage != null &&
-                  !serverSwitchInProgress)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    friendlyError(vpnErrorMessage, context),
-                    textAlign: TextAlign.center,
-                    maxLines: 5,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.red(context)),
-                  ),
-                ),
-              // Скорость/трафик/время. Появление плавное: AnimatedSize
-              // раздвигает место (контент ниже не прыгает), а чипы всплывают
-              // снизу с фейдом; дефолтный клип AnimatedSize обрезает их на
-              // входе — эффект «из тумана снизу».
-              AnimatedSize(
-                duration: const Duration(milliseconds: 380),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topCenter,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 420),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.45),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  ),
-                  child: isConnected
-                      ? const _ConnectionStats(key: ValueKey('stats'))
-                      : const SizedBox(
-                          key: ValueKey('stats-hidden'),
-                          width: double.infinity,
-                        ),
-                ),
-              ),
-          // Отступ до волны тоже постоянный — он прыгал вместе с её высотой.
-          const SizedBox(height: 20),
-          _WavePaintWidget(
-            waveCtrl: _waveCtrl,
-            stateCtrl: _stateCtrl,
-            height: waveHeight,
-          ),
-        ],
-      ),
-    );
 
     Widget body = Column(
       children: [
-        connectHeader,
+        _ConnectHeader(
+          stateCtrl: _stateCtrl,
+          waveCtrl: _waveCtrl,
+          onToggle: _toggleVpn,
+          onJumpToActive: _jumpToActiveServer,
+        ),
         Expanded(
           // Градиент лежит в этой же колонке, а не в общем Stack по измеренной
           // высоте шапки. Замер делался после кадра, поэтому пока шапка меняла
@@ -1055,96 +1180,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
     );
   }
 
-  Widget _statusText(
-    VpnStatus status,
-    String? errorMessage,
-    ServerItem? activeServer,
-  ) {
-    final l10n = AppLocalizations.of(context)!;
-    final textTheme = Theme.of(context).textTheme;
-    if (status == VpnStatus.connected && activeServer != null) {
-      final cleanName = ServerNameUtils.formatForDisplay(
-        ServerNameUtils.cleanDisplayName(activeServer.displayName),
-      );
-      final scheme = Theme.of(context).colorScheme;
-      // Тональный чип-пилюля вместо обводки: у M3E это штатный вид «активного»
-      // статуса, и он же даёт главному экрану второй цветовой акцент после
-      // кнопки. Тот же secondaryContainer носит активный сервер в списке —
-      // цвет читается как «вот это выбрано» на обоих экранах.
-      //
-      // Чип же и увозит к своему серверу в списке: он единственный на экране
-      // называет активный сервер по имени, а найти его строку среди полусотни
-      // других можно было только свайпами — при том, что приложение и так
-      // знает, где она.
-      final shape = RoundedRectangleBorder(
-        borderRadius: ExpressiveShape.radius(ExpressiveShape.full),
-      );
-      return Tooltip(
-        key: const ValueKey('connected'),
-        message: l10n.serversJumpToActive,
-        waitDuration: const Duration(milliseconds: 600),
-        child: Material(
-          color: scheme.secondaryContainer,
-          shape: shape,
-          child: InkWell(
-            onTap: _jumpToActiveServer,
-            customBorder: shape,
-            child: Semantics(
-              button: true,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: _statusChipVerticalPadding,
-                ),
-                child: Text(
-                  l10n.vpnConnectedTo(cleanName),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: _statusChipTextStyle(textTheme)
-                      ?.copyWith(color: scheme.onSecondaryContainer),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    } else {
-      final statusKey = switch (status) {
-        VpnStatus.connected => 'connected',
-        VpnStatus.connecting => 'connecting',
-        VpnStatus.disconnecting => 'disconnecting',
-        VpnStatus.error => 'error',
-        _ => activeServer != null ? 'ready' : 'no-server',
-      };
-      final label = switch (status) {
-        VpnStatus.connecting => l10n.vpnConnecting,
-        VpnStatus.disconnecting => l10n.vpnDisconnecting,
-        VpnStatus.error => _vpnErrorStatusLabel(errorMessage, context),
-        // connected, но activeServer == null (активный сервер удалили при
-        // живом туннеле) — показываем «подключено», а не «выберите сервер»
-        VpnStatus.connected => l10n.vpnConnectedGeneric,
-        _ =>
-          activeServer != null
-              ? l10n.vpnTapToConnect(
-                  ServerNameUtils.formatForDisplay(
-                    ServerNameUtils.cleanDisplayName(activeServer.displayName),
-                  ),
-                )
-              : l10n.vpnSelectServer,
-      };
-      return Text(
-        label,
-        key: ValueKey(statusKey),
-        textAlign: TextAlign.center,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: textTheme.bodyMedium?.copyWith(
-          color: AppTheme.textLight(context),
-        ),
-      );
-    }
-  }
 
   Widget _emptyState() {
     final l10n = AppLocalizations.of(context)!;
