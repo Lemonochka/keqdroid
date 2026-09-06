@@ -13,6 +13,7 @@ import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
 import 'package:keqdroid/shared/ui/expressive_button_group.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
+import 'package:keqdroid/shared/ui/update_interval_sheet.dart';
 import 'package:keqdroid/shared/ui/horizontal_mouse_scroll.dart';
 import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
@@ -656,106 +657,6 @@ Future<void> _subOpenProviderLink(BuildContext context, String url) async {
 }
 
 /// Выбор интервала автообновления подписки.
-void _subShowIntervalPicker(
-  BuildContext context,
-  WidgetRef ref,
-  Subscription sub,
-) {
-  const options = [1, 3, 6, 12, 24, 48, 72];
-  // В состоянии карточки `l10n` — геттер, поэтому метод обходился без
-  // объявления. Функции верхнего уровня его взять неоткуда.
-  final l10n = AppLocalizations.of(context)!;
-  final textLightColor = AppTheme.textLight(context);
-  final textColor = AppTheme.text(context);
-
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (ctx) {
-      final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
-      return SafeArea(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.only(bottom: 12),
-            children: [
-              Text(
-                l10n.subscriptionsAutoUpdateInterval,
-                textAlign: TextAlign.center,
-                style: Theme.of(ctx)
-                    .textTheme
-                    .emphasized(Theme.of(ctx).textTheme.titleLarge)
-                    ?.copyWith(color: textColor),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.subscriptionsCurrentInterval(sub.updateIntervalHours),
-                textAlign: TextAlign.center,
-                style: Theme.of(ctx)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: textLightColor),
-              ),
-              const SizedBox(height: 12),
-              // Это выбор, а не список действий: текущий интервал виден
-              // заливкой сегмента, а не только жирной подписью с галочкой.
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ExpressiveGroup(
-                  children: [
-                    // Выключение живёт здесь, а не отдельным значком в
-                    // карточке: это одна настройка, и орган управления у неё
-                    // должен быть один.
-                    ExpressiveActionTile(
-                      icon: Icons.update_disabled_rounded,
-                      title: l10n.subscriptionsAutoUpdateOff,
-                      selected: !sub.autoUpdate,
-                      onTap: () {
-                        ref
-                            .read(subscriptionsProvider.notifier)
-                            .setUpdateSchedule(sub.id, autoUpdate: false);
-                        Navigator.pop(ctx);
-                      },
-                    ),
-                    for (final h in options)
-                      ExpressiveActionTile(
-                        icon: h < 24
-                            ? Icons.schedule_rounded
-                            : Icons.calendar_today_rounded,
-                        title: h == 1
-                            ? l10n.subscriptionsEveryHour
-                            : h < 24
-                            ? l10n.subscriptionsEveryHours(h)
-                            : h == 24
-                            ? l10n.subscriptionsEveryDay
-                            : l10n.subscriptionsEveryDays(h ~/ 24),
-                        selected:
-                            sub.autoUpdate && h == sub.updateIntervalHours,
-                        onTap: () {
-                          // Выбор интервала означает «включить и поставить
-                          // его» — одной операцией, а не двумя подряд.
-                          ref
-                              .read(subscriptionsProvider.notifier)
-                              .setUpdateSchedule(
-                                sub.id,
-                                autoUpdate: true,
-                                hours: h,
-                              );
-                          Navigator.pop(ctx);
-                        },
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
 
 /// «Сколько осталось» до конца подписки.
 String _subFormatExpiry(BuildContext context, DateTime dt) {
@@ -1010,7 +911,7 @@ class _SubCardDetails extends ConsumerWidget {
                         : l10n.subscriptionsOff,
                     accent: ExpressiveAccent.primary,
                     muted: !sub.autoUpdate,
-                    onTap: () => _subShowIntervalPicker(context, ref, sub),
+                    onTap: () => showUpdateIntervalSheet(context, ref, sub),
                   ),
                   if (sub.webPageUrl != null)
                     _CardChip(

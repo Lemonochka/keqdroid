@@ -369,97 +369,6 @@ void _serverGroupSortMenu(
   );
 }
 
-void _serverGroupIntervalPicker(
-  WidgetRef ref,
-  BuildContext context,
-  Subscription sub,
-) {
-  const options = [1, 3, 6, 12, 24, 48, 72];
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (ctx) {
-      final maxHeight = MediaQuery.sizeOf(ctx).height * 0.85;
-      return SafeArea(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.only(bottom: 12),
-            children: [
-              Text(
-                context.l10n.subscriptionsAutoUpdateInterval,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme
-                    .emphasized(Theme.of(context).textTheme.titleLarge)
-                    ?.copyWith(color: AppTheme.text(context)),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                context.l10n.subscriptionsCurrentInterval(
-                  sub.updateIntervalHours,
-                ),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-              ),
-              const SizedBox(height: 12),
-              // Тот же вид, что у пикера интервала в карточке подписки:
-              // выбор, а не список действий, поэтому текущее значение
-              // заливается сегментом, а не отличается жирной подписью.
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ExpressiveGroup(
-                  children: [
-                    // «Выключить» есть и здесь: пикер тот же самый, и
-                    // расходиться со шторкой из карточки подписки он не
-                    // должен.
-                    ExpressiveActionTile(
-                      icon: Icons.update_disabled_rounded,
-                      title: context.l10n.subscriptionsAutoUpdateOff,
-                      selected: !sub.autoUpdate,
-                      onTap: () {
-                        ref
-                            .read(subscriptionsProvider.notifier)
-                            .setUpdateSchedule(sub.id, autoUpdate: false);
-                        Navigator.of(ctx).pop();
-                      },
-                    ),
-                    for (final h in options)
-                      ExpressiveActionTile(
-                        icon: h < 24
-                            ? Icons.schedule_rounded
-                            : Icons.calendar_today_rounded,
-                        title: h == 1
-                            ? context.l10n.subscriptionsEveryHour
-                            : h < 24
-                            ? context.l10n.subscriptionsEveryHours(h)
-                            : h == 24
-                            ? context.l10n.subscriptionsEveryDay
-                            : context.l10n.subscriptionsEveryDays(h ~/ 24),
-                        selected:
-                            sub.autoUpdate && h == sub.updateIntervalHours,
-                        onTap: () {
-                          ref
-                              .read(subscriptionsProvider.notifier)
-                              .setUpdateSchedule(
-                                sub.id,
-                                autoUpdate: true,
-                                hours: h,
-                              );
-                          Navigator.pop(ctx);
-                        },
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
 
 /// Шапка группы серверов: название, счётчики, сортировка, обновление, пинг.
 ///
@@ -628,7 +537,7 @@ class _ServerGroupHeader extends ConsumerWidget {
                           ),
                           child: InkWell(
                             onTap: () =>
-                                _serverGroupIntervalPicker(ref, context, sub),
+                                showUpdateIntervalSheet(context, ref, sub),
                             customBorder: ExpressiveShape.border(
                               ExpressiveShape.full,
                             ),
