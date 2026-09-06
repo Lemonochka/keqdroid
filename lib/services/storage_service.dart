@@ -18,6 +18,7 @@ class StorageService {
   static const _kSettings      = 'keqdis_settings';
   static const _kSocksPort     = 'keqdis_socks_port';
   static const _kActiveHttpPort = 'keqdis_active_http_port';
+  static const _kKeqtrisBest  = 'keqdis_keqtris_best';
   static const _kHwid          = 'keqdis_hwid';
   static const _kWindowBounds  = 'keqdis_window_bounds';
   static const _kSortModes     = 'keqdis_server_sort_modes';
@@ -324,6 +325,15 @@ class StorageService {
 
   Future<void> setSocksPort(int port) =>
       _serial(() => _prefs.setInt(_kSocksPort, port));
+
+  // Лучший результат в пасхалке. Отдельный ключ, а не поле AppSettings:
+  // к настройкам приложения он отношения не имеет, в резервную копию не
+  // просится и не должен тащиться в каждый copyWith настроек.
+
+  int getKeqtrisBest() => _prefs.getInt(_kKeqtrisBest) ?? 0;
+
+  Future<void> setKeqtrisBest(int score) =>
+      _serial(() => _prefs.setInt(_kKeqtrisBest, score));
 
   /// HTTP-инбаунд живой сессии; null — VPN не подключён.
   ///

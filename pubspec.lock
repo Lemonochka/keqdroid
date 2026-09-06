@@ -533,6 +533,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.12.0"
+  keqtris:
+    dependency: "direct main"
+    description:
+      path: "packages/keqtris"
+      relative: true
+    source: path
+    version: "0.1.0"
   leak_tracker:
     dependency: transitive
     description:

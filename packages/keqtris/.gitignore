@@ -1,0 +1,4 @@
+# Корневой .gitignore закрывает только /build/ от корня репозитория.
+build/
+.dart_tool/
+pubspec.lock

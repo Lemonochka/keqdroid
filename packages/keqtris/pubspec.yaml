@@ -1,0 +1,23 @@
+name: keqtris
+description: "Пасхалка: тетрис по Tetris Guideline, спрятанный в экране «О приложении»."
+publish_to: 'none'
+version: 0.1.0
+
+# Пакет автономен: ни одного импорта из keqdroid. Тему, лучший результат и
+# признак «экран открыт» ему передают снаружи. Благодаря этому правила игры
+# тестируются без запуска приложения.
+environment:
+  sdk: ^3.11.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Канонические цвета фигур пересаживаются на тон текущей темы через HCT.
+  material_color_utilities: ^0.13.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:

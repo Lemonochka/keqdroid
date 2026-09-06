@@ -214,7 +214,7 @@ class _AppInternalsScreen extends ConsumerWidget {
 
   List<Widget> _buildRows(AppLocalizations l10n, BuildInfo build) {
     return [
-      _InternalsRow(
+      _VersionRow(
         label: l10n.settingsInternalsAppVersion,
         value: '${build.appVersion} (${build.buildNumber})',
       ),
@@ -235,6 +235,7 @@ class _AppInternalsScreen extends ConsumerWidget {
         label: l10n.settingsInternalsBuildMode,
         value: build.releaseMode ? 'release' : 'debug',
       ),
+      const _KeqtrisBestRow(),
     ];
   }
 
@@ -511,6 +512,115 @@ class _GeoTile extends StatelessWidget {
 ///
 /// Значение выделяемое: панель существует ровно для того, чтобы её содержимое
 /// можно было куда-то отправить.
+/// Лучший результат в пасхалке — и единственный её след на экране.
+///
+/// До первой партии строки нет вовсе: пустой «РЕКОРД: 0» выдал бы игру тому,
+/// кто её ещё не нашёл, и находить стало бы нечего.
+class _KeqtrisBestRow extends ConsumerWidget {
+  const _KeqtrisBestRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final best = ref.read(storageProvider).getKeqtrisBest();
+    if (best <= 0) return const SizedBox.shrink();
+    final ru = Localizations.localeOf(context).languageCode == 'ru';
+    return _InternalsRow(
+      label: ru ? 'Рекорд' : 'Best score',
+      value: '$best',
+    );
+  }
+}
+
+/// Строка версии приложения. Она же — вход в пасхалку.
+///
+/// Пять нажатий подряд открывают тетрис. Счётчик сбрасывается, если между
+/// нажатиями прошло больше секунды: иначе случайные тычки по строке за неделю
+/// накопились бы в «сюрприз» на ровном месте, и он перестал бы быть находкой.
+///
+/// Ничем не подсвечена намеренно. Подсказка «нажми ещё три раза» превращает
+/// пасхалку в кнопку.
+class _VersionRow extends ConsumerStatefulWidget {
+  const _VersionRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  /// Сколько нажатий открывает игру.
+  static const int tapsToOpen = 5;
+
+  @override
+  ConsumerState<_VersionRow> createState() => _VersionRowState();
+}
+
+class _VersionRowState extends ConsumerState<_VersionRow> {
+  static const _forgetAfter = Duration(seconds: 1);
+
+  int _taps = 0;
+  DateTime? _lastTap;
+
+  void _onTap() {
+    final now = DateTime.now();
+    final last = _lastTap;
+    _taps = (last == null || now.difference(last) > _forgetAfter) ? 1 : _taps + 1;
+    _lastTap = now;
+    if (_taps < _VersionRow.tapsToOpen) return;
+    _taps = 0;
+    _open();
+  }
+
+  Future<void> _open() async {
+    final storage = ref.read(storageProvider);
+    final haptics =
+        ref.read(settingsNotifierProvider).value?.hapticFeedback ?? true;
+    if (haptics) AppHaptics.selection();
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => KeqtrisScreen(
+          bestScore: storage.getKeqtrisBest(),
+          haptics: haptics,
+          labels: _keqtrisLabels(Localizations.localeOf(context).languageCode),
+          // Рекорд пишем на диск только когда он побит: партия, не дотянувшая
+          // до лучшей, хранилищу неинтересна.
+          onGameOver: (score) {
+            if (score > storage.getKeqtrisBest()) {
+              unawaited(storage.setKeqtrisBest(score));
+            }
+          },
+        ),
+      ),
+    );
+    // Вернулись с игры — пусть строка перерисуется с новым рекордом.
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _onTap,
+      child: _InternalsRow(label: widget.label, value: widget.value),
+    );
+  }
+}
+
+/// Подписи игры. Заводить ради пасхалки ключи в пяти ARB-файлах несоразмерно,
+/// поэтому две локали живут здесь, а всё остальное получает английский по
+/// умолчанию из самого пакета.
+KeqtrisLabels _keqtrisLabels(String language) => switch (language) {
+  'ru' => const KeqtrisLabels(
+    score: 'СЧЁТ',
+    best: 'РЕКОРД',
+    lines: 'ЛИНИИ',
+    hold: 'ЗАПАС',
+    next: 'ДАЛЕЕ',
+    gameOver: 'Партия окончена',
+    restart: 'Ещё раз',
+    newBest: 'Новый рекорд',
+  ),
+  _ => const KeqtrisLabels(),
+};
+
 class _InternalsRow extends StatelessWidget {
   final String label;
   final String value;
