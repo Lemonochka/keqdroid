@@ -1039,6 +1039,198 @@ class _SubCardDetails extends ConsumerWidget {
   }
 }
 
+// mobile: вся карточка тащится через ReorderableDelayedDragStartListener
+// desktop: ручка для мыши + long-press на заголовке, как на мобильном
+Widget _subHeaderDragTarget({
+  required bool isDesktop,
+  required int listIndex,
+  required Widget child,
+}) {
+  if (!isDesktop) {
+    return Expanded(child: child);
+  }
+  return Expanded(
+    child: ReorderableDelayedDragStartListener(
+      index: listIndex,
+      child: child,
+    ),
+  );
+}
+
+/// Шапка карточки подписки: имя, провайдер, кнопки обновления и меню.
+///
+/// Отдельный виджет, а не кусок общего `build()`: он сам подписан на то,
+/// свёрнута ли карточка и идёт ли обновление, поэтому вращение кнопки
+/// обновления перерисовывает шапку, а не всю карточку с её подробностями.
+class _SubCardHeader extends ConsumerWidget {
+  const _SubCardHeader({
+    required this.sub,
+    required this.listIndex,
+    required this.onRefresh,
+    required this.onShowMenu,
+  });
+
+  final Subscription sub;
+  final int listIndex;
+  final Future<void> Function() onRefresh;
+
+  /// Меню карточки живёт в состоянии: оно открывает четыре шторки, каждая из
+  /// которых тоже метод состояния. Поднимать всю цепочку ради шапки — размен не
+  /// в нашу пользу, поэтому меню приходит сюда обработчиком.
+  final VoidCallback onShowMenu;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final collapsed = ref.watch(
+      collapsedSubscriptionCardsProvider.select((m) => m[sub.id] ?? false),
+    );
+    final isRefreshing = ref.watch(
+      subscriptionRefreshingIdsProvider.select((ids) => ids.contains(sub.id)),
+    );
+    final refreshError = ref.watch(
+      subscriptionRefreshErrorsProvider.select((m) => m[sub.id]),
+    );
+    final hasRefreshError = refreshError != null;
+    final textColor = AppTheme.text(context);
+    final textLightColor = AppTheme.textLight(context);
+    final accentColor = AppTheme.accent(context);
+    final redColor = AppTheme.red(context);
+    final isDesktop = PlatformBootstrap.isDesktop;
+    return Padding(
+        padding: EdgeInsets.fromLTRB(16, 14, isDesktop ? 16 : 8, 0),
+        child: Row(
+          children: [
+            if (isDesktop) ...[
+              ReorderableDragStartListener(
+                index: listIndex,
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 6),
+                  child: Icon(
+                    Icons.drag_handle_rounded,
+                    size: 22,
+                    color: textLightColor,
+                  ),
+                ),
+              ),
+            ],
+            _subHeaderDragTarget(
+              isDesktop: isDesktop,
+              listIndex: listIndex,
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => ref
+                        .read(collapsedSubscriptionCardsProvider.notifier)
+                        .update((m) => {...m, sub.id: !collapsed}),
+                    child: AnimatedRotation(
+                      turns: collapsed ? -0.25 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.expand_more_rounded,
+                        size: 20,
+                        color: textLightColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => ref
+                          .read(
+                            collapsedSubscriptionCardsProvider.notifier,
+                          )
+                          .update((m) => {...m, sub.id: !collapsed}),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            sub.name,
+                            style: Theme.of(context).textTheme
+                                .emphasized(
+                                  Theme.of(context).textTheme.titleMedium,
+                                )
+                                ?.copyWith(color: textColor),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          // Чей это сервис на самом деле — показываем,
+                          // только если имя карточки задано своё и от
+                          // названия провайдера отличается.
+                          if (sub.providerSubtitle != null)
+                            Text(
+                              sub.providerSubtitle!,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(color: textLightColor),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: isDesktop ? 12 : 4),
+            IconButton(
+              icon: isRefreshing
+                  ? ShapeLoadingIndicator(size: 18, color: accentColor)
+                  : Icon(
+                      Icons.refresh_rounded,
+                      size: 20,
+                      color: hasRefreshError ? redColor : textLightColor,
+                    ),
+              onPressed: isRefreshing
+                  ? null
+                  : () async {
+                      try {
+                        await onRefresh();
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(friendlyError(e, context)),
+                            backgroundColor: redColor,
+                          ),
+                        );
+                      }
+                    },
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(
+                minWidth: 36,
+                minHeight: 36,
+              ),
+            ),
+            SizedBox(width: isDesktop ? 10 : 4),
+            // Правка, «поделиться» и удаление ушли под одну кнопку.
+            //
+            // Три иконки в шапке конкурировали с именем и делили место с
+            // ним же, а нужны они редко — в отличие от обновления, оно
+            // осталось снаружи. Удаление заодно перестало стоять в один
+            // ряд с безобидной правкой.
+            IconButton(
+              icon: const Icon(Icons.more_vert_rounded, size: 20),
+              color: textLightColor,
+              tooltip: l10n.subscriptionsCardMenu,
+              onPressed: () => onShowMenu(),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(
+                minWidth: 36,
+                minHeight: 36,
+              ),
+            ),
+          ],
+        ),
+      );
+  }
+}
+
 class _SubItem extends ConsumerStatefulWidget {
   final Subscription sub;
   final int listIndex;
@@ -1084,25 +1276,10 @@ class _SubItemState extends ConsumerState<_SubItem> {
   @override
   Widget build(BuildContext context) {
     final sub = widget.sub;
-    final collapsed = ref.watch(
-      collapsedSubscriptionCardsProvider.select((m) => m[sub.id] ?? false),
-    );
-    final isRefreshing = ref.watch(
-      subscriptionRefreshingIdsProvider.select((ids) => ids.contains(sub.id)),
-    );
-    final refreshError = ref.watch(
-      subscriptionRefreshErrorsProvider.select((m) => m[sub.id]),
-    );
-    final hasRefreshError = refreshError != null;
-
-    // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
+    // Карточка сама почти ничего больше не рисует: шапка, плашки и подробности
+    // разошлись по своим виджетам и подписываются на нужное им сами. Здесь
+    // остались подложка, её форма и порядок частей.
     final cardColor = AppTheme.card(context);
-    final textColor = AppTheme.text(context);
-    final textLightColor = AppTheme.textLight(context);
-    final accentColor = AppTheme.accent(context);
-    final redColor = AppTheme.red(context);
-    final isDesktop = PlatformBootstrap.isDesktop;
-
     final cardTheme = resolveCardTheme(sub.cardThemeId);
     final cardRadius = BorderRadius.circular(ExpressiveShape.largeIncreased);
 
@@ -1137,136 +1314,11 @@ class _SubItemState extends ConsumerState<_SubItem> {
             Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(16, 14, isDesktop ? 16 : 8, 0),
-              child: Row(
-                children: [
-                  if (isDesktop) ...[
-                    ReorderableDragStartListener(
-                      index: widget.listIndex,
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.only(end: 6),
-                        child: Icon(
-                          Icons.drag_handle_rounded,
-                          size: 22,
-                          color: textLightColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                  _buildHeaderDragTarget(
-                    isDesktop: isDesktop,
-                    listIndex: widget.listIndex,
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => ref
-                              .read(collapsedSubscriptionCardsProvider.notifier)
-                              .update((m) => {...m, sub.id: !collapsed}),
-                          child: AnimatedRotation(
-                            turns: collapsed ? -0.25 : 0,
-                            duration: const Duration(milliseconds: 200),
-                            child: Icon(
-                              Icons.expand_more_rounded,
-                              size: 20,
-                              color: textLightColor,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => ref
-                                .read(
-                                  collapsedSubscriptionCardsProvider.notifier,
-                                )
-                                .update((m) => {...m, sub.id: !collapsed}),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  sub.name,
-                                  style: Theme.of(context).textTheme
-                                      .emphasized(
-                                        Theme.of(context).textTheme.titleMedium,
-                                      )
-                                      ?.copyWith(color: textColor),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                // Чей это сервис на самом деле — показываем,
-                                // только если имя карточки задано своё и от
-                                // названия провайдера отличается.
-                                if (sub.providerSubtitle != null)
-                                  Text(
-                                    sub.providerSubtitle!,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelMedium
-                                        ?.copyWith(color: textLightColor),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: isDesktop ? 12 : 4),
-                  IconButton(
-                    icon: isRefreshing
-                        ? ShapeLoadingIndicator(size: 18, color: accentColor)
-                        : Icon(
-                            Icons.refresh_rounded,
-                            size: 20,
-                            color: hasRefreshError ? redColor : textLightColor,
-                          ),
-                    onPressed: isRefreshing
-                        ? null
-                        : () async {
-                            try {
-                              await widget.onRefresh();
-                            } catch (e) {
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(friendlyError(e, context)),
-                                  backgroundColor: redColor,
-                                ),
-                              );
-                            }
-                          },
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                  ),
-                  SizedBox(width: isDesktop ? 10 : 4),
-                  // Правка, «поделиться» и удаление ушли под одну кнопку.
-                  //
-                  // Три иконки в шапке конкурировали с именем и делили место с
-                  // ним же, а нужны они редко — в отличие от обновления, оно
-                  // осталось снаружи. Удаление заодно перестало стоять в один
-                  // ряд с безобидной правкой.
-                  IconButton(
-                    icon: const Icon(Icons.more_vert_rounded, size: 20),
-                    color: textLightColor,
-                    tooltip: l10n.subscriptionsCardMenu,
-                    onPressed: () => _showCardMenu(context),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                  ),
-                ],
-              ),
+            _SubCardHeader(
+              sub: sub,
+              listIndex: widget.listIndex,
+              onRefresh: widget.onRefresh,
+              onShowMenu: () => _showCardMenu(context),
             ),
             // Истёкшая подписка — всегда на виду, вне сворачиваемой части:
             // провайдер о конце срока клиенту не сообщает, а панель обычно
@@ -1290,23 +1342,6 @@ class _SubItemState extends ConsumerState<_SubItem> {
     );
   }
 
-  // mobile: вся карточка тащится через ReorderableDelayedDragStartListener
-  // desktop: ручка для мыши + long-press на заголовке, как на мобильном
-  Widget _buildHeaderDragTarget({
-    required bool isDesktop,
-    required int listIndex,
-    required Widget child,
-  }) {
-    if (!isDesktop) {
-      return Expanded(child: child);
-    }
-    return Expanded(
-      child: ReorderableDelayedDragStartListener(
-        index: listIndex,
-        child: child,
-      ),
-    );
-  }
 
   void _showEditDialog(BuildContext context) {
     final sub = widget.sub;
