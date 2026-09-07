@@ -1318,6 +1318,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get statsSplitDirectTag => 'direkt';
 
   @override
+  String get statsSplitVpnLabel => 'Über das VPN';
+
+  @override
+  String get statsSplitDirectLabel => 'Am VPN vorbei';
+
+  @override
   String get qrScanTitle => 'QR-Code scannen';
 
   @override

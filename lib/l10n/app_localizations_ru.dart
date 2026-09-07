@@ -1317,7 +1317,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get statsSplitVpnTag => 'VPN';
 
   @override
-  String get statsSplitDirectTag => 'мимо';
+  String get statsSplitDirectTag => 'обход';
+
+  @override
+  String get statsSplitVpnLabel => 'Через VPN';
+
+  @override
+  String get statsSplitDirectLabel => 'Мимо VPN';
 
   @override
   String get qrScanTitle => 'Сканировать QR-код';

@@ -30,6 +30,7 @@ import '../models/server_item.dart';
 import '../models/server_name_utils.dart';
 import '../models/subscription.dart';
 import '../models/subscription_card_theme.dart';
+import '../models/traffic_split.dart';
 import '../providers/providers.dart';
 import '../providers/traffic_split_provider.dart';
 import '../services/file_dialog_service.dart';

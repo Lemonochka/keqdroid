@@ -612,6 +612,8 @@
   "statsUploadLabel": "Upload speed",
   "statsSplitVpnTag": "VPN",
   "statsSplitDirectTag": "direct",
+  "statsSplitVpnLabel": "Through the VPN",
+  "statsSplitDirectLabel": "Bypassing the VPN",
   "qrScanTitle": "Scan QR code",
   "qrScanHint": "Point the camera at a QR code",
   "qrScanCameraError": "Camera unavailable",

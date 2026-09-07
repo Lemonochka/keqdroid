@@ -69,32 +69,21 @@ class _ConnectionStats extends ConsumerWidget {
         metrics: [
           if (showAnyTraffic) ...[
             if (split != null) ...[
-              // Разбиты все три чипа сразу. Общий объём рядом с раздельными
-              // скоростями ломал строчное чтение полосы: верхняя строка везде
-              // про туннель, нижняя везде про обход, а один чип — про сумму.
-              _splitMetric(
+              // Ячейка на канал, а не на показатель: приём, отдача и объём
+              // туннеля стоят вместе и вместе же отвечают на вопрос «а сюда
+              // вообще что-нибудь идёт». Разложенные по показателям, они
+              // заставляли искать вторую половину ответа в соседней ячейке.
+              _channelMetric(
                 l10n,
-                icon: Icons.arrow_downward_rounded,
-                label: l10n.statsDownloadLabel,
-                vpn: _formatVpnRate(split.vpn.downloadSpeed),
-                direct: _formatVpnRate(split.direct.downloadSpeed),
-                template: _kRateTemplate,
+                tag: l10n.statsSplitVpnTag,
+                label: l10n.statsSplitVpnLabel,
+                traffic: split.vpn,
               ),
-              _splitMetric(
+              _channelMetric(
                 l10n,
-                icon: Icons.arrow_upward_rounded,
-                label: l10n.statsUploadLabel,
-                vpn: _formatVpnRate(split.vpn.uploadSpeed),
-                direct: _formatVpnRate(split.direct.uploadSpeed),
-                template: _kRateTemplate,
-              ),
-              _splitMetric(
-                l10n,
-                icon: Icons.data_usage_rounded,
-                label: l10n.statsInLabel,
-                vpn: _formatVpnBytes(split.vpn.totalDownload),
-                direct: _formatVpnBytes(split.direct.totalDownload),
-                template: _kBytesTemplate,
+                tag: l10n.statsSplitDirectTag,
+                label: l10n.statsSplitDirectLabel,
+                traffic: split.direct,
               ),
             ] else ...[
               StatMetric(
@@ -130,31 +119,34 @@ class _ConnectionStats extends ConsumerWidget {
   }
 }
 
-/// Ячейка «в туннель / мимо туннеля».
-///
-/// Сверху туннель: ради него приложение и запущено, а мимо него уходит то, что
-/// развели правилами, — это поправка к главному числу, а не равное ему.
-StatMetric _splitMetric(
+/// Ячейка одного канала: приём, отдача и принятый объём.
+StatMetric _channelMetric(
   AppLocalizations l10n, {
-  required IconData icon,
+  required String tag,
   required String label,
-  required String vpn,
-  required String direct,
-  required String template,
+  required ChannelTraffic traffic,
 }) =>
-    StatMetric.split(
-      icon: icon,
+    StatMetric.channel(
+      tag: tag,
       label: label,
       lines: [
-        StatValue(
-          tag: l10n.statsSplitVpnTag,
-          value: vpn,
-          template: template,
+        StatLine(
+          icon: Icons.arrow_downward_rounded,
+          label: l10n.statsDownloadLabel,
+          value: _formatVpnRate(traffic.downloadSpeed),
+          template: _kRateTemplate,
         ),
-        StatValue(
-          tag: l10n.statsSplitDirectTag,
-          value: direct,
-          template: template,
+        StatLine(
+          icon: Icons.arrow_upward_rounded,
+          label: l10n.statsUploadLabel,
+          value: _formatVpnRate(traffic.uploadSpeed),
+          template: _kRateTemplate,
+        ),
+        StatLine(
+          icon: Icons.data_usage_rounded,
+          label: l10n.statsInLabel,
+          value: _formatVpnBytes(traffic.totalDownload),
+          template: _kBytesTemplate,
         ),
       ],
     );

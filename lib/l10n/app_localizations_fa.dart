@@ -1318,6 +1318,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get statsSplitDirectTag => 'مستقیم';
 
   @override
+  String get statsSplitVpnLabel => 'از طریق وی‌پی‌ان';
+
+  @override
+  String get statsSplitDirectLabel => 'بدون وی‌پی‌ان';
+
+  @override
   String get qrScanTitle => 'اسکن کد QR';
 
   @override

@@ -2573,6 +2573,18 @@ abstract class AppLocalizations {
   /// **'direct'**
   String get statsSplitDirectTag;
 
+  /// No description provided for @statsSplitVpnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Through the VPN'**
+  String get statsSplitVpnLabel;
+
+  /// No description provided for @statsSplitDirectLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Bypassing the VPN'**
+  String get statsSplitDirectLabel;
+
   /// No description provided for @qrScanTitle.
   ///
   /// In en, this message translates to:

@@ -611,6 +611,8 @@
   "statsUploadLabel": "Senderate",
   "statsSplitVpnTag": "VPN",
   "statsSplitDirectTag": "direkt",
+  "statsSplitVpnLabel": "Über das VPN",
+  "statsSplitDirectLabel": "Am VPN vorbei",
   "qrScanTitle": "QR-Code scannen",
   "qrScanHint": "Richten Sie die Kamera auf einen QR-Code",
   "qrScanCameraError": "Kamera nicht verfügbar",

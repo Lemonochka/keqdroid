@@ -17,50 +17,60 @@ import 'package:flutter/material.dart';
 import '../../utils/bidi.dart';
 import 'expressive.dart';
 
-/// Одно подписанное значение внутри ячейки.
-///
-/// Подпись пустая у обычного показателя: его называет значок слева, и слово
-/// рядом было бы шумом. Она появляется, когда в ячейке две строки и значок
-/// один на обе — тогда различить их больше нечем.
-class StatValue {
-  final String tag;
-  final String value;
-
-  /// Самое широкое значение, какое сюда может приехать.
-  final String template;
-
-  const StatValue({
-    this.tag = '',
-    required this.value,
-    required this.template,
-  });
-}
-
-/// Один показатель полосы.
-class StatMetric {
+/// Одна строка внутри ячейки: свой значок и своё значение.
+class StatLine {
   final IconData icon;
 
   /// Название для доступности: на экране его заменяет значок, но незрячему
   /// пользователю «часы» ничего не скажут.
   final String label;
 
-  /// Строки значения: одна у обычного показателя, две у разбивки.
-  final List<StatValue> lines;
+  final String value;
 
-  StatMetric({
+  /// Самое широкое значение, какое сюда может приехать.
+  final String template;
+
+  const StatLine({
     required this.icon,
     required this.label,
+    required this.value,
+    required this.template,
+  });
+}
+
+/// Одна ячейка полосы.
+class StatMetric {
+  /// Подпись ячейки слева. Пусто — ячейка без подписи.
+  ///
+  /// Нужна, когда ячеек несколько и различает их не показатель, а то, о ЧЁМ
+  /// они: у разбивки трафика одна ячейка про туннель, другая про обход, а
+  /// строки внутри у обеих одинаковые.
+  final String tag;
+
+  /// Название ячейки для доступности.
+  final String label;
+
+  final List<StatLine> lines;
+
+  StatMetric({
+    required IconData icon,
+    required String label,
     required String value,
     required String template,
-  }) : lines = [StatValue(value: value, template: template)];
+  })  : tag = '',
+        label = label,
+        lines = [
+          StatLine(icon: icon, label: label, value: value, template: template),
+        ];
 
-  /// Показатель, разложенный на два подписанных значения в одной ячейке.
+  /// Ячейка про один канал: подпись слева, показатели канала строками.
   ///
-  /// Вторым РЯДОМ ячеек это было бы честнее по вёрстке, но полоса и так
-  /// делится надвое, когда чипов четыре: третий ряд под кнопкой съедает
-  /// половину шапки. Вторая строка внутри ячейки стоит одну высоту текста.
-  const StatMetric.split({
-    required this.icon,
+  /// Раскладка «столбец = канал», а не «столбец = показатель»: числа одного
+  /// канала стоят рядом и складываются в ответ на вопрос «а сюда вообще
+  /// что-нибудь идёт», вместо того чтобы искать вторую половину ответа в
+  /// соседней ячейке.
+  const StatMetric.channel({
+    required this.tag,
     required this.label,
     required this.lines,
   });
@@ -75,9 +85,6 @@ class StatStrip extends StatelessWidget {
   static const double _cellPadding = ExpressiveSpacing.medium;
   static const double _gap = 6;
 
-  /// Зазор между подписью значения и самим значением. Уже, чем [_gap]: подпись
-  /// и число — одно целое, а значок слева стоит от них отдельно.
-  static const double _tagGap = 4;
 
   /// Толщина разделителя между ячейками.
   static const double _divider = 1;
@@ -166,16 +173,18 @@ class StatStrip extends StatelessWidget {
     final theme = Theme.of(context);
     final color = theme.colorScheme.onSurfaceVariant;
     final valueStyle = _valueStyle(theme);
-    final tagStyle = _tagStyle(theme);
-    final tagWidth = _tagWidth(context, metric, tagStyle);
+    final tagWidth = _tagWidth(context, metric, _tagStyle(theme));
     final slotWidth = _slotWidth(context, metric, valueStyle);
 
     return Semantics(
       label: metric.label,
-      value: [
-        for (final line in metric.lines)
-          line.tag.isEmpty ? line.value : '${line.tag} ${line.value}',
-      ].join(', '),
+      // У ячейки с одной строкой значение и есть эта строка: подпись показателя
+      // уже стоит меткой, и повторять её внутри значения незачем.
+      value: metric.lines.length == 1
+          ? metric.lines.first.value
+          : [
+              for (final line in metric.lines) '${line.label} ${line.value}',
+            ].join(', '),
       // Собственную семантику содержимого гасим: иначе подпись ячейки слилась
       // бы с текстом значения в одну строку («Время 44s»), и по названию
       // показателя её было бы уже не найти.
@@ -188,8 +197,17 @@ class StatStrip extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(metric.icon, size: ExpressiveIconSize.inline, color: color),
-            const SizedBox(width: _gap),
+            if (tagWidth > 0) ...[
+              SizedBox(
+                width: tagWidth,
+                child: Text(
+                  metric.tag,
+                  style: _tagStyle(theme),
+                  maxLines: 1,
+                ),
+              ),
+              const SizedBox(width: _gap),
+            ],
             Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,13 +216,12 @@ class StatStrip extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (tagWidth > 0) ...[
-                        SizedBox(
-                          width: tagWidth,
-                          child: Text(line.tag, style: tagStyle, maxLines: 1),
-                        ),
-                        const SizedBox(width: _tagGap),
-                      ],
+                      Icon(
+                        line.icon,
+                        size: ExpressiveIconSize.inline,
+                        color: color,
+                      ),
+                      const SizedBox(width: _gap),
                       SizedBox(
                         width: slotWidth,
                         child: Text(
@@ -231,9 +248,9 @@ class StatStrip extends StatelessWidget {
     final theme = Theme.of(context);
     final tagWidth = _tagWidth(context, metric, _tagStyle(theme));
     return _cellPadding * 2 +
+        (tagWidth > 0 ? tagWidth + _gap : 0) +
         ExpressiveIconSize.inline +
         _gap +
-        (tagWidth > 0 ? tagWidth + _tagGap : 0) +
         _slotWidth(context, metric, _valueStyle(theme));
   }
 
@@ -245,32 +262,28 @@ class StatStrip extends StatelessWidget {
         fontFeatures: const [FontFeature.tabularFigures()],
       );
 
-  /// Подпись значения — ступенью мельче и приглушена: данные здесь числа, а
+  /// Подпись ячейки — ступенью мельче и приглушена: данные здесь числа, а
   /// подпись лишь говорит, к какому каналу их отнести.
   static TextStyle? _tagStyle(ThemeData theme) =>
       theme.textTheme.labelSmall?.copyWith(
         color: theme.colorScheme.onSurfaceVariant,
       );
 
-  /// Ширина колонки подписей. Ноль — подписей нет, колонки тоже.
+  /// Ширина колонки подписей. Ноль — подписи нет, колонки тоже.
   static double _tagWidth(
     BuildContext context,
     StatMetric metric,
     TextStyle? style,
-  ) {
-    var width = 0.0;
-    for (final line in metric.lines) {
-      if (line.tag.isEmpty) continue;
-      width = max(width, _measure(context, line.tag, style));
-    }
-    return width.ceilToDouble();
-  }
+  ) =>
+      metric.tag.isEmpty
+          ? 0
+          : _measure(context, metric.tag, style).ceilToDouble();
 
   /// Ширина слота под значение — по образцу, но не уже реального текста:
   /// на аномально длинном значении слот разово подрастёт, зато не обрежет.
   ///
-  /// Слот один на обе строки ячейки: разъехавшиеся по ширине строки читались
-  /// бы как два разных показателя, а не как разбивка одного.
+  /// Слот один на все строки ячейки: разъехавшиеся по ширине строки читались
+  /// бы как несколько разных показателей, а не как один канал.
   static double _slotWidth(
     BuildContext context,
     StatMetric metric,

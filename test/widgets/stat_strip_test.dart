@@ -31,27 +31,59 @@ final _four = <StatMetric>[
   ),
 ];
 
-/// Ячейки «в туннель / мимо туннеля»: приём и отдача, каждая двумя строками.
-List<StatMetric> _splitOf(String vpn, String direct) => [
-      StatMetric.split(
-        icon: Icons.arrow_downward_rounded,
-        label: 'Скорость приёма',
+/// Две ячейки-канала: слева всё про туннель, справа всё про обход.
+List<StatMetric> _channelsOf(String vpnDown, String directDown) => [
+      StatMetric.channel(
+        tag: 'VPN',
+        label: 'Через VPN',
         lines: [
-          StatValue(tag: 'VPN', value: vpn, template: '999.9 MB/s'),
-          StatValue(tag: 'мимо', value: direct, template: '999.9 MB/s'),
+          StatLine(
+            icon: Icons.arrow_downward_rounded,
+            label: 'Приём',
+            value: vpnDown,
+            template: '999.9 MB/s',
+          ),
+          const StatLine(
+            icon: Icons.arrow_upward_rounded,
+            label: 'Отдача',
+            value: '22.0 KB/s',
+            template: '999.9 MB/s',
+          ),
+          const StatLine(
+            icon: Icons.data_usage_rounded,
+            label: 'Принято',
+            value: '239.5 KB',
+            template: '999.99 GB',
+          ),
         ],
       ),
-      const StatMetric.split(
-        icon: Icons.arrow_upward_rounded,
-        label: 'Скорость отдачи',
+      StatMetric.channel(
+        tag: 'обход',
+        label: 'Мимо VPN',
         lines: [
-          StatValue(tag: 'VPN', value: '22.0 KB/s', template: '999.9 MB/s'),
-          StatValue(tag: 'мимо', value: '3.0 KB/s', template: '999.9 MB/s'),
+          StatLine(
+            icon: Icons.arrow_downward_rounded,
+            label: 'Приём',
+            value: directDown,
+            template: '999.9 MB/s',
+          ),
+          const StatLine(
+            icon: Icons.arrow_upward_rounded,
+            label: 'Отдача',
+            value: '3.0 KB/s',
+            template: '999.9 MB/s',
+          ),
+          const StatLine(
+            icon: Icons.data_usage_rounded,
+            label: 'Принято',
+            value: '12.0 KB',
+            template: '999.99 GB',
+          ),
         ],
       ),
     ];
 
-final _split = _splitOf('1.1 MB/s', '0.1 MB/s');
+final _channels = _channelsOf('1.1 MB/s', '0.1 MB/s');
 
 Future<Size> _pumpStrip(
   WidgetTester tester,
@@ -74,7 +106,6 @@ Future<Size> _pumpStrip(
   );
   return tester.getSize(find.byType(StatStrip));
 }
-
 void main() {
   testWidgets('значения не меняют ширину полосы', (tester) async {
     // Показатели обновляются раз в секунду: полоса, дышащая на каждом
@@ -139,41 +170,38 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('разбивка живёт двумя строками в одной ячейке', (tester) async {
-    // Не вторым рядом ячеек: ряд под кнопкой стоит целой высоты ячейки, а
-    // здесь хватает одной высоты текста.
-    final size = await _pumpStrip(tester, _split);
+  testWidgets('канал занимает одну ячейку, а не колонку из них', (tester) async {
+    // Все числа туннеля стоят вместе, все числа обхода — вместе: иначе ответ
+    // на «а сюда что-нибудь идёт» приходится собирать из соседних ячеек.
+    await _pumpStrip(tester, _channels);
 
-    expect(find.text('VPN'), findsNWidgets(2));
-    expect(find.text('мимо'), findsNWidgets(2));
+    // Подпись канала одна на ячейку, а не по одной на строку.
+    expect(find.text('VPN'), findsOneWidget);
+    expect(find.text('обход'), findsOneWidget);
     expect(find.textContaining('1.1 MB/s'), findsOneWidget);
     expect(find.textContaining('0.1 MB/s'), findsOneWidget);
+    expect(find.textContaining('239.5 KB'), findsOneWidget);
+    expect(find.textContaining('12.0 KB'), findsOneWidget);
     // Один ряд: горизонтального разделителя между рядами нет.
     expect(find.byType(Divider), findsNothing);
-
-    final plain = await _pumpStrip(tester, [_rate('1.1 MB/s'), _rate('0.1 MB/s')]);
-    expect(size.height, greaterThan(plain.height));
   });
 
-  testWidgets('значения разбивки не меняют ширину полосы', (tester) async {
-    final a = await _pumpStrip(tester, _split);
-    final b = await _pumpStrip(tester, _splitOf('0 B/s', '0 B/s'));
+  testWidgets('значения канала не меняют ширину полосы', (tester) async {
+    final a = await _pumpStrip(tester, _channels);
+    final b = await _pumpStrip(tester, _channelsOf('0 B/s', '0 B/s'));
     expect(b.width, a.width);
   });
 
-  testWidgets('обе строки ячейки уходят в семантику', (tester) async {
-    // На экране их различает только подпись: незрячему пользователю без неё
-    // приезжают два числа подряд без единого намёка, где какое.
+  testWidgets('все строки ячейки уходят в семантику', (tester) async {
+    // На экране их различают значки; незрячему пользователю без имён приезжают
+    // три числа подряд без единого намёка, где какое.
     final handle = tester.ensureSemantics();
-    await _pumpStrip(tester, _split);
+    await _pumpStrip(tester, _channels);
 
-    final node = tester.getSemantics(
-      find.bySemanticsLabel('Скорость приёма').first,
-    );
-    expect(node.value, contains('VPN'));
-    expect(node.value, contains('мимо'));
-    expect(node.value, contains('1.1 MB/s'));
-    expect(node.value, contains('0.1 MB/s'));
+    final node = tester.getSemantics(find.bySemanticsLabel('Через VPN'));
+    expect(node.value, contains('Приём 1.1 MB/s'));
+    expect(node.value, contains('Отдача 22.0 KB/s'));
+    expect(node.value, contains('Принято 239.5 KB'));
     handle.dispose();
   });
 }

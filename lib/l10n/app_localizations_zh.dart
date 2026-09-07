@@ -1318,6 +1318,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statsSplitDirectTag => '直连';
 
   @override
+  String get statsSplitVpnLabel => '经由代理';
+
+  @override
+  String get statsSplitDirectLabel => '直连';
+
+  @override
   String get qrScanTitle => '扫描二维码';
 
   @override
