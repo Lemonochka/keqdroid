@@ -1312,6 +1312,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statsUploadLabel => '上传速度';
 
   @override
+  String get statsSplitVpnTag => 'VPN';
+
+  @override
+  String get statsSplitDirectTag => '直连';
+
+  @override
   String get qrScanTitle => '扫描二维码';
 
   @override
@@ -1693,6 +1699,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appearanceShowTimeSubtitle => '连接按钮下方的会话时长';
+
+  @override
+  String get appearanceShowTrafficSplit => '分开显示代理与直连';
+
+  @override
+  String get appearanceShowTrafficSplitSubtitle => '分别显示走隧道和直连的速度。仅 mihomo 内核提供此数据 — xray 只给出总量。';
 
   @override
   String get appearanceWaveLatencyColor => '按延迟为指示条着色';

@@ -125,6 +125,12 @@ class AppSettings {
   final bool showTrafficStats;
   /// Чип времени подключения под кнопкой подключения.
   final bool showConnectionTime;
+  /// Разбивать скорость на «в туннель» и «мимо туннеля».
+  ///
+  /// Выключено по умолчанию: разбивку умеет считать только ядро mihomo (см.
+  /// `TrafficSplitSource`), и включённая по умолчанию настройка, которая у
+  /// половины пользователей ничего не меняет, читается как поломка.
+  final bool showTrafficSplit;
 
   /// Красить индикатор под кнопкой по задержке активного сервера.
   ///
@@ -208,6 +214,7 @@ class AppSettings {
     this.hapticFeedback = true,
     this.showTrafficStats = true,
     this.showConnectionTime = true,
+    this.showTrafficSplit = false,
     this.waveLatencyColor = true,
     this.showSpeedInNotification = true,
     this.showUptimeInNotification = true,
@@ -261,6 +268,7 @@ class AppSettings {
     'hapticFeedback': hapticFeedback,
     'showTrafficStats': showTrafficStats,
     'showConnectionTime': showConnectionTime,
+    'showTrafficSplit': showTrafficSplit,
     'waveLatencyColor': waveLatencyColor,
     'showSpeedInNotification': showSpeedInNotification,
     'showUptimeInNotification': showUptimeInNotification,
@@ -342,6 +350,7 @@ class AppSettings {
       hapticFeedback: json['hapticFeedback'] as bool? ?? true,
       showTrafficStats: json['showTrafficStats'] as bool? ?? true,
       showConnectionTime: json['showConnectionTime'] as bool? ?? true,
+      showTrafficSplit: json['showTrafficSplit'] as bool? ?? false,
       waveLatencyColor: json['waveLatencyColor'] as bool? ?? true,
       showSpeedInNotification: json['showSpeedInNotification'] as bool? ?? true,
       showUptimeInNotification:
@@ -507,6 +516,7 @@ class AppSettings {
     bool? hapticFeedback,
     bool? showTrafficStats,
     bool? showConnectionTime,
+    bool? showTrafficSplit,
     bool? waveLatencyColor,
     bool? showSpeedInNotification,
     bool? showUptimeInNotification,
@@ -559,6 +569,7 @@ class AppSettings {
         hapticFeedback: hapticFeedback ?? this.hapticFeedback,
         showTrafficStats: showTrafficStats ?? this.showTrafficStats,
         showConnectionTime: showConnectionTime ?? this.showConnectionTime,
+        showTrafficSplit: showTrafficSplit ?? this.showTrafficSplit,
         waveLatencyColor: waveLatencyColor ?? this.waveLatencyColor,
         showSpeedInNotification:
             showSpeedInNotification ?? this.showSpeedInNotification,
@@ -619,6 +630,7 @@ class AppSettings {
               hapticFeedback == other.hapticFeedback &&
               showTrafficStats == other.showTrafficStats &&
               showConnectionTime == other.showConnectionTime &&
+              showTrafficSplit == other.showTrafficSplit &&
               waveLatencyColor == other.waveLatencyColor &&
               showSpeedInNotification == other.showSpeedInNotification &&
               showUptimeInNotification == other.showUptimeInNotification &&
@@ -681,6 +693,7 @@ class AppSettings {
     hapticFeedback,
     showTrafficStats,
     showConnectionTime,
+    showTrafficSplit,
     waveLatencyColor,
     showSpeedInNotification,
     showUptimeInNotification,

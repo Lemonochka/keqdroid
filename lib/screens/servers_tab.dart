@@ -31,6 +31,7 @@ import '../models/server_name_utils.dart';
 import '../models/subscription.dart';
 import '../models/subscription_card_theme.dart';
 import '../providers/providers.dart';
+import '../providers/traffic_split_provider.dart';
 import '../services/file_dialog_service.dart';
 import '../services/ping_service.dart';
 import '../services/subscription_accent_service.dart';

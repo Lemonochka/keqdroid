@@ -1314,6 +1314,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get statsUploadLabel => 'Скорость отдачи';
 
   @override
+  String get statsSplitVpnTag => 'VPN';
+
+  @override
+  String get statsSplitDirectTag => 'мимо';
+
+  @override
   String get qrScanTitle => 'Сканировать QR-код';
 
   @override
@@ -1695,6 +1701,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get appearanceShowTimeSubtitle => 'Чип длительности сессии под кнопкой подключения';
+
+  @override
+  String get appearanceShowTrafficSplit => 'Отдельно VPN и мимо него';
+
+  @override
+  String get appearanceShowTrafficSplitSubtitle => 'Скорость в туннель и мимо туннеля по отдельности. Разбивку отдаёт только ядро mihomo — у xray она одной суммой.';
 
   @override
   String get appearanceWaveLatencyColor => 'Красить индикатор по задержке';

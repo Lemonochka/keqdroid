@@ -31,6 +31,28 @@ final _four = <StatMetric>[
   ),
 ];
 
+/// Ячейки «в туннель / мимо туннеля»: приём и отдача, каждая двумя строками.
+List<StatMetric> _splitOf(String vpn, String direct) => [
+      StatMetric.split(
+        icon: Icons.arrow_downward_rounded,
+        label: 'Скорость приёма',
+        lines: [
+          StatValue(tag: 'VPN', value: vpn, template: '999.9 MB/s'),
+          StatValue(tag: 'мимо', value: direct, template: '999.9 MB/s'),
+        ],
+      ),
+      const StatMetric.split(
+        icon: Icons.arrow_upward_rounded,
+        label: 'Скорость отдачи',
+        lines: [
+          StatValue(tag: 'VPN', value: '22.0 KB/s', template: '999.9 MB/s'),
+          StatValue(tag: 'мимо', value: '3.0 KB/s', template: '999.9 MB/s'),
+        ],
+      ),
+    ];
+
+final _split = _splitOf('1.1 MB/s', '0.1 MB/s');
+
 Future<Size> _pumpStrip(
   WidgetTester tester,
   List<StatMetric> metrics, {
@@ -114,6 +136,44 @@ void main() {
 
     expect(find.bySemanticsLabel('Скорость приёма'), findsOneWidget);
     expect(find.bySemanticsLabel('Время'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('разбивка живёт двумя строками в одной ячейке', (tester) async {
+    // Не вторым рядом ячеек: ряд под кнопкой стоит целой высоты ячейки, а
+    // здесь хватает одной высоты текста.
+    final size = await _pumpStrip(tester, _split);
+
+    expect(find.text('VPN'), findsNWidgets(2));
+    expect(find.text('мимо'), findsNWidgets(2));
+    expect(find.textContaining('1.1 MB/s'), findsOneWidget);
+    expect(find.textContaining('0.1 MB/s'), findsOneWidget);
+    // Один ряд: горизонтального разделителя между рядами нет.
+    expect(find.byType(Divider), findsNothing);
+
+    final plain = await _pumpStrip(tester, [_rate('1.1 MB/s'), _rate('0.1 MB/s')]);
+    expect(size.height, greaterThan(plain.height));
+  });
+
+  testWidgets('значения разбивки не меняют ширину полосы', (tester) async {
+    final a = await _pumpStrip(tester, _split);
+    final b = await _pumpStrip(tester, _splitOf('0 B/s', '0 B/s'));
+    expect(b.width, a.width);
+  });
+
+  testWidgets('обе строки ячейки уходят в семантику', (tester) async {
+    // На экране их различает только подпись: незрячему пользователю без неё
+    // приезжают два числа подряд без единого намёка, где какое.
+    final handle = tester.ensureSemantics();
+    await _pumpStrip(tester, _split);
+
+    final node = tester.getSemantics(
+      find.bySemanticsLabel('Скорость приёма').first,
+    );
+    expect(node.value, contains('VPN'));
+    expect(node.value, contains('мимо'));
+    expect(node.value, contains('1.1 MB/s'));
+    expect(node.value, contains('0.1 MB/s'));
     handle.dispose();
   });
 }

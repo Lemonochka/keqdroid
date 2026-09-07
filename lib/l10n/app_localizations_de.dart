@@ -1312,6 +1312,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get statsUploadLabel => 'Senderate';
 
   @override
+  String get statsSplitVpnTag => 'VPN';
+
+  @override
+  String get statsSplitDirectTag => 'direkt';
+
+  @override
   String get qrScanTitle => 'QR-Code scannen';
 
   @override
@@ -1693,6 +1699,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get appearanceShowTimeSubtitle => 'Chip mit Sitzungsdauer unter dem Verbindungsknopf';
+
+  @override
+  String get appearanceShowTrafficSplit => 'VPN und direkt getrennt';
+
+  @override
+  String get appearanceShowTrafficSplitSubtitle => 'Tunnel- und Direktgeschwindigkeit nebeneinander. Nur der mihomo-Kern liefert die Aufteilung — xray meldet nur die Summe.';
 
   @override
   String get appearanceWaveLatencyColor => 'Anzeige nach Latenz färben';

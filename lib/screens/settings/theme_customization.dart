@@ -159,6 +159,14 @@ class _AppearanceGeneralTab extends StatelessWidget {
                 onChanged: (v) => onSave(current.copyWith(showTrafficStats: v)),
               ),
               _AppearanceSwitchTile(
+                icon: Icons.alt_route_rounded,
+                title: l10n.appearanceShowTrafficSplit,
+                subtitle: l10n.appearanceShowTrafficSplitSubtitle,
+                value: current.showTrafficSplit,
+                onChanged: (v) =>
+                    onSave(current.copyWith(showTrafficSplit: v)),
+              ),
+              _AppearanceSwitchTile(
                 icon: Icons.timer_rounded,
                 title: l10n.appearanceShowTime,
                 subtitle: l10n.appearanceShowTimeSubtitle,

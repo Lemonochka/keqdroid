@@ -2561,6 +2561,18 @@ abstract class AppLocalizations {
   /// **'Upload speed'**
   String get statsUploadLabel;
 
+  /// No description provided for @statsSplitVpnTag.
+  ///
+  /// In en, this message translates to:
+  /// **'VPN'**
+  String get statsSplitVpnTag;
+
+  /// No description provided for @statsSplitDirectTag.
+  ///
+  /// In en, this message translates to:
+  /// **'direct'**
+  String get statsSplitDirectTag;
+
   /// No description provided for @qrScanTitle.
   ///
   /// In en, this message translates to:
@@ -3310,6 +3322,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Session duration chip under the connect button'**
   String get appearanceShowTimeSubtitle;
+
+  /// No description provided for @appearanceShowTrafficSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Split VPN and direct'**
+  String get appearanceShowTrafficSplit;
+
+  /// No description provided for @appearanceShowTrafficSplitSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tunnelled and direct speed side by side. Only the mihomo core reports the breakdown — xray gives one total.'**
+  String get appearanceShowTrafficSplitSubtitle;
 
   /// No description provided for @appearanceWaveLatencyColor.
   ///

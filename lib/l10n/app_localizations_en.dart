@@ -1312,6 +1312,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsUploadLabel => 'Upload speed';
 
   @override
+  String get statsSplitVpnTag => 'VPN';
+
+  @override
+  String get statsSplitDirectTag => 'direct';
+
+  @override
   String get qrScanTitle => 'Scan QR code';
 
   @override
@@ -1693,6 +1699,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appearanceShowTimeSubtitle => 'Session duration chip under the connect button';
+
+  @override
+  String get appearanceShowTrafficSplit => 'Split VPN and direct';
+
+  @override
+  String get appearanceShowTrafficSplitSubtitle => 'Tunnelled and direct speed side by side. Only the mihomo core reports the breakdown — xray gives one total.';
 
   @override
   String get appearanceWaveLatencyColor => 'Colour the indicator by latency';

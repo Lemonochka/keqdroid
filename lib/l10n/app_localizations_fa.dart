@@ -1312,6 +1312,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get statsUploadLabel => 'سرعت ارسال';
 
   @override
+  String get statsSplitVpnTag => 'VPN';
+
+  @override
+  String get statsSplitDirectTag => 'مستقیم';
+
+  @override
   String get qrScanTitle => 'اسکن کد QR';
 
   @override
@@ -1693,6 +1699,12 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get appearanceShowTimeSubtitle => 'نشان دادن مدت نشست زیر دکمهٔ اتصال';
+
+  @override
+  String get appearanceShowTrafficSplit => 'تفکیک وی‌پی‌ان و مستقیم';
+
+  @override
+  String get appearanceShowTrafficSplitSubtitle => 'سرعت تونل و مستقیم را جدا نشان می‌دهد. تنها هستهٔ mihomo این تفکیک را می‌دهد — xray فقط مجموع را گزارش می‌کند.';
 
   @override
   String get appearanceWaveLatencyColor => 'رنگ نوار بر پایهٔ تأخیر';
