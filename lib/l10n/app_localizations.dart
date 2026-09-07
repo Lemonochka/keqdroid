@@ -3350,7 +3350,7 @@ abstract class AppLocalizations {
   /// No description provided for @appearanceShowTrafficSplitSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Two lines instead of one in every traffic chip. Only the mihomo core can count it.'**
+  /// **'A block per route, through the tunnel and direct, instead of the shared chips. Only the mihomo core can count it.'**
   String get appearanceShowTrafficSplitSubtitle;
 
   /// No description provided for @appearanceWaveLatencyColor.

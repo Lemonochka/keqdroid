@@ -760,7 +760,7 @@
   "appearanceShowTime": "显示连接时长",
   "appearanceShowTimeSubtitle": "连接按钮下方的会话时长",
   "appearanceShowTrafficSplit": "分开显示代理与直连",
-  "appearanceShowTrafficSplitSubtitle": "每个流量信息显示两行而非一行。仅 mihomo 内核支持。",
+  "appearanceShowTrafficSplitSubtitle": "不再显示共用信息，而是按线路各占一块：走隧道与直连。仅 mihomo 内核支持。",
   "appearanceWaveLatencyColor": "按延迟为指示条着色",
   "appearanceWaveLatencyColorSubtitle": "按当前服务器的延迟显示绿色、橙色或红色",
   "appearanceFontTitle": "字体",

@@ -1713,7 +1713,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appearanceShowTrafficSplit => 'VPN und direkt getrennt anzeigen';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => 'Zwei Zeilen statt einer in jedem Verkehrs-Chip. Nur der mihomo-Kern kann das zählen.';
+  String get appearanceShowTrafficSplitSubtitle => 'Statt der gemeinsamen Chips ein Block je Route: durch den Tunnel und direkt. Nur der mihomo-Kern kann das zählen.';
 
   @override
   String get appearanceWaveLatencyColor => 'Anzeige nach Latenz färben';

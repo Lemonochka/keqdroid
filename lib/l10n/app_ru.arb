@@ -760,7 +760,7 @@
   "appearanceShowTime": "Показывать время подключения",
   "appearanceShowTimeSubtitle": "Чип длительности сессии под кнопкой подключения",
   "appearanceShowTrafficSplit": "Показывать VPN и обход раздельно",
-  "appearanceShowTrafficSplitSubtitle": "В каждом чипе трафика две строки вместо одной. Умеет только ядро mihomo.",
+  "appearanceShowTrafficSplitSubtitle": "Вместо общих чипов — свой блок на каждый маршрут: в туннель и мимо. Умеет только ядро mihomo.",
   "appearanceWaveLatencyColor": "Красить индикатор по задержке",
   "appearanceWaveLatencyColorSubtitle": "Зелёная, оранжевая или красная по пингу активного сервера",
   "appearanceFontTitle": "Шрифт",

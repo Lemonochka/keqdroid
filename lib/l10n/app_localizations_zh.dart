@@ -1713,7 +1713,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceShowTrafficSplit => '分开显示代理与直连';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => '每个流量信息显示两行而非一行。仅 mihomo 内核支持。';
+  String get appearanceShowTrafficSplitSubtitle => '不再显示共用信息，而是按线路各占一块：走隧道与直连。仅 mihomo 内核支持。';
 
   @override
   String get appearanceWaveLatencyColor => '按延迟为指示条着色';

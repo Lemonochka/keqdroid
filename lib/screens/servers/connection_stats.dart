@@ -42,9 +42,9 @@ class _ConnectionStats extends ConsumerWidget {
         return (s.showTrafficStats, s.showConnectionTime, s.showTrafficSplit);
       }),
     );
-    // Разбивка сама показывает чипы трафика, не требуя включить соседний
-    // переключатель: настройка, которая молчит, пока не включена другая, —
-    // это не настройка, а её половина.
+    // Два вида одного и того же: общие чипы или раздельные. Вместе они не
+    // включаются (см. `AppSettings.withTrafficStats`), так что «или» здесь
+    // читается как «трафик показываем хоть каким-нибудь из двух».
     final showAnyTraffic = showTraffic || showSplit;
     if (!showAnyTraffic && !showTime) return const SizedBox.shrink();
 

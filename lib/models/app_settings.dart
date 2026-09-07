@@ -121,11 +121,17 @@ class AppSettings {
   final bool amoledBlack;
   /// Тактильная отдача на нажатия. На десктопе значения не имеет.
   final bool hapticFeedback;
-  /// Чипы скорости и объёма трафика под кнопкой подключения.
+  /// Общие чипы скорости и объёма трафика под кнопкой подключения.
+  ///
+  /// Взаимоисключающи с [showTrafficSplit]: включать их обоими
+  /// переключателями сразу нечего, это два вида одного показателя. Правило
+  /// держат [withTrafficStats] и [withTrafficSplit].
   final bool showTrafficStats;
   /// Чип времени подключения под кнопкой подключения.
   final bool showConnectionTime;
-  /// Разбивать чипы трафика на «в туннель» и «мимо туннеля».
+  /// Показывать трафик раздельно: «в туннель» и «мимо туннеля».
+  ///
+  /// Заменяет собой общие чипы, а не дополняет их (см. [showTrafficStats]).
   ///
   /// Выключено по умолчанию: разбивку умеет считать только ядро mihomo (см.
   /// `TrafficSplitSource`), и включённая по умолчанию настройка, которая у
@@ -348,7 +354,12 @@ class AppSettings {
       serversTwoColumns: json['serversTwoColumns'] as bool? ?? false,
       amoledBlack: json['amoledBlack'] as bool? ?? false,
       hapticFeedback: json['hapticFeedback'] as bool? ?? true,
-      showTrafficStats: json['showTrafficStats'] as bool? ?? true,
+      // Разом включёнными они быть не могут (см. [withTrafficStats]), но у
+      // тех, кто включил разбивку до этого правила, на диске лежат обе: она
+      // молча перекрывала общие чипы. Разбивка и выигрывает — экран после
+      // обновления остаётся ровно таким, каким был.
+      showTrafficStats: (json['showTrafficStats'] as bool? ?? true) &&
+          !(json['showTrafficSplit'] as bool? ?? false),
       showConnectionTime: json['showConnectionTime'] as bool? ?? true,
       showTrafficSplit: json['showTrafficSplit'] as bool? ?? false,
       waveLatencyColor: json['waveLatencyColor'] as bool? ?? true,
@@ -580,6 +591,25 @@ class AppSettings {
         linuxTunRememberDismissed:
             linuxTunRememberDismissed ?? this.linuxTunRememberDismissed,
         uiScale: clampUiScale(uiScale ?? this.uiScale),
+      );
+
+  /// Включить или выключить общие чипы трафика, погасив разбивку.
+  ///
+  /// Раздельные чипы рисуются ВМЕСТО общих, а не рядом с ними, поэтому вместе
+  /// они не включаются. Раньше включённая разбивка просто перекрывала общие:
+  /// переключатель «показывать трафик» щёлкал, а на экране не менялось ничего,
+  /// и догадаться, что мешает соседняя настройка, можно было только выключив
+  /// её наугад.
+  AppSettings withTrafficStats(bool on) => copyWith(
+        showTrafficStats: on,
+        showTrafficSplit: on ? false : showTrafficSplit,
+      );
+
+  /// Включить или выключить разбивку, погасив общие чипы — см.
+  /// [withTrafficStats].
+  AppSettings withTrafficSplit(bool on) => copyWith(
+        showTrafficSplit: on,
+        showTrafficStats: on ? false : showTrafficStats,
       );
 
   @override

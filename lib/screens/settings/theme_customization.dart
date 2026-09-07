@@ -156,15 +156,18 @@ class _AppearanceGeneralTab extends StatelessWidget {
                 title: l10n.appearanceShowTraffic,
                 subtitle: l10n.appearanceShowTrafficSubtitle,
                 value: current.showTrafficStats,
-                onChanged: (v) => onSave(current.copyWith(showTrafficStats: v)),
+                // Включение гасит разбивку, и наоборот: чипы там и там одни и
+                // те же, просто в разном виде. Раньше включённая разбивка
+                // молча перекрывала общие, и соседний переключатель выглядел
+                // сломанным.
+                onChanged: (v) => onSave(current.withTrafficStats(v)),
               ),
               _AppearanceSwitchTile(
                 icon: Icons.alt_route_rounded,
                 title: l10n.appearanceShowTrafficSplit,
                 subtitle: l10n.appearanceShowTrafficSplitSubtitle,
                 value: current.showTrafficSplit,
-                onChanged: (v) =>
-                    onSave(current.copyWith(showTrafficSplit: v)),
+                onChanged: (v) => onSave(current.withTrafficSplit(v)),
               ),
               _AppearanceSwitchTile(
                 icon: Icons.timer_rounded,

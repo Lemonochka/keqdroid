@@ -760,7 +760,7 @@
   "appearanceShowTime": "Verbindungsdauer anzeigen",
   "appearanceShowTimeSubtitle": "Chip mit Sitzungsdauer unter dem Verbindungsknopf",
   "appearanceShowTrafficSplit": "VPN und direkt getrennt anzeigen",
-  "appearanceShowTrafficSplitSubtitle": "Zwei Zeilen statt einer in jedem Verkehrs-Chip. Nur der mihomo-Kern kann das zählen.",
+  "appearanceShowTrafficSplitSubtitle": "Statt der gemeinsamen Chips ein Block je Route: durch den Tunnel und direkt. Nur der mihomo-Kern kann das zählen.",
   "appearanceWaveLatencyColor": "Anzeige nach Latenz färben",
   "appearanceWaveLatencyColorSubtitle": "Grün, orange oder rot nach dem Ping des aktiven Servers",
   "appearanceFontTitle": "Schriftart",

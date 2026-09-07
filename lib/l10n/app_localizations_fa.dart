@@ -1713,7 +1713,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceShowTrafficSplit => 'نمایش جداگانهٔ وی‌پی‌ان و مستقیم';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => 'در هر چیپ ترافیک دو خط به جای یک خط. تنها هستهٔ mihomo آن را می‌شمارد.';
+  String get appearanceShowTrafficSplitSubtitle => 'به جای چیپ‌های مشترک، برای هر مسیر یک بلوک: از تونل و مستقیم. تنها هستهٔ mihomo آن را می‌شمارد.';
 
   @override
   String get appearanceWaveLatencyColor => 'رنگ نوار بر پایهٔ تأخیر';

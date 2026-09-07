@@ -41,6 +41,24 @@ class ConnectionTraffic {
   });
 }
 
+/// Ответ `/connections` целиком.
+///
+/// Кроме списка соединений ядро отдаёт свои общие суммы — накопительные с его
+/// старта и только растущие. Разложить их по каналам нечем, и полоса их не
+/// показывает; нужны они ради одного: по ним видно, то же это ядро или уже
+/// перезапущенное (см. [TrafficSplitState.belongsTo]).
+class ConnectionsSnapshot {
+  final List<ConnectionTraffic> connections;
+  final int coreDownload;
+  final int coreUpload;
+
+  const ConnectionsSnapshot({
+    required this.connections,
+    required this.coreDownload,
+    required this.coreUpload,
+  });
+}
+
 /// Разбивка живёт только там, где ядро само ведёт список соединений и пишет
 /// против каждого, куда оно ушло. Это mihomo и его RESTful API.
 ///
@@ -65,7 +83,7 @@ class TrafficSplitSource {
   }
 
   /// Снимок счётчиков всех живых соединений. `null` — API не ответил.
-  static Future<List<ConnectionTraffic>?> fetch({
+  static Future<ConnectionsSnapshot?> fetch({
     required int port,
     required String secret,
   }) async {
@@ -83,7 +101,7 @@ class TrafficSplitSource {
         await resp.drain<void>();
         return null;
       }
-      return parseConnections(await resp.transform(utf8.decoder).join());
+      return parseSnapshot(await resp.transform(utf8.decoder).join());
     } catch (_) {
       _reset();
       return null;
@@ -91,7 +109,7 @@ class TrafficSplitSource {
   }
 
   @visibleForTesting
-  static List<ConnectionTraffic>? parseConnections(String body) {
+  static ConnectionsSnapshot? parseSnapshot(String body) {
     final dynamic json = jsonDecode(body);
     if (json is! Map) return null;
     final raw = json['connections'];
@@ -112,7 +130,11 @@ class TrafficSplitSource {
         upload: (item['upload'] as num?)?.toInt() ?? 0,
       ));
     }
-    return out;
+    return ConnectionsSnapshot(
+      connections: out,
+      coreDownload: (json['downloadTotal'] as num?)?.toInt() ?? 0,
+      coreUpload: (json['uploadTotal'] as num?)?.toInt() ?? 0,
+    );
   }
 }
 
@@ -148,11 +170,19 @@ TrafficChannel channelOfChains(List<String> chains) {
 /// не сходятся.
 ///
 /// Отсюда же требование к вызывающему: опрашивать НЕПРЕРЫВНО, пока держится
-/// сессия. Каждая пауза — это дыра в объёме, которую уже ничем не закрыть.
+/// сессия. Каждая пауза — дыра в объёме, и закрыть её потом можно лишь
+/// наполовину: у соединений, переживших паузу, счётчики так и лежат в ядре
+/// накопленными (на этом стоит [restore] после перезапуска приложения), а от
+/// закрывшихся не осталось ничего.
 class TrafficSplitTracker {
   final Map<String, ConnectionTraffic> _prev = {};
   String? _session;
   bool _baselineTaken = false;
+
+  /// Следующая разница накрывает всё время, пока приложение было закрыто.
+  /// В объём она идёт, в скорость — нет: часы, поделённые на один такт, дали
+  /// бы в полосе гигабайты в секунду.
+  bool _gapPending = false;
   int _vpnDown = 0;
   int _vpnUp = 0;
   int _directDown = 0;
@@ -226,7 +256,68 @@ class TrafficSplitTracker {
     _vpnUp += vpnUp;
     _directDown += directDown;
     _directUp += directUp;
+    if (_gapPending) {
+      _gapPending = false;
+      return _snapshot(0, 0, 0, 0);
+    }
     return _snapshot(vpnDown, vpnUp, directDown, directUp);
+  }
+
+  /// Счёт для хранилища. `null` — сессии ещё не было, писать нечего.
+  ///
+  /// Общие суммы ядра идут из того же ответа `/connections`, что и последний
+  /// [add]: только вместе с ними по записи видно, что ядро с тех пор не
+  /// перезапускалось.
+  TrafficSplitState? stateFor({
+    required int coreDownload,
+    required int coreUpload,
+  }) {
+    final session = _session;
+    if (session == null) return null;
+    return TrafficSplitState(
+      session: session,
+      coreDownload: coreDownload,
+      coreUpload: coreUpload,
+      vpnDownload: _vpnDown,
+      vpnUpload: _vpnUp,
+      directDownload: _directDown,
+      directUpload: _directUp,
+      connections: {
+        for (final e in _prev.entries) e.key: (e.value.download, e.value.upload)
+      },
+    );
+  }
+
+  /// Продолжить счёт, начатый прошлым запуском приложения.
+  ///
+  /// Зовётся вместо первого [add] — то есть до него и по той же сессии, иначе
+  /// [add] сочтёт счёт чужим и обнулит его. Восстановленные счётчики
+  /// соединений заменяют собой базовую отметку: соединение, пережившее
+  /// закрытие приложения, отдаст в объём всё, что унесло за это время, а не с
+  /// момента, когда мы снова начали смотреть.
+  void restore(TrafficSplitState stored) {
+    _session = stored.session;
+    _vpnDown = stored.vpnDownload;
+    _vpnUp = stored.vpnUpload;
+    _directDown = stored.directDownload;
+    _directUp = stored.directUpload;
+    _prev
+      ..clear()
+      ..addEntries(stored.connections.entries.map(
+        (e) => MapEntry(
+          e.key,
+          ConnectionTraffic(
+            id: e.key,
+            // Куда ушло соединение, спрашиваем у свежего снимка: цепочка в
+            // ядре дописывается по ходу, и вчерашняя была бы хуже сегодняшней.
+            chains: const [],
+            download: e.value.$1,
+            upload: e.value.$2,
+          ),
+        ),
+      ));
+    _baselineTaken = true;
+    _gapPending = true;
   }
 
   TrafficSplit _snapshot(int vpnDown, int vpnUp, int directDown, int directUp) =>
@@ -255,5 +346,8 @@ class TrafficSplitTracker {
   void reset() {
     _prev.clear();
     _baselineTaken = false;
+    // Прошлого снимка больше нет — и разницы, которую надо было спрятать от
+    // строки скорости, тоже.
+    _gapPending = false;
   }
 }

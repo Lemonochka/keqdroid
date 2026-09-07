@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/traffic_split.dart';
 import 'package:keqdroid/services/traffic_split_service.dart';
@@ -44,30 +46,35 @@ void main() {
 
   group('разбор ответа /connections', () {
     test('счётчики и цепочки достаются из полей ядра', () {
-      final rows = TrafficSplitSource.parseConnections('''
+      final snapshot = TrafficSplitSource.parseSnapshot('''
 {"downloadTotal":1,"uploadTotal":2,"connections":[
   {"id":"a","chains":["proxy"],"download":100,"upload":10},
   {"id":"b","chains":["DIRECT"],"download":50,"upload":5}
 ]}
 ''');
+      final rows = snapshot!.connections;
       expect(rows, hasLength(2));
-      expect(rows![0].id, 'a');
+      expect(rows[0].id, 'a');
       expect(rows[0].chains, ['proxy']);
       expect(rows[0].download, 100);
       expect(rows[1].chains, ['DIRECT']);
       expect(rows[1].upload, 5);
+      // Общие суммы ядра: по ним видно, что ядро с прошлой записи не
+      // перезапускалось.
+      expect(snapshot.coreDownload, 1);
+      expect(snapshot.coreUpload, 2);
     });
 
     test('соединение без идентификатора пропускаем: свести его не с чем', () {
-      final rows = TrafficSplitSource.parseConnections(
+      final snapshot = TrafficSplitSource.parseSnapshot(
         '{"connections":[{"chains":["proxy"],"download":1}]}',
       );
-      expect(rows, isEmpty);
+      expect(snapshot!.connections, isEmpty);
     });
 
     test('ответ не того вида — null, а не пустая разбивка', () {
-      expect(TrafficSplitSource.parseConnections('{"foo":1}'), isNull);
-      expect(TrafficSplitSource.parseConnections('[]'), isNull);
+      expect(TrafficSplitSource.parseSnapshot('{"foo":1}'), isNull);
+      expect(TrafficSplitSource.parseSnapshot('[]'), isNull);
     });
   });
 
@@ -251,6 +258,136 @@ void main() {
         session: 's1',
       );
       expect(split.vpn.downloadSpeed, 800);
+    });
+  });
+
+  group('счёт переживает закрытие приложения', () {
+    // Трекер, у которого по туннелю уже прошло 600 байт, а живое соединение
+    // «a» стоит на счётчике 700.
+    TrafficSplitTracker counted() {
+      final tracker = TrafficSplitTracker();
+      tracker.add([_c('a', chains: ['proxy'], download: 100)], session: 's1');
+      tracker.add([_c('a', chains: ['proxy'], download: 700)], session: 's1');
+      return tracker;
+    }
+
+    test('объём продолжается с того, на чём закрылись', () {
+      final saved = counted().stateFor(coreDownload: 700, coreUpload: 0)!;
+      expect(saved.vpnDownload, 600);
+      expect(saved.connections['a'], (700, 0));
+
+      final restarted = TrafficSplitTracker()..restore(saved);
+      final split = restarted.add(
+        [_c('a', chains: ['proxy'], download: 700)],
+        session: 's1',
+      );
+      expect(split.vpn.totalDownload, 600);
+    });
+
+    test('унесённое при закрытом приложении попадает в объём', () {
+      // Соединение пережило закрытие, и ядро всё это время считало по нему
+      // само: 5000 байт между 700 и 5700 прошли, пока смотреть было некому.
+      final saved = counted().stateFor(coreDownload: 700, coreUpload: 0)!;
+      final restarted = TrafficSplitTracker()..restore(saved);
+      final split = restarted.add(
+        [_c('a', chains: ['proxy'], download: 5700)],
+        session: 's1',
+      );
+      expect(split.vpn.totalDownload, 5600);
+    });
+
+    test('но не в скорость: это часы, а не один такт', () {
+      final saved = counted().stateFor(coreDownload: 700, coreUpload: 0)!;
+      final restarted = TrafficSplitTracker()..restore(saved);
+      final first = restarted.add(
+        [_c('a', chains: ['proxy'], download: 5700)],
+        session: 's1',
+      );
+      expect(first.vpn.downloadSpeed, 0);
+      // А следующий такт — уже настоящая секунда.
+      final second = restarted.add(
+        [_c('a', chains: ['proxy'], download: 5900)],
+        session: 's1',
+      );
+      expect(second.vpn.downloadSpeed, 200);
+    });
+
+    test('появившееся при закрытом приложении считается целиком', () {
+      final saved = counted().stateFor(coreDownload: 700, coreUpload: 0)!;
+      final restarted = TrafficSplitTracker()..restore(saved);
+      final split = restarted.add([
+        _c('a', chains: ['proxy'], download: 700),
+        _c('b', chains: ['DIRECT'], download: 42, upload: 7),
+      ], session: 's1');
+      expect(split.direct.total, 49);
+    });
+
+    test('до первой сессии писать нечего', () {
+      final tracker = TrafficSplitTracker();
+      expect(tracker.stateFor(coreDownload: 0, coreUpload: 0), isNull);
+    });
+
+    test('чужая сессия не подхватывается', () {
+      final saved = counted().stateFor(coreDownload: 700, coreUpload: 30)!;
+      expect(
+        saved.belongsTo(session: 's1', coreDownload: 900, coreUpload: 40),
+        isTrue,
+      );
+      expect(
+        saved.belongsTo(session: 's2', coreDownload: 900, coreUpload: 40),
+        isFalse,
+      );
+    });
+
+    test('перезапущенное ядро видно по его собственным суммам', () {
+      // Реконнект из плитки поднимает ядро на том же конфиге: порт и токен те
+      // же, метка сессии совпадает. Но свои общие суммы новое ядро начинает с
+      // нуля, и цифра меньше записанной означает, что счёт остался от прошлой
+      // жизни ядра.
+      final saved = counted().stateFor(coreDownload: 700, coreUpload: 30)!;
+      expect(
+        saved.belongsTo(session: 's1', coreDownload: 12, coreUpload: 0),
+        isFalse,
+      );
+    });
+
+    test('запись читается обратно ровно такой же', () {
+      final saved = counted().stateFor(coreDownload: 700, coreUpload: 30)!;
+      final back = TrafficSplitState.fromJson(
+        jsonDecode(jsonEncode(saved.toJson())),
+      );
+      expect(back, isNotNull);
+      expect(back!.session, 's1');
+      expect(back.coreDownload, 700);
+      expect(back.coreUpload, 30);
+      expect(back.vpnDownload, 600);
+      expect(back.connections, {'a': (700, 0)});
+    });
+
+    test('порванная запись — как будто её нет', () {
+      // Файл пишется на живом туннеле, и процесс убивают в любой момент:
+      // обрезанная или чужая запись не должна ронять разбор.
+      expect(TrafficSplitState.fromJson('не json вовсе'), isNull);
+      expect(TrafficSplitState.fromJson(jsonDecode('{"v":1}')), isNull);
+      expect(
+        TrafficSplitState.fromJson(jsonDecode('{"v":1,"session":"s1"}')),
+        isNull,
+      );
+      expect(
+        TrafficSplitState.fromJson(jsonDecode(
+          '{"v":1,"session":"s1","core":[1,2],"vpn":[1,2],"direct":[1,2],'
+          '"conns":{"a":[1]}}',
+        )),
+        isNull,
+      );
+      // Формат сменится — старую запись читать нечем, счёт начнётся заново.
+      expect(
+        TrafficSplitState.fromJson(jsonDecode(
+          '{"v":2,"session":"s1","core":[1,2],"vpn":[1,2],"direct":[1,2],'
+          '"conns":{}}',
+        )),
+        isNull,
+      );
     });
   });
 }

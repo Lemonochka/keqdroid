@@ -1715,7 +1715,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceShowTrafficSplit => 'Показывать VPN и обход раздельно';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => 'В каждом чипе трафика две строки вместо одной. Умеет только ядро mihomo.';
+  String get appearanceShowTrafficSplitSubtitle => 'Вместо общих чипов — свой блок на каждый маршрут: в туннель и мимо. Умеет только ядро mihomo.';
 
   @override
   String get appearanceWaveLatencyColor => 'Красить индикатор по задержке';

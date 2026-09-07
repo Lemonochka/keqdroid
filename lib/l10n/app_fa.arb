@@ -541,7 +541,7 @@
   "appearanceShowTime": "نمایش زمان اتصال",
   "appearanceShowTimeSubtitle": "نشان دادن مدت نشست زیر دکمهٔ اتصال",
   "appearanceShowTrafficSplit": "نمایش جداگانهٔ وی‌پی‌ان و مستقیم",
-  "appearanceShowTrafficSplitSubtitle": "در هر چیپ ترافیک دو خط به جای یک خط. تنها هستهٔ mihomo آن را می‌شمارد.",
+  "appearanceShowTrafficSplitSubtitle": "به جای چیپ‌های مشترک، برای هر مسیر یک بلوک: از تونل و مستقیم. تنها هستهٔ mihomo آن را می‌شمارد.",
   "appearanceWaveLatencyColor": "رنگ نوار بر پایهٔ تأخیر",
   "appearanceWaveLatencyColorSubtitle": "سبز، نارنجی یا قرمز بر پایهٔ پینگ سرور فعال",
   "appearanceFontTitle": "قلم",

@@ -105,7 +105,12 @@ class _WavePaintWidgetState extends ConsumerState<_WavePaintWidget>
     // Чипы трафика выключены — волна не должна дышать: канал данных скрыт
     // целиком, а не наполовину. На скорость не подписываемся вовсе, чтобы не
     // перестраивать виджет раз в секунду впустую.
-    final showTraffic = settings.showTrafficStats;
+    //
+    // Разбивка — те же чипы в другом виде, и она гасит общие (см.
+    // `AppSettings.withTrafficStats`). Спрашивать только про общие значило бы
+    // останавливать волну на включённой разбивке, то есть при показанном
+    // трафике.
+    final showTraffic = settings.showTrafficStats || settings.showTrafficSplit;
     // Скорость берём суммой: волна показывает «сколько сейчас идёт», без
     // разделения на приём и отдачу — для этого рядом есть чипы со цифрами.
     final bytesPerSec = showTraffic
