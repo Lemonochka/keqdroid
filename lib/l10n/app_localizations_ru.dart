@@ -1326,6 +1326,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get statsSplitDirectLabel => 'Мимо VPN';
 
   @override
+  String get statsSplitTotalLabel => 'Прошло';
+
+  @override
   String get qrScanTitle => 'Сканировать QR-код';
 
   @override

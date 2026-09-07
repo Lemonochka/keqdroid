@@ -220,5 +220,37 @@ void main() {
       );
       expect(split.vpn.totalDownload, 0);
     });
+
+    test('объём копится в обе стороны', () {
+      // Прогон отдачи (спидтест) идёт почти целиком вверх: счётчик одного
+      // приёма стоял бы на месте при живом трафике, и маршрут выглядел бы
+      // мёртвым.
+      final tracker = TrafficSplitTracker();
+      tracker.add(
+        [_c('a', chains: ['DIRECT'], download: 0, upload: 0)],
+        session: 's1',
+      );
+      final split = tracker.add(
+        [_c('a', chains: ['DIRECT'], download: 1000, upload: 20000000)],
+        session: 's1',
+      );
+      expect(split.direct.totalDownload, 1000);
+      expect(split.direct.totalUpload, 20000000);
+      expect(split.direct.total, 20001000);
+    });
+
+    test('соединение без маршрута не теряет свой трафик', () {
+      // Пока ядро не назначило цепочку, относить трафик некуда. Но и
+      // запоминать счётчик нельзя: иначе унесённое за это время потом сойдёт
+      // за уже учтённое и не попадёт ни в одну сторону.
+      final tracker = TrafficSplitTracker();
+      tracker.add([_c('a', chains: [], download: 0)], session: 's1');
+      tracker.add([_c('a', chains: [], download: 500)], session: 's1');
+      final split = tracker.add(
+        [_c('a', chains: ['proxy'], download: 800)],
+        session: 's1',
+      );
+      expect(split.vpn.downloadSpeed, 800);
+    });
   });
 }

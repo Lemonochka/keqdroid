@@ -1324,6 +1324,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get statsSplitDirectLabel => 'بدون وی‌پی‌ان';
 
   @override
+  String get statsSplitTotalLabel => 'منتقل‌شده';
+
+  @override
   String get qrScanTitle => 'اسکن کد QR';
 
   @override

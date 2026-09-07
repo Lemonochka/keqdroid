@@ -7,22 +7,29 @@ class ChannelTraffic {
   final int downloadSpeed;
   final int uploadSpeed;
 
-  /// Принято по этому каналу за сессию.
+  /// Прошло по этому каналу за сессию, в обе стороны.
   ///
-  /// Отдачи здесь нет, потому что её нет и в полосе: чип объёма всегда
-  /// показывал только принятое.
+  /// Обе стороны вместе, хотя чип общего объёма показывал только принятое:
+  /// вопрос к этой полосе — «сколько ушло ЭТИМ маршрутом», и на прогоне
+  /// отдачи (тот же спидтест) счётчик одного приёма стоит на месте, из чего
+  /// читается, что маршрут не работает.
   final int totalDownload;
+  final int totalUpload;
+
+  int get total => totalDownload + totalUpload;
 
   const ChannelTraffic({
     required this.downloadSpeed,
     required this.uploadSpeed,
     required this.totalDownload,
+    required this.totalUpload,
   });
 
   static const zero = ChannelTraffic(
     downloadSpeed: 0,
     uploadSpeed: 0,
     totalDownload: 0,
+    totalUpload: 0,
   );
 
   @override
@@ -31,15 +38,17 @@ class ChannelTraffic {
       other is ChannelTraffic &&
           downloadSpeed == other.downloadSpeed &&
           uploadSpeed == other.uploadSpeed &&
-          totalDownload == other.totalDownload;
+          totalDownload == other.totalDownload &&
+          totalUpload == other.totalUpload;
 
   @override
-  int get hashCode => Object.hash(downloadSpeed, uploadSpeed, totalDownload);
+  int get hashCode =>
+      Object.hash(downloadSpeed, uploadSpeed, totalDownload, totalUpload);
 
   @override
   String toString() =>
       'ChannelTraffic(${downloadSpeed}B/s down, ${uploadSpeed}B/s up, '
-      '$totalDownload B total)';
+      '$total B total)';
 }
 
 /// Трафик, разложенный по тому, куда его отправило ядро.

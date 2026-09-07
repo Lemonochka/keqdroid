@@ -1324,6 +1324,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get statsSplitDirectLabel => 'Am VPN vorbei';
 
   @override
+  String get statsSplitTotalLabel => 'Übertragen';
+
+  @override
   String get qrScanTitle => 'QR-Code scannen';
 
   @override

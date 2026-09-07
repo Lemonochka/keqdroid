@@ -414,6 +414,7 @@
   "statsSplitDirectTag": "مستقیم",
   "statsSplitVpnLabel": "از طریق وی‌پی‌ان",
   "statsSplitDirectLabel": "بدون وی‌پی‌ان",
+  "statsSplitTotalLabel": "منتقل‌شده",
   "qrScanTitle": "اسکن کد QR",
   "qrScanHint": "دوربین را روی کد QR بگیرید",
   "qrScanCameraError": "دوربین در دسترس نیست",

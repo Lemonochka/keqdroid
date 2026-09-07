@@ -1324,6 +1324,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statsSplitDirectLabel => '直连';
 
   @override
+  String get statsSplitTotalLabel => '已传输';
+
+  @override
   String get qrScanTitle => '扫描二维码';
 
   @override

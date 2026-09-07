@@ -2585,6 +2585,12 @@ abstract class AppLocalizations {
   /// **'Bypassing the VPN'**
   String get statsSplitDirectLabel;
 
+  /// No description provided for @statsSplitTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Transferred'**
+  String get statsSplitTotalLabel;
+
   /// No description provided for @qrScanTitle.
   ///
   /// In en, this message translates to:

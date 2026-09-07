@@ -144,8 +144,10 @@ StatMetric _channelMetric(
         ),
         StatLine(
           icon: Icons.data_usage_rounded,
-          label: l10n.statsInLabel,
-          value: _formatVpnBytes(traffic.totalDownload),
+          label: l10n.statsSplitTotalLabel,
+          // Обе стороны вместе: на прогоне отдачи счётчик одного приёма стоит
+          // на месте, и маршрут выглядит мёртвым при живом трафике.
+          value: _formatVpnBytes(traffic.total),
           template: _kBytesTemplate,
         ),
       ],

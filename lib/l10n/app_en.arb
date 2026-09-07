@@ -614,6 +614,7 @@
   "statsSplitDirectTag": "direct",
   "statsSplitVpnLabel": "Through the VPN",
   "statsSplitDirectLabel": "Bypassing the VPN",
+  "statsSplitTotalLabel": "Transferred",
   "qrScanTitle": "Scan QR code",
   "qrScanHint": "Point the camera at a QR code",
   "qrScanCameraError": "Camera unavailable",

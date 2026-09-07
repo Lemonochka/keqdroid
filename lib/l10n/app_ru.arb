@@ -613,6 +613,7 @@
   "statsSplitDirectTag": "обход",
   "statsSplitVpnLabel": "Через VPN",
   "statsSplitDirectLabel": "Мимо VPN",
+  "statsSplitTotalLabel": "Прошло",
   "qrScanTitle": "Сканировать QR-код",
   "qrScanHint": "Наведите камеру на QR-код",
   "qrScanCameraError": "Камера недоступна",

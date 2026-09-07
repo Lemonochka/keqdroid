@@ -613,6 +613,7 @@
   "statsSplitDirectTag": "direkt",
   "statsSplitVpnLabel": "Über das VPN",
   "statsSplitDirectLabel": "Am VPN vorbei",
+  "statsSplitTotalLabel": "Übertragen",
   "qrScanTitle": "QR-Code scannen",
   "qrScanHint": "Richten Sie die Kamera auf einen QR-Code",
   "qrScanCameraError": "Kamera nicht verfügbar",

@@ -613,6 +613,7 @@
   "statsSplitDirectTag": "直连",
   "statsSplitVpnLabel": "经由代理",
   "statsSplitDirectLabel": "直连",
+  "statsSplitTotalLabel": "已传输",
   "qrScanTitle": "扫描二维码",
   "qrScanHint": "将相机对准二维码",
   "qrScanCameraError": "相机不可用",

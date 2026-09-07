@@ -141,15 +141,22 @@ TrafficChannel channelOfChains(List<String> chains) {
 ///
 /// Объём канала — сумма этих разниц за сессию, и он чуть занижен: соединение,
 /// закрывшееся между опросами, недодаёт то, что успело унести после
-/// последнего снимка. Общий объём ядро отдаёт точной цифрой, но одной на всё —
-/// разложить её по каналам нечем, а показывать точный общий рядом с двумя
-/// измеренными значило бы поставить в полосу три числа, которые не сходятся.
+/// последнего снимка, а совсем короткое может целиком уместиться между двумя
+/// снимками и не попасть в счёт вовсе. Общий объём ядро отдаёт точной цифрой,
+/// но одной на всё — разложить её по каналам нечем, а показывать точный общий
+/// рядом с двумя измеренными значило бы поставить в полосу три числа, которые
+/// не сходятся.
+///
+/// Отсюда же требование к вызывающему: опрашивать НЕПРЕРЫВНО, пока держится
+/// сессия. Каждая пауза — это дыра в объёме, которую уже ничем не закрыть.
 class TrafficSplitTracker {
   final Map<String, ConnectionTraffic> _prev = {};
   String? _session;
   bool _baselineTaken = false;
-  int _vpnTotal = 0;
-  int _directTotal = 0;
+  int _vpnDown = 0;
+  int _vpnUp = 0;
+  int _directDown = 0;
+  int _directUp = 0;
 
   /// Показатели каналов по снимку счётчиков.
   ///
@@ -163,8 +170,10 @@ class TrafficSplitTracker {
       _session = session;
       // Объём копится за сессию: у новой он начинается с нуля, как и у чипа
       // общего объёма рядом.
-      _vpnTotal = 0;
-      _directTotal = 0;
+      _vpnDown = 0;
+      _vpnUp = 0;
+      _directDown = 0;
+      _directUp = 0;
       reset();
     }
 
@@ -172,6 +181,11 @@ class TrafficSplitTracker {
     final seen = <String, ConnectionTraffic>{};
 
     for (final c in connections) {
+      final channel = channelOfChains(c.chains);
+      // Соединение, которому ядро ещё не назначило маршрут, не запоминаем
+      // вовсе: запомнив, мы приняли бы его счётчик за уже учтённый, и всё,
+      // что оно унесло до появления цепочки, пропало бы из разбивки.
+      if (channel == TrafficChannel.unknown) continue;
       seen[c.id] = c;
       if (!_baselineTaken) continue;
 
@@ -185,7 +199,7 @@ class TrafficSplitTracker {
           : math.max(0, c.download - prev.download);
       final up = prev == null ? c.upload : math.max(0, c.upload - prev.upload);
 
-      switch (channelOfChains(c.chains)) {
+      switch (channel) {
         case TrafficChannel.vpn:
           vpnDown += down;
           vpnUp += up;
@@ -208,8 +222,10 @@ class TrafficSplitTracker {
       _baselineTaken = true;
       return _snapshot(0, 0, 0, 0);
     }
-    _vpnTotal += vpnDown;
-    _directTotal += directDown;
+    _vpnDown += vpnDown;
+    _vpnUp += vpnUp;
+    _directDown += directDown;
+    _directUp += directUp;
     return _snapshot(vpnDown, vpnUp, directDown, directUp);
   }
 
@@ -218,21 +234,24 @@ class TrafficSplitTracker {
         vpn: ChannelTraffic(
           downloadSpeed: vpnDown,
           uploadSpeed: vpnUp,
-          totalDownload: _vpnTotal,
+          totalDownload: _vpnDown,
+          totalUpload: _vpnUp,
         ),
         direct: ChannelTraffic(
           downloadSpeed: directDown,
           uploadSpeed: directUp,
-          totalDownload: _directTotal,
+          totalDownload: _directDown,
+          totalUpload: _directUp,
         ),
       );
 
   /// Забыть базовую отметку: следующий снимок станет новой.
   ///
-  /// Нужен после паузы опроса (окно в трее, приложение в фоне): иначе первая
-  /// же разница после паузы схлопнула бы весь скрытый период в одну секунду.
-  /// Накопленный объём при этом сохраняется — он про сессию, а не про опрос;
-  /// трафик скрытого периода в него, правда, уже не попадёт.
+  /// Накопленный объём при этом сохраняется — он про сессию ядра, а не про
+  /// опрос. Опрос не прерывается вовсе, пока держится подключение: разница со
+  /// снимком получасовой давности схлопнула бы полчаса в одну секунду, а
+  /// пропущенное за эти полчаса всё равно не вернулось бы — счётчики
+  /// закрывшихся соединений ядро не хранит.
   void reset() {
     _prev.clear();
     _baselineTaken = false;
