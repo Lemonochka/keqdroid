@@ -804,6 +804,33 @@ class MihomoConfigGen {
     return out.isEmpty ? null : out;
   }
 
+  /// Переносит `vcn`/`pcs` из ссылки в поля mihomo — то же, что делает
+  /// xray-генератор (`config_gen.dart`, `_tlsClientSettings`).
+  ///
+  /// `name-cert-verify` описан у ядра как «меняет только цель проверки DNSName
+  /// в сертификате, не трогая SNI» — дословный аналог `verifyPeerCertByName`.
+  /// Без него сертификат сверяется с маскировочным `sni` (панели ставят туда
+  /// чужой домен) и рукопожатие падает.
+  ///
+  /// Оба поля переносим, ТОЛЬКО когда значение одно. У xray и то и другое —
+  /// список через запятую, у mihomo обе настройки принимают одну строку, а
+  /// какое из нескольких значений относится к листу цепочки, из ссылки не
+  /// видно. Взятый наугад чужой отпечаток закрыл бы соединение совсем, поэтому
+  /// при нескольких значениях не пиним вовсе: имя проверяется правильное,
+  /// цепочка — по системным корням.
+  static void _applyCertPinning(Map<String, dynamic> out, Uri uri) {
+    List<String> values(String key) => _param(uri, key)
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    final names = values('vcn');
+    if (names.length == 1) out['name-cert-verify'] = names.first;
+    final pins = values('pcs');
+    if (pins.length == 1) out['fingerprint'] = pins.first;
+  }
+
   static Map<String, dynamic> _vless(String link) {
     final uri = _parse(link);
     final uuid = uri.userInfo;
@@ -833,6 +860,9 @@ class MihomoConfigGen {
       final alpn = _alpn(_param(uri, 'alpn'));
       if (alpn != null) out['alpn'] = alpn;
     }
+    // Только для обычного TLS: у REALITY своя проверка подлинности сервера,
+    // сертификат там подставной и пинить его нечем.
+    if (security == 'tls') _applyCertPinning(out, uri);
     if (security == 'reality') {
       out['reality-opts'] = {
         'public-key': _param(uri, 'pbk'),
@@ -918,6 +948,7 @@ class MihomoConfigGen {
     };
     final alpn = _alpn(_param(uri, 'alpn'));
     if (alpn != null) out['alpn'] = alpn;
+    _applyCertPinning(out, uri);
 
     _applyTransport(out, uri, network: _param(uri, 'type', 'tcp'), host: sni);
     return out;

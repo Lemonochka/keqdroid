@@ -67,6 +67,53 @@ void main() {
   });
 
   group('прокси', () {
+    test('vcn переносится в name-cert-verify, одиночный pcs — в fingerprint', () {
+      // То же, что делает xray-генератор со своими `verifyPeerCertByName` и
+      // `pinnedPeerCertSha256`: у ядра эта настройка описана как «меняет только
+      // цель проверки DNSName, не трогая SNI».
+      final p = _proxy(MihomoConfigGen.build(
+        'vless://uuid@vps1.example.org:8443?type=tcp&security=tls'
+        '&sni=spotify.com&vcn=vps1.example.org'
+        '&pcs=c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843',
+        const AppSettings(),
+        socksPort: 2080,
+      ));
+      expect(p['servername'], 'spotify.com');
+      expect(p['name-cert-verify'], 'vps1.example.org');
+      expect(
+        p['fingerprint'],
+        'c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843',
+      );
+    });
+
+    test('несколько отпечатков в pcs не пиним вовсе', () {
+      // `fingerprint` у ядра — одна строка, а какой из отпечатков относится к
+      // листу цепочки, из ссылки не видно. Взятый наугад чужой отпечаток
+      // закрыл бы соединение совсем.
+      final p = _proxy(MihomoConfigGen.build(
+        'vless://uuid@vps1.example.org:8443?type=tcp&security=tls'
+        '&sni=spotify.com&vcn=vps1.example.org'
+        '&pcs=c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843'
+        '%2Ca2372d06431e9716365eeed47ec020351497d182fcc038e457e58168a03cac07',
+        const AppSettings(),
+        socksPort: 2080,
+      ));
+      expect(p['name-cert-verify'], 'vps1.example.org');
+      expect(p.containsKey('fingerprint'), isFalse);
+    });
+
+    test('у reality пиннинга сертификата не появляется', () {
+      // Сертификат там подставной, подлинность сервера проверяет сам REALITY.
+      final p = _proxy(MihomoConfigGen.build(
+        'vless://uuid@nl.example:443?type=tcp&security=reality&sni=decoy.example'
+        '&pbk=publickey&sid=aabb&vcn=nl.example&pcs=deadbeef',
+        const AppSettings(),
+        socksPort: 2080,
+      ));
+      expect(p.containsKey('name-cert-verify'), isFalse);
+      expect(p.containsKey('fingerprint'), isFalse);
+    });
+
     test('vless + reality + vision', () {
       final p = _proxy(MihomoConfigGen.build(
         'vless://uuid@nl.example:443?type=tcp&security=reality&sni=decoy.example'

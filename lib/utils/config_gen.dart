@@ -120,19 +120,25 @@ class ConfigGeneratorV2 {
   /// то есть ОДИН сервер с `insecure=1` в подписке лишал связи все остальные,
   /// и наружу это выглядело как «SOCKS port not ready» без намёка на причину.
   ///
-  /// Замен, предлагаемых ядром, тут не подставить: `pinnedPeerCertSha256` хочет
-  /// отпечаток сертификата (его в ссылке нет), а `verifyPeerCertByName` сверяет
-  /// цепочку с системными корнями по другому имени — самоподписанному серверу
-  /// это не поможет. Поэтому просто проверяем сертификат как обычно: сервер с
-  /// нормальным сертификатом (а `insecure=1` в панелях сплошь и рядом просто
-  /// мусор копипасты) работает, а остальные хотя бы не тянут за собой всю
-  /// подписку.
+  /// Обе замены, предлагаемые ядром, ссылки УМЕЮТ передавать, и мы их читаем:
+  /// `pcs` -> `pinnedPeerCertSha256` (отпечатки сертификатов через запятую, в
+  /// hex) и `vcn` -> `verifyPeerCertByName` (имена через запятую). Панели
+  /// выдают их вместе с `sni` чужого домена: в ClientHello уходит маскировочное
+  /// имя, а сертификат сверяется с настоящим. Пока мы эти поля выбрасывали,
+  /// ядро проверяло сертификат по маскировочному `sni` и роняло рукопожатие —
+  /// сервер работал у всех, кроме нас.
+  ///
+  /// Голый `insecure=1` без этих полей по-прежнему игнорируем: доверять любому
+  /// сертификату — не «послабление», а дыра, и в панелях этот флаг сплошь и
+  /// рядом просто мусор копипасты. Сервер с нормальным сертификатом работает,
+  /// а остальные хотя бы не тянут за собой всю подписку.
   static Map<String, dynamic> _tlsClientSettings({
     required String serverName,
     String fingerprint = '',
     String? alpnQuery,
     String? echConfigList,
     String? pinnedPeerCertSha256,
+    String? verifyPeerCertByName,
   }) {
     final tls = <String, dynamic>{
       'serverName': serverName,
@@ -145,6 +151,8 @@ class ConfigGeneratorV2 {
     if (ech.isNotEmpty) tls['echConfigList'] = ech;
     final pin = pinnedPeerCertSha256?.trim() ?? '';
     if (pin.isNotEmpty) tls['pinnedPeerCertSha256'] = pin;
+    final verifyName = verifyPeerCertByName?.trim() ?? '';
+    if (verifyName.isNotEmpty) tls['verifyPeerCertByName'] = verifyName;
     return tls;
   }
 
@@ -1370,6 +1378,8 @@ class ConfigGeneratorV2 {
         fingerprint: getParam('fp', ''),
         alpnQuery: getParam('alpn'),
         echConfigList: getParam('ech'),
+        pinnedPeerCertSha256: getParam('pcs'),
+        verifyPeerCertByName: getParam('vcn'),
       );
     } else if (security == 'reality') {
       final rfp = getParam('fp', '').trim();
@@ -1381,6 +1391,11 @@ class ConfigGeneratorV2 {
         'publicKey': getParam('pbk'),
         'shortId': getParam('sid'),
         'spiderX': getParam('spx'),
+        // Post-quantum подпись сертификата REALITY (ML-DSA-65). Без ключа
+        // соединение всё равно встанет, но БЕЗ дополнительной проверки — то
+        // есть тише, чем просил тот, кто выдал ссылку.
+        if (getParam('pqv').trim().isNotEmpty)
+          'mldsa65Verify': getParam('pqv').trim(),
       };
     }
 
@@ -1402,7 +1417,9 @@ class ConfigGeneratorV2 {
         };
       case 'httpupgrade':
         stream['httpupgradeSettings'] = {'path': getParam('path', '/'), 'host': getParam('host', sni)};
-      case 'tcp':
+      // `raw` — новое имя `tcp` в ядре; в ссылках встречаются оба, и
+      // mihomo-генератор давно считает их одним транспортом.
+      case 'tcp' || 'raw':
         if (getParam('headerType') == 'http') {
           stream['tcpSettings'] = {'header': {'type': 'http', 'request': {'headers': {'Host': [getParam('host', address)]}}}};
         }

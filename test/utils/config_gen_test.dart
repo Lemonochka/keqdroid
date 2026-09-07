@@ -9,6 +9,93 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 void main() {
   const settings = AppSettings();
 
+    test('переносит vcn и pcs из ссылки в tlsSettings', () {
+      // Регрессия с живого сервера: панель отдаёт `sni` чужого домена, а
+      // сертификат велит проверять по настоящему имени и по отпечаткам. Пока мы
+      // эти два поля выбрасывали, ядро сверяло сертификат с маскировочным `sni`
+      // и роняло рукопожатие — сервер работал во всех клиентах, кроме нашего.
+      Socks5Credentials().init('u', 'p');
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@vps1.example.org:8443?security=tls&type=tcp'
+        '&sni=spotify.com&fp=chrome&vcn=vps1.example.org'
+        '&pcs=c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843'
+        '%2Ca2372d06431e9716365eeed47ec020351497d182fcc038e457e58168a03cac07'
+        '#demo',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
+      final tls = (outbound['streamSettings']
+          as Map<String, dynamic>)['tlsSettings'] as Map<String, dynamic>;
+
+      expect(tls['serverName'], 'spotify.com');
+      expect(tls['verifyPeerCertByName'], 'vps1.example.org');
+      // Список отпечатков ядро принимает одной строкой через запятую и само
+      // режет её на части — склеивать или разбирать нам нечего.
+      expect(
+        tls['pinnedPeerCertSha256'],
+        'c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843,'
+        'a2372d06431e9716365eeed47ec020351497d182fcc038e457e58168a03cac07',
+      );
+    });
+
+    test('без vcn и pcs пустых полей в tlsSettings не появляется', () {
+      Socks5Credentials().init('u', 'p');
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@example.com:443?security=tls&type=tcp&sni=example.com#d',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
+      final tls = (outbound['streamSettings']
+          as Map<String, dynamic>)['tlsSettings'] as Map<String, dynamic>;
+
+      expect(tls.containsKey('verifyPeerCertByName'), isFalse);
+      expect(tls.containsKey('pinnedPeerCertSha256'), isFalse);
+    });
+
+    test('type=raw получает http-заголовок так же, как type=tcp', () {
+      // `raw` — новое имя транспорта в ядре, и ссылки с ним уже ходят.
+      // mihomo-генератор считал их одним транспортом давно, xray-генератор нет:
+      // маскировка под http молча терялась.
+      Socks5Credentials().init('u', 'p');
+      Map<String, dynamic> streamFor(String type) {
+        final config = ConfigGeneratorV2.generateConfig(
+          'vless://uuid@example.com:443?type=$type&headerType=http'
+          '&host=cdn.example.com&security=none#d',
+          settings,
+        );
+        final map = jsonDecode(config) as Map<String, dynamic>;
+        final outbound =
+            (map['outbounds'] as List).first as Map<String, dynamic>;
+        return outbound['streamSettings'] as Map<String, dynamic>;
+      }
+
+      for (final type in ['tcp', 'raw']) {
+        final tcp = streamFor(type)['tcpSettings'] as Map<String, dynamic>?;
+        expect(tcp, isNotNull, reason: type);
+        final header = tcp!['header'] as Map<String, dynamic>;
+        expect(header['type'], 'http');
+      }
+    });
+
+    test('reality: pqv доезжает как mldsa65Verify', () {
+      // Без ключа соединение встаёт, но без дополнительной post-quantum
+      // проверки — то есть тише, чем просил выдавший ссылку.
+      Socks5Credentials().init('u', 'p');
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@example.com:443?security=reality&pbk=pub&sid=12'
+        '&fp=chrome&sni=example.com&type=tcp&pqv=BASE64KEY#d',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
+      final reality = (outbound['streamSettings']
+          as Map<String, dynamic>)['realitySettings'] as Map<String, dynamic>;
+
+      expect(reality['mldsa65Verify'], 'BASE64KEY');
+    });
+
   group('ConfigGeneratorV2', () {
     test('builds VLESS reality settings', () {
       Socks5Credentials().init('u', 'p');
