@@ -1704,7 +1704,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceShowTrafficSplit => '分开显示代理与直连';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => '分别显示走隧道和直连的速度。仅 mihomo 内核提供此数据 — xray 只给出总量。';
+  String get appearanceShowTrafficSplitSubtitle => '每个流量信息显示两行而非一行。仅 mihomo 内核支持。';
 
   @override
   String get appearanceWaveLatencyColor => '按延迟为指示条着色';

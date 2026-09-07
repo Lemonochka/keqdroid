@@ -1701,10 +1701,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceShowTimeSubtitle => 'Session duration chip under the connect button';
 
   @override
-  String get appearanceShowTrafficSplit => 'Split VPN and direct';
+  String get appearanceShowTrafficSplit => 'Show VPN and direct apart';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => 'Tunnelled and direct speed side by side. Only the mihomo core reports the breakdown — xray gives one total.';
+  String get appearanceShowTrafficSplitSubtitle => 'Two lines instead of one in every traffic chip. Only the mihomo core can count it.';
 
   @override
   String get appearanceWaveLatencyColor => 'Colour the indicator by latency';

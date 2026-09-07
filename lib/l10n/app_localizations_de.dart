@@ -1701,10 +1701,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appearanceShowTimeSubtitle => 'Chip mit Sitzungsdauer unter dem Verbindungsknopf';
 
   @override
-  String get appearanceShowTrafficSplit => 'VPN und direkt getrennt';
+  String get appearanceShowTrafficSplit => 'VPN und direkt getrennt anzeigen';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => 'Tunnel- und Direktgeschwindigkeit nebeneinander. Nur der mihomo-Kern liefert die Aufteilung — xray meldet nur die Summe.';
+  String get appearanceShowTrafficSplitSubtitle => 'Zwei Zeilen statt einer in jedem Verkehrs-Chip. Nur der mihomo-Kern kann das zählen.';
 
   @override
   String get appearanceWaveLatencyColor => 'Anzeige nach Latenz färben';

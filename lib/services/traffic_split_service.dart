@@ -134,16 +134,24 @@ TrafficChannel channelOfChains(List<String> chains) {
   return TrafficChannel.vpn;
 }
 
-/// Превращает накопительные счётчики соединений в скорость по каналам.
+/// Превращает накопительные счётчики соединений в показатели каналов.
 ///
 /// Считает по разнице двух снимков, потому что своих «скоростей» ядро не
 /// отдаёт вовсе — только сколько всего набежало по каждому соединению.
+///
+/// Объём канала — сумма этих разниц за сессию, и он чуть занижен: соединение,
+/// закрывшееся между опросами, недодаёт то, что успело унести после
+/// последнего снимка. Общий объём ядро отдаёт точной цифрой, но одной на всё —
+/// разложить её по каналам нечем, а показывать точный общий рядом с двумя
+/// измеренными значило бы поставить в полосу три числа, которые не сходятся.
 class TrafficSplitTracker {
   final Map<String, ConnectionTraffic> _prev = {};
   String? _session;
   bool _baselineTaken = false;
+  int _vpnTotal = 0;
+  int _directTotal = 0;
 
-  /// Разница со снимком секундой раньше.
+  /// Показатели каналов по снимку счётчиков.
   ///
   /// [session] — метка сессии ядра. Другая сессия означает другой набор
   /// идентификаторов, и старые счётчики к ним отношения не имеют.
@@ -153,6 +161,10 @@ class TrafficSplitTracker {
   }) {
     if (_session != session) {
       _session = session;
+      // Объём копится за сессию: у новой он начинается с нуля, как и у чипа
+      // общего объёма рядом.
+      _vpnTotal = 0;
+      _directTotal = 0;
       reset();
     }
 
@@ -194,21 +206,33 @@ class TrafficSplitTracker {
     // бы всё, что скачалось за сессию, как «скорость».
     if (!_baselineTaken) {
       _baselineTaken = true;
-      return TrafficSplit.zero;
+      return _snapshot(0, 0, 0, 0);
     }
-    return TrafficSplit(
-      vpnDownload: vpnDown,
-      vpnUpload: vpnUp,
-      directDownload: directDown,
-      directUpload: directUp,
-    );
+    _vpnTotal += vpnDown;
+    _directTotal += directDown;
+    return _snapshot(vpnDown, vpnUp, directDown, directUp);
   }
 
-  /// Забыть накопленное: следующий снимок станет новой базовой отметкой.
+  TrafficSplit _snapshot(int vpnDown, int vpnUp, int directDown, int directUp) =>
+      TrafficSplit(
+        vpn: ChannelTraffic(
+          downloadSpeed: vpnDown,
+          uploadSpeed: vpnUp,
+          totalDownload: _vpnTotal,
+        ),
+        direct: ChannelTraffic(
+          downloadSpeed: directDown,
+          uploadSpeed: directUp,
+          totalDownload: _directTotal,
+        ),
+      );
+
+  /// Забыть базовую отметку: следующий снимок станет новой.
   ///
-  /// Нужен не только на смене сессии, но и после паузы опроса (окно в трее,
-  /// приложение в фоне): иначе первая же разница после паузы схлопнула бы весь
-  /// скрытый период в одну секунду.
+  /// Нужен после паузы опроса (окно в трее, приложение в фоне): иначе первая
+  /// же разница после паузы схлопнула бы весь скрытый период в одну секунду.
+  /// Накопленный объём при этом сохраняется — он про сессию, а не про опрос;
+  /// трафик скрытого периода в него, правда, уже не попадёт.
   void reset() {
     _prev.clear();
     _baselineTaken = false;

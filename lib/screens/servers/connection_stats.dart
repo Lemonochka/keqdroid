@@ -34,15 +34,19 @@ class _ConnectionStats extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Видимость чипов настраивается в Appearance: трафик (скорость + объём)
-    // и время подключения — отдельными переключателями.
+    // Видимость чипов настраивается в Appearance: трафик (скорость + объём),
+    // время подключения и разбивка трафика по каналам.
     final (showTraffic, showTime, showSplit) = ref.watch(
       settingsNotifierProvider.select((async) {
         final s = async.value ?? const AppSettings();
         return (s.showTrafficStats, s.showConnectionTime, s.showTrafficSplit);
       }),
     );
-    if (!showTraffic && !showTime) return const SizedBox.shrink();
+    // Разбивка сама показывает чипы трафика, не требуя включить соседний
+    // переключатель: настройка, которая молчит, пока не включена другая, —
+    // это не настройка, а её половина.
+    final showAnyTraffic = showTraffic || showSplit;
+    if (!showAnyTraffic && !showTime) return const SizedBox.shrink();
 
     final stats = ref.watch(
       vpnStateProvider.select((a) {
@@ -56,30 +60,41 @@ class _ConnectionStats extends ConsumerWidget {
     // ядро из нескольких, и наливать её в общее состояние туннеля значило бы
     // тащить через все бэкенды поле, которое почти везде пустое.
     // `null` — ядро разбивку не отдаёт, и чипы остаются обычными.
-    final split = showTraffic && showSplit
-        ? ref.watch(trafficSplitProvider).value
-        : null;
+    final split = showSplit ? ref.watch(trafficSplitProvider).value : null;
 
     final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.only(top: ExpressiveSpacing.medium),
       child: StatStrip(
         metrics: [
-          if (showTraffic) ...[
+          if (showAnyTraffic) ...[
             if (split != null) ...[
-              _splitRate(
+              // Разбиты все три чипа сразу. Общий объём рядом с раздельными
+              // скоростями ломал строчное чтение полосы: верхняя строка везде
+              // про туннель, нижняя везде про обход, а один чип — про сумму.
+              _splitMetric(
                 l10n,
                 icon: Icons.arrow_downward_rounded,
                 label: l10n.statsDownloadLabel,
-                viaVpn: split.vpnDownload,
-                direct: split.directDownload,
+                vpn: _formatVpnRate(split.vpn.downloadSpeed),
+                direct: _formatVpnRate(split.direct.downloadSpeed),
+                template: _kRateTemplate,
               ),
-              _splitRate(
+              _splitMetric(
                 l10n,
                 icon: Icons.arrow_upward_rounded,
                 label: l10n.statsUploadLabel,
-                viaVpn: split.vpnUpload,
-                direct: split.directUpload,
+                vpn: _formatVpnRate(split.vpn.uploadSpeed),
+                direct: _formatVpnRate(split.direct.uploadSpeed),
+                template: _kRateTemplate,
+              ),
+              _splitMetric(
+                l10n,
+                icon: Icons.data_usage_rounded,
+                label: l10n.statsInLabel,
+                vpn: _formatVpnBytes(split.vpn.totalDownload),
+                direct: _formatVpnBytes(split.direct.totalDownload),
+                template: _kBytesTemplate,
               ),
             ] else ...[
               StatMetric(
@@ -94,13 +109,13 @@ class _ConnectionStats extends ConsumerWidget {
                 value: _formatVpnRate(stats.$2),
                 template: _kRateTemplate,
               ),
+              StatMetric(
+                icon: Icons.data_usage_rounded,
+                label: l10n.statsInLabel,
+                value: _formatVpnBytes(stats.$3),
+                template: _kBytesTemplate,
+              ),
             ],
-            StatMetric(
-              icon: Icons.data_usage_rounded,
-              label: l10n.statsInLabel,
-              value: _formatVpnBytes(stats.$3),
-              template: _kBytesTemplate,
-            ),
           ],
           if (showTime)
             StatMetric(
@@ -115,16 +130,17 @@ class _ConnectionStats extends ConsumerWidget {
   }
 }
 
-/// Ячейка «скорость в туннель / скорость мимо туннеля».
+/// Ячейка «в туннель / мимо туннеля».
 ///
-/// Сверху идёт туннель: ради него приложение и запущено, а мимо него уходит
-/// то, что развели правилами, — это поправка к главному числу, а не равное ему.
-StatMetric _splitRate(
+/// Сверху туннель: ради него приложение и запущено, а мимо него уходит то, что
+/// развели правилами, — это поправка к главному числу, а не равное ему.
+StatMetric _splitMetric(
   AppLocalizations l10n, {
   required IconData icon,
   required String label,
-  required int viaVpn,
-  required int direct,
+  required String vpn,
+  required String direct,
+  required String template,
 }) =>
     StatMetric.split(
       icon: icon,
@@ -132,13 +148,13 @@ StatMetric _splitRate(
       lines: [
         StatValue(
           tag: l10n.statsSplitVpnTag,
-          value: _formatVpnRate(viaVpn),
-          template: _kRateTemplate,
+          value: vpn,
+          template: template,
         ),
         StatValue(
           tag: l10n.statsSplitDirectTag,
-          value: _formatVpnRate(direct),
-          template: _kRateTemplate,
+          value: direct,
+          template: template,
         ),
       ],
     );

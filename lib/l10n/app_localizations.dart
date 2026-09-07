@@ -3326,13 +3326,13 @@ abstract class AppLocalizations {
   /// No description provided for @appearanceShowTrafficSplit.
   ///
   /// In en, this message translates to:
-  /// **'Split VPN and direct'**
+  /// **'Show VPN and direct apart'**
   String get appearanceShowTrafficSplit;
 
   /// No description provided for @appearanceShowTrafficSplitSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Tunnelled and direct speed side by side. Only the mihomo core reports the breakdown — xray gives one total.'**
+  /// **'Two lines instead of one in every traffic chip. Only the mihomo core can count it.'**
   String get appearanceShowTrafficSplitSubtitle;
 
   /// No description provided for @appearanceWaveLatencyColor.

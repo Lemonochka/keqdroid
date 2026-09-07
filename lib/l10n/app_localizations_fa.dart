@@ -1701,10 +1701,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceShowTimeSubtitle => 'نشان دادن مدت نشست زیر دکمهٔ اتصال';
 
   @override
-  String get appearanceShowTrafficSplit => 'تفکیک وی‌پی‌ان و مستقیم';
+  String get appearanceShowTrafficSplit => 'نمایش جداگانهٔ وی‌پی‌ان و مستقیم';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => 'سرعت تونل و مستقیم را جدا نشان می‌دهد. تنها هستهٔ mihomo این تفکیک را می‌دهد — xray فقط مجموع را گزارش می‌کند.';
+  String get appearanceShowTrafficSplitSubtitle => 'در هر چیپ ترافیک دو خط به جای یک خط. تنها هستهٔ mihomo آن را می‌شمارد.';
 
   @override
   String get appearanceWaveLatencyColor => 'رنگ نوار بر پایهٔ تأخیر';

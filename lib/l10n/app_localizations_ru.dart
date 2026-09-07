@@ -1703,10 +1703,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceShowTimeSubtitle => 'Чип длительности сессии под кнопкой подключения';
 
   @override
-  String get appearanceShowTrafficSplit => 'Отдельно VPN и мимо него';
+  String get appearanceShowTrafficSplit => 'Показывать VPN и обход раздельно';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => 'Скорость в туннель и мимо туннеля по отдельности. Разбивку отдаёт только ядро mihomo — у xray она одной суммой.';
+  String get appearanceShowTrafficSplitSubtitle => 'В каждом чипе трафика две строки вместо одной. Умеет только ядро mihomo.';
 
   @override
   String get appearanceWaveLatencyColor => 'Красить индикатор по задержке';

@@ -95,10 +95,10 @@ void main() {
         _c('b', chains: ['DIRECT'], download: 70, upload: 9),
       ], session: 's1');
 
-      expect(split.vpnDownload, 300);
-      expect(split.vpnUpload, 20);
-      expect(split.directDownload, 20);
-      expect(split.directUpload, 4);
+      expect(split.vpn.downloadSpeed, 300);
+      expect(split.vpn.uploadSpeed, 20);
+      expect(split.direct.downloadSpeed, 20);
+      expect(split.direct.uploadSpeed, 4);
     });
 
     test('родившееся между опросами считается целиком', () {
@@ -110,8 +110,8 @@ void main() {
         [_c('new', chains: ['DIRECT'], download: 42, upload: 7)],
         session: 's1',
       );
-      expect(split.directDownload, 42);
-      expect(split.directUpload, 7);
+      expect(split.direct.downloadSpeed, 42);
+      expect(split.direct.uploadSpeed, 7);
     });
 
     test('закрывшееся соединение больше не капает', () {
@@ -119,7 +119,10 @@ void main() {
       tracker.add([_c('a', chains: ['proxy'], download: 100)], session: 's1');
       tracker.add([_c('a', chains: ['proxy'], download: 300)], session: 's1');
       final split = tracker.add([], session: 's1');
-      expect(split, TrafficSplit.zero);
+      expect(split.vpn.downloadSpeed, 0);
+      // Объём при этом остаётся: соединение закрылось, а принятое по нему за
+      // сессию никуда не делось.
+      expect(split.vpn.totalDownload, 200);
     });
 
     test('счётчик, поехавший назад, не даёт отрицательной скорости', () {
@@ -129,7 +132,7 @@ void main() {
         [_c('a', chains: ['proxy'], download: 100)],
         session: 's1',
       );
-      expect(split.vpnDownload, 0);
+      expect(split.vpn.downloadSpeed, 0);
     });
 
     test('заблокированное и нерешённое не идут ни в одну сторону', () {
@@ -168,6 +171,54 @@ void main() {
         session: 's1',
       );
       expect(split, TrafficSplit.zero);
+    });
+
+    test('объём копится по каналам за сессию', () {
+      final tracker = TrafficSplitTracker();
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 0),
+        _c('b', chains: ['DIRECT'], download: 0),
+      ], session: 's1');
+      tracker.add([
+        _c('a', chains: ['proxy'], download: 300),
+        _c('b', chains: ['DIRECT'], download: 40),
+      ], session: 's1');
+      final split = tracker.add([
+        _c('a', chains: ['proxy'], download: 500),
+        _c('b', chains: ['DIRECT'], download: 100),
+      ], session: 's1');
+
+      expect(split.vpn.totalDownload, 500);
+      expect(split.direct.totalDownload, 100);
+      // Скорость при этом — только за последний такт.
+      expect(split.vpn.downloadSpeed, 200);
+      expect(split.direct.downloadSpeed, 60);
+    });
+
+    test('пауза опроса не обнуляет накопленный объём', () {
+      // Полоса показывает объём за сессию, а не за отрезок между сворачиваниями
+      // окна: обнуляясь на каждом возврате из трея, она врала бы куда сильнее,
+      // чем недосчитывая скрытый период.
+      final tracker = TrafficSplitTracker();
+      tracker.add([_c('a', chains: ['proxy'], download: 0)], session: 's1');
+      tracker.add([_c('a', chains: ['proxy'], download: 700)], session: 's1');
+      tracker.reset();
+      final split = tracker.add(
+        [_c('a', chains: ['proxy'], download: 900)],
+        session: 's1',
+      );
+      expect(split.vpn.totalDownload, 700);
+    });
+
+    test('новая сессия начинает объём заново', () {
+      final tracker = TrafficSplitTracker();
+      tracker.add([_c('a', chains: ['proxy'], download: 0)], session: 's1');
+      tracker.add([_c('a', chains: ['proxy'], download: 700)], session: 's1');
+      final split = tracker.add(
+        [_c('a', chains: ['proxy'], download: 700)],
+        session: 's2',
+      );
+      expect(split.vpn.totalDownload, 0);
     });
   });
 }
