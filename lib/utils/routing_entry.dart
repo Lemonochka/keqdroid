@@ -16,12 +16,11 @@ bool looksLikeIpOrCidr(String value) {
   return false;
 }
 
-/// Splits raw routing entries into domain-shaped and ip-shaped tokens.
+/// Делит записи роутинга на доменные и адресные.
 ///
-/// - `geoip:*` tokens go to [ips] (xray matches them as ip rules).
-/// - IPv4/IPv6 addresses and CIDR ranges go to [ips].
-/// - everything else (bare hosts, `.suffix`, `domain:`/`full:`/`regexp:`/
-///   `geosite:`) goes to [domains] and is normalized downstream.
+/// В [ips] уходят `geoip:*` (ядро сопоставляет их как ip-правила), адреса и
+/// диапазоны CIDR. Всё остальное — голые хосты, `.суффиксы`, `domain:`, `full:`,
+/// `regexp:`, `geosite:` — это [domains], их нормализуют дальше по цепочке.
 ({List<String> domains, List<String> ips}) splitDomainsAndIps(
   List<String> entries,
 ) {

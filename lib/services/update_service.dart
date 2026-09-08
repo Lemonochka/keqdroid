@@ -121,7 +121,7 @@ class UpdateService {
           DateTime.now().difference(last) < _minAutoCheckGap) {
         return _cachedResultRespectingSkip();
       }
-      // отмечаем ДО сети, чтобы параллельные ре-раны провайдера не прошли
+      // отмечаем до сети, чтобы параллельные ре-раны провайдера не прошли
       // гейт вдвоём
       _lastAutoCheckAt = DateTime.now();
     }

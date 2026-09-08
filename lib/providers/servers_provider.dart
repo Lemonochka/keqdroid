@@ -355,7 +355,7 @@ class ServersNotifier extends Notifier<ServersState> {
     Map<String, ({int? pingMs, String? lastPingType})> updates,
   ) async {
     if (updates.isEmpty) return;
-    // Мержим в актуальный список ВНУТРИ serial-очереди storage: запись
+    // Мержим в актуальный список внутри serial-очереди storage: запись
     // снапшота провайдера целиком (saveServers) затирала серверы, если
     // параллельно успела обновиться подписка.
     final merged = await ref

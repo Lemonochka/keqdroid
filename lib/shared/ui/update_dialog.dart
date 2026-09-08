@@ -13,7 +13,7 @@ import '../../tunnel/tunnel_state.dart';
 import '../../utils/awg_profile.dart';
 import '../../utils/local_vpn_proxy.dart';
 
-/// «Диалог уже показывали в этой сессии» — по ВЕРСИИ, а не булев флаг:
+/// «Диалог уже показывали в этой сессии» — по версии, а не булев флаг:
 /// ре-раны updateInfoProvider с той же версией не спамят диалогом, но новый
 /// релиз, вышедший пока приложение работает (периодический ре-чек),
 /// предлагается снова.
@@ -206,7 +206,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
             style: TextStyle(color: subtitleColor),
           ),
         ),
-        // «Позже» просто закрывает диалог — БЕЗ записи skip: пользователь ждёт
+        // «Позже» просто закрывает диалог — без записи skip: пользователь ждёт
         // напоминания, а skip навсегда убирает версию из авто-предложений.
         TextButton(
           onPressed: _downloading

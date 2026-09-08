@@ -210,7 +210,7 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
     );
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
-      // Оболочка НЕ ужимается под клавиатуру.
+      // Оболочка не ужимается под клавиатуру.
       //
       // В теле вкладок нет ни одного поля ввода: всё, что печатается —
       // добавление сервера, правка подписки, идентичность, редактор конфига —

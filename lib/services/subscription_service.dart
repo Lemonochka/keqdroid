@@ -254,7 +254,7 @@ class SubscriptionService {
       final host = uri.host.toLowerCase();
       final port = uri.port.toString();
 
-      // vmess: uuid внутри base64-json payload. Декодируем из СЫРОЙ строки:
+      // vmess: uuid внутри base64-json payload. Декодируем из сырой строки:
       // uri.host лоуэркейсит base64 (регистрозависимый), декод падает, и ключ
       // уходит в фоллбэк с полным конфигом — тогда смена имени сервера
       // (ps внутри payload) ломает сопоставление, теряя ping/избранное/
@@ -824,7 +824,7 @@ class SubscriptionService {
       out.add(uri.replace(path: p.isEmpty ? '/' : p).toString());
     }
 
-    // НЕ добавляем http-вариант для https-подписок: URL содержит секретный
+    // Не добавляем http-вариант для https-подписок: URL содержит секретный
     // токен, а к запросу идут hwid-заголовки — открытый HTTP отдал бы их
     // любому наблюдателю сети (для VPN-клиента это недопустимо).
     // query-вариант только для проблемного домена, чтобы не ломать обычные подписки
@@ -934,7 +934,7 @@ class SubscriptionService {
     final model = _trimmedOrNull(overrideModel) ?? await _getDeviceModel();
     final osVersion =
         _trimmedOrNull(overrideOsVersion) ?? Platform.operatingSystemVersion;
-    // Значения ОБЯЗАНЫ быть ASCII: Platform.operatingSystemVersion на
+    // Значения обязаны быть ASCII: Platform.operatingSystemVersion на
     // локализованной Windows отдаёт «"Майкрософт Windows 11 Pro" 10.0 (Build
     // 26100)», localHostname тоже бывает кириллическим, и dart:io роняет весь
     // запрос с FormatException ещё до сети — снаружи это выглядело «Ошибкой
@@ -1150,7 +1150,7 @@ class SubscriptionService {
     String? pinnedUserAgent,
   }) async {
     // Подписка закрепила свой UA — перебирать нечего: любой другой сломал бы
-    // ровно ту подмену, ради которой UA и закрепляли.
+    // ту подмену, ради которой UA и закрепляли.
     if (pinnedUserAgent != null) return null;
     // [skipUserAgents] — уже опробованные (первый запрос), их не повторяем
     final userAgents = <String>[
@@ -1374,7 +1374,7 @@ class SubscriptionService {
       final decodedCompact = _tryDecodeBase64Flexible(current.replaceAll(RegExp(r'\s+'), ''));
       final uriDecoded = _tryUriDecode(current);
 
-      // _decodeBase64Tokens сюда НЕ добавляем — он плодит варианты и раздувает очередь
+      // _decodeBase64Tokens сюда не добавляем — он плодит варианты и раздувает очередь
 
       final nextCandidates = [html, js, decoded, decodedCompact, uriDecoded]
           .whereType<String>()
@@ -1424,10 +1424,10 @@ class SubscriptionService {
         lower.startsWith('proxy-providers:') ||
         lower.contains('\nproxy-providers:')) {
       // Clash мы исполняем, поэтому «формат не поддерживается» здесь было бы
-      // прямой неправдой — и именно так это выглядело у пользователя: подписка
+      // прямой неправдой — и так это выглядело у пользователя: подписка
       // с UA clash-клиента отказывалась обновляться с сообщением про
       // неподдерживаемый формат. Досюда доходит только конфиг, который не
-      // удалось взять по КОНКРЕТНОЙ причине, — её и называем.
+      // удалось взять по конкретной причине, — её и называем.
       final problem = CustomClashConfig.describeProblem(text);
       if (problem != null) return 'Clash subscription: $problem';
       return 'Clash subscription returned a config without a server address. '
@@ -1657,7 +1657,7 @@ class SubscriptionService {
 
   /// Вложенные карты Clash → плоские ключи, которыми оперирует [_proxyMapToUri].
   ///
-  /// Без этого прокси теряет ровно то, что делает его рабочим: ключ REALITY,
+  /// Без этого прокси теряет то, что делает его рабочим: ключ REALITY,
   /// имя grpc-сервиса, Host из заголовков ws. Ссылка при этом собирается
   /// «успешно» — и молча не подключается.
   static Map<String, String> _flattenClashProxy(Map<String, dynamic> raw) {
@@ -1762,7 +1762,7 @@ class SubscriptionService {
       final id = pick(['uuid', 'id']);
       if (host.isEmpty || port <= 0 || id.isEmpty) return null;
       final query = <String, String>{
-        // Транспорт и его параметры. `type` тут НЕ синоним `network`: у Clash
+        // Транспорт и его параметры. `type` тут не синоним `network`: у Clash
         // это протокол узла, и подставленный в транспорт он давал ссылку с
         // `type=vless`, то есть узел с несуществующим транспортом.
         ..._clashTransportQuery(pick),
@@ -2458,7 +2458,7 @@ class SubscriptionService {
       };
 
       // Дедуп конфигов: построчные пути парсера не дедуплицируют, а два
-      // одинаковых конфига дали бы два ServerItem с ОДНИМ id (exactMatch
+      // одинаковых конфига дали бы два ServerItem с одним id (exactMatch
       // возвращает один и тот же элемент) → duplicate ValueKey в списке UI.
       final uniqueConfigs = result.configs.toSet().toList();
 

@@ -8,7 +8,9 @@ import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/servers_tab.dart';
 import 'package:keqdroid/screens/subscriptions_tab.dart';
+import 'package:keqdroid/services/vpn_engine.dart';
 
+import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
 /// Шторка выбора интервала автообновления открывается из двух мест — из шапки
@@ -68,6 +70,11 @@ Future<void> _pump(WidgetTester tester, Widget home) async {
         ),
         subscriptionsProvider.overrideWith(() => _FakeSubs([_sub])),
         settingsNotifierProvider.overrideWith(_FakeSettings.new),
+        // См. FakeTunnelBackend: иначе тест поднимает настоящий бэкенд
+        // туннеля, и на Linux он на выходе зовёт gsettings.
+        vpnEngineProvider.overrideWithValue(
+          VpnEngine.withBackend(FakeTunnelBackend()),
+        ),
       ],
       child: MaterialApp(
         locale: const Locale('en'),

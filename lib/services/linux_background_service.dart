@@ -9,15 +9,14 @@ import 'package:window_manager/window_manager.dart';
 import '../core/app_logger.dart';
 import 'storage_service.dart';
 
-/// Linux background/tray behaviour (Windows has its own native tray).
+/// Фон и трей на Linux; у Windows трей свой, нативный.
 ///
-/// * Closing the window hides it (the tunnel keeps running) instead of quitting.
-/// * The tray icon's menu restores the window / quits. AppIndicator is
-///   menu-only: raw clicks are never delivered to the app, and on vanilla
-///   GNOME the icon needs the AppIndicator extension to be visible.
-/// * Single-instance: launching the app again brings the running window back to
-///   front (the reliable way to restore on GNOME-without-tray) instead of
-///   spawning a second copy.
+/// Закрытие окна прячет его, а не выходит из приложения — туннель продолжает
+/// работать. Вернуть окно и выйти можно из меню трея: AppIndicator умеет только
+/// меню, одиночные клики до приложения не доходят вовсе, а на чистом GNOME
+/// значок вообще не виден без расширения. Второй запуск не плодит копию, а
+/// поднимает уже работающее окно — на GNOME без трея это единственный надёжный
+/// способ его вернуть.
 class LinuxBackgroundService with WindowListener, TrayListener {
   LinuxBackgroundService._();
   static final LinuxBackgroundService instance = LinuxBackgroundService._();

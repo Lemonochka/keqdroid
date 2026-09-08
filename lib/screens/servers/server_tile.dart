@@ -85,7 +85,7 @@ class _ServerTile extends ConsumerWidget {
     // кэшируем цвета, чтобы не дёргать Theme.of() на каждый вложенный виджет
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    // Акцент подписки подменяет РОЛЬ, а не отдельный цвет: и заливка выбранного
+    // Акцент подписки подменяет роль, а не отдельный цвет: и заливка выбранного
     // сегмента, и текст на нём берутся из одной тональной схемы, поэтому
     // контраст остаётся выверенным при любой картинке. Подписи «серверов
     // вообще» (пинг, протокол) остаются на ролях темы — иначе список стал бы
@@ -94,7 +94,7 @@ class _ServerTile extends ConsumerWidget {
     final accentColor = accent?.seed ?? AppTheme.accent(context);
     final textLightColor = AppTheme.textLight(context);
 
-    // Активный сервер — ВЫБРАННЫЙ СЕГМЕНТ списка, по спеке expressive-списка:
+    // Активный сервер — выбранный сегмент списка, по спеке expressive-списка:
     // форма морфится к 16dp по кругу, заливка уходит в цветной контейнер. Ни
     // подъёма, ни отступа, ни подсветки поверх — выделение несут контейнер и
     // его форма, и больше ничего.
@@ -124,7 +124,7 @@ class _ServerTile extends ConsumerWidget {
           ? (accent?.onContainer ?? scheme.onSecondaryContainer)
           : null,
       opaqueBadge: isActive,
-      // Активный сервер отличается ВЕСОМ, а не размером: у M3E это и есть
+      // Активный сервер отличается весом, а не размером: у M3E это и есть
       // роль усиленного варианта.
       emphasizeTitle: isActive,
       trailing: _buildTrailing(
@@ -142,7 +142,7 @@ class _ServerTile extends ConsumerWidget {
     // доступности/autofill включает семантику реально, а её геометрия
     // пересчитывается на каждом кадре свайпа — чем меньше узлов, тем дешевле.
     //
-    // Внешний SizedBox — ШАГ списка, а не высота сегмента: зазор набирается
+    // Внешний SizedBox — шаг списка, а не высота сегмента: зазор набирается
     // полями внутри него. От шага считаются `mainAxisExtent` сетки и смещение
     // якоря активного сервера, и он обязан остаться прежним.
     return RepaintBoundary(
@@ -266,7 +266,7 @@ class _ServerTile extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
-      // Цвет НЕ задаём: из темы шторка берёт surfaceContainerLow. Здесь стоял
+      // Цвет не задаём: из темы шторка берёт surfaceContainerLow. Здесь стоял
       // AppTheme.bg — ровно фон страницы, поэтому шторка не отделялась от неё
       // ничем, кроме затемнения, и читалась плоской.
       // Настоящая ручка вместо нарисованной. Прежняя была просто Container

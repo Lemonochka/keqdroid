@@ -8,7 +8,7 @@ import 'socks5_credentials.dart';
 /// Порт локального HTTP-инбаунда ядра, через который прямо сейчас можно выйти
 /// в сеть, либо null — «идти напрямую».
 ///
-/// Спрашивается на КАЖДЫЙ запрос, а не при сборке клиента: VPN включают и
+/// Спрашивается на каждый запрос, а не при сборке клиента: VPN включают и
 /// выключают посреди жизни сервиса (сервис подписок живёт всё время работы
 /// приложения), а порт активной сессии может отличаться от настроенного.
 typedef LocalProxyPortResolver = int? Function();
@@ -111,11 +111,10 @@ void configureDioForActiveVpn(
   configureDioForLocalVpnHttpProxy(dio, httpPort: httpPort);
 }
 
-/// Есть ли у активного туннеля локальный HTTP-инбаунд на 127.0.0.1:httpPort,
-/// через который Dio может выйти в сеть по туннелю:
-///  - desktop: есть всегда (xray/keqrnel http-in; wireproxy [http] в awg);
-///  - Android xray: есть (http-in из config_gen работает и в chain-режиме);
-///  - Android awg: нет — но пакет приложения включён в TUN, прокси не нужен.
+/// Есть ли у активного туннеля локальный HTTP-инбаунд, через который Dio выйдет
+/// в сеть по туннелю. На десктопе он есть всегда, на Android с xray тоже.
+/// Исключение — Android с AmneziaWG: инбаунда нет, но пакет приложения включён
+/// в TUN, и прокси там не нужен.
 bool tunnelHasLocalHttpProxy({
   required bool vpnConnected,
   required bool awgBackend,

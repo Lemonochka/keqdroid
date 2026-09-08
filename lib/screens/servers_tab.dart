@@ -191,7 +191,7 @@ class _ConnectHeader extends ConsumerWidget {
     // состоянии «подключается», чтобы переход был одной плавной дугой.
     final isConnected =
         vpnStatus == VpnStatus.connected && !serverSwitchInProgress;
-    // `disconnecting` сюда НЕ входит, и это не упрощение.
+    // `disconnecting` сюда не входит, и это не упрощение.
     //
     // Отключение мгновенное, но флаг заводил кнопку в состояние «идёт работа»:
     // на пути в отключённый вид успевал появиться индикатор, дожить до
@@ -202,7 +202,7 @@ class _ConnectHeader extends ConsumerWidget {
         serverSwitchInProgress || vpnStatus == VpnStatus.connecting;
 
     final isDesktop = PlatformBootstrap.isDesktop;
-    // Высота волны ПОСТОЯННА. Раньше она ужималась на connecting/connected,
+    // Высота волны постоянна. Раньше она ужималась на connecting/connected,
     // чтобы шапка не разрасталась от чипов трафика, но менялась мгновенно —
     // и всё выше списка прыгало и слегка уменьшалось в момент подключения.
     // Единственное, что теперь меняет высоту шапки, — появление чипов, а его
@@ -234,7 +234,7 @@ class _ConnectHeader extends ConsumerWidget {
               ),
               const SizedBox(height: 18),
               SizedBox(
-                // Высота под статус ФИКСИРОВАНА и рассчитана на две строки.
+                // Высота под статус фиксирована и рассчитана на две строки.
                 // Имена серверов разной длины занимают то одну строку, то две,
                 // и шапка меняла высоту при переключении сервера — волна и
                 // список под ней подпрыгивали.
@@ -368,7 +368,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // На десктопе `inactive` = окно ВИДИМО, но не в фокусе (клик по другому
+    // На десктопе `inactive` = окно видимо, но не в фокусе (клик по другому
     // окну, разворот из трея через таскбар) — считать его «фоном» нельзя:
     // при развороте через таскбар Windows нередко доставляет только `inactive`
     // (`resumed` — лишь при получении фокуса), и анимация линии подключения
@@ -638,7 +638,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
       });
     });
 
-    // Видимость вкладки — только listen, НЕ watch: она влияет лишь на явные
+    // Видимость вкладки — только listen, не watch: она влияет лишь на явные
     // контроллер волны через _syncHeaderAnimations, а watch
     // перестраивал бы весь таб (хедер + список) прямо в кадре свайпа.
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -841,7 +841,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                       _scanQrAndImport(ctx);
                     },
                   ),
-                // Цепочка собирается из УЖЕ добавленных серверов, поэтому она
+                // Цепочка собирается из уже добавленных серверов, поэтому она
                 // последняя в списке и появляется, только когда есть из чего
                 // собирать — иначе первый же экран приложения обещал бы то,
                 // чего в нём пока нельзя сделать.

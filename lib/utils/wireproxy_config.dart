@@ -2,7 +2,7 @@
 ///
 /// wireproxy-awg reads a standard WG/AWG `[Interface]`/`[Peer]` config (including
 /// the AmneziaWG obfuscation keys) plus `[Socks5]` / `[http]` sections that expose
-/// the tunnel as local proxies. Used for AmneziaWG **proxy mode** on Windows:
+/// the tunnel as local proxies. Used for AmneziaWG proxy mode on Windows:
 /// wireproxy → local SOCKS5/HTTP → Windows system proxy (no admin, no TUN).
 class WireproxyConfigGen {
   static String generate(

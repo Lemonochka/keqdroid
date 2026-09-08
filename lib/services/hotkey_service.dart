@@ -6,13 +6,11 @@ import 'package:flutter/widgets.dart';
 import '../core/app_logger.dart';
 import '../models/hotkey_config.dart';
 
-/// Хоткеи на desktop.
+/// Хоткеи на десктопе.
 ///
-/// * Windows — системные (RegisterHotKey в native-раннере): срабатывают даже
-///   когда окно скрыто в трее. Нажатие приходит из натива методом
-///   `onHotkeyPressed` (роутится через VpnNativeBridge → [dispatchAction]).
-/// * Linux — внутри приложения (HardwareKeyboard), пока окно в фокусе:
-///   глобальные хоткеи под Wayland приложению недоступны.
+/// На Windows они системные и срабатывают даже когда окно спрятано в трее:
+/// нажатие приходит из натива и роутится в [dispatchAction]. На Linux — только
+/// пока окно в фокусе: глобальные хоткеи под Wayland приложению недоступны.
 class HotkeyService {
   HotkeyService._();
 

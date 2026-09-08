@@ -275,7 +275,7 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
 
   /// Маршрут одной карточкой: «это устройство» → узлы → «добавить» → «интернет».
   ///
-  /// Кнопка добавления стоит ПЕРЕД «интернетом», а не после: новый узел уходит
+  /// Кнопка добавления стоит перед «интернетом», а не после: новый узел уходит
   /// в конец списка и становится выходным — там, где кнопка и нарисована.
   Widget _routeCard(AppLocalizations l10n) {
     return DecoratedSliver(
@@ -362,7 +362,7 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   // Смешиваем с фоном карточки, а не кладём полупрозрачным:
-                  // кружок стоит ПОВЕРХ линии маршрута, и сквозь прозрачный
+                  // кружок стоит поверх линии маршрута, и сквозь прозрачный
                   // фон она просвечивала — кнопка выглядела перечёркнутой.
                   color: Color.alphaBlend(
                     color.withValues(alpha: 0.15),

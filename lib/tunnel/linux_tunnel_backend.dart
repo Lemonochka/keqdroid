@@ -34,17 +34,15 @@ Stream<void> get linuxTunRememberOffers => _linuxTunRememberController.stream;
 
 /// Linux desktop backend (proxy + TUN).
 ///
-/// Mirrors the proven pure-Dart pipeline of [WindowsTunnelBackend] — spawning
-/// xray / sing-box / wireproxy and waiting on their local ports — without any
-/// native MethodChannel.
+/// Тот же чисто дартовый конвейер, что у [WindowsTunnelBackend]: запустить ядра
+/// и дождаться их локальных портов, без нативного канала.
 ///
-/// * **Proxy mode**: xray (or wireproxy-awg) exposes a local SOCKS5/HTTP proxy,
-///   applied to the desktop via GNOME `gsettings` (best effort; degrades on
-///   non-GNOME — the local proxy still works and can be set manually).
-/// * **TUN mode**: xray/wireproxy provide the local SOCKS5, then sing-box runs
-///   a `tun` inbound that captures all traffic. Creating the TUN device and
-///   editing routes needs root, so sing-box is launched via `pkexec` (a polkit
-///   GUI prompt). Traffic counters are read from the tun interface sysfs stats.
+/// В proxy-режиме ядро поднимает локальный SOCKS/HTTP, а системный прокси
+/// прописывается через `gsettings` — по возможности: на не-GNOME он не встанет,
+/// но локальный прокси работает и его можно указать руками. В TUN-режиме поверх
+/// того же SOCKS запускается sing-box с tun-инбаундом; создать устройство и
+/// править маршруты может только root, поэтому он идёт через `pkexec`. Счётчики
+/// трафика там читаются из sysfs tun-интерфейса.
 class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   static const tunInterfaceName = 'tun-keqdis';
 
@@ -54,7 +52,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   static const _coreLogPath = '/tmp/keqdroid_keqrnel.log';
 
   /// Момент запуска pkexec текущей сессии — [_coreLogPath] обнуляется только
-  /// внутри root-обёртки, так что при падении ДО неё (сам pkexec) файл ещё
+  /// внутри root-обёртки, так что при падении до неё (сам pkexec) файл ещё
   /// хранит прошлую сессию; по mtime отличаем свежий лог от застарелого.
   DateTime? _keqrnelLaunchedAt;
 
@@ -171,9 +169,9 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       await _cleanupForRestart();
       activeInstance = this;
       // _cleanupForRestart() зануляет _activeMode внутри _stopSessionInner —
-      // вернуть режим НОВОЙ сессии. Иначе вся сессия живёт с _activeMode=null:
+      // вернуть режим новой сессии. Иначе вся сессия живёт с _activeMode=null:
       // getCurrentState теряет режим, а setTrafficStatsPollingEnabled(true)
-      // после разворота из трея молча НЕ перезапускает опрос счётчиков —
+      // после разворота из трея молча не перезапускает опрос счётчиков —
       // трафик/время замерзают до реконнекта.
       _activeMode = request.mode;
       _sessionDir = await LinuxCorePaths.sessionDir();
@@ -515,7 +513,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   // ---- passwordless TUN (polkit rule) -------------------------------------
 
   /// Root-owned хелпер, который pkexec запускает вместо inline `sh -c`.
-  /// polkit-правило разрешает беспарольный запуск ИМЕННО этого пути.
+  /// polkit-правило разрешает беспарольный запуск именно этого пути.
   /// Путь версионирован намеренно. Тело обёртки — контракт по позициям
   /// аргументов, а установленный у пользователя хелпер живёт своей жизнью:
   /// добавь мы восьмой аргумент к прежнему пути, у всех, кто уже поставил
@@ -537,15 +535,15 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   /// Разово за запуск приложения: показали ли уже предложение установить правило.
   static bool _rememberOfferedThisRun = false;
 
-  /// Тело root-обёртки TUN. Один и тот же скрипт запускается двумя путями:
-  ///  * правило не стоит → `pkexec sh -c <body> sh <args>` (polkit спросит пароль);
-  ///  * правило стоит     → `pkexec <_polkitHelperPath> <args>` (без пароля),
-  ///    файл хелпера = shebang + это тело.
+  /// Тело root-обёртки TUN. Скрипт один, а путей два: без правила polkit это
+  /// `pkexec sh -c <body>` с запросом пароля, с правилом — `pkexec` по
+  /// фиксированному пути хелпера без пароля, и файл хелпера это shebang плюс то
+  /// же тело.
   /// Восьмой аргумент — какое ядро запускать: командные строки у них разные
   /// (`keqrnel run -c <cfg>` против `mihomo -d <home> -f <cfg>`), а обёртка
   /// одна. Пустой KIND означает keqrnel — так обёртка ведёт себя как прежняя.
   ///
-  /// `modprobe tun` здесь потому, что это ЕДИНСТВЕННОЕ место, где мы root:
+  /// `modprobe tun` здесь потому, что это единственное место, где мы root:
   /// без модуля `/dev/net/tun` не существует, и ядро падает на открытии
   /// устройства («no such file or directory») — типовой случай минимальных
   /// сборок ядра и контейнеров. Позиции аргументов при этом не тронуты, так
@@ -591,9 +589,9 @@ polkit.addRule(function(action, subject) {
 ''';
 
   /// Установлено ли беспарольное правило. Признаком берём root-хелпер по
-  /// [_polkitHelperPath], а polkit-правило НАМЕРЕННО не статим: каталог
+  /// [_polkitHelperPath], а polkit-правило намеренно не статим: каталог
   /// `/etc/polkit-1/rules.d` имеет режим 0700 (root/polkitd), обычный юзер в
-  /// него не может зайти — `existsSync` на файле внутри ВСЕГДА вернёт false,
+  /// него не может зайти — `existsSync` на файле внутри всегда вернёт false,
   /// даже когда правило на месте. Гейт по нему держал тумблер вечно
   /// «выключенным» после успешной установки (пользователь вводил пароль,
   /// файлы писались, но UI перечитывал «не установлено» и просил пароль снова).
@@ -608,7 +606,7 @@ polkit.addRule(function(action, subject) {
     }
   }
 
-  /// Ставит root-хелпер и polkit-правило ОДНИМ элевейтед-запуском (polkit
+  /// Ставит root-хелпер и polkit-правило одним элевейтед-запуском (polkit
   /// спросит пароль один раз). После этого TUN стартует без пароля. true — успех.
   static Future<bool> installPasswordlessTun() async {
     if (!Platform.isLinux) return false;
@@ -676,7 +674,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       );
     }
 
-    // Стек TUN-инбаунда — под возможности ЭТОГО бинаря: ядро без
+    // Стек TUN-инбаунда — под возможности этого бинаря: ядро без
     // `-tags with_gvisor` на `stack: gvisor` не ругается в конфиге, а падает
     // при старте («gVisor is not included in this build»), и TUN не поднимается
     // вовсе. Поставляемый keqrnel собран с тегом, собранный руками — вряд ли.
@@ -736,7 +734,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
   /// Копия ядра, которую сможет исполнить root.
   ///
   /// В AppImage бинарь лежит на пользовательском FUSE-монте (`/tmp/.mount_*`),
-  /// куда root ВООБЩЕ не может зайти, и pkexec умирает с «Permission denied» /
+  /// куда root вообще не может зайти, и pkexec умирает с «Permission denied» /
   /// кодом 127. Копия в каталоге сессии (обычный /tmp) от этого избавлена.
   Future<String> _stageBinaryForRoot(String binPath, String name) async {
     final staged = p.join(_sessionDir!.path, name);
@@ -762,7 +760,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
   /// ожидание самой авторизации. Возвращает процесс pkexec — готовность TUN
   /// меряет уже вызывающий.
   ///
-  /// [onStarted] зовётся СРАЗУ после запуска, до ожидания авторизации: стоп,
+  /// [onStarted] зовётся сразу после запуска, до ожидания авторизации: стоп,
   /// пришедший в это окно, обязан найти процесс на месте и снять сентинел.
   /// Иначе root-ядро остаётся жить с поднятым TUN, а убить его нам уже нечем —
   /// обычный пользователь root-процессу сигнал не пошлёт.
@@ -785,7 +783,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     // delete the file (on stop) — or the app dies — it SIGTERMs sing-box AS ROOT,
     // letting it revert auto_route/nftables.
     //
-    // Sentinel-файл + `kill -0` PID poll, а НЕ stdin: после polkit-аутентификации
+    // Sentinel-файл + `kill -0` PID poll, а не stdin: после polkit-аутентификации
     // pkexec не пробрасывает stdin вызывающего в elevated-потомка — у того stdin
     // сразу на EOF, и любой stdin-вотчдог убивает keqrnel в момент запуска.
     // Сентинел не требует ни stdin, ни повторной элевации.
@@ -882,7 +880,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
 
   /// Ждёт завершения polkit-аутентификации перед отсчётом готовности TUN.
   ///
-  /// [Process.start] для pkexec возвращается сразу — ещё ДО того, как
+  /// [Process.start] для pkexec возвращается сразу — ещё до того, как
   /// пользователь ввёл пароль в окне polkit. Если запустить 20-секундный
   /// бюджет [_waitForSingbox] в этот же момент, его съедает сам ввод пароля:
   /// tun-интерфейс не успевает появиться и коннект падает «keqrnel TUN did
@@ -933,7 +931,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       if (code != null) {
         throw VpnStartException(_elevationError(code, log));
       }
-      // Строка ТОЛЬКО от sing-box: прежнее «"started" где-то и "tun"
+      // Строка только от sing-box: прежнее «"started" где-то и "tun"
       // где-то» ловило баннер встроенного xray, а он печатается раньше, чем
       // поднят tun-инбаунд (ядро стартует аутбаунды до инбаундов).
       if (singboxTunReady(log.toString())) return true;
@@ -962,13 +960,13 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     return false;
   }
 
-  /// User-facing message for an elevated keqrnel exit. pkexec uses distinct
-  /// codes for the two "no root granted" cases — surface them with a clear hint
-  /// (and the Proxy-mode fallback) instead of a raw exit code:
-  ///  * 126 — the user dismissed the polkit password dialog (cancelled).
-  ///  * 127 — not authorized / no polkit agent available to prompt (common on
-  ///    minimal tiling WMs that don't run polkit-gnome / lxpolkit / kde agent).
-  /// Any other code is a real core failure — keep the code + log tail.
+  /// Что показать человеку, когда ядро под root вышло с ошибкой.
+  ///
+  /// У pkexec два своих кода на «root не дали»: 126 — диалог пароля закрыли,
+  /// 127 — не авторизовано или спросить некому, агента polkit в сессии нет (так
+  /// бывает на тайлингах без polkit-gnome и подобных). Их разбираем и советуем
+  /// proxy-режим; любой другой код — настоящая поломка ядра, оставляем код и
+  /// хвост лога.
   String _elevationError(int code, StringBuffer log) {
     switch (code) {
       case 126:
@@ -981,7 +979,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       default:
         // Реальный вывод ядра лежит в _coreLogPath (pipe pkexec обычно пуст,
         // см. коммент у обёртки) — тянем его, иначе юзер видит голый код.
-        // Файл доверяем только если он записан ПОСЛЕ запуска этой сессии.
+        // Файл доверяем только если он записан после запуска этой сессии.
         var coreTail = '';
         try {
           final coreLog = File(_coreLogPath);
@@ -1015,9 +1013,9 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
 
   /// Ходит ли хоть что-нибудь через поднятое ядро.
   ///
-  /// Проверка идёт через ЛОКАЛЬНЫЙ HTTP-инбаунд — он есть в обоих режимах (в
+  /// Проверка идёт через локальный HTTP-инбаунд — он есть в обоих режимах (в
   /// TUN его инбаунды лифтит keqrnel, через него же качается обновление), и
-  /// путь через него ровно тот же, что у трафика из туннеля: те же правила
+  /// путь через него тот же, что у трафика из туннеля: те же правила
   /// роутинга, тот же аутбаунд, тот же сервер.
   ///
   /// Только предупреждение: сессию не рвём. Правило пользователя, отправляющее
@@ -1067,7 +1065,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
         'it manually if your desktop does not honour gsettings.',
       );
     }
-    // Намеренно НЕ трогаем прокси-настройки браузеров: gsettings задаёт
+    // Намеренно не трогаем прокси-настройки браузеров: gsettings задаёт
     // системный прокси, а Firefox можно один раз переключить на «Использовать
     // системные настройки прокси». Приложение чужие значения не правит.
   }
@@ -1161,7 +1159,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     }
   }
 
-  /// Зачистка перед стартом новой сессии — БЕЗ эмитов disconnecting/disconnected.
+  /// Зачистка перед стартом новой сессии — без эмитов disconnecting/disconnected.
   /// Нотифаер пропускает disconnected из стрима в UI даже при connect-in-flight
   /// (так нужно Android'у: отмена диалога разрешения), поэтому эмит отсюда
   /// проваливал кнопку в серый «отключён» на пару секунд, пока поднимались ядра.

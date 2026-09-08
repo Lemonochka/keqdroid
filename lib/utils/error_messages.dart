@@ -198,7 +198,7 @@ UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
   final base = explainError(error);
   // Заголовок ключуется по коду, а не по виду ошибки: видов шесть на
   // одиннадцать кодов, и «Connection failed: auth» вместо «Device Limit
-  // Reached» отнимает у пользователя ровно ту подсказку, ради которой
+  // Reached» отнимает у пользователя ту подсказку, ради которой
   // код и различали. Виды остались за vpnErrorStatusLabel — там короткая
   // подпись статуса, и общая формулировка уместна.
   final title = switch (base.code) {

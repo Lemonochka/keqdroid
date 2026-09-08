@@ -182,7 +182,7 @@ final appIconCacheProvider = Provider<AppIconCache>(
 /// в трее без перезапуска, и без перепроверки новый релиз виден только вручную.
 const _updateRecheckInterval = Duration(hours: 6);
 
-// Подписка ТОЛЬКО на факт «подключён ли VPN» через select, не на весь VpnState:
+// Подписка только на факт «подключён ли VPN» через select, не на весь VpnState:
 // телеметрия эмитит состояние каждую секунду, и watch целиком ре-ранил бы
 // провайдер на каждый эмит — checkForUpdate выжирал бы анонимный лимит GitHub
 // (60 запросов/час). Дополнительно от спама сетью защищает in-memory троттлинг
@@ -208,7 +208,7 @@ final systemAccentColorProvider = StreamProvider<Color?>((ref) async* {
   }
 
   yield select(await VpnNativeBridge.getSystemAccentCandidates());
-  // Смена обоев запускает извлечение цвета уже ПОСЛЕ нашего чтения на старте:
+  // Смена обоев запускает извлечение цвета уже после нашего чтения на старте:
   // без подписки «поставил обои — приложение прежнего цвета» лечилось бы
   // только перезапуском.
   await for (final candidates in VpnNativeBridge.systemAccentChanges) {

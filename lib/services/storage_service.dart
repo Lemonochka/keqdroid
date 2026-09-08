@@ -35,16 +35,16 @@ class StorageService {
 
   /// Все записи, reload() и read-modify-write циклы выполняются строго по
   /// очереди.
-  /// 1) SharedPreferences.reload() подменяет ВЕСЬ Dart-кэш снапшотом
+  /// 1) SharedPreferences.reload() подменяет весь Dart-кэш снапшотом
   ///    платформы; если снапшот снят до завершения параллельного set*, кэш
   ///    откатывается к старым значениям (так «воскресали» удалённые пакеты
   ///    split tunneling).
   /// 2) upsert/replace/delete читают список, правят и пишут целиком — два
   ///    параллельных цикла (например, батч обновления подписок) читали одну
   ///    базу и последняя запись затирала изменения первой (lost update).
-  ///    Поэтому в _serial оборачивается ВЕСЬ цикл, а не только setString.
+  ///    Поэтому в _serial оборачивается весь цикл, а не только setString.
   ///
-  /// ВАЖНО: _serial не реентерабелен — изнутри _serial-блока зовите только
+  /// важно: _serial не реентерабелен — изнутри _serial-блока зовите только
   /// сырые _write*-хелперы и get*-чтения, не публичные save*-методы.
   Future<void> _opChain = Future.value();
 
@@ -55,7 +55,7 @@ class StorageService {
   }
 
   /// Decodes a stored JSON array, parsing each element with [parse] and
-  /// **skipping** entries that fail instead of discarding the whole list.
+  /// skipping entries that fail instead of discarding the whole list.
   ///
   /// A single corrupt record (interrupted write, schema change across an
   /// upgrade, manual edit) must not wipe every server/subscription/rule the
@@ -167,7 +167,7 @@ class StorageService {
         );
       });
 
-  /// Точечно применяет результаты пинга к АКТУАЛЬНОМУ списку в storage и
+  /// Точечно применяет результаты пинга к актуальному списку в storage и
   /// возвращает записанный список. Именно точечно, а не снапшотом провайдера
   /// через saveServers: если параллельно обновилась подписка, устаревший
   /// список из памяти затёр бы её новые серверы.

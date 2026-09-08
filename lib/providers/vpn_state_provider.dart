@@ -1,6 +1,6 @@
 part of 'providers.dart';
 
-/// Что делать с состоянием из натива, пока идёт НАША попытка подключения.
+/// Что делать с состоянием из натива, пока идёт наша попытка подключения.
 enum ConnectInFlightAction {
   /// Не трогать состояние: сообщение ничего не говорит об исходе попытки.
   ignore,
@@ -40,7 +40,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   bool _connectInFlight = false;
   // Окно от тапа до фактического старта сессии. Всё это время нативный сервис
   // ещё не поднят и честно отвечает `disconnected` — принимать этот ответ за
-  // исход НАШЕЙ попытки нельзя.
+  // исход нашей попытки нельзя.
   bool _awaitingSessionStart = false;
   bool _serverSwitchInProgress = false;
   // Пользователь отменил попытку подключения (тап по кругу в connecting) —
@@ -382,7 +382,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           routingMode != AppRoutingMode.allProxy) {
         // Не «сплит не сработал», а «сессия идёт как весь-трафик»: без туннеля
         // ядро не знает процесса-владельца соединения, а оставленный от сплита
-        // финал (`onlySelected` → DIRECT) отправил бы мимо прокси ВСЁ.
+        // финал (`onlySelected` → DIRECT) отправил бы мимо прокси всё.
         AppLogger.instance.warn(
           'Split tunneling rules are ignored in Proxy mode on desktop: without '
           'a tunnel the core cannot tell which process a connection belongs '
@@ -430,7 +430,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // запрещён (WSAEACCES). Раньше любой из этих случаев заканчивался отказом
       // подключаться — снаружи «прокси/TUN не работает», а чинить надо руками и
       // в другом месте. Теперь порт подбирается рабочий; расхождение с
-      // настройкой идёт в лог, а сами настройки НЕ переписываются.
+      // настройкой идёт в лог, а сами настройки не переписываются.
       //
       // Ставить это раньше нельзя: выше есть ветка, которая сохраняет
       // `settings` в хранилище (автостарт без прав → Proxy), и подменённые
@@ -450,7 +450,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // 1. забираем SOCKS5-креды у нативного сервиса
       final creds = await engine.fetchSocksCredentials();
       // В режиме прокси креды вписывают руками в чужое приложение, поэтому там
-      // нужны ПОСТОЯННЫЕ, а не сессионные: нативные генерируются заново на
+      // нужны постоянные, а не сессионные: нативные генерируются заново на
       // каждое подключение, и настройка в стороннем приложении протухала бы
       // после первого же реконнекта.
       if (Platform.isAndroid &&
@@ -482,10 +482,10 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // noauth on the loopback inbounds in desktop proxy mode (safe: they bind
       // to 127.0.0.1 only). AmneziaWG proxy is already noauth via wireproxy.
       //
-      // На Android в режиме прокси — ровно та же причина, и она там жёстче.
+      // На Android в режиме прокси — та же причина, и она там жёстче.
       // Пароль к локальному SOCKS придуман для tun2socks: он единственный, кто
       // ходит в ядро в режиме VPN, и креды ему передаются в обход человека. В
-      // режиме прокси в ядро ходит ЧУЖОЕ приложение, а системному полю «прокси»
+      // режиме прокси в ядро ходит чужое приложение, а системному полю «прокси»
       // у Wi-Fi негде взять логин с паролем — там только адрес и порт. Оставь
       // мы auth, режим не работал бы вовсе: ядро отвечает `invalid username or
       // password` на каждое соединение.
@@ -494,7 +494,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       final proxyModeNoAuth = connectionMode == ConnectionMode.proxy &&
           (!Platform.isAndroid || !settings.proxyModeAuth);
 
-      // Ядро выбирает ФОРМАТ сервера, а настройка — только там, где формат
+      // Ядро выбирает формат сервера, а настройка — только там, где формат
       // берут оба (обычная ссылка). Готовый конфиг исполняет то ядро, на языке
       // которого он написан: xray-json — xray, clash-yaml — mihomo. Несовпадение
       // с выбором пользователя больше не молчит: раньше это выглядело как
@@ -515,7 +515,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       final vpnBackend = choice.backend;
       final mihomoPicked = vpnBackend == VpnBackend.mihomo;
 
-      // Координаты API ядра нужны ДО генерации: они едут внутрь конфига.
+      // Координаты API ядра нужны до генерации: они едут внутрь конфига.
       // У xray-пути аналога нет — там «Соединения» читают access-лог.
       final mihomoApi = MihomoApiSession();
       if (mihomoPicked) {
@@ -593,7 +593,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // перестаёт ходить вовсе. Снаружи это «приложение блокирует то, что
       // провайдер пускает через прокси» — называем причину вслух.
       if (server.protocol == 'custom') {
-        // Правила автора, привязанные к ЕГО инбаундам, после подмены инбаундов
+        // Правила автора, привязанные к его инбаундам, после подмены инбаундов
         // не сработают ни разу. Перехват DNS мы делаем за него сами, всё
         // остальное — молча мёртвый код в конфиге, и снаружи это «правила
         // провайдера не работают».

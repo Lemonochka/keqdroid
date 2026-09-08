@@ -1208,7 +1208,7 @@ class _ServerConfigEditorScreenState
   ///
   /// Именно `Material`, а не `Container` с `BoxDecoration`: внутри секций живут
   /// `SwitchListTile` (`allowInsecure`), а `ListTile` рисует свой фон и чернила
-  /// на БЛИЖАЙШЕМ `Material`-предке. Когда ближе оказывается крашеный
+  /// на ближайшем `Material`-предке. Когда ближе оказывается крашеный
   /// `DecoratedBox`, Flutter роняет ассерт «ListTile background color or ink
   /// splashes may be invisible» — в дебаге это отваливший кусок экрана при
   /// заходе в редактор, в релизе тихо съеденные чернила. Цвет, радиус и рамка

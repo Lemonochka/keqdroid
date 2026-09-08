@@ -22,12 +22,12 @@ class SubscriptionFetchException extends NetworkException {
   const SubscriptionFetchException(super.message, {required this.url, super.cause});
 }
 
-/// Свой таймаут запроса — НЕ `dart:async`.
+/// Свой таймаут запроса — не `dart:async`.
 ///
 /// Имя с приставкой намеренно: раньше класс звался `TimeoutException`, и в
 /// файле, импортирующем и его, и `dart:async`, побеждал он (не-SDK объявление
 /// перекрывает одноимённое из `dart:`), а в остальных — SDK'шный. Получалось,
-/// что `on TimeoutException` в разных файлах ловил РАЗНОЕ, и по имени это никак
+/// что `on TimeoutException` в разных файлах ловил разное, и по имени это никак
 /// не читалось.
 class RequestTimeoutException extends NetworkException {
   const RequestTimeoutException(super.message, {super.cause});

@@ -70,10 +70,9 @@ class KeqrnelConfig {
   /// Конфиг keqrnel как чистого socks/http-провайдера: оборачиваем готовый
   /// xray-конфиг (в нём уже свои inbounds с теми же портами/кредами и outbound
   /// сервера) во встроенный xray-движок, без sing-box TUN. Используется там, где
-  /// туннель/прокси держит кто-то другой:
-  ///  - Android: VpnService + tun2socks (keqrnel = drop-in замена libxray.so);
-  ///  - эфемерный keqrnel для url-пинга (EphemeralXrayPing).
-  /// Desktop proxy-режим идёт через [proxyWithStats] — там нужен подсчёт трафика.
+  /// туннель держит кто-то другой: на Android это VpnService с tun2socks, а на
+  /// десктопе — эфемерное ядро url-пинга. Proxy-режим десктопа идёт через
+  /// [proxyWithStats], там нужен подсчёт трафика.
   static String wrapXray(String xrayConfig) {
     final xray = jsonDecode(xrayConfig) as Map<String, dynamic>;
     final inbounds = _singboxInboundsFromXray(xray);

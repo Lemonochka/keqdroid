@@ -301,7 +301,7 @@ class _LanguageSettingsCard extends ConsumerWidget {
                         final scheme = Theme.of(context).colorScheme;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          // Пункты — на уровень ВЫШЕ шторки, а не на фоне
+                          // Пункты — на уровень выше шторки, а не на фоне
                           // страницы. Здесь стоял AppTheme.bg, то есть surface,
                           // а в AMOLED-режиме это чистый чёрный: карточки
                           // оказывались темнее собственного родителя (перевёрнутая

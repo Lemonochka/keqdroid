@@ -15,7 +15,7 @@ class AppTheme {
   static Color textLight(BuildContext ctx) => _cs(ctx).onSurfaceVariant;
   static Color red(BuildContext ctx) => _cs(ctx).error;
 
-  /// Текст и иконки ПОВЕРХ [red]. Белым тут не отделаться: в тёмной схеме
+  /// Текст и иконки поверх [red]. Белым тут не отделаться: в тёмной схеме
   /// `error` сам светло-красный, и белая надпись на нём почти не читается.
   static Color onRed(BuildContext ctx) => _cs(ctx).onError;
   static Color divider(BuildContext ctx) => _cs(ctx).outlineVariant;

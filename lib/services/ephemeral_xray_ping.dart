@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 
 import '../core/app_logger.dart';
@@ -8,6 +10,48 @@ import '../tunnel/linux_core_paths.dart';
 import '../tunnel/windows_core_paths.dart';
 import '../utils/keqrnel_config.dart';
 import 'windows_desktop_service.dart';
+
+final _ansiEscape = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
+
+/// Снимает ANSI-раскраску со строки лога ядра.
+///
+/// Ядро красит уровень сообщения даже в трубу, и без чистки в текст ошибки
+/// приезжало `\x1B[31mFATAL\x1B[0m` вместо слова FATAL.
+@visibleForTesting
+String stripAnsi(String value) => value.replaceAll(_ansiEscape, '');
+
+/// Хвост вывода временного ядра — и страховка, и единственная улика.
+///
+/// Трубы дочернего процесса обязаны вычитываться. Их не читал никто: стоило
+/// ядру наговорить больше буфера трубы, и оно вставало на записи навсегда —
+/// читать было некому. Снаружи это выглядело ровно как «порт не поднялся»,
+/// потому что порт после этого и правда не открывался.
+///
+/// Заодно это единственное место, где ядро объясняет, почему не поднялось.
+/// Держим последние строки: раньше они уходили в никуда.
+class _CoreLog {
+  _CoreLog(Process process) {
+    for (final stream in [process.stdout, process.stderr]) {
+      stream
+          .transform(const Utf8Decoder(allowMalformed: true))
+          .transform(const LineSplitter())
+          .listen(_add, onError: (Object _) {}, cancelOnError: false);
+    }
+  }
+
+  static const _keep = 6;
+  final _lines = <String>[];
+
+  void _add(String line) {
+    final trimmed = stripAnsi(line).trim();
+    if (trimmed.isEmpty) return;
+    _lines.add(trimmed);
+    if (_lines.length > _keep) _lines.removeAt(0);
+  }
+
+  /// Готовая приписка к сообщению об ошибке; пусто, если ядро молчало.
+  String get tail => _lines.isEmpty ? '' : ': ${_lines.join(' | ')}';
+}
 
 /// короткоживущий xray для url-пинга, как на android
 class EphemeralXrayPing {
@@ -25,10 +69,32 @@ class EphemeralXrayPing {
   /// The ephemeral test runs through keqrnel, so the xray config is wrapped into
   /// keqrnel's embedded-xray outbound (its own socks inbound binds the test port
   /// exactly like standalone xray).
-  static String _coreConfig(String xrayConfigJson) =>
-      (Platform.isWindows || Platform.isLinux)
-          ? KeqrnelConfig.wrapXray(xrayConfigJson)
-          : xrayConfigJson;
+  ///
+  /// [port] переписывает порт инбаунда уже в готовом конфиге: на повторной
+  /// попытке номер другой, а пересобирать ради этого весь xray-конфиг (он
+  /// приезжает сюда строкой от генератора) значило бы тащить сюда и генератор,
+  /// и настройки.
+  static String _coreConfig(String xrayConfigJson, int port) {
+    if (!Platform.isWindows && !Platform.isLinux) return xrayConfigJson;
+    final box = jsonDecode(KeqrnelConfig.wrapXray(xrayConfigJson))
+        as Map<String, dynamic>;
+    final inbounds = box['inbounds'];
+    if (inbounds is List) {
+      for (final inbound in inbounds) {
+        if (inbound is Map<String, dynamic>) inbound['listen_port'] = port;
+      }
+    }
+    return jsonEncode(box);
+  }
+
+  /// Свободный порт на петле. Тот же способ, что у PingService: занять сокет с
+  /// нулевым портом и сразу отпустить.
+  static Future<int> _freeLoopbackPort() async {
+    final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final port = socket.port;
+    await socket.close();
+    return port;
+  }
 
   static Future<Directory> _sessionDir() {
     if (Platform.isLinux) return LinuxCorePaths.sessionDir();
@@ -105,7 +171,7 @@ class EphemeralXrayPing {
     bool keepAlive = true,
   }) async {
     if (items.isEmpty) return [];
-    // Внутри батча — по очереди: все элементы приходят с ОДНИМ socksPort, и
+    // Внутри батча — по очереди: все элементы приходят с одним socksPort, и
     // параллельно они дрались бы за него. Параллелит вызовы PingService, он же
     // и выдаёт каждому замеру свой порт.
     final out = <({
@@ -201,35 +267,55 @@ class EphemeralXrayPing {
       p.join(sessionDir.path, 'xray_ping_${DateTime.now().microsecondsSinceEpoch}.json'),
     );
     Process? process;
+    // Порт может смениться на второй попытке — см. ниже.
+    var port = socksPort;
 
     try {
-      await configFile.writeAsString(_coreConfig(xrayConfigJson));
-      process = await Process.start(
-        xrayBin,
-        ['run', '-c', configFile.path],
-        workingDirectory: sessionDir.path,
-        mode: ProcessStartMode.normal,
-      );
-      unawaited(_attachCoreProcess(process.pid));
-
-      final portReady = await _waitForPort(
-        '127.0.0.1',
-        socksPort,
-        Duration(milliseconds: timeoutMs.clamp(500, 5000)),
-        process: process,
-      );
-      if (!portReady) {
-        return (
-          success: false,
-          latencyMs: null,
-          error: 'Xray SOCKS port $socksPort not ready',
-          httpStatus: null,
+      for (var attempt = 0; attempt < 2; attempt++) {
+        await configFile.writeAsString(_coreConfig(xrayConfigJson, port));
+        process = await Process.start(
+          xrayBin,
+          ['run', '-c', configFile.path],
+          workingDirectory: sessionDir.path,
+          mode: ProcessStartMode.normal,
         );
+        unawaited(_attachCoreProcess(process.pid));
+        final log = _CoreLog(process);
+
+        final startup = await _waitForPort(
+          '127.0.0.1',
+          port,
+          Duration(milliseconds: timeoutMs.clamp(500, _startupBudgetMs)),
+          process: process,
+        );
+        if (startup.ready) break;
+
+        // Ядро выпало сразу — самая частая причина этого на десктопе в
+        // TUN-режиме: порт увели у нас из-под рук. Свободный номер мы
+        // выбираем, заняв и тут же отпустив сокет, а между этим и bind'ом
+        // ядра проходит время старта процесса. В TUN через машину идёт весь
+        // трафик, динамических портов расходуется много, и в это окно порт
+        // достаётся чужому исходящему соединению — тогда ядро падает на
+        // «address already in use», а пользователь видит мёртвый сервер при
+        // живом. Одна повторная попытка со свежим портом это закрывает;
+        // настоящую поломку конфига она не чинит, но и стоит меньше секунды —
+        // упавшее ядро замечается по коду выхода, а не по таймауту.
+        await _killProcess(process);
+        process = null;
+        if (startup.exitCode == null || attempt == 1) {
+          return (
+            success: false,
+            latencyMs: null,
+            error: _startupError(startup.exitCode, port, log),
+            httpStatus: null,
+          );
+        }
+        port = await _freeLoopbackPort();
       }
 
       return await _httpProbeViaSocks(
         testUrl: testUrl,
-        socksPort: socksPort,
+        socksPort: port,
         timeoutMs: timeoutMs,
         keepAlive: keepAlive,
       );
@@ -276,7 +362,7 @@ class EphemeralXrayPing {
     Process? process;
 
     try {
-      await configFile.writeAsString(_coreConfig(xrayConfigJson));
+      await configFile.writeAsString(_coreConfig(xrayConfigJson, socksPort));
       process = await Process.start(
         xrayBin,
         ['run', '-c', configFile.path],
@@ -284,18 +370,19 @@ class EphemeralXrayPing {
         mode: ProcessStartMode.normal,
       );
       unawaited(_attachCoreProcess(process.pid));
+      final log = _CoreLog(process);
 
-      final portReady = await _waitForPort(
+      final startup = await _waitForPort(
         '127.0.0.1',
         socksPort,
-        Duration(milliseconds: timeoutMs.clamp(500, 6000)),
+        Duration(milliseconds: timeoutMs.clamp(500, _startupBudgetMs)),
         process: process,
       );
-      if (!portReady) {
+      if (!startup.ready) {
         return (
           success: false,
           kbps: null,
-          error: 'Xray SOCKS port $socksPort not ready',
+          error: _startupError(startup.exitCode, socksPort, log),
         );
       }
 
@@ -392,7 +479,7 @@ class EphemeralXrayPing {
     Socket? raw;
     _HttpResponseReader? reader;
     try {
-      // Соединение ведём РУКАМИ, а не через HttpClient, и это не вкусовщина.
+      // Соединение ведём руками, а не через HttpClient, и это не вкусовщина.
       //
       // `HttpClient` не переиспользует туннель CONNECT: замерено — три запроса
       // подряд открывают три туннеля, тогда как без прокси тот же клиент
@@ -403,7 +490,7 @@ class EphemeralXrayPing {
       // и пороги цвета красили здоровое в красное. На Android этой беды нет:
       // там `HttpURLConnection` держит пул как положено.
       //
-      // Своими руками мы получаем ровно ту же семантику, что у Android:
+      // Своими руками мы получаем ту же семантику, что у Android:
       // рукопожатие один раз, дальше GET'ы по одному и тому же TLS-сокету.
       raw = await Socket.connect(
         InternetAddress.loopbackIPv4,
@@ -505,7 +592,19 @@ class EphemeralXrayPing {
     return trimmed;
   }
 
-  static Future<bool> _waitForPort(
+  /// Сколько ждём, пока временное ядро откроет свой порт.
+  ///
+  /// Было 5 секунд, и на десктопе в TUN-режиме этого не хватало: батч поднимает
+  /// до шести ядер разом (PingService.urlPingConcurrency), они делят диск и
+  /// антивирусную проверку, а срок у всех шести общий — стартуют-то они в одну
+  /// секунду. Успевали первые, остальные краснели «порт не поднялся» на живых
+  /// серверах. Упавшее ядро ждать не заставляет: выход процесса замечается
+  /// сразу и без таймаута, так что запас платят только те, кто реально
+  /// поднимается медленно.
+  static const int _startupBudgetMs = 12000;
+
+  /// Ждёт порт временного ядра. `exitCode` не null — ядро вышло само.
+  static Future<({bool ready, int? exitCode})> _waitForPort(
     String host,
     int port,
     Duration maxWait, {
@@ -519,7 +618,7 @@ class EphemeralXrayPing {
           const Duration(milliseconds: 1),
           onTimeout: () => -1,
         );
-        if (code >= 0) return false;
+        if (code >= 0) return (ready: false, exitCode: code);
       }
       try {
         final s = await Socket.connect(
@@ -528,7 +627,7 @@ class EphemeralXrayPing {
           timeout: const Duration(milliseconds: 200),
         );
         await s.close();
-        return true;
+        return (ready: true, exitCode: null);
       } catch (_) {
         await Future<void>.delayed(delay);
         if (delay.inMilliseconds < 80) {
@@ -536,8 +635,18 @@ class EphemeralXrayPing {
         }
       }
     }
-    return false;
+    return (ready: false, exitCode: null);
   }
+
+  /// Почему ядро не открыло порт — словами, а не одной строкой на все случаи.
+  ///
+  /// Прежнее «port not ready» одинаково значило «упало на конфиге» и «не успело
+  /// подняться», а последние слова самого ядра уходили в никуда. Разбирать по
+  /// такому сообщению было нечего.
+  static String _startupError(int? exitCode, int port, _CoreLog log) =>
+      exitCode != null
+          ? 'Core exited with code $exitCode before opening port $port${log.tail}'
+          : 'Core did not open port $port in time${log.tail}';
 
   static Future<void> _killProcess(Process? process) async {
     if (process == null) return;
@@ -557,7 +666,7 @@ class EphemeralXrayPing {
 
 /// Читает ответы HTTP/1.1 из одного сокета подряд.
 ///
-/// Своё чтение нужно потому, что замер ведётся по ОДНОМУ соединению: тело
+/// Своё чтение нужно потому, что замер ведётся по одному соединению: тело
 /// каждого ответа обязано быть дочитано ровно до конца, иначе следующий GET
 /// прочитает хвост предыдущего вместо своего статуса. `HttpClient` это делал бы
 /// сам, но он не переиспользует туннель CONNECT — см. комментарий в

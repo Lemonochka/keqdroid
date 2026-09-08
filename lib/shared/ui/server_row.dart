@@ -56,7 +56,7 @@ class ServerRow extends StatelessWidget {
     this.trailing,
   });
 
-  /// ШАГ строки в списках серверов — вместе с зазором между сегментами, а не
+  /// Шаг строки в списках серверов — вместе с зазором между сегментами, а не
   /// высота самого контейнера (та меньше ровно на зазор `ExpressiveListSegment.gap`).
   ///
   /// Общая константа, чтобы сетка в две колонки, `mainAxisExtent` и смещение
@@ -123,7 +123,7 @@ class ServerRow extends StatelessWidget {
                         ),
                         // Имя пункта списка — роль `bodyLarge`: это label text
                         // по токенам списка, а не заголовок. Выбранный сервер
-                        // отличается ВЕСОМ (усиленный вариант), а не кеглем.
+                        // отличается весом (усиленный вариант), а не кеглем.
                         style: (emphasizeTitle
                                 ? textTheme.emphasized(textTheme.bodyLarge)
                                 : textTheme.bodyLarge)

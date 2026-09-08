@@ -23,8 +23,8 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
   bool _initialized = false;
 
   // Снимок для dispose(). Трогать там `ref` нельзя: Riverpod помечает элемент
-  // defunct в super.unmount() ДО State.dispose(), а watch-подписки закрывает
-  // ПОСЛЕ него — брошенный из ref.read StateError обрывает unmount, подписки
+  // defunct в super.unmount() до State.dispose(), а watch-подписки закрывает
+  // после него — брошенный из ref.read StateError обрывает unmount, подписки
   // остаются живыми на мёртвом элементе, и дальше каждое изменение любого
   // провайдера валится ассертом markNeedsBuild на defunct-элементе.
   SettingsNotifier? _settingsNotifier;
@@ -47,7 +47,7 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
 
   @override
   void dispose() {
-    // Слушатели снимаем ПЕРВЫМИ: FocusNode.dispose() снимает фокус и дёрнул бы
+    // Слушатели снимаем первыми: FocusNode.dispose() снимает фокус и дёрнул бы
     // _apply, который лезет в context (снекбары) уже на умирающем экране.
     _socksFocus.removeListener(_socksBlur);
     _httpFocus.removeListener(_httpBlur);
@@ -80,7 +80,7 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
   }
 
   /// Внешнее изменение настроек (общий сброс экрана). Вызывается из
-  /// `ref.listen`, то есть ПОСЛЕ фазы build: присваивать текст контроллеру
+  /// `ref.listen`, то есть после фазы build: присваивать текст контроллеру
   /// прямо в build нельзя — это markNeedsBuild у уже смонтированного TextField.
   void _adoptExternal(AppSettings settings) {
     void adopt(TextEditingController ctrl, FocusNode focus, int value) {

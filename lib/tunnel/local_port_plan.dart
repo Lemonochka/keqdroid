@@ -9,7 +9,7 @@ enum LocalPortIssue {
   occupied,
 
   /// Windows отдал диапазон под Hyper-V / WSL2 / контейнеры (или бинд запретила
-  /// защита) — `WSAEACCES` 10013. Слушателя при этом НЕТ вовсе: `netstat` пуст,
+  /// защита) — `WSAEACCES` 10013. Слушателя при этом нет вовсе: `netstat` пуст,
   /// а бинд всё равно запрещён, и список видно только через
   /// `netsh interface ipv4 show excludedportrange protocol=tcp`.
   reserved,
@@ -92,7 +92,7 @@ String localPortBlockedMessage({
         'app settings, or check local firewall / security software.',
 };
 
-/// Порты, на которых сессия РЕАЛЬНО поднимется.
+/// Порты, на которых сессия реально поднимется.
 ///
 /// Настройка — это пожелание: порт из неё может быть занят соседом или изъят
 /// системой, и до сих пор это означало отказ подключаться («SOCKS port 2080 is
@@ -264,7 +264,7 @@ class LocalPortResolver {
   /// дала» — и это два разных совета пользователю, поэтому одного «занят» мало.
   static LocalPortIssue classify(SocketException e) {
     final code = e.osError?.errorCode;
-    // Повторный бинд ВНУТРИ нашего же процесса до ОС не доходит: dart:io ловит
+    // Повторный бинд внутри нашего же процесса до ОС не доходит: dart:io ловит
     // его сам и подставляет собственный код -1 с текстом про `shared`.
     final message = (e.osError?.message ?? '').toLowerCase();
     if (message.contains('shared flag')) return LocalPortIssue.occupied;
@@ -273,7 +273,7 @@ class LocalPortResolver {
         10048 => LocalPortIssue.occupied, // WSAEADDRINUSE
         // WSAEACCES. Три разных случая с одним кодом: изъятый системой
         // диапазон (Hyper-V/WSL/контейнеры), порт, занятый чужим сокетом с
-        // SO_EXCLUSIVEADDRUSE, и запрет от защитного ПО. Различать их изнутри
+        // SO_EXCLUSIVEADDRUSE, и запрет от защитного по. Различать их изнутри
         // нечем, поэтому [localPortBlockedMessage] называет все три.
         10013 => LocalPortIssue.reserved,
         _ => LocalPortIssue.unknown,
@@ -302,7 +302,7 @@ class LocalPortResolver {
   }
 }
 
-/// Порты ЖИВОЙ сессии — для кода, который ходит в локальный HTTP-инбаунд
+/// Порты живой сессии — для кода, который ходит в локальный HTTP-инбаунд
 /// (апдейтер), но не участвует в подключении и потому знает только настройку.
 ///
 /// Настройка и факт разъезжаются ровно тогда, когда порт пришлось подменить

@@ -17,7 +17,7 @@ class _XrayCoreSectionHeader extends StatelessWidget {
       ExpressiveSectionHeader(title, icon: icon);
 }
 
-/// Карточка секции — ровно та же, что на остальных подэкранах настроек
+/// Карточка секции — та же, что на остальных подэкранах настроек
 /// (см. `card()` в ping/lan/permissions).
 ///
 /// Волосяных дивайдеров внутри больше нет. В M3E строки разделяет containment,
@@ -124,7 +124,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
           settings.copyWith(
             xrayCore: const XrayCoreSettings(),
             tun: const TunSettings(),
-            // Кнопка сбрасывает ВСЁ, что стоит на этом экране, — включая
+            // Кнопка сбрасывает всё, что стоит на этом экране, — включая
             // секцию mihomo. Забытое поле здесь выглядит как «сброс не
             // сработал».
             mihomoFakeIp: defaults.mihomoFakeIp,

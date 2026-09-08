@@ -35,7 +35,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   /// Active session backend — for Xray log export on desktop.
   static WindowsTunnelBackend? activeInstance;
 
-  /// Логи последней ЗАВЕРШЁННОЙ сессии. После teardown [activeInstance]
+  /// Логи последней завершённой сессии. После teardown [activeInstance]
   /// зануляется, и экран логов отвечал «подключитесь сначала» ровно в тот
   /// момент, когда логи нужнее всего — после внезапной смерти ядра.
   static String lastSessionLogs = '';
@@ -155,9 +155,9 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       await _cleanupForRestart();
       activeInstance = this;
       // _cleanupForRestart() зануляет _activeMode внутри _stopSessionInner —
-      // вернуть режим НОВОЙ сессии. Иначе вся сессия живёт с _activeMode=null:
+      // вернуть режим новой сессии. Иначе вся сессия живёт с _activeMode=null:
       // getCurrentState теряет режим, а setTrafficStatsPollingEnabled(true)
-      // после разворота из трея молча НЕ перезапускает опрос счётчиков —
+      // после разворота из трея молча не перезапускает опрос счётчиков —
       // трафик/время замерзают до реконнекта.
       _activeMode = request.mode;
 
@@ -482,9 +482,9 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     return false;
   }
 
-  /// AmneziaWG (оба режима на базе wireproxy-awg, который встраивает amneziawg-go):
-  ///  - proxy: wireproxy → локальные SOCKS5/HTTP → системный прокси Windows (без админа);
-  ///  - tun:   wireproxy → локальный SOCKS5 → sing-box TUN (как xray-TUN; нужен админ).
+  /// AmneziaWG, оба режима на wireproxy-awg. В proxy он поднимает локальные
+  /// SOCKS/HTTP и они прописываются системным прокси Windows, без админа; в TUN
+  /// поверх того же SOCKS встаёт sing-box, как и у xray, и админ уже нужен.
   Future<void> _startAwgSession(TunnelSessionRequest request) async {
     if (request.mode == ConnectionMode.proxy) {
       await _startAwgProxySession(request);
@@ -631,17 +631,15 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     }
   }
 
-  /// Что должно быть на месте ДО старта TUN, но проверяется только там.
+  /// Что должно быть на месте до старта TUN, но проверяется только там.
   ///
   /// Оба случая иначе выглядят одинаково — «keqrnel TUN did not start» с
   /// невнятным хвостом лога, — а причины у них разные и обе чинятся руками:
   ///
-  ///  * `wintun.dll` рядом с ядром. Его сносит антивирус (файл без подписи
-  ///    рядом с exe — типовая эвристика) и теряет ручная распаковка портативной
-  ///    сборки. Без него sing-tun не создаёт адаптер вовсе.
-  ///  * Локальные порты. В TUN-режиме их слушает встроенный xray внутри
-  ///    keqrnel: занял 2080 сосед (второй клиент, прошлая сессия, что угодно) —
-  ///    и ядро падает на старте инбаунда, хотя TUN тут вообще ни при чём.
+  /// Первое — `wintun.dll` рядом с ядром: его сносит антивирус и теряет ручная
+  /// распаковка портативной сборки, а без него sing-tun адаптер не создаёт
+  /// вовсе. Второе — локальные порты: в TUN их слушает встроенный xray, и если
+  /// 2080 занял сосед, ядро падает на старте инбаунда, хотя TUN тут ни при чём.
   Future<void> _ensureTunPrerequisites(
     String binPath,
     TunnelSessionRequest request,
@@ -662,7 +660,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   ///
   /// Обычно сюда приезжают уже подобранные порты ([LocalPortResolver] отработал
   /// до генерации конфига), так что срабатывает это на гонке «занял между
-  /// проверкой и стартом» — и тогда важно назвать ПРИЧИНУ: «занят соседом»,
+  /// проверкой и стартом» — и тогда важно назвать причину: «занят соседом»,
   /// «изъят Windows под Hyper-V/WSL» и «запрещён защитой» лечатся по-разному, а
   /// выглядят одинаково.
   ///
@@ -763,11 +761,11 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
           !identical(process, _xrayProcess)) {
         return;
       }
-      // Хвост снимаем ДО teardown и кладём прямо в текст ошибки: голый exit
+      // Хвост снимаем до teardown и кладём прямо в текст ошибки: голый exit
       // code не говорит ничего, а экран логов после остановки сессии показать
       // уже нечего (см. lastSessionLogs).
       final details = _sessionLogTail();
-      // Причину ищем в ПОЛНОМ выводе сессии, а не в хвосте: строка с реальной
+      // Причину ищем в полном выводе сессии, а не в хвосте: строка с реальной
       // ошибкой часто оказывается выше десятка строк агонии ядра.
       final hint = tunFailureHint(exportSessionLogs(), windows: true);
       AppLogger.instance.error(
@@ -798,7 +796,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     }
   }
 
-  /// Зачистка перед стартом новой сессии — БЕЗ эмитов disconnecting/disconnected.
+  /// Зачистка перед стартом новой сессии — без эмитов disconnecting/disconnected.
   /// Нотифаер пропускает disconnected из стрима в UI даже при connect-in-flight
   /// (так нужно Android'у: отмена диалога разрешения), поэтому эмит отсюда
   /// проваливал кнопку в серый «отключён» на пару секунд, пока поднимались ядра.
@@ -853,10 +851,10 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     // (graceful не успел) он и вовсе доживает до конца драйверной уборки.
     // Стартовать поверх такого адаптера нельзя: sing-tun на занятом имени
     // получает от CreateAdapter ErrExist и делает OpenAdapter — то есть
-    // настраивает УМИРАЮЩИЙ адаптер. Снаружи это «через раз ошибка, через раз
+    // настраивает умирающий адаптер. Снаружи это «через раз ошибка, через раз
     // туннель поднялся, а трафика нет».
     //
-    // Только если сессия РЕАЛЬНО была TUN: чужой sing-box-клиент рядом держит
+    // Только если сессия реально была TUN: чужой sing-box-клиент рядом держит
     // тот же адрес 172.19.0.1 (это дефолт sing-box), и ждать его исчезновения
     // на каждом отключении прокси-режима незачем.
     if (wasTun) await _awaitTunAdapterGone();
@@ -1140,7 +1138,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     );
   }
 
-  /// Сверяет стек TUN-инбаунда с тем, что умеет ЭТОТ бинарь ядра.
+  /// Сверяет стек TUN-инбаунда с тем, что умеет этот бинарь ядра.
   ///
   /// Ядро без `-tags with_gvisor` на `stack: gvisor` не ругается в конфиге, а
   /// падает при старте — «TUN не поднялся, exit code 1» на ровном месте.
@@ -1427,9 +1425,9 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   /// Ходит ли хоть что-нибудь через поднятое ядро.
   ///
-  /// Проверка идёт через ЛОКАЛЬНЫЙ HTTP-инбаунд — он есть в обоих режимах (в
+  /// Проверка идёт через локальный HTTP-инбаунд — он есть в обоих режимах (в
   /// TUN его инбаунды лифтит keqrnel, через него же качается обновление), и
-  /// путь через него ровно тот же, что у трафика из туннеля: те же правила
+  /// путь через него тот же, что у трафика из туннеля: те же правила
   /// роутинга, тот же аутбаунд, тот же сервер. Неудача означает, что не
   /// загрузится ничего, — и сказать об этом надо сразу, а не оставлять
   /// пользователя наедине с зелёной кнопкой.

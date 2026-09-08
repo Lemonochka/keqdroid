@@ -7,8 +7,10 @@ import 'package:keqdroid/models/app_info.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/split_tunneling_screen.dart';
+import 'package:keqdroid/services/vpn_engine.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
-import 'package:keqdroid/tunnel/tunnel_state.dart';
+
+import '../helpers/fake_tunnel_backend.dart';
 
 /// Списки берём из состояния, а не из хранилища: настоящий нотифаер лезет в
 /// SharedPreferences, которых в тесте нет.
@@ -113,6 +115,12 @@ Future<void> _pump(
         ),
         settingsNotifierProvider.overrideWith(_FakeSettings.new),
         vpnStateProvider.overrideWith(() => _FakeVpn(status)),
+        // Без этого экран поднимает НАСТОЯЩИЙ бэкенд туннеля (через него идут
+        // иконки приложений), а на Linux его dispose зовёт gsettings — тест
+        // падал на CI и правил прокси рабочего стола. См. FakeTunnelBackend.
+        vpnEngineProvider.overrideWithValue(
+          VpnEngine.withBackend(FakeTunnelBackend()),
+        ),
       ],
       child: MaterialApp(
         theme: buildAppTheme(

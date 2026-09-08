@@ -27,7 +27,7 @@ class WindowsCorePaths {
   }
 
   /// Стабильный пользовательский каталог для извлечённых из ассетов файлов.
-  /// НЕ %TEMP%: Defender агрессивнее к exe, запускаемым из Temp (правило
+  /// Не %TEMP%: Defender агрессивнее к exe, запускаемым из Temp (правило
   /// «never run from %TEMP%»), а случайные keqdis_bin_*/keqdis_geo_* папки
   /// копились там без подчистки.
   static String _stableExtractRoot() {

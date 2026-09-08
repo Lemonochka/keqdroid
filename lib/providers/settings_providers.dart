@@ -81,7 +81,7 @@ class SplitTunnelingNotifier extends Notifier<SplitTunnelingState> {
   /// старой версией, — одно приложение: правило по нему всё равно уходит в
   /// обеих формах ([processNameMatchVariants]). Пока сравнение шло по сырой
   /// строке, повторное нажатие по такой строке не снимало отметку, а клало в
-  /// список ВТОРУЮ запись, и на экране появлялся близнец.
+  /// список вторую запись, и на экране появлялся близнец.
   static Set<String> _togglePackage(Set<String> current, String pkg) {
     final key = pkg.toLowerCase();
     final next = {...current}..removeWhere((e) => e.toLowerCase() == key);
@@ -179,7 +179,7 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     return ref.read(storageProvider).getSettings();
   }
 
-  /// Состояние обновляется ДО записи на диск, а не после неё.
+  /// Состояние обновляется до записи на диск, а не после неё.
   ///
   /// `saveSettings` уходит в SharedPreferences через платформенный канал, и
   /// пока летел этот круговой рейс, интерфейс стоял: между нажатием на
@@ -187,7 +187,7 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   /// переключателя. Настройка — не транзакция, подтверждать её записью незачем.
   ///
   /// Порядок записей от перестановки не страдает: StorageService выстраивает
-  /// их в одну очередь в порядке ВЫЗОВА (см. `_serial`), а состояние здесь
+  /// их в одну очередь в порядке вызова (см. `_serial`), а состояние здесь
   /// меняется в том же порядке.
   Future<void> save(AppSettings settings) async {
     state = AsyncData(settings);

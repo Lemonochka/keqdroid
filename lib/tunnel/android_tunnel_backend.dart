@@ -72,7 +72,7 @@ class AndroidTunnelBackend implements TunnelBackend {
     }
   }
 
-  /// Креды локальных инбаундов УЖЕ работающей сессии — в отличие от
+  /// Креды локальных инбаундов уже работающей сессии — в отличие от
   /// [fetchSocksCredentials], который генерирует новую пару под будущий
   /// startVpn. Нужно свежему Dart-изоляту, когда VpnService пережил
   /// пересоздание Flutter-движка: без этого Socks5Credentials пуст и
@@ -96,11 +96,11 @@ class AndroidTunnelBackend implements TunnelBackend {
   @override
   Future<void> startSession(TunnelSessionRequest request) async {
     try {
-      // На Android ВСЕГДА используем chain (чистый libxray), не keqrnel.
+      // На Android всегда используем chain (чистый libxray), не keqrnel.
       //
       // keqrnel-обёртка (KeqrnelConfig.wrapXray) строит sing-box с `route:
       // {final: proxy}` и гонит весь трафик во встроенный xray как в прокси-
-      // аутбаунд. При этом внутренние direct/proxy/block-правила xray НЕ
+      // аутбаунд. При этом внутренние direct/proxy/block-правила xray не
       // применяются → сплит-роутинг (geoip/geosite/домены, обход .ru мимо VPN)
       // на Android молча не работает: весь трафик идёт через сервер. К тому же
       // tun2socks отдаёт ядру только IP, а sing-box-инбаунд в обёртке не снифит
