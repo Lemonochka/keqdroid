@@ -637,6 +637,15 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
       // AmneziaWG поднимается из сырого .conf своим ядром — xray-конфиг не нужен.
       // У mihomo свой конфиг, xray-генератор для него не запускаем.
+      // Туннель отдаём самому ядру только там, где ему есть что отдавать:
+      // на Android, в режиме VPN и на самом xray. В режиме «прокси»
+      // интерфейса нет вовсе, у AmneziaWG и mihomo туннель свой.
+      final nativeTun = Platform.isAndroid &&
+          settings.androidNativeTun &&
+          connectionMode == ConnectionMode.tun &&
+          !isAwg &&
+          !mihomoPicked;
+
       final xrayConfig = (isAwg || mihomoPicked)
           ? ''
           : ConfigGeneratorV2.generateConfig(
@@ -645,6 +654,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
               resolvedServerIp: serverIp,
               localInboundsNoAuth: proxyModeNoAuth,
               geoIndex: customGeoIndex,
+              nativeTunInbound: nativeTun,
             );
 
       // Забирать ли IPv6 в туннель. Спрашиваем машину, а не только настройку:

@@ -569,6 +569,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXraySniffingRouteOnlyHint => 'Домен из снифера только выбирает правило, а соединение идёт на адрес от приложения.';
 
   @override
+  String get settingsXrayNativeTun => 'Туннель держит ядро';
+
+  @override
+  String get settingsXrayNativeTunHint => 'Ядро xray читает пакеты из туннеля само, без посредника. Меньше пересылок на каждый пакет. Требуется переподключение.';
+
+  @override
   String get settingsXrayResetDefaults => 'Сбросить настройки';
 
   @override

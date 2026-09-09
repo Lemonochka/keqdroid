@@ -20,6 +20,9 @@ class ConfigGeneratorV2 {
     String? resolvedServerIp,
     /// windows system proxy can't pass socks5 creds — use noauth on localhost.
     bool localInboundsNoAuth = false,
+    /// Туннель держит само ядро: в конфиг добавляется tun-инбаунд, а
+    /// дескриптор ему передаёт нативная часть через переменную окружения.
+    bool nativeTunInbound = false,
     /// Индекс поставляемых geo-баз. Нужен только готовым (custom) конфигам: их
     /// правила приходят от провайдера, а неизвестный `geosite:`-код роняет
     /// разбор всего конфига. Для ссылок списки чистит GeoAssetService заранее.
@@ -31,6 +34,7 @@ class ConfigGeneratorV2 {
         settings,
         resolvedServerIp: resolvedServerIp,
         localInboundsNoAuth: localInboundsNoAuth,
+        nativeTunInbound: nativeTunInbound,
         geoIndex: geoIndex,
       ),
     );
@@ -87,6 +91,21 @@ class ConfigGeneratorV2 {
   /// Слушать на нём некому и не должно: запрос приходит в tun2socks и обязан
   /// попасть в перехват, а не наружу.
   static const String _androidTunDns = '172.19.0.2';
+
+  /// Заглушка на случай, если нативная часть не перепишет `mtu` своим числом.
+  /// Настоящее значение принадлежит ей: интерфейс поднимает она, и число
+  /// обязано совпасть с тем, что она поставила через `setMtu`.
+  static const int _defaultTunMtu = 1400;
+
+  /// Имя tun-инбаунда. На Android оно косметическое — интерфейс уже поднят
+  /// VpnService, и ядро печатает это имя только в двух строчках лога.
+  ///
+  /// Но задать его обязательно. Пустое имя ядро понимает как «придумай сам» и
+  /// идёт перебирать занятые имена через `net.Interfaces()`, а тот на Android
+  /// ходит в netlink, куда untrusted-приложение не пускают: разбор падает на
+  /// `netlinkrib: permission denied` — и падает целиком, вместе со всем
+  /// конфигом, а не только этим инбаундом.
+  static const String _tunInterfaceName = 'keqtun0';
 
   /// Пароль на LAN-инбаунды включается только полной парой логин+пароль:
   /// половинчатый ввод даёт noauth, а не пустой логин/пароль в accounts.
@@ -186,6 +205,9 @@ class ConfigGeneratorV2 {
     int? pingSocksPort,
     bool pingHttpInbound = false,
     bool localInboundsNoAuth = false,
+    /// Туннель держит само ядро: в конфиг добавляется tun-инбаунд, а
+    /// дескриптор ему передаёт нативная часть через переменную окружения.
+    bool nativeTunInbound = false,
     GeoAssetIndex? geoIndex,
   }) {
     final trimmed = input.trim();
@@ -200,6 +222,7 @@ class ConfigGeneratorV2 {
         pingSocksPort: pingSocksPort,
         pingHttpInbound: pingHttpInbound,
         localInboundsNoAuth: localInboundsNoAuth,
+        nativeTunInbound: nativeTunInbound,
       );
     }
 
@@ -214,6 +237,7 @@ class ConfigGeneratorV2 {
         pingSocksPort: pingSocksPort,
         pingHttpInbound: pingHttpInbound,
         localInboundsNoAuth: localInboundsNoAuth,
+        nativeTunInbound: nativeTunInbound,
         geoIndex: geoIndex,
       );
     }
@@ -230,6 +254,7 @@ class ConfigGeneratorV2 {
       pingSocksPort: pingSocksPort,
       pingHttpInbound: pingHttpInbound,
       localInboundsNoAuth: localInboundsNoAuth,
+      nativeTunInbound: nativeTunInbound,
     );
   }
 
@@ -361,6 +386,9 @@ class ConfigGeneratorV2 {
     int? pingSocksPort,
     bool pingHttpInbound = false,
     bool localInboundsNoAuth = false,
+    /// Туннель держит само ядро: в конфиг добавляется tun-инбаунд, а
+    /// дескриптор ему передаёт нативная часть через переменную окружения.
+    bool nativeTunInbound = false,
   }) {
     if (chain.hops.isEmpty) {
       throw ArgumentError('Proxy chain has no nodes');
@@ -405,6 +433,7 @@ class ConfigGeneratorV2 {
       pingSocksPort: pingSocksPort,
       pingHttpInbound: pingHttpInbound,
       localInboundsNoAuth: localInboundsNoAuth,
+      nativeTunInbound: nativeTunInbound,
     );
   }
 
@@ -612,6 +641,9 @@ class ConfigGeneratorV2 {
     int? pingSocksPort,
     bool pingHttpInbound = false,
     bool localInboundsNoAuth = false,
+    /// Туннель держит само ядро: в конфиг добавляется tun-инбаунд, а
+    /// дескриптор ему передаёт нативная часть через переменную окружения.
+    bool nativeTunInbound = false,
     GeoAssetIndex? geoIndex,
   }) {
     final inbounds = _buildInbounds(
@@ -619,6 +651,7 @@ class ConfigGeneratorV2 {
       pingSocksPort: pingSocksPort,
       pingHttpInbound: pingHttpInbound,
       localInboundsNoAuth: localInboundsNoAuth,
+      nativeTunInbound: nativeTunInbound,
     );
 
     if (pingSocksPort != null) {
@@ -1514,7 +1547,7 @@ class ConfigGeneratorV2 {
   // нужно правило «мимо туннеля».
   static Map<String, dynamic> _wrapConfig(
       List<Map<String, dynamic>> proxyOutbounds, AppSettings settings, String serverAddress, int serverPort,
-      {String? originalServerAddress, List<String> extraServerAddresses = const [], int? pingSocksPort, bool pingHttpInbound = false, bool localInboundsNoAuth = false}) {
+      {String? originalServerAddress, List<String> extraServerAddresses = const [], int? pingSocksPort, bool pingHttpInbound = false, bool localInboundsNoAuth = false, bool nativeTunInbound = false}) {
 
     originalServerAddress ??= serverAddress;
     final isPingMode = pingSocksPort != null;
@@ -1813,6 +1846,7 @@ class ConfigGeneratorV2 {
       pingSocksPort: pingSocksPort,
       pingHttpInbound: pingHttpInbound,
       localInboundsNoAuth: localInboundsNoAuth,
+      nativeTunInbound: nativeTunInbound,
     );
 
     return {
@@ -1861,7 +1895,18 @@ class ConfigGeneratorV2 {
   /// Теги инбаундов, которые ставит [_buildInbounds]. Вынесены, потому что по
   /// ним считается, какие авторские правила готового конфига остались без
   /// инбаунда и уже не сработают (`previewDeadInboundRules`).
-  static const appInboundTags = ['socks-in', 'http-in', 'socks-lan', 'http-lan'];
+  ///
+  /// `tun-in` тут вместе с остальными, хотя появляется не всегда: список
+  /// перечисляет теги, которые вообще бывают наши, а не те, что есть в этом
+  /// конкретном конфиге. Лишний тег даёт разве что не показанное
+  /// предупреждение, недостающий — предупреждение о живом правиле.
+  static const appInboundTags = [
+    'socks-in',
+    'http-in',
+    'socks-lan',
+    'http-lan',
+    'tun-in',
+  ];
 
   /// Инбаунды приложения: локальные SOCKS/HTTP (и опционально LAN).
   ///
@@ -1875,12 +1920,36 @@ class ConfigGeneratorV2 {
     int? pingSocksPort,
     bool pingHttpInbound = false,
     bool localInboundsNoAuth = false,
+    /// Туннель держит само ядро: в конфиг добавляется tun-инбаунд, а
+    /// дескриптор ему передаёт нативная часть через переменную окружения.
+    bool nativeTunInbound = false,
   }) {
     final core = settings.xrayCore;
     final isPingMode = pingSocksPort != null;
     final socksPort = pingSocksPort ?? settings.localPort;
     final useNoAuthInbound = isPingMode || localInboundsNoAuth;
     return <Map<String, dynamic>>[
+      // Ядро само читает пакеты из туннеля — вместо того, чтобы принимать их
+      // от tun2socks по локальному SOCKS. Дескриптор сюда не пишем: ядро берёт
+      // его из переменной окружения `XRAY_TUN_FD` (`proxy/tun/tun_android.go`),
+      // и знает этот номер только нативная часть, поднявшая интерфейс. Оттуда
+      // же приезжает и `mtu`: разойдись он с интерфейсом — пакеты, законные для
+      // netstack, отбрасывались бы ядром ОС при записи в tun.
+      //
+      // Порт ядро у этого инбаунда не спрашивает вовсе (`InboundDetourConfig`
+      // пропускает проверку для `tun`), но ключ обязан быть: без него разбор
+      // конфига падает на «Listen on AnyIP but no Port(s) set».
+      //
+      // Снифер тут не роскошь: без него роутинг видит только IP, и все правила
+      // по доменам перестают срабатывать разом.
+      if (nativeTunInbound && !isPingMode)
+        {
+          'tag': 'tun-in',
+          'port': 0,
+          'protocol': 'tun',
+          'settings': {'name': _tunInterfaceName, 'mtu': _defaultTunMtu},
+          'sniffing': core.buildSniffing(),
+        },
       if (isPingMode && pingHttpInbound)
         // Desktop ping listens over HTTP, not SOCKS: the Dart probe uses dart:io
         // HttpClient, whose findProxy supports only 'PROXY host:port' (HTTP CONNECT)

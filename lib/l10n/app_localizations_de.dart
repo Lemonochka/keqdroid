@@ -567,6 +567,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXraySniffingRouteOnlyHint => 'Die erkannte Domain wählt nur die Regel; verbunden wird zur Adresse der App.';
 
   @override
+  String get settingsXrayNativeTun => 'Kern hält den Tunnel';
+
+  @override
+  String get settingsXrayNativeTunHint => 'Der Xray-Kern liest die Pakete direkt aus dem Tunnel, ohne Zwischenstück. Weniger Umwege pro Paket. Neu verbinden zum Übernehmen.';
+
+  @override
   String get settingsXrayResetDefaults => 'Auf Standard zurücksetzen';
 
   @override

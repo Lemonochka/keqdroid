@@ -508,6 +508,11 @@ class KeqdisVpnService : VpnService() {
             // ни дескриптора для mihomo, ни ожидания его tun-листенера. Ядро
             // поднимает свои инбаунды на 127.0.0.1 — этого достаточно.
             val proxyOnly = tunnelMode == TUNNEL_MODE_PROXY
+            // Держит ли туннель сам xray. Спрашиваем конфиг, а не настройку:
+            // конфиг и есть то, по чему ядро будет себя вести, и он же лежит на
+            // диске для реконнекта из плитки — второй источник правды разъехался
+            // бы ровно так же, как когда-то движок в плитке.
+            val xrayOwnsTun = !isMihomo && !proxyOnly && xrayConfigHasTun(xrayConfigPath)
 
             // Порядок зависит от того, кто владеет туннелем.
             //
@@ -540,6 +545,21 @@ class KeqdisVpnService : VpnService() {
                     xrayConfigPath,
                     coreKind,
                 )
+            } else if (xrayOwnsTun) {
+                // Тот же порядок, что у mihomo, и по той же причине: номер
+                // дескриптора нужен ядру в момент старта, значит интерфейс
+                // обязан существовать раньше.
+                val tun = buildTunInterface(excludePkgs, includePkgs)
+                tunInterface = tun
+                val tunRawFd = tun.fd
+                injectXrayTunMtu(xrayConfigPath)
+                activeSocksPort = socksPort
+                xrayPid = startXray(
+                    getBinaryPath("libxray.so"),
+                    xrayConfigPath,
+                    coreKind,
+                    tunFd = tunRawFd,
+                )
             } else {
                 xrayPid = startXray(
                     getBinaryPath("libxray.so"),
@@ -570,7 +590,7 @@ class KeqdisVpnService : VpnService() {
             // и только пакеты из tun не читает никто.
             if (isMihomo && !proxyOnly) awaitMihomoTun()
 
-            if (!isMihomo && !proxyOnly) {
+            if (!isMihomo && !proxyOnly && !xrayOwnsTun) {
                 // создаём TUN-интерфейс
                 val tun = buildTunInterface(excludePkgs, includePkgs)
                 tunInterface = tun
@@ -1334,6 +1354,52 @@ class KeqdisVpnService : VpnService() {
         android.util.Log.i("KEQDIS", "mihomo tun: no verdict in the log, continuing")
     }
 
+    /**
+     * Есть ли в конфиге xray инбаунд, который сам читает пакеты из туннеля.
+     *
+     * Признак берём из конфига, а не из настройки приложения: ядро ведёт себя
+     * по конфигу, и он же переживает перезапуск сервиса. Настройка могла бы
+     * успеть измениться между сборкой конфига и реконнектом из плитки — тогда
+     * мы подняли бы tun2socks поверх ядра, которое уже забрало дескриптор.
+     */
+    private fun xrayConfigHasTun(configPath: String): Boolean = runCatching {
+        val inbounds = org.json.JSONObject(File(configPath).readText())
+            .optJSONArray("inbounds") ?: return false
+        for (i in 0 until inbounds.length()) {
+            if (inbounds.optJSONObject(i)?.optString("protocol") == "tun") return true
+        }
+        false
+    }.getOrElse {
+        android.util.Log.w("KEQDIS", "xrayConfigHasTun: ${it.message}")
+        false
+    }
+
+    /**
+     * Проставляет tun-инбаунду xray тот же MTU, что стоит на интерфейсе.
+     *
+     * Причина та же, что и у mihomo (см. ниже): у fd-устройства ядру неоткуда
+     * спросить MTU, оно возьмёт своё умолчание, а расхождение с интерфейсом —
+     * это пакеты, законные для netstack и отброшенные ядром ОС при записи в
+     * tun. Дескриптор сюда не пишем: xray читает его только из переменной
+     * окружения, места в конфиге под него нет вовсе.
+     */
+    private fun injectXrayTunMtu(configPath: String) {
+        val file = File(configPath)
+        val root = org.json.JSONObject(file.readText())
+        val inbounds = root.optJSONArray("inbounds")
+            ?: throw IllegalStateException("xray config has no inbounds")
+        for (i in 0 until inbounds.length()) {
+            val inbound = inbounds.optJSONObject(i) ?: continue
+            if (inbound.optString("protocol") != "tun") continue
+            val settings = inbound.optJSONObject("settings") ?: org.json.JSONObject()
+            settings.put("mtu", TUN_MTU)
+            inbound.put("settings", settings)
+            file.writeText(root.toString())
+            android.util.Log.i("KEQDIS", "xray tun: mtu=$TUN_MTU")
+            return
+        }
+        throw IllegalStateException("xray config has no tun inbound")
+    }
     /**
      * Дописывает в готовый конфиг mihomo номер дескриптора TUN и MTU.
      *

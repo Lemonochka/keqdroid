@@ -567,6 +567,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXraySniffingRouteOnlyHint => '嗅探到的域名只用于选择规则，连接仍走应用给出的地址。';
 
   @override
+  String get settingsXrayNativeTun => '由内核持有隧道';
+
+  @override
+  String get settingsXrayNativeTunHint => 'xray 内核直接从隧道读取数据包，无需中间层。每个包少一跳。需重新连接后生效。';
+
+  @override
   String get settingsXrayResetDefaults => '重置为默认值';
 
   @override

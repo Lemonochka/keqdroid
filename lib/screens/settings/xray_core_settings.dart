@@ -1153,6 +1153,18 @@ class _XrayGeneralSection extends ConsumerWidget {
                 ),
               ),
             ),
+            // Только Android: на десктопе туннель держит sing-box внутри
+            // keqrnel, и tun2socks там нет вовсе — переключать нечего.
+            if (Platform.isAndroid)
+              SwitchListTile(
+                value: settings.androidNativeTun,
+                onChanged: (v) => ref
+                    .read(settingsNotifierProvider.notifier)
+                    .save(settings.copyWith(androidNativeTun: v)),
+                activeThumbColor: accent,
+                title: Text(l10n.settingsXrayNativeTun),
+                subtitle: Text(l10n.settingsXrayNativeTunHint),
+              ),
           ],
         ),
       ],

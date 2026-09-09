@@ -95,6 +95,17 @@ void main() {
       );
     });
 
+    _golden('vless-native-tun', () {
+      // Туннель держит само ядро: в конфиге появляется tun-инбаунд, всё
+      // остальное обязано остаться прежним — локальные порты с паролем,
+      // перехват DNS, порядок правил.
+      return ConfigGeneratorV2.generateConfig(
+        'vless://$_uuid@198.51.100.25:443?type=tcp&security=none#nativetun',
+        _settings,
+        nativeTunInbound: true,
+      );
+    });
+
     _golden('vless-xhttp-extra', () {
       return ConfigGeneratorV2.generateConfig(
         'vless://$_uuid@198.51.100.12:443?type=xhttp&security=reality'

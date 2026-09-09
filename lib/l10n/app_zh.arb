@@ -251,6 +251,8 @@
   "settingsXrayXmuxParamsHint": "留空使用 Xray 默认值。数字或范围，例如 16-32。",
   "settingsXraySniffingHint": "从入站流量中检测目标协议和域名",
   "settingsXraySniffingRouteOnlyHint": "嗅探到的域名只用于选择规则，连接仍走应用给出的地址。",
+  "settingsXrayNativeTun": "由内核持有隧道",
+  "settingsXrayNativeTunHint": "xray 内核直接从隧道读取数据包，无需中间层。每个包少一跳。需重新连接后生效。",
   "settingsXrayResetDefaults": "重置为默认值",
   "settingsXrayResetDone": "已恢复 Xray 内核设置",
   "settingsXrayXmuxMaxConcurrency": "最大并发数",

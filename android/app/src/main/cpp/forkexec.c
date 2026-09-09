@@ -537,6 +537,15 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
                 execv(binPath, argv);
             } else {
                 setenv("XRAY_LOCATION_ASSET", assetDir, 1);
+                /* Дескриптор туннеля xray берёт только отсюда: в его конфиге
+                 * места под номер нет вовсе (proxy/tun/tun_android.go читает
+                 * переменную окружения). Ставим лишь когда номер дали — иначе
+                 * ядро сочло бы за дескриптор ноль, то есть наш stdin. */
+                if (tunFd >= 0) {
+                    char fdEnv[16];
+                    snprintf(fdEnv, sizeof(fdEnv), "%d", tunFd);
+                    setenv("XRAY_TUN_FD", fdEnv, 1);
+                }
                 char *argv[] = { (char *)binPath, "run", "-c", (char *)configPath, NULL };
                 execv(binPath, argv);
             }

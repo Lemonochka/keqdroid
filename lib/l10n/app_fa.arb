@@ -175,6 +175,8 @@
   "settingsXrayXmuxParamsHint": "خالی یعنی پیش‌فرض Xray. یک عدد یا یک بازه، مثلاً 16-32.",
   "settingsXraySniffingHint": "تشخیص پروتکل و دامنهٔ مقصد از روی ترافیک ورودی",
   "settingsXraySniffingRouteOnlyHint": "دامنهٔ شناسایی‌شده فقط قانون را انتخاب می‌کند؛ اتصال به نشانی برنامه می‌رود.",
+  "settingsXrayNativeTun": "تونل در اختیار هسته",
+  "settingsXrayNativeTunHint": "هستهٔ xray بسته‌ها را خودش از تونل می‌خواند، بدون واسطه. پرش کمتر برای هر بسته. برای اعمال، دوباره وصل شوید.",
   "settingsXrayResetDefaults": "بازگشت به پیش‌فرض",
   "settingsXrayResetDone": "تنظیمات هستهٔ Xray بازنشانی شد",
   "settingsXrayXmuxMaxConcurrency": "بیشینهٔ هم‌زمانی",

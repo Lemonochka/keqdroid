@@ -116,9 +116,18 @@ const _clearedAndBlocked = AppSettings(
   finalOutbound: AppSettings.finalOutboundBlock,
 );
 
-Map<String, dynamic> _build(String raw, AppSettings settings) =>
-    jsonDecode(ConfigGeneratorV2.generateConfig(raw, settings))
-        as Map<String, dynamic>;
+Map<String, dynamic> _build(
+  String raw,
+  AppSettings settings, {
+  bool nativeTunInbound = false,
+}) =>
+    jsonDecode(
+      ConfigGeneratorV2.generateConfig(
+        raw,
+        settings,
+        nativeTunInbound: nativeTunInbound,
+      ),
+    ) as Map<String, dynamic>;
 
 List<Map<String, dynamic>> _rules(Map<String, dynamic> config) => [
       for (final r in ((config['routing'] as Map)['rules'] as List))
@@ -390,17 +399,23 @@ void main() {
         () {
       // Список `appInboundTags` — не константа сама по себе: разъедется с
       // `_buildInbounds`, и детект начнёт врать в обе стороны.
-      final config = _build(
-        _withAuthorDns,
-        _clearedAndBlocked.copyWith(lanSharing: true, lanUsername: ''),
-      );
-      final actual = [
-        for (final i in config['inbounds'] as List) (i as Map)['tag'] as String,
-      ];
+      // Оба состава инбаундов, а не один: туннель, который держит само ядро,
+      // добавляет свой тег, и разъехаться список может именно на нём.
+      for (final nativeTun in [false, true]) {
+        final config = _build(
+          _withAuthorDns,
+          _clearedAndBlocked.copyWith(lanSharing: true, lanUsername: ''),
+          nativeTunInbound: nativeTun,
+        );
+        final actual = [
+          for (final i in config['inbounds'] as List)
+            (i as Map)['tag'] as String,
+        ];
 
-      expect(actual, isNotEmpty);
-      for (final tag in actual) {
-        expect(ConfigGeneratorV2.appInboundTags, contains(tag));
+        expect(actual, isNotEmpty);
+        for (final tag in actual) {
+          expect(ConfigGeneratorV2.appInboundTags, contains(tag));
+        }
       }
     });
   });

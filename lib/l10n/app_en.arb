@@ -251,6 +251,8 @@
   "settingsXrayXmuxParamsHint": "Blank uses the Xray default. A number or a range, e.g. 16-32.",
   "settingsXraySniffingHint": "Detect destination protocol and domain from inbound traffic",
   "settingsXraySniffingRouteOnlyHint": "The sniffed domain only picks the routing rule; the connection still goes to the address the app gave.",
+  "settingsXrayNativeTun": "Core owns the tunnel",
+  "settingsXrayNativeTunHint": "The xray core reads packets from the tunnel itself, with no middleman. Fewer hops per packet. Reconnect to apply.",
   "settingsXrayResetDefaults": "Reset to defaults",
   "settingsXrayResetDone": "Xray core settings restored",
   "settingsXrayXmuxMaxConcurrency": "Max concurrency",

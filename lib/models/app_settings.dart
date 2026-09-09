@@ -85,6 +85,18 @@ class AppSettings {
   /// тогда, когда режим переключили руками.
   final bool connectionModeChosen;
 
+  /// Android: туннель держит само ядро xray, а не tun2socks.
+  ///
+  /// Ядро умеет читать пакеты из дескриптора VpnService напрямую
+  /// (`proxy/tun` в Xray-core, номер приезжает переменной окружения). Тогда
+  /// исчезает лишний посредник, а с ним лишняя копия каждого пакета и
+  /// пересылка всего трафика через локальный SOCKS.
+  ///
+  /// Флаг отдельный, а не «всегда включено», потому что путь через tun2socks
+  /// проверен годами, а этот — нет: пока не обкатается, к нему нужен обратный
+  /// ход одним переключателем.
+  final bool androidNativeTun;
+
   /// Требовать логин с паролем у локального прокси в режиме «Прокси».
   ///
   /// Выключается ради потребителей, которым креды вписать некуда: системное
@@ -219,6 +231,7 @@ class AppSettings {
     this.tun = const TunSettings(),
     this.connectionMode = 'proxy',
     this.connectionModeChosen = false,
+    this.androidNativeTun = false,
     this.proxyModeAuth = true,
     this.proxyModeUser = '',
     this.proxyModePass = '',
@@ -275,6 +288,7 @@ class AppSettings {
     'tun': tun.toJson(),
     'connectionMode': connectionMode,
     'connectionModeChosen': connectionModeChosen,
+    'androidNativeTun': androidNativeTun,
     'proxyModeAuth': proxyModeAuth,
     'proxyModeUser': proxyModeUser,
     'proxyModePass': proxyModePass,
@@ -358,6 +372,7 @@ class AppSettings {
         json['connectionMode'] as String?,
       ).storageValue,
       connectionModeChosen: json['connectionModeChosen'] as bool? ?? false,
+      androidNativeTun: json['androidNativeTun'] as bool? ?? false,
       proxyModeAuth: json['proxyModeAuth'] as bool? ?? true,
       proxyModeUser: json['proxyModeUser'] as String? ?? '',
       proxyModePass: json['proxyModePass'] as String? ?? '',
@@ -533,6 +548,7 @@ class AppSettings {
     TunSettings? tun,
     String? connectionMode,
     bool? connectionModeChosen,
+    bool? androidNativeTun,
     bool? proxyModeAuth,
     String? proxyModeUser,
     String? proxyModePass,
@@ -588,6 +604,7 @@ class AppSettings {
         tun: tun ?? this.tun,
         connectionMode: connectionMode ?? this.connectionMode,
         connectionModeChosen: connectionModeChosen ?? this.connectionModeChosen,
+        androidNativeTun: androidNativeTun ?? this.androidNativeTun,
         proxyModeAuth: proxyModeAuth ?? this.proxyModeAuth,
         proxyModeUser: proxyModeUser ?? this.proxyModeUser,
         proxyModePass: proxyModePass ?? this.proxyModePass,
@@ -671,6 +688,7 @@ class AppSettings {
               tun == other.tun &&
               connectionMode == other.connectionMode &&
               connectionModeChosen == other.connectionModeChosen &&
+              androidNativeTun == other.androidNativeTun &&
               proxyModeAuth == other.proxyModeAuth &&
               proxyModeUser == other.proxyModeUser &&
               proxyModePass == other.proxyModePass &&
@@ -736,6 +754,7 @@ class AppSettings {
     tun,
     connectionMode,
     connectionModeChosen,
+    androidNativeTun,
     proxyModeAuth,
     proxyModeUser,
     proxyModePass,

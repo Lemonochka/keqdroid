@@ -1151,6 +1151,18 @@ abstract class AppLocalizations {
   /// **'The sniffed domain only picks the routing rule; the connection still goes to the address the app gave.'**
   String get settingsXraySniffingRouteOnlyHint;
 
+  /// No description provided for @settingsXrayNativeTun.
+  ///
+  /// In en, this message translates to:
+  /// **'Core owns the tunnel'**
+  String get settingsXrayNativeTun;
+
+  /// No description provided for @settingsXrayNativeTunHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The xray core reads packets from the tunnel itself, with no middleman. Fewer hops per packet. Reconnect to apply.'**
+  String get settingsXrayNativeTunHint;
+
   /// No description provided for @settingsXrayResetDefaults.
   ///
   /// In en, this message translates to:
