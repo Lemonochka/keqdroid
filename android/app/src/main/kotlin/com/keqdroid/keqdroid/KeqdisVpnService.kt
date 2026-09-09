@@ -68,6 +68,13 @@ class KeqdisVpnService : VpnService() {
         const val TUNNEL_MODE_PROXY    = "proxy"
         // Файл логов ядра в filesDir; читается getXrayLogs (надёжнее logcat на Android 13+).
         const val CORE_LOG_FILE        = "core_logs.txt"
+
+        /// Вторая строка вердикта монитора: объясняет, почему выше по файлу
+        /// тишина. Без неё пустой хвост лога читается как «логи не пишутся».
+        const val CORE_GONE_HINT =
+            "a process killed from outside gets no chance to write a farewell, " +
+                "so silence above this line is the symptom, not a missing log; " +
+                "check the battery saver and the autostart limits for the app"
         // Вердикт mihomo о собственном туннеле — единственный способ узнать,
         // взял ли он наш дескриптор (см. awaitMihomoTun). Строки из
         // listener/listener.go: ReCreateTun.
@@ -1227,6 +1234,13 @@ class KeqdisVpnService : VpnService() {
                     if ((status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) &&
                         pid == tun2socksPid) {
                         android.util.Log.w("KEQDIS", "[tun2socks] triggering full cleanup after unexpected exit")
+                        // В лог ЯДРА, а не в свой: экран логов в приложении читает
+                        // core_logs.txt, а собственный лог tun2socks живёт только в
+                        // отладочном режиме — там вердикт никто бы не увидел.
+                        appendCoreLog(
+                            "tun2socks process $pid is gone, and the app did not stop it",
+                            CORE_GONE_HINT,
+                        )
                         tun2socksPid = -1  // уже мёртв
                         setStatus(VpnRunStatus.ERROR, "tun2socks exited")
                         cleanup()
@@ -1242,6 +1256,29 @@ class KeqdisVpnService : VpnService() {
     }
 
     // ── Xray ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Дописывает в лог ядра строку от самого приложения.
+     *
+     * Нужна ровно для одного случая: ядро исчезло, а в логе от него ничего не
+     * осталось. Убитый снаружи процесс прощального сообщения не пишет, само
+     * событие «pid пропал» видит только служба, и печатала она его в logcat —
+     * который untrusted_app на Android 13+ не читает (SELinux, см. getXrayLogs).
+     * Снаружи это выглядело как «туннель отвалился в фоне, а в логах пусто»:
+     * жалоба, которую нечем ни подтвердить, ни опровергнуть.
+     *
+     * Метка времени — та же, что у native-писателя (core_log_line в
+     * forkexec.c), иначе строка читается чужой среди строк ядра. Файл открыт
+     * там с O_APPEND, так что дописывать в него параллельно безопасно.
+     */
+    private fun appendCoreLog(vararg lines: String) {
+        runCatching {
+            val stamp = java.text.SimpleDateFormat("MM-dd HH:mm:ss ", java.util.Locale.US)
+                .format(java.util.Date())
+            File(filesDir, CORE_LOG_FILE)
+                .appendText(lines.joinToString("") { "$stamp[keqdis] $it\n" })
+        }
+    }
 
     /**
      * Последние строки core_logs.txt для текста ошибки. Само по себе «port not
@@ -1402,6 +1439,10 @@ class KeqdisVpnService : VpnService() {
                         // подключается к новому Xray со старыми credentials
                         // → invalid password.
                         android.util.Log.w("KEQDIS", "[xray] triggering full cleanup after unexpected exit")
+                        appendCoreLog(
+                            "core process $pid is gone, and the app did not stop it",
+                            CORE_GONE_HINT,
+                        )
                         xrayPid = -1  // уже мёртв — не пытаемся убить повторно в cleanup()
                         setStatus(VpnRunStatus.ERROR, "Xray exited unexpectedly")
                         cleanup()
