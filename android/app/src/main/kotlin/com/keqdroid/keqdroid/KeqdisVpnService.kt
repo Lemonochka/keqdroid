@@ -899,6 +899,9 @@ class KeqdisVpnService : VpnService() {
     /// поэтому обрыв старых для него ничем не отличается от закрытия сессий
     /// приложениями. Интерфейс не трогаем вовсе — иначе система показала бы
     /// разрыв VPN, а его здесь нет.
+    ///
+    /// Ядру, которое читает туннель само, интерфейса мало: дескриптор жил в
+    /// убитом процессе, и новому его надо отдать заново.
     private suspend fun restartCoreAfterHandover() = opMutex.withLock {
         if (status != VpnRunStatus.RUNNING) return@withLock
         val config = lastXrayConfigPath ?: return@withLock
@@ -921,7 +924,21 @@ class KeqdisVpnService : VpnService() {
                 delay(100); waitedFree += 100
             }
 
-            xrayPid = startXray(getBinaryPath("libxray.so"), config, lastCoreKind)
+            // Без дескриптора ядро считает туннелем нулевой fd — собственный
+            // stdin. Ничего не падает: интерфейс поднят, порт слушается, статус
+            // «подключено», и только из туннеля никто не читает. Поймано на
+            // устройстве — после смены сети связь пропадала молча и насовсем.
+            //
+            // Владелец спрашивается у конфига, а не у настройки: конфиг и есть
+            // то, по чему ядро себя ведёт, и он же переживает перезапуск
+            // сервиса.
+            val tunFd = if (xrayConfigHasTun(config)) tunInterface?.fd ?: -1 else -1
+            xrayPid = startXray(
+                getBinaryPath("libxray.so"),
+                config,
+                lastCoreKind,
+                tunFd = tunFd,
+            )
 
             var waited = 0
             while (!isPortOpen("127.0.0.1", port) && waited < 10000) {
