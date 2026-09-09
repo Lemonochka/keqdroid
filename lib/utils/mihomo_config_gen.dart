@@ -1036,13 +1036,31 @@ class MihomoConfigGen {
       if (sni.isNotEmpty) 'sni': sni,
       'client-fingerprint': fp.isNotEmpty ? fp : 'chrome',
     };
+    final network = _param(uri, 'type', 'tcp');
     final alpn = _alpn(_param(uri, 'alpn'));
-    if (alpn != null) out['alpn'] = alpn;
+    if (alpn != null) out['alpn'] = _alpnForTrojan(network, alpn);
     _applyCertPinning(out, uri);
 
-    _applyTransport(out, uri, network: _param(uri, 'type', 'tcp'), host: sni);
+    _applyTransport(out, uri, network: network, host: sni);
     return out;
   }
+
+  /// Тот же случай, что у xray: ws поверх TLS не переживает выбор h2 по ALPN,
+  /// апгрейд соединения идёт только по HTTP/1.1.
+  ///
+  /// Чиним только trojan, потому что в mihomo только он и читает alpn на
+  /// ws-пути (`adapter/outbound/trojan.go`): у vless и vmess ws-ветка
+  /// подставляет `http/1.1` сама и alpn из конфига там не смотрит вовсе. Тянуть
+  /// правку туда — менять конфиг там, где ядро на него не смотрит.
+  ///
+  /// Пара целиком, как и в xray: одиночный `h2` — осознанный выбор.
+  static List<String> _alpnForTrojan(String network, List<String> alpn) =>
+      network == 'ws' &&
+              alpn.length == 2 &&
+              alpn[0] == 'h2' &&
+              alpn[1] == 'http/1.1'
+          ? const ['http/1.1']
+          : alpn;
 
   static Map<String, dynamic> _shadowsocks(String link) {
     // sip002 и старая форма: ss://base64(method:pass)@host:port и

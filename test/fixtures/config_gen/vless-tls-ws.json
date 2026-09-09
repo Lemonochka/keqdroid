@@ -88,7 +88,10 @@
         "network": "ws",
         "security": "tls",
         "tlsSettings": {
-          "serverName": "ws.example"
+          "serverName": "ws.example",
+          "alpn": [
+            "http/1.1"
+          ]
         },
         "wsSettings": {
           "path": "/path",

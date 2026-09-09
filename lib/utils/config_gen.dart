@@ -99,6 +99,25 @@ class ConfigGeneratorV2 {
     return list.isEmpty ? null : list;
   }
 
+  /// ws и httpupgrade поверх TLS: пару `h2,http/1.1` из ссылки сводим к одному
+  /// `http/1.1`.
+  ///
+  /// Оба транспорта поднимаются апгрейдом соединения по HTTP/1.1, и если сервер
+  /// выберет по ALPN h2, апгрейда не будет — снаружи это «ссылка не работает»
+  /// без внятной ошибки. Ядро подставляет `http/1.1` само (`WithNextProto` в
+  /// `transport/internet/tls/config.go`), но только когда alpn в конфиге пуст:
+  /// пришедшую из ссылки пару оно оставляет как есть.
+  ///
+  /// Срабатывает ровно на эту пару целиком. Одиночный `alpn=h2` пользователь мог
+  /// поставить осознанно — решать за него мы не будем.
+  static List<String> _alpnForNetwork(String network, List<String> alpn) =>
+      (network == 'ws' || network == 'httpupgrade') &&
+              alpn.length == 2 &&
+              alpn[0] == 'h2' &&
+              alpn[1] == 'http/1.1'
+          ? const ['http/1.1']
+          : alpn;
+
   /// Клиентский TLS: имена полей — как в `infra/conf` ядра.
   ///
   /// Пустой `fingerprint` не заполняем: у ядра пустое поле и так означает
@@ -116,6 +135,7 @@ class ConfigGeneratorV2 {
   /// а остальные хотя бы не тянут за собой всю подписку.
   static Map<String, dynamic> _tlsClientSettings({
     required String serverName,
+    required String network,
     String fingerprint = '',
     String? alpnQuery,
     String? echConfigList,
@@ -128,7 +148,7 @@ class ConfigGeneratorV2 {
     final fp = fingerprint.trim();
     if (fp.isNotEmpty) tls['fingerprint'] = fp;
     final alpn = _splitAlpn(alpnQuery);
-    if (alpn != null) tls['alpn'] = alpn;
+    if (alpn != null) tls['alpn'] = _alpnForNetwork(network, alpn);
     final ech = echConfigList?.trim() ?? '';
     if (ech.isNotEmpty) tls['echConfigList'] = ech;
     final pin = pinnedPeerCertSha256?.trim() ?? '';
@@ -1101,6 +1121,7 @@ class ConfigGeneratorV2 {
       final ech = vmessConfig?['ech']?.toString();
       streamSettings['tlsSettings'] = _tlsClientSettings(
         serverName: sni.isNotEmpty ? sni : (vmessConfig?['add']?.toString() ?? ''),
+        network: network,
         fingerprint: fp,
         alpnQuery: alpn,
         echConfigList: ech,
@@ -1142,6 +1163,7 @@ class ConfigGeneratorV2 {
     streamSettings['security'] = 'tls';
     streamSettings['tlsSettings'] = _tlsClientSettings(
       serverName: sni,
+      network: type,
       fingerprint: fingerprint,
       alpnQuery: getParam('alpn'),
       echConfigList: getParam('ech'),
@@ -1284,6 +1306,7 @@ class ConfigGeneratorV2 {
     streamSettings['security'] = 'tls';
     streamSettings['tlsSettings'] = _tlsClientSettings(
       serverName: sni,
+      network: 'hysteria',
       fingerprint: getParam('fp', ''),
       alpnQuery: alpnForTls,
       echConfigList: getParam('ech'),
@@ -1347,6 +1370,7 @@ class ConfigGeneratorV2 {
     if (security == 'tls') {
       stream['tlsSettings'] = _tlsClientSettings(
         serverName: sni,
+        network: type,
         fingerprint: getParam('fp', ''),
         alpnQuery: getParam('alpn'),
         echConfigList: getParam('ech'),

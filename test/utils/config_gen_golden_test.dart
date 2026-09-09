@@ -73,9 +73,11 @@ void main() {
     });
 
     _golden('vless-tls-ws', () {
+      // alpn задан парой h2+http/1.1 намеренно: панели её выдают, а websocket
+      // на h2 не поднимается — в фикстуре обязан остаться один http/1.1.
       return ConfigGeneratorV2.generateConfig(
         'vless://$_uuid@198.51.100.11:443?type=ws&security=tls'
-        '&sni=ws.example&host=ws.example&path=%2Fpath#ws',
+        '&sni=ws.example&host=ws.example&path=%2Fpath&alpn=h2,http%2F1.1#ws',
         _settings,
       );
     });
