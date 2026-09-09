@@ -6,7 +6,9 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/settings_tab.dart';
+import 'package:keqdroid/services/vpn_engine.dart';
 
+import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
 /// `pumpAndSettle` на этом экране не годится: в настройках живёт бесконечная
@@ -50,10 +52,19 @@ Future<_FakeSettings> _openSheet(
       overrides: [
         storageProvider.overrideWithValue(storage),
         settingsNotifierProvider.overrideWith(() => notifier),
+        // См. FakeTunnelBackend: иначе экран поднимает настоящий бэкенд
+        // туннеля, а на Linux его dispose зовёт gsettings — на раннере это
+        // роняло весь файл, на Windows того же кода нет и всё было зелёным.
+        vpnEngineProvider.overrideWithValue(
+          VpnEngine.withBackend(FakeTunnelBackend()),
+        ),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        // Ищем по английским подписям — язык задаём, а не надеемся на язык
+        // машины, где тест запустили.
+        locale: const Locale('en'),
         // Тема приложения, а не голый MaterialApp: в ней живут компонентные
         // темы M3E, в том числе обновлённая отрисовка ползунка
         // (`SliderThemeData(year2023: false)`). Без неё тест смотрел бы на
