@@ -577,6 +577,69 @@ void main() {
       );
     });
 
+    // По default-nameserver резолвятся ИМЕНА самих DoH-серверов, и ходит туда
+    // ядро всегда напрямую, мимо туннеля и мимо правил (`parseNameServer` с
+    // respectRules=false в config.go ядра). Что там лежит — то и видит
+    // провайдер, поэтому чужих адресов там быть не должно.
+    group('bootstrap', () {
+      List<String> bootstrapFor(String servers) =>
+          MihomoConfigGen.buildDns(AppSettings(
+            xrayCore: XrayCoreSettings(
+              dnsUseCustom: true,
+              dnsServers: servers,
+            ),
+          ))['default-nameserver'] as List<String>;
+
+      test('свой резолвер, а не Google с Cloudflare', () {
+        // Ровно та жалоба, ради которой правка: выбран Quad9, а имя его
+        // DoH-сервера уходило спрашивать у чужой пары.
+        expect(
+          bootstrapFor('https://9.9.9.9/dns-query'),
+          ['https://9.9.9.9/dns-query'],
+        );
+      });
+
+      test('запись переносится со схемой, а не голым адресом', () {
+        // Голый `9.9.9.9` — это UDP-53 мимо туннеля, то есть запрошенное имя
+        // открытым текстом. У DoH провайдер видит только TLS к 9.9.9.9.
+        expect(bootstrapFor('https://9.9.9.9/dns-query').single, startsWith('https://'));
+        // Умолчание — те же два адреса, что и были, но теперь тоже DoH.
+        expect(
+          MihomoConfigGen.buildDns(const AppSettings())['default-nameserver'],
+          ['https://1.1.1.1/dns-query', 'https://8.8.8.8/dns-query'],
+        );
+      });
+
+      test('серверы по именам в bootstrap не годятся', () {
+        // Им самим нужен резолв — ядро такую запись и не примет («default
+        // nameserver should be pure IP»). Берём из списка только адресные.
+        expect(
+          bootstrapFor('https://dns.quad9.net/dns-query, '
+              'https+local://9.9.9.9/dns-query'),
+          ['https://9.9.9.9/dns-query#DIRECT'],
+        );
+      });
+
+      test('список без единого адреса остаётся на прежней паре', () {
+        // Подставить туда нечего: без bootstrap имена DoH-серверов не
+        // разрешаются вовсе, и DNS умирает целиком.
+        expect(
+          bootstrapFor('https://dns.quad9.net/dns-query, localhost'),
+          ['1.1.1.1', '8.8.8.8'],
+        );
+      });
+
+      test('порт и IPv6 адрес адресом быть не перестают', () {
+        expect(bootstrapFor('tls://9.9.9.9:853'), ['tls://9.9.9.9:853']);
+        expect(
+          bootstrapFor('https://[2620:fe::fe]/dns-query'),
+          ['https://[2620:fe::fe]/dns-query'],
+        );
+        // Имя с портом — всё ещё имя.
+        expect(bootstrapFor('tls://dns.quad9.net:853'), ['1.1.1.1', '8.8.8.8']);
+      });
+    });
+
     test('пустой список не оставляет ядро без резолвера', () {
       expect(
         MihomoConfigGen.dnsServers(

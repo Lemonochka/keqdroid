@@ -542,9 +542,7 @@ class MihomoConfigGen {
         // туннеле.
         'fake-ip-filter': fakeIpFilter,
       },
-      // Bootstrap: по ним резолвятся имена самих DoH-серверов. Всегда напрямую,
-      // иначе первый же запрос упирается в курицу и яйцо.
-      'default-nameserver': const ['1.1.1.1', '8.8.8.8'],
+      'default-nameserver': bootstrapNameservers(core),
       // Адрес прокси-сервера — отдельной записью и всегда мимо туннеля (у xray
       // это `bootstrapDomains` со `skipFallback`): запрос по нему через прокси
       // означал бы круг.
@@ -585,6 +583,56 @@ class MihomoConfigGen {
       if (converted != null && !out.contains(converted)) out.add(converted);
     }
     return out.isEmpty ? fallback : out;
+  }
+
+  /// Bootstrap-резолвер: по нему ядро разрешает ИМЕНА самих DoH-серверов.
+  ///
+  /// Ходит по нему mihomo всегда напрямую — мимо туннеля и мимо правил
+  /// (`parseNameServer` с `respectRules = false` в config.go ядра), — поэтому
+  /// содержимое списка видит провайдер. Пара чужих резолверов, вписанная сюда
+  /// намертво, означала вот что: человек выбрал Quad9, а имя его же
+  /// DoH-сервера уходило спрашивать у Google с Cloudflare, открытым текстом и
+  /// в обход туннеля.
+  ///
+  /// Берём его собственные серверы, но только те, у которых адрес — IP: им
+  /// резолв не нужен, а значит только они здесь и работают (ядро это прямо
+  /// требует — «default nameserver should be pure IP»). Запись переносится
+  /// целиком, вместе со схемой: `https://9.9.9.9/dns-query` прячет запрос в
+  /// TLS, а голый `9.9.9.9` отдал бы его провайдеру открытым.
+  ///
+  /// Список, где ни одного IP нет (все серверы заданы именами), остаётся на
+  /// прежней паре: подставить туда нечего, а менять ей транспорт — отдельный
+  /// риск в сети, где DoH к этим адресам могут и не пустить.
+  static List<String> bootstrapNameservers(XrayCoreSettings core) {
+    final out = [
+      for (final server in dnsServers(core))
+        if (_hasIpAddress(server)) server,
+    ];
+    return out.isEmpty ? _bootstrapFallback : out;
+  }
+
+  static const _bootstrapFallback = ['1.1.1.1', '8.8.8.8'];
+
+  /// Адрес записи — IP, а не имя.
+  static bool _hasIpAddress(String server) {
+    var host = server;
+    // Ни фрагмент (`#DIRECT`), ни путь (`/dns-query`) к адресу не относятся.
+    final hash = host.indexOf('#');
+    if (hash >= 0) host = host.substring(0, hash);
+    final scheme = host.indexOf('://');
+    if (scheme >= 0) host = host.substring(scheme + 3);
+    final slash = host.indexOf('/');
+    if (slash >= 0) host = host.substring(0, slash);
+    if (host.startsWith('[')) {
+      final close = host.indexOf(']');
+      if (close < 0) return false;
+      host = host.substring(1, close);
+    } else if (':'.allMatches(host).length == 1) {
+      // Одно двоеточие — это порт. У голого IPv6 их больше, и там отрезать
+      // нечего.
+      host = host.substring(0, host.indexOf(':'));
+    }
+    return InternetAddress.tryParse(host) != null;
   }
 
   /// Схемы, которые mihomo принимает в `nameserver`.
