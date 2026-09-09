@@ -107,13 +107,14 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
         _snapshot.source != ConnectionsSource.unavailable &&
         logLevel != 'info' &&
         logLevel != 'debug';
-    // Владельца соединения на Android ищем по логу tun2socks, а он включается
-    // при старте туннеля. Дебаг включили после подключения — колонка будет
-    // пустой до переподключения, и молчать об этом нельзя: выглядит поломкой.
+    // Владельца ищем по исходному сокету из самой записи. Его туда кладёт
+    // ядро, читающее туннель, — то есть он есть всегда; но если записи пришли
+    // из сессии, поднятой иначе, колонка будет пустой, и молчать об этом
+    // нельзя: выглядит поломкой.
     final showAppNamesHint =
         Platform.isAndroid && !_snapshot.appNamesAvailable;
     // Сплит-туннель на Android делает система: исключённые приложения идут
-    // мимо TUN, их трафик не видит ни tun2socks, ни ядро. В списке их поэтому
+    // мимо TUN, их трафик не видит ядро вовсе. В списке их поэтому
     // не бывает никогда — и это не пропажа, а как раз то, о чём просили.
     final split = ref.watch(splitTunnelingProvider);
     final showSplitNote = Platform.isAndroid &&

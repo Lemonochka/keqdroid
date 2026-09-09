@@ -483,7 +483,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // to 127.0.0.1 only). AmneziaWG proxy is already noauth via wireproxy.
       //
       // На Android в режиме прокси — та же причина, и она там жёстче.
-      // Пароль к локальному SOCKS придуман для tun2socks: он единственный, кто
+      // Пароль к локальному SOCKS придуман для тех, кто
       // ходит в ядро в режиме VPN, и креды ему передаются в обход человека. В
       // режиме прокси в ядро ходит чужое приложение, а системному полю «прокси»
       // у Wi-Fi негде взять логин с паролем — там только адрес и порт. Оставь
@@ -525,7 +525,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       }
 
       // Туннель принадлежит самому mihomo: адаптер, маршруты и перехват DNS —
-      // его, а не sing-box'а или tun2socks. Различие платформ ровно одно: на
+      // его, а не sing-box'а. Различие платформ ровно одно: на
       // десктопе ядро создаёт устройство само, на Android получает готовый
       // дескриптор от VpnService (и потому не трогает ни адреса, ни маршруты).
       final MihomoTunOptions? mihomoTun;
@@ -559,7 +559,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
               settings,
               socksPort: settings.localPort,
               // HTTP-инбаунд нужен и на Android, а не только на десктопе: под
-              // tun2socks в ядро ходят одним SOCKS, но само приложение ходит
+              // туннель ядро читает само, но приложение ходит в него
               // через локальный HTTP-прокси — `Dart HttpClient` не умеет SOCKS
               // вовсе, а свой пакет исключён из TUN. Без этого порта проверка
               // обновлений на mihomo падала с «connection refused»: xray
@@ -641,7 +641,6 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // на Android, в режиме VPN и на самом xray. В режиме «прокси»
       // интерфейса нет вовсе, у AmneziaWG и mihomo туннель свой.
       final nativeTun = Platform.isAndroid &&
-          settings.androidNativeTun &&
           connectionMode == ConnectionMode.tun &&
           !isAwg &&
           !mihomoPicked;

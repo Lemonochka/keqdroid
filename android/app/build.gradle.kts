@@ -49,7 +49,7 @@ android {
 
         ndk {
             // Только arm64-v8a: реальные Android-устройства. x86_64 был нерабочим
-            // для VPN (в jniLibs не было tun2socks/xray) — убран вместе с keqrnel.
+            // для VPN (в jniLibs не было ядер) — убран вместе с keqrnel.
             abiFilters += listOf("arm64-v8a")
         }
     }

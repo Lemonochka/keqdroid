@@ -21,7 +21,7 @@ enum ConnectionMode {
 
   String get storageValue => name;
 
-  /// На Android пока всегда TUN через VpnService + Xray + tun2socks.
+  /// На Android пока всегда TUN через VpnService, читает его само ядро.
   static ConnectionMode platformDefault() {
     return ConnectionMode.tun;
   }

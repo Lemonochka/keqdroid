@@ -739,7 +739,7 @@ class PingService {
     // в режиме «только выбранные», где addDisallowedApplication бросает.
     final throughTun = tunMode || (platformAlwaysTun ?? Platform.isAndroid);
     // через tun неизмеримы raw tcp/icmp (закрывает локальный tun-стек / не проходит
-    // tun2socks); url и speed идут через временный core в обход туннеля
+    // само ядро); url и speed идут через временный core в обход туннеля
     if (vpnConnected &&
         throughTun &&
         (base == PingType.tcp || base == PingType.icmp)) {

@@ -29,7 +29,7 @@ enum CoreRole {
   /// Только протоколы и локальный SOCKS/HTTP (libxray на Android).
   proxy,
 
-  /// Владеет TUN-устройством (tun2socks на Android).
+  /// Владеет TUN-устройством.
   tun,
 
   /// AmneziaWG.

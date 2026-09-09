@@ -133,11 +133,11 @@ void main() {
     test('своё ядро узнаётся по пути с мажорной версией', () {
       final info = GoBuildInfo.parse(buildBlob(
         goVersion: 'go1.26.0',
-        modinfo: 'mod\tgithub.com/xjasonlyu/tun2socks/v2\tv2.7.0\t\n',
+        modinfo: 'mod\tgithub.com/amnezia-vpn/amneziawg-go/v3\tv3.1.0\t\n',
       ))!;
 
-      expect(info.isModule('xjasonlyu/tun2socks/v2'), isTrue);
-      expect(info.isModule('xjasonlyu/tun2socks'), isTrue);
+      expect(info.isModule('amnezia-vpn/amneziawg-go/v3'), isTrue);
+      expect(info.isModule('amnezia-vpn/amneziawg-go'), isTrue);
       expect(info.isModule('sagernet/sing-box'), isFalse);
     });
 
@@ -223,16 +223,6 @@ void main() {
           expect(info.modulePath, 'github.com/xtls/xray-core');
           expect(info.moduleVersion, startsWith('v'));
           expect(info.depVersion('xtls/xray-core'), isNull);
-        },
-      );
-    });
-
-    test('tun2socks отдаёт свою версию', () async {
-      await expectCore(
-        'android/app/src/main/jniLibs/arm64-v8a/libtun2socks.so',
-        (info) {
-          expect(info.modulePath, 'github.com/xjasonlyu/tun2socks/v2');
-          expect(info.moduleVersion, startsWith('v'));
         },
       );
     });

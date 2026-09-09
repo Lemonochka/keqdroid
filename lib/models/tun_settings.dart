@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 /// Расширенные настройки sing-box TUN-инбаунда. Только desktop
-/// (Windows/Linux): на Android TUN держит VpnService + tun2socks,
+/// (Windows/Linux): на Android TUN держит VpnService, а читает его само ядро,
 /// sing-box-инбаунд там не используется.
 class TunSettings {
   /// Сетевой стек: [stackSystem] | [stackGvisor] | [stackMixed].

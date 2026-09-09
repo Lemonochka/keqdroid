@@ -95,7 +95,7 @@ void main() {
       );
     });
 
-    test('icmp тоже, он через tun2socks не проходит', () {
+    test('icmp тоже, он через прокси-протокол не проходит', () {
       expect(
         PingService.pingTypeForConnectionState(PingType.icmp,
             vpnConnected: true, tunMode: false, platformAlwaysTun: true),

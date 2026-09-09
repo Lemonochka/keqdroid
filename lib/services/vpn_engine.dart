@@ -62,7 +62,7 @@ class VpnEngine {
   Future<void> startSession(TunnelSessionRequest request) =>
       _backend.startSession(request);
 
-  /// Android: TUN через VpnService + Xray + tun2socks.
+  /// Android: TUN через VpnService, пакеты читает само ядро.
   Future<void> startVpn(
     String xrayConfig, {
     int socksPort = 2080,

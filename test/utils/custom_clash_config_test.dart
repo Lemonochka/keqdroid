@@ -118,7 +118,7 @@ void main() {
       expect(config['socks-port'], 2080);
       expect(config['bind-address'], '127.0.0.1');
       expect(config['authentication'], ['user:pass']);
-      // Порты автора и его api — мимо: в наш инбаунд ходит tun2socks с
+      // Порты автора и его api — мимо: в наш инбаунд ходит приложение с
       // известными ему кредами, а api читает экран «Соединения».
       expect(config.containsKey('port'), isFalse);
       expect(config.containsKey('mixed-port'), isFalse);

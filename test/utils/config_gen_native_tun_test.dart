@@ -5,8 +5,7 @@ import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// Инбаунд, которым ядро само читает пакеты из туннеля, вместо того чтобы
-/// принимать их от tun2socks по локальному SOCKS.
+/// Инбаунд, которым ядро само читает пакеты из туннеля.
 ///
 /// Дескриптор в конфиг не попадает и попасть не может: ядро читает его из
 /// переменной окружения, а номер знает только нативная часть, поднявшая

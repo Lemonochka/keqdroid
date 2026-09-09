@@ -23,7 +23,7 @@ void main() {
   );
 
   group('инбаунд', () {
-    test('слушает только петлю и требует те же креды, что ждёт tun2socks', () {
+    test('слушает только петлю и требует те же креды, что ждёт приложение', () {
       final c = MihomoConfigGen.build(
         'vless://uuid@example.com:443?type=tcp&security=none',
         const AppSettings(),
@@ -452,7 +452,7 @@ void main() {
 
   group('sniffer', () {
     // Без него доменная половина правил не срабатывает НИКОГДА: в SOCKS от
-    // tun2socks приезжает голый IP, сравнивать GEOSITE/DOMAIN-SUFFIX не с чем,
+    // локальный SOCKS приезжает голый IP, сравнивать GEOSITE/DOMAIN-SUFFIX не с чем,
     // и всё уходит в MATCH.
     test('включён и нюхает чистые IP — иначе домены не матчатся вовсе', () {
       final s = MihomoConfigGen.build(
@@ -732,7 +732,7 @@ void main() {
 
     // Разница «пусто» и «нет ключа» здесь решает всё: без ключа mihomo
     // подставит глобальный `authentication`, то есть случайные креды
-    // tun2socks, и в раздачу не зайдёт никто.
+    // приложения, и в раздачу не зайдёт никто.
     test('без пароля users пустой, но присутствует', () {
       final listeners = (MihomoConfigGen.build(
         'vless://uuid@nl.example:443?type=tcp&security=none',
@@ -995,7 +995,7 @@ void main() {
       expect(rules.last, 'MATCH,DIRECT');
     });
 
-    // Под tun2socks в инбаунд ходит ровно один процесс — он же был бы
+    // В локальный инбаунд ходит ровно один процесс — он же был бы
     // «владельцем» всего, поэтому правил там нет вовсе.
     test('без своего туннеля правил по процессам не бывает', () {
       final config = MihomoConfigGen.build(

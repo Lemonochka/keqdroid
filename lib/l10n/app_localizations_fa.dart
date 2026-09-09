@@ -567,12 +567,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXraySniffingRouteOnlyHint => 'دامنهٔ شناسایی‌شده فقط قانون را انتخاب می‌کند؛ اتصال به نشانی برنامه می‌رود.';
 
   @override
-  String get settingsXrayNativeTun => 'تونل در اختیار هسته';
-
-  @override
-  String get settingsXrayNativeTunHint => 'هستهٔ xray بسته‌ها را خودش از تونل می‌خواند، بدون واسطه. پرش کمتر برای هر بسته. برای اعمال، دوباره وصل شوید.';
-
-  @override
   String get settingsXrayResetDefaults => 'بازگشت به پیش‌فرض';
 
   @override

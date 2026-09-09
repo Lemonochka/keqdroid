@@ -31,7 +31,6 @@ class AppInternalsService {
     'xtls/xray-core': 'xray-core',
     'sagernet/sing-box': 'sing-box',
     'amnezia-vpn/amneziawg-go': 'amneziawg-go',
-    'xjasonlyu/tun2socks/v2': 'tun2socks',
   };
 
   static Future<AppInternals> collect({
@@ -67,16 +66,14 @@ class AppInternalsService {
       final dir = android['nativeLibraryDir'] as String?;
       if (dir == null || dir.isEmpty) return const [];
       return [
-        // На Android движок всегда chain: ядро владеет протоколами,
-        // tun2socks — TUN-устройством. keqrnel сюда не поставляется.
+        // На Android движок всегда chain: ядро владеет и протоколами, и
+        // самим TUN-устройством. keqrnel сюда не поставляется.
         //
         // Прокси-ядер два, и они взаимозаменяемы: какое из них исполняет
         // сервер, выбирает пользователь прямо на этом экране
         // (AppSettings.vpnCore).
         await _core(p.join(dir, 'libxray.so'), 'libxray.so', CoreRole.proxy),
         await _core(p.join(dir, 'libmihomo.so'), 'libmihomo.so', CoreRole.proxy),
-        await _core(
-            p.join(dir, 'libtun2socks.so'), 'libtun2socks.so', CoreRole.tun),
         await _core(
             p.join(dir, 'libwg-go.so'), 'libwg-go.so', CoreRole.amneziawg),
       ];
@@ -263,10 +260,8 @@ class AppInternalsService {
   static Map<String, int> _corePids(Map<String, Object?> android) {
     if (Platform.isAndroid) {
       final core = android['xrayPid'] as int? ?? -1;
-      final tun2socks = android['tun2socksPid'] as int? ?? -1;
       return {
         if (core > 0) _androidCoreBinary(android): core,
-        if (tun2socks > 0) 'tun2socks': tun2socks,
       };
     }
     if (Platform.isWindows) {

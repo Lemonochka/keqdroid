@@ -567,12 +567,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXraySniffingRouteOnlyHint => 'The sniffed domain only picks the routing rule; the connection still goes to the address the app gave.';
 
   @override
-  String get settingsXrayNativeTun => 'Core owns the tunnel';
-
-  @override
-  String get settingsXrayNativeTunHint => 'The xray core reads packets from the tunnel itself, with no middleman. Fewer hops per packet. Reconnect to apply.';
-
-  @override
   String get settingsXrayResetDefaults => 'Reset to defaults';
 
   @override

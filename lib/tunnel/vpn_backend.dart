@@ -1,8 +1,8 @@
 /// Which native core backs the active VPN session.
 ///
-/// `xray`   — обычный пайплайн (xray → локальный SOCKS5 → tun2socks/sing-box).
+/// `xray`   — обычный пайплайн (xray читает туннель сам, на десктопе за ним sing-box).
 /// `mihomo` — то же место в схеме, но SOCKS5 поднимает mihomo: TUN по-прежнему
-///            держит VpnService + tun2socks, ядро о туннеле не знает.
+///            держит VpnService, а читает его само ядро.
 /// `awg`    — AmneziaWG: ядро само владеет TUN (amneziawg-go на Android,
 ///            amneziawg tunnel-сервис на Windows), без socks-обёртки.
 enum VpnBackend {

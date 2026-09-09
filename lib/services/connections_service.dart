@@ -343,31 +343,19 @@ class ConnectionsService {
     }
     final snapshot = XrayAccessLogParser.parse(text);
     if (!Platform.isAndroid) return snapshot;
-    return _withAndroidAppNames(snapshot);
+    return _withAndroidAppNamesFromSource(snapshot);
   }
 
-  /// Владелец соединения на xray-пути известен только из лога tun2socks — в нём
-  /// одном виден исходный сокет приложения (в лог xray попадает уже наш
-  /// собственный, со стороны SOCKS).
-  static Future<ConnectionsSnapshot> _withAndroidAppNames(
-    ConnectionsSnapshot snapshot,
-  ) async =>
-      withAppNames(
-        snapshot,
-        peers: Tun2SocksLogParser.parse(await VpnNativeBridge.getTun2SocksLogs()),
-        resolve: VpnNativeBridge.resolveConnectionOwners,
-        cache: _appNames,
-      );
-
-  /// То же для mihomo, владеющего туннелем: исходный сокет приложения приезжает
-  /// прямо в ответе API (`metadata.sourceIP`/`sourcePort`), потому что ядро
-  /// принимает пакеты из tun, а не из локального SOCKS.
+  /// Исходный сокет приложения приезжает прямо в записи: туннель читает само
+  /// ядро, поэтому источником в его логе (и в ответе API у mihomo) стоит адрес
+  /// приложения на TUN, а не наш собственный сокет со стороны SOCKS.
   ///
-  /// Это не просто другой источник тех же данных: лог tun2socks писался только
-  /// в дебаг-режиме, а здесь имена находятся всегда. Само поле `process` ядра
-  /// по-прежнему пустое (`find-process-mode: off`): непривилегированному
-  /// процессу Android не отдаёт ни netlink INET_DIAG, ни `/proc/net/*` чужих
-  /// uid — спрашивать систему может только приложение-владелец туннеля.
+  /// Имена благодаря этому находятся всегда — раньше на xray-пути они зависели
+  /// от дебаг-режима, потому что читались из чужого лога. Поле `process` у
+  /// ядра при этом по-прежнему пустое (`find-process-mode: off`):
+  /// непривилегированному процессу Android не отдаёт ни netlink INET_DIAG, ни
+  /// `/proc/net/*` чужих uid — спрашивать систему может только
+  /// приложение-владелец туннеля. Им и спрашиваем.
   static Future<ConnectionsSnapshot> _withAndroidAppNamesFromSource(
     ConnectionsSnapshot snapshot,
   ) async =>
@@ -387,11 +375,16 @@ class ConnectionsService {
     final entries = [...snapshot.entries];
     final indexes = <int>[];
     final requests = <Map<String, Object?>>[];
+    // Хоть одно имя нашлось в кэше — значит спрашивать не о чем не потому, что
+    // спросить нечем. Разница видна на второй же секунде: экран опрашивается по
+    // таймеру, и когда все имена уже в кэше, вопросов к системе нет вовсе.
+    var fromCache = false;
     for (var i = 0; i < entries.length; i++) {
       final entry = entries[i];
       final known = cache?[entry.id];
       if (known != null && known.isNotEmpty) {
         entries[i] = entry.withProcess(known);
+        fromCache = true;
         continue;
       }
       // Закрытые не спрашиваем: система ищет владельца в живой таблице сокетов.
@@ -410,10 +403,12 @@ class ConnectionsService {
         'dstPort': entry.destPort,
       });
     }
-    if (requests.isEmpty) {
+    if (requests.isEmpty && !fromCache) {
       return entries.isEmpty ? snapshot : _withoutAppNames(snapshot);
     }
-    final names = await resolve(requests);
+    final names = requests.isEmpty
+        ? const <String>[]
+        : await resolve(requests);
     for (var i = 0; i < indexes.length && i < names.length; i++) {
       final name = names[i];
       if (name.isEmpty) continue;
@@ -454,81 +449,11 @@ class ConnectionsService {
         appNamesAvailable: false,
       );
 
-  /// Дополняет соединения именами приложений-владельцев.
-  ///
-  /// Связка двухступенчатая: лог tun2socks даёт по назначению сокет
-  /// приложения, а система по паре сокетов — uid и имя. Закрытые соединения не
-  /// спрашиваем вовсе: система ищет их в живой таблице сокетов и на закрытые
-  /// отвечает «владельца нет».
   /// Найденные имена, чтобы не спрашивать систему об одном и том же каждые две
   /// секунды: экран опрашивается по таймеру, а соединение живёт дольше.
   static final Map<String, String> _appNames = {};
   static const _appNamesLimit = 300;
 
-  static Future<ConnectionsSnapshot> withAppNames(
-    ConnectionsSnapshot snapshot, {
-    required Map<String, Tun2SocksPeer> peers,
-    required Future<List<String>> Function(List<Map<String, Object?>>) resolve,
-    Map<String, String>? cache,
-  }) async {
-    if (peers.isEmpty) {
-      // Лога tun2socks нет вовсе — туннель поднимали без дебаг-режима.
-      return snapshot.entries.isEmpty
-          ? snapshot
-          : _withoutAppNames(snapshot);
-    }
-
-    final entries = [...snapshot.entries];
-    final indexes = <int>[];
-    final requests = <Map<String, Object?>>[];
-    for (var i = 0; i < entries.length; i++) {
-      final entry = entries[i];
-      final known = cache?[entry.id];
-      if (known != null && known.isNotEmpty) {
-        entries[i] = entry.withProcess(known);
-        continue;
-      }
-      if (entry.closed) continue;
-      // Спрашиваем по IP: host к этому моменту мог смениться на домен.
-      final ip = entry.destIp.isNotEmpty ? entry.destIp : entry.host;
-      final peer = peers[Tun2SocksLogParser.keyFor(
-        entry.network,
-        ip,
-        entry.destPort,
-      )];
-      if (peer == null) continue;
-      indexes.add(i);
-      requests.add({
-        'protocol': entry.network,
-        'srcIp': peer.ip,
-        'srcPort': peer.port,
-        'dstIp': ip,
-        'dstPort': entry.destPort,
-      });
-    }
-    final names = requests.isEmpty
-        ? const <String>[]
-        : await resolve(requests);
-    for (var i = 0; i < indexes.length && i < names.length; i++) {
-      final name = names[i];
-      if (name.isEmpty) continue;
-      final index = indexes[i];
-      entries[index] = entries[index].withProcess(name);
-      if (cache != null) {
-        cache[entries[index].id] = name;
-        while (cache.length > _appNamesLimit) {
-          cache.remove(cache.keys.first);
-        }
-      }
-    }
-    return ConnectionsSnapshot(
-      entries: entries,
-      source: snapshot.source,
-      note: snapshot.note,
-      ruleInfoAvailable: snapshot.ruleInfoAvailable,
-      appNamesAvailable: snapshot.appNamesAvailable,
-    );
-  }
 }
 
 /// Разбор лога xray в список соединений.
@@ -901,48 +826,6 @@ class XraySessionTrace {
   bool closed = false;
 }
 
-/// Адрес приложения на TUN — второй конец соединения, тот, что ищет система.
-class Tun2SocksPeer {
-  const Tun2SocksPeer({required this.ip, required this.port});
-  final String ip;
-  final int port;
-}
-
-/// Разбор лога tun2socks: `[TCP] 10.0.0.2:41234 <-> 216.58.198.162:443`.
-///
-/// Это единственное место, где виден исходный сокет приложения. В access-лог
-/// xray попадает уже наш собственный сокет со стороны SOCKS (`127.0.0.1:…`),
-/// принадлежащий tun2socks, — спрашивать систему про него бессмысленно, она
-/// честно ответит, что владелец keqdroid.
-class Tun2SocksLogParser {
-  Tun2SocksLogParser._();
-
-  /// Префикс строки и формат времени у tun2socks свои и от версии к версии
-  /// меняются, поэтому цепляемся только за саму пару адресов.
-  static final _line = RegExp(
-    r'\[(TCP|UDP)\]\s+(\S+):(\d+)\s+<->\s+(\S+):(\d+)',
-    caseSensitive: false,
-  );
-
-  static String keyFor(String network, String ip, int port) =>
-      '${network.toLowerCase()}:${ip.trim().toLowerCase()}:$port';
-
-  /// Назначение → адрес приложения. Последняя запись выигрывает: к одному
-  /// адресу ходят по многу раз, и свежая связка вернее старой.
-  static Map<String, Tun2SocksPeer> parse(String log) {
-    final byTarget = <String, Tun2SocksPeer>{};
-    for (final line in log.split('\n')) {
-      final m = _line.firstMatch(line);
-      if (m == null) continue;
-      final port = int.tryParse(m.group(5)!);
-      final srcPort = int.tryParse(m.group(3)!);
-      if (port == null || srcPort == null) continue;
-      byTarget[keyFor(m.group(1)!, m.group(4)!, port)] =
-          Tun2SocksPeer(ip: m.group(2)!, port: srcPort);
-    }
-    return byTarget;
-  }
-}
 
 /// Решение роутинга ядра для одного назначения.
 class XrayRouteDecision {

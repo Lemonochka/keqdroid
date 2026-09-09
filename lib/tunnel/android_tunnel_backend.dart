@@ -103,10 +103,10 @@ class AndroidTunnelBackend implements TunnelBackend {
       // аутбаунд. При этом внутренние direct/proxy/block-правила xray не
       // применяются → сплит-роутинг (geoip/geosite/домены, обход .ru мимо VPN)
       // на Android молча не работает: весь трафик идёт через сервер. К тому же
-      // tun2socks отдаёт ядру только IP, а sing-box-инбаунд в обёртке не снифит
-      // домен. Чистый libxray исполняет конфиг целиком — со своим роутингом и
-      // снифинг-инбаундом, как любой xray-клиент на Android. sing-box-слой на
-      // Android ничего полезного не добавляет (TUN держит VpnService+tun2socks).
+      // sing-box-инбаунд в обёртке не снифит домен. Чистый libxray исполняет
+      // конфиг целиком — со своим роутингом и снифинг-инбаундом, как любой
+      // xray-клиент на Android. sing-box-слой на Android ничего полезного не
+      // добавляет: TUN поднимает VpnService, а читает его само ядро.
       final coreConfig = request.xrayConfig;
 
       final args = <String, dynamic>{
@@ -117,7 +117,7 @@ class AndroidTunnelBackend implements TunnelBackend {
         'coreEngine': 'chain',
         // Режим сессии: `proxy` — ядро без VpnService, только локальные
         // инбаунды. Нативная сторона по нему решает, спрашивать ли разрешение
-        // и поднимать ли интерфейс с tun2socks.
+        // и поднимать ли интерфейс вовсе.
         'tunnelMode': request.mode.storageValue,
         'socksPort': request.socksPort,
         'excludePackages': request.excludePackages,

@@ -101,22 +101,6 @@ class VpnNativeBridge {
   /// Слушать смену обоев имеет смысл только там, где её кто-то шлёт.
   static bool get supportsSystemAccentEvents => Platform.isAndroid;
 
-  /// Лог tun2socks. Пишется только в дебаг-режиме: там на каждое соединение
-  /// печатается сокет самого приложения, а больше его взять негде — в лог xray
-  /// попадает уже наш собственный, со стороны SOCKS.
-  static Future<String> getTun2SocksLogs({int maxLines = 600}) async {
-    if (!Platform.isAndroid) return '';
-    try {
-      final text = await channel.invokeMethod<String>(
-        'getTun2SocksLogs',
-        {'maxLines': maxLines},
-      );
-      return text ?? '';
-    } catch (_) {
-      return '';
-    }
-  }
-
   /// Координаты RESTful API у работающей mihomo-сессии: `port` и `secret`.
   ///
   /// Нужно только свежему Dart-изоляту, когда VpnService пережил пересоздание

@@ -13,7 +13,6 @@ object NativeHelper {
     private val coreBinaries = setOf(
         "libxray.so",
         "libmihomo.so",
-        "libtun2socks.so",
     )
 
     // pid'ы ядер, запущенных ИМЕННО ЭТИМ процессом приложения.
@@ -25,16 +24,6 @@ object NativeHelper {
     private val livePids = Collections.synchronizedSet(mutableSetOf<Int>())
 
     @JvmStatic
-    private external fun nativeStartTun2Socks(
-        tunFd: Int,
-        binPath: String,
-        proxyUrl: String,
-        logLevel: String,
-        logPath: String,
-        mtu: Int,
-    ): Int
-
-    @JvmStatic
     private external fun nativeStartCore(
         binPath: String,
         configPath: String,
@@ -44,26 +33,6 @@ object NativeHelper {
         tunFd: Int,
     ): Int
 
-    // logLevel: уровень логов tun2socks. На `info` он печатает каждое соединение
-    // строкой `[TCP] <сокет приложения> <-> <назначение>` — единственное место,
-    // где виден исходный сокет; в лог xray попадает уже наш собственный, со
-    // стороны SOCKS. logPath: полный путь к файлу логов, пустая строка —
-    // логирование в файл выключено и пайп не создаётся вовсе.
-    // mtu: ОБЯЗАН совпадать с тем, с которым поднят интерфейс VpnService. Своего
-    // значения у fd-устройства tun2socks не знает и по умолчанию берёт 1500;
-    // расхождение с интерфейсом даёт пакеты, которые netstack собрал, а ядро на
-    // записи в tun отбросило.
-    fun startTun2Socks(
-        tunFd: Int,
-        binPath: String,
-        proxyUrl: String,
-        logLevel: String,
-        logPath: String,
-        mtu: Int,
-    ): Int = remember(
-        nativeStartTun2Socks(tunFd, binPath, proxyUrl, logLevel, logPath, mtu),
-    )
-
     // Запуск ядра прокси. logName: имя файла логов ядра внутри assetDir
     // (filesDir); пустая строка — файловое логирование выключено (используется
     // ping/спидтестом).
@@ -72,10 +41,9 @@ object NativeHelper {
     // `run -c <config>` и базы geo через XRAY_LOCATION_ASSET, mihomo —
     // `-d <dir> -f <config>` и берёт базы из рабочего каталога.
     //
-    // tunFd: дескриптор TUN-устройства, когда туннелем владеет само ядро
-    // (mihomo с `tun.file-descriptor`); -1 — ядро о туннеле не знает, пакеты
-    // ему приносит tun2socks. Дескриптор переживает execv только со снятым
-    // FD_CLOEXEC, и снимает его натив — см. forkexec.c.
+    // tunFd: дескриптор TUN-устройства; -1 — туннеля нет вовсе (режим прокси).
+    // Дескриптор переживает execv только со снятым FD_CLOEXEC, и снимает его
+    // натив — см. forkexec.c.
     fun startCore(
         binPath: String,
         configPath: String,
@@ -100,8 +68,8 @@ object NativeHelper {
     // отстрел системой): onDestroy при SIGKILL не приходит, убивать процесс
     // некому, и он остаётся сидеть на 2080.
     //
-    // Дальше начинается неочевидное: новое ядро порт занять не может и работает
-    // без SOCKS, а tun2socks подключается к СТАРОМУ ядру — с чужими
+    // Дальше начинается неочевидное: новое ядро порт занять не может, а
+    // локальный прокси приложения дозванивается до СТАРОГО ядра — с чужими
     // credentials. В логе это выглядит как `rejected username/password`, будто
     // сломалась авторизация, хотя сломан порядок запуска.
     //

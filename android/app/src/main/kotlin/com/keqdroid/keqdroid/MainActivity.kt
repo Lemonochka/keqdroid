@@ -451,7 +451,7 @@ class MainActivity : FlutterFragmentActivity() {
                         "getSocksCredentials"  -> {
                             // Генерируем свежие credentials.
                             // Они будут переданы в сервис через Intent при startVpn —
-                            // так Xray конфиг и tun2socks гарантированно используют одно и то же.
+                            // так конфиг ядра и локальный прокси приложения гарантированно совпадают.
                             pendingSocksUsername = randomToken(16)
                             pendingSocksPassword = randomToken(24)
                             android.util.Log.d("KEQDIS", "getSocksCredentials: generated new credentials")
@@ -508,12 +508,11 @@ class MainActivity : FlutterFragmentActivity() {
                         "getNativeInternals" -> {
                             // Панель «Внутренности» читает версии ядер прямо из
                             // файлов (Go build info), поэтому ей нужен каталог с
-                            // libxray.so/libtun2socks.so — из Dart он не виден.
+                            // libxray.so — из Dart он не виден.
                             // PID берём здесь же: они живут в сервисе, а не в Dart.
                             result.success(mapOf(
                                 "nativeLibraryDir" to applicationInfo.nativeLibraryDir,
                                 "xrayPid" to (vpnServiceBinder?.getXrayPid() ?: -1),
-                                "tun2socksPid" to (vpnServiceBinder?.getTun2SocksPid() ?: -1),
                                 // Ядро ЖИВОЙ сессии. Binder не привязан (холодный
                                 // старт при работающем туннеле) — берём из тех же
                                 // QS-prefs, что и всё остальное о прошлом старте.
@@ -559,10 +558,6 @@ class MainActivity : FlutterFragmentActivity() {
                         "getXrayLogs" -> {
                             val maxLines = call.argument<Int>("maxLines") ?: 300
                             getXrayLogs(maxLines, result)
-                        }
-                        "getTun2SocksLogs" -> {
-                            val maxLines = call.argument<Int>("maxLines") ?: 300
-                            getTun2SocksLogs(maxLines, result)
                         }
                         "resolveConnectionOwners" -> {
                             val items = call.argument<List<Map<String, Any?>>>("connections")
@@ -763,8 +758,8 @@ class MainActivity : FlutterFragmentActivity() {
         serverName: String?,
         result: MethodChannel.Result,
         coreEngine: String = KeqdisVpnService.CORE_ENGINE_CHAIN,
-        // mihomo занимает то же место в схеме (локальный SOCKS под tun2socks),
-        // поэтому путь запуска общий — различаются backend и имя файла конфига.
+        // mihomo занимает то же место в схеме, поэтому путь запуска общий —
+        // различаются backend и имя файла конфига.
         // Имя разное намеренно: по нему видно, каким ядром писан файл, а
         // оставшийся от прошлой сессии чужой конфиг не подсунется новому ядру.
         backend: String = KeqdisVpnService.VPN_BACKEND_XRAY,
@@ -1205,28 +1200,6 @@ class MainActivity : FlutterFragmentActivity() {
                 }.getOrElse { e ->
                     "Unable to read core logs: ${e.message}"
                 }
-            }
-            result.success(logs)
-        }
-    }
-
-    /**
-     * Лог tun2socks. Пишется только в дебаг-режиме (см. KeqdisVpnService), и
-     * только в нём видно, какому приложению принадлежит соединение: строка
-     * `[TCP] 10.0.0.2:41234 <-> 216.58.198.162:443`, где первый адрес —
-     * сокет самого приложения на TUN. В логе xray на его месте уже наш
-     * собственный сокет со стороны SOCKS.
-     */
-    private fun getTun2SocksLogs(maxLines: Int, result: MethodChannel.Result) {
-        mainScope.launch {
-            val logs = withContext(Dispatchers.IO) {
-                val capped = maxLines.coerceIn(50, 4000)
-                runCatching {
-                    val f = File(filesDir, KeqdisVpnService.TUN2SOCKS_LOG_FILE)
-                    if (f.exists() && f.length() > 0L)
-                        f.readLines().takeLast(capped).joinToString("\n")
-                    else ""
-                }.getOrDefault("")
             }
             result.success(logs)
         }

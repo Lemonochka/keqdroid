@@ -273,7 +273,7 @@ class _AppInternalsScreen extends ConsumerWidget {
 class _CoreTile extends StatelessWidget {
   final CoreInfo core;
 
-  /// null — ядро не участвует в выборе (tun2socks, wg-go, десктопные бинари).
+  /// null — ядро не участвует в выборе (wg-go, десктопные бинари).
   final bool? selected;
 
   /// Заменяет подпись роли: у двух прокси-движков она одинаковая и в момент
@@ -706,7 +706,8 @@ String _coreMismatchText(AppLocalizations l10n, VpnCoreSkip skip) =>
     };
 
 /// Пароль локального прокси и сами креды. Видна только в режиме «Прокси»: в
-/// режиме VPN в ядро ходит один tun2socks, и креды ему передаются мимо человека.
+/// режиме VPN в локальный прокси ходит только само приложение, и креды ему
+/// передаются мимо человека.
 class _ProxyAuthTile extends ConsumerWidget {
   const _ProxyAuthTile();
 
@@ -784,7 +785,7 @@ class _ProxyAuthTile extends ConsumerWidget {
 /// Два слова взяты не наугад. «VPN» — то, чем режим является для системы:
 /// именно его показывает ключик в статусбаре и диалог разрешения. «Прокси» —
 /// то, чем становится приложение без туннеля: локальный SOCKS/HTTP, к которому
-/// приложения подключаются сами. Ни «TUN», ни «tun2socks» тут не звучат — это
+/// приложения подключаются сами. Слово «TUN» тут не звучит — это
 /// имена наших внутренностей, а не то, что выбирает человек.
 class _TunnelModeTile extends ConsumerWidget {
   final ConnectionMode mode;

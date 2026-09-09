@@ -251,8 +251,6 @@
   "settingsXrayXmuxParamsHint": "Пусто — дефолт Xray. Число или диапазон, например 16-32.",
   "settingsXraySniffingHint": "Определять протокол и домен назначения по входящему трафику",
   "settingsXraySniffingRouteOnlyHint": "Домен из снифера только выбирает правило, а соединение идёт на адрес от приложения.",
-  "settingsXrayNativeTun": "Туннель держит ядро",
-  "settingsXrayNativeTunHint": "Ядро xray читает пакеты из туннеля само, без посредника. Меньше пересылок на каждый пакет. Требуется переподключение.",
   "settingsXrayResetDefaults": "Сбросить настройки",
   "settingsXrayResetDone": "Настройки ядра Xray восстановлены",
   "settingsXrayXmuxMaxConcurrency": "Макс. параллельность",

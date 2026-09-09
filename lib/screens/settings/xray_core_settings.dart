@@ -178,7 +178,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
         const _XrayNoiseSection(),
         const _XrayGeneralSection(),
         // sing-box TUN есть только на десктопе: Android держит TUN через
-        // VpnService + tun2socks, эти опции там ни на что не влияют.
+        // VpnService, эти опции там ни на что не влияют.
         if (Platform.isWindows || Platform.isLinux) const _XrayTunSection(),
         // mihomo поставляется на всех трёх платформах, поэтому секция здесь
         // безусловна — в отличие от TUN-настроек выше, которые описывают
@@ -1153,18 +1153,6 @@ class _XrayGeneralSection extends ConsumerWidget {
                 ),
               ),
             ),
-            // Только Android: на десктопе туннель держит sing-box внутри
-            // keqrnel, и tun2socks там нет вовсе — переключать нечего.
-            if (Platform.isAndroid)
-              SwitchListTile(
-                value: settings.androidNativeTun,
-                onChanged: (v) => ref
-                    .read(settingsNotifierProvider.notifier)
-                    .save(settings.copyWith(androidNativeTun: v)),
-                activeThumbColor: accent,
-                title: Text(l10n.settingsXrayNativeTun),
-                subtitle: Text(l10n.settingsXrayNativeTunHint),
-              ),
           ],
         ),
       ],

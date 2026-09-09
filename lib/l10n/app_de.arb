@@ -251,8 +251,6 @@
   "settingsXrayXmuxParamsHint": "Leer nutzt den Xray-Standard. Zahl oder Bereich, z. B. 16-32.",
   "settingsXraySniffingHint": "Zielprotokoll und Domain aus dem eingehenden Verkehr erkennen",
   "settingsXraySniffingRouteOnlyHint": "Die erkannte Domain wählt nur die Regel; verbunden wird zur Adresse der App.",
-  "settingsXrayNativeTun": "Kern hält den Tunnel",
-  "settingsXrayNativeTunHint": "Der Xray-Kern liest die Pakete direkt aus dem Tunnel, ohne Zwischenstück. Weniger Umwege pro Paket. Neu verbinden zum Übernehmen.",
   "settingsXrayResetDefaults": "Auf Standard zurücksetzen",
   "settingsXrayResetDone": "Xray-Kerneinstellungen wiederhergestellt",
   "settingsXrayXmuxMaxConcurrency": "Max. Parallelität",

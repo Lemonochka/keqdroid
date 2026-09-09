@@ -60,7 +60,7 @@ class KeqdisVpnService : VpnService() {
         //
         // В режиме прокси сервис остаётся foreground-сервисом (тип specialUse,
         // не vpn — см. манифест), но VpnService.establish() не вызывается вовсе:
-        // нет ни интерфейса, ни tun2socks, ни диалога разрешения. Ядро просто
+        // нет ни интерфейса, ни диалога разрешения. Ядро просто
         // слушает 127.0.0.1, а loopback на Android общий для всех приложений,
         // так что настроить на него можно кого угодно.
         const val EXTRA_TUNNEL_MODE    = "tunnel_mode"
@@ -80,9 +80,6 @@ class KeqdisVpnService : VpnService() {
         // listener/listener.go: ReCreateTun.
         const val MIHOMO_TUN_READY     = "[TUN] Tun adapter listening at:"
         const val MIHOMO_TUN_FAILED    = "Start TUN listening error:"
-        // Лог tun2socks; пишется только в дебаг-режиме. Нужен экрану «Соединения»:
-        // исходный сокет приложения виден больше нигде.
-        const val TUN2SOCKS_LOG_FILE   = "tun2socks_logs.txt"
         // AmneziaWG: ядро amneziawg-go само владеет TUN, конфиг приходит из .conf.
         const val EXTRA_AWG_UAPI        = "awg_uapi"
         const val EXTRA_AWG_ADDRESSES   = "awg_addresses"
@@ -171,7 +168,6 @@ class KeqdisVpnService : VpnService() {
     @Volatile private var lastExcludePackages: List<String> = emptyList()
     @Volatile private var lastIncludePackages: List<String> = emptyList()
     @Volatile private var xrayPid:            Int                   = -1
-    @Volatile private var tun2socksPid:       Int                   = -1
     // AmneziaWG tunnel handle из amneziawg-go (>=0 когда активен awg-бэкенд).
     @Volatile private var awgHandle:          Int                   = -1
     @Volatile private var tunInterface:       ParcelFileDescriptor? = null
@@ -189,7 +185,7 @@ class KeqdisVpnService : VpnService() {
 
     // Сериализует start/stop/teardown: без этого быстрое перещёлкивание плитки в
     // шторке запускало новый старт поверх ещё идущего cleanup() предыдущего стопа —
-    // они дрались за xrayPid/tun2socksPid/tunInterface и SOCKS-порт, старт падал в
+    // они дрались за xrayPid/tunInterface и SOCKS-порт, старт падал в
     // ERROR и приложение приходилось перезапускать. Под мьютексом операции идут
     // строго по очереди, и стоп дожидается cleanup() ДО того, как стартует следующий.
     private val opMutex = Mutex()
@@ -226,7 +222,6 @@ class KeqdisVpnService : VpnService() {
         fun getDurationSeconds() = if (startTime > 0) (System.currentTimeMillis() - startTime) / 1000L else 0L
         // PID форкнутых ядер для панели «Внутренности»; -1 — процесс не запущен.
         fun getXrayPid()         = xrayPid
-        fun getTun2SocksPid()    = tun2socksPid
         // Чем исполняется ТЕКУЩАЯ сессия. Панель «Внутренности» не вправе
         // выводить это из настройки: выбор ядра меняют на ходу, а работает всё
         // равно то, с которым подключились.
@@ -415,9 +410,6 @@ class KeqdisVpnService : VpnService() {
         if (!cleanupDone) {
             // быстрая очистка PID, без wait на процессы
             runCatching {
-                if (tun2socksPid > 0) {
-                    try { android.os.Process.killProcess(tun2socksPid) } catch (_: Exception) {}
-                }
                 if (xrayPid > 0) {
                     try { android.os.Process.killProcess(xrayPid) } catch (_: Exception) {}
                 }
@@ -485,15 +477,16 @@ class KeqdisVpnService : VpnService() {
             // coreEngine оставлен в сигнатурах для совместимости, но игнорируется —
             // даже старый сохранённый engine=keqrnel не должен искать отсутствующий бинарь.
             //
-            // mihomo занимает в схеме ровно то же место: поднимает локальный SOCKS5,
-            // TUN как и раньше держат VpnService + tun2socks. Отличаются только
-            // бинарь и argv (см. NativeHelper.startCore).
+            // mihomo занимает в схеме ровно то же место: туннель держит само
+            // ядро, локальный SOCKS остаётся для самого приложения. Отличаются
+            // только бинарь и argv (см. NativeHelper.startCore).
             // Ядра от прошлой жизни приложения — до старта нового.
             //
-            // Без этого новое ядро не займёт SOCKS-порт (его держит старое), а
-            // tun2socks подключится к старому ядру с чужими credentials: в логе
-            // `rejected username/password`, на экране — «подключено» и мёртвая
-            // сеть. Проверка isPortOpen ниже такое не ловит: порт-то открыт.
+            // Без этого новое ядро не займёт SOCKS-порт: его держит старое, и
+            // локальный прокси приложения уводит запросы в чужую сессию с
+            // чужими credentials — в логе `rejected username/password`, на
+            // экране «подключено» и мёртвая сеть. Проверка isPortOpen ниже
+            // такое не ловит: порт-то открыт.
             if (NativeHelper.killOrphans() > 0) {
                 // SIGKILL асинхронен: слушающий сокет освобождается не в тот же
                 // миг, а новое ядро полезет за портом сразу.
@@ -504,8 +497,8 @@ class KeqdisVpnService : VpnService() {
             }
 
             val isMihomo = coreKind == CORE_KIND_MIHOMO
-            // Только локальный прокси: интерфейса нет, значит нет ни tun2socks,
-            // ни дескриптора для mihomo, ни ожидания его tun-листенера. Ядро
+            // Только локальный прокси: интерфейса нет, значит нет ни
+            // дескриптора для ядра, ни ожидания его tun-листенера. Ядро
             // поднимает свои инбаунды на 127.0.0.1 — этого достаточно.
             val proxyOnly = tunnelMode == TUNNEL_MODE_PROXY
             // Держит ли туннель сам xray. Спрашиваем конфиг, а не настройку:
@@ -514,18 +507,10 @@ class KeqdisVpnService : VpnService() {
             // бы ровно так же, как когда-то движок в плитке.
             val xrayOwnsTun = !isMihomo && !proxyOnly && xrayConfigHasTun(xrayConfigPath)
 
-            // Порядок зависит от того, кто владеет туннелем.
-            //
-            //  * xray: ядро о TUN не знает, пакеты ему приносит tun2socks.
-            //    Сначала ядро (и его SOCKS-порт), потом интерфейс, потом
-            //    tun2socks — так упавшее ядро не оставляет за собой поднятый
-            //    интерфейс.
-            //  * mihomo: туннель держит оно само через `tun.file-descriptor`,
-            //    поэтому интерфейс обязан существовать РАНЬШЕ ядра — номер
-            //    дескриптора дописывается в конфиг перед запуском. Взамен
-            //    исчезает tun2socks, а с ним лишняя пересылка каждого пакета
-            //    через локальный SOCKS; появляются перехват DNS (`dns-hijack`)
-            //    и настоящий UDP.
+            // Туннель держит ядро — любое из двух, — и поэтому интерфейс обязан
+            // существовать РАНЬШЕ него: номер дескриптора нужен уже на старте.
+            // mihomo получает его дописанным в конфиг, xray — переменной
+            // окружения. Разница на этом и заканчивается.
             if (isMihomo && !proxyOnly) {
                 val tun = buildTunInterface(excludePkgs, includePkgs)
                 tunInterface = tun
@@ -546,9 +531,6 @@ class KeqdisVpnService : VpnService() {
                     coreKind,
                 )
             } else if (xrayOwnsTun) {
-                // Тот же порядок, что у mihomo, и по той же причине: номер
-                // дескриптора нужен ядру в момент старта, значит интерфейс
-                // обязан существовать раньше.
                 val tun = buildTunInterface(excludePkgs, includePkgs)
                 tunInterface = tun
                 val tunRawFd = tun.fd
@@ -561,6 +543,17 @@ class KeqdisVpnService : VpnService() {
                     tunFd = tunRawFd,
                 )
             } else {
+                // Режим VPN, а tun-инбаунда в конфиге нет — значит на диске
+                // лежит конфиг от версии, которая ещё носила отдельный
+                // пересыльщик пакетов. Так бывает при реконнекте из плитки
+                // сразу после обновления. Поднимать ядро в таком виде нельзя:
+                // интерфейс встанет, а читать из него будет некому — и это
+                // выглядело бы как «подключено, интернета нет».
+                if (!proxyOnly) {
+                    throw IllegalStateException(
+                        "Config predates the in-core tunnel — reconnect from the app once"
+                    )
+                }
                 xrayPid = startXray(
                     getBinaryPath("libxray.so"),
                     xrayConfigPath,
@@ -590,16 +583,7 @@ class KeqdisVpnService : VpnService() {
             // и только пакеты из tun не читает никто.
             if (isMihomo && !proxyOnly) awaitMihomoTun()
 
-            if (!isMihomo && !proxyOnly && !xrayOwnsTun) {
-                // создаём TUN-интерфейс
-                val tun = buildTunInterface(excludePkgs, includePkgs)
-                tunInterface = tun
-
-                // запускаем tun2socks через нативный fork
-                val tunRawFd = tun.fd
-                activeSocksPort = socksPort
-                startTun2Socks(tunRawFd, socksPort, socksNoAuth = socksNoAuth)
-            } else if (proxyOnly) {
+            if (proxyOnly) {
                 // Порт всё равно объявляем активным: на него смотрят экран
                 // «Внутренности» и переподключение из плитки.
                 activeSocksPort = socksPort
@@ -663,7 +647,7 @@ class KeqdisVpnService : VpnService() {
         unregisterNotificationReceiver()
 
         // cleanup() ВНУТРИ мьютекса (await), чтобы следующий старт не начался,
-        // пока не убиты старые xray/tun2socks и не закрыт TUN: cleanup в
+        // пока не убито старое ядро и не закрыт TUN: cleanup в
         // отдельной корутине гонялся бы с новым стартом и подвешивал его.
         try {
             cleanup()
@@ -685,11 +669,6 @@ class KeqdisVpnService : VpnService() {
             awgHandle = -1
         }
 
-        val t2sPid = tun2socksPid
-        if (t2sPid > 0) {
-            try { android.os.Process.killProcess(t2sPid) } catch (_: Exception) {}
-            tun2socksPid = -1
-        }
 
         try { tunInterface?.close() } catch (_: Exception) {}
         tunInterface = null
@@ -709,7 +688,7 @@ class KeqdisVpnService : VpnService() {
 
         // socksUsername/socksPassword здесь НЕ сбрасываем: они живут до
         // следующего ACTION_START (с его новыми credentials) — так корректно
-        // дозавершается уже запущенный tun2socks, а binder может вернуть
+        // дозавершается уже запущенное ядро, а binder может вернуть
         // актуальные значения для диагностики.
         startTime = 0L
         uploadTotal.set(0); downloadTotal.set(0)
@@ -895,13 +874,9 @@ class KeqdisVpnService : VpnService() {
 
     /// Перезапуск ядра на месте: тот же конфиг, тот же порт, тот же TUN.
     ///
-    /// tun2socks переживает: он открывает соединение к SOCKS на каждую сессию,
-    /// поэтому обрыв старых для него ничем не отличается от закрытия сессий
-    /// приложениями. Интерфейс не трогаем вовсе — иначе система показала бы
-    /// разрыв VPN, а его здесь нет.
-    ///
-    /// Ядру, которое читает туннель само, интерфейса мало: дескриптор жил в
-    /// убитом процессе, и новому его надо отдать заново.
+    /// Интерфейс не трогаем вовсе — иначе система показала бы разрыв VPN, а
+    /// его здесь нет. Но интерфейса мало: дескриптор жил в убитом процессе, и
+    /// новому ядру его надо отдать заново.
     private suspend fun restartCoreAfterHandover() = opMutex.withLock {
         if (status != VpnRunStatus.RUNNING) return@withLock
         val config = lastXrayConfigPath ?: return@withLock
@@ -950,9 +925,9 @@ class KeqdisVpnService : VpnService() {
             android.util.Log.i("KEQDIS", "handover: core restarted pid=$xrayPid")
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            // Дальше сессия всё равно нежизнеспособна: ядра нет, tun2socks
-            // стучится в пустой порт. Ведём себя ровно как монитор при падении
-            // ядра, чтобы приложение и плитка увидели честный исход.
+            // Дальше сессия всё равно нежизнеспособна: ядра нет, из туннеля
+            // читать некому. Ведём себя ровно как монитор при падении ядра,
+            // чтобы приложение и плитка увидели честный исход.
             android.util.Log.e("KEQDIS", "handover: core restart failed: ${e.message}", e)
             setStatus(VpnRunStatus.ERROR, "Core restart after network change failed")
             cleanup()
@@ -1223,75 +1198,6 @@ class KeqdisVpnService : VpnService() {
         return if (ip.isEmpty()) null else Pair(ip, prefix)
     }
 
-    // ── tun2socks ────────────────────────────────────────────────────────────
-
-    private fun startTun2Socks(tunRawFd: Int, socksPort: Int, socksNoAuth: Boolean = false) {
-        val bin = File(applicationInfo.nativeLibraryDir, "libtun2socks.so")
-        if (!bin.exists()) throw IllegalStateException("libtun2socks.so not found in ${applicationInfo.nativeLibraryDir}")
-
-        val proxyUrl = if (socksNoAuth) {
-            "socks5://127.0.0.1:$socksPort"
-        } else {
-            if (socksUsername.isEmpty() || socksPassword.isEmpty())
-                throw IllegalStateException("SOCKS5 credentials missing in startTun2Socks")
-            "socks5://$socksUsername:$socksPassword@127.0.0.1:$socksPort"
-        }
-
-        // В дебаг-режиме поднимаем уровень до info и пишем вывод в файл: только
-        // там видно, какому приложению принадлежит соединение (строка
-        // `[TCP] <сокет приложения> <-> <назначение>`). В обычном режиме всё как
-        // раньше — warning и без файла.
-        val debug = readDebugMode()
-        val logPath = if (debug) File(filesDir, TUN2SOCKS_LOG_FILE).absolutePath else ""
-        val logLevel = if (debug) "info" else "warning"
-
-        android.util.Log.i("KEQDIS", "Starting tun2socks: fd=$tunRawFd bin=${bin.absolutePath} log=$logLevel")
-
-        val pid = NativeHelper.startTun2Socks(
-            tunRawFd,
-            bin.absolutePath,
-            proxyUrl,
-            logLevel,
-            logPath,
-            TUN_MTU,
-        )
-        if (pid <= 0) throw IllegalStateException("fork() failed (pid=$pid)")
-
-        tun2socksPid = pid
-        android.util.Log.i("KEQDIS", "tun2socks started pid=$pid")
-
-        serviceScope.launch(Dispatchers.IO) {
-            try {
-                while (java.io.File("/proc/$pid").exists()) delay(500)
-                android.util.Log.w("KEQDIS", "[tun2socks] pid=$pid exited")
-                // Реакцию на смерть процесса гоним через opMutex и перепроверяем под
-                // ним: при переподключении старый pid уже не равен tun2socksPid, а
-                // статус мог уйти в STOPPED — тогда это плановое завершение, не ошибка.
-                opMutex.withLock {
-                    if ((status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) &&
-                        pid == tun2socksPid) {
-                        android.util.Log.w("KEQDIS", "[tun2socks] triggering full cleanup after unexpected exit")
-                        // В лог ЯДРА, а не в свой: экран логов в приложении читает
-                        // core_logs.txt, а собственный лог tun2socks живёт только в
-                        // отладочном режиме — там вердикт никто бы не увидел.
-                        appendCoreLog(
-                            "tun2socks process $pid is gone, and the app did not stop it",
-                            CORE_GONE_HINT,
-                        )
-                        tun2socksPid = -1  // уже мёртв
-                        setStatus(VpnRunStatus.ERROR, "tun2socks exited")
-                        cleanup()
-                        cleanupDone = true
-                        withContext(Dispatchers.Main) { stopForeground(STOP_FOREGROUND_REMOVE) }
-                        unregisterNotificationReceiver()
-                        // Без stopSelf(): сервис остаётся в ERROR и переиспользуется
-                        // следующим стартом из плитки, не убивая поставленную в очередь команду.
-                    }
-                }
-            } catch (_: Exception) {}
-        }
-    }
-
     // ── Xray ─────────────────────────────────────────────────────────────────
 
     /**
@@ -1377,7 +1283,7 @@ class KeqdisVpnService : VpnService() {
      * Признак берём из конфига, а не из настройки приложения: ядро ведёт себя
      * по конфигу, и он же переживает перезапуск сервиса. Настройка могла бы
      * успеть измениться между сборкой конфига и реконнектом из плитки — тогда
-     * мы подняли бы tun2socks поверх ядра, которое уже забрало дескриптор.
+     * мы решили бы, что туннель держит кто-то другой.
      */
     private fun xrayConfigHasTun(configPath: String): Boolean = runCatching {
         val inbounds = org.json.JSONObject(File(configPath).readText())
@@ -1427,7 +1333,7 @@ class KeqdisVpnService : VpnService() {
      * ядро не может спросить MTU у системы и берёт своё умолчание, а
      * расхождение с интерфейсом — это пакеты, которые netstack считает
      * допустимыми, а ядро ОС на записи в tun отбрасывает (ровно та же
-     * ловушка, что с `--mtu` у tun2socks).
+     * ловушка).
      *
      * Конфиг переписывается на месте: экран «Соединения» и реконнект из плитки
      * читают координаты API из того же файла.
@@ -1517,10 +1423,6 @@ class KeqdisVpnService : VpnService() {
                 opMutex.withLock {
                     if ((status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) &&
                         monitorPid == xrayPid) {
-                        // Убиваем tun2socks немедленно при падении Xray: иначе
-                        // старый tun2socks доживает до следующего запуска и
-                        // подключается к новому Xray со старыми credentials
-                        // → invalid password.
                         android.util.Log.w("KEQDIS", "[xray] triggering full cleanup after unexpected exit")
                         appendCoreLog(
                             "core process $pid is gone, and the app did not stop it",
@@ -1532,7 +1434,8 @@ class KeqdisVpnService : VpnService() {
                         cleanupDone = true
                         withContext(Dispatchers.Main) { stopForeground(STOP_FOREGROUND_REMOVE) }
                         unregisterNotificationReceiver()
-                        // Без stopSelf(): см. монитор tun2socks.
+                        // Без stopSelf(): сервис остаётся в ERROR и переиспользуется
+                        // следующим стартом из плитки.
                     }
                 }
             } catch (_: Exception) {}
@@ -1625,7 +1528,7 @@ class KeqdisVpnService : VpnService() {
     // прокидывания extra через Intent.
     private data class NotifBodyPrefs(val showUptime: Boolean, val showSpeed: Boolean)
 
-    // Дебаг-режим приложения. Он гейтит подробный лог tun2socks: тот пишет
+    // Дебаг-режим приложения. Он гейтит подробный лог ядра: тот пишет
     // строку на каждое соединение, и держать это включённым всегда незачем.
     private fun readDebugMode(): Boolean {
         return try {
