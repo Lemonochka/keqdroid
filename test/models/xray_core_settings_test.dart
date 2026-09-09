@@ -52,9 +52,44 @@ void main() {
         directDomains: ['domain:corp.example'],
       )['servers'] as List).cast<Map<String, dynamic>>();
 
-      expect(servers, hasLength(1));
-      expect(servers.single['address'], 'https://dns.google/dns-query');
-      expect(servers.single.containsKey('domains'), isFalse);
+      // Под Direct-домены не уходит ни одна из строк — иначе всё остальное
+      // осталось бы без резолвера.
+      for (final server in servers) {
+        expect(server['address'], 'https://dns.google/dns-query');
+        expect(server.containsKey('domains'), isFalse);
+      }
+    });
+
+    // Резолверы ядро опрашивает по очереди, и на одном она кончается первой же
+    // неудачей — а неудача штатная: простоявшее DoH-соединение закрывает
+    // дальний конец, и следующий запрос уезжает в мёртвое. Вторая строка тем
+    // же адресом — второй клиент со своим соединением, то есть куда провалиться.
+    test('единственному своему резолверу даётся вторая попытка', () {
+      const core = XrayCoreSettings(
+        dnsUseCustom: true,
+        dnsServers: 'https://9.9.9.9/dns-query',
+      );
+      final servers = (core.buildDnsBlock(directDomains: const []))['servers']
+          as List;
+
+      expect(servers, hasLength(2));
+      expect((servers[0] as Map)['address'], 'https://9.9.9.9/dns-query');
+      expect((servers[1] as Map)['address'], 'https://9.9.9.9/dns-query');
+      // Запасной не должен быть тупиком: `skipFallback` на нём означал бы, что
+      // дальше очередь снова не идёт.
+      expect((servers[1] as Map).containsKey('skipFallback'), isFalse);
+    });
+
+    test('двум своим резолверам вторая попытка не дописывается', () {
+      const core = XrayCoreSettings(
+        dnsUseCustom: true,
+        dnsServers: 'https://9.9.9.9/dns-query\nhttps://1.1.1.1/dns-query',
+      );
+      final servers = (core.buildDnsBlock(directDomains: const []))['servers']
+          as List;
+
+      expect(servers, hasLength(2));
+      expect((servers[1] as Map)['address'], 'https://1.1.1.1/dns-query');
     });
 
     // Строки пользователя уходят в конфиг как есть: и `https+local://` (мимо
