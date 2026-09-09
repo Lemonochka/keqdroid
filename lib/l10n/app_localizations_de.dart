@@ -2229,6 +2229,45 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsInternalsUnavailable => '—';
 
   @override
+  String get appearanceCustomColorTitle => 'Eigene Farbe';
+
+  @override
+  String get appearanceCustomColorSheetTitle => 'Eigene Farbe';
+
+  @override
+  String get appearanceCustomColorHue => 'Farbton';
+
+  @override
+  String get appearanceCustomColorSaturation => 'Sättigung';
+
+  @override
+  String get appearanceCustomColorBrightness => 'Helligkeit';
+
+  @override
+  String get appearanceCustomColorHex => 'HEX-Code';
+
+  @override
+  String get appearanceCustomColorInvalid => 'Sechs Hex-Ziffern, zum Beispiel 7B2CBF';
+
+  @override
+  String get appearanceCustomColorApply => 'Übernehmen';
+
+  @override
+  String get appearanceCustomColorVariant => 'Palette';
+
+  @override
+  String get appearanceCustomColorVariantCalm => 'Ruhig';
+
+  @override
+  String get appearanceCustomColorVariantVibrant => 'Kräftig';
+
+  @override
+  String get appearanceCustomColorVariantExact => 'Exakt';
+
+  @override
+  String get appearanceCustomColorVariantHint => 'Sättigung und Helligkeit wirken nur bei „Exakt“ — die anderen beiden wählen sie selbst.';
+
+  @override
   String get appearanceUiScaleTitle => 'Oberflächengröße';
 
   @override

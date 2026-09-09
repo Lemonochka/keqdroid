@@ -67,6 +67,7 @@ part 'settings/advanced_settings.dart';
 part 'settings/app_internals.dart';
 part 'settings/backup_restore.dart';
 part 'settings/connections.dart';
+part 'settings/custom_color_sheet.dart';
 part 'settings/debug_and_logs.dart';
 part 'settings/hotkey_settings.dart';
 part 'settings/lan_sharing.dart';

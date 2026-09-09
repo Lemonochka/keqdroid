@@ -35,6 +35,19 @@ class AppSettings {
   final bool followSystemTheme;
   final String themePresetId;
 
+  /// Цвет темы «свой цвет» — шесть hex-цифр без решётки (`7B2CBF`).
+  ///
+  /// Хранится рядом с [themePresetId], а не внутри него: набранный оттенок
+  /// переживает уход на готовый пресет и возвращение обратно. Пусто — цвет ещё
+  /// не выбирали.
+  final String customThemeSeed;
+
+  /// Как из [customThemeSeed] строится палитра: имя из [kCustomThemeVariants].
+  ///
+  /// Отдельной настройкой, а не частью цвета: вариант переживает подбор
+  /// оттенка, а оттенок — смену варианта.
+  final String customThemeVariant;
+
   /// Форма кружков под иконками: id из [IconShape] (`circle` по умолчанию).
   final String iconShapeId;
 
@@ -191,6 +204,8 @@ class AppSettings {
     this.darkTheme = false,
     this.followSystemTheme = true,
     this.themePresetId = 'ocean',
+    this.customThemeSeed = '',
+    this.customThemeVariant = 'tonalSpot',
     this.iconShapeId = 'circle',
     this.fontId = 'system',
     this.debugMode = false,
@@ -245,6 +260,8 @@ class AppSettings {
     'darkTheme': darkTheme,
     'followSystemTheme': followSystemTheme,
     'themePresetId': themePresetId,
+    'customThemeSeed': customThemeSeed,
+    'customThemeVariant': customThemeVariant,
     'iconShapeId': iconShapeId,
     'fontId': fontId,
     'debugMode': debugMode,
@@ -321,6 +338,9 @@ class AppSettings {
       darkTheme: json['darkTheme'] as bool? ?? false,
       followSystemTheme: json['followSystemTheme'] as bool? ?? true,
       themePresetId: json['themePresetId'] as String? ?? 'ocean',
+      customThemeSeed: json['customThemeSeed'] as String? ?? '',
+      customThemeVariant:
+          json['customThemeVariant'] as String? ?? 'tonalSpot',
       iconShapeId: json['iconShapeId'] as String? ?? 'circle',
       fontId: json['fontId'] as String? ?? 'system',
       debugMode: json['debugMode'] as bool? ?? false,
@@ -498,6 +518,8 @@ class AppSettings {
     bool? darkTheme,
     bool? followSystemTheme,
     String? themePresetId,
+    String? customThemeSeed,
+    String? customThemeVariant,
     String? iconShapeId,
     String? fontId,
     bool? debugMode,
@@ -551,6 +573,8 @@ class AppSettings {
         darkTheme: darkTheme ?? this.darkTheme,
         followSystemTheme: followSystemTheme ?? this.followSystemTheme,
         themePresetId: themePresetId ?? this.themePresetId,
+        customThemeSeed: customThemeSeed ?? this.customThemeSeed,
+        customThemeVariant: customThemeVariant ?? this.customThemeVariant,
         iconShapeId: iconShapeId ?? this.iconShapeId,
         fontId: fontId ?? this.fontId,
         debugMode: debugMode ?? this.debugMode,
@@ -632,6 +656,8 @@ class AppSettings {
               darkTheme == other.darkTheme &&
               followSystemTheme == other.followSystemTheme &&
               themePresetId == other.themePresetId &&
+              customThemeSeed == other.customThemeSeed &&
+              customThemeVariant == other.customThemeVariant &&
               iconShapeId == other.iconShapeId &&
               fontId == other.fontId &&
               debugMode == other.debugMode &&
@@ -695,6 +721,8 @@ class AppSettings {
     darkTheme,
     followSystemTheme,
     themePresetId,
+    customThemeSeed,
+    customThemeVariant,
     iconShapeId,
     fontId,
     debugMode,

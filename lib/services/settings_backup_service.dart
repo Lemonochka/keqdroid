@@ -98,6 +98,8 @@ class SettingsBackupService {
     'darkTheme',
     'followSystemTheme',
     'themePresetId',
+    'customThemeSeed',
+    'customThemeVariant',
     'iconShapeId',
     'fontId',
     'amoledBlack',

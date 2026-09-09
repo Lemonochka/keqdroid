@@ -2229,6 +2229,45 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsInternalsUnavailable => '—';
 
   @override
+  String get appearanceCustomColorTitle => 'رنگ دلخواه';
+
+  @override
+  String get appearanceCustomColorSheetTitle => 'رنگ دلخواه';
+
+  @override
+  String get appearanceCustomColorHue => 'ته‌رنگ';
+
+  @override
+  String get appearanceCustomColorSaturation => 'اشباع';
+
+  @override
+  String get appearanceCustomColorBrightness => 'روشنایی';
+
+  @override
+  String get appearanceCustomColorHex => 'کد HEX';
+
+  @override
+  String get appearanceCustomColorInvalid => 'شش رقم شانزده‌شانزدهی، برای مثال 7B2CBF';
+
+  @override
+  String get appearanceCustomColorApply => 'اعمال';
+
+  @override
+  String get appearanceCustomColorVariant => 'پالت';
+
+  @override
+  String get appearanceCustomColorVariantCalm => 'آرام';
+
+  @override
+  String get appearanceCustomColorVariantVibrant => 'پرمایه';
+
+  @override
+  String get appearanceCustomColorVariantExact => 'دقیق';
+
+  @override
+  String get appearanceCustomColorVariantHint => 'اشباع و روشنایی فقط در حالت «دقیق» اثر دارند؛ دو حالت دیگر خودشان آن‌ها را انتخاب می‌کنند.';
+
+  @override
   String get appearanceUiScaleTitle => 'اندازه رابط کاربری';
 
   @override

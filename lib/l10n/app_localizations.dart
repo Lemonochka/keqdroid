@@ -4319,6 +4319,84 @@ abstract class AppLocalizations {
   /// **'—'**
   String get settingsInternalsUnavailable;
 
+  /// No description provided for @appearanceCustomColorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom color'**
+  String get appearanceCustomColorTitle;
+
+  /// No description provided for @appearanceCustomColorSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your color'**
+  String get appearanceCustomColorSheetTitle;
+
+  /// No description provided for @appearanceCustomColorHue.
+  ///
+  /// In en, this message translates to:
+  /// **'Hue'**
+  String get appearanceCustomColorHue;
+
+  /// No description provided for @appearanceCustomColorSaturation.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturation'**
+  String get appearanceCustomColorSaturation;
+
+  /// No description provided for @appearanceCustomColorBrightness.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness'**
+  String get appearanceCustomColorBrightness;
+
+  /// No description provided for @appearanceCustomColorHex.
+  ///
+  /// In en, this message translates to:
+  /// **'HEX code'**
+  String get appearanceCustomColorHex;
+
+  /// No description provided for @appearanceCustomColorInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Six hex digits, for example 7B2CBF'**
+  String get appearanceCustomColorInvalid;
+
+  /// No description provided for @appearanceCustomColorApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get appearanceCustomColorApply;
+
+  /// No description provided for @appearanceCustomColorVariant.
+  ///
+  /// In en, this message translates to:
+  /// **'Palette'**
+  String get appearanceCustomColorVariant;
+
+  /// No description provided for @appearanceCustomColorVariantCalm.
+  ///
+  /// In en, this message translates to:
+  /// **'Calm'**
+  String get appearanceCustomColorVariantCalm;
+
+  /// No description provided for @appearanceCustomColorVariantVibrant.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrant'**
+  String get appearanceCustomColorVariantVibrant;
+
+  /// No description provided for @appearanceCustomColorVariantExact.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact'**
+  String get appearanceCustomColorVariantExact;
+
+  /// No description provided for @appearanceCustomColorVariantHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturation and brightness only tell on Exact: the other two pick them for you.'**
+  String get appearanceCustomColorVariantHint;
+
   /// No description provided for @appearanceUiScaleTitle.
   ///
   /// In en, this message translates to:

@@ -2227,6 +2227,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsInternalsUnavailable => '—';
 
   @override
+  String get appearanceCustomColorTitle => '自定义颜色';
+
+  @override
+  String get appearanceCustomColorSheetTitle => '自定义颜色';
+
+  @override
+  String get appearanceCustomColorHue => '色相';
+
+  @override
+  String get appearanceCustomColorSaturation => '饱和度';
+
+  @override
+  String get appearanceCustomColorBrightness => '明度';
+
+  @override
+  String get appearanceCustomColorHex => 'HEX 代码';
+
+  @override
+  String get appearanceCustomColorInvalid => '六位十六进制数字，例如 7B2CBF';
+
+  @override
+  String get appearanceCustomColorApply => '应用';
+
+  @override
+  String get appearanceCustomColorVariant => '调色方式';
+
+  @override
+  String get appearanceCustomColorVariantCalm => '柔和';
+
+  @override
+  String get appearanceCustomColorVariantVibrant => '鲜艳';
+
+  @override
+  String get appearanceCustomColorVariantExact => '精确';
+
+  @override
+  String get appearanceCustomColorVariantHint => '饱和度和明度只在“精确”下起作用，另外两种会自行调配。';
+
+  @override
   String get appearanceUiScaleTitle => '界面大小';
 
   @override

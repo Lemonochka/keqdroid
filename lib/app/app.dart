@@ -171,6 +171,87 @@ ThemePreset resolveThemePreset(String id) {
   );
 }
 
+/// Id темы «свой цвет».
+///
+/// Сам цвет лежит отдельной настройкой ([AppSettings.customThemeSeed]), а не в
+/// id: иначе уход на готовый пресет и обратно терял бы набранное, и человек
+/// каждый раз подбирал бы оттенок заново.
+const String kCustomThemePresetId = 'custom';
+
+/// Цвет по умолчанию, когда своя тема выбрана, а цвет ещё не задан.
+const Color kCustomThemeDefaultSeed = Color(0xFF7B2CBF);
+
+/// Варианты палитры, предложенные в «своём цвете», в порядке нарастания цвета.
+///
+/// Три из девяти: остальные либо повторяют соседа (`content` почти равен
+/// `fidelity`), либо выбрасывают выбранный оттенок вовсе (`rainbow`,
+/// `fruitSalad`, `monochrome`) — на экране, где оттенок и подбирают, это
+/// выглядело бы поломкой.
+///
+/// Ключи — имена [DynamicSchemeVariant]: они и уезжают в настройки, поэтому в
+/// резервной копии видно, что именно выбрано, без второго словаря наших слов.
+const kCustomThemeVariants = <String, DynamicSchemeVariant>{
+  'tonalSpot': DynamicSchemeVariant.tonalSpot,
+  'vibrant': DynamicSchemeVariant.vibrant,
+  'fidelity': DynamicSchemeVariant.fidelity,
+};
+
+/// Имя варианта → вариант; неизвестное или пустое — `tonalSpot`.
+///
+/// Дефолт тот же, что был единственным вариантом до появления выбора: у того,
+/// кто уже подобрал свой цвет, палитра от обновления не поедет.
+DynamicSchemeVariant parseThemeVariant(String raw) =>
+    kCustomThemeVariants[raw.trim()] ?? DynamicSchemeVariant.tonalSpot;
+
+/// `RRGGBB`/`#RRGGBB`/`AARRGGBB` → цвет. `null` — строка не цвет.
+///
+/// Разбор терпимый, потому что hex сюда попадает и из чужих рук: из фигмы, из
+/// чата, из резервной копии постарше. Непрозрачность дописываем сами — сид
+/// палитры полупрозрачным не бывает.
+Color? parseThemeSeed(String raw) {
+  var hex = raw.trim();
+  if (hex.startsWith('#')) hex = hex.substring(1);
+  if (hex.length != 6 && hex.length != 8) return null;
+  final value = int.tryParse(hex, radix: 16);
+  if (value == null) return null;
+  return Color(hex.length == 6 ? 0xFF000000 | value : value | 0xFF000000);
+}
+
+/// Цвет в том виде, в каком он лежит в настройках и показывается человеку.
+String formatThemeSeed(Color color) =>
+    (color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase();
+
+/// Пресет из своего цвета.
+///
+/// Id несёт и цвет, и вариант палитры, и это не косметика: по id кешируются
+/// готовые схемы (см. [buildPresetScheme]), так что с постоянным `custom` в
+/// кеше навсегда осела бы первая выбранная палитра, а следующий выбор молча не
+/// применялся бы.
+ThemePreset customThemePreset(
+  Color seed, {
+  DynamicSchemeVariant variant = DynamicSchemeVariant.tonalSpot,
+}) =>
+    ThemePreset(
+      id: '$kCustomThemePresetId:${formatThemeSeed(seed)}:${variant.name}',
+      name: '#${formatThemeSeed(seed)}',
+      seed: seed,
+      variant: variant,
+    );
+
+/// Тема, которую надо применить: готовая или своя.
+///
+/// Незаданный или испорченный цвет не роняет человека на чужой пресет — своя
+/// тема остаётся своей, просто с цветом по умолчанию.
+ThemePreset themePresetFor(AppSettings settings) {
+  if (settings.themePresetId == kCustomThemePresetId) {
+    return customThemePreset(
+      parseThemeSeed(settings.customThemeSeed) ?? kCustomThemeDefaultSeed,
+      variant: parseThemeVariant(settings.customThemeVariant),
+    );
+  }
+  return resolveThemePreset(settings.themePresetId);
+}
+
 /// Готовые схемы пресетов: ключ — (id, яркость).
 ///
 /// `ColorScheme.fromSeed` — это полный расчёт динамической схемы по HCT, и
@@ -181,20 +262,28 @@ ThemePreset resolveThemePreset(String id) {
 /// перехода светлая↔тёмная. То есть расчёт палитр выпадал ровно на те 350 мс,
 /// когда пользователь смотрит на анимацию, — отсюда и рывки при смене темы.
 ///
-/// Кешировать безопасно: функция чистая, `ColorScheme` неизменяем, а размер
-/// кеша сверху ограничен числом пресетов на две яркости.
+/// Кешировать безопасно: функция чистая, а `ColorScheme` неизменяем.
 final Map<(String, Brightness), ColorScheme> _presetSchemeCache = {};
 
-ColorScheme buildPresetScheme(ThemePreset preset, Brightness brightness) =>
-    _presetSchemeCache.putIfAbsent((preset.id, brightness), () {
-      final custom = preset.schemeBuilder;
-      if (custom != null) return custom(brightness);
-      return ColorScheme.fromSeed(
-        seedColor: preset.seed,
-        brightness: brightness,
-        dynamicSchemeVariant: preset.variant,
-      );
-    });
+/// Потолок кеша. Готовых пресетов на две яркости — два десятка, и без своих
+/// цветов потолок был бы не нужен вовсе; но у каждого своего цвета свой id, и
+/// человек, гоняющий ползунок, набивал бы кеш до конца сессии.
+const int _presetSchemeCacheLimit = 48;
+
+ColorScheme buildPresetScheme(ThemePreset preset, Brightness brightness) {
+  if (_presetSchemeCache.length >= _presetSchemeCacheLimit) {
+    _presetSchemeCache.clear();
+  }
+  return _presetSchemeCache.putIfAbsent((preset.id, brightness), () {
+    final custom = preset.schemeBuilder;
+    if (custom != null) return custom(brightness);
+    return ColorScheme.fromSeed(
+      seedColor: preset.seed,
+      brightness: brightness,
+      dynamicSchemeVariant: preset.variant,
+    );
+  });
+}
 
 /// Чёрный AMOLED-фон поверх любой тёмной схемы.
 ///
@@ -403,7 +492,7 @@ class _ThemedApp extends ConsumerWidget {
     // Единственная точка синхронизации флага отдачи: присваивание идемпотентно
     // и ничего не перестраивает, зато обработчикам нажатий не нужен ref.
     AppHaptics.enabled = settings.hapticFeedback;
-    final preset = resolveThemePreset(settings.themePresetId);
+    final preset = themePresetFor(settings);
     final customLight = buildPresetScheme(preset, Brightness.light);
     final customDark = buildPresetScheme(preset, Brightness.dark);
     ColorScheme dark(ColorScheme scheme) =>

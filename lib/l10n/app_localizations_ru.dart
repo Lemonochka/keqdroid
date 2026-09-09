@@ -2234,6 +2234,45 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsInternalsUnavailable => '—';
 
   @override
+  String get appearanceCustomColorTitle => 'Свой цвет';
+
+  @override
+  String get appearanceCustomColorSheetTitle => 'Свой цвет';
+
+  @override
+  String get appearanceCustomColorHue => 'Оттенок';
+
+  @override
+  String get appearanceCustomColorSaturation => 'Насыщенность';
+
+  @override
+  String get appearanceCustomColorBrightness => 'Яркость';
+
+  @override
+  String get appearanceCustomColorHex => 'HEX-код';
+
+  @override
+  String get appearanceCustomColorInvalid => 'Шесть шестнадцатеричных цифр, например 7B2CBF';
+
+  @override
+  String get appearanceCustomColorApply => 'Применить';
+
+  @override
+  String get appearanceCustomColorVariant => 'Палитра';
+
+  @override
+  String get appearanceCustomColorVariantCalm => 'Спокойная';
+
+  @override
+  String get appearanceCustomColorVariantVibrant => 'Яркая';
+
+  @override
+  String get appearanceCustomColorVariantExact => 'Точная';
+
+  @override
+  String get appearanceCustomColorVariantHint => 'Насыщенность и яркость слышно только на «Точной»: остальные две подбирают их сами.';
+
+  @override
   String get appearanceUiScaleTitle => 'Размер интерфейса';
 
   @override

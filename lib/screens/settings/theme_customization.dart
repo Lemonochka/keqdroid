@@ -8,7 +8,9 @@ class _ThemeCustomizationCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final settings = settingsAsync.value ?? const AppSettings();
-    final preset = resolveThemePreset(settings.themePresetId);
+    // Через themePresetFor, а не resolveThemePreset: у своей темы id в списке
+    // не значится, и в подписи карточки стоял бы дефолтный Ocean.
+    final preset = themePresetFor(settings);
     final modeLabel = settings.darkTheme ? l10n.themeModeDark : l10n.themeModeLight;
     final isDesktop = PlatformBootstrap.isDesktop;
     final subtitle = settings.followSystemTheme
@@ -858,8 +860,16 @@ class _ThemePresetGrid extends StatelessWidget {
             labelHeight +
             ExpressiveListSegment.gap;
 
+        // Своя тема — последней плиткой той же сетки, а не отдельным блоком:
+        // выбирают её тем же движением и из того же ряда, что и готовую.
+        final l10n = AppLocalizations.of(context)!;
+        final customSeed = parseThemeSeed(current.customThemeSeed);
+        final customSelected = !current.followSystemTheme &&
+            current.themePresetId == kCustomThemePresetId;
+        final count = kThemePresets.length + 1;
+
         return SliverGrid.builder(
-          itemCount: kThemePresets.length,
+          itemCount: count,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
             // Зазор набирается полями самих сегментов (segmentMargin), как в
@@ -869,12 +879,55 @@ class _ThemePresetGrid extends StatelessWidget {
             mainAxisExtent: tileHeight,
           ),
           itemBuilder: (context, i) {
+            if (i == kThemePresets.length) {
+              // Пока цвет не выбирали, плитка показывает тот, который получит
+              // человек по тапу, — а не пустоту и не чужую палитру.
+              // Вариант палитры берётся из настроек вместе с цветом: иначе
+              // плитка обещала бы спокойную палитру, а выбор отдавал бы
+              // точную — ровно ту, ради которой вариант и меняли.
+              final preset = customThemePreset(
+                customSeed ?? kCustomThemeDefaultSeed,
+                variant: parseThemeVariant(current.customThemeVariant),
+              );
+              return Padding(
+                padding: ExpressiveListSegment.segmentMargin(
+                  index: i,
+                  columns: columns,
+                ),
+                child: ExpressiveListSegment(
+                  radius: ExpressiveListSegment.segmentRadius(
+                    index: i,
+                    count: count,
+                    columns: columns,
+                  ),
+                  selected: customSelected,
+                  color: scheme.surfaceContainerHigh,
+                  selectedColor: scheme.secondaryContainer,
+                  onTap: () => _showCustomColorSheet(
+                    context,
+                    current: current,
+                    onSave: onSave,
+                  ),
+                  child: _ThemePresetTile(
+                    name: l10n.appearanceCustomColorTitle,
+                    scheme: _previewScheme(preset),
+                    iconShape: iconShape,
+                    selected: customSelected,
+                    padding: _padding,
+                  ),
+                ),
+              );
+            }
             final preset = kThemePresets[i];
             // Сравниваем с разрешённым id, а не с сохранённым: у того, кто
             // сидел на удалённом пресете, в настройках так и лежит «forest», и
             // прямое сравнение не отметило бы галочкой ни одну плитку — экран
             // выглядел бы «тема не выбрана».
+            // Своя тема тоже снимает галочку со всех готовых: её id в списке
+            // не значится, и `resolveThemePreset` отдал бы дефолтный Ocean —
+            // выбранными выглядели бы сразу две плитки.
             final selected = !current.followSystemTheme &&
+                !customSelected &&
                 preset.id == resolveThemePreset(current.themePresetId).id;
             return Padding(
               padding: ExpressiveListSegment.segmentMargin(
@@ -884,7 +937,7 @@ class _ThemePresetGrid extends StatelessWidget {
               child: ExpressiveListSegment(
                 radius: ExpressiveListSegment.segmentRadius(
                   index: i,
-                  count: kThemePresets.length,
+                  count: count,
                   columns: columns,
                 ),
                 selected: selected,

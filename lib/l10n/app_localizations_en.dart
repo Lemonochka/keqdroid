@@ -2229,6 +2229,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsInternalsUnavailable => '—';
 
   @override
+  String get appearanceCustomColorTitle => 'Custom color';
+
+  @override
+  String get appearanceCustomColorSheetTitle => 'Your color';
+
+  @override
+  String get appearanceCustomColorHue => 'Hue';
+
+  @override
+  String get appearanceCustomColorSaturation => 'Saturation';
+
+  @override
+  String get appearanceCustomColorBrightness => 'Brightness';
+
+  @override
+  String get appearanceCustomColorHex => 'HEX code';
+
+  @override
+  String get appearanceCustomColorInvalid => 'Six hex digits, for example 7B2CBF';
+
+  @override
+  String get appearanceCustomColorApply => 'Apply';
+
+  @override
+  String get appearanceCustomColorVariant => 'Palette';
+
+  @override
+  String get appearanceCustomColorVariantCalm => 'Calm';
+
+  @override
+  String get appearanceCustomColorVariantVibrant => 'Vibrant';
+
+  @override
+  String get appearanceCustomColorVariantExact => 'Exact';
+
+  @override
+  String get appearanceCustomColorVariantHint => 'Saturation and brightness only tell on Exact: the other two pick them for you.';
+
+  @override
   String get appearanceUiScaleTitle => 'Interface size';
 
   @override
