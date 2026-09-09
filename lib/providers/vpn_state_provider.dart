@@ -673,6 +673,23 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         );
       }
 
+      // Свои DNS в десктопном TUN исполняет sing-box, а он держит ровно один
+      // резолвер (см. [SingBoxTunConfigGen.ignoredCustomDnsServers]). На xray
+      // тот же список опрашивается по очереди, поэтому «у меня три сервера, а
+      // работает первый» — не поломка, но и не то, о чём можно молчать.
+      if (!mihomoPicked &&
+          !Platform.isAndroid &&
+          connectionMode == ConnectionMode.tun) {
+        final ignored = SingBoxTunConfigGen.ignoredCustomDnsServers(settings);
+        if (ignored.isNotEmpty) {
+          AppLogger.instance.warn(
+            'Custom DNS: in TUN mode the core runs a single resolver, so only '
+            'the first usable address is in effect. Not used: '
+            '${ignored.join(', ')}.',
+          );
+        }
+      }
+
       final session = TunnelSessionBuilder.build(
         settings: settings,
         xrayConfig: xrayConfig,

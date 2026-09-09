@@ -13,8 +13,7 @@
         "tag": "proxy-dns",
         "type": "https",
         "server": "1.1.1.1",
-        "path": "/dns-query",
-        "detour": "proxy"
+        "path": "/dns-query"
       }
     ],
     "rules": [

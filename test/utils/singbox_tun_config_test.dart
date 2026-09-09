@@ -141,7 +141,7 @@ void main() {
     expect((map['route'] as Map)['final'], 'proxy');
   });
 
-  Map<String, dynamic> proxyDnsFor(AppSettings settings) {
+  Map<String, dynamic> dnsBlockFor(AppSettings settings) {
     final json = SingBoxTunConfigGen.generate(
       localSocksPort: 10808,
       socksUsername: 'u',
@@ -149,9 +149,13 @@ void main() {
       serverIpToExclude: '1.2.3.4',
       settings: settings,
     );
-    final map = jsonDecode(json) as Map<String, dynamic>;
+    return ((jsonDecode(json) as Map<String, dynamic>)['dns']
+        as Map<String, dynamic>);
+  }
+
+  Map<String, dynamic> proxyDnsFor(AppSettings settings) {
     final servers =
-        ((map['dns'] as Map)['servers'] as List).cast<Map<String, dynamic>>();
+        (dnsBlockFor(settings)['servers'] as List).cast<Map<String, dynamic>>();
     return servers.firstWhere((s) => s['tag'] == 'proxy-dns');
   }
 
@@ -190,9 +194,85 @@ void main() {
     expect(proxyDns['type'], 'https');
     expect(proxyDns['server'], '1.1.1.1');
     expect(proxyDns['path'], '/dns-query');
-    expect(proxyDns['detour'], 'proxy');
     // адрес НИКОГДА не должен утечь в server целиком
     expect(proxyDns['server'], isNot(contains('://')));
+  });
+
+  test('+local резолвит мимо туннеля: detour не ставится', () {
+    // Суффикс `+local` у xray значит «мимо роутинга», и в TUN это единственный
+    // способ увести системный DNS из туннеля: сам DNS системы исполняет
+    // sing-box, до xray-слоя такой запрос не доходит. Раньше detour ставился
+    // всем подряд, и настройка молча не работала.
+    final proxyDns = proxyDnsFor(
+      const AppSettings(
+        xrayCore: XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: 'https+local://9.9.9.9/dns-query',
+        ),
+      ),
+    );
+    expect(proxyDns['type'], 'https');
+    expect(proxyDns['server'], '9.9.9.9');
+    expect(proxyDns.containsKey('detour'), isFalse);
+  });
+
+  test('без +local резолвер остаётся в туннеле', () {
+    final proxyDns = proxyDnsFor(
+      const AppSettings(
+        xrayCore: XrayCoreSettings(
+          dnsUseCustom: true,
+          dnsServers: 'https://9.9.9.9/dns-query',
+        ),
+      ),
+    );
+    expect(proxyDns['detour'], 'proxy');
+  });
+
+  test('лишние адреса списка называются, а не теряются молча', () {
+    // Резолвер в этом ядре ровно один, и это единственное место, где про
+    // выброшенные строки вообще можно узнать: в конфиг они не попадают.
+    expect(
+      SingBoxTunConfigGen.ignoredCustomDnsServers(
+        const AppSettings(
+          xrayCore: XrayCoreSettings(
+            dnsUseCustom: true,
+            dnsServers: 'localhost\nhttps://1.1.1.1/dns-query\ntls://9.9.9.9',
+          ),
+        ),
+      ),
+      // localhost непереводим и идёт в список сам, 1.1.1.1 занимает
+      // единственное место, tls остаётся не у дел.
+      ['localhost', 'tls://9.9.9.9'],
+    );
+    expect(
+      SingBoxTunConfigGen.ignoredCustomDnsServers(const AppSettings()),
+      isEmpty,
+    );
+  });
+
+  test('«отключить кэш DNS» доезжает до ядра', () {
+    expect(
+      dnsBlockFor(const AppSettings(
+        xrayCore: XrayCoreSettings(dnsDisableCache: true),
+      ))['disable_cache'],
+      isTrue,
+    );
+    expect(
+      dnsBlockFor(const AppSettings()).containsKey('disable_cache'),
+      isFalse,
+    );
+  });
+
+  test('«отдельный резолвер для direct» выключается', () {
+    const direct = AppSettings(directRules: 'corp.example');
+    expect(dnsBlockFor(direct)['rules'], isNotNull);
+    expect(
+      dnsBlockFor(const AppSettings(
+        directRules: 'corp.example',
+        xrayCore: XrayCoreSettings(dnsSplitDirectDomains: false),
+      ))['rules'],
+      isNull,
+    );
   });
 
   test('plain https:// DoH keeps host and path', () {

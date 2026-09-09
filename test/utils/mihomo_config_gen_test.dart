@@ -543,7 +543,37 @@ void main() {
         ),
         // h2c mihomo не знает — такая запись роняет разбор конфига целиком,
         // поэтому её выбрасываем, а не переносим как есть.
-        ['https://1.1.1.1/dns-query', 'tcp://9.9.9.9', '8.8.4.4', 'system'],
+        [
+          'https://1.1.1.1/dns-query#DIRECT',
+          'tcp://9.9.9.9',
+          '8.8.4.4',
+          'system',
+        ],
+      );
+    });
+
+    test('+local переживает respect-rules', () {
+      // При глобал-прокси ядро подставляет `RULES` каждому серверу с пустым
+      // фрагментом, и «мимо туннеля» превращалось в «через туннель». Явное имя
+      // прокси во фрагменте эту подстановку перебивает.
+      const core = XrayCoreSettings(
+        dnsUseCustom: true,
+        dnsServers: 'https+local://9.9.9.9/dns-query\nhttps://1.1.1.1/dns-query',
+      );
+      expect(
+        MihomoConfigGen.dnsServers(core),
+        ['https://9.9.9.9/dns-query#DIRECT', 'https://1.1.1.1/dns-query'],
+      );
+      final dns = MihomoConfigGen.buildDns(
+        const AppSettings(
+          finalOutbound: AppSettings.finalOutboundProxy,
+          xrayCore: core,
+        ),
+      );
+      expect(dns['respect-rules'], isTrue);
+      expect(
+        (dns['nameserver'] as List).first,
+        'https://9.9.9.9/dns-query#DIRECT',
       );
     });
 

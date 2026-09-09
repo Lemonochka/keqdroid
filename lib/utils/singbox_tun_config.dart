@@ -156,14 +156,7 @@ class SingBoxTunConfigGen {
         .toList();
 
     Map<String, dynamic> buildProxyDnsServer() {
-      // Кастомный DNS уважаем только когда он включён в настройках xray-ядра.
-      final customDns = !settings.xrayCore.dnsUseCustom
-          ? const <String>[]
-          : settings.xrayCore.dnsServers
-              .split(RegExp(r'[\n,]+'))
-              .map((e) => e.trim())
-              .where((e) => e.isNotEmpty)
-              .toList();
+      final customDns = customDnsList(settings);
 
       // Дефолт — DNS-over-HTTPS через туннель. Многие VPS-хостеры/серверы режут
       // исходящий порт 53 (анти-abuse), из-за чего и UDP-, и TCP-DNS через
@@ -562,11 +555,16 @@ class SingBoxTunConfigGen {
     // домен из Direct-списка получает NXDOMAIN, хотя маршрут для него direct.
     // hijack-dns при этом перехватывает все запросы (анти-leak, см. dns.final),
     // поэтому выбор резолвера возможен только здесь, через dns.rules.
+    //
+    // Под тем же выключателем, что и у xray: настройка обещает одно поведение
+    // на оба ядра, а раньше здесь сплит стоял всегда — выключить его в TUN не
+    // получалось вовсе.
     final directDnsParts = classifyDomains(directDomains);
     final dnsRules = <Map<String, dynamic>>[
-      if (directDnsParts.domain.isNotEmpty ||
-          directDnsParts.domainSuffix.isNotEmpty ||
-          directDnsParts.domainRegex.isNotEmpty)
+      if (settings.xrayCore.dnsSplitDirectDomains &&
+          (directDnsParts.domain.isNotEmpty ||
+              directDnsParts.domainSuffix.isNotEmpty ||
+              directDnsParts.domainRegex.isNotEmpty))
         {
           if (directDnsParts.domain.isNotEmpty)
             'domain': directDnsParts.domain,
@@ -619,7 +617,14 @@ class SingBoxTunConfigGen {
           buildProxyDnsServer(),
         ],
         if (dnsRules.isNotEmpty) 'rules': dnsRules,
+        // Только A-записи, и «стратегия запросов» из настроек ядра сюда
+        // намеренно не переносится. AAAA в этом режиме некуда деть: при
+        // включённом блоке IPv6-утечки весь IPv6 уходит в `block` (см. правило
+        // ниже), а при выключенном он идёт мимо туннеля по системным
+        // маршрутам. В обоих случаях адрес из AAAA — это либо мёртвое
+        // соединение, либо утечка, поэтому его лучше не выдавать вовсе.
         'strategy': 'ipv4_only',
+        if (settings.xrayCore.dnsDisableCache) 'disable_cache': true,
         // Клиентский DNS идёт через туннель (proxy-dns), а не через системный
         // резолвер: иначе на машинах с Tailscale его перехватывает MagicDNS
         // (100.100.100.100) и резолв ломается, плюс это утечка DNS мимо VPN.
@@ -644,13 +649,52 @@ class SingBoxTunConfigGen {
     return const JsonEncoder.withIndent('  ').convert(map);
   }
 
+  /// Адреса из поля «свои DNS-серверы», как их ввела пользовательница. Пусто,
+  /// когда переключатель выключен: список тогда не участвует вовсе.
+  static List<String> customDnsList(AppSettings settings) =>
+      !settings.xrayCore.dnsUseCustom
+          ? const <String>[]
+          : settings.xrayCore.dnsServers
+              .split(RegExp(r'[\n,]+'))
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
+
+  /// Что из этого списка в TUN не сработает.
+  ///
+  /// Резолвер тут ровно один: `dns.final` принимает один тег, а транспорта с
+  /// откатом на следующий сервер у ядра нет вовсе (реестр — udp/tcp/tls/https/
+  /// quic/h3/local/hosts/fakeip/dhcp). Поэтому работает первый пригодный адрес,
+  /// а остальные строки — включая непереводимые (`localhost`, `fakedns`) —
+  /// молча не участвуют. У xray список опрашивается по очереди, так что разница
+  /// заметна, и вызывающий пишет её в лог.
+  static List<String> ignoredCustomDnsServers(AppSettings settings) {
+    var used = false;
+    final ignored = <String>[];
+    for (final address in customDnsList(settings)) {
+      if (!used && _singBoxDnsServerFromXray(address) != null) {
+        used = true;
+        continue;
+      }
+      ignored.add(address);
+    }
+    return ignored;
+  }
+
   /// Переводит один DNS-адрес из xray-синтаксиса в объект sing-box dns-сервера
   /// (формат 1.12+: `{type, server, server_port?, path?}`). Возвращает null,
   /// когда адрес нельзя гонять как сетевой upstream через прокси
   /// (localhost/fakedns/dhcp) — вызывающий тогда берёт дефолтный DoH.
   ///
   /// UDP через SOCKS хрупок (см. коммент выше про TCP:53), поэтому и «голый»
-  /// адрес, и udp://-схему форсируем в TCP. Все серверы идут `detour: proxy`.
+  /// адрес, и udp://-схему форсируем в TCP.
+  ///
+  /// Суффикс `+local` («мимо роутинга» у xray) снимает `detour`: сервер без
+  /// него ядро набирает своим дефолтным диалером, то есть мимо туннеля —
+  /// ровно то, что человек и просил. Без этого настройка молча не работала: в
+  /// TUN системный DNS исполняет sing-box, и он гнал в туннель всё подряд.
+  /// Голый адрес без схемы остаётся проксированным: у xray это обычный UDP-
+  /// резолвер, который тоже идёт через роутинг.
   static Map<String, dynamic>? _singBoxDnsServerFromXray(String raw) {
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return null;
@@ -661,32 +705,36 @@ class SingBoxTunConfigGen {
       return null;
     }
 
+    // Тег исторический: сервер зовётся `proxy-dns` и когда идёт напрямую —
+    // на него смотрят `dns.final` и `default_domain_resolver`.
     Map<String, dynamic> server(String type, String host, int? port,
-            {String? path}) =>
+            {String? path, bool local = false}) =>
         {
           'tag': 'proxy-dns',
           'type': type,
           'server': host,
           'server_port': ?port,
           if (path != null && path.isNotEmpty && path != '/') 'path': path,
-          'detour': 'proxy',
+          if (!local) 'detour': 'proxy',
         };
 
     // Схема вида `scheme://`. У xray scheme может нести суффикс (`https+local`,
     // `tcp+local`, …) — базой считаем часть до '+'.
     final schemeMatch = RegExp(r'^([a-z][a-z0-9.+-]*)://').firstMatch(lower);
     if (schemeMatch != null) {
-      final base = schemeMatch.group(1)!.split('+').first;
+      final scheme = schemeMatch.group(1)!;
+      final base = scheme.split('+').first;
+      final local = scheme.endsWith('+local');
       final uri = Uri.tryParse(trimmed);
       if (uri == null || uri.host.isEmpty) return null;
       final port = uri.hasPort ? uri.port : null;
       switch (base) {
         case 'https':
         case 'h2c':
-          return server('https', uri.host, port, path: uri.path);
+          return server('https', uri.host, port, path: uri.path, local: local);
         case 'tls':
         case 'dot':
-          return server('tls', uri.host, port);
+          return server('tls', uri.host, port, local: local);
         case 'quic':
         case 'doq':
           // `type: quic` в ядре не зарегистрирован (реестр транспортов у
@@ -695,12 +743,13 @@ class SingBoxTunConfigGen {
           // стартует → TUN не поднимается. Берём DoT к тому же хосту: у всех,
           // кто отдаёт DoQ, он есть, и шифрование сохраняется. Порт не
           // переносим — у DoQ он свой (784/853), у DoT дефолтный 853.
-          return server('tls', uri.host, null);
+          return server('tls', uri.host, null, local: local);
         case 'tcp':
-          return server('tcp', uri.host, port);
+          return server('tcp', uri.host, port, local: local);
         case 'udp':
         case 'dns':
-          return server('tcp', uri.host, port); // UDP over SOCKS ненадёжен → TCP
+          // UDP over SOCKS ненадёжен → TCP
+          return server('tcp', uri.host, port, local: local);
         default:
           return null;
       }
