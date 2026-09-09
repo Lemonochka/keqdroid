@@ -13,6 +13,27 @@ class XrayCoreSettings {
   /// When true, first resolver uses [directDomains] with skipFallback (legacy behavior).
   final bool dnsSplitDirectDomains;
 
+  /// Mux.Cool — несколько соединений внутри одного (`mux` у аутбаунда).
+  ///
+  /// Придуман ради экономии рукопожатий, а не ради скорости: документация ядра
+  /// прямо предупреждает, что на видео, загрузках и замерах скорости
+  /// мультиплексор делает хуже. Поэтому выключен по умолчанию — как и в ядре.
+  final bool muxEnabled;
+
+  /// Сколько TCP-потоков вести в одном соединении. `-1` — не мультиплексировать
+  /// TCP вовсе (остаётся только XUDP), `0` ядро само считает за 8, потолок 128.
+  final int muxConcurrency;
+
+  /// То же для UDP — XUDP, отдельная пачка. Ради него всё и затевалось: без
+  /// него каждая UDP-сессия открывает своё соединение до сервера, и пачка
+  /// DNS-запросов с Android упирается в лимит новых соединений (см. правило
+  /// `dns-out`). `0` — UDP едет в общей TCP-пачке, `-1` — не трогать UDP вовсе.
+  final int muxXudpConcurrency;
+
+  /// Что делать с UDP/443, то есть с QUIC: `reject`, `allow` или `skip`.
+  /// Умолчание ядра — `reject`: браузер через секунду откатится на TCP.
+  final String muxXudpProxyUDP443;
+
   final bool xmuxEnabled;
   final String xmuxMaxConcurrency;
   final String xmuxMaxConnections;
@@ -64,6 +85,10 @@ class XrayCoreSettings {
     this.dnsQueryStrategy = 'UseIPv4',
     this.dnsDisableCache = false,
     this.dnsSplitDirectDomains = true,
+    this.muxEnabled = false,
+    this.muxConcurrency = defaultMuxConcurrency,
+    this.muxXudpConcurrency = defaultMuxXudpConcurrency,
+    this.muxXudpProxyUDP443 = muxUdp443Reject,
     this.xmuxEnabled = false,
     this.xmuxMaxConcurrency = '',
     this.xmuxMaxConnections = '',
@@ -97,6 +122,32 @@ class XrayCoreSettings {
 
   static const defaultFragmentLength = '100-200';
   static const defaultFragmentInterval = '10-20';
+
+  /// QUIC режем: браузер через секунду сам откатится на TCP. Так же считает и
+  /// ядро — пустое поле оно превращает именно в это.
+  static const muxUdp443Reject = 'reject';
+
+  /// QUIC пускаем внутрь мультиплексора.
+  static const muxUdp443Allow = 'allow';
+
+  /// QUIC мимо мультиплексора, своим ходом протокола.
+  static const muxUdp443Skip = 'skip';
+
+  /// Три значения, которые ядро понимает. Четвёртое роняет разбор всего
+  /// конфига — та же цена ошибки, что у `fragmentPacketModes`.
+  static const muxUdp443Modes = [
+    muxUdp443Reject,
+    muxUdp443Allow,
+    muxUdp443Skip,
+  ];
+
+  /// Столько же кладёт ядро, когда `concurrency` не задан.
+  static const defaultMuxConcurrency = 8;
+
+  /// Своего умолчания у ядра тут нет: пустое поле означает «UDP едет в общей
+  /// TCP-пачке», то есть XUDP выключен. 16 — рабочее число, с которым XUDP и
+  /// живёт у клиентов; ядро принимает от 1 до 1024.
+  static const defaultMuxXudpConcurrency = 16;
   static const dnsQueryStrategies = [
     'UseIPv4',
     'UseIPv6',
@@ -114,6 +165,10 @@ class XrayCoreSettings {
         'dnsQueryStrategy': dnsQueryStrategy,
         'dnsDisableCache': dnsDisableCache,
         'dnsSplitDirectDomains': dnsSplitDirectDomains,
+        'muxEnabled': muxEnabled,
+        'muxConcurrency': muxConcurrency,
+        'muxXudpConcurrency': muxXudpConcurrency,
+        'muxXudpProxyUDP443': muxXudpProxyUDP443,
         'xmuxEnabled': xmuxEnabled,
         'xmuxMaxConcurrency': xmuxMaxConcurrency,
         'xmuxMaxConnections': xmuxMaxConnections,
@@ -139,10 +194,17 @@ class XrayCoreSettings {
       final v = (json[k] as num?)?.toInt() ?? def;
       return v < 0 ? 0 : v;
     }
+    // Отрицательное значение у mux осмысленно («не мультиплексировать»),
+    // поэтому свой читатель: общий `i` срезает минус в ноль.
+    int signed(String k, int def, int min, int max) {
+      final v = (json[k] as num?)?.toInt() ?? def;
+      return v < min ? min : (v > max ? max : v);
+    }
     final log = str('logLevel', 'warning');
     final domain = str('routingDomainStrategy', 'AsIs');
     final query = str('dnsQueryStrategy', 'UseIPv4');
     final packets = str('fragmentPackets', fragmentPacketsTlsHello);
+    final udp443 = str('muxXudpProxyUDP443', muxUdp443Reject);
     return XrayCoreSettings(
       logLevel: logLevels.contains(log) ? log : 'warning',
       routingDomainStrategy:
@@ -153,6 +215,13 @@ class XrayCoreSettings {
       dnsQueryStrategy: dnsQueryStrategies.contains(query) ? query : 'UseIPv4',
       dnsDisableCache: b('dnsDisableCache', false),
       dnsSplitDirectDomains: b('dnsSplitDirectDomains', true),
+      muxEnabled: b('muxEnabled', false),
+      muxConcurrency: signed('muxConcurrency', defaultMuxConcurrency, -1, 128),
+      muxXudpConcurrency:
+          signed('muxXudpConcurrency', defaultMuxXudpConcurrency, -1, 1024),
+      muxXudpProxyUDP443: muxUdp443Modes.contains(udp443)
+          ? udp443
+          : muxUdp443Reject,
       xmuxEnabled: b('xmuxEnabled', false),
       xmuxMaxConcurrency: json['xmuxMaxConcurrency'] as String? ?? '',
       xmuxMaxConnections: json['xmuxMaxConnections'] as String? ?? '',
@@ -181,6 +250,10 @@ class XrayCoreSettings {
     String? dnsQueryStrategy,
     bool? dnsDisableCache,
     bool? dnsSplitDirectDomains,
+    bool? muxEnabled,
+    int? muxConcurrency,
+    int? muxXudpConcurrency,
+    String? muxXudpProxyUDP443,
     bool? xmuxEnabled,
     String? xmuxMaxConcurrency,
     String? xmuxMaxConnections,
@@ -205,6 +278,10 @@ class XrayCoreSettings {
         dnsDisableCache: dnsDisableCache ?? this.dnsDisableCache,
         dnsSplitDirectDomains:
             dnsSplitDirectDomains ?? this.dnsSplitDirectDomains,
+        muxEnabled: muxEnabled ?? this.muxEnabled,
+        muxConcurrency: muxConcurrency ?? this.muxConcurrency,
+        muxXudpConcurrency: muxXudpConcurrency ?? this.muxXudpConcurrency,
+        muxXudpProxyUDP443: muxXudpProxyUDP443 ?? this.muxXudpProxyUDP443,
         xmuxEnabled: xmuxEnabled ?? this.xmuxEnabled,
         xmuxMaxConcurrency: xmuxMaxConcurrency ?? this.xmuxMaxConcurrency,
         xmuxMaxConnections: xmuxMaxConnections ?? this.xmuxMaxConnections,
@@ -486,6 +563,23 @@ class XrayCoreSettings {
   /// плохих каналов — ценой той самой двадцатисекундной паузы.
   static const _dnsTimeoutMs = 2500;
 
+  /// `mux` для аутбаунда, или `null` — тогда ключа в конфиге нет вовсе.
+  ///
+  /// Значения подрезаны по границам ядра (`docs/config/outbound.md`), а режим
+  /// UDP/443 — по списку: незнакомая строка там роняет разбор всего конфига,
+  /// а не отключает мультиплексор.
+  Map<String, dynamic>? buildMuxMap() {
+    if (!muxEnabled) return null;
+    return {
+      'enabled': true,
+      'concurrency': muxConcurrency.clamp(-1, 128),
+      'xudpConcurrency': muxXudpConcurrency.clamp(-1, 1024),
+      'xudpProxyUDP443': muxUdp443Modes.contains(muxXudpProxyUDP443)
+          ? muxXudpProxyUDP443
+          : muxUdp443Reject,
+    };
+  }
+
   /// XMUX block for XHTTP `extra` (client-only).
   Map<String, dynamic>? buildXmuxMap() {
     if (!xmuxEnabled) return null;
@@ -558,6 +652,10 @@ class XrayCoreSettings {
           dnsQueryStrategy == other.dnsQueryStrategy &&
           dnsDisableCache == other.dnsDisableCache &&
           dnsSplitDirectDomains == other.dnsSplitDirectDomains &&
+          muxEnabled == other.muxEnabled &&
+          muxConcurrency == other.muxConcurrency &&
+          muxXudpConcurrency == other.muxXudpConcurrency &&
+          muxXudpProxyUDP443 == other.muxXudpProxyUDP443 &&
           xmuxEnabled == other.xmuxEnabled &&
           xmuxMaxConcurrency == other.xmuxMaxConcurrency &&
           xmuxMaxConnections == other.xmuxMaxConnections &&
@@ -573,7 +671,9 @@ class XrayCoreSettings {
           sniffingRouteOnly == other.sniffingRouteOnly;
 
   @override
-  int get hashCode => Object.hash(
+  // hashAll, а не hash: у последнего потолок в двадцать аргументов, а полей
+  // здесь больше.
+  int get hashCode => Object.hashAll([
         logLevel,
         routingDomainStrategy,
         dnsUseCustom,
@@ -581,6 +681,10 @@ class XrayCoreSettings {
         dnsQueryStrategy,
         dnsDisableCache,
         dnsSplitDirectDomains,
+        muxEnabled,
+        muxConcurrency,
+        muxXudpConcurrency,
+        muxXudpProxyUDP443,
         xmuxEnabled,
         xmuxMaxConcurrency,
         xmuxMaxConnections,
@@ -594,7 +698,7 @@ class XrayCoreSettings {
         fragmentInterval,
         sniffingEnabled,
         sniffingRouteOnly,
-      );
+      ]);
 
   String toJsonString() => jsonEncode(toJson());
 

@@ -172,6 +172,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
         // высоты и отодвигала настройки вниз.
         const _LocalPortsSection(),
         const _XrayDnsSection(),
+        const _XrayMuxSection(),
         const _XrayXmuxSection(),
         const _XrayFragmentSection(),
         const _XrayGeneralSection(),
@@ -300,6 +301,181 @@ class _XrayDnsSection extends ConsumerWidget {
                   _saveXrayCore(ref, settings, core.copyWith(dnsDisableCache: v)),
               activeThumbColor: accent,
               title: Text(l10n.settingsXrayDnsDisableCache),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Секция «Mux» — мультиплексор соединений (Mux.Cool и XUDP).
+///
+/// Не путать с соседней XMUX: та живёт внутри транспорта XHTTP, эта — над
+/// протоколом и работает на vless, vmess и trojan.
+///
+/// Отдельный виджет по той же причине, что и остальные секции: свой `const`
+/// конструктор и своя подписка, перестраивается она одна.
+class _XrayMuxSection extends ConsumerWidget {
+  const _XrayMuxSection();
+
+  static String _udp443Label(AppLocalizations l10n, String mode) =>
+      switch (mode) {
+        XrayCoreSettings.muxUdp443Allow => l10n.settingsXrayMuxUdp443Allow,
+        XrayCoreSettings.muxUdp443Skip => l10n.settingsXrayMuxUdp443Skip,
+        _ => l10n.settingsXrayMuxUdp443Reject,
+      };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings =
+        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
+    final core = settings.xrayCore;
+    final accent = AppTheme.accent(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _XrayCoreSectionHeader(
+          icon: Icons.account_tree_rounded,
+          title: l10n.settingsXrayMuxSection,
+        ),
+        _xraySettingsCard(
+          context,
+          children: [
+            SwitchListTile(
+              value: core.muxEnabled,
+              onChanged: (v) =>
+                  _saveXrayCore(ref, settings, core.copyWith(muxEnabled: v)),
+              activeThumbColor: accent,
+              title: Text(l10n.settingsXrayMuxEnable),
+              subtitle: Text(l10n.settingsXrayMuxEnableHint),
+            ),
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.settingsXrayMuxParamsTitle,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(color: AppTheme.text(context)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(l10n.settingsXrayMuxParamsHint),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerLowest,
+                        borderRadius:
+                            ExpressiveShape.radius(ExpressiveShape.large),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _XrayCoreTextField(
+                                key: ValueKey('mux_c_${core.muxConcurrency}'),
+                                label: l10n.settingsXrayMuxConcurrency,
+                                hint: '${XrayCoreSettings.defaultMuxConcurrency}',
+                                initialValue: '${core.muxConcurrency}',
+                                keyboardType: TextInputType.number,
+                                // Пустое или нечисловое поле — не повод отдать
+                                // ядру мусор: возвращаем умолчание, как и в
+                                // остальных полях этого экрана.
+                                onSave: (v) => _saveXrayCore(
+                                  ref,
+                                  settings,
+                                  core.copyWith(
+                                    muxConcurrency: int.tryParse(v.trim()) ??
+                                        XrayCoreSettings.defaultMuxConcurrency,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _XrayCoreTextField(
+                                key: ValueKey(
+                                  'mux_x_${core.muxXudpConcurrency}',
+                                ),
+                                label: l10n.settingsXrayMuxXudpConcurrency,
+                                hint:
+                                    '${XrayCoreSettings.defaultMuxXudpConcurrency}',
+                                initialValue: '${core.muxXudpConcurrency}',
+                                keyboardType: TextInputType.number,
+                                onSave: (v) => _saveXrayCore(
+                                  ref,
+                                  settings,
+                                  core.copyWith(
+                                    muxXudpConcurrency: int.tryParse(v.trim()) ??
+                                        XrayCoreSettings
+                                            .defaultMuxXudpConcurrency,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Text(
+                      l10n.settingsXrayMuxUdp443Title,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(color: AppTheme.text(context)),
+                    ),
+                  ),
+                  RadioGroup<String>(
+                    groupValue: core.muxXudpProxyUDP443,
+                    onChanged: (v) {
+                      if (v != null) {
+                        _saveXrayCore(
+                          ref,
+                          settings,
+                          core.copyWith(muxXudpProxyUDP443: v),
+                        );
+                      }
+                    },
+                    child: Column(
+                      children: [
+                        for (final mode in XrayCoreSettings.muxUdp443Modes)
+                          _xrayChoiceTile(
+                            context: context,
+                            value: mode,
+                            accent: accent,
+                            title: _udp443Label(l10n, mode),
+                            subtitle: mode,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              crossFadeState: core.muxEnabled
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 220),
+              sizeCurve: Curves.easeOutCubic,
             ),
           ],
         ),
@@ -1231,6 +1407,7 @@ String _xrayCoreSettingsSubtitle(AppLocalizations l10n, AppSettings? settings) {
   }
   final parts = <String>[core.logLevel];
   if (core.dnsUseCustom) parts.insert(0, 'DNS');
+  if (core.muxEnabled) parts.add('Mux');
   if (core.xmuxEnabled) parts.add('XMUX');
   if (!tun.isDefault) parts.add('TUN');
   if (customPorts) parts.add('${current.localPort}/${current.httpPort}');

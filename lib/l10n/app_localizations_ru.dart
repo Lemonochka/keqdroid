@@ -506,6 +506,39 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayXmuxEnableHint => 'Мультиплексирование для транспорта XHTTP (только клиент)';
 
   @override
+  String get settingsXrayMuxSection => 'Mux';
+
+  @override
+  String get settingsXrayMuxEnable => 'Включить Mux';
+
+  @override
+  String get settingsXrayMuxEnableHint => 'Несколько соединений внутри одного: меньше рукопожатий, но на загрузках и замерах скорости обычно хуже. Только ядро xray.';
+
+  @override
+  String get settingsXrayMuxParamsTitle => 'Потоков в одном соединении';
+
+  @override
+  String get settingsXrayMuxParamsHint => '-1 — не мультиплексировать. TCP до 128, UDP до 1024.';
+
+  @override
+  String get settingsXrayMuxConcurrency => 'TCP-потоки';
+
+  @override
+  String get settingsXrayMuxXudpConcurrency => 'UDP-потоки (XUDP)';
+
+  @override
+  String get settingsXrayMuxUdp443Title => 'QUIC (UDP/443)';
+
+  @override
+  String get settingsXrayMuxUdp443Reject => 'Отклонять';
+
+  @override
+  String get settingsXrayMuxUdp443Allow => 'Пускать в Mux';
+
+  @override
+  String get settingsXrayMuxUdp443Skip => 'Мимо Mux';
+
+  @override
   String get settingsXrayGeneralSection => 'Общие';
 
   @override

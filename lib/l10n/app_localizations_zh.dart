@@ -504,6 +504,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayXmuxEnableHint => '用于 XHTTP 传输的多路复用（客户端侧）';
 
   @override
+  String get settingsXrayMuxSection => 'Mux';
+
+  @override
+  String get settingsXrayMuxEnable => '启用 Mux';
+
+  @override
+  String get settingsXrayMuxEnableHint => '多条连接复用一条：握手更少，但下载和测速通常更差。仅 xray 内核。';
+
+  @override
+  String get settingsXrayMuxParamsTitle => '每条连接的子连接数';
+
+  @override
+  String get settingsXrayMuxParamsHint => '-1 表示不复用。TCP 最大 128，UDP 最大 1024。';
+
+  @override
+  String get settingsXrayMuxConcurrency => 'TCP 子连接';
+
+  @override
+  String get settingsXrayMuxXudpConcurrency => 'UDP 子连接 (XUDP)';
+
+  @override
+  String get settingsXrayMuxUdp443Title => 'QUIC (UDP/443)';
+
+  @override
+  String get settingsXrayMuxUdp443Reject => '拒绝';
+
+  @override
+  String get settingsXrayMuxUdp443Allow => '走 Mux';
+
+  @override
+  String get settingsXrayMuxUdp443Skip => '绕过 Mux';
+
+  @override
   String get settingsXrayGeneralSection => '常规';
 
   @override

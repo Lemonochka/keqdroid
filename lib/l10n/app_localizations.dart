@@ -1025,6 +1025,72 @@ abstract class AppLocalizations {
   /// **'Multiplexing for XHTTP transport (client-side)'**
   String get settingsXrayXmuxEnableHint;
 
+  /// No description provided for @settingsXrayMuxSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Mux'**
+  String get settingsXrayMuxSection;
+
+  /// No description provided for @settingsXrayMuxEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Mux'**
+  String get settingsXrayMuxEnable;
+
+  /// No description provided for @settingsXrayMuxEnableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Many connections inside one: fewer handshakes, but usually worse on downloads and speed tests. Xray core only.'**
+  String get settingsXrayMuxEnableHint;
+
+  /// No description provided for @settingsXrayMuxParamsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Streams per connection'**
+  String get settingsXrayMuxParamsTitle;
+
+  /// No description provided for @settingsXrayMuxParamsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'-1 turns multiplexing off. TCP up to 128, UDP up to 1024.'**
+  String get settingsXrayMuxParamsHint;
+
+  /// No description provided for @settingsXrayMuxConcurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'TCP streams'**
+  String get settingsXrayMuxConcurrency;
+
+  /// No description provided for @settingsXrayMuxXudpConcurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'UDP streams (XUDP)'**
+  String get settingsXrayMuxXudpConcurrency;
+
+  /// No description provided for @settingsXrayMuxUdp443Title.
+  ///
+  /// In en, this message translates to:
+  /// **'QUIC (UDP/443)'**
+  String get settingsXrayMuxUdp443Title;
+
+  /// No description provided for @settingsXrayMuxUdp443Reject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get settingsXrayMuxUdp443Reject;
+
+  /// No description provided for @settingsXrayMuxUdp443Allow.
+  ///
+  /// In en, this message translates to:
+  /// **'Send through Mux'**
+  String get settingsXrayMuxUdp443Allow;
+
+  /// No description provided for @settingsXrayMuxUdp443Skip.
+  ///
+  /// In en, this message translates to:
+  /// **'Bypass Mux'**
+  String get settingsXrayMuxUdp443Skip;
+
   /// No description provided for @settingsXrayGeneralSection.
   ///
   /// In en, this message translates to:

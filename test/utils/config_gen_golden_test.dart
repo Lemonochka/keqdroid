@@ -82,6 +82,19 @@ void main() {
       );
     });
 
+    _golden('vless-mux', () {
+      // Мультиплексор целиком: включатель плюс все три числа, как они уедут в
+      // ядро. Сервер намеренно без vision — с ним concurrency подменяется на
+      // -1, и это отдельный случай в config_gen_mux_test.
+      return ConfigGeneratorV2.generateConfig(
+        'vless://$_uuid@198.51.100.23:443?type=ws&security=tls'
+        '&sni=mux.example&host=mux.example&path=%2Fm#mux',
+        _settings.copyWith(
+          xrayCore: const XrayCoreSettings(muxEnabled: true),
+        ),
+      );
+    });
+
     _golden('vless-xhttp-extra', () {
       return ConfigGeneratorV2.generateConfig(
         'vless://$_uuid@198.51.100.12:443?type=xhttp&security=reality'

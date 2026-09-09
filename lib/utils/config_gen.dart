@@ -219,6 +219,7 @@ class ConfigGeneratorV2 {
     }
 
     final link = _buildLinkOutbound(trimmed, settings);
+    _applyMux(link.outbound, settings.xrayCore);
 
     return _wrapConfig(
       [link.outbound],
@@ -383,6 +384,11 @@ class ConfigGeneratorV2 {
     // Выходной узел — первым: в xray первый аутбаунд считается основным, и
     // всё, что не попало ни в одно правило, уходит именно в него.
     final exit = outbounds.removeLast();
+
+    // Мультиплексор — только на выходном узле. На промежуточных звеньях он
+    // мультиплексировал бы одно-единственное соединение (следующее звено
+    // дозванивается через dialerProxy), то есть добавлял бы слой ни за чем.
+    _applyMux(exit, settings.xrayCore);
 
     return _wrapConfig(
       [exit, ...outbounds],
@@ -1030,6 +1036,44 @@ class ConfigGeneratorV2 {
   }
 
   /// client-side xhttp extras (xmux) and similar stream options.
+  /// Мультиплексор на выходной аутбаунд — там, где ядро его поймёт.
+  ///
+  /// Mux — надстройка над протоколом: клиент дозванивается до служебного адреса
+  /// `v1.mux.cool`, а пачку разбирает сервер. На стороне сервера этим занят
+  /// общий обработчик (`common/mux/server.go`), одинаковый для всех инбаундов,
+  /// поэтому годятся vless, vmess и trojan — trojan в том числе, хотя Happ его
+  /// исключает. Shadowsocks же уедет к чужому серверу, который про `mux.cool`
+  /// не знает и попробует резолвить этот домен как обычный. Hysteria возит
+  /// датаграммы своим способом, ей мультиплексор поверх не нужен.
+  ///
+  /// XHTTP исключён по другой причине: он мультиплексирует сам (`extra.xmux`),
+  /// и второй слой поверх первого только добавит очередь.
+  static void _applyMux(Map<String, dynamic> outbound, XrayCoreSettings core) {
+    final mux = core.buildMuxMap();
+    if (mux == null) return;
+    const muxable = {'vless', 'vmess', 'trojan'};
+    if (!muxable.contains(outbound['protocol']?.toString())) return;
+    final stream = outbound['streamSettings'];
+    final network =
+        stream is Map<String, dynamic> ? stream['network']?.toString() : null;
+    if (network == 'xhttp' || network == 'splithttp') return;
+
+    // Vision пускает в пачку только UDP: сервер обрывает всё mux-соединение,
+    // если внутри оказался TCP («it will break the whole Mux connection» —
+    // common/mux/server.go, ветка vless.XRV в inbound.go). Настройка тут не
+    // спорит с ядром: включённый mux с vision означает XUDP и ничего больше.
+    outbound['mux'] = _hasVisionFlow(outbound)
+        ? {...mux, 'concurrency': -1}
+        : mux;
+  }
+
+  static bool _hasVisionFlow(Map<String, dynamic> outbound) {
+    final settings = outbound['settings'];
+    if (settings is! Map) return false;
+    return (settings['flow']?.toString().trim() ?? '')
+        .startsWith('xtls-rprx-vision');
+  }
+
   static void _applyXrayStreamExtras(
     Map<String, dynamic> outbound,
     XrayCoreSettings core,

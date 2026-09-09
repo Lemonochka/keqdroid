@@ -504,6 +504,39 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayXmuxEnableHint => 'مالتی‌پلکسینگ برای انتقال XHTTP (سمت کلاینت)';
 
   @override
+  String get settingsXrayMuxSection => 'Mux';
+
+  @override
+  String get settingsXrayMuxEnable => 'فعال‌سازی Mux';
+
+  @override
+  String get settingsXrayMuxEnableHint => 'چند اتصال درون یک اتصال: دست‌دادن کمتر، اما معمولاً در دانلود و تست سرعت بدتر است. فقط هستهٔ xray.';
+
+  @override
+  String get settingsXrayMuxParamsTitle => 'تعداد جریان در هر اتصال';
+
+  @override
+  String get settingsXrayMuxParamsHint => '-1 یعنی بدون مالتی‌پلکس. TCP تا ۱۲۸، UDP تا ۱۰۲۴.';
+
+  @override
+  String get settingsXrayMuxConcurrency => 'جریان‌های TCP';
+
+  @override
+  String get settingsXrayMuxXudpConcurrency => 'جریان‌های UDP (XUDP)';
+
+  @override
+  String get settingsXrayMuxUdp443Title => 'QUIC (UDP/443)';
+
+  @override
+  String get settingsXrayMuxUdp443Reject => 'رد کردن';
+
+  @override
+  String get settingsXrayMuxUdp443Allow => 'از مسیر Mux';
+
+  @override
+  String get settingsXrayMuxUdp443Skip => 'بدون Mux';
+
+  @override
   String get settingsXrayGeneralSection => 'عمومی';
 
   @override

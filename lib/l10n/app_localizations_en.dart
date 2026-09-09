@@ -504,6 +504,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayXmuxEnableHint => 'Multiplexing for XHTTP transport (client-side)';
 
   @override
+  String get settingsXrayMuxSection => 'Mux';
+
+  @override
+  String get settingsXrayMuxEnable => 'Enable Mux';
+
+  @override
+  String get settingsXrayMuxEnableHint => 'Many connections inside one: fewer handshakes, but usually worse on downloads and speed tests. Xray core only.';
+
+  @override
+  String get settingsXrayMuxParamsTitle => 'Streams per connection';
+
+  @override
+  String get settingsXrayMuxParamsHint => '-1 turns multiplexing off. TCP up to 128, UDP up to 1024.';
+
+  @override
+  String get settingsXrayMuxConcurrency => 'TCP streams';
+
+  @override
+  String get settingsXrayMuxXudpConcurrency => 'UDP streams (XUDP)';
+
+  @override
+  String get settingsXrayMuxUdp443Title => 'QUIC (UDP/443)';
+
+  @override
+  String get settingsXrayMuxUdp443Reject => 'Reject';
+
+  @override
+  String get settingsXrayMuxUdp443Allow => 'Send through Mux';
+
+  @override
+  String get settingsXrayMuxUdp443Skip => 'Bypass Mux';
+
+  @override
   String get settingsXrayGeneralSection => 'General';
 
   @override
