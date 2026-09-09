@@ -175,6 +175,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
         const _XrayMuxSection(),
         const _XrayXmuxSection(),
         const _XrayFragmentSection(),
+        const _XrayNoiseSection(),
         const _XrayGeneralSection(),
         // sing-box TUN есть только на десктопе: Android держит TUN через
         // VpnService + tun2socks, эти опции там ни на что не влияют.
@@ -822,6 +823,212 @@ class _XrayFragmentSection extends ConsumerWidget {
                 ],
               ),
               crossFadeState: core.fragmentEnabled
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 220),
+              sizeCurve: Curves.easeOutCubic,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Секция шума перед UDP-трафиком.
+///
+/// Стоит следом за фрагментацией не случайно: это её пара. Фрагментация — для
+/// TCP-серверов, шум — для UDP-серверов, где резать нечего.
+class _XrayNoiseSection extends ConsumerWidget {
+  const _XrayNoiseSection();
+
+  static String _kindLabel(AppLocalizations l10n, String kind) => switch (kind) {
+        XrayCoreSettings.noiseStr => l10n.settingsXrayNoiseKindStr,
+        XrayCoreSettings.noiseHex => l10n.settingsXrayNoiseKindHex,
+        XrayCoreSettings.noiseBase64 => l10n.settingsXrayNoiseKindBase64,
+        _ => l10n.settingsXrayNoiseKindRand,
+      };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings =
+        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
+    final core = settings.xrayCore;
+    final accent = AppTheme.accent(context);
+    final random = core.noiseKind == XrayCoreSettings.noiseRandom;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _XrayCoreSectionHeader(
+          icon: Icons.graphic_eq_rounded,
+          title: l10n.settingsXrayNoiseSection,
+        ),
+        _xraySettingsCard(
+          context,
+          children: [
+            SwitchListTile(
+              value: core.noiseEnabled,
+              onChanged: (v) =>
+                  _saveXrayCore(ref, settings, core.copyWith(noiseEnabled: v)),
+              activeThumbColor: accent,
+              title: Text(l10n.settingsXrayNoiseEnable),
+              subtitle: Text(l10n.settingsXrayNoiseEnableHint),
+            ),
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Text(
+                      l10n.settingsXrayNoiseKindTitle,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(color: AppTheme.text(context)),
+                    ),
+                  ),
+                  RadioGroup<String>(
+                    groupValue: core.noiseKind,
+                    onChanged: (v) {
+                      if (v != null) {
+                        _saveXrayCore(
+                          ref,
+                          settings,
+                          core.copyWith(noiseKind: v),
+                        );
+                      }
+                    },
+                    child: Column(
+                      children: [
+                        for (final kind in XrayCoreSettings.noiseKinds)
+                          _xrayChoiceTile(
+                            context: context,
+                            value: kind,
+                            accent: accent,
+                            title: _kindLabel(l10n, kind),
+                            subtitle: kind,
+                          ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Text(l10n.settingsXrayNoiseParamsHint),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerLowest,
+                        borderRadius:
+                            ExpressiveShape.radius(ExpressiveShape.large),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            // Поля мусора и своего пакета исключают друг друга:
+                            // ядро отвергает конфиг, где заданы оба. Показываем
+                            // ровно те, что относятся к выбранному виду.
+                            if (random)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: _XrayCoreTextField(
+                                      key: ValueKey(
+                                        'noise_len_${core.noiseRandLength}',
+                                      ),
+                                      label: l10n.settingsXrayNoiseRandLength,
+                                      hint: XrayCoreSettings
+                                          .defaultNoiseRandLength,
+                                      initialValue: core.noiseRandLength,
+                                      onSave: (v) => _saveXrayCore(
+                                        ref,
+                                        settings,
+                                        core.copyWith(noiseRandLength: v),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _XrayCoreTextField(
+                                      key: ValueKey(
+                                        'noise_bytes_${core.noiseRandBytes}',
+                                      ),
+                                      label: l10n.settingsXrayNoiseRandBytes,
+                                      hint: '0-255',
+                                      initialValue: core.noiseRandBytes,
+                                      onSave: (v) => _saveXrayCore(
+                                        ref,
+                                        settings,
+                                        core.copyWith(noiseRandBytes: v),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            else
+                              _XrayCoreTextField(
+                                key: ValueKey('noise_packet_${core.noisePacket}'),
+                                label: l10n.settingsXrayNoisePacket,
+                                hint: '',
+                                initialValue: core.noisePacket,
+                                onSave: (v) => _saveXrayCore(
+                                  ref,
+                                  settings,
+                                  core.copyWith(noisePacket: v),
+                                ),
+                              ),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: _XrayCoreTextField(
+                                    key: ValueKey(
+                                      'noise_delay_${core.noiseDelay}',
+                                    ),
+                                    label: l10n.settingsXrayNoiseDelay,
+                                    hint: '0',
+                                    initialValue: core.noiseDelay,
+                                    onSave: (v) => _saveXrayCore(
+                                      ref,
+                                      settings,
+                                      core.copyWith(noiseDelay: v),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _XrayCoreTextField(
+                                    key: ValueKey(
+                                      'noise_reset_${core.noiseReset}',
+                                    ),
+                                    label: l10n.settingsXrayNoiseReset,
+                                    hint: '0',
+                                    initialValue: core.noiseReset,
+                                    onSave: (v) => _saveXrayCore(
+                                      ref,
+                                      settings,
+                                      core.copyWith(noiseReset: v),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              crossFadeState: core.noiseEnabled
                   ? CrossFadeState.showSecond
                   : CrossFadeState.showFirst,
               duration: const Duration(milliseconds: 220),

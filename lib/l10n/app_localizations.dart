@@ -1217,6 +1217,90 @@ abstract class AppLocalizations {
   /// **'The first packet goes out in pieces, so DPI cannot read the SNI. Xray core only.'**
   String get settingsXrayFragmentEnableHint;
 
+  /// No description provided for @settingsXrayNoiseSection.
+  ///
+  /// In en, this message translates to:
+  /// **'UDP noise'**
+  String get settingsXrayNoiseSection;
+
+  /// No description provided for @settingsXrayNoiseEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Send noise before UDP'**
+  String get settingsXrayNoiseEnable;
+
+  /// No description provided for @settingsXrayNoiseEnableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A junk packet goes to the server before the first real one. For hysteria and mkcp, where there is no ClientHello to cut. Xray core only.'**
+  String get settingsXrayNoiseEnableHint;
+
+  /// No description provided for @settingsXrayNoiseKindTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What to send'**
+  String get settingsXrayNoiseKindTitle;
+
+  /// No description provided for @settingsXrayNoiseKindRand.
+  ///
+  /// In en, this message translates to:
+  /// **'Random junk'**
+  String get settingsXrayNoiseKindRand;
+
+  /// No description provided for @settingsXrayNoiseKindStr.
+  ///
+  /// In en, this message translates to:
+  /// **'Own packet: text'**
+  String get settingsXrayNoiseKindStr;
+
+  /// No description provided for @settingsXrayNoiseKindHex.
+  ///
+  /// In en, this message translates to:
+  /// **'Own packet: hex'**
+  String get settingsXrayNoiseKindHex;
+
+  /// No description provided for @settingsXrayNoiseKindBase64.
+  ///
+  /// In en, this message translates to:
+  /// **'Own packet: base64'**
+  String get settingsXrayNoiseKindBase64;
+
+  /// No description provided for @settingsXrayNoisePacket.
+  ///
+  /// In en, this message translates to:
+  /// **'Packet'**
+  String get settingsXrayNoisePacket;
+
+  /// No description provided for @settingsXrayNoiseRandLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Length, bytes'**
+  String get settingsXrayNoiseRandLength;
+
+  /// No description provided for @settingsXrayNoiseRandBytes.
+  ///
+  /// In en, this message translates to:
+  /// **'Byte values (0-255)'**
+  String get settingsXrayNoiseRandBytes;
+
+  /// No description provided for @settingsXrayNoiseDelay.
+  ///
+  /// In en, this message translates to:
+  /// **'Delay, ms'**
+  String get settingsXrayNoiseDelay;
+
+  /// No description provided for @settingsXrayNoiseReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat, sec'**
+  String get settingsXrayNoiseReset;
+
+  /// No description provided for @settingsXrayNoiseParamsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A number or a range, e.g. 50-100. Blank leaves it to the core.'**
+  String get settingsXrayNoiseParamsHint;
+
   /// No description provided for @settingsXrayFragmentPacketsTitle.
   ///
   /// In en, this message translates to:

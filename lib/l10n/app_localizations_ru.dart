@@ -602,6 +602,48 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayFragmentEnableHint => 'Первый пакет уходит кусками, и DPI не видит SNI. Только ядро xray.';
 
   @override
+  String get settingsXrayNoiseSection => 'Шум перед UDP';
+
+  @override
+  String get settingsXrayNoiseEnable => 'Слать шум перед UDP';
+
+  @override
+  String get settingsXrayNoiseEnableHint => 'Перед первым настоящим пакетом к серверу уходит мусор. Для hysteria и mkcp, где резать ClientHello нечего. Только ядро xray.';
+
+  @override
+  String get settingsXrayNoiseKindTitle => 'Чем шуметь';
+
+  @override
+  String get settingsXrayNoiseKindRand => 'Случайный мусор';
+
+  @override
+  String get settingsXrayNoiseKindStr => 'Свой пакет: текстом';
+
+  @override
+  String get settingsXrayNoiseKindHex => 'Свой пакет: hex';
+
+  @override
+  String get settingsXrayNoiseKindBase64 => 'Свой пакет: base64';
+
+  @override
+  String get settingsXrayNoisePacket => 'Пакет';
+
+  @override
+  String get settingsXrayNoiseRandLength => 'Длина, байт';
+
+  @override
+  String get settingsXrayNoiseRandBytes => 'Значения байт (0-255)';
+
+  @override
+  String get settingsXrayNoiseDelay => 'Пауза, мс';
+
+  @override
+  String get settingsXrayNoiseReset => 'Повтор, сек';
+
+  @override
+  String get settingsXrayNoiseParamsHint => 'Число или диапазон, например 50-100. Пусто — на усмотрение ядра.';
+
+  @override
   String get settingsXrayFragmentPacketsTitle => 'Что резать';
 
   @override

@@ -600,6 +600,48 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayFragmentEnableHint => 'Das erste Paket geht in Stücken raus, DPI liest die SNI nicht. Nur Xray-Kern.';
 
   @override
+  String get settingsXrayNoiseSection => 'UDP-Rauschen';
+
+  @override
+  String get settingsXrayNoiseEnable => 'Rauschen vor UDP senden';
+
+  @override
+  String get settingsXrayNoiseEnableHint => 'Vor dem ersten echten Paket geht Müll an den Server. Für hysteria und mkcp, wo es kein ClientHello zu schneiden gibt. Nur Xray-Kern.';
+
+  @override
+  String get settingsXrayNoiseKindTitle => 'Was gesendet wird';
+
+  @override
+  String get settingsXrayNoiseKindRand => 'Zufälliger Müll';
+
+  @override
+  String get settingsXrayNoiseKindStr => 'Eigenes Paket: Text';
+
+  @override
+  String get settingsXrayNoiseKindHex => 'Eigenes Paket: Hex';
+
+  @override
+  String get settingsXrayNoiseKindBase64 => 'Eigenes Paket: Base64';
+
+  @override
+  String get settingsXrayNoisePacket => 'Paket';
+
+  @override
+  String get settingsXrayNoiseRandLength => 'Länge, Bytes';
+
+  @override
+  String get settingsXrayNoiseRandBytes => 'Bytewerte (0-255)';
+
+  @override
+  String get settingsXrayNoiseDelay => 'Pause, ms';
+
+  @override
+  String get settingsXrayNoiseReset => 'Wiederholung, Sek.';
+
+  @override
+  String get settingsXrayNoiseParamsHint => 'Eine Zahl oder ein Bereich, z. B. 50-100. Leer überlässt es dem Kern.';
+
+  @override
   String get settingsXrayFragmentPacketsTitle => 'Was aufgeteilt wird';
 
   @override

@@ -148,6 +148,22 @@ void main() {
       );
     });
 
+    _golden('hysteria2-udp-noise', () {
+      // Тот самый случай, которому фрагментация не помогает: UDP-сервер, резать
+      // нечего. Салмандер из ссылки при этом остаётся — шум дописывается следом.
+      return ConfigGeneratorV2.generateConfig(
+        'hysteria2://password@198.51.100.24:443?mport=20000-20050'
+        '&obfs=salamander&obfs-password=obfspass&sni=hy2.example#hy2noise',
+        _settings.copyWith(
+          xrayCore: const XrayCoreSettings(
+            noiseEnabled: true,
+            noiseDelay: '5-20',
+            noiseReset: '60',
+          ),
+        ),
+      );
+    });
+
     _golden('custom-json-server', () {
       // Готовый конфиг как сервер: инбаунды остаются наши, аутбаунды провайдера.
       return ConfigGeneratorV2.generateConfig(

@@ -61,6 +61,37 @@ class XrayCoreSettings {
   /// `0` с `tlshello` — разрезать ClientHello, но отправить одним пакетом.
   final String fragmentInterval;
 
+  /// Шум перед UDP-трафиком (`streamSettings.finalmask.udp`, тип `noise`).
+  ///
+  /// Фрагментация ClientHello сюда не годится по устройству: у hysteria и mkcp
+  /// никакого ClientHello в потоке нет, и `_applyFragment` для них честно
+  /// ничего не делает. Шум работает иначе — перед первым настоящим пакетом на
+  /// адрес ядро отправляет туда мусор, и профиль соединения перестаёт быть
+  /// узнаваемым с первого пакета.
+  final bool noiseEnabled;
+
+  /// Чем шуметь: [noiseRandom] — случайный мусор, остальное — свой пакет из
+  /// [noisePacket] в этой кодировке.
+  final String noiseKind;
+
+  /// Пакет-заготовка. Пуст при [noiseRandom].
+  final String noisePacket;
+
+  /// Длина случайного пакета в байтах: число или диапазон `50-100`.
+  /// Работает только при [noiseRandom]: ядро отвергает конфиг, где заданы и
+  /// `packet`, и `rand` разом.
+  final String noiseRandLength;
+
+  /// Диапазон значений случайных байтов, 0–255. Пусто — весь диапазон.
+  final String noiseRandBytes;
+
+  /// Пауза после шумового пакета в миллисекундах: число или диапазон.
+  final String noiseDelay;
+
+  /// Через сколько секунд шум повторить для того же адреса. Пусто или 0 —
+  /// один раз за жизнь соединения.
+  final String noiseReset;
+
   final bool sniffingEnabled;
 
   /// `true` — снифер только подсказывает роутингу домен, соединение уходит на
@@ -100,6 +131,13 @@ class XrayCoreSettings {
     this.fragmentPackets = fragmentPacketsTlsHello,
     this.fragmentLength = defaultFragmentLength,
     this.fragmentInterval = defaultFragmentInterval,
+    this.noiseEnabled = false,
+    this.noiseKind = noiseRandom,
+    this.noisePacket = '',
+    this.noiseRandLength = defaultNoiseRandLength,
+    this.noiseRandBytes = '',
+    this.noiseDelay = '',
+    this.noiseReset = '',
     this.sniffingEnabled = true,
     this.sniffingRouteOnly = false,
   });
@@ -141,6 +179,23 @@ class XrayCoreSettings {
     muxUdp443Skip,
   ];
 
+  /// Случайный мусор вместо своего пакета: у ядра это `rand` вместо `packet`.
+  /// Двух сразу оно не принимает и роняет конфиг целиком, поэтому выбор здесь
+  /// один на оба поля, а не два независимых.
+  static const noiseRandom = 'rand';
+
+  /// Свой пакет: текстом как есть, шестнадцатеричный, base64. Имена — те же,
+  /// что ядро ждёт в поле `type` (`PraseByteSlice` в `transport_finalmask.go`).
+  static const noiseStr = 'str';
+  static const noiseHex = 'hex';
+  static const noiseBase64 = 'base64';
+
+  static const noiseKinds = [noiseRandom, noiseStr, noiseHex, noiseBase64];
+
+  /// Длина мусорного пакета по умолчанию. Своего умолчания у ядра тут нет:
+  /// пустой `rand` означает нулевую длину, то есть шума не будет вовсе.
+  static const defaultNoiseRandLength = '50-100';
+
   /// Столько же кладёт ядро, когда `concurrency` не задан.
   static const defaultMuxConcurrency = 8;
 
@@ -180,6 +235,13 @@ class XrayCoreSettings {
         'fragmentPackets': fragmentPackets,
         'fragmentLength': fragmentLength,
         'fragmentInterval': fragmentInterval,
+        'noiseEnabled': noiseEnabled,
+        'noiseKind': noiseKind,
+        'noisePacket': noisePacket,
+        'noiseRandLength': noiseRandLength,
+        'noiseRandBytes': noiseRandBytes,
+        'noiseDelay': noiseDelay,
+        'noiseReset': noiseReset,
         'sniffingEnabled': sniffingEnabled,
         'sniffingRouteOnly': sniffingRouteOnly,
       };
@@ -205,6 +267,7 @@ class XrayCoreSettings {
     final query = str('dnsQueryStrategy', 'UseIPv4');
     final packets = str('fragmentPackets', fragmentPacketsTlsHello);
     final udp443 = str('muxXudpProxyUDP443', muxUdp443Reject);
+    final noiseKind = str('noiseKind', noiseRandom);
     return XrayCoreSettings(
       logLevel: logLevels.contains(log) ? log : 'warning',
       routingDomainStrategy:
@@ -237,6 +300,15 @@ class XrayCoreSettings {
           : fragmentPacketsTlsHello,
       fragmentLength: str('fragmentLength', defaultFragmentLength),
       fragmentInterval: str('fragmentInterval', defaultFragmentInterval),
+      noiseEnabled: b('noiseEnabled', false),
+      // Незнакомый вид шума — назад к случайному мусору: свой пакет без
+      // понятной кодировки ядру отдавать нечем.
+      noiseKind: noiseKinds.contains(noiseKind) ? noiseKind : noiseRandom,
+      noisePacket: json['noisePacket'] as String? ?? '',
+      noiseRandLength: str('noiseRandLength', defaultNoiseRandLength),
+      noiseRandBytes: json['noiseRandBytes'] as String? ?? '',
+      noiseDelay: json['noiseDelay'] as String? ?? '',
+      noiseReset: json['noiseReset'] as String? ?? '',
       sniffingEnabled: b('sniffingEnabled', true),
       sniffingRouteOnly: b('sniffingRouteOnly', false),
     );
@@ -265,6 +337,13 @@ class XrayCoreSettings {
     String? fragmentPackets,
     String? fragmentLength,
     String? fragmentInterval,
+    bool? noiseEnabled,
+    String? noiseKind,
+    String? noisePacket,
+    String? noiseRandLength,
+    String? noiseRandBytes,
+    String? noiseDelay,
+    String? noiseReset,
     bool? sniffingEnabled,
     bool? sniffingRouteOnly,
   }) =>
@@ -296,6 +375,13 @@ class XrayCoreSettings {
         fragmentPackets: fragmentPackets ?? this.fragmentPackets,
         fragmentLength: fragmentLength ?? this.fragmentLength,
         fragmentInterval: fragmentInterval ?? this.fragmentInterval,
+        noiseEnabled: noiseEnabled ?? this.noiseEnabled,
+        noiseKind: noiseKind ?? this.noiseKind,
+        noisePacket: noisePacket ?? this.noisePacket,
+        noiseRandLength: noiseRandLength ?? this.noiseRandLength,
+        noiseRandBytes: noiseRandBytes ?? this.noiseRandBytes,
+        noiseDelay: noiseDelay ?? this.noiseDelay,
+        noiseReset: noiseReset ?? this.noiseReset,
         sniffingEnabled: sniffingEnabled ?? this.sniffingEnabled,
         sniffingRouteOnly: sniffingRouteOnly ?? this.sniffingRouteOnly,
       );
@@ -563,6 +649,56 @@ class XrayCoreSettings {
   /// плохих каналов — ценой той самой двадцатисекундной паузы.
   static const _dnsTimeoutMs = 2500;
 
+  /// Один элемент для `finalmask.udp`, или `null` — шум выключен.
+  ///
+  /// Ключ у ядра пишется строчными (`finalmask`), хотя всё вокруг camelCase —
+  /// в Go-структуре он `FinalMask`, а в json-теге строчный. Ошибка здесь не
+  /// заметна ничем: неизвестный ключ xray молча выбрасывает, конфиг поднимается,
+  /// а шума нет.
+  ///
+  /// `rand` и `packet` вместе ядро отвергает («len(item.Packet) > 0 &&
+  /// item.Rand.To > 0»), поэтому [noiseKind] и выбирает одно из двух.
+  Map<String, dynamic>? buildNoiseItem() {
+    if (!noiseEnabled) return null;
+    final item = <String, dynamic>{};
+    if (noiseKind == noiseRandom) {
+      item['rand'] = _parseRangeValue(
+        _rangeOrFallback(noiseRandLength, defaultNoiseRandLength),
+      );
+      final bytes = noiseRandBytes.trim();
+      if (RegExp(r'^\d+(-\d+)?$').hasMatch(bytes)) {
+        item['randRange'] = _parseRangeValue(bytes);
+      }
+    } else {
+      // Пустой пакет — это ни шум, ни ошибка: ядро отправит ноль байт. Молчать
+      // тут хуже, чем откатиться на мусор, ради которого настройку и включали.
+      final packet = noisePacket.trim();
+      if (packet.isEmpty) {
+        item['rand'] = _parseRangeValue(defaultNoiseRandLength);
+      } else {
+        item['type'] = noiseKind;
+        item['packet'] = packet;
+      }
+    }
+    final delay = noiseDelay.trim();
+    if (RegExp(r'^\d+(-\d+)?$').hasMatch(delay)) {
+      item['delay'] = _parseRangeValue(delay);
+    }
+    return {
+      'type': 'noise',
+      'settings': {
+        if (RegExp(r'^\d+(-\d+)?$').hasMatch(noiseReset.trim()))
+          'reset': _parseRangeValue(noiseReset.trim()),
+        'noise': [item],
+      },
+    };
+  }
+
+  static String _rangeOrFallback(String raw, String fallback) {
+    final v = raw.trim();
+    return RegExp(r'^\d+(-\d+)?$').hasMatch(v) ? v : fallback;
+  }
+
   /// `mux` для аутбаунда, или `null` — тогда ключа в конфиге нет вовсе.
   ///
   /// Значения подрезаны по границам ядра (`docs/config/outbound.md`), а режим
@@ -667,6 +803,13 @@ class XrayCoreSettings {
           fragmentPackets == other.fragmentPackets &&
           fragmentLength == other.fragmentLength &&
           fragmentInterval == other.fragmentInterval &&
+          noiseEnabled == other.noiseEnabled &&
+          noiseKind == other.noiseKind &&
+          noisePacket == other.noisePacket &&
+          noiseRandLength == other.noiseRandLength &&
+          noiseRandBytes == other.noiseRandBytes &&
+          noiseDelay == other.noiseDelay &&
+          noiseReset == other.noiseReset &&
           sniffingEnabled == other.sniffingEnabled &&
           sniffingRouteOnly == other.sniffingRouteOnly;
 
@@ -696,6 +839,13 @@ class XrayCoreSettings {
         fragmentPackets,
         fragmentLength,
         fragmentInterval,
+        noiseEnabled,
+        noiseKind,
+        noisePacket,
+        noiseRandLength,
+        noiseRandBytes,
+        noiseDelay,
+        noiseReset,
         sniffingEnabled,
         sniffingRouteOnly,
       ]);

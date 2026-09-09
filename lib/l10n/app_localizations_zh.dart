@@ -600,6 +600,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayFragmentEnableHint => '首包分片发送，DPI 读不到 SNI。仅 Xray 内核。';
 
   @override
+  String get settingsXrayNoiseSection => 'UDP 噪声';
+
+  @override
+  String get settingsXrayNoiseEnable => 'UDP 前发送噪声';
+
+  @override
+  String get settingsXrayNoiseEnableHint => '在第一个真实数据包之前先向服务器发一个垃圾包。用于 hysteria 和 mkcp——它们没有可切分的 ClientHello。仅 xray 内核。';
+
+  @override
+  String get settingsXrayNoiseKindTitle => '发送什么';
+
+  @override
+  String get settingsXrayNoiseKindRand => '随机垃圾数据';
+
+  @override
+  String get settingsXrayNoiseKindStr => '自定义包：文本';
+
+  @override
+  String get settingsXrayNoiseKindHex => '自定义包：hex';
+
+  @override
+  String get settingsXrayNoiseKindBase64 => '自定义包：base64';
+
+  @override
+  String get settingsXrayNoisePacket => '数据包';
+
+  @override
+  String get settingsXrayNoiseRandLength => '长度（字节）';
+
+  @override
+  String get settingsXrayNoiseRandBytes => '字节取值 (0-255)';
+
+  @override
+  String get settingsXrayNoiseDelay => '延迟（毫秒）';
+
+  @override
+  String get settingsXrayNoiseReset => '重复（秒）';
+
+  @override
+  String get settingsXrayNoiseParamsHint => '一个数字或范围，例如 50-100。留空则交给内核决定。';
+
+  @override
   String get settingsXrayFragmentPacketsTitle => '拆分对象';
 
   @override

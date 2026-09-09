@@ -502,6 +502,45 @@ class ConfigGeneratorV2 {
         _ => 'UseIP',
       };
 
+  /// Шум перед первым UDP-пакетом — единственное, что у нас есть для
+  /// UDP-серверов: фрагментировать там нечего.
+  ///
+  /// Ставится на тот же аутбаунд, что и фрагментация: внешний (без
+  /// `dialerProxy`) и датаграммный. Внутри цепочки шуметь бессмысленно — там
+  /// «сокет» это предыдущее звено, а не сеть.
+  ///
+  /// Если у hysteria уже есть салмандер из ссылки, шум дописывается следом:
+  /// список `udp` ядро оборачивает с конца (`slices.Backward`), поэтому
+  /// последний в списке оказывается ближе всего к проводу — мусор уходит ровно
+  /// таким, каким его задали, а не обфусцированным поверх.
+  static void _applyUdpNoise(
+    List<Map<String, dynamic>> proxyOutbounds,
+    XrayCoreSettings core,
+  ) {
+    final noise = core.buildNoiseItem();
+    if (noise == null) return;
+
+    for (final outbound in proxyOutbounds) {
+      final stream = outbound['streamSettings'];
+      if (stream is! Map<String, dynamic>) continue;
+      final dialer = (stream['sockopt'] as Map<String, dynamic>?)?['dialerProxy']
+              ?.toString() ??
+          '';
+      if (dialer.isNotEmpty) continue;
+      if (!_isDatagramOutbound(outbound)) continue;
+
+      final finalmask = Map<String, dynamic>.from(
+        (stream['finalmask'] as Map<String, dynamic>?) ?? {},
+      );
+      final udp = [
+        ...((finalmask['udp'] as List?) ?? const []),
+        noise,
+      ];
+      finalmask['udp'] = udp;
+      stream['finalmask'] = finalmask;
+    }
+  }
+
   /// Едет ли аутбаунд по UDP: hysteria2 (`network: hysteria`) и mKCP/QUIC из
   /// параметра `type` ссылки.
   static bool _isDatagramOutbound(Map<String, dynamic> outbound) {
@@ -1764,6 +1803,10 @@ class ConfigGeneratorV2 {
     // условиях: проба обязана дозваниваться ровно так же, как потом боевое
     // соединение, иначе зелёный пинг ничего не обещает.
     final fragmentOutbound = _applyFragment(proxyOutbounds, core);
+
+    // Шум перед UDP — для тех же аутбаундов, для которых фрагментация не
+    // работает, и по тому же правилу «только внешний, не звено цепочки».
+    _applyUdpNoise(proxyOutbounds, core);
 
     final inbounds = _buildInbounds(
       settings,

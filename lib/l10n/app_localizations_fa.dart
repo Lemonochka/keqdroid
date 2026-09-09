@@ -600,6 +600,48 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayFragmentEnableHint => 'بستهٔ نخست تکه‌تکه می‌رود و DPI نمی‌تواند SNI را بخواند. فقط هستهٔ Xray.';
 
   @override
+  String get settingsXrayNoiseSection => 'نویز پیش از UDP';
+
+  @override
+  String get settingsXrayNoiseEnable => 'ارسال نویز پیش از UDP';
+
+  @override
+  String get settingsXrayNoiseEnableHint => 'پیش از نخستین بستهٔ واقعی، بستهٔ بی‌معنا به سرور فرستاده می‌شود. برای hysteria و mkcp که ClientHello برای تکه‌کردن ندارند. فقط هستهٔ xray.';
+
+  @override
+  String get settingsXrayNoiseKindTitle => 'چه چیزی فرستاده شود';
+
+  @override
+  String get settingsXrayNoiseKindRand => 'دادهٔ تصادفی';
+
+  @override
+  String get settingsXrayNoiseKindStr => 'بستهٔ دلخواه: متن';
+
+  @override
+  String get settingsXrayNoiseKindHex => 'بستهٔ دلخواه: hex';
+
+  @override
+  String get settingsXrayNoiseKindBase64 => 'بستهٔ دلخواه: base64';
+
+  @override
+  String get settingsXrayNoisePacket => 'بسته';
+
+  @override
+  String get settingsXrayNoiseRandLength => 'طول، بایت';
+
+  @override
+  String get settingsXrayNoiseRandBytes => 'مقدار بایت‌ها (۰-۲۵۵)';
+
+  @override
+  String get settingsXrayNoiseDelay => 'تأخیر، میلی‌ثانیه';
+
+  @override
+  String get settingsXrayNoiseReset => 'تکرار، ثانیه';
+
+  @override
+  String get settingsXrayNoiseParamsHint => 'یک عدد یا یک بازه، مثلاً 50-100. خالی یعنی تصمیم با هسته.';
+
+  @override
   String get settingsXrayFragmentPacketsTitle => 'چه چیزی تکه شود';
 
   @override

@@ -600,6 +600,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayFragmentEnableHint => 'The first packet goes out in pieces, so DPI cannot read the SNI. Xray core only.';
 
   @override
+  String get settingsXrayNoiseSection => 'UDP noise';
+
+  @override
+  String get settingsXrayNoiseEnable => 'Send noise before UDP';
+
+  @override
+  String get settingsXrayNoiseEnableHint => 'A junk packet goes to the server before the first real one. For hysteria and mkcp, where there is no ClientHello to cut. Xray core only.';
+
+  @override
+  String get settingsXrayNoiseKindTitle => 'What to send';
+
+  @override
+  String get settingsXrayNoiseKindRand => 'Random junk';
+
+  @override
+  String get settingsXrayNoiseKindStr => 'Own packet: text';
+
+  @override
+  String get settingsXrayNoiseKindHex => 'Own packet: hex';
+
+  @override
+  String get settingsXrayNoiseKindBase64 => 'Own packet: base64';
+
+  @override
+  String get settingsXrayNoisePacket => 'Packet';
+
+  @override
+  String get settingsXrayNoiseRandLength => 'Length, bytes';
+
+  @override
+  String get settingsXrayNoiseRandBytes => 'Byte values (0-255)';
+
+  @override
+  String get settingsXrayNoiseDelay => 'Delay, ms';
+
+  @override
+  String get settingsXrayNoiseReset => 'Repeat, sec';
+
+  @override
+  String get settingsXrayNoiseParamsHint => 'A number or a range, e.g. 50-100. Blank leaves it to the core.';
+
+  @override
   String get settingsXrayFragmentPacketsTitle => 'What to split';
 
   @override
