@@ -598,6 +598,10 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                         "xrayUrlTestBatch" -> {
                             val socksPort = call.argument<Int>("socksPort")
+                            // Ядро замера: тем же, каким сервер поедет на самом деле.
+                            // Пустое значение — xray, как было до появления выбора.
+                            val core = call.argument<String>("core")
+                                ?: EphemeralXrayPing.CORE_XRAY
                             val testUrl = call.argument<String>("testUrl")
                             val timeoutMs = call.argument<Int>("timeoutMs") ?: 15_000
                             val keepAlive = call.argument<Boolean>("keepAlive") ?: true
@@ -613,6 +617,7 @@ class MainActivity : FlutterFragmentActivity() {
                                 testUrl ?: "https://connectivitycheck.gstatic.com/generate_204",
                                 timeoutMs,
                                 keepAlive,
+                                core,
                                 result,
                             )
                         }
@@ -635,6 +640,8 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                         "xraySpeedTestBatch" -> {
                             val socksPort = call.argument<Int>("socksPort")
+                            val core = call.argument<String>("core")
+                                ?: EphemeralXrayPing.CORE_XRAY
                             val downloadUrl = call.argument<String>("downloadUrl")
                             val timeoutMs = call.argument<Int>("timeoutMs") ?: 20_000
                             @Suppress("UNCHECKED_CAST")
@@ -648,6 +655,7 @@ class MainActivity : FlutterFragmentActivity() {
                                 socksPort,
                                 downloadUrl ?: DEFAULT_SPEED_TEST_URL,
                                 timeoutMs,
+                                core,
                                 result,
                             )
                         }
@@ -970,6 +978,7 @@ class MainActivity : FlutterFragmentActivity() {
         testUrl: String,
         timeoutMs: Int,
         keepAlive: Boolean,
+        core: String,
         result: MethodChannel.Result,
     ) {
         mainScope.launch {
@@ -990,6 +999,7 @@ class MainActivity : FlutterFragmentActivity() {
                         testUrl = testUrl,
                         timeoutMs = timeoutMs,
                         keepAlive = keepAlive,
+                        core = core,
                     )
                 }.getOrElse { e ->
                     emptyList<EphemeralXrayPing.BatchResult>()
@@ -1048,6 +1058,7 @@ class MainActivity : FlutterFragmentActivity() {
         socksPort: Int,
         downloadUrl: String,
         timeoutMs: Int,
+        core: String,
         result: MethodChannel.Result,
     ) {
         mainScope.launch {
@@ -1067,6 +1078,7 @@ class MainActivity : FlutterFragmentActivity() {
                         items = items,
                         downloadUrl = downloadUrl,
                         timeoutMs = timeoutMs,
+                        core = core,
                     )
                 }.getOrElse { e ->
                     emptyList<EphemeralXrayPing.SpeedBatchResult>()

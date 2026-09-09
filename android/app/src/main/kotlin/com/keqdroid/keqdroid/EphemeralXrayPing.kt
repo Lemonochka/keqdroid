@@ -44,6 +44,20 @@ import kotlin.math.min
 
 object EphemeralXrayPing {
 
+    /// Ядро замера, как его называет dart-сторона (`VpnBackend.wireValue`).
+
+    const val CORE_XRAY = "xray"
+
+    const val CORE_MIHOMO = "mihomo"
+
+    /// Бинарь ядра. Оба лежат в nativeLibraryDir под именами `lib*.so`: APK
+    /// распаковывает только то, что похоже на библиотеку, поэтому ядра там и
+    /// названы так, хотя это обычные исполняемые файлы.
+
+    private fun coreBinary(nativeLibraryDir: String, core: String): File =
+        File(nativeLibraryDir, if (core == CORE_MIHOMO) "libmihomo.so" else "libxray.so")
+
+
     private const val TAG = "KEQDIS_PING"
 
     // Only the speed test takes it, see the class doc.
@@ -173,15 +187,17 @@ object EphemeralXrayPing {
 
         keepAlive: Boolean = true,
 
+        core: String = CORE_XRAY,
+
     ): List<BatchResult> {
 
         if (items.isEmpty()) return emptyList()
 
-        val binary = File(nativeLibraryDir, "libxray.so")
+        val binary = coreBinary(nativeLibraryDir, core)
 
         if (!binary.exists()) {
 
-            val err = Result(false, null, "libxray.so not found", null)
+            val err = Result(false, null, "${binary.name} not found", null)
 
             return items.map { BatchResult(it.id, err) }
 
@@ -212,6 +228,8 @@ object EphemeralXrayPing {
                     binary = binary,
 
                     keepAlive = keepAlive,
+
+                    core = core,
 
                 ),
 
@@ -279,15 +297,17 @@ object EphemeralXrayPing {
 
         timeoutMs: Int,
 
+        core: String = CORE_XRAY,
+
     ): List<SpeedBatchResult> = lock.withLock {
 
         if (items.isEmpty()) return@withLock emptyList()
 
-        val binary = File(nativeLibraryDir, "libxray.so")
+        val binary = coreBinary(nativeLibraryDir, core)
 
         if (!binary.exists()) {
 
-            val err = SpeedResult(false, null, "libxray.so not found")
+            val err = SpeedResult(false, null, "${binary.name} not found")
 
             return@withLock items.map { SpeedBatchResult(it.id, err) }
 
@@ -316,6 +336,8 @@ object EphemeralXrayPing {
                     timeoutMs = timeoutMs,
 
                     binary = binary,
+
+                    core = core,
 
                 ),
 
@@ -347,6 +369,8 @@ object EphemeralXrayPing {
 
         keepAlive: Boolean = true,
 
+        core: String = CORE_XRAY,
+
     ): Result {
 
         val configFile = File(filesDir, "xray_ping_${UUID.randomUUID()}.json")
@@ -357,18 +381,18 @@ object EphemeralXrayPing {
 
             configFile.writeText(xrayConfigJson, Charsets.UTF_8)
 
-            val xrayBin = binary ?: File(nativeLibraryDir, "libxray.so")
+            val xrayBin = binary ?: coreBinary(nativeLibraryDir, core)
 
             if (!xrayBin.exists()) {
 
-                return Result(false, null, "libxray.so not found", null)
+                return Result(false, null, "${xrayBin.name} not found", null)
 
             }
 
 
 
             // logName="" — ping/спидтест не пишут в файл логов соединения.
-            pid = NativeHelper.startCore(xrayBin.absolutePath, configFile.absolutePath, assetDir, "", "xray")
+            pid = NativeHelper.startCore(xrayBin.absolutePath, configFile.absolutePath, assetDir, "", core)
 
             when {
 
@@ -448,6 +472,8 @@ object EphemeralXrayPing {
 
         binary: File? = null,
 
+        core: String = CORE_XRAY,
+
     ): SpeedResult {
 
         val configFile = File(filesDir, "xray_speed_${UUID.randomUUID()}.json")
@@ -458,18 +484,18 @@ object EphemeralXrayPing {
 
             configFile.writeText(xrayConfigJson, Charsets.UTF_8)
 
-            val xrayBin = binary ?: File(nativeLibraryDir, "libxray.so")
+            val xrayBin = binary ?: coreBinary(nativeLibraryDir, core)
 
             if (!xrayBin.exists()) {
 
-                return SpeedResult(false, null, "libxray.so not found")
+                return SpeedResult(false, null, "${xrayBin.name} not found")
 
             }
 
 
 
             // logName="" — ping/спидтест не пишут в файл логов соединения.
-            pid = NativeHelper.startCore(xrayBin.absolutePath, configFile.absolutePath, assetDir, "", "xray")
+            pid = NativeHelper.startCore(xrayBin.absolutePath, configFile.absolutePath, assetDir, "", core)
 
             when {
 

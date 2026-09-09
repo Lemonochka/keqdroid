@@ -961,6 +961,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       })>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
     bool keepAlive = true,
@@ -971,6 +972,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
           .map((e) => (id: e.$1, xrayConfigJson: e.$2))
           .toList(),
       socksPort: socksPort,
+      core: core,
       testUrl: testUrl,
       timeoutMs: timeoutMs,
       keepAlive: keepAlive,
@@ -998,6 +1000,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       })>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String downloadUrl = kDefaultSpeedTestUrl,
     int timeoutMs = 20000,
   }) async {
@@ -1005,6 +1008,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     return EphemeralXrayPing.speedTestBatch(
       items: items.map((e) => (id: e.$1, xrayConfigJson: e.$2)).toList(),
       socksPort: socksPort,
+      core: core,
       downloadUrl: downloadUrl,
       timeoutMs: timeoutMs,
     );

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:keqdroid/tunnel/tunnel_backend.dart';
 import 'package:keqdroid/tunnel/tunnel_session_request.dart';
 import 'package:keqdroid/tunnel/tunnel_state.dart';
+import 'package:keqdroid/tunnel/vpn_backend.dart';
 
 /// Бэкенд-пустышка для виджет-тестов.
 ///
@@ -64,6 +65,7 @@ class FakeTunnelBackend extends TunnelBackend {
       })>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
     bool keepAlive = true,

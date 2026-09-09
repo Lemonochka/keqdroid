@@ -1322,6 +1322,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
   xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
     bool keepAlive = true,
@@ -1332,6 +1333,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     final raw = await EphemeralXrayPing.urlTestBatch(
       items: items.map((e) => (id: e.$1, xrayConfigJson: e.$2)).toList(),
       socksPort: socksPort,
+      core: core,
       testUrl: testUrl,
       timeoutMs: timeoutMs,
       keepAlive: keepAlive,
@@ -1354,6 +1356,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
   xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String downloadUrl = kDefaultSpeedTestUrl,
     int timeoutMs = 20000,
   }) async {
@@ -1361,6 +1364,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     return EphemeralXrayPing.speedTestBatch(
       items: items.map((e) => (id: e.$1, xrayConfigJson: e.$2)).toList(),
       socksPort: socksPort,
+      core: core,
       downloadUrl: downloadUrl,
       timeoutMs: timeoutMs,
     );

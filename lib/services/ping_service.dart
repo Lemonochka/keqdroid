@@ -7,9 +7,12 @@ import '../models/app_settings.dart';
 import '../models/ping_test_config.dart';
 import '../models/server_item.dart';
 import '../services/vpn_engine.dart';
+import '../tunnel/vpn_backend.dart';
 import '../utils/config_gen.dart';
 import '../utils/hysteria_uri.dart';
+import '../utils/mihomo_config_gen.dart';
 import '../utils/pooled.dart';
+import '../utils/vpn_core_support.dart';
 
 /// tcp = raw connect latency, url = GET via ephemeral xray,
 /// speed = download throughput in kbps (not ms).
@@ -470,6 +473,57 @@ class PingService {
     });
   }
 
+  /// Каким ядром мерить этот сервер.
+  ///
+  /// Тем же, каким он поедет: решение принимает та же функция, что и на
+  /// подключении. Пока замер всегда поднимал xray, «зелёный пинг» и «сервер
+  /// работает» были про разные ядра — сервер, живой на mihomo, краснел из-за
+  /// того, что его не понял xray, и наоборот. Теперь расходиться нечему.
+  ///
+  /// AmneziaWG сюда попадает как xray и, как и раньше, краснеет: его формат
+  /// исполняет только своё ядро, а короткоживущего wg-замера у нас нет.
+  static VpnBackend pingCoreFor(String serverConfig, AppSettings settings) {
+    final choice = resolveVpnBackend(
+      config: serverConfig,
+      preference: settings.vpnCore,
+      mihomoAvailable: mihomoShipsHere,
+    );
+    return choice.backend == VpnBackend.mihomo
+        ? VpnBackend.mihomo
+        : VpnBackend.xray;
+  }
+
+  /// Конфиг замера — генератором того ядра, которое его и поднимет.
+  ///
+  /// `httpInbound` одинаков у обоих: на десктопе проба идёт по HTTP
+  /// (`HttpClient` из dart:io не умеет SOCKS вовсе), на Android — по SOCKS,
+  /// потому что там пробу делает Java через `Proxy.Type.SOCKS`.
+  ///
+  /// Разрешённый адрес сервера нужен только xray: у него это отдельное
+  /// direct-правило в таблице маршрутов. У mihomo правило ровно одно (`MATCH`
+  /// в прокси), и своё соединение до сервера ядро по нему не гоняет.
+  static String _pingConfigFor(
+    VpnBackend core,
+    String serverConfig,
+    AppSettings settings, {
+    required int socksPort,
+    String? resolvedServerIp,
+  }) =>
+      core == VpnBackend.mihomo
+          ? MihomoConfigGen.generatePingConfig(
+              serverConfig,
+              settings,
+              socksPort: socksPort,
+              httpInbound: !Platform.isAndroid,
+            )
+          : ConfigGeneratorV2.generatePingConfig(
+              serverConfig,
+              settings,
+              socksPort: socksPort,
+              resolvedServerIp: resolvedServerIp,
+              httpInbound: !Platform.isAndroid,
+            );
+
   static Future<PingResult> _pingUrlSingle(
     ServerItem server,
     AppSettings settings, {
@@ -489,18 +543,18 @@ class PingService {
     // бывает и готовый конфиг Clash. Незавёрнутое исключение отсюда роняло бы
     // весь батч замеров, вместо того чтобы покраснеть одной строкой.
     try {
-      final config = ConfigGeneratorV2.generatePingConfig(
+      final core = pingCoreFor(server.config, settings);
+      final config = _pingConfigFor(
+        core,
         server.config,
         settings,
         socksPort: socksPort,
         resolvedServerIp: resolvedIp,
-        // Desktop probes over HTTP (dart:io HttpClient can't do SOCKS);
-        // Android's Java probe uses Proxy.Type.SOCKS, so it keeps SOCKS.
-        httpInbound: !Platform.isAndroid,
       );
       final raw = await VpnEngine().xrayUrlTest(
         xrayConfig: config,
         socksPort: socksPort,
+        core: core,
         testUrl: testUrl,
         timeoutMs: timeoutMs,
         keepAlive: settings.pingKeepAlive,
@@ -550,18 +604,18 @@ class PingService {
       // Генерация — внутри try: замер умеет только формат xray, а сервером
       // бывает и готовый конфиг Clash (см. pingUrlBatch).
       try {
-        final config = ConfigGeneratorV2.generatePingConfig(
+        final core = pingCoreFor(s.config, settings);
+        final config = _pingConfigFor(
+          core,
           s.config,
           settings,
           socksPort: socksPort,
           resolvedServerIp: ips[s.id],
-          // Desktop probes over HTTP (dart:io HttpClient can't do SOCKS);
-          // Android's Java probe uses Proxy.Type.SOCKS, so it keeps SOCKS.
-          httpInbound: !Platform.isAndroid,
         );
         final raw = await VpnEngine().xraySpeedTest(
           xrayConfig: config,
           socksPort: socksPort,
+          core: core,
           timeoutMs: timeoutMs,
         );
         result = PingResult(

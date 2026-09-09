@@ -1,4 +1,5 @@
 import 'tunnel_session_request.dart';
+import 'vpn_backend.dart';
 import 'tunnel_state.dart';
 
 /// бэкенд туннеля: android VpnService, windows процессы + tun
@@ -45,6 +46,10 @@ abstract class TunnelBackend {
       })>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
+    /// Ядро, которое поднимут на замер. Тем же, каким сервер поедет на самом
+    /// деле: иначе замер отвечает про чужое ядро — сервер, живой на mihomo,
+    /// краснел из-за того, что его не понял xray.
+    VpnBackend core = VpnBackend.xray,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
     /// два запроса по одному соединению, берём лучший: первый оплачивает DNS и
@@ -63,6 +68,7 @@ abstract class TunnelBackend {
       })>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String downloadUrl = kDefaultSpeedTestUrl,
     int timeoutMs = 20000,
   }) async =>

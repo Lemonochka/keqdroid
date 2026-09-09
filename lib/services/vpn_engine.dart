@@ -6,6 +6,7 @@ import '../tunnel/tunnel_backend_factory.dart';
 import '../tunnel/android_tunnel_backend.dart';
 import '../tunnel/tunnel_session_request.dart';
 import '../tunnel/tunnel_state.dart';
+import '../tunnel/vpn_backend.dart';
 
 export '../tunnel/connection_mode.dart';
 export '../tunnel/tunnel_session_request.dart';
@@ -94,6 +95,7 @@ class VpnEngine {
       })>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
     bool keepAlive = true,
@@ -101,6 +103,7 @@ class VpnEngine {
       _backend.xrayUrlTestBatch(
         items: items,
         socksPort: socksPort,
+        core: core,
         testUrl: testUrl,
         timeoutMs: timeoutMs,
         keepAlive: keepAlive,
@@ -110,6 +113,7 @@ class VpnEngine {
       xrayUrlTest({
     required String xrayConfig,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
     bool keepAlive = true,
@@ -117,6 +121,7 @@ class VpnEngine {
     final batch = await xrayUrlTestBatch(
       items: [('single', xrayConfig)],
       socksPort: socksPort,
+      core: core,
       testUrl: testUrl,
       timeoutMs: timeoutMs,
       keepAlive: keepAlive,
@@ -142,12 +147,14 @@ class VpnEngine {
       })>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String downloadUrl = kDefaultSpeedTestUrl,
     int timeoutMs = 20000,
   }) =>
       _backend.xraySpeedTestBatch(
         items: items,
         socksPort: socksPort,
+        core: core,
         downloadUrl: downloadUrl,
         timeoutMs: timeoutMs,
       );
@@ -155,12 +162,14 @@ class VpnEngine {
   Future<({bool success, int? kbps, String error})> xraySpeedTest({
     required String xrayConfig,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String downloadUrl = kDefaultSpeedTestUrl,
     int timeoutMs = 20000,
   }) async {
     final batch = await xraySpeedTestBatch(
       items: [('single', xrayConfig)],
       socksPort: socksPort,
+      core: core,
       downloadUrl: downloadUrl,
       timeoutMs: timeoutMs,
     );

@@ -282,6 +282,7 @@ class AndroidTunnelBackend implements TunnelBackend {
       })>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
     int timeoutMs = 15000,
     bool keepAlive = true,
@@ -290,6 +291,7 @@ class AndroidTunnelBackend implements TunnelBackend {
     try {
       final result = await _method.invokeMethod<List>('xrayUrlTestBatch', {
         'socksPort': socksPort,
+        'core': core.wireValue,
         'testUrl': testUrl,
         'timeoutMs': timeoutMs,
         'keepAlive': keepAlive,
@@ -338,6 +340,7 @@ class AndroidTunnelBackend implements TunnelBackend {
       })>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
+    VpnBackend core = VpnBackend.xray,
     String downloadUrl = kDefaultSpeedTestUrl,
     int timeoutMs = 20000,
   }) async {
@@ -345,6 +348,7 @@ class AndroidTunnelBackend implements TunnelBackend {
     try {
       final result = await _method.invokeMethod<List>('xraySpeedTestBatch', {
         'socksPort': socksPort,
+        'core': core.wireValue,
         'downloadUrl': downloadUrl,
         'timeoutMs': timeoutMs,
         'items': items

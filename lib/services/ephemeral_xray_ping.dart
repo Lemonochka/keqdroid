@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../core/app_logger.dart';
 import '../tunnel/linux_core_paths.dart';
 import '../tunnel/windows_core_paths.dart';
+import '../tunnel/vpn_backend.dart';
 import '../utils/keqrnel_config.dart';
 import 'windows_desktop_service.dart';
 
@@ -66,6 +67,32 @@ class EphemeralXrayPing {
     return Future<String?>.value(null);
   }
 
+  static Future<String?> _resolveMihomo() {
+    if (Platform.isWindows) return WindowsCorePaths.mihomoExecutable();
+    if (Platform.isLinux) return LinuxCorePaths.mihomoExecutable();
+    return Future<String?>.value(null);
+  }
+
+  /// Бинарь ядра, которым меряем.
+  static Future<String?> _resolveCore(VpnBackend core) =>
+      core == VpnBackend.mihomo ? _resolveMihomo() : _resolveXray();
+
+  /// Аргументы запуска. У ядер они разные, и у mihomo домашний каталог —
+  /// каталог сессии замера, а не общий с туннелем.
+  ///
+  /// Общий стоил бы блокировки: mihomo держит `cache.db` через bbolt с
+  /// секундным таймаутом на захват файла (`initCache` в ядре), и замер во
+  /// время живого подключения ждал бы эту секунду впустую — прямо в измеряемое
+  /// время. Geo-базы замеру не нужны, его конфиг правил с ними не содержит.
+  static List<String> _coreArgs(
+    VpnBackend core,
+    String configPath,
+    String sessionDirPath,
+  ) =>
+      core == VpnBackend.mihomo
+          ? ['-d', sessionDirPath, '-f', configPath]
+          : ['run', '-c', configPath];
+
   /// The ephemeral test runs through keqrnel, so the xray config is wrapped into
   /// keqrnel's embedded-xray outbound (its own socks inbound binds the test port
   /// exactly like standalone xray).
@@ -74,9 +101,10 @@ class EphemeralXrayPing {
   /// попытке номер другой, а пересобирать ради этого весь xray-конфиг (он
   /// приезжает сюда строкой от генератора) значило бы тащить сюда и генератор,
   /// и настройки.
-  static String _coreConfig(String xrayConfigJson, int port) {
-    if (!Platform.isWindows && !Platform.isLinux) return xrayConfigJson;
-    final box = jsonDecode(KeqrnelConfig.wrapXray(xrayConfigJson))
+  static String _coreConfig(String configJson, int port, VpnBackend core) {
+    if (core == VpnBackend.mihomo) return _mihomoConfig(configJson, port);
+    if (!Platform.isWindows && !Platform.isLinux) return configJson;
+    final box = jsonDecode(KeqrnelConfig.wrapXray(configJson))
         as Map<String, dynamic>;
     final inbounds = box['inbounds'];
     if (inbounds is List) {
@@ -85,6 +113,21 @@ class EphemeralXrayPing {
       }
     }
     return jsonEncode(box);
+  }
+
+  /// mihomo оборачивать не во что — он сам себе ядро. Меняем только номер
+  /// порта инбаунда, по той же причине, что и у xray: на повторной попытке он
+  /// другой, а пересобирать конфиг заново значило бы тащить сюда генератор.
+  ///
+  /// Какой из двух ключей выставлен, решает генератор (`port` — HTTP, десктоп;
+  /// `socks-port` — Android), поэтому правим тот, что уже есть, и не добавляем
+  /// второй: лишний инбаунд занял бы ещё один порт.
+  static String _mihomoConfig(String configJson, int port) {
+    final config = jsonDecode(configJson) as Map<String, dynamic>;
+    for (final key in const ['port', 'socks-port', 'mixed-port']) {
+      if (config.containsKey(key)) config[key] = port;
+    }
+    return jsonEncode(config);
   }
 
   /// Свободный порт на петле. Тот же способ, что у PingService: занять сокет с
@@ -146,10 +189,12 @@ class EphemeralXrayPing {
     required int socksPort,
     required String testUrl,
     required int timeoutMs,
+    VpnBackend core = VpnBackend.xray,
   }) async {
     return _runSingle(
       xrayConfigJson: xrayConfigJson,
       socksPort: socksPort,
+      core: core,
       testUrl: testUrl,
       timeoutMs: timeoutMs,
     );
@@ -168,6 +213,7 @@ class EphemeralXrayPing {
     required int socksPort,
     required String testUrl,
     required int timeoutMs,
+    VpnBackend core = VpnBackend.xray,
     bool keepAlive = true,
   }) async {
     if (items.isEmpty) return [];
@@ -185,6 +231,7 @@ class EphemeralXrayPing {
       final r = await _runSingle(
         xrayConfigJson: item.xrayConfigJson,
         socksPort: socksPort,
+        core: core,
         testUrl: testUrl,
         timeoutMs: timeoutMs,
         keepAlive: keepAlive,
@@ -208,6 +255,7 @@ class EphemeralXrayPing {
     required int socksPort,
     required String downloadUrl,
     required int timeoutMs,
+    VpnBackend core = VpnBackend.xray,
   }) async {
     if (items.isEmpty) return [];
     return _runSerial(() async {
@@ -216,6 +264,7 @@ class EphemeralXrayPing {
         final r = await _runSpeedSingle(
           xrayConfigJson: item.xrayConfigJson,
           socksPort: socksPort,
+          core: core,
           downloadUrl: downloadUrl,
           timeoutMs: timeoutMs,
         );
@@ -241,6 +290,7 @@ class EphemeralXrayPing {
     required int socksPort,
     required String testUrl,
     required int timeoutMs,
+    VpnBackend core = VpnBackend.xray,
     bool keepAlive = true,
   }) async {
     if (!Platform.isWindows && !Platform.isLinux) {
@@ -252,19 +302,22 @@ class EphemeralXrayPing {
       );
     }
 
-    final xrayBin = await _resolveXray();
-    if (xrayBin == null) {
+    final coreBin = await _resolveCore(core);
+    if (coreBin == null) {
       return (
         success: false,
         latencyMs: null,
-        error: 'xray not found. $_binariesHint',
+        error: '${core.wireValue} not found. $_binariesHint',
         httpStatus: null,
       );
     }
 
     final sessionDir = await _sessionDir();
     final configFile = File(
-      p.join(sessionDir.path, 'xray_ping_${DateTime.now().microsecondsSinceEpoch}.json'),
+      p.join(
+        sessionDir.path,
+        '${core.wireValue}_ping_${DateTime.now().microsecondsSinceEpoch}.json',
+      ),
     );
     Process? process;
     // Порт может смениться на второй попытке — см. ниже.
@@ -272,10 +325,10 @@ class EphemeralXrayPing {
 
     try {
       for (var attempt = 0; attempt < 2; attempt++) {
-        await configFile.writeAsString(_coreConfig(xrayConfigJson, port));
+        await configFile.writeAsString(_coreConfig(xrayConfigJson, port, core));
         process = await Process.start(
-          xrayBin,
-          ['run', '-c', configFile.path],
+          coreBin,
+          _coreArgs(core, configFile.path, sessionDir.path),
           workingDirectory: sessionDir.path,
           mode: ProcessStartMode.normal,
         );
@@ -340,32 +393,34 @@ class EphemeralXrayPing {
     required int socksPort,
     required String downloadUrl,
     required int timeoutMs,
+    VpnBackend core = VpnBackend.xray,
   }) async {
     if (!Platform.isWindows && !Platform.isLinux) {
       return (success: false, kbps: null, error: 'Speed test runs on desktop only');
     }
 
-    final xrayBin = await _resolveXray();
-    if (xrayBin == null) {
+    final coreBin = await _resolveCore(core);
+    if (coreBin == null) {
       return (
         success: false,
         kbps: null,
-        error: 'xray not found. $_binariesHint',
+        error: '${core.wireValue} not found. $_binariesHint',
       );
     }
 
     final sessionDir = await _sessionDir();
     final configFile = File(
       p.join(sessionDir.path,
-          'xray_speed_${DateTime.now().microsecondsSinceEpoch}.json'),
+          '${core.wireValue}_speed_${DateTime.now().microsecondsSinceEpoch}.json'),
     );
     Process? process;
 
     try {
-      await configFile.writeAsString(_coreConfig(xrayConfigJson, socksPort));
+      await configFile
+          .writeAsString(_coreConfig(xrayConfigJson, socksPort, core));
       process = await Process.start(
-        xrayBin,
-        ['run', '-c', configFile.path],
+        coreBin,
+        _coreArgs(core, configFile.path, sessionDir.path),
         workingDirectory: sessionDir.path,
         mode: ProcessStartMode.normal,
       );
