@@ -88,22 +88,15 @@ class KeqdisVpnService : VpnService() {
         const val TUN_ADDRESS          = "172.19.0.1"
         const val TUN_PREFIX           = 30
         const val TUN_MTU              = 1400
-        /// DNS-адрес, который отдаём системе на xray-ядре: второй хост нашей же
-        /// /30 — слушать на нём некому, и это ровно то, что нужно (см.
-        /// addDnsServer в buildTunInterface). Запрос всё равно уйдёт в tun0 и
-        /// попадёт в правило перехвата по порту 53 (`dns-out`/`dns-out-tun` в
-        /// config_gen). Держать в паре с `_androidTunDns` на стороне Dart.
+        /// DNS-адрес, который отдаём системе: второй хост нашей же /30 —
+        /// слушать на нём некому, и это ровно то, что нужно (см. addDnsServer
+        /// в buildTunInterface). Запрос всё равно уйдёт в tun0, а там его ждёт
+        /// перехват по порту 53: у xray это правило `dns-out`/`dns-out-tun`
+        /// (config_gen), у mihomo — `dns-hijack` его tun-инбаунда, который на
+        /// Android существует с тех пор, как ядро забирает дескриптор у
+        /// VpnService и держит туннель само. Держать в паре с `_androidTunDns`
+        /// на стороне Dart.
         const val TUN_DNS_ADDRESS      = "172.19.0.2"
-
-        /// А mihomo такой адрес отдавать НЕЛЬЗЯ: перехват DNS у него живёт в
-        /// tun-инбаунде (`dns-hijack: any:53`), а на Android туннель держит
-        /// VpnService — ядро работает через socks, и tun-инбаунда у него нет
-        /// вовсе. Перехватывать запрос нечем, для ядра это обычный UDP на
-        /// приватный адрес: правило про private (своё или авторское) уводит его
-        /// в direct, ядро открывает сокет на 172.19.0.2:53, где никто не
-        /// слушает, и резолва нет совсем. Публичный адрес хотя бы доезжает
-        /// через туннель и резолвится на выходе.
-        const val TUN_DNS_ADDRESS_NO_HIJACK = "8.8.8.8"
 
         // Broadcast action для кнопок уведомления
         const val BROADCAST_ACTION_CONNECT    = "com.keqdis.vpn.NOTIF_CONNECT"
@@ -947,14 +940,7 @@ class KeqdisVpnService : VpnService() {
             // У 172.19.0.2 (второй хост той же /30, наш конец — TUN_ADDRESS)
             // отвечать на 853 некому, валидация DoT проваливается, и система
             // остаётся на обычном UDP-53 — том самом, который перехват ждёт.
-            //
-            // Работает это только там, где перехват есть, то есть на xray;
-            // почему mihomo остаётся на публичном адресе — см.
-            // TUN_DNS_ADDRESS_NO_HIJACK.
-            .addDnsServer(
-                if (lastCoreKind == CORE_KIND_MIHOMO) TUN_DNS_ADDRESS_NO_HIJACK
-                else TUN_DNS_ADDRESS
-            )
+            .addDnsServer(TUN_DNS_ADDRESS)
             .setSession("KEQDIS")
             .setBlocking(false)
 
