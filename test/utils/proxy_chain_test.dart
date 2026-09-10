@@ -68,6 +68,11 @@ void main() {
       expect(ProxyChainConfig.canBeHop('awg'), isFalse);
       expect(ProxyChainConfig.canBeHop('custom'), isFalse);
       expect(ProxyChainConfig.canBeHop('chain'), isFalse);
+      // Узлы цепочки связывает `dialerProxy` xray, а этих протоколов у него
+      // нет вовсе — в цепочку они не годятся, сколько бы их ни умел mihomo.
+      for (final protocol in ['tuic', 'anytls', 'ssr', 'mieru']) {
+        expect(ProxyChainConfig.canBeHop(protocol), isFalse, reason: protocol);
+      }
     });
 
     test('refreshed pulls the current link of a node that is still around', () {

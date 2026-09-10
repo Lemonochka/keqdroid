@@ -21,6 +21,8 @@ Color serverProtocolColor(BuildContext context, String protocol) =>
       'hysteria' => AppTheme.harmonize(context, const Color(0xFF00897B)),
       'hysteria2' => AppTheme.harmonize(context, const Color(0xFF00695C)),
       'hy2' => AppTheme.harmonize(context, const Color(0xFF004D40)),
+      // Соседний оттенок к hysteria: тоже QUIC, тоже только на mihomo.
+      'tuic' => AppTheme.harmonize(context, const Color(0xFF00838F)),
       // Готовый конфиг ядра: протокол внутри может быть любым, поэтому цвет
       // отдельный — «это конфиг целиком, со своим роутингом».
       'custom' => AppTheme.harmonize(context, const Color(0xFFF9A825)),

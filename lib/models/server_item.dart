@@ -429,7 +429,7 @@ class ServerItem {
   }
 
   /// Протокол ('vless', 'vmess', 'trojan', 'ss', 'ssr', 'hysteria', 'hy2',
-  /// 'awg', 'custom', 'clash', 'chain', 'unknown')
+  /// 'tuic', 'awg', 'custom', 'clash', 'chain', 'unknown')
   String get protocol {
     final lower = config.toLowerCase();
     if (lower.startsWith('${ProxyChainConfig.scheme}://')) {
@@ -446,6 +446,7 @@ class ServerItem {
     if (lower.startsWith('hy2://')) return 'hy2';
     if (lower.startsWith('hysteria2://')) return 'hysteria2';
     if (lower.startsWith('hysteria://')) return 'hysteria';
+    if (lower.startsWith('tuic://')) return 'tuic';
     if (AwgProfile.isAwgConfig(config)) return 'awg';
     // Clash — раньше xray: json-конфиг Clash тоже начинается с '{', и
     // разбирать его как xray-конфиг бессмысленно (у него нет outbounds).

@@ -300,8 +300,9 @@ class ServersNotifier extends Notifier<ServersState> {
         lower.startsWith('ssr://') ||
         lower.startsWith('hysteria://') ||
         lower.startsWith('hysteria2://') ||
-        lower.startsWith('hy2://'))) {
-      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, wg://, an Xray JSON config, a Clash YAML config or an AmneziaWG .conf';
+        lower.startsWith('hy2://') ||
+        lower.startsWith('tuic://'))) {
+      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic://, wg://, an Xray JSON config, a Clash YAML config or an AmneziaWG .conf';
     }
 
     // Схема `hysteria://` носит обе версии, и различить их можно только по

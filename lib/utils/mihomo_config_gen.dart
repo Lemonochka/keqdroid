@@ -742,6 +742,7 @@ class MihomoConfigGen {
     if (lower.startsWith('hysteria2://') || lower.startsWith('hy2://')) {
       return _hysteria2(link);
     }
+    if (lower.startsWith('tuic://')) return _tuic(link);
     // `hysteria://` носят обе версии. Первую не поддерживаем — она устарела, и
     // собранная как вторая даёт молчащий сервер; всё остальное под этой схемой
     // это hysteria2 у панели со старым шаблоном, и терять его нельзя.
@@ -1601,6 +1602,44 @@ class MihomoConfigGen {
   }
 
   // ───────────────────────────── правила ─────────────────────────────
+
+  /// TUIC: QUIC-протокол, которого у xray нет вовсе.
+  ///
+  /// Две версии различаются формой userInfo, и ядро различает их так же
+  /// (`common/convert/converter.go`): `uuid:password` — пятая, один токен —
+  /// четвёртая. Ключи у них разные поля, поэтому решать надо здесь.
+  static Map<String, dynamic> _tuic(String link) {
+    final uri = _parse(link);
+    final userInfo = uri.userInfo;
+    if (userInfo.isEmpty) throw ArgumentError('TUIC requires credentials');
+
+    final split = userInfo.indexOf(':');
+    final out = <String, dynamic>{
+      'name': proxyName,
+      'type': 'tuic',
+      'server': uri.host,
+      'port': uri.port,
+      'udp': true,
+      if (split > 0) ...{
+        'uuid': Uri.decodeComponent(userInfo.substring(0, split)),
+        'password': Uri.decodeComponent(userInfo.substring(split + 1)),
+      } else
+        'token': Uri.decodeComponent(userInfo),
+    };
+
+    final sni = _param(uri, 'sni');
+    if (sni.isNotEmpty) out['sni'] = sni;
+    final alpn = _alpn(_param(uri, 'alpn'));
+    if (alpn != null) out['alpn'] = alpn;
+    final congestion = _param(uri, 'congestion_control');
+    if (congestion.isNotEmpty) out['congestion-controller'] = congestion;
+    final relay = _param(uri, 'udp_relay_mode');
+    if (relay.isNotEmpty) out['udp-relay-mode'] = relay;
+    // Имя не отправлять вовсе — просят, когда сервер за общим фронтом и любое
+    // имя выдало бы его. Значение только `1`, как и у ядра.
+    if (_param(uri, 'disable_sni') == '1') out['disable-sni'] = true;
+    return out;
+  }
 
   static List<String> _parseList(String s) => s
       .split(RegExp(r'[\r\n,]+'))

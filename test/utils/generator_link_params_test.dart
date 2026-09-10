@@ -367,6 +367,23 @@ final _rows = <_Row>[
   _row('ss', 'sip002', 'ss://$_ssUser@198.51.100.10:8388?x=1', 'udp-over-tcp',
       'true'),
 
+  // ───────────────────────────── TUIC ──────────────────────────────
+  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?x=1', 'sni', 'tuic.example'),
+  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?sni=tuic.example', 'alpn',
+      'h3'),
+  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?sni=tuic.example',
+      'congestion_control', 'bbr'),
+  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?sni=tuic.example',
+      'udp_relay_mode', 'quic'),
+  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?sni=tuic.example',
+      'disable_sni', '1'),
+  _row('tuic', 'v5', 'tuic://$_uuid:password@$_host?sni=tuic.example',
+      'allow_insecure', '1'),
+  // Версию TUIC различает форма userInfo, а не параметр: пара — пятая, один
+  // токен — четвёртая, и поля у них в ядре разные.
+  _Row('tuic', 'v4', 'токен вместо пары', 'tuic://$_uuid:password@$_host?x=1',
+      'tuic://token@$_host?x=1'),
+
   // ─────────────────────────── Hysteria2 ───────────────────────────
   _row('hysteria2', 'base', 'hysteria2://password@$_host?x=1', 'sni',
       'hy2.example'),
@@ -430,6 +447,14 @@ const _waivedXray = <String, String>{
   'trojan/tls/allowInsecure': 'политика: allowInsecure не эмитим никогда, '
       'см. removed_tls_fields.dart',
   'hysteria2/base/insecure': 'то же, что allowInsecure',
+  'tuic/v5/sni': 'TUIC у xray нет вовсе — своего аутбаунда под него в ядре не '
+      'заведено; ссылку целиком разводит правило выбора ядра',
+  'tuic/v5/alpn': 'там же',
+  'tuic/v5/congestion_control': 'там же',
+  'tuic/v5/udp_relay_mode': 'там же',
+  'tuic/v5/disable_sni': 'там же',
+  'tuic/v5/allow_insecure': 'там же',
+  'tuic/v4/токен вместо пары': 'там же',
   'ss/obfs/plugin': 'у shadowsocks в xray плагинов нет вовсе '
       '(infra/conf/shadowsocks.go — только method и password)',
   'ss/v2ray-plugin/plugin': 'там же: плагинов нет',
@@ -446,6 +471,8 @@ const _gapsXray = <String, String>{
 
 /// Выброшено сознательно на mihomo.
 const _waivedMihomo = <String, String>{
+  'tuic/v5/allow_insecure': 'политика: доверять любому сертификату не '
+      'соглашаемся, см. removed_tls_fields.dart',
   'vless/reality/spx':
       'у RealityOptions нет spiderX (adapter/outbound/reality.go)',
   'vless/reality/pqv': 'там же нет поля постквантовой подписи',

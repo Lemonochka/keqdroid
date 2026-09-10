@@ -61,9 +61,11 @@ class PingService {
       return _pingIcmp(server, timeoutSeconds: timeoutSeconds);
     }
     // udp-протоколы пингуем через udp сокет
+    // TUIC тоже поверх QUIC: tcp-коннекта к его порту не бывает.
     if (protocol == 'hysteria' ||
         protocol == 'hysteria2' ||
-        protocol == 'hy2') {
+        protocol == 'hy2' ||
+        protocol == 'tuic') {
       return _pingHysteria(server, timeoutSeconds: timeoutSeconds);
     }
 
@@ -344,7 +346,9 @@ class PingService {
 
       // пейлоад зависит от протокола
       Uint8List payload;
-      if (server.protocol == 'hysteria2' || server.protocol == 'hy2') {
+      if (server.protocol == 'hysteria2' ||
+          server.protocol == 'hy2' ||
+          server.protocol == 'tuic') {
         // quic initial с фейковой версией, чтобы спровоцировать version negotiation
         payload = Uint8List.fromList([
           0xc0, // long header

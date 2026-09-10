@@ -1608,6 +1608,51 @@ void main() {
     });
   });
 
+  // TUIC — QUIC-протокол, которого у xray нет вовсе. Версия узнаётся по форме
+  // userInfo, и поля у версий в ядре разные.
+  group('TUIC', () {
+    test('v5: пара uuid:password', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'tuic://11111111-2222-3333-4444-555555555555:secret@198.51.100.30:443'
+        '?sni=tuic.example&alpn=h3&congestion_control=bbr'
+        '&udp_relay_mode=quic&disable_sni=1',
+      );
+      expect(proxy['type'], 'tuic');
+      expect(proxy['uuid'], '11111111-2222-3333-4444-555555555555');
+      expect(proxy['password'], 'secret');
+      expect(proxy.containsKey('token'), isFalse);
+      expect(proxy['sni'], 'tuic.example');
+      expect(proxy['alpn'], ['h3']);
+      expect(proxy['congestion-controller'], 'bbr');
+      expect(proxy['udp-relay-mode'], 'quic');
+      expect(proxy['disable-sni'], isTrue);
+    });
+
+    test('v4: один токен', () {
+      final proxy =
+          MihomoConfigGen.buildProxy('tuic://sometoken@198.51.100.30:443');
+      expect(proxy['token'], 'sometoken');
+      expect(proxy.containsKey('uuid'), isFalse);
+      expect(proxy.containsKey('password'), isFalse);
+    });
+
+    test('без ключей — отказ, а не прокси без пароля', () {
+      expect(
+        () => MihomoConfigGen.buildProxy('tuic://198.51.100.30:443'),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    // Политика та же, что у insecure везде: доверять любому сертификату не
+    // соглашаемся, сколько бы ссылка ни просила.
+    test('allow_insecure не превращается в skip-cert-verify', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'tuic://uuid:pwd@198.51.100.30:443?allow_insecure=1',
+      );
+      expect(proxy.containsKey('skip-cert-verify'), isFalse);
+    });
+  });
+
   group('hysteria', () {
     // Схема одна на обе версии. Первую не собираем вовсе, вторую под этой же
     // схемой терять нельзя — панели со старым шаблоном выдают именно её.

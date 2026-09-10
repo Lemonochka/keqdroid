@@ -301,6 +301,13 @@ rules:
       expect(backendsForLink(vmess({'net': 'tcp', 'type': 'http'})), both);
     });
 
+    test('TUIC — только mihomo: у xray такого аутбаунда нет', () {
+      expect(
+        backendsForLink('tuic://uuid:pwd@198.51.100.30:443?sni=t.example'),
+        {VpnBackend.mihomo},
+      );
+    });
+
     test('нечитаемую ссылку не судим — её развернёт генератор', () {
       expect(backendsForLink('vmess://не-base64'), both);
       expect(backendsForLink('какая-то строка'), both);
