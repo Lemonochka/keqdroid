@@ -294,6 +294,27 @@ void main() {
       expect(server.countryCode, 'RU');
     });
 
+    // Ключ сопоставления серверов при обновлении подписки. Ошибка здесь не
+    // видна сразу: сервер просто теряет пинг, избранное и «активный».
+    test('vmess-ссылка AEAD опознаётся по uuid, а не по одному адресу', () {
+      const first = 'vmess://aaaaaaaa-1111-2222-3333-444444444444'
+          '@1.2.3.4:443?type=tcp#one';
+      const second = 'vmess://bbbbbbbb-1111-2222-3333-444444444444'
+          '@1.2.3.4:443?type=tcp#two';
+
+      final keyOne = SubscriptionService.stableKeyForTest(first);
+      expect(keyOne, contains('aaaaaaaa-1111-2222-3333-444444444444'));
+      expect(keyOne, isNot(SubscriptionService.stableKeyForTest(second)));
+      // Имя и параметры меняются у провайдера постоянно — ключ не должен.
+      expect(
+        SubscriptionService.stableKeyForTest(
+          'vmess://aaaaaaaa-1111-2222-3333-444444444444'
+          '@1.2.3.4:443?type=ws&path=%2Fx#renamed',
+        ),
+        keyOne,
+      );
+    });
+
     test('splits two URIs that share one line instead of merging them', () {
       const body =
           'vless://aaaaaaaa-1111-2222-3333-444444444444@1.2.3.4:443?type=tcp#name one '

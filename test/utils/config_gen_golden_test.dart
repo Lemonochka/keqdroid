@@ -135,6 +135,17 @@ void main() {
       return ConfigGeneratorV2.generateConfig('vmess://$vmess', _settings);
     });
 
+    _golden('vmess-aead-link', () {
+      // Второй формат vmess: не base64-json, а ссылка стандарта #716. Раньше
+      // такая не декодировалась вовсе и сервер не собирался.
+      return ConfigGeneratorV2.generateConfig(
+        'vmess://$_uuid@198.51.100.29:443?type=ws&security=tls'
+        '&sni=aead.example&host=aead.example&path=%2Faead&encryption=zero'
+        '#vmessaead',
+        _settings,
+      );
+    });
+
     _golden('vmess-httpupgrade', () {
       // httpupgrade и HTTP-маскировка у vmess не собирались вовсе: сборка знала
       // только ws и grpc. Заодно видно `type` — у vmess это заголовок, а не

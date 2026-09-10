@@ -269,6 +269,24 @@ final _rows = <_Row>[
       'masqvmess.example'),
   _vmessRow('tcp-http', {..._vmessBase, 'type': 'http'}, 'path', '/masqvmess'),
 
+  // vmess-ссылка стандарта #716: по строению это vless-ссылка, а не base64-json.
+  _row('vmess', 'aead', 'vmess://$_uuid@$_host?type=tcp&security=none',
+      'encryption', 'zero'),
+  _row('vmess', 'aead', 'vmess://$_uuid@$_host?type=tcp&security=tls', 'sni',
+      'aead.example'),
+  _row('vmess', 'aead',
+      'vmess://$_uuid@$_host?type=tcp&security=tls&sni=aead.example', 'fp',
+      'chrome'),
+  _row('vmess', 'aead',
+      'vmess://$_uuid@$_host?type=ws&security=tls&sni=aead.example', 'path',
+      '%2Faead'),
+  _row('vmess', 'aead',
+      'vmess://$_uuid@$_host?type=ws&security=tls&sni=aead.example', 'host',
+      'aeadhost.example'),
+  _row('vmess', 'aead',
+      'vmess://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example',
+      'pbk', 'publickey'),
+
   // ───────────────────────────── Trojan ────────────────────────────
   _row('trojan', 'tls', 'trojan://password@$_host?type=tcp&security=tls', 'sni',
       'tj.example'),

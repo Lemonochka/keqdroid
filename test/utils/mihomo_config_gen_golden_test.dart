@@ -113,6 +113,17 @@ void main() {
       );
     });
 
+    _golden('vmess-aead-link', () {
+      return MihomoConfigGen.generate(
+        'vmess://$_uuid@198.51.100.29:443?type=ws&security=tls'
+        '&sni=aead.example&host=aead.example&path=%2Faead&encryption=zero'
+        '#vmessaead',
+        _settings,
+        socksPort: 2080,
+        httpPort: 2081,
+      );
+    });
+
     _golden('trojan-reality', () {
       return MihomoConfigGen.generate(
         'trojan://password@198.51.100.28:443?type=tcp&security=reality'

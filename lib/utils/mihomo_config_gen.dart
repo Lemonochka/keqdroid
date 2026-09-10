@@ -1096,28 +1096,44 @@ class MihomoConfigGen {
 
   static Map<String, dynamic> _vless(String link) {
     final uri = _parse(link);
-    final uuid = uri.userInfo;
-    if (uuid.isEmpty) throw ArgumentError('VLESS requires UUID in userInfo');
-
-    final security = _param(uri, 'security', 'none');
-    final sni = _param(uri, 'sni', _param(uri, 'host', uri.host));
     final flow = _param(uri, 'flow');
-    final fp = _param(uri, 'fp');
     // Постквантовое шифрование VLESS (`mlkem768x25519plus...`). Без него ядро
     // подключается открытым VLESS: сервер ждёт mlkem-рукопожатие, не получает
     // его и рвёт соединение молча, в логе остаётся только обрыв. Пустую строку
     // и `none` ядро понимает одинаково, поэтому их не пишем вовсе.
     final encryption = _param(uri, 'encryption').trim();
+    return _vShareLink(uri, 'vless', {
+      if (flow.isNotEmpty) 'flow': flow,
+      if (encryption.isNotEmpty && encryption != 'none')
+        'encryption': encryption,
+    });
+  }
+
+  /// Общая часть ссылок стандарта #716: у vless и у vmess-AEAD адрес, TLS,
+  /// REALITY и транспорт устроены одинаково — так же, как в `handleVShareLink`
+  /// самого mihomo. [protocolFields] — то немногое, чем они различаются.
+  static Map<String, dynamic> _vShareLink(
+    Uri uri,
+    String type,
+    Map<String, dynamic> protocolFields,
+  ) {
+    final uuid = uri.userInfo;
+    if (uuid.isEmpty) {
+      throw ArgumentError('${type.toUpperCase()} requires UUID in userInfo');
+    }
+
+    final security = _param(uri, 'security', 'none');
+    final sni = _param(uri, 'sni', _param(uri, 'host', uri.host));
+    final fp = _param(uri, 'fp');
 
     final out = <String, dynamic>{
       'name': proxyName,
-      'type': 'vless',
+      'type': type,
       'server': uri.host,
       'port': uri.port,
       'uuid': uuid,
       'udp': true,
-      if (flow.isNotEmpty) 'flow': flow,
-      if (encryption.isNotEmpty && encryption != 'none') 'encryption': encryption,
+      ...protocolFields,
     };
 
     if (security == 'tls' || security == 'reality') {
@@ -1140,22 +1156,44 @@ class MihomoConfigGen {
     }
 
     _applyTransport(out, uri,
-        protocol: 'vless', network: _param(uri, 'type', 'tcp'), host: sni);
+        protocol: type, network: _param(uri, 'type', 'tcp'), host: sni);
     return out;
   }
 
+  /// У vmess два формата ссылки: старый v2rayN (base64 от json) и AEAD
+  /// стандарта #716, который по строению ничем не отличается от vless. Второй
+  /// мы разбирали как base64, он не декодировался, и сервер не собирался вовсе.
+  /// Различаем как само ядро (`converter.go`): не вышло base64 — значит ссылка.
   static Map<String, dynamic> _vmess(String link) {
     final payload = link.substring('vmess://'.length).trim();
     if (payload.isEmpty) throw ArgumentError('VMess payload is empty');
-    var normalized = payload.replaceAll('-', '+').replaceAll('_', '/');
-    while (normalized.length % 4 != 0) {
-      normalized += '=';
+    Map<String, dynamic>? cfg;
+    try {
+      var normalized = payload.replaceAll('-', '+').replaceAll('_', '/');
+      while (normalized.length % 4 != 0) {
+        normalized += '=';
+      }
+      final decoded = jsonDecode(utf8.decode(base64.decode(normalized)));
+      if (decoded is Map) cfg = Map<String, dynamic>.from(decoded);
+    } catch (_) {
+      // Ниже решаем по виду payload, а не по тексту чужой ошибки.
     }
-    final decoded = jsonDecode(utf8.decode(base64.decode(normalized)));
-    if (decoded is! Map) throw ArgumentError('Invalid VMess payload format');
-    final cfg = Map<String, dynamic>.from(decoded);
+    if (cfg == null) {
+      // `@` в base64 не встречается: у AEAD там UUID пользователя перед адресом.
+      if (!payload.contains('@')) {
+        throw ArgumentError('Invalid VMess payload format');
+      }
+      // Счётчика alterId у AEAD нет вовсе, шифр приезжает в `encryption`.
+      final uri = _parse(link);
+      final cipher = _param(uri, 'encryption', 'auto');
+      return _vShareLink(uri, 'vmess', {
+        'alterId': 0,
+        'cipher': cipher.isEmpty ? 'auto' : cipher,
+      });
+    }
 
-    String s(String key, [String def = '']) => cfg[key]?.toString() ?? def;
+    final json = cfg;
+    String s(String key, [String def = '']) => json[key]?.toString() ?? def;
 
     final host = s('add');
     final sni = s('sni', s('host'));

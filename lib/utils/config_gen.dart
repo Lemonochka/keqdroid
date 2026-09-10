@@ -192,17 +192,27 @@ class ConfigGeneratorV2 {
     return utf8.decode(base64.decode(normalized));
   }
 
-  static Map<String, dynamic> _parseVmessPayload(String input) {
+  /// base64-json из vmess-ссылки, либо `null` — если ссылка второго вида.
+  ///
+  /// У vmess два формата: старый v2rayN (base64 от json) и AEAD стандарта #716
+  /// (`vmess://uuid@host:port?...`), который по строению ничем не отличается от
+  /// vless-ссылки. Второй мы разбирали как base64, он не декодировался, и
+  /// сервер не собирался вовсе. Различаем как само ядро mihomo
+  /// (`converter.go`): не вышло base64 — значит ссылка.
+  static Map<String, dynamic>? _parseVmessPayload(String input) {
     final payload = input.substring('vmess://'.length).trim();
     if (payload.isEmpty) {
       throw ArgumentError('VMess payload is empty');
     }
-    final decoded = _decodeBase64UrlCompat(payload);
-    final parsed = jsonDecode(decoded);
-    if (parsed is! Map<String, dynamic>) {
-      throw ArgumentError('Invalid VMess payload format');
+    try {
+      final parsed = jsonDecode(_decodeBase64UrlCompat(payload));
+      if (parsed is Map<String, dynamic>) return parsed;
+    } catch (_) {
+      // Ниже решаем по виду payload, а не по тексту чужой ошибки.
     }
-    return parsed;
+    // `@` в base64 не встречается: у AEAD там UUID пользователя перед адресом.
+    if (payload.contains('@')) return null;
+    throw ArgumentError('Invalid VMess payload format');
   }
 
   static Map<String, dynamic> _buildXrayConfig(
@@ -282,7 +292,9 @@ class ConfigGeneratorV2 {
     try {
       if (isVmess) {
         vmessConfig = _parseVmessPayload(trimmed);
-        uri = Uri.parse('vmess://proxy');
+        // AEAD-ссылку разбираем как обычную: адрес, uuid и параметры лежат в
+        // ней самой, и дальше её ведёт тот же путь, что и vless.
+        uri = vmessConfig != null ? Uri.parse('vmess://proxy') : Uri.parse(trimmed);
       } else {
         uri = Uri.parse(trimmed);
       }
@@ -296,9 +308,10 @@ class ConfigGeneratorV2 {
     }
 
     final scheme = isVmess ? 'vmess' : uri.scheme.toLowerCase();
-    final address = isVmess ? (vmessConfig?['add']?.toString() ?? '') : uri.host;
-    final port = isVmess
-        ? int.tryParse(vmessConfig?['port']?.toString() ?? '') ?? 0
+    final address =
+        vmessConfig != null ? (vmessConfig['add']?.toString() ?? '') : uri.host;
+    final port = vmessConfig != null
+        ? int.tryParse(vmessConfig['port']?.toString() ?? '') ?? 0
         : uri.port;
 
     String getParam(String key, [String def = '']) {
@@ -326,7 +339,7 @@ class ConfigGeneratorV2 {
     } else if (scheme == 'ss') {
       outbound = _buildShadowsocksOutbound(uri, getParam, address, port);
     } else if (scheme == 'vmess') {
-      outbound = _buildVmessOutbound(vmessConfig, getParam, address, port, streamSettings);
+      outbound = _buildVmessOutbound(uri, vmessConfig, getParam, address, port, streamSettings);
     } else if (isHysteria) {
       outbound = _buildHysteriaOutbound(uri, getParam, address, port, streamSettings);
     } else {
@@ -1227,15 +1240,19 @@ class ConfigGeneratorV2 {
 
   // vmess
   static Map<String, dynamic> _buildVmessOutbound(
-      Map<String, dynamic>? vmessConfig, String Function(String, [String]) getParam,
+      Uri uri, Map<String, dynamic>? vmessConfig, String Function(String, [String]) getParam,
       String address, int port, Map<String, dynamic> streamSettings) {
-    final uuid = vmessConfig?['id']?.toString() ?? '';
+    final uuid = (vmessConfig?['id'] ?? uri.userInfo).toString();
     if (uuid.isEmpty) {
       throw ArgumentError('VMess requires id in payload');
     }
 
-    final vmessSecurity = vmessConfig?['security']?.toString() ?? vmessConfig?['scy']?.toString() ?? 'auto';
-    final flow = vmessConfig?['flow']?.toString() ?? '';
+    // У AEAD-ссылки шифр приезжает в `encryption` — так его называет стандарт
+    // и так его читает mihomo (`converter.go`, ветка vmess).
+    final vmessSecurity = vmessConfig?['security']?.toString() ??
+        vmessConfig?['scy']?.toString() ??
+        (vmessConfig == null ? getParam('encryption', 'auto') : 'auto');
+    final flow = vmessConfig?['flow']?.toString() ?? getParam('flow');
 
     return {
       'tag': 'proxy',
@@ -1249,7 +1266,7 @@ class ConfigGeneratorV2 {
         if (flow.isNotEmpty) 'flow': flow,
       },
       'streamSettings': _buildStreamSettings(
-        _vmessStreamParams(vmessConfig),
+        vmessConfig != null ? _vmessStreamParams(vmessConfig) : getParam,
         address,
         streamSettings,
       ),

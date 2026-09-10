@@ -263,7 +263,12 @@ class SubscriptionService {
         try {
           final payload = rawConfig.substring('vmess://'.length);
           final decoded = _tryDecodeBase64Flexible(payload);
-          if (decoded == null) return 'vmess:@$host:$port';
+          // Не декодировалось — значит ссылка формата AEAD (#716), где uuid
+          // лежит там же, где у vless. Без него ключом остался бы один адрес, и
+          // два сервера на одном хосте склеились бы в один.
+          if (decoded == null) {
+            return 'vmess:${uri.userInfo.toLowerCase()}@$host:$port';
+          }
           final json = jsonDecode(decoded) as Map<String, dynamic>;
           final id = (json['id'] as String? ?? '').toLowerCase();
           final add = (json['add'] as String? ?? '').toLowerCase();
@@ -1194,6 +1199,9 @@ class SubscriptionService {
   /// Test-only hook over the private body parser (extraction → raw config list).
   @visibleForTesting
   static List<String> parseBodyForTest(String content) => _parseBody(content);
+
+  @visibleForTesting
+  static String stableKeyForTest(String rawConfig) => _stableKey(rawConfig);
 
   /// [_parseBody] в отдельном изоляте. Тело подписки бывает большим (сотни
   /// URI, несколько base64-вариантов, regex-проходы), а auto-update дёргается
