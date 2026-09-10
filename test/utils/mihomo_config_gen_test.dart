@@ -1693,6 +1693,37 @@ void main() {
     });
   });
 
+  // SSR у нас принимался разбором, но не собирался ни одним генератором:
+  // сервер в списке был, подключения не было.
+  group('SSR', () {
+    String b64(String value) =>
+        base64Url.encode(utf8.encode(value)).replaceAll('=', '');
+
+    test('собирается со всеми полями', () {
+      final payload = '198.51.100.32:8388:auth_aes128_md5:aes-256-cfb:'
+          'tls1.2_ticket_auth:${b64('secret')}/?'
+          'obfsparam=${b64('cdn.example')}&protoparam=${b64('32')}';
+      final proxy = MihomoConfigGen.buildProxy('ssr://${b64(payload)}');
+
+      expect(proxy['type'], 'ssr');
+      expect(proxy['server'], '198.51.100.32');
+      expect(proxy['port'], 8388);
+      expect(proxy['cipher'], 'aes-256-cfb');
+      expect(proxy['password'], 'secret');
+      expect(proxy['obfs'], 'tls1.2_ticket_auth');
+      expect(proxy['protocol'], 'auth_aes128_md5');
+      expect(proxy['obfs-param'], 'cdn.example');
+      expect(proxy['protocol-param'], '32');
+    });
+
+    test('битая ссылка — отказ, а не прокси без адреса', () {
+      expect(
+        () => MihomoConfigGen.buildProxy('ssr://не-base64'),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+  });
+
   group('hysteria', () {
     // Схема одна на обе версии. Первую не собираем вовсе, вторую под этой же
     // схемой терять нельзя — панели со старым шаблоном выдают именно её.

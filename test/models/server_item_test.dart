@@ -98,4 +98,18 @@ void main() {
       expect(s.displayName, 'My VMess');
     });
   });
+
+  // Адрес и порт SSR лежат внутри base64. Без разбора в списке был бы виден
+  // кусок base64 вместо хоста, а пинг мерил бы несуществующий адрес.
+  test('у SSR адрес и порт достаются из base64', () {
+    String b64(String value) =>
+        base64Url.encode(utf8.encode(value)).replaceAll('=', '');
+    final payload = 'ssr.example:8388:origin:aes-256-cfb:plain:${b64('pw')}/?'
+        'remarks=${b64('SSR Node')}';
+    final server = ServerItem.fromRaw('ssr://${b64(payload)}');
+
+    expect(server.protocol, 'ssr');
+    expect(server.address, 'ssr.example');
+    expect(server.port, 8388);
+  });
 }

@@ -8,6 +8,7 @@ import 'custom_clash_config.dart';
 import 'hysteria_uri.dart';
 import 'routing_entry.dart';
 import 'socks5_credentials.dart';
+import 'ssr_uri.dart';
 import 'tls_fingerprint.dart';
 
 /// Туннель, которым владеет само ядро: wintun-адаптер на десктопе или готовый
@@ -744,6 +745,7 @@ class MihomoConfigGen {
     }
     if (lower.startsWith('tuic://')) return _tuic(link);
     if (lower.startsWith('anytls://')) return _anytls(link);
+    if (lower.startsWith('ssr://')) return _ssr(link);
     // `hysteria://` носят обе версии. Первую не поддерживаем — она устарела, и
     // собранная как вторая даёт молчащий сервер; всё остальное под этой схемой
     // это hysteria2 у панели со старым шаблоном, и терять его нельзя.
@@ -1680,6 +1682,29 @@ class MihomoConfigGen {
     final ech = _echOpts(_rawParam(uri, 'ech'));
     if (ech != null) out['ech-opts'] = ech;
     return out;
+  }
+
+  /// ShadowsocksR: старый протокол, который у нас принимался разбором, но не
+  /// собирался ни одним генератором — сервер в списке был, подключения не было.
+  /// У xray его нет вовсе.
+  static Map<String, dynamic> _ssr(String link) {
+    final parsed = SsrLink.tryParse(link);
+    if (parsed == null) throw ArgumentError('mihomo: invalid SSR link');
+    return <String, dynamic>{
+      'name': proxyName,
+      'type': 'ssr',
+      'server': parsed.host,
+      'port': parsed.port,
+      'cipher': parsed.method,
+      'password': parsed.password,
+      // `obfs` и `protocol` у ядра обязательны: пустыми их декодер не примет.
+      'obfs': parsed.obfs,
+      'protocol': parsed.protocol,
+      'udp': true,
+      if (parsed.obfsParam.isNotEmpty) 'obfs-param': parsed.obfsParam,
+      if (parsed.protocolParam.isNotEmpty)
+        'protocol-param': parsed.protocolParam,
+    };
   }
 
   static List<String> _parseList(String s) => s

@@ -17,6 +17,7 @@ import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
 import '../utils/hysteria_uri.dart';
 import '../utils/identity_presets.dart';
+import '../utils/ssr_uri.dart';
 import '../core/exceptions.dart';
 
 /// Косметика, которую панель отдаёт заголовками ответа на запрос подписки.
@@ -257,6 +258,17 @@ class SubscriptionService {
       final uri = Uri.parse(_parsableUri(rawConfig));
       final host = uri.host.toLowerCase();
       final port = uri.port.toString();
+
+      // SSR прячет в base64 всё сразу — и адрес, и пароль, и имя. Ключ по
+      // сырой ссылке менялся бы вместе с именем узла, то есть при каждом
+      // переименовании у провайдера сервер терял бы пинг и избранное.
+      if (rawConfig.toLowerCase().startsWith('ssr://')) {
+        final ssr = SsrLink.tryParse(rawConfig);
+        if (ssr != null) {
+          return 'ssr:${ssr.password.toLowerCase()}@'
+              '${ssr.host.toLowerCase()}:${ssr.port}';
+        }
+      }
 
       // vmess: uuid внутри base64-json payload. Декодируем из сырой строки:
       // uri.host лоуэркейсит base64 (регистрозависимый), декод падает, и ключ
@@ -2348,6 +2360,12 @@ class SubscriptionService {
       if (CustomXrayConfig.looksLikeJson(raw)) {
         final remarks = CustomXrayConfig.tryParse(raw)?.remarks ?? '';
         return remarks.isEmpty ? null : remarks;
+      }
+
+      // Имя узла SSR лежит в `remarks` внутри base64, фрагмента у него нет.
+      if (raw.toLowerCase().startsWith('ssr://')) {
+        final remarks = SsrLink.tryParse(raw)?.remarks.trim() ?? '';
+        if (remarks.isNotEmpty) return remarks;
       }
 
       if (raw.startsWith('vmess://')) {

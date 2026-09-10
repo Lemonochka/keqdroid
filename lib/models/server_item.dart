@@ -6,6 +6,7 @@ import '../utils/awg_profile.dart';
 import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
 import '../utils/proxy_chain.dart';
+import '../utils/ssr_uri.dart';
 import 'server_flag.dart';
 import 'server_name_utils.dart';
 
@@ -336,6 +337,9 @@ class ServerItem {
       if (protocol == 'vmess') {
         return (_vmessPayload()?['add'] ?? '').toString().trim();
       }
+      // У SSR адрес внутри base64, а не там, где его ищет `Uri`: без разбора
+      // в списке был бы виден кусок base64, а пинг мерил бы несуществующий хост.
+      if (protocol == 'ssr') return SsrLink.tryParse(config)?.host ?? '';
       return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).host;
     } catch (_) {
       return '';
@@ -365,6 +369,7 @@ class ServerItem {
       if (protocol == 'vmess') {
         return int.tryParse((_vmessPayload()?['port'] ?? '').toString()) ?? 0;
       }
+      if (protocol == 'ssr') return SsrLink.tryParse(config)?.port ?? 0;
       return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).port;
     } catch (_) {
       return 0;

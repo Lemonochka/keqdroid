@@ -24,6 +24,8 @@ Color serverProtocolColor(BuildContext context, String protocol) =>
       // Соседний оттенок к hysteria: тоже QUIC, тоже только на mihomo.
       'tuic' => AppTheme.harmonize(context, const Color(0xFF00838F)),
       'anytls' => AppTheme.harmonize(context, const Color(0xFF5E35B1)),
+      // Родня shadowsocks, оттенок оттуда же.
+      'ssr' => AppTheme.harmonize(context, const Color(0xFF2E7D32)),
       // Готовый конфиг ядра: протокол внутри может быть любым, поэтому цвет
       // отдельный — «это конфиг целиком, со своим роутингом».
       'custom' => AppTheme.harmonize(context, const Color(0xFFF9A825)),

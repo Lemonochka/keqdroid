@@ -398,6 +398,20 @@ final _rows = <_Row>[
   _row('anytls', 'base', 'anytls://password@$_host?sni=anytls.example',
       'insecure', '1'),
 
+  // ────────────────────────────── SSR ──────────────────────────────
+  // У SSR параметры не в запросе: пять полей стоят позициями внутри base64, и
+  // ещё два лежат в его же хвосте. Поэтому строки сравнивают два значения, а
+  // не «есть/нет»: пустым такое поле не бывает.
+  _Row('ssr', 'base', 'метод', _ssr(method: 'aes-256-cfb'),
+      _ssr(method: 'chacha20-ietf')),
+  _Row('ssr', 'base', 'протокол', _ssr(protocol: 'origin'),
+      _ssr(protocol: 'auth_aes128_md5')),
+  _Row('ssr', 'base', 'обфускация', _ssr(obfs: 'plain'),
+      _ssr(obfs: 'tls1.2_ticket_auth')),
+  _Row('ssr', 'base', 'пароль', _ssr(password: 'one'), _ssr(password: 'two')),
+  _Row('ssr', 'base', 'obfsparam', _ssr(), _ssr(obfsParam: 'cdn.example')),
+  _Row('ssr', 'base', 'protoparam', _ssr(), _ssr(protoParam: '32')),
+
   // ─────────────────────────── Hysteria2 ───────────────────────────
   _row('hysteria2', 'base', 'hysteria2://password@$_host?x=1', 'sni',
       'hy2.example'),
@@ -442,6 +456,26 @@ final _rows = <_Row>[
 
 final _ssUser = base64Url.encode(utf8.encode('aes-256-gcm:password'));
 
+/// Ссылка SSR из частей: собирать её руками в каждой строке нечитаемо.
+String _ssr({
+  String method = 'aes-256-cfb',
+  String protocol = 'origin',
+  String obfs = 'plain',
+  String password = 'secret',
+  String obfsParam = '',
+  String protoParam = '',
+}) {
+  String b64(String value) =>
+      base64Url.encode(utf8.encode(value)).replaceAll('=', '');
+  final query = [
+    if (obfsParam.isNotEmpty) 'obfsparam=${b64(obfsParam)}',
+    if (protoParam.isNotEmpty) 'protoparam=${b64(protoParam)}',
+  ].join('&');
+  final payload = '198.51.100.32:8388:$protocol:$method:$obfs:'
+      '${b64(password)}/?$query';
+  return 'ssr://${b64(payload)}';
+}
+
 /// Выброшено сознательно на xray: поля в ядре нет либо мы отказались его писать.
 const _waivedXray = <String, String>{
   'vless/tcp/packetEncoding':
@@ -476,6 +510,13 @@ const _waivedXray = <String, String>{
   'anytls/base/hpkp': 'там же',
   'anytls/base/ech': 'там же',
   'anytls/base/insecure': 'там же',
+  'ssr/base/метод': 'SSR у xray нет вовсе — своего аутбаунда под него в ядре '
+      'не заведено; ссылку целиком разводит правило выбора ядра',
+  'ssr/base/протокол': 'там же',
+  'ssr/base/обфускация': 'там же',
+  'ssr/base/пароль': 'там же',
+  'ssr/base/obfsparam': 'там же',
+  'ssr/base/protoparam': 'там же',
   'ss/obfs/plugin': 'у shadowsocks в xray плагинов нет вовсе '
       '(infra/conf/shadowsocks.go — только method и password)',
   'ss/v2ray-plugin/plugin': 'там же: плагинов нет',

@@ -115,7 +115,7 @@ Set<VpnBackend> backendsForFormat(ServerFormat format) => switch (format) {
 const _bothCores = {VpnBackend.xray, VpnBackend.mihomo};
 
 /// Схемы, которые исполняет только mihomo: у xray таких аутбаундов нет.
-const _mihomoOnlySchemes = {'tuic', 'anytls'};
+const _mihomoOnlySchemes = {'tuic', 'anytls', 'ssr'};
 
 /// Какие ядра берут именно эту ссылку.
 ///
