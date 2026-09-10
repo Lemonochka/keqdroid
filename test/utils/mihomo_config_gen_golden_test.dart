@@ -113,6 +113,16 @@ void main() {
       );
     });
 
+    _golden('trojan-reality', () {
+      return MihomoConfigGen.generate(
+        'trojan://password@198.51.100.28:443?type=tcp&security=reality'
+        '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome#trojanreality',
+        _settings,
+        socksPort: 2080,
+        httpPort: 2081,
+      );
+    });
+
     _golden('trojan-grpc', () {
       return MihomoConfigGen.generate(
         'trojan://password@198.51.100.14:443?type=grpc&security=tls'

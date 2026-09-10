@@ -442,8 +442,6 @@ const _gapsMihomo = <String, String>{
   'vless/tcp-http/path': 'G-20: там же',
   'vmess/tcp-http/host': 'G-20: синтетический Uri в _vmess не несёт headerType',
   'vmess/tcp-http/path': 'G-20: там же',
-  'trojan/reality/pbk': 'G-11: reality-opts у trojan не пишутся',
-  'trojan/reality/sid': 'G-11: там же',
   'ss/obfs/plugin': 'G-22: plugin и plugin-opts не переносятся',
   'ss/v2ray-plugin/plugin': 'G-22: там же',
   'ss/sip002/uot': 'G-22: udp-over-tcp не переносится',

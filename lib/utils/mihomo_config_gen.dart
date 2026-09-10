@@ -1219,7 +1219,19 @@ class MihomoConfigGen {
     final network = _param(uri, 'type', 'tcp');
     final alpn = _alpn(_param(uri, 'alpn'));
     if (alpn != null) out['alpn'] = _alpnForTrojan(network, alpn);
-    _applyCertPinning(out, uri);
+    // Trojan поверх REALITY ссылки несут давно, а поле у ядра есть
+    // (`TrojanOption.RealityOpts`). Без него клиент шёл обычным TLS и получал
+    // от сервера подставной сертификат маскировочного сайта.
+    if (_param(uri, 'security').trim().toLowerCase() == 'reality') {
+      out['reality-opts'] = {
+        'public-key': _param(uri, 'pbk'),
+        'short-id': _param(uri, 'sid'),
+      };
+    } else {
+      // Пин сертификата — только для обычного TLS: у REALITY сертификат
+      // подставной и пинить его нечем.
+      _applyCertPinning(out, uri);
+    }
 
     _applyTransport(out, uri, protocol: 'trojan', network: network, host: sni);
     return out;

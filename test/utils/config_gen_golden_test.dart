@@ -167,6 +167,16 @@ void main() {
       );
     });
 
+    _golden('trojan-reality', () {
+      // Раньше сборка trojan ставила `security: tls` жёстко, и ключи REALITY
+      // уезжали в никуда: клиент шёл обычным TLS на подставной сертификат.
+      return ConfigGeneratorV2.generateConfig(
+        'trojan://password@198.51.100.28:443?type=tcp&security=reality'
+        '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome#trojanreality',
+        _settings,
+      );
+    });
+
     _golden('trojan-grpc', () {
       return ConfigGeneratorV2.generateConfig(
         'trojan://password@198.51.100.14:443?type=grpc&security=tls'
