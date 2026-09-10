@@ -6,6 +6,7 @@ import 'package:keqdroid/models/xray_core_settings.dart';
 import 'package:keqdroid/tunnel/app_routing_mode.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
+import 'package:keqdroid/utils/tls_fingerprint.dart';
 
 Map<String, dynamic> _proxy(Map<String, dynamic> config) =>
     (config['proxies'] as List).cast<Map<String, dynamic>>().single;
@@ -1648,6 +1649,45 @@ void main() {
     test('allow_insecure не превращается в skip-cert-verify', () {
       final proxy = MihomoConfigGen.buildProxy(
         'tuic://uuid:pwd@198.51.100.30:443?allow_insecure=1',
+      );
+      expect(proxy.containsKey('skip-cert-verify'), isFalse);
+    });
+  });
+
+  // AnyTLS: поток внутри обычного TLS. Имени пользователя у протокола нет —
+  // если в userInfo нет двоеточия, паролем работает всё, что там есть.
+  group('AnyTLS', () {
+    test('пароль из userInfo, с двоеточием и без', () {
+      final pair = MihomoConfigGen.buildProxy(
+        'anytls://user:secret@198.51.100.31:443?sni=a.example',
+      );
+      expect(pair['type'], 'anytls');
+      expect(pair['password'], 'secret');
+
+      final single =
+          MihomoConfigGen.buildProxy('anytls://secret@198.51.100.31:443');
+      expect(single['password'], 'secret');
+    });
+
+    test('hpkp — это пин сертификата, а не отпечаток uTLS', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'anytls://secret@198.51.100.31:443?sni=a.example&hpkp=QQ+WW/EE=',
+      );
+      expect(proxy['fingerprint'], 'QQ+WW/EE=');
+      // А отпечаток uTLS — наш общий по умолчанию.
+      expect(proxy['client-fingerprint'], defaultTlsFingerprint);
+    });
+
+    test('без ключей — отказ', () {
+      expect(
+        () => MihomoConfigGen.buildProxy('anytls://198.51.100.31:443'),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('insecure не превращается в skip-cert-verify', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'anytls://secret@198.51.100.31:443?insecure=1',
       );
       expect(proxy.containsKey('skip-cert-verify'), isFalse);
     });

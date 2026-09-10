@@ -384,6 +384,20 @@ final _rows = <_Row>[
   _Row('tuic', 'v4', 'токен вместо пары', 'tuic://$_uuid:password@$_host?x=1',
       'tuic://token@$_host?x=1'),
 
+  // ──────────────────────────── AnyTLS ─────────────────────────────
+  _row('anytls', 'base', 'anytls://password@$_host?x=1', 'sni',
+      'anytls.example'),
+  _row('anytls', 'base', 'anytls://password@$_host?sni=anytls.example', 'fp',
+      'chrome'),
+  _row('anytls', 'base', 'anytls://password@$_host?sni=anytls.example', 'alpn',
+      'h2'),
+  _row('anytls', 'base', 'anytls://password@$_host?sni=anytls.example', 'hpkp',
+      _pcs),
+  _row('anytls', 'base', 'anytls://password@$_host?sni=anytls.example', 'ech',
+      _ech),
+  _row('anytls', 'base', 'anytls://password@$_host?sni=anytls.example',
+      'insecure', '1'),
+
   // ─────────────────────────── Hysteria2 ───────────────────────────
   _row('hysteria2', 'base', 'hysteria2://password@$_host?x=1', 'sni',
       'hy2.example'),
@@ -455,6 +469,13 @@ const _waivedXray = <String, String>{
   'tuic/v5/disable_sni': 'там же',
   'tuic/v5/allow_insecure': 'там же',
   'tuic/v4/токен вместо пары': 'там же',
+  'anytls/base/sni': 'AnyTLS у xray нет вовсе — своего аутбаунда под него в '
+      'ядре не заведено; ссылку целиком разводит правило выбора ядра',
+  'anytls/base/fp': 'там же',
+  'anytls/base/alpn': 'там же',
+  'anytls/base/hpkp': 'там же',
+  'anytls/base/ech': 'там же',
+  'anytls/base/insecure': 'там же',
   'ss/obfs/plugin': 'у shadowsocks в xray плагинов нет вовсе '
       '(infra/conf/shadowsocks.go — только method и password)',
   'ss/v2ray-plugin/plugin': 'там же: плагинов нет',
@@ -473,6 +494,7 @@ const _gapsXray = <String, String>{
 const _waivedMihomo = <String, String>{
   'tuic/v5/allow_insecure': 'политика: доверять любому сертификату не '
       'соглашаемся, см. removed_tls_fields.dart',
+  'anytls/base/insecure': 'там же',
   'vless/reality/spx':
       'у RealityOptions нет spiderX (adapter/outbound/reality.go)',
   'vless/reality/pqv': 'там же нет поля постквантовой подписи',

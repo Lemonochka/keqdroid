@@ -96,7 +96,7 @@ ServerFormat detectServerFormat(String config) {
 }
 
 final _linkScheme = RegExp(
-  r'^(vless|vmess|trojan|ss|ssr|hysteria|hysteria2|hy2|tuic)://',
+  r'^(vless|vmess|trojan|ss|ssr|hysteria|hysteria2|hy2|tuic|anytls)://',
   caseSensitive: false,
 );
 
@@ -115,7 +115,7 @@ Set<VpnBackend> backendsForFormat(ServerFormat format) => switch (format) {
 const _bothCores = {VpnBackend.xray, VpnBackend.mihomo};
 
 /// Схемы, которые исполняет только mihomo: у xray таких аутбаундов нет.
-const _mihomoOnlySchemes = {'tuic'};
+const _mihomoOnlySchemes = {'tuic', 'anytls'};
 
 /// Какие ядра берут именно эту ссылку.
 ///

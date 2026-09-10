@@ -1281,7 +1281,7 @@ class SubscriptionService {
       }
     }
     throw const FormatException(
-      'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2:// or tuic://',
+      'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic:// or anytls://',
     );
   }
 
@@ -2169,7 +2169,7 @@ class SubscriptionService {
     // иначе `wss://host` из JS/HTML панелей матчился как `ss://host`, плодя
     // фантомные shadowsocks-сервера при HTML-краулинге подписки.
     final matches = RegExp(
-      r'''(?<![A-Za-z0-9+.\-])(?:vless|vmess|trojan|ss|ssr|hysteria2?|hy2|tuic)://(?:(?!(?:vless|vmess|trojan|ssr|ss|hysteria2?|hy2|tuic)://)[^\r\n<>"'])+''',
+      r'''(?<![A-Za-z0-9+.\-])(?:vless|vmess|trojan|ss|ssr|hysteria2?|hy2|tuic|anytls)://(?:(?!(?:vless|vmess|trojan|ssr|ss|hysteria2?|hy2|tuic|anytls)://)[^\r\n<>"'])+''',
       caseSensitive: false,
     ).allMatches(text);
     final links = <String>[];
@@ -2214,7 +2214,8 @@ class SubscriptionService {
         lower.startsWith('hysteria://') ||
         lower.startsWith('hysteria2://') ||
         lower.startsWith('hy2://') ||
-        lower.startsWith('tuic://');
+        lower.startsWith('tuic://') ||
+        lower.startsWith('anytls://');
   }
 
   static bool _isMetadataConfig(String raw) {

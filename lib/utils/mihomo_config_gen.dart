@@ -743,6 +743,7 @@ class MihomoConfigGen {
       return _hysteria2(link);
     }
     if (lower.startsWith('tuic://')) return _tuic(link);
+    if (lower.startsWith('anytls://')) return _anytls(link);
     // `hysteria://` носят обе версии. Первую не поддерживаем — она устарела, и
     // собранная как вторая даёт молчащий сервер; всё остальное под этой схемой
     // это hysteria2 у панели со старым шаблоном, и терять его нельзя.
@@ -1638,6 +1639,46 @@ class MihomoConfigGen {
     // Имя не отправлять вовсе — просят, когда сервер за общим фронтом и любое
     // имя выдало бы его. Значение только `1`, как и у ядра.
     if (_param(uri, 'disable_sni') == '1') out['disable-sni'] = true;
+    return out;
+  }
+
+  /// AnyTLS: поток внутри обычного TLS, свой мультиплексор поверх.
+  ///
+  /// Формат ссылки — `docs/uri_scheme.md` в anytls-go, разбор сверен с
+  /// `common/convert/converter.go`. Пароль лежит в userInfo, и если двоеточия
+  /// в нём нет, то паролем работает всё, что там есть: у протокола нет
+  /// отдельного имени пользователя (в `AnyTLSOption` такого поля нет вовсе).
+  static Map<String, dynamic> _anytls(String link) {
+    final uri = _parse(link);
+    final userInfo = uri.userInfo;
+    if (userInfo.isEmpty) throw ArgumentError('AnyTLS requires password');
+    final split = userInfo.indexOf(':');
+    final password = Uri.decodeComponent(
+      split > 0 ? userInfo.substring(split + 1) : userInfo,
+    );
+
+    final sni = _param(uri, 'sni');
+    final fp = _param(uri, 'fp');
+    final out = <String, dynamic>{
+      'name': proxyName,
+      'type': 'anytls',
+      'server': uri.host,
+      'port': uri.port,
+      'password': password,
+      'udp': true,
+      if (sni.isNotEmpty) 'sni': sni,
+      // Здесь TLS всегда, поэтому отпечаток обязателен по той же причине, что и
+      // у vless: пустой mihomo читает как «без uTLS».
+      'client-fingerprint': fp.isNotEmpty ? fp : defaultTlsFingerprint,
+    };
+    final alpn = _alpn(_param(uri, 'alpn'));
+    if (alpn != null) out['alpn'] = alpn;
+    // `hpkp` — пин сертификата, а не отпечаток uTLS: имя параметра из формата
+    // anytls, поле ядра называется `fingerprint`.
+    final pin = _rawParam(uri, 'hpkp');
+    if (pin.isNotEmpty) out['fingerprint'] = pin;
+    final ech = _echOpts(_rawParam(uri, 'ech'));
+    if (ech != null) out['ech-opts'] = ech;
     return out;
   }
 
