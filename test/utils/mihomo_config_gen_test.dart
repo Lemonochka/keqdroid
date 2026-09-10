@@ -1344,4 +1344,27 @@ void main() {
     expect(parsed['proxies'], isA<List>());
     expect(parsed['rules'], isA<List>());
   });
+
+  group('hysteria', () {
+    // Схема одна на обе версии. Первую не собираем вовсе, вторую под этой же
+    // схемой терять нельзя — панели со старым шаблоном выдают именно её.
+    test('v1 отклоняется', () {
+      expect(
+        () => MihomoConfigGen.buildProxy(
+          'hysteria://host:443?auth=secret&upmbps=100&downmbps=200',
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('hysteria:// с параметрами второй версии собирается как hysteria2', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'hysteria://password@198.51.100.16:443?sni=hy2.example'
+        '&obfs=salamander&obfs-password=obfspass',
+      );
+      expect(proxy['type'], 'hysteria2');
+      expect(proxy['sni'], 'hy2.example');
+      expect(proxy['obfs'], 'salamander');
+    });
+  });
 }

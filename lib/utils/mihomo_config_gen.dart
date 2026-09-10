@@ -5,6 +5,7 @@ import '../models/app_settings.dart';
 import '../models/xray_core_settings.dart';
 import '../tunnel/app_routing_mode.dart';
 import 'custom_clash_config.dart';
+import 'hysteria_uri.dart';
 import 'routing_entry.dart';
 import 'socks5_credentials.dart';
 import 'tls_fingerprint.dart';
@@ -739,6 +740,17 @@ class MihomoConfigGen {
     if (lower.startsWith('trojan://')) return _trojan(link);
     if (lower.startsWith('ss://')) return _shadowsocks(link);
     if (lower.startsWith('hysteria2://') || lower.startsWith('hy2://')) {
+      return _hysteria2(link);
+    }
+    // `hysteria://` носят обе версии. Первую не поддерживаем — она устарела, и
+    // собранная как вторая даёт молчащий сервер; всё остальное под этой схемой
+    // это hysteria2 у панели со старым шаблоном, и терять его нельзя.
+    if (lower.startsWith('hysteria://')) {
+      if (HysteriaLinkParams.isV1(link)) {
+        throw ArgumentError(
+          'mihomo: Hysteria v1 is not supported. Use a hysteria2:// link',
+        );
+      }
       return _hysteria2(link);
     }
     final scheme = RegExp(r'^([a-zA-Z][a-zA-Z0-9+.-]*):').firstMatch(link)?.group(1);

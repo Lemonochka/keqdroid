@@ -233,6 +233,19 @@ void main() {
       expect(stream['security'], 'tls');
     });
 
+    // Решение хозяйки: первую версию не поддерживаем. Молчаливая сборка её как
+    // второй давала конфиг не того протокола и сервер, который не отвечает.
+    test('Hysteria v1 отклоняется, а не собирается как вторая', () {
+      Socks5Credentials().init('u', 'p');
+      expect(
+        () => ConfigGeneratorV2.generateConfig(
+          'hysteria://host:443?auth=secret&upmbps=100&downmbps=200&peer=sni.example',
+          settings,
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
     test('killSwitch does not add split rules to xray routing', () {
       // Правило 0.0.0.0/1+128.0.0.0/1 → proxy было no-op (catch-all ниже и так
       // шлёт всё в proxy); настоящий kill switch — final: block в sing-box

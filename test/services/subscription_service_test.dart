@@ -315,6 +315,19 @@ void main() {
       );
     });
 
+    // Решение хозяйки: первую версию Hysteria не поддерживаем. В списке она
+    // выглядела рабочим сервером и молчала после подключения.
+    test('Hysteria v1 в список не попадает, вторая под той же схемой попадает',
+        () {
+      const body = 'hysteria://1.2.3.4:443?auth=x&upmbps=100&downmbps=200#v1\n'
+          'hysteria://pwd@5.6.7.8:443?sni=node.example&obfs=salamander'
+          '&obfs-password=abc#v2';
+
+      final configs = SubscriptionService.parseBodyForTest(body);
+      expect(configs.length, 1);
+      expect(configs.single, contains('obfs=salamander'));
+    });
+
     test('splits two URIs that share one line instead of merging them', () {
       const body =
           'vless://aaaaaaaa-1111-2222-3333-444444444444@1.2.3.4:443?type=tcp#name one '
@@ -373,6 +386,37 @@ rules:
       // `type` у Clash — это протокол, а не транспорт: подставленный в
       // транспорт, он давал ссылку с несуществующим `type=vless`.
       expect(uri.queryParameters['type'], 'tcp');
+    });
+
+    test('узел type: hysteria пропускается, hysteria2 рядом переводится', () {
+      // `type: hysteria` у Clash — всегда первая версия. Раньше ему
+      // приписывался `version=2`, и он уезжал в ядро как hysteria2: конфиг не
+      // того протокола и сервер, который не отвечает.
+      const mixed = '''
+proxies:
+  - name: "old"
+    type: hysteria
+    server: v1.example
+    port: 443
+    auth_str: secret
+    up: 100
+    down: 200
+  - name: "new"
+    type: hysteria2
+    server: v2.example
+    port: 443
+    password: secret
+    sni: v2.example
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: ["old", "new"]
+rules:
+  - MATCH,Proxy
+''';
+      final configs = SubscriptionService.parseBodyForTest(mixed);
+      expect(configs, hasLength(1));
+      expect(Uri.parse(configs.single).host, 'v2.example');
     });
 
     test('профиль без разбираемых узлов остаётся конфигом целиком', () {

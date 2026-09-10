@@ -42,6 +42,7 @@ import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
 import '../utils/error_messages.dart';
 import '../utils/geo_asset_index.dart';
+import '../utils/hysteria_uri.dart';
 import '../utils/host_ipv6.dart';
 import '../utils/local_vpn_proxy.dart';
 import '../utils/process_name_utils.dart';

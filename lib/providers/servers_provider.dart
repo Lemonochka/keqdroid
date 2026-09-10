@@ -304,6 +304,14 @@ class ServersNotifier extends Notifier<ServersState> {
       return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, wg://, an Xray JSON config, a Clash YAML config or an AmneziaWG .conf';
     }
 
+    // Схема `hysteria://` носит обе версии, и различить их можно только по
+    // параметрам. Первую не собирает ни одно наше ядро; собранная как вторая,
+    // она даёт молчащий сервер, и причину человек ищет в чём угодно, кроме
+    // версии протокола.
+    if (HysteriaLinkParams.isV1(rawConfig)) {
+      return 'Hysteria v1 is not supported. Ask the provider for a hysteria2:// link';
+    }
+
     if (lower.startsWith('vmess://')) {
       final payload = rawConfig.substring('vmess://'.length).trim();
       try {

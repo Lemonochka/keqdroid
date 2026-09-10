@@ -15,6 +15,7 @@ import '../models/subscription.dart';
 import '../services/storage_service.dart';
 import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
+import '../utils/hysteria_uri.dart';
 import '../utils/identity_presets.dart';
 import '../core/exceptions.dart';
 
@@ -1813,17 +1814,16 @@ class SubscriptionService {
       return 'ss://$userInfo@$host:$port$fragment';
     }
 
-    if (type == 'hysteria' || type == 'hysteria2' || type == 'hy2') {
+    // `type: hysteria` у Clash — всегда первая версия: у второй свой тип. Раньше
+    // такому узлу приписывался `version=2` и он уезжал в ядро как hysteria2 —
+    // конфиг не того протокола и сервер, который не отвечает.
+    if (type == 'hysteria') return null;
+    if (type == 'hysteria2' || type == 'hy2') {
       final auth = pick(['auth', 'password', 'psk', 'auth_str', 'auth-str']);
       if (host.isEmpty || port <= 0 || auth.isEmpty) return null;
-      final isV2 = type == 'hysteria2' || type == 'hy2';
-      final scheme = isV2 ? 'hy2' : 'hysteria';
-      final ver = pick(['version']);
+      const scheme = 'hy2';
       // xray 26+ hysteria outbound takes only version 2 in hysteriaSettings
-      final query = <String, String>{
-        'auth': auth,
-        'version': ver.isNotEmpty ? ver : '2',
-      };
+      final query = <String, String>{'auth': auth, 'version': '2'};
       final sni = pick(['sni', 'servername', 'server_name']);
       if (sni.isNotEmpty) query['sni'] = sni;
       final insecure = pick(['insecure', 'skip-cert-verify', 'allow_insecure']).toLowerCase();
@@ -2186,6 +2186,9 @@ class SubscriptionService {
 
   static bool _isValidConfig(String s) {
     final lower = s.toLowerCase();
+    // Hysteria v1 в список не берём вовсе: ни одно ядро её не собирает, а под
+    // общей схемой она выглядит рабочим сервером и молчит после подключения.
+    if (HysteriaLinkParams.isV1(s)) return false;
     return lower.startsWith('vless://') ||
         lower.startsWith('vmess://') ||
         lower.startsWith('trojan://') ||

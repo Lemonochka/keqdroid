@@ -1448,10 +1448,13 @@ class ConfigGeneratorV2 {
 
     final hyParams = HysteriaLinkParams.fromConfig(uri.toString());
     final sni = getParam('sni', hyParams.sni.isNotEmpty ? hyParams.sni : address);
+    // Схема `hysteria://` одна на обе версии, и без проверки первая собиралась
+    // бы как вторая: конфиг не того протокола, сервер молчит, а снаружи это
+    // «сервер не работает». Признаки версии — в [HysteriaLinkParams.isV1].
     final version = int.tryParse(getParam('version', '2')) ?? 2;
-    if (version != 2) {
+    if (version != 2 || HysteriaLinkParams.isV1(uri.toString())) {
       throw ArgumentError(
-        'Hysteria v1 is not supported by Xray 26+. Use hysteria2:// or hy2:// links.',
+        'Hysteria v1 is not supported. Use a hysteria2:// or hy2:// link.',
       );
     }
 
