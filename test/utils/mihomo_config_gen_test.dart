@@ -135,14 +135,17 @@ void main() {
     });
 
     // У mihomo пустой client-fingerprint значит «без uTLS», а не chrome, как у
-    // xray, — поэтому подставляем явно.
-    test('vless без fp получает chrome', () {
+    // xray, — поэтому подставляем явно. Firefox, а не chrome: хромовский
+    // ClientHello с постквантовым ключом на российских сетях уходит в тишину
+    // (см. комментарий в `config_gen.dart`), и оба генератора держат один
+    // выбор.
+    test('vless без fp получает firefox', () {
       final p = _proxy(MihomoConfigGen.build(
         'vless://uuid@e.example:443?type=tcp&security=tls&sni=e.example',
         const AppSettings(),
         socksPort: 2080,
       ));
-      expect(p['client-fingerprint'], 'chrome');
+      expect(p['client-fingerprint'], 'firefox');
     });
 
     // Живая ссылка провайдера: mihomo постквантовое шифрование VLESS умеет

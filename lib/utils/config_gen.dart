@@ -1497,8 +1497,14 @@ class ConfigGeneratorV2 {
       final rfp = getParam('fp', '').trim();
       stream['realitySettings'] = {
         'show': false,
-        // reality needs a known utls fingerprint; empty is invalid on xray 26+.
-        'fingerprint': rfp.isNotEmpty ? rfp : 'chrome',
+        // Отпечаток обязателен: пустой xray 26 не берёт, а ссылки его часто не
+        // называют — значит выбираем мы. Не chrome: у xray он разворачивается в
+        // Chrome 133 с постквантовым ключом X25519MLKEM768, и такой ClientHello
+        // весом под 1.7 КБ на российских сетях уже ловят — сервер соединение
+        // принимает и не отвечает ни байтом. Замер на живых узлах: chrome — 0
+        // из 30 запросов, firefox — 30 из 30. У mihomo этой беды нет, он
+        // вырезает постквантовый ключ сам, а у xray такого рычага не заведено.
+        'fingerprint': rfp.isNotEmpty ? rfp : 'firefox',
         'serverName': sni,
         'publicKey': getParam('pbk'),
         'shortId': getParam('sid'),

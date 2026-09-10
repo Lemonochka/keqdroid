@@ -411,6 +411,38 @@ void main() {
       expect(tls.containsKey('fingerprint'), isFalse);
     });
 
+    // Ссылки на reality часто приходят без `fp`, а пустое поле ядро не берёт —
+    // отпечаток в этом случае выбираем мы. Выбор не косметический: хромовский
+    // ClientHello с постквантовым ключом на российских сетях остаётся без
+    // ответа, поэтому по умолчанию firefox.
+    test('REALITY без fp получает firefox, а не chrome', () {
+      Socks5Credentials().init('u', 'p');
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@nl.example:443?security=reality&type=tcp'
+        '&sni=decoy.example&pbk=publickey&sid=aabb',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final stream = ((map['outbounds'] as List).first as Map)['streamSettings']
+          as Map<String, dynamic>;
+      final reality = stream['realitySettings'] as Map<String, dynamic>;
+      expect(reality['fingerprint'], 'firefox');
+    });
+
+    test('REALITY с fp из ссылки его и оставляет', () {
+      Socks5Credentials().init('u', 'p');
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@nl.example:443?security=reality&type=tcp'
+        '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final stream = ((map['outbounds'] as List).first as Map)['streamSettings']
+          as Map<String, dynamic>;
+      final reality = stream['realitySettings'] as Map<String, dynamic>;
+      expect(reality['fingerprint'], 'chrome');
+    });
+
     test('VLESS TLS keeps the fingerprint named by the link', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(

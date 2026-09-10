@@ -1029,8 +1029,11 @@ class MihomoConfigGen {
       out['tls'] = true;
       if (sni.isNotEmpty) out['servername'] = sni;
       // Пустой `client-fingerprint` mihomo трактует как «без uTLS», а не как
-      // chrome — в отличие от xray. Поэтому подставляем явно.
-      out['client-fingerprint'] = fp.isNotEmpty ? fp : 'chrome';
+      // chrome — в отличие от xray. Поэтому подставляем явно, и тот же
+      // firefox, что и xray-генератор: ссылка без отпечатка обязана вести себя
+      // одинаково на обоих ядрах, иначе смена ядра молча меняет то, чем клиент
+      // представляется серверу. Почему именно firefox — в `config_gen.dart`.
+      out['client-fingerprint'] = fp.isNotEmpty ? fp : 'firefox';
       final alpn = _alpn(_param(uri, 'alpn'));
       if (alpn != null) out['alpn'] = alpn;
     }
