@@ -773,6 +773,45 @@ class MihomoConfigGen {
     return (all != null && all.isNotEmpty) ? all.first : def;
   }
 
+  /// Значение параметра без подмены `+` на пробел — для тех, что несут base64.
+  ///
+  /// `Uri.queryParameters` разбирает запрос по правилам HTML-формы, где `+`
+  /// это пробел. Панели сплошь не кодируют `+` как `%2B`, и ECH-конфиг или пин
+  /// сертификата приезжали испорченными: ядру это неотличимо от неверного
+  /// ключа, оно просто не подключается. `Uri.decodeComponent`, в отличие от
+  /// `decodeQueryComponent`, `+` не трогает.
+  static String _rawParam(Uri uri, String key) {
+    for (final pair in uri.query.split('&')) {
+      final eq = pair.indexOf('=');
+      if (eq < 0) continue;
+      if (Uri.decodeComponent(pair.substring(0, eq)) != key) continue;
+      return Uri.decodeComponent(pair.substring(eq + 1));
+    }
+    return '';
+  }
+
+  /// `ech` из ссылки → `ech-opts`.
+  ///
+  /// У xray это поле двузначно (`transport/internet/tls/ech.go`): либо сам
+  /// список ECHConfigList в base64, либо адрес DNS, у которого его спросить, —
+  /// `имя+https://1.1.1.1/dns-query`. У mihomo первому отвечает `config`,
+  /// второму — пустой `config` и запрос HTTPS-записи, а имя из ссылки уезжает
+  /// в `query-server-name`.
+  ///
+  /// Расхождение, которое не лечится: адрес DNS из ссылки mihomo подставить
+  /// некуда, запись он спросит у своего резолвера. Меняется то, кто отвечает
+  /// на запрос, — но не сам конфиг, который в ответе.
+  static Map<String, dynamic>? _echOpts(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return null;
+    if (!value.contains('://')) return {'enable': true, 'config': value};
+    final name = value.split('+').first.trim();
+    return {
+      'enable': true,
+      if (name.isNotEmpty && !name.contains('://')) 'query-server-name': name,
+    };
+  }
+
   static List<String>? _alpn(String raw) {
     final list = raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
     return list.isEmpty ? null : list;
@@ -1120,7 +1159,7 @@ class MihomoConfigGen {
   static void _applyCertPinning(Map<String, dynamic> out, Uri uri) {
     final names = _csv(_param(uri, 'vcn'));
     if (names.length == 1) out['name-cert-verify'] = names.first;
-    final pins = _csv(_param(uri, 'pcs'));
+    final pins = _csv(_rawParam(uri, 'pcs'));
     if (pins.length == 1) out['fingerprint'] = pins.first;
   }
 
@@ -1177,6 +1216,8 @@ class MihomoConfigGen {
       out['client-fingerprint'] = fp.isNotEmpty ? fp : defaultTlsFingerprint;
       final alpn = _alpn(_param(uri, 'alpn'));
       if (alpn != null) out['alpn'] = alpn;
+      final ech = _echOpts(_rawParam(uri, 'ech'));
+      if (ech != null) out['ech-opts'] = ech;
     }
     // Только для обычного TLS: у REALITY своя проверка подлинности сервера,
     // сертификат там подставной и пинить его нечем.
@@ -1247,6 +1288,8 @@ class MihomoConfigGen {
       out['client-fingerprint'] = fp.isNotEmpty ? fp : defaultTlsFingerprint;
       final alpn = _alpn(s('alpn'));
       if (alpn != null) out['alpn'] = alpn;
+      final ech = _echOpts(s('ech'));
+      if (ech != null) out['ech-opts'] = ech;
     }
 
     // vmess прячет транспорт в json, а не в query — собираем синтетический Uri,
@@ -1288,6 +1331,7 @@ class MihomoConfigGen {
       'udp': true,
       if (sni.isNotEmpty) 'sni': sni,
       'client-fingerprint': fp.isNotEmpty ? fp : defaultTlsFingerprint,
+      'ech-opts': ?_echOpts(_rawParam(uri, 'ech')),
     };
     final network = _param(uri, 'type', 'tcp');
     final alpn = _alpn(_param(uri, 'alpn'));

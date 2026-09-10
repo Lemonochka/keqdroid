@@ -261,6 +261,7 @@ final _rows = <_Row>[
   _vmessRow('tls', _vmessTls, 'sni', 'vmess.example'),
   _vmessRow('tls', _vmessTls, 'alpn', 'h2,http/1.1'),
   _vmessRow('tls', _vmessTls, 'fp', 'chrome'),
+  _vmessRow('tls', _vmessTls, 'ech', _ech),
   _vmessRow('ws', _vmessNet('ws'), 'path', '/vmessws'),
   _vmessRow('ws', _vmessNet('ws'), 'host', 'wsvmess.example'),
   _vmessRow('grpc', _vmessNet('grpc'), 'path', 'grpcsvc'),
@@ -289,6 +290,9 @@ final _rows = <_Row>[
   _row('vmess', 'aead',
       'vmess://$_uuid@$_host?type=tcp&security=reality&sni=decoy.example',
       'pbk', 'publickey'),
+  _row('vmess', 'aead',
+      'vmess://$_uuid@$_host?type=tcp&security=tls&sni=aead.example', 'ech',
+      _ech),
 
   // ───────────────────────────── Trojan ────────────────────────────
   _row('trojan', 'tls', 'trojan://password@$_host?type=tcp&security=tls', 'sni',
@@ -454,8 +458,6 @@ const _waivedMihomo = <String, String>{
 
 /// Известные дыры mihomo-пути.
 const _gapsMihomo = <String, String>{
-  'vless/tls/ech': 'G-21: у ядра есть ech-opts, мы их не пишем',
-  'trojan/tls/ech': 'G-21: там же',
   'vless/ws/ed': 'G-24: ws-opts.max-early-data',
   'vless/ws/eh': 'G-24: ws-opts.early-data-header-name',
   'vless/httpupgrade/ed': 'G-24: v2ray-http-upgrade-fast-open',

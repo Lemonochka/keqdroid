@@ -184,6 +184,21 @@ class ConfigGeneratorV2 {
     return tls;
   }
 
+  /// Значение параметра запроса без подмены `+` на пробел.
+  ///
+  /// `Uri.decodeComponent` в отличие от `decodeQueryComponent` `+` не трогает —
+  /// то есть читает запрос по RFC 3986, а не по правилам формы.
+  static String _rawQueryParam(Uri uri, String key, String def) {
+    for (final pair in uri.query.split('&')) {
+      final eq = pair.indexOf('=');
+      if (eq < 0) continue;
+      if (Uri.decodeComponent(pair.substring(0, eq)) != key) continue;
+      final value = Uri.decodeComponent(pair.substring(eq + 1));
+      if (value.isNotEmpty) return value;
+    }
+    return def;
+  }
+
   static String _decodeBase64UrlCompat(String input) {
     var normalized = input.trim().replaceAll('-', '+').replaceAll('_', '/');
     while (normalized.length % 4 != 0) {
@@ -323,6 +338,11 @@ class ConfigGeneratorV2 {
         final value = vmessConfig[key];
         if (value != null) return value.toString();
       }
+      // base64 в запросе ссылки: `Uri.queryParameters` разбирает его по
+      // правилам HTML-формы, где `+` означает пробел. Панели сплошь не
+      // кодируют `+` как `%2B`, и значение приезжало испорченным — ядру это
+      // неотличимо от неверного ключа, оно просто не подключается.
+      if (key == 'ech' || key == 'pcs') return _rawQueryParam(uri, key, def);
       final val = uri.queryParametersAll[key];
       return (val != null && val.isNotEmpty) ? val.first : def;
     }

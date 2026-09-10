@@ -1398,6 +1398,52 @@ void main() {
     });
   });
 
+  // ECH прячет настоящее имя сервера в ClientHello. У xray поле `ech`
+  // двузначно, у mihomo под это два разных вида `ech-opts`.
+  group('ECH', () {
+    test('base64-список уезжает в config', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=tcp&security=tls&sni=e.example'
+        '&ech=AEX%2BDQBBzQAgACD0RY0ZGF9n',
+      );
+      final ech = proxy['ech-opts'] as Map<String, dynamic>;
+      expect(ech['enable'], isTrue);
+      expect(ech['config'], 'AEX+DQBBzQAgACD0RY0ZGF9n');
+      expect(ech.containsKey('query-server-name'), isFalse);
+    });
+
+    // Ссылка называет DNS, у которого спросить запись. Самого адреса ядру не
+    // передать, но имя для запроса — да.
+    test('форма «имя+dns» включает запрос HTTPS-записи', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=tcp&security=tls&sni=e.example'
+        '&ech=real.example%2Bhttps%3A%2F%2F1.1.1.1%2Fdns-query',
+      );
+      final ech = proxy['ech-opts'] as Map<String, dynamic>;
+      expect(ech['enable'], isTrue);
+      expect(ech['query-server-name'], 'real.example');
+      expect(ech.containsKey('config'), isFalse);
+    });
+
+    // Ловушка на ровном месте: разбор запроса по правилам HTML-формы читает
+    // `+` как пробел, и base64 приезжает испорченным.
+    test('плюс в base64 остаётся плюсом', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=tcp&security=tls&sni=e.example'
+        '&ech=AA+BB/CC=&pcs=QQ+WW/EE=',
+      );
+      expect((proxy['ech-opts'] as Map)['config'], 'AA+BB/CC=');
+      expect(proxy['fingerprint'], 'QQ+WW/EE=');
+    });
+
+    test('без ech поля нет вовсе', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=tcp&security=tls&sni=e.example',
+      );
+      expect(proxy.containsKey('ech-opts'), isFalse);
+    });
+  });
+
   group('hysteria', () {
     // Схема одна на обе версии. Первую не собираем вовсе, вторую под этой же
     // схемой терять нельзя — панели со старым шаблоном выдают именно её.

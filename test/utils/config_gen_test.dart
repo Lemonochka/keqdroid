@@ -246,6 +246,22 @@ void main() {
       );
     });
 
+    // Разбор запроса по правилам HTML-формы читает `+` как пробел, и base64
+    // приезжает испорченным: ядру это неотличимо от неверного ключа.
+    test('плюс в base64-параметрах ссылки остаётся плюсом', () {
+      Socks5Credentials().init('u', 'p');
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@198.51.100.10:443?type=tcp&security=tls&sni=e.example'
+        '&ech=AA+BB/CC=&pcs=QQ+WW/EE=',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
+      final tls = (outbound['streamSettings'] as Map)['tlsSettings'] as Map;
+      expect(tls['echConfigList'], 'AA+BB/CC=');
+      expect(tls['pinnedPeerCertSha256'], 'QQ+WW/EE=');
+    });
+
     test('killSwitch does not add split rules to xray routing', () {
       // Правило 0.0.0.0/1+128.0.0.0/1 → proxy было no-op (catch-all ниже и так
       // шлёт всё в proxy); настоящий kill switch — final: block в sing-box
