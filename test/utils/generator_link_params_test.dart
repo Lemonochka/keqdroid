@@ -418,6 +418,9 @@ const _waivedXray = <String, String>{
   'ss/obfs/plugin': 'у shadowsocks в xray плагинов нет вовсе '
       '(infra/conf/shadowsocks.go — только method и password)',
   'ss/v2ray-plugin/plugin': 'там же: плагинов нет',
+  'ss/sip002/uot': 'полей uot и UoTVersion у xray 26 нет вовсе — мы их писали, '
+      'а ядро молча выбрасывало; ссылку разводит правило выбора ядра',
+  'ss/sip002/udp-over-tcp': 'там же',
 };
 
 /// Известные дыры xray-пути. Задача блока чинит и вычёркивает свои строки.
@@ -433,7 +436,6 @@ const _gapsXray = <String, String>{
   'vless/httpupgrade/ed': 'G-24: то же у HttpUpgradeConfig.Build',
   'vless/kcp/seed': 'G-12: kcpSettings не собираются вовсе',
   'vless/kcp/headerType': 'G-12: там же',
-  'ss/sip002/udp-over-tcp': 'G-22: читается только алиас uot',
 };
 
 /// Выброшено сознательно на mihomo.
@@ -461,10 +463,6 @@ const _gapsMihomo = <String, String>{
   'vless/ws/ed': 'G-24: ws-opts.max-early-data',
   'vless/ws/eh': 'G-24: ws-opts.early-data-header-name',
   'vless/httpupgrade/ed': 'G-24: v2ray-http-upgrade-fast-open',
-  'ss/obfs/plugin': 'G-22: plugin и plugin-opts не переносятся',
-  'ss/v2ray-plugin/plugin': 'G-22: там же',
-  'ss/sip002/uot': 'G-22: udp-over-tcp не переносится',
-  'ss/sip002/udp-over-tcp': 'G-22: там же',
   'hysteria2/base/mport': 'G-23: ports',
   'hysteria2/base/hop-interval': 'G-23: hop-interval',
   'hysteria2/base/pinSHA256': 'G-23: fingerprint',

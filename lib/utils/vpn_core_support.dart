@@ -150,6 +150,16 @@ Set<VpnBackend> backendsForLink(String link) {
     return const {VpnBackend.mihomo};
   }
 
+  // UDP внутри TCP — тоже только mihomo (`udp-over-tcp` у `ShadowSocksOption`);
+  // у xray в shadowsocks такого поля нет.
+  if (scheme == 'ss' &&
+      (param('uot') == '1' ||
+          param('uot') == 'true' ||
+          param('udp-over-tcp') == 'true' ||
+          param('udp-over-tcp') == '1')) {
+    return const {VpnBackend.mihomo};
+  }
+
   return _transportBackends(scheme, param('type'), param('headerType'));
 }
 

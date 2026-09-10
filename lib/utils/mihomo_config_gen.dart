@@ -1408,6 +1408,12 @@ class MihomoConfigGen {
     final colon = hostPort.lastIndexOf(':');
     if (colon < 0) throw ArgumentError('Shadowsocks requires host:port');
 
+    final query = queryIdx >= 0 ? beforeHash.substring(queryIdx + 1) : '';
+    final params = query.isEmpty
+        ? const <String, String>{}
+        : Uri.splitQueryString(query);
+    final plugin = _ssPlugin(params['plugin'] ?? '');
+
     return <String, dynamic>{
       'name': proxyName,
       'type': 'ss',
@@ -1416,7 +1422,75 @@ class MihomoConfigGen {
       'cipher': method,
       'password': password,
       'udp': true,
+      // UDP внутри TCP-соединения — для сетей, где UDP режут целиком. Пишем
+      // только когда ссылка просит: у ядра это лишний слой на каждый пакет.
+      if (_ssUdpOverTcp(params)) ...{
+        'udp-over-tcp': true,
+        'udp-over-tcp-version': ?int.tryParse(
+          params['udp-over-tcp-version'] ?? params['UoTVersion'] ?? '',
+        ),
+      },
+      ...?plugin,
     };
+  }
+
+  static bool _ssUdpOverTcp(Map<String, String> params) =>
+      params['udp-over-tcp']?.toLowerCase() == 'true' ||
+      params['udp-over-tcp'] == '1' ||
+      params['uot'] == '1' ||
+      params['uot']?.toLowerCase() == 'true';
+
+  /// Плагин shadowsocks из строки SIP002 → `plugin` и `plugin-opts`.
+  ///
+  /// В ссылке плагин приезжает одной строкой с точками с запятой:
+  /// `obfs-local;obfs=http;obfs-host=cdn.example`. Разбор — как в самом ядре
+  /// (`common/convert/converter.go`): точки с запятой заменяются на `&`, и
+  /// дальше это обычный запрос. Оттуда же и то, что плагинов ровно два:
+  /// `obfs` и `v2ray-plugin`. Остальные (`gost-plugin`, `shadow-tls`, `kcptun`)
+  /// у ядра есть, но формата в ссылках у них нет, и придумывать его мы не
+  /// станем.
+  ///
+  /// Строка без точки с запятой пропускается — так же, как её пропускает ядро:
+  /// плагин без настроек это только имя, а `obfs` без режима всё равно не
+  /// поднимется.
+  static Map<String, dynamic>? _ssPlugin(String raw) {
+    final value = raw.trim();
+    if (!value.contains(';')) return null;
+    final Map<String, String> opts;
+    try {
+      opts = Uri.splitQueryString('pluginName=${value.replaceAll(';', '&')}');
+    } catch (_) {
+      return null;
+    }
+    final name = opts['pluginName'] ?? '';
+    String pick(String key, [String alias = '']) {
+      final direct = opts[key]?.trim() ?? '';
+      if (direct.isNotEmpty || alias.isEmpty) return direct;
+      return opts[alias]?.trim() ?? '';
+    }
+
+    if (name.contains('obfs') && !name.contains('v2ray-plugin')) {
+      return {
+        'plugin': 'obfs',
+        'plugin-opts': {
+          'mode': pick('obfs'),
+          'host': pick('obfs-host'),
+        },
+      };
+    }
+    if (name.contains('v2ray-plugin')) {
+      return {
+        'plugin': 'v2ray-plugin',
+        'plugin-opts': {
+          'mode': pick('mode', 'obfs'),
+          'host': pick('host', 'obfs-host'),
+          'path': pick('path'),
+          // `tls` в этой строке — флаг без значения, отсюда поиск по подстроке.
+          'tls': value.contains('tls'),
+        },
+      };
+    }
+    return null;
   }
 
   static Map<String, dynamic> _hysteria2(String link) {

@@ -251,6 +251,16 @@ rules:
       );
     });
 
+    test('UDP внутри TCP у shadowsocks — только mihomo', () {
+      for (final query in ['uot=1', 'udp-over-tcp=true']) {
+        expect(
+          backendsForLink('ss://$ssUser@198.51.100.10:8388?$query'),
+          {VpnBackend.mihomo},
+          reason: query,
+        );
+      }
+    });
+
     test('транспорт h2 — только mihomo: xray 26 его снёс', () {
       expect(
         backendsForLink('vless://$uuid@198.51.100.10:443?type=http'),

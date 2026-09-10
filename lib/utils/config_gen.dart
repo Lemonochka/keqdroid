@@ -1407,9 +1407,11 @@ class ConfigGeneratorV2 {
     }
 
     final email = getParam('email');
-    final uot = getParam('uot');
-    final uotVersion = getParam('UoTVersion');
 
+    // `uot`/`UoTVersion` отсюда убраны: у shadowsocks в xray 26 таких полей нет
+    // вовсе (`infra/conf/shadowsocks.go` — адрес, метод, пароль, email,
+    // уровень), и ядро их молча выбрасывало. UDP внутри TCP умеет только
+    // mihomo, туда такую ссылку и разводит правило выбора ядра.
     return {
       'tag': 'proxy',
       'protocol': 'shadowsocks',
@@ -1419,8 +1421,6 @@ class ConfigGeneratorV2 {
         'method': method,
         'password': password,
         if (email.isNotEmpty) 'email': email,
-        if (uot.isNotEmpty) 'uot': uot.toLowerCase() == 'true',
-        if (uotVersion.isNotEmpty) 'UoTVersion': int.tryParse(uotVersion) ?? 0,
         'level': 0,
       },
       'streamSettings': {'network': 'tcp'},

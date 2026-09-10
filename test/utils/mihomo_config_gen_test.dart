@@ -1400,6 +1400,57 @@ void main() {
 
   // ECH прячет настоящее имя сервера в ClientHello. У xray поле `ech`
   // двузначно, у mihomo под это два разных вида `ech-opts`.
+  // Плагин оборачивает трафик shadowsocks во что-то безобидное. Ссылка несёт
+  // его одной строкой, и раньше она пропадала целиком: сервер ждал обёртку,
+  // получал голый shadowsocks и не отвечал.
+  group('shadowsocks: плагины и UDP внутри TCP', () {
+    const user = 'YWVzLTI1Ni1nY206cGFzc3dvcmQ';
+
+    test('obfs-local разбирается в plugin-opts', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'ss://$user@198.51.100.10:8388'
+        '?plugin=obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3Dcdn.example',
+      );
+      expect(proxy['plugin'], 'obfs');
+      final opts = proxy['plugin-opts'] as Map<String, dynamic>;
+      expect(opts['mode'], 'http');
+      expect(opts['host'], 'cdn.example');
+    });
+
+    test('v2ray-plugin: tls это флаг без значения', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'ss://$user@198.51.100.10:8388'
+        '?plugin=v2ray-plugin%3Btls%3Bmode%3Dwebsocket'
+        '%3Bhost%3Dv2.example%3Bpath%3D%2Fws',
+      );
+      expect(proxy['plugin'], 'v2ray-plugin');
+      final opts = proxy['plugin-opts'] as Map<String, dynamic>;
+      expect(opts['mode'], 'websocket');
+      expect(opts['host'], 'v2.example');
+      expect(opts['path'], '/ws');
+      expect(opts['tls'], isTrue);
+    });
+
+    test('без плагина полей плагина нет', () {
+      final proxy = MihomoConfigGen.buildProxy('ss://$user@198.51.100.10:8388');
+      expect(proxy.containsKey('plugin'), isFalse);
+      expect(proxy.containsKey('plugin-opts'), isFalse);
+      expect(proxy.containsKey('udp-over-tcp'), isFalse);
+    });
+
+    test('UDP внутри TCP включается обоими написаниями', () {
+      for (final query in ['uot=1', 'udp-over-tcp=true']) {
+        final proxy =
+            MihomoConfigGen.buildProxy('ss://$user@198.51.100.10:8388?$query');
+        expect(proxy['udp-over-tcp'], isTrue, reason: query);
+      }
+      final versioned = MihomoConfigGen.buildProxy(
+        'ss://$user@198.51.100.10:8388?uot=1&udp-over-tcp-version=2',
+      );
+      expect(versioned['udp-over-tcp-version'], 2);
+    });
+  });
+
   group('ECH', () {
     test('base64-список уезжает в config', () {
       final proxy = MihomoConfigGen.buildProxy(
