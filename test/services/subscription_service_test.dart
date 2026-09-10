@@ -605,6 +605,63 @@ rules:
       expect(uri.queryParameters.containsKey('spx'), isFalse);
     });
 
+    // Узел неизвестного типа исчезал молча: подписка на 20 серверов приезжала
+    // как 12, и спросить было не о чем.
+    test('узлы, которых мы не умеем, считаются по типам', () {
+      const profile = '''
+proxies:
+  - name: "ok"
+    type: vless
+    server: ok.example
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+  - name: "s1"
+    type: snell
+    server: s1.example
+    port: 443
+    psk: x
+  - name: "s2"
+    type: snell
+    server: s2.example
+    port: 443
+    psk: y
+  - name: "w"
+    type: wireguard
+    server: w.example
+    port: 51820
+    private-key: k
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: ["ok", "s1", "s2", "w"]
+rules:
+  - MATCH,Proxy
+''';
+      expect(SubscriptionService.parseBodyForTest(profile), hasLength(1));
+      expect(
+        SubscriptionService.unsupportedClashNodes(profile),
+        {'snell': 2, 'wireguard': 1},
+      );
+    });
+
+    test('когда всё разобралось, пропущенных нет', () {
+      const profile = '''
+proxies:
+  - name: "ok"
+    type: vless
+    server: ok.example
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: ["ok"]
+rules:
+  - MATCH,Proxy
+''';
+      expect(SubscriptionService.unsupportedClashNodes(profile), isEmpty);
+    });
+
     test('профиль без разбираемых узлов остаётся конфигом целиком', () {
       // Узлы приходят из `proxy-providers` (в сеть за ними мы не ходим), но
       // сам конфиг рабочий — его исполнит mihomo, как написал автор.

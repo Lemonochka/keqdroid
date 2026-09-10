@@ -508,6 +508,19 @@ class SubscriptionService {
       } else {
         configs = await _parseBodyOffThread(effectiveBody);
       }
+      // Узлы, которых мы не умеем, до сих пор просто исчезали из списка.
+      // Молчание тут хуже короткого списка: человек видит 12 серверов вместо
+      // 20 и не знает, у кого спрашивать.
+      if (CustomClashConfig.looksLikeClash(effectiveBody)) {
+        final summary =
+            _skippedNodesSummary(unsupportedClashNodes(effectiveBody));
+        if (summary != null) {
+          AppLogger.instance.warn(
+            'Subscription: skipped nodes this client cannot run: $summary',
+          );
+        }
+      }
+
       // fallback для панелей, которые суют дату/трафик в служебные ноды
       if (usedBytes == null || totalBytes == null || expiresAt == null) {
         final meta = _extractMetaFromBody(effectiveBody);
@@ -1619,6 +1632,38 @@ class SubscriptionService {
   /// ключа REALITY, то есть между сервером и его видимостью в списке.
   /// Сканер остаётся запасным путём: payload бывает битым (обрезан, склеен с
   /// html), и тогда «хоть что-то» лучше, чем ничего.
+  /// Узлы Clash, которые мы не умеем: тип → сколько их.
+  ///
+  /// Считается отдельно от разбора: сам разбор уезжает в изолят и возвращает
+  /// оттуда только ссылки, а сказать про пропущенные надо на главном. Проход
+  /// дешёвый — построчный сканер по тому же телу, и только если оно вообще
+  /// похоже на Clash.
+  ///
+  /// Зачем вообще: узел неизвестного типа (snell, ssh, wireguard) молча
+  /// исчезал, и подписка на 20 серверов приезжала как 12 без единого слова.
+  @visibleForTesting
+  static Map<String, int> unsupportedClashNodes(String content) {
+    final counts = <String, int>{};
+    for (final proxy in _extractYamlLikeProxies(content)) {
+      if (_proxyMapToUri(proxy) != null) continue;
+      final type = (proxy['type'] ?? proxy['protocol'] ?? '')
+          .toString()
+          .trim()
+          .toLowerCase();
+      final key = type.isEmpty ? 'unknown' : type;
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  /// Строка для лога: «пропущено 3 узла типа snell, 1 типа ssh».
+  static String? _skippedNodesSummary(Map<String, int> counts) {
+    if (counts.isEmpty) return null;
+    final parts = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return parts.map((e) => '${e.value} of type ${e.key}').join(', ');
+  }
+
   static List<Map<String, dynamic>> _extractYamlLikeProxies(String content) {
     final parsed = CustomClashConfig.tryParse(content);
     if (parsed != null && parsed.proxies.isNotEmpty) return parsed.proxies;
