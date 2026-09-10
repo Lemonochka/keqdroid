@@ -843,19 +843,90 @@ class MihomoConfigGen {
     final path = pick('path', 'path');
     final mode = pick('mode', 'mode');
     final padding = pick('x_padding_bytes', 'xPaddingBytes');
-    final scMaxEachPost = pick('scMaxEachPostBytes', 'scMaxEachPostBytes');
-    final scMinInterval = pick('scMinPostsIntervalMs', 'scMinPostsIntervalMs');
-    final reuse = _xmux(extra['xmux']);
 
-    return <String, dynamic>{
+    final opts = <String, dynamic>{
       'path': path.isEmpty ? '/' : path,
       if (host.isNotEmpty) 'host': host,
       if (mode.isNotEmpty) 'mode': mode,
       if (padding.isNotEmpty) 'x-padding-bytes': padding,
-      if (scMaxEachPost.isNotEmpty) 'sc-max-each-post-bytes': scMaxEachPost,
-      if (scMinInterval.isNotEmpty) 'sc-min-posts-interval-ms': scMinInterval,
-      'reuse-settings': ?reuse,
     };
+
+    for (final field in _xhttpExtraFields.entries) {
+      if (opts.containsKey(field.value)) continue;
+      final value = extra[field.key]?.toString().trim() ?? '';
+      if (value.isNotEmpty) opts[field.value] = value;
+    }
+    for (final flag in _xhttpExtraFlags.entries) {
+      if (extra[flag.key] == true) opts[flag.value] = true;
+    }
+    _applyXPaddingObfsDefaults(opts);
+
+    // Свои заголовки запроса ядро принимает только строками.
+    final headers = extra['headers'];
+    if (headers is Map && headers.isNotEmpty) {
+      opts['headers'] = <String, String>{
+        for (final e in headers.entries) e.key.toString(): e.value.toString(),
+      };
+    }
+
+    final reuse = _xmux(extra);
+    if (reuse != null) opts['reuse-settings'] = reuse;
+    return opts;
+  }
+
+  /// Поля `extra` под именами mihomo (`XHTTPOptions` в его vless-аутбаунде).
+  ///
+  /// Это не украшательство: ими описан сам вид запроса — где лежит номер
+  /// сессии, где счётчик, каким методом и куда уходят данные вверх. Пока мы
+  /// переносили из `extra` только набивку и лимиты постинга, mihomo слал
+  /// запросы своего вида, и сервер отвечал на них 400 — узел «не работал на
+  /// mihomo», хотя на xray работал.
+  ///
+  /// У части настроек в ссылках два написания (`sessionKey` и `sessionIDKey`):
+  /// берётся первое непустое, поэтому порядок здесь значим.
+  ///
+  /// Чего тут нет — того ядро не знает: `noSSEHeader`, `scMaxBufferedPosts`,
+  /// `scMaxConcurrentPosts` и `scStreamUpServerSecs` у него серверные, а не
+  /// клиентские.
+  static const Map<String, String> _xhttpExtraFields = {
+    'xPaddingKey': 'x-padding-key',
+    'xPaddingHeader': 'x-padding-header',
+    'xPaddingPlacement': 'x-padding-placement',
+    'xPaddingMethod': 'x-padding-method',
+    'uplinkHTTPMethod': 'uplink-http-method',
+    'uplinkDataPlacement': 'uplink-data-placement',
+    'uplinkDataKey': 'uplink-data-key',
+    'uplinkChunkSize': 'uplink-chunk-size',
+    'sessionPlacement': 'session-placement',
+    'sessionIDPlacement': 'session-placement',
+    'sessionKey': 'session-key',
+    'sessionIDKey': 'session-key',
+    'sessionIDTable': 'session-table',
+    'sessionIDLength': 'session-length',
+    'seqPlacement': 'seq-placement',
+    'seqKey': 'seq-key',
+    'scMaxEachPostBytes': 'sc-max-each-post-bytes',
+    'scMinPostsIntervalMs': 'sc-min-posts-interval-ms',
+  };
+
+  static const Map<String, String> _xhttpExtraFlags = {
+    'xPaddingObfsMode': 'x-padding-obfs-mode',
+    'noGRPCHeader': 'no-grpc-header',
+  };
+
+  /// Дефолты обфусцированной набивки, которых у mihomo нет.
+  ///
+  /// В этом режиме xray кладёт набивку в заголовок `X-Padding` видом «адрес
+  /// запроса плюс ?x_padding=XXX», и сервер её проверяет: запрос без набивки
+  /// он отвергает с 400. mihomo же при пустом `x-padding-placement` не
+  /// добавляет её вовсе — ссылка включает режим, а набивки нет, и узел молча
+  /// не поднимается. Поэтому дописываем то, что xray подставляет сам; всё,
+  /// что названо в ссылке явно, остаётся как есть.
+  static void _applyXPaddingObfsDefaults(Map<String, dynamic> opts) {
+    if (opts['x-padding-obfs-mode'] != true) return;
+    opts.putIfAbsent('x-padding-placement', () => 'queryInHeader');
+    opts.putIfAbsent('x-padding-header', () => 'X-Padding');
+    opts.putIfAbsent('x-padding-key', () => 'x_padding');
   }
 
   /// Содержимое `extra`. Мусор внутри — не повод ронять подключение целиком:
@@ -875,8 +946,15 @@ class MihomoConfigGen {
   ///
   /// Все поля, кроме `hKeepAlivePeriod`, у mihomo строковые: они принимают
   /// диапазоны вида `16-32`, а не только числа.
-  static Map<String, dynamic>? _xmux(Object? xmux) {
-    if (xmux is! Map) return null;
+  ///
+  /// Панели пишут эти настройки двумя способами: внутрь `xmux` и рядом с ним,
+  /// прямо в `extra`. Читаем оба, вложенный главнее.
+  static Map<String, dynamic>? _xmux(Map<String, dynamic> extra) {
+    final nested = extra['xmux'];
+    final xmux = <String, dynamic>{
+      ...extra,
+      if (nested is Map) ...Map<String, dynamic>.from(nested),
+    };
     String value(String key) => xmux[key]?.toString().trim() ?? '';
 
     final keepAlive = int.tryParse(value('hKeepAlivePeriod'));

@@ -336,6 +336,118 @@ void main() {
           {'max-concurrency': '16-32', 'h-keep-alive-period': 45});
     });
 
+    // Живая подписка: узел «белые списки» работал на xray и не работал на
+    // mihomo. Вид запроса описан в `extra` — где номер сессии, где счётчик,
+    // каким методом и куда уходят данные вверх; пока мы это выбрасывали,
+    // mihomo слал запрос своего вида, и сервер отвечал 400.
+    test('extra переносит форму запроса целиком', () {
+      const extra = '{"seqKey":"offset","seqPlacement":"query",'
+          '"sessionKey":"media_sid","sessionPlacement":"cookie",'
+          '"uplinkHTTPMethod":"GET","uplinkDataPlacement":"header",'
+          '"uplinkDataKey":"X-Playback-Token","noGRPCHeader":true}';
+      final p = _proxy(MihomoConfigGen.build(
+        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+        '&path=%2Fupload%2F&mode=packet-up'
+        '&extra=${Uri.encodeQueryComponent(extra)}',
+        const AppSettings(),
+        socksPort: 2080,
+      ));
+      expect(p['xhttp-opts'], {
+        'path': '/upload/',
+        'mode': 'packet-up',
+        'uplink-http-method': 'GET',
+        'uplink-data-placement': 'header',
+        'uplink-data-key': 'X-Playback-Token',
+        'session-placement': 'cookie',
+        'session-key': 'media_sid',
+        'seq-placement': 'query',
+        'seq-key': 'offset',
+        'no-grpc-header': true,
+      });
+    });
+
+    // Второе написание тех же настроек: панели пишут то `sessionKey`, то
+    // `sessionIDKey`, xray понимает оба.
+    test('extra принимает sessionID-написание', () {
+      const extra = '{"sessionIDKey":"sid","sessionIDPlacement":"query",'
+          '"sessionIDTable":"Base62","sessionIDLength":"16-32"}';
+      final opts = _proxy(MihomoConfigGen.build(
+        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+        '&extra=${Uri.encodeQueryComponent(extra)}',
+        const AppSettings(),
+        socksPort: 2080,
+      ))['xhttp-opts'] as Map;
+      expect(opts['session-key'], 'sid');
+      expect(opts['session-placement'], 'query');
+      expect(opts['session-table'], 'Base62');
+      expect(opts['session-length'], '16-32');
+    });
+
+    // Тот самый узел «белые списки»: ссылка включает обфускацию набивки и
+    // больше ничего про неё не говорит. xray в этом режиме шлёт заголовок
+    // `X-Padding`, сервер набивку проверяет и запрос без неё отвергает, а
+    // mihomo без явного размещения не набивает вовсе.
+    test('обфускация набивки получает дефолты xray', () {
+      const extra = '{"xPaddingObfsMode":true}';
+      final opts = _proxy(MihomoConfigGen.build(
+        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+        '&extra=${Uri.encodeQueryComponent(extra)}',
+        const AppSettings(),
+        socksPort: 2080,
+      ))['xhttp-opts'] as Map;
+      expect(opts['x-padding-obfs-mode'], isTrue);
+      expect(opts['x-padding-placement'], 'queryInHeader');
+      expect(opts['x-padding-header'], 'X-Padding');
+      expect(opts['x-padding-key'], 'x_padding');
+    });
+
+    test('своё размещение набивки дефолтами не перебивается', () {
+      const extra = '{"xPaddingObfsMode":true,"xPaddingPlacement":"header",'
+          '"xPaddingHeader":"X-Api-Key","xPaddingMethod":"tokenish",'
+          '"xPaddingBytes":"50-150"}';
+      final opts = _proxy(MihomoConfigGen.build(
+        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+        '&extra=${Uri.encodeQueryComponent(extra)}',
+        const AppSettings(),
+        socksPort: 2080,
+      ))['xhttp-opts'] as Map;
+      expect(opts['x-padding-placement'], 'header');
+      expect(opts['x-padding-header'], 'X-Api-Key');
+      expect(opts['x-padding-method'], 'tokenish');
+      expect(opts['x-padding-bytes'], '50-150');
+      // ключ ссылка не назвала — его дописываем сами.
+      expect(opts['x-padding-key'], 'x_padding');
+    });
+
+    test('без обфускации набивку размещать нечем — дефолтов не появляется', () {
+      final opts = _proxy(MihomoConfigGen.build(
+        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+        '&x_padding_bytes=100-1000',
+        const AppSettings(),
+        socksPort: 2080,
+      ))['xhttp-opts'] as Map;
+      expect(opts['x-padding-bytes'], '100-1000');
+      expect(opts.containsKey('x-padding-placement'), isFalse);
+      expect(opts.containsKey('x-padding-header'), isFalse);
+    });
+
+    // Панели кладут эти поля и внутрь `xmux`, и рядом с ним.
+    test('reuse-settings собирается и из полей рядом с xmux', () {
+      const extra = '{"hKeepAlivePeriod":30,"hMaxRequestTimes":"600-900",'
+          '"hMaxReusableSecs":1800}';
+      final opts = _proxy(MihomoConfigGen.build(
+        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+        '&extra=${Uri.encodeQueryComponent(extra)}',
+        const AppSettings(),
+        socksPort: 2080,
+      ))['xhttp-opts'] as Map;
+      expect(opts['reuse-settings'], {
+        'h-max-request-times': '600-900',
+        'h-max-reusable-secs': '1800',
+        'h-keep-alive-period': 30,
+      });
+    });
+
     test('битый extra не роняет ссылку целиком', () {
       final p = _proxy(MihomoConfigGen.build(
         'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
