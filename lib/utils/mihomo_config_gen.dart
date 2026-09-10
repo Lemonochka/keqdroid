@@ -863,12 +863,18 @@ class MihomoConfigGen {
           out['network'] = 'tcp';
         }
       case 'ws':
-        final path = _param(uri, 'path', '/');
+        final early = _earlyData(uri, _param(uri, 'path', '/'));
         final wsHost = _param(uri, 'host', host);
         out['network'] = 'ws';
         out['ws-opts'] = {
-          'path': path,
+          'path': early.path,
           if (wsHost.isNotEmpty) 'headers': {'Host': wsHost},
+          if (early.size != null) 'max-early-data': early.size,
+          // Ядро без имени заголовка ранние данные не отправит вовсе, а ссылка
+          // его обычно не называет: это соглашение, а не настройка. Имя из
+          // ссылки пишем и без размера — так же поступает разбор в самом ядре.
+          if (early.size != null || early.header != null)
+            'early-data-header-name': early.header ?? 'Sec-WebSocket-Protocol',
         };
       case 'grpc':
         out['network'] = 'grpc';
@@ -882,10 +888,14 @@ class MihomoConfigGen {
           if (host.isNotEmpty) 'host': [host],
         };
       case 'httpupgrade':
+        final upgrade = _earlyData(uri, _param(uri, 'path', '/'));
         out['network'] = 'ws';
         out['ws-opts'] = {
-          'path': _param(uri, 'path', '/'),
+          'path': upgrade.path,
           'v2ray-http-upgrade': true,
+          // У httpupgrade размер ранних данных ядру не нужен: там это просто
+          // «не ждать ответа сервера перед отправкой».
+          if (upgrade.size != null) 'v2ray-http-upgrade-fast-open': true,
           if (host.isNotEmpty) 'headers': {'Host': _param(uri, 'host', host)},
         };
       // splithttp — прежнее имя того же транспорта, старые ссылки живы.
@@ -917,6 +927,40 @@ class MihomoConfigGen {
     if (foreign) {
       throw ArgumentError('mihomo: $protocol over $network is xray-only');
     }
+  }
+
+  /// Ранние данные WebSocket: первый пакет уезжает вместе с рукопожатием.
+  ///
+  /// Размер ссылка называет двумя способами: параметром `ed` или тем же `ed`
+  /// внутри пути (`/ws?ed=2048`) — так его пишет v2rayN. Ядро читает только
+  /// поле, поэтому из пути параметр вынимаем: оставь его там — и сервер
+  /// получит путь с хвостом, которого не ждёт.
+  static ({String path, int? size, String? header}) _earlyData(
+    Uri uri,
+    String rawPath,
+  ) {
+    var path = rawPath;
+    var size = int.tryParse(_param(uri, 'ed'));
+    var header = _param(uri, 'eh');
+
+    final query = rawPath.indexOf('?');
+    if (query >= 0) {
+      final parsed = Uri.tryParse(rawPath);
+      if (parsed != null) {
+        final params = Map<String, String>.from(parsed.queryParameters);
+        size ??= int.tryParse(params.remove('ed') ?? '');
+        final inPath = params.remove('eh') ?? '';
+        if (header.isEmpty) header = inPath;
+        path = params.isEmpty
+            ? rawPath.substring(0, query)
+            : Uri(path: parsed.path, queryParameters: params).toString();
+      }
+    }
+    return (
+      path: path,
+      size: size,
+      header: header.isEmpty ? null : header,
+    );
   }
 
   /// `xhttp-opts` из ссылки.
@@ -1302,6 +1346,7 @@ class MihomoConfigGen {
         'type': net,
         // `type` в json vmess — это заголовок маскировки, а не транспорт.
         'headerType': s('type'),
+        // Ранние данные у vmess лежат внутри пути, отдельных полей у него нет.
         'path': s('path', '/'),
         'host': s('host'),
         'serviceName': s('path'),

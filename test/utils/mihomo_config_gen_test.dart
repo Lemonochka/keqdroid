@@ -1451,6 +1451,72 @@ void main() {
     });
   });
 
+  // Ранние данные: первый пакет уезжает вместе с рукопожатием WebSocket. На
+  // подключение не влияет, на скорость первого запроса — да.
+  group('ранние данные WebSocket', () {
+    test('ed и eh из параметров ссылки', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=ws&security=tls&sni=w.example'
+        '&path=%2Fws&ed=2048&eh=X-Early',
+      );
+      final opts = proxy['ws-opts'] as Map<String, dynamic>;
+      expect(opts['path'], '/ws');
+      expect(opts['max-early-data'], 2048);
+      expect(opts['early-data-header-name'], 'X-Early');
+    });
+
+    test('без eh подставляется соглашение', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=ws&security=tls&sni=w.example'
+        '&path=%2Fws&ed=2048',
+      );
+      final opts = proxy['ws-opts'] as Map<String, dynamic>;
+      expect(opts['early-data-header-name'], 'Sec-WebSocket-Protocol');
+    });
+
+    // v2rayN кладёт размер внутрь пути. Оставь его там — и сервер получит путь
+    // с хвостом, которого не ждёт.
+    test('ed внутри пути вынимается из него', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=ws&security=tls&sni=w.example'
+        '&path=%2Fws%3Fed%3D2048',
+      );
+      final opts = proxy['ws-opts'] as Map<String, dynamic>;
+      expect(opts['path'], '/ws');
+      expect(opts['max-early-data'], 2048);
+    });
+
+    test('чужие параметры пути остаются в пути', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=ws&security=tls&sni=w.example'
+        '&path=%2Fws%3Fed%3D2048%26token%3Dabc',
+      );
+      final opts = proxy['ws-opts'] as Map<String, dynamic>;
+      expect(opts['path'], '/ws?token=abc');
+      expect(opts['max-early-data'], 2048);
+    });
+
+    test('у httpupgrade размер не нужен, нужен сам флаг', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=httpupgrade&security=tls'
+        '&sni=h.example&path=%2Fhu&ed=2048',
+      );
+      final opts = proxy['ws-opts'] as Map<String, dynamic>;
+      expect(opts['v2ray-http-upgrade-fast-open'], isTrue);
+      expect(opts.containsKey('max-early-data'), isFalse);
+    });
+
+    test('без ранних данных полей о них нет', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=ws&security=tls&sni=w.example'
+        '&path=%2Fws',
+      );
+      final opts = proxy['ws-opts'] as Map<String, dynamic>;
+      expect(opts.containsKey('max-early-data'), isFalse);
+      expect(opts.containsKey('early-data-header-name'), isFalse);
+    });
+  });
+
   group('ECH', () {
     test('base64-список уезжает в config', () {
       final proxy = MihomoConfigGen.buildProxy(

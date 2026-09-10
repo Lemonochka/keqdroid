@@ -278,6 +278,44 @@ void main() {
       expect((stream['tlsSettings'] as Map)['serverName'], 'hy2.example');
     });
 
+    // Отдельного поля под ранние данные у ядра нет: оно вынимает `ed` из пути
+    // само. Ссылка же несёт его и отдельным параметром.
+    test('ранние данные из параметра ссылки переезжают в путь', () {
+      Socks5Credentials().init('u', 'p');
+      Map<String, dynamic> streamOf(String link) {
+        final map = jsonDecode(ConfigGeneratorV2.generateConfig(link, settings))
+            as Map<String, dynamic>;
+        final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
+        return outbound['streamSettings'] as Map<String, dynamic>;
+      }
+
+      final ws = streamOf(
+        'vless://uuid@198.51.100.10:443?type=ws&security=tls&sni=w.example'
+        '&path=%2Fws&ed=2048',
+      );
+      expect((ws['wsSettings'] as Map)['path'], '/ws?ed=2048');
+
+      final upgrade = streamOf(
+        'vless://uuid@198.51.100.10:443?type=httpupgrade&security=tls'
+        '&sni=h.example&path=%2Fhu&ed=2048',
+      );
+      expect((upgrade['httpupgradeSettings'] as Map)['path'], '/hu?ed=2048');
+
+      // Уже стоящий в пути параметр не дублируем.
+      final already = streamOf(
+        'vless://uuid@198.51.100.10:443?type=ws&security=tls&sni=w.example'
+        '&path=%2Fws%3Fed%3D1024&ed=2048',
+      );
+      expect((already['wsSettings'] as Map)['path'], '/ws?ed=1024');
+
+      // Без ранних данных путь остаётся как был.
+      final plain = streamOf(
+        'vless://uuid@198.51.100.10:443?type=ws&security=tls&sni=w.example'
+        '&path=%2Fws',
+      );
+      expect((plain['wsSettings'] as Map)['path'], '/ws');
+    });
+
     test('killSwitch does not add split rules to xray routing', () {
       // Правило 0.0.0.0/1+128.0.0.0/1 → proxy было no-op (catch-all ниже и так
       // шлёт всё в proxy); настоящий kill switch — final: block в sing-box

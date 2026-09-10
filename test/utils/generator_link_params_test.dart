@@ -440,9 +440,6 @@ const _gapsXray = <String, String>{
   'vless/h2/host': 'G-03: там же',
   'vmess/h2/path': 'G-03: там же',
   'vmess/h2/host': 'G-03: там же',
-  'vless/ws/ed': 'G-24: ядро читает ed из пути (WebSocketConfig.Build), а мы '
-      'оставляем его в параметрах ссылки',
-  'vless/httpupgrade/ed': 'G-24: то же у HttpUpgradeConfig.Build',
   'vless/kcp/seed': 'G-12: kcpSettings не собираются вовсе',
   'vless/kcp/headerType': 'G-12: там же',
 };
@@ -469,9 +466,6 @@ const _waivedMihomo = <String, String>{
 
 /// Известные дыры mihomo-пути.
 const _gapsMihomo = <String, String>{
-  'vless/ws/ed': 'G-24: ws-opts.max-early-data',
-  'vless/ws/eh': 'G-24: ws-opts.early-data-header-name',
-  'vless/httpupgrade/ed': 'G-24: v2ray-http-upgrade-fast-open',
   // Двух задач ниже в QUEUE.md ещё нет — они найдены этой переписью и описаны
   // в PROGRESS.md, откуда советник заведёт их в очередь.
   'vless/h2/host': 'G-25: h2-opts.host берётся из sni, параметр host ссылки '

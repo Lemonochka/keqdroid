@@ -1173,6 +1173,19 @@ class ConfigGeneratorV2 {
     download[key] = settings;
   }
 
+  /// Размер ранних данных — в путь, потому что ядро читает его только оттуда.
+  ///
+  /// Отдельного поля у ядра нет вовсе: `WebSocketConfig.Build` разбирает путь и
+  /// вынимает `ed` из его запроса сам (`infra/conf/transport_method.go`), у
+  /// httpupgrade то же. Ссылки же несут его и так, и так — v2rayN кладёт в
+  /// путь, стандарт #716 отдельным параметром.
+  static String _pathWithEarlyData(String path, String ed) {
+    final size = int.tryParse(ed.trim());
+    if (size == null || size <= 0) return path;
+    if (path.contains('ed=')) return path;
+    return path.contains('?') ? '$path&ed=$size' : '$path?ed=$size';
+  }
+
   /// client-side xhttp extras (xmux) and similar stream options.
   /// Мультиплексор на выходной аутбаунд — там, где ядро его поймёт.
   ///
@@ -1600,7 +1613,10 @@ class ConfigGeneratorV2 {
 
     switch (type) {
       case 'ws':
-        stream['wsSettings'] = {'path': getParam('path', '/'), 'headers': {'Host': getParam('host', sni)}};
+        stream['wsSettings'] = {
+          'path': _pathWithEarlyData(getParam('path', '/'), getParam('ed')),
+          'headers': {'Host': getParam('host', sni)},
+        };
       case 'grpc':
         // `authority` — то имя, под которым запрос уезжает в HTTP/2; без него
         // ядро подставляет адрес узла, и сервер за общим фронтом отвечает 404.
@@ -1622,7 +1638,10 @@ class ConfigGeneratorV2 {
           ),
         };
       case 'httpupgrade':
-        stream['httpupgradeSettings'] = {'path': getParam('path', '/'), 'host': getParam('host', sni)};
+        stream['httpupgradeSettings'] = {
+          'path': _pathWithEarlyData(getParam('path', '/'), getParam('ed')),
+          'host': getParam('host', sni),
+        };
       // `raw` — новое имя `tcp` в ядре; в ссылках встречаются оба, и
       // mihomo-генератор давно считает их одним транспортом.
       case 'tcp' || 'raw':
