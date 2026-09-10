@@ -1345,6 +1345,59 @@ void main() {
     expect(parsed['rules'], isA<List>());
   });
 
+  // Маскировка под обычный HTTP-запрос поверх tcp. У ядра это отдельный
+  // `network`, а не флаг: без неё сервер ждёт запрос с заголовками, получает
+  // голый поток и молчит.
+  group('HTTP-маскировка', () {
+    test('vless: headerType=http превращается в network http', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=tcp&security=none'
+        '&headerType=http&host=masq.example&path=%2Fmasq&method=POST',
+      );
+      expect(proxy['network'], 'http');
+      final opts = proxy['http-opts'] as Map<String, dynamic>;
+      expect(opts['method'], 'POST');
+      expect(opts['path'], ['/masq']);
+      expect((opts['headers'] as Map)['Host'], ['masq.example']);
+    });
+
+    test('vmess: заголовок лежит в поле type, а не в net', () {
+      final payload = base64.encode(utf8.encode(jsonEncode({
+        'v': '2',
+        'ps': 'n',
+        'add': '198.51.100.10',
+        'port': '443',
+        'id': 'uuid',
+        'net': 'tcp',
+        'type': 'http',
+        'host': 'masqvmess.example',
+        'path': '/masqvmess',
+      })));
+      final proxy = MihomoConfigGen.buildProxy('vmess://$payload');
+      expect(proxy['network'], 'http');
+      final opts = proxy['http-opts'] as Map<String, dynamic>;
+      expect(opts['path'], ['/masqvmess']);
+      expect((opts['headers'] as Map)['Host'], ['masqvmess.example']);
+    });
+
+    test('без headerType транспорт остаётся обычным tcp', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'vless://uuid@198.51.100.10:443?type=tcp&security=none',
+      );
+      expect(proxy['network'], 'tcp');
+      expect(proxy.containsKey('http-opts'), isFalse);
+    });
+
+    test('trojan так не умеет — генератор отказывается', () {
+      expect(
+        () => MihomoConfigGen.buildProxy(
+          'trojan://pwd@198.51.100.10:443?type=tcp&security=tls&headerType=http',
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+  });
+
   group('hysteria', () {
     // Схема одна на обе версии. Первую не собираем вовсе, вторую под этой же
     // схемой терять нельзя — панели со старым шаблоном выдают именно её.

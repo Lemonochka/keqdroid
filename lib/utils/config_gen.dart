@@ -1603,10 +1603,12 @@ class ConfigGeneratorV2 {
           // Пустым его не пишем: у ядра по умолчанию `/`, а пустой список оно
           // поняло бы как запрос без пути вовсе.
           final path = getParam('path');
+          final method = getParam('method');
           stream['tcpSettings'] = {
             'header': {
               'type': 'http',
               'request': {
+                if (method.isNotEmpty) 'method': method,
                 if (path.isNotEmpty) 'path': [path],
                 'headers': {'Host': [getParam('host', address)]},
               },

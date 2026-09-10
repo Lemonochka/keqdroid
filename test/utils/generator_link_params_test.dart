@@ -250,6 +250,9 @@ final _rows = <_Row>[
   _row('vless', 'tcp-http',
       'vless://$_uuid@$_host?type=tcp&security=none&headerType=http', 'path',
       '%2Fmasq'),
+  _row('vless', 'tcp-http',
+      'vless://$_uuid@$_host?type=tcp&security=none&headerType=http', 'method',
+      'POST'),
 
   // ───────────────────────────── VMess ─────────────────────────────
   _vmessRow('tcp', _vmessBase, 'aid', '1'),
@@ -344,6 +347,9 @@ final _rows = <_Row>[
       'trojan://password@$_host?type=httpupgrade&security=tls&sni=tjh.example',
       'path',
       '%2Ftjh'),
+  // На mihomo эта строка зелёная не потому, что маскировка собирается, а
+  // потому что генератор на неё честно отказывается: `http-opts` у
+  // `TrojanOption` нет вовсе, и ссылку разводит правило выбора ядра.
   _row('trojan', 'tcp-http',
       'trojan://password@$_host?type=tcp&security=tls&sni=tjm.example',
       'headerType', 'http'),
@@ -438,8 +444,6 @@ const _waivedMihomo = <String, String>{
   'vless/kcp/seed': 'у VlessOption нет mkcp-opts — ссылка целиком не для '
       'mihomo, это разводит G-03',
   'vless/kcp/headerType': 'там же',
-  'trojan/tcp-http/headerType': 'у TrojanOption нет http-opts '
-      '(adapter/outbound/trojan.go), HTTP-маскировка на trojan — только xray',
   'vmess/xhttp/path': 'xhttp-opts есть только у VlessOption; с G-03 генератор '
       'на такую ссылку честно отказывается, а не пишет ключи в пустоту',
   'trojan/xhttp/path': 'там же',
@@ -455,11 +459,6 @@ const _gapsMihomo = <String, String>{
   'vless/ws/ed': 'G-24: ws-opts.max-early-data',
   'vless/ws/eh': 'G-24: ws-opts.early-data-header-name',
   'vless/httpupgrade/ed': 'G-24: v2ray-http-upgrade-fast-open',
-  'vless/tcp/headerType': 'G-20: HTTP-маскировка поверх tcp не собирается',
-  'vless/tcp-http/host': 'G-20: там же',
-  'vless/tcp-http/path': 'G-20: там же',
-  'vmess/tcp-http/host': 'G-20: синтетический Uri в _vmess не несёт headerType',
-  'vmess/tcp-http/path': 'G-20: там же',
   'ss/obfs/plugin': 'G-22: plugin и plugin-opts не переносятся',
   'ss/v2ray-plugin/plugin': 'G-22: там же',
   'ss/sip002/uot': 'G-22: udp-over-tcp не переносится',

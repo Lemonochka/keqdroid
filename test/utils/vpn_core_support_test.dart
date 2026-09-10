@@ -276,6 +276,21 @@ rules:
       );
     });
 
+    test('HTTP-маскировка у trojan — только xray', () {
+      expect(
+        backendsForLink(
+          'trojan://p@198.51.100.10:443?type=tcp&security=tls&headerType=http',
+        ),
+        {VpnBackend.xray},
+      );
+      // У VLESS и VMess `http-opts` есть — эти ссылки по-прежнему для обоих.
+      expect(
+        backendsForLink('vless://$uuid@198.51.100.10:443?headerType=http'),
+        both,
+      );
+      expect(backendsForLink(vmess({'net': 'tcp', 'type': 'http'})), both);
+    });
+
     test('нечитаемую ссылку не судим — её развернёт генератор', () {
       expect(backendsForLink('vmess://не-base64'), both);
       expect(backendsForLink('какая-то строка'), both);

@@ -150,7 +150,7 @@ Set<VpnBackend> backendsForLink(String link) {
     return const {VpnBackend.mihomo};
   }
 
-  return _transportBackends(scheme, param('type'));
+  return _transportBackends(scheme, param('type'), param('headerType'));
 }
 
 /// vmess прячет транспорт в base64-json, а не в запросе.
@@ -165,6 +165,8 @@ Set<VpnBackend> _vmessBackends(String link) {
     return _transportBackends(
       'vmess',
       decoded['net']?.toString().trim().toLowerCase() ?? '',
+      // `type` в json vmess — это заголовок маскировки, а не транспорт.
+      decoded['type']?.toString().trim().toLowerCase() ?? '',
     );
   } catch (_) {
     return _bothCores;
@@ -176,8 +178,19 @@ Set<VpnBackend> _vmessBackends(String link) {
 /// Сверено по `adapter/outbound/*.go` mihomo 1.19.30 и `infra/conf` xray
 /// 26.7.28: у ядра либо есть поле под настройки транспорта, либо нет, и
 /// «нет» означает молчаливый откат на голый TCP.
-Set<VpnBackend> _transportBackends(String scheme, String type) =>
-    switch ((scheme, type)) {
+Set<VpnBackend> _transportBackends(
+  String scheme,
+  String type,
+  String headerType,
+) {
+  // Маскировка под HTTP поверх tcp: `http-opts` есть у VLESS и VMess, у
+  // `TrojanOption` их нет вовсе.
+  if (scheme == 'trojan' &&
+      headerType == 'http' &&
+      (type.isEmpty || type == 'tcp' || type == 'raw')) {
+    return const {VpnBackend.xray};
+  }
+  return switch ((scheme, type)) {
       // xray 26 снёс транспорт HTTP/2 целиком: `TransportProtocol.Build`
       // отвечает отказом и роняет весь конфиг, снаружи это «SOCKS port not
       // ready». У mihomo он остался — `h2-opts` есть и у VLESS, и у VMess.
@@ -192,6 +205,7 @@ Set<VpnBackend> _transportBackends(String scheme, String type) =>
       ('vmess' || 'trojan', 'xhttp' || 'splithttp') => const {VpnBackend.xray},
       _ => _bothCores,
     };
+}
 
 /// Итог выбора: чем сервер поедет и почему это не то, что просил пользователь.
 typedef VpnBackendChoice = ({

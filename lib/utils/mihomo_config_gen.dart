@@ -801,7 +801,28 @@ class MihomoConfigGen {
     switch (network) {
       // `raw` — новое имя `tcp` в xray; в ссылках встречаются оба.
       case '' || 'tcp' || 'raw':
-        out['network'] = 'tcp';
+        // Маскировка под обычный HTTP-запрос поверх tcp: у ядра это отдельный
+        // `network`, а не флаг. Без неё сервер ждёт запрос с заголовками, а
+        // получает голый поток и молчит в ответ.
+        if (_param(uri, 'headerType').toLowerCase() == 'http') {
+          // У `TrojanOption` нет `http-opts` вовсе — такая ссылка только для
+          // xray, её разводит правило в `vpn_core_support.dart`.
+          if (protocol == 'trojan') {
+            throw ArgumentError('mihomo: trojan over http header is xray-only');
+          }
+          final method = _param(uri, 'method');
+          final path = _param(uri, 'path', '/');
+          out['network'] = 'http';
+          out['http-opts'] = {
+            if (method.isNotEmpty) 'method': method,
+            // Пути и заголовки ядро берёт списками: ими маскировка чередует
+            // запросы, чтобы они не были одинаковыми.
+            'path': [path],
+            'headers': {if (host.isNotEmpty) 'Host': [_param(uri, 'host', host)]},
+          };
+        } else {
+          out['network'] = 'tcp';
+        }
       case 'ws':
         final path = _param(uri, 'path', '/');
         final wsHost = _param(uri, 'host', host);
@@ -1236,6 +1257,8 @@ class MihomoConfigGen {
       host: host.isEmpty ? 'x' : host,
       queryParameters: {
         'type': net,
+        // `type` в json vmess — это заголовок маскировки, а не транспорт.
+        'headerType': s('type'),
         'path': s('path', '/'),
         'host': s('host'),
         'serviceName': s('path'),
