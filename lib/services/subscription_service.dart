@@ -251,7 +251,10 @@ class SubscriptionService {
         }
       }
 
-      final uri = Uri.parse(rawConfig);
+      // Перебор портов hysteria2 пишут прямо в адресе (`host:20000-20050`), а
+      // такой порт `Uri.parse` не берёт — ключ уходил бы в грубый фолбэк по
+      // первым 80 символам и менялся вместе с именем сервера.
+      final uri = Uri.parse(_parsableUri(rawConfig));
       final host = uri.host.toLowerCase();
       final port = uri.port.toString();
 
@@ -2184,6 +2187,20 @@ class SubscriptionService {
     return links.toSet().toList();
   }
 
+  /// Ссылка в виде, который переварит `Uri.parse`.
+  ///
+  /// Отличается от исходной только у hysteria2 со списком портов в адресе: там
+  /// в адресе остаётся первый порт. Всё остальное возвращается как есть.
+  static String _parsableUri(String raw) {
+    final lower = raw.trimLeft().toLowerCase();
+    if (!lower.startsWith('hysteria2://') &&
+        !lower.startsWith('hy2://') &&
+        !lower.startsWith('hysteria://')) {
+      return raw;
+    }
+    return HysteriaLinkParams.splitPorts(raw).$1;
+  }
+
   static bool _isValidConfig(String s) {
     final lower = s.toLowerCase();
     // Hysteria v1 в список не берём вовсе: ни одно ядро её не собирает, а под
@@ -2343,7 +2360,7 @@ class SubscriptionService {
         }
       }
 
-      final uri = Uri.parse(raw);
+      final uri = Uri.parse(_parsableUri(raw));
       final fragment = uri.fragment.trim();
       if (fragment.isEmpty) return null;
       return Uri.decodeComponent(fragment).trim();

@@ -64,7 +64,8 @@
       "password": "password",
       "sni": "hy2.example",
       "obfs": "salamander",
-      "obfs-password": "obfspass"
+      "obfs-password": "obfspass",
+      "ports": "20000-20050"
     }
   ],
   "rules": [

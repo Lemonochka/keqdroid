@@ -1494,7 +1494,10 @@ class MihomoConfigGen {
   }
 
   static Map<String, dynamic> _hysteria2(String link) {
-    final uri = _parse(link);
+    // Перебор портов пишут и прямо в адресе (`host:20000-20050`), а такой порт
+    // `Uri.parse` не берёт: раньше ссылка разваливалась целиком.
+    final params = HysteriaLinkParams.fromConfig(link);
+    final uri = _parse(HysteriaLinkParams.splitPorts(link).$1);
     var password = uri.userInfo;
     if (password.isEmpty) password = _param(uri, 'password', _param(uri, 'auth'));
     if (password.isEmpty) throw ArgumentError('Hysteria2 requires password');
@@ -1518,6 +1521,18 @@ class MihomoConfigGen {
     if (down.isNotEmpty) out['down'] = down;
     final alpn = _alpn(_param(uri, 'alpn'));
     if (alpn != null) out['alpn'] = alpn;
+    // Перебор портов: сервер слушает диапазон и ждёт, что клиент будет по нему
+    // ходить. Без списка клиент сидит на одном порту, и провайдер, который этот
+    // порт душит, душит подключение целиком.
+    if (params.mport.isNotEmpty) {
+      out['ports'] = params.mport;
+      if (params.hopInterval.isNotEmpty) {
+        out['hop-interval'] = params.hopInterval;
+      }
+    }
+    // Пин сертификата: ссылка называет его `pinSHA256`, у ядра это
+    // `fingerprint` (не uTLS-отпечаток, а именно отпечаток сертификата).
+    if (params.pinSha256.isNotEmpty) out['fingerprint'] = params.pinSha256;
     return out;
   }
 

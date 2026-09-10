@@ -262,6 +262,22 @@ void main() {
       expect(tls['pinnedPeerCertSha256'], 'QQ+WW/EE=');
     });
 
+    // Список портов прямо в адресе `Uri.parse` не берёт, и раньше ссылка
+    // разваливалась целиком — вместе с sni, obfs и всем остальным.
+    test('hysteria2: список портов из адреса не ломает разбор ссылки', () {
+      Socks5Credentials().init('u', 'p');
+      final config = ConfigGeneratorV2.generateConfig(
+        'hysteria2://password@198.51.100.16:20000-20050,443?sni=hy2.example',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
+      final stream = outbound['streamSettings'] as Map<String, dynamic>;
+      final hysteria = stream['hysteriaSettings'] as Map<String, dynamic>;
+      expect((hysteria['udphop'] as Map)['ports'], '20000-20050,443');
+      expect((stream['tlsSettings'] as Map)['serverName'], 'hy2.example');
+    });
+
     test('killSwitch does not add split rules to xray routing', () {
       // Правило 0.0.0.0/1+128.0.0.0/1 → proxy было no-op (catch-all ниже и так
       // шлёт всё в proxy); настоящий kill switch — final: block в sing-box

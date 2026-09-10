@@ -398,6 +398,15 @@ final _rows = <_Row>[
       '30'),
   _row('hysteria2', 'base', 'hysteria2://password@$_host?sni=hy2.example',
       'insecure', '1'),
+  // Список портов пишут и прямо в адресе — такую ссылку `Uri.parse` не берёт,
+  // и раньше она разваливалась целиком. Поэтому строка тут не про параметр
+  // запроса, а про вид адреса.
+  _Row(
+      'hysteria2',
+      'ports-in-address',
+      'адрес со списком портов',
+      'hysteria2://password@198.51.100.10:443?sni=hy2.example',
+      'hysteria2://password@198.51.100.10:20000-20050,443?sni=hy2.example'),
 ];
 
 final _ssUser = base64Url.encode(utf8.encode('aes-256-gcm:password'));
@@ -463,9 +472,6 @@ const _gapsMihomo = <String, String>{
   'vless/ws/ed': 'G-24: ws-opts.max-early-data',
   'vless/ws/eh': 'G-24: ws-opts.early-data-header-name',
   'vless/httpupgrade/ed': 'G-24: v2ray-http-upgrade-fast-open',
-  'hysteria2/base/mport': 'G-23: ports',
-  'hysteria2/base/hop-interval': 'G-23: hop-interval',
-  'hysteria2/base/pinSHA256': 'G-23: fingerprint',
   // Двух задач ниже в QUEUE.md ещё нет — они найдены этой переписью и описаны
   // в PROGRESS.md, откуда советник заведёт их в очередь.
   'vless/h2/host': 'G-25: h2-opts.host берётся из sni, параметр host ссылки '

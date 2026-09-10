@@ -1507,6 +1507,44 @@ void main() {
       );
     });
 
+    // Перебор портов: сервер слушает диапазон и ждёт, что клиент будет по нему
+    // ходить. Список приходит двумя способами, и второй раньше ронял разбор
+    // ссылки целиком.
+    test('список портов из запроса доезжает вместе с интервалом', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'hysteria2://pwd@198.51.100.16:443?sni=hy2.example'
+        '&mport=20000-20050&hop-interval=30',
+      );
+      expect(proxy['ports'], '20000-20050');
+      expect(proxy['hop-interval'], '30');
+    });
+
+    test('список портов прямо в адресе тоже доезжает', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'hysteria2://pwd@198.51.100.16:20000-20050,443?sni=hy2.example',
+      );
+      expect(proxy['server'], '198.51.100.16');
+      // В адресе остаётся первый порт списка — как это делает и само ядро.
+      expect(proxy['port'], 20000);
+      expect(proxy['ports'], '20000-20050,443');
+      expect(proxy['sni'], 'hy2.example');
+    });
+
+    test('пин сертификата уезжает в fingerprint', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'hysteria2://pwd@198.51.100.16:443?sni=hy2.example&pinSHA256=QQ+WW/EE=',
+      );
+      expect(proxy['fingerprint'], 'QQ+WW/EE=');
+    });
+
+    test('без перебора портов полей о нём нет', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'hysteria2://pwd@198.51.100.16:443?sni=hy2.example&hop-interval=30',
+      );
+      expect(proxy.containsKey('ports'), isFalse);
+      expect(proxy.containsKey('hop-interval'), isFalse);
+    });
+
     test('hysteria:// с параметрами второй версии собирается как hysteria2', () {
       final proxy = MihomoConfigGen.buildProxy(
         'hysteria://password@198.51.100.16:443?sni=hy2.example'

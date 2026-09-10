@@ -310,6 +310,10 @@ class ConfigGeneratorV2 {
         // AEAD-ссылку разбираем как обычную: адрес, uuid и параметры лежат в
         // ней самой, и дальше её ведёт тот же путь, что и vless.
         uri = vmessConfig != null ? Uri.parse('vmess://proxy') : Uri.parse(trimmed);
+      } else if (isHysteria) {
+        // Перебор портов hysteria2 пишут прямо в адресе (`host:20000-20050`), а
+        // такой порт `Uri.parse` не берёт: раньше ссылка разваливалась целиком.
+        uri = Uri.parse(HysteriaLinkParams.splitPorts(trimmed).$1);
       } else {
         uri = Uri.parse(trimmed);
       }
@@ -361,7 +365,8 @@ class ConfigGeneratorV2 {
     } else if (scheme == 'vmess') {
       outbound = _buildVmessOutbound(uri, vmessConfig, getParam, address, port, streamSettings);
     } else if (isHysteria) {
-      outbound = _buildHysteriaOutbound(uri, getParam, address, port, streamSettings);
+      outbound = _buildHysteriaOutbound(
+          uri, trimmed, getParam, address, port, streamSettings);
     } else {
       throw ArgumentError('Unsupported protocol: $scheme');
     }
@@ -1430,6 +1435,7 @@ class ConfigGeneratorV2 {
   // hysteria / hy2
   static Map<String, dynamic> _buildHysteriaOutbound(
       Uri uri,
+      String rawLink,
       String Function(String, [String]) getParam,
       String address,
       int port,
@@ -1466,7 +1472,9 @@ class ConfigGeneratorV2 {
       return map;
     }
 
-    final hyParams = HysteriaLinkParams.fromConfig(uri.toString());
+    // Из исходной ссылки, а не из [uri]: список портов мог стоять в адресе, и
+    // при разборе его оттуда уже вынули.
+    final hyParams = HysteriaLinkParams.fromConfig(rawLink);
     final sni = getParam('sni', hyParams.sni.isNotEmpty ? hyParams.sni : address);
     // Схема `hysteria://` одна на обе версии, и без проверки первая собиралась
     // бы как вторая: конфиг не того протокола, сервер молчит, а снаружи это
