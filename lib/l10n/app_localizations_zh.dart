@@ -2190,6 +2190,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsCoreSkipPlatform => '此平台未附带 mihomo 内核，连接将改用 Xray 内核。';
 
   @override
+  String get settingsCoreSkipLinkXrayOnly => '当前服务器的链接使用了 mihomo 在该协议下没有的传输方式 —— 无论选择哪个内核，都由 Xray 运行。';
+
+  @override
+  String get settingsCoreSkipLinkMihomoOnly => '当前服务器的链接使用了 Xray 26 已移除的传输方式 —— 无论选择哪个内核，都由 mihomo 运行。';
+
+  @override
   String get settingsInternalsCores => '内核';
 
   @override

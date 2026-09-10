@@ -2197,6 +2197,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsCoreSkipPlatform => 'Ядро mihomo не поставляется на этой платформе — подключение идёт через ядро Xray.';
 
   @override
+  String get settingsCoreSkipLinkXrayOnly => 'Ссылка активного сервера — на транспорте, которого у mihomo для этого протокола нет: она исполняется на Xray при любом выборе ядра.';
+
+  @override
+  String get settingsCoreSkipLinkMihomoOnly => 'Ссылка активного сервера — на транспорте, который Xray 26 убрал: она исполняется на mihomo при любом выборе ядра.';
+
+  @override
   String get settingsInternalsCores => 'Ядра';
 
   @override

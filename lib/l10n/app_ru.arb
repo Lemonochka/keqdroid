@@ -956,6 +956,8 @@
   "settingsCoreSkipChain": "Активный сервер — цепочка: её узлы связаны через dialerProxy Xray, поэтому она идёт через libxray при любом выборе ядра.",
   "settingsCoreSkipAwg": "Активный сервер — профиль AmneziaWG: его исполняет своё ядро wg-go при любом выборе.",
   "settingsCoreSkipPlatform": "Ядро mihomo не поставляется на этой платформе — подключение идёт через ядро Xray.",
+  "settingsCoreSkipLinkXrayOnly": "Ссылка активного сервера — на транспорте, которого у mihomo для этого протокола нет: она исполняется на Xray при любом выборе ядра.",
+  "settingsCoreSkipLinkMihomoOnly": "Ссылка активного сервера — на транспорте, который Xray 26 убрал: она исполняется на mihomo при любом выборе ядра.",
   "settingsInternalsCores": "Ядра",
   "settingsInternalsGeo": "Geo-базы",
   "settingsInternalsSession": "Текущая сессия",

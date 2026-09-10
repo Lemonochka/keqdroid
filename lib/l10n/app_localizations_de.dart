@@ -2192,6 +2192,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsCoreSkipPlatform => 'Der mihomo-Kern wird für diese Plattform nicht mitgeliefert — die Verbindung läuft über den Xray-Kern.';
 
   @override
+  String get settingsCoreSkipLinkXrayOnly => 'Der Link des aktiven Servers nutzt einen Transport, für den mihomo bei diesem Protokoll keine Felder hat — er läuft unabhängig von der Kernauswahl auf Xray.';
+
+  @override
+  String get settingsCoreSkipLinkMihomoOnly => 'Der Link des aktiven Servers nutzt einen Transport, den Xray 26 entfernt hat — er läuft unabhängig von der Kernauswahl auf mihomo.';
+
+  @override
   String get settingsInternalsCores => 'Kerne';
 
   @override

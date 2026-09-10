@@ -702,6 +702,8 @@ String _coreMismatchText(AppLocalizations l10n, VpnCoreSkip skip) =>
       VpnCoreSkip.chain => l10n.settingsCoreSkipChain,
       VpnCoreSkip.amneziaWg => l10n.settingsCoreSkipAwg,
       VpnCoreSkip.clashConfig => l10n.settingsCoreSkipClash,
+      VpnCoreSkip.linkXrayOnly => l10n.settingsCoreSkipLinkXrayOnly,
+      VpnCoreSkip.linkMihomoOnly => l10n.settingsCoreSkipLinkMihomoOnly,
       VpnCoreSkip.platform => l10n.settingsCoreSkipPlatform,
     };
 

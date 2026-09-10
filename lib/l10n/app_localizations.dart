@@ -4253,6 +4253,18 @@ abstract class AppLocalizations {
   /// **'The mihomo core is not bundled for this platform, so the connection runs on the Xray core instead.'**
   String get settingsCoreSkipPlatform;
 
+  /// No description provided for @settingsCoreSkipLinkXrayOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'The active server\'s link uses a transport mihomo has no fields for in this protocol, so it runs on Xray no matter which core is selected.'**
+  String get settingsCoreSkipLinkXrayOnly;
+
+  /// No description provided for @settingsCoreSkipLinkMihomoOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'The active server\'s link uses a transport Xray 26 removed, so it runs on mihomo no matter which core is selected.'**
+  String get settingsCoreSkipLinkMihomoOnly;
+
   /// No description provided for @settingsInternalsCores.
   ///
   /// In en, this message translates to:

@@ -781,9 +781,11 @@ class MihomoConfigGen {
   static void _applyTransport(
     Map<String, dynamic> out,
     Uri uri, {
+    required String protocol,
     required String network,
     required String host,
   }) {
+    _refuseForeignTransport(protocol, network);
     switch (network) {
       // `raw` — новое имя `tcp` в xray; в ссылках встречаются оба.
       case '' || 'tcp' || 'raw':
@@ -820,6 +822,28 @@ class MihomoConfigGen {
         out['xhttp-opts'] = _xhttpOpts(uri);
       default:
         throw ArgumentError('mihomo: unsupported transport ($network)');
+    }
+  }
+
+  /// Транспорты, которых у этого протокола в mihomo нет.
+  ///
+  /// Ключи ядро не проверяет: незнакомое поле его декодер пропускает молча, а
+  /// незнакомый `network` уходит в ветку `default` и говорит с сервером голым
+  /// TCP поверх TLS (`adapter/outbound/vmess.go`, `trojan.go`). Подключение при
+  /// этом «есть», сервер не отвечает, и причину искать негде. Отказ громче.
+  ///
+  /// Такая ссылка не теряется: правило выбора ядра отдаёт её xray
+  /// (`vpn_core_support.dart`), и сюда она доходит только в обход правила.
+  static void _refuseForeignTransport(String protocol, String network) {
+    final foreign = switch ((protocol, network)) {
+      // `xhttp-opts` есть только у `VlessOption`.
+      ('vmess' || 'trojan', 'xhttp' || 'splithttp') => true,
+      // У `TrojanOption` нет ни `h2-opts`, ни `http-opts`.
+      ('trojan', 'http' || 'h2') => true,
+      _ => false,
+    };
+    if (foreign) {
+      throw ArgumentError('mihomo: $protocol over $network is xray-only');
     }
   }
 
@@ -1115,7 +1139,8 @@ class MihomoConfigGen {
       };
     }
 
-    _applyTransport(out, uri, network: _param(uri, 'type', 'tcp'), host: sni);
+    _applyTransport(out, uri,
+        protocol: 'vless', network: _param(uri, 'type', 'tcp'), host: sni);
     return out;
   }
 
@@ -1170,7 +1195,7 @@ class MihomoConfigGen {
         'extra': s('extra'),
       },
     );
-    _applyTransport(out, synthetic, network: net, host: sni);
+    _applyTransport(out, synthetic, protocol: 'vmess', network: net, host: sni);
     return out;
   }
 
@@ -1196,7 +1221,7 @@ class MihomoConfigGen {
     if (alpn != null) out['alpn'] = _alpnForTrojan(network, alpn);
     _applyCertPinning(out, uri);
 
-    _applyTransport(out, uri, network: network, host: sni);
+    _applyTransport(out, uri, protocol: 'trojan', network: network, host: sni);
     return out;
   }
 

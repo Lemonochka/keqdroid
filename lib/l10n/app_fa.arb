@@ -667,6 +667,8 @@
   "settingsCoreSkipChain": "سرور فعال یک زنجیره است: گره‌های آن با dialerProxy در Xray به هم وصل شده‌اند، پس صرف‌نظر از هستهٔ انتخاب‌شده با libxray اجرا می‌شود.",
   "settingsCoreSkipAwg": "سرور فعال یک پروفایل AmneziaWG است — صرف‌نظر از هستهٔ انتخاب‌شده با هستهٔ خودش، wg-go، اجرا می‌شود.",
   "settingsCoreSkipPlatform": "هستهٔ mihomo برای این پلتفرم ارائه نمی‌شود — اتصال از هستهٔ Xray انجام می‌شود.",
+  "settingsCoreSkipLinkXrayOnly": "لینک سرور فعال از انتقالی استفاده می‌کند که mihomo برای این پروتکل ندارد — صرف‌نظر از هستهٔ انتخاب‌شده با Xray اجرا می‌شود.",
+  "settingsCoreSkipLinkMihomoOnly": "لینک سرور فعال از انتقالی استفاده می‌کند که Xray 26 حذف کرده است — صرف‌نظر از هستهٔ انتخاب‌شده با mihomo اجرا می‌شود.",
   "settingsInternalsCores": "هسته‌ها",
   "settingsInternalsGeo": "پایگاه‌های جغرافیایی",
   "settingsInternalsSession": "نشست جاری",

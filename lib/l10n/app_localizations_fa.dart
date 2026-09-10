@@ -2192,6 +2192,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsCoreSkipPlatform => 'هستهٔ mihomo برای این پلتفرم ارائه نمی‌شود — اتصال از هستهٔ Xray انجام می‌شود.';
 
   @override
+  String get settingsCoreSkipLinkXrayOnly => 'لینک سرور فعال از انتقالی استفاده می‌کند که mihomo برای این پروتکل ندارد — صرف‌نظر از هستهٔ انتخاب‌شده با Xray اجرا می‌شود.';
+
+  @override
+  String get settingsCoreSkipLinkMihomoOnly => 'لینک سرور فعال از انتقالی استفاده می‌کند که Xray 26 حذف کرده است — صرف‌نظر از هستهٔ انتخاب‌شده با mihomo اجرا می‌شود.';
+
+  @override
   String get settingsInternalsCores => 'هسته‌ها';
 
   @override

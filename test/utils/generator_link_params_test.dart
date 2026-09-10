@@ -430,6 +430,10 @@ const _waivedMihomo = <String, String>{
   'vless/kcp/headerType': 'там же',
   'trojan/tcp-http/headerType': 'у TrojanOption нет http-opts '
       '(adapter/outbound/trojan.go), HTTP-маскировка на trojan — только xray',
+  'vmess/xhttp/path': 'xhttp-opts есть только у VlessOption; с G-03 генератор '
+      'на такую ссылку честно отказывается, а не пишет ключи в пустоту',
+  'trojan/xhttp/path': 'там же',
+  'trojan/xhttp/mode': 'там же',
   'trojan/tls/allowInsecure': 'политика, см. removed_tls_fields.dart',
   'hysteria2/base/insecure': 'то же',
 };

@@ -956,6 +956,8 @@
   "settingsCoreSkipChain": "Der aktive Server ist eine Proxy-Kette: Ihre Knoten hängen an Xrays dialerProxy, sie läuft deshalb unabhängig von der Kernauswahl über libxray.",
   "settingsCoreSkipAwg": "Der aktive Server ist ein AmneziaWG-Profil — er läuft unabhängig von der Kernauswahl über seinen eigenen Kern wg-go.",
   "settingsCoreSkipPlatform": "Der mihomo-Kern wird für diese Plattform nicht mitgeliefert — die Verbindung läuft über den Xray-Kern.",
+  "settingsCoreSkipLinkXrayOnly": "Der Link des aktiven Servers nutzt einen Transport, für den mihomo bei diesem Protokoll keine Felder hat — er läuft unabhängig von der Kernauswahl auf Xray.",
+  "settingsCoreSkipLinkMihomoOnly": "Der Link des aktiven Servers nutzt einen Transport, den Xray 26 entfernt hat — er läuft unabhängig von der Kernauswahl auf mihomo.",
   "settingsInternalsCores": "Kerne",
   "settingsInternalsGeo": "Geo-Datenbanken",
   "settingsInternalsSession": "Aktuelle Sitzung",

@@ -210,4 +210,105 @@ rules:
       }
     });
   });
+
+  // «Ссылку умеют оба» было неправдой. Оба ядра молча пропускают незнакомый
+  // ключ, поэтому неверный выбор здесь не падает, а тихо уводит трафик не тем
+  // транспортом: подключение якобы есть, сервер не отвечает. Ниже — те самые
+  // случаи, где ядро решает содержимое ссылки, а не её формат.
+  group('какое ядро берёт эту ссылку', () {
+    const both = {VpnBackend.xray, VpnBackend.mihomo};
+    const uuid = '00000000-0000-4000-8000-000000000000';
+    const ssUser = 'YWVzLTI1Ni1nY206cGFzc3dvcmQ';
+    String vmess(Map<String, String> fields) {
+      final payload = jsonEncode({
+        'v': '2',
+        'ps': 'n',
+        'add': '198.51.100.10',
+        'port': '443',
+        'id': uuid,
+        ...fields,
+      });
+      return 'vmess://${base64.encode(utf8.encode(payload))}';
+    }
+
+    test('обычную ссылку по-прежнему берут оба', () {
+      expect(backendsForLink(link), both);
+      expect(
+        backendsForLink('trojan://p@198.51.100.10:443?type=ws&security=tls'),
+        both,
+      );
+      expect(backendsForLink(vmess({'net': 'ws', 'tls': 'tls'})), both);
+      expect(backendsForLink('ss://$ssUser@198.51.100.10:8388'), both);
+    });
+
+    test('плагин shadowsocks — только mihomo', () {
+      expect(
+        backendsForLink(
+          'ss://$ssUser@198.51.100.10:8388'
+          '?plugin=obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3Dobfs.example',
+        ),
+        {VpnBackend.mihomo},
+      );
+    });
+
+    test('транспорт h2 — только mihomo: xray 26 его снёс', () {
+      expect(
+        backendsForLink('vless://$uuid@198.51.100.10:443?type=http'),
+        {VpnBackend.mihomo},
+      );
+      expect(backendsForLink(vmess({'net': 'h2'})), {VpnBackend.mihomo});
+    });
+
+    test('mKCP и чужой xhttp — только xray', () {
+      expect(
+        backendsForLink('vless://$uuid@198.51.100.10:443?type=kcp'),
+        {VpnBackend.xray},
+      );
+      expect(backendsForLink(vmess({'net': 'xhttp'})), {VpnBackend.xray});
+      expect(
+        backendsForLink('trojan://p@198.51.100.10:443?type=xhttp'),
+        {VpnBackend.xray},
+      );
+      // У VLESS xhttp есть и у mihomo — эта ссылка по-прежнему для обоих.
+      expect(
+        backendsForLink('vless://$uuid@198.51.100.10:443?type=xhttp'),
+        both,
+      );
+    });
+
+    test('нечитаемую ссылку не судим — её развернёт генератор', () {
+      expect(backendsForLink('vmess://не-base64'), both);
+      expect(backendsForLink('какая-то строка'), both);
+    });
+
+    test('выбор ядра мимо правила виден причиной, а не молчанием', () {
+      const ss = 'ss://$ssUser@198.51.100.10:8388?plugin=obfs-local%3Bobfs%3Dhttp';
+      final onXray = resolveVpnBackend(
+        config: ss,
+        preference: AppSettings.vpnCoreXray,
+        mihomoAvailable: true,
+      );
+      expect(onXray.backend, VpnBackend.mihomo);
+      expect(onXray.skip, VpnCoreSkip.linkMihomoOnly);
+
+      const kcp = 'vless://$uuid@198.51.100.10:443?type=kcp';
+      final onMihomo = resolveVpnBackend(
+        config: kcp,
+        preference: AppSettings.vpnCoreMihomo,
+        mihomoAvailable: true,
+      );
+      expect(onMihomo.backend, VpnBackend.xray);
+      expect(onMihomo.skip, VpnCoreSkip.linkXrayOnly);
+
+      // auto ничего не «пропускает» и здесь: ядро выбирал не пользователь.
+      expect(
+        resolveVpnBackend(
+          config: kcp,
+          preference: AppSettings.vpnCoreAuto,
+          mihomoAvailable: true,
+        ).skip,
+        isNull,
+      );
+    });
+  });
 }
