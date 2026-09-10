@@ -87,7 +87,8 @@
         "network": "grpc",
         "security": "tls",
         "tlsSettings": {
-          "serverName": "grpc.example"
+          "serverName": "grpc.example",
+          "fingerprint": "firefox"
         },
         "grpcSettings": {
           "serviceName": "grpcsvc"

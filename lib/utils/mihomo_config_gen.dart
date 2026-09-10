@@ -7,6 +7,7 @@ import '../tunnel/app_routing_mode.dart';
 import 'custom_clash_config.dart';
 import 'routing_entry.dart';
 import 'socks5_credentials.dart';
+import 'tls_fingerprint.dart';
 
 /// Туннель, которым владеет само ядро: wintun-адаптер на десктопе или готовый
 /// fd от VpnService на Android.
@@ -861,16 +862,13 @@ class MihomoConfigGen {
     }
     _applyXPaddingObfsDefaults(opts);
 
-    // Свои заголовки запроса ядро принимает только строками.
-    final headers = extra['headers'];
-    if (headers is Map && headers.isNotEmpty) {
-      opts['headers'] = <String, String>{
-        for (final e in headers.entries) e.key.toString(): e.value.toString(),
-      };
-    }
+    final headers = _headers(extra['headers']);
+    if (headers != null) opts['headers'] = headers;
 
     final reuse = _xmux(extra);
     if (reuse != null) opts['reuse-settings'] = reuse;
+    final download = _downloadSettings(extra['downloadSettings']);
+    if (download != null) opts['download-settings'] = download;
     return opts;
   }
 
@@ -885,9 +883,10 @@ class MihomoConfigGen {
   /// У части настроек в ссылках два написания (`sessionKey` и `sessionIDKey`):
   /// берётся первое непустое, поэтому порядок здесь значим.
   ///
-  /// Чего тут нет — того ядро не знает: `noSSEHeader`, `scMaxBufferedPosts`,
-  /// `scMaxConcurrentPosts` и `scStreamUpServerSecs` у него серверные, а не
-  /// клиентские.
+  /// `downloadSettings` — отдельное подключение, его разбирает
+  /// [_downloadSettings]. Прочего, чего тут нет, ядро не знает: `noSSEHeader`,
+  /// `scMaxBufferedPosts`, `scMaxConcurrentPosts` и `scStreamUpServerSecs` у
+  /// него серверные, а не клиентские.
   static const Map<String, String> _xhttpExtraFields = {
     'xPaddingKey': 'x-padding-key',
     'xPaddingHeader': 'x-padding-header',
@@ -972,6 +971,81 @@ class MihomoConfigGen {
     return out.isEmpty ? null : out;
   }
 
+  /// Свои заголовки запроса ядро принимает только строками.
+  static Map<String, String>? _headers(Object? raw) {
+    if (raw is! Map || raw.isEmpty) return null;
+    return {for (final e in raw.entries) e.key.toString(): e.value.toString()};
+  }
+
+  /// `downloadSettings` из `extra` → `download-settings`: данные вниз идут
+  /// отдельным подключением, часто через другой адрес.
+  ///
+  /// У xray это полное описание подключения: чего в нём нет, того нет вовсе.
+  /// mihomo незаданное берёт у основного — и скачивание уехало бы с его SNI,
+  /// `host`, REALITY и пином сертификата. Поэтому всё, от чего зависит само
+  /// подключение, пишем явно, даже пустым.
+  static Map<String, dynamic>? _downloadSettings(Object? raw) {
+    if (raw is! Map) return null;
+    Map<String, dynamic> obj(Object? v) =>
+        v is Map ? Map<String, dynamic>.from(v) : const {};
+    String str(Map<String, dynamic> m, String key) =>
+        m[key]?.toString().trim() ?? '';
+    String single(String csv) {
+      final values = _csv(csv);
+      return values.length == 1 ? values.single : '';
+    }
+
+    final ds = obj(raw);
+    final address = str(ds, 'address');
+    final security = str(ds, 'security').toLowerCase();
+    final reality = security == 'reality';
+    final isTls = reality || security == 'tls';
+    final tls = obj(ds[reality ? 'realitySettings' : 'tlsSettings']);
+    final xhttp = obj(ds['xhttpSettings']);
+    // Свой `extra` у скачивания замещает его настройки, кроме host и path.
+    final nested = obj(xhttp['extra']);
+    final shape = nested.isNotEmpty ? nested : xhttp;
+    final path = str(xhttp, 'path');
+    // Ключ REALITY у xray может лежать и в `password`, тогда главнее он.
+    final password = str(tls, 'password');
+    final publicKey = password.isNotEmpty ? password : str(tls, 'publicKey');
+
+    final out = <String, dynamic>{
+      if (address.isNotEmpty) 'server': address,
+      'port': ?int.tryParse(str(ds, 'port')),
+      'tls': isTls,
+      // Пустой host mihomo, как и xray, заменит на SNI скачивания.
+      'host': str(xhttp, 'host'),
+      'path': path.isEmpty ? '/' : path,
+      // Пустой ключ — единственный способ сказать mihomo «без REALITY».
+      'reality-opts': reality
+          ? {'public-key': publicKey, 'short-id': str(tls, 'shortId')}
+          : {'public-key': ''},
+      // Пин сертификата и имя его проверки — свои: сертификат тут другой.
+      'fingerprint': reality ? '' : single(str(tls, 'pinnedPeerCertSha256')),
+      'name-cert-verify':
+          reality ? '' : single(str(tls, 'verifyPeerCertByName')),
+    };
+    if (isTls) {
+      // Без serverName xray берёт SNI из адреса скачивания.
+      final serverName = str(tls, 'serverName');
+      final sni = serverName.isNotEmpty ? serverName : address;
+      if (sni.isNotEmpty) out['servername'] = sni;
+      final fp = str(tls, 'fingerprint');
+      out['client-fingerprint'] = fp.isNotEmpty ? fp : defaultTlsFingerprint;
+      final alpnRaw = tls['alpn'];
+      final alpn = _alpn(
+        alpnRaw is List ? alpnRaw.join(',') : alpnRaw?.toString() ?? '',
+      );
+      if (alpn != null) out['alpn'] = alpn;
+    }
+    final headers = _headers(shape['headers']);
+    if (headers != null) out['headers'] = headers;
+    final reuse = _xmux(shape);
+    if (reuse != null) out['reuse-settings'] = reuse;
+    return out;
+  }
+
   /// Переносит `vcn`/`pcs` из ссылки в поля mihomo — то же, что делает
   /// xray-генератор (`config_gen.dart`, `_tlsClientSettings`).
   ///
@@ -987,17 +1061,14 @@ class MihomoConfigGen {
   /// при нескольких значениях не пиним вовсе: имя проверяется правильное,
   /// цепочка — по системным корням.
   static void _applyCertPinning(Map<String, dynamic> out, Uri uri) {
-    List<String> values(String key) => _param(uri, key)
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-
-    final names = values('vcn');
+    final names = _csv(_param(uri, 'vcn'));
     if (names.length == 1) out['name-cert-verify'] = names.first;
-    final pins = values('pcs');
+    final pins = _csv(_param(uri, 'pcs'));
     if (pins.length == 1) out['fingerprint'] = pins.first;
   }
+
+  static List<String> _csv(String raw) =>
+      raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
 
   static Map<String, dynamic> _vless(String link) {
     final uri = _parse(link);
@@ -1029,11 +1100,8 @@ class MihomoConfigGen {
       out['tls'] = true;
       if (sni.isNotEmpty) out['servername'] = sni;
       // Пустой `client-fingerprint` mihomo трактует как «без uTLS», а не как
-      // chrome — в отличие от xray. Поэтому подставляем явно, и тот же
-      // firefox, что и xray-генератор: ссылка без отпечатка обязана вести себя
-      // одинаково на обоих ядрах, иначе смена ядра молча меняет то, чем клиент
-      // представляется серверу. Почему именно firefox — в `config_gen.dart`.
-      out['client-fingerprint'] = fp.isNotEmpty ? fp : 'firefox';
+      // chrome — в отличие от xray. Поэтому подставляем явно.
+      out['client-fingerprint'] = fp.isNotEmpty ? fp : defaultTlsFingerprint;
       final alpn = _alpn(_param(uri, 'alpn'));
       if (alpn != null) out['alpn'] = alpn;
     }
@@ -1080,7 +1148,7 @@ class MihomoConfigGen {
       out['tls'] = true;
       if (sni.isNotEmpty) out['servername'] = sni;
       final fp = s('fp');
-      out['client-fingerprint'] = fp.isNotEmpty ? fp : 'chrome';
+      out['client-fingerprint'] = fp.isNotEmpty ? fp : defaultTlsFingerprint;
       final alpn = _alpn(s('alpn'));
       if (alpn != null) out['alpn'] = alpn;
     }
@@ -1121,7 +1189,7 @@ class MihomoConfigGen {
       'password': password,
       'udp': true,
       if (sni.isNotEmpty) 'sni': sni,
-      'client-fingerprint': fp.isNotEmpty ? fp : 'chrome',
+      'client-fingerprint': fp.isNotEmpty ? fp : defaultTlsFingerprint,
     };
     final network = _param(uri, 'type', 'tcp');
     final alpn = _alpn(_param(uri, 'alpn'));

@@ -89,6 +89,7 @@
         "security": "tls",
         "tlsSettings": {
           "serverName": "ws.example",
+          "fingerprint": "firefox",
           "alpn": [
             "http/1.1"
           ]

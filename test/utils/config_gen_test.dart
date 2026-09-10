@@ -138,7 +138,7 @@ void main() {
       expect(settings2['id'], '11111111-1111-1111-1111-111111111111');
     });
 
-    test('VMess TLS omits empty fingerprint (Xray 26 TLSConfig)', () {
+    test('VMess TLS без fp получает firefox', () {
       Socks5Credentials().init('u', 'p');
       final payload = base64.encode(utf8.encode(jsonEncode({
         'v': '2',
@@ -154,7 +154,7 @@ void main() {
       final map = jsonDecode(config) as Map<String, dynamic>;
       final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
       final tls = stream['tlsSettings'] as Map<String, dynamic>;
-      expect(tls.containsKey('fingerprint'), isFalse);
+      expect(tls['fingerprint'], 'firefox');
     });
 
     test('builds VMess outbound from url-safe base64 payload', () {
@@ -397,9 +397,9 @@ void main() {
       expect(tls['serverName'], 'example.com');
     });
 
-    // Пустое поле ядро само читает как HelloChrome_Auto (`GetFingerprint("")`),
-    // так что дописывать сюда `chrome` нечего — это ровно дефолт ядра.
-    test('VLESS TLS omits fingerprint when fp not set (Xray 26)', () {
+    // Пустое поле ядро читает как Chrome (`GetFingerprint("")`), а он на наших
+    // сетях уходит в тишину, поэтому пишем свой отпечаток — как и для REALITY.
+    test('VLESS TLS без fp получает firefox', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(
         'vless://5783a3e7-e373-51cd-8642-c83782b807c5@example.com:443?encryption=none&security=tls&sni=example.com&type=tcp',
@@ -408,13 +408,37 @@ void main() {
       final map = jsonDecode(config) as Map<String, dynamic>;
       final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
       final tls = stream['tlsSettings'] as Map<String, dynamic>;
+      expect(tls['fingerprint'], 'firefox');
+    });
+
+    test('Trojan TLS без fp получает firefox', () {
+      Socks5Credentials().init('u', 'p');
+      final config = ConfigGeneratorV2.generateConfig(
+        'trojan://password@example.com:443?sni=example.com&type=tcp',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
+      final tls = stream['tlsSettings'] as Map<String, dynamic>;
+      expect(tls['fingerprint'], 'firefox');
+    });
+
+    // У hysteria рукопожатие QUIC: отпечаток ядро там не применяет, и писать
+    // его незачем.
+    test('Hysteria2 без fp отпечатка не получает', () {
+      Socks5Credentials().init('u', 'p');
+      final config = ConfigGeneratorV2.generateConfig(
+        'hy2://secret@example.com:443?sni=example.com',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final stream = ((map['outbounds'] as List).first as Map)['streamSettings'] as Map<String, dynamic>;
+      final tls = stream['tlsSettings'] as Map<String, dynamic>;
       expect(tls.containsKey('fingerprint'), isFalse);
     });
 
-    // Ссылки на reality часто приходят без `fp`, а пустое поле ядро не берёт —
-    // отпечаток в этом случае выбираем мы. Выбор не косметический: хромовский
-    // ClientHello с постквантовым ключом на российских сетях остаётся без
-    // ответа, поэтому по умолчанию firefox.
+    // Ссылки на reality часто приходят без `fp`, и отпечаток в этом случае
+    // выбираем мы (см. `defaultTlsFingerprint`).
     test('REALITY без fp получает firefox, а не chrome', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(
@@ -441,6 +465,44 @@ void main() {
           as Map<String, dynamic>;
       final reality = stream['realitySettings'] as Map<String, dynamic>;
       expect(reality['fingerprint'], 'chrome');
+    });
+
+    // Скачивание по downloadSettings — отдельное подключение со своим TLS.
+    test('downloadSettings без fp получает тот же отпечаток', () {
+      Socks5Credentials().init('u', 'p');
+      const extra = '{"downloadSettings":{"address":"dl.example","port":443,'
+          '"network":"xhttp","security":"tls",'
+          '"tlsSettings":{"serverName":"dl.example"}}}';
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@x.example:443?security=tls&type=xhttp&sni=x.example'
+        '&extra=${Uri.encodeQueryComponent(extra)}',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final stream = ((map['outbounds'] as List).first as Map)['streamSettings']
+          as Map<String, dynamic>;
+      final download = ((stream['xhttpSettings'] as Map)['extra']
+          as Map)['downloadSettings'] as Map;
+      expect(download['tlsSettings'],
+          {'serverName': 'dl.example', 'fingerprint': 'firefox'});
+    });
+
+    test('downloadSettings с fp из ссылки его и оставляет', () {
+      Socks5Credentials().init('u', 'p');
+      const extra = '{"downloadSettings":{"address":"dl.example","port":443,'
+          '"network":"xhttp","security":"reality",'
+          '"realitySettings":{"publicKey":"pk","fingerprint":"safari"}}}';
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://uuid@x.example:443?security=tls&type=xhttp&sni=x.example'
+        '&extra=${Uri.encodeQueryComponent(extra)}',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final stream = ((map['outbounds'] as List).first as Map)['streamSettings']
+          as Map<String, dynamic>;
+      final download = ((stream['xhttpSettings'] as Map)['extra']
+          as Map)['downloadSettings'] as Map;
+      expect((download['realitySettings'] as Map)['fingerprint'], 'safari');
     });
 
     test('VLESS TLS keeps the fingerprint named by the link', () {

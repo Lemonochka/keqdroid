@@ -9,10 +9,12 @@ import '../utils/hysteria_uri.dart';
 import '../utils/proxy_chain.dart';
 import '../utils/routing_entry.dart';
 import '../utils/socks5_credentials.dart';
+import '../utils/tls_fingerprint.dart';
 
-/// builds client outbound json for xray 26.x. a few quirks: no empty fingerprint
-/// (core rejects ""), never emit allowInsecure at all, echConfigList is a
-/// string not an array, and hysteria2 uses network "hysteria" not "quic".
+/// builds client outbound json for xray 26.x. a few quirks: the core reads an
+/// empty fingerprint as chrome, so we fill our own; never emit allowInsecure at
+/// all; echConfigList is a string not an array; hysteria2 uses network
+/// "hysteria" not "quic".
 class ConfigGeneratorV2 {
   static String generateConfig(
     String input,
@@ -139,8 +141,9 @@ class ConfigGeneratorV2 {
 
   /// Клиентский TLS: имена полей — как в `infra/conf` ядра.
   ///
-  /// Пустой `fingerprint` не заполняем: у ядра пустое поле и так означает
-  /// Chrome-рукопожатие, дописывать `chrome` значит повторять за ним.
+  /// Без `fp` в ссылке пишем [defaultTlsFingerprint]: пустое поле ядро читает
+  /// как Chrome. Кроме hysteria — там рукопожатие QUIC, и отпечаток ядро не
+  /// применяет.
   ///
   /// `allowInsecure` не эмитим никогда, даже когда ссылка просит. Ядро это поле
   /// снесло, и разбор конфига падает целиком: один сервер с `insecure=1` лишал
@@ -165,7 +168,11 @@ class ConfigGeneratorV2 {
       'serverName': serverName,
     };
     final fp = fingerprint.trim();
-    if (fp.isNotEmpty) tls['fingerprint'] = fp;
+    if (fp.isNotEmpty) {
+      tls['fingerprint'] = fp;
+    } else if (network != 'hysteria') {
+      tls['fingerprint'] = defaultTlsFingerprint;
+    }
     final alpn = _splitAlpn(alpnQuery);
     if (alpn != null) tls['alpn'] = _alpnForNetwork(network, alpn);
     final ech = echConfigList?.trim() ?? '';
@@ -1104,7 +1111,28 @@ class ConfigGeneratorV2 {
       extra ??= <String, dynamic>{};
       extra.putIfAbsent('xPaddingBytes', () => padding);
     }
+    final download = extra?['downloadSettings'];
+    if (download is Map<String, dynamic>) _fillDownloadFingerprint(download);
     return (extra == null || extra.isEmpty) ? null : extra;
+  }
+
+  /// Скачивание по `downloadSettings` — отдельное подключение со своим TLS, и
+  /// без отпечатка ядро представилось бы в нём Chrome. Пишем тот же
+  /// [defaultTlsFingerprint], что и основному.
+  static void _fillDownloadFingerprint(Map<String, dynamic> download) {
+    final key = switch (download['security']?.toString().toLowerCase()) {
+      'tls' => 'tlsSettings',
+      'reality' => 'realitySettings',
+      _ => null,
+    };
+    if (key == null) return;
+    final settings = download[key] is Map
+        ? Map<String, dynamic>.from(download[key] as Map)
+        : <String, dynamic>{};
+    if ((settings['fingerprint']?.toString().trim() ?? '').isEmpty) {
+      settings['fingerprint'] = defaultTlsFingerprint;
+    }
+    download[key] = settings;
   }
 
   /// client-side xhttp extras (xmux) and similar stream options.
@@ -1497,14 +1525,7 @@ class ConfigGeneratorV2 {
       final rfp = getParam('fp', '').trim();
       stream['realitySettings'] = {
         'show': false,
-        // Отпечаток обязателен: пустой xray 26 не берёт, а ссылки его часто не
-        // называют — значит выбираем мы. Не chrome: у xray он разворачивается в
-        // Chrome 133 с постквантовым ключом X25519MLKEM768, и такой ClientHello
-        // весом под 1.7 КБ на российских сетях уже ловят — сервер соединение
-        // принимает и не отвечает ни байтом. Замер на живых узлах: chrome — 0
-        // из 30 запросов, firefox — 30 из 30. У mihomo этой беды нет, он
-        // вырезает постквантовый ключ сам, а у xray такого рычага не заведено.
-        'fingerprint': rfp.isNotEmpty ? rfp : 'firefox',
+        'fingerprint': rfp.isNotEmpty ? rfp : defaultTlsFingerprint,
         'serverName': sni,
         'publicKey': getParam('pbk'),
         'shortId': getParam('sid'),

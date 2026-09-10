@@ -13,6 +13,14 @@ Map<String, dynamic> _proxy(Map<String, dynamic> config) =>
 List<String> _rules(Map<String, dynamic> config) =>
     (config['rules'] as List).cast<String>();
 
+/// `download-settings` у xhttp-ссылки [link] с таким [extra].
+Map<String, dynamic> _download(String link, String extra) =>
+    (_proxy(MihomoConfigGen.build(
+      '$link&extra=${Uri.encodeQueryComponent(extra)}',
+      const AppSettings(),
+      socksPort: 2080,
+    ))['xhttp-opts'] as Map)['download-settings'] as Map<String, dynamic>;
+
 void main() {
   setUp(() => Socks5Credentials().init('u', 'p'));
 
@@ -135,10 +143,8 @@ void main() {
     });
 
     // У mihomo пустой client-fingerprint значит «без uTLS», а не chrome, как у
-    // xray, — поэтому подставляем явно. Firefox, а не chrome: хромовский
-    // ClientHello с постквантовым ключом на российских сетях уходит в тишину
-    // (см. комментарий в `config_gen.dart`), и оба генератора держат один
-    // выбор.
+    // xray, — поэтому подставляем явно, и тот же, что xray-генератор
+    // (`defaultTlsFingerprint`).
     test('vless без fp получает firefox', () {
       final p = _proxy(MihomoConfigGen.build(
         'vless://uuid@e.example:443?type=tcp&security=tls&sni=e.example',
@@ -146,6 +152,32 @@ void main() {
         socksPort: 2080,
       ));
       expect(p['client-fingerprint'], 'firefox');
+    });
+
+    test('vmess и trojan без fp получают тот же firefox', () {
+      final vmess = base64.encode(utf8.encode(jsonEncode({
+        'v': '2',
+        'add': 'v.example',
+        'port': '443',
+        'id': 'uuid',
+        'aid': '0',
+        'net': 'tcp',
+        'tls': 'tls',
+        'sni': 'v.example',
+      })));
+      final v = _proxy(MihomoConfigGen.build(
+        'vmess://$vmess',
+        const AppSettings(),
+        socksPort: 2080,
+      ));
+      expect(v['client-fingerprint'], 'firefox');
+
+      final t = _proxy(MihomoConfigGen.build(
+        'trojan://password@t.example:443?sni=t.example&type=tcp',
+        const AppSettings(),
+        socksPort: 2080,
+      ));
+      expect(t['client-fingerprint'], 'firefox');
     });
 
     // Живая ссылка провайдера: mihomo постквантовое шифрование VLESS умеет
@@ -449,6 +481,115 @@ void main() {
         'h-max-reusable-secs': '1800',
         'h-keep-alive-period': 30,
       });
+    });
+
+    test('свои заголовки запроса из extra переносятся', () {
+      const extra = '{"headers":{"X-Token":"abc"}}';
+      final opts = _proxy(MihomoConfigGen.build(
+        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example'
+        '&extra=${Uri.encodeQueryComponent(extra)}',
+        const AppSettings(),
+        socksPort: 2080,
+      ))['xhttp-opts'] as Map;
+      expect(opts['headers'], {'X-Token': 'abc'});
+    });
+
+    // Закачка идёт REALITY напрямую, скачивание — обычным TLS через CDN.
+    // Незаданное mihomo берёт у основного подключения, так что без явных
+    // полей скачивание ушло бы с его REALITY и SNI.
+    test('downloadSettings: скачивание через CDN не наследует основное', () {
+      const extra = '{"downloadSettings":{"address":"cdn.example","port":443,'
+          '"network":"xhttp","security":"tls",'
+          '"tlsSettings":{"serverName":"front.example","alpn":["h2"]},'
+          '"xhttpSettings":{"path":"/down","host":"front.example"}}}';
+      final ds = _download(
+        'vless://uuid@x.example:443?type=xhttp&security=reality'
+        '&sni=decoy.example&pbk=publickey&sid=aabb&path=%2Fup',
+        extra,
+      );
+      expect(ds, {
+        'server': 'cdn.example',
+        'port': 443,
+        'tls': true,
+        'host': 'front.example',
+        'path': '/down',
+        'reality-opts': {'public-key': ''},
+        'fingerprint': '',
+        'name-cert-verify': '',
+        'servername': 'front.example',
+        'client-fingerprint': 'firefox',
+        'alpn': ['h2'],
+      });
+    });
+
+    test('downloadSettings: скачивание через REALITY получает свои ключи', () {
+      const extra = '{"downloadSettings":{"address":"direct.example",'
+          '"port":8443,"security":"reality","realitySettings":'
+          '{"serverName":"decoy.example","publicKey":"pk","shortId":"cd",'
+          '"fingerprint":"safari"}}}';
+      final ds = _download(
+        'vless://uuid@cdn.example:443?type=xhttp&security=tls'
+        '&sni=cdn.example&pcs=aabb',
+        extra,
+      );
+      expect(ds['reality-opts'], {'public-key': 'pk', 'short-id': 'cd'});
+      expect(ds['servername'], 'decoy.example');
+      expect(ds['client-fingerprint'], 'safari');
+      // Пин основного — к его сертификату, у скачивания сертификат чужой.
+      expect(ds['fingerprint'], '');
+      expect(ds['path'], '/');
+    });
+
+    test('downloadSettings без serverName: SNI — адрес скачивания', () {
+      const extra = '{"downloadSettings":{"address":"dl.example","port":443,'
+          '"security":"tls"}}';
+      final ds = _download(
+        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example',
+        extra,
+      );
+      expect(ds['servername'], 'dl.example');
+      expect(ds['host'], '');
+      expect(ds['client-fingerprint'], 'firefox');
+    });
+
+    // Без явных tls: false и пустого ключа mihomo унаследовал бы REALITY
+    // основного и не поднялся бы вовсе: REALITY без TLS не бывает.
+    test('downloadSettings без TLS снимает REALITY основного', () {
+      const extra =
+          '{"downloadSettings":{"address":"plain.example","port":80}}';
+      final ds = _download(
+        'vless://uuid@x.example:443?type=xhttp&security=reality'
+        '&sni=decoy.example&pbk=publickey&sid=aabb',
+        extra,
+      );
+      expect(ds['tls'], isFalse);
+      expect(ds['reality-opts'], {'public-key': ''});
+      expect(ds.containsKey('servername'), isFalse);
+    });
+
+    test('downloadSettings: свой пин скачивания переносится, если он один', () {
+      const extra = '{"downloadSettings":{"address":"dl.example","port":443,'
+          '"security":"tls","tlsSettings":{"pinnedPeerCertSha256":"ab12",'
+          '"verifyPeerCertByName":"real.example"}}}';
+      final ds = _download(
+        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example',
+        extra,
+      );
+      expect(ds['fingerprint'], 'ab12');
+      expect(ds['name-cert-verify'], 'real.example');
+    });
+
+    test('downloadSettings: заголовки и xmux скачивания — из его extra', () {
+      const extra = '{"downloadSettings":{"address":"dl.example","port":443,'
+          '"security":"tls","xhttpSettings":{"path":"/d","extra":'
+          '{"headers":{"X-Cdn":"1"},"xmux":{"maxConcurrency":"4-8"}}}}}';
+      final ds = _download(
+        'vless://uuid@x.example:443?type=xhttp&security=tls&sni=x.example',
+        extra,
+      );
+      expect(ds['path'], '/d');
+      expect(ds['headers'], {'X-Cdn': '1'});
+      expect(ds['reuse-settings'], {'max-concurrency': '4-8'});
     });
 
     test('битый extra не роняет ссылку целиком', () {
