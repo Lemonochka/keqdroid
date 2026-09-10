@@ -1715,6 +1715,8 @@ class SubscriptionService {
     final ws = nested('ws-opts');
     if (ws != null) {
       put('path', ws['path']);
+      put('ed', ws['max-early-data']);
+      put('eh', ws['early-data-header-name']);
       final headers = ws['headers'];
       if (headers is Map) {
         for (final entry in headers.entries) {
@@ -1726,6 +1728,7 @@ class SubscriptionService {
     }
     final http = nested('http-opts') ?? nested('h2-opts');
     if (http != null) {
+      put('method', http['method']);
       final path = http['path'];
       put('path', path is List && path.isNotEmpty ? path.first : path);
       final host = http['host'] ?? http['Host'];
@@ -1737,7 +1740,40 @@ class SubscriptionService {
     if (reality != null) {
       put('pbk', reality['public-key']);
       put('sid', reality['short-id']);
-      put('spx', reality['support-x25519mlkem768']);
+      // `spx` сюда не пишем: это spiderX у REALITY, а у Clash такого поля нет
+      // вовсе. Раньше в него уезжал флаг постквантового ключа
+      // (`support-x25519mlkem768`) — ядро получало мусор вместо адреса.
+    }
+    final xhttp = nested('xhttp-opts');
+    if (xhttp != null) {
+      put('path', xhttp['path']);
+      put('host', xhttp['host']);
+      put('mode', xhttp['mode']);
+    }
+    final ech = nested('ech-opts');
+    if (ech != null) put('ech', ech['config']);
+    final plugin = nested('plugin-opts');
+    if (plugin != null) {
+      // Плагин в ссылке — одна строка с точками с запятой, как в SIP002.
+      final name = text(raw['plugin']);
+      if (name.isNotEmpty) {
+        final parts = <String>[
+          name == 'obfs' ? 'obfs-local' : name,
+          if (name == 'obfs') ...[
+            if (text(plugin['mode']).isNotEmpty) 'obfs=${text(plugin['mode'])}',
+            if (text(plugin['host']).isNotEmpty)
+              'obfs-host=${text(plugin['host'])}',
+          ] else ...[
+            if (plugin['tls'] == true) 'tls',
+            if (text(plugin['mode']).isNotEmpty) 'mode=${text(plugin['mode'])}',
+            if (text(plugin['host']).isNotEmpty) 'host=${text(plugin['host'])}',
+            if (text(plugin['path']).isNotEmpty) 'path=${text(plugin['path'])}',
+          ],
+        ];
+        // Не `put`: в `plugin` уже лежит имя плагина из плоского обхода выше,
+        // а нужна вся строка целиком.
+        if (parts.length > 1) map['plugin'] = parts.join(';');
+      }
     }
 
     // Имена, под которыми те же вещи знает ссылка.
@@ -1827,7 +1863,127 @@ class SubscriptionService {
       final password = pick(['password', 'passwd', 'pass']);
       if (host.isEmpty || port <= 0 || cipher.isEmpty || password.isEmpty) return null;
       final userInfo = base64Url.encode(utf8.encode('$cipher:$password')).replaceAll('=', '');
-      return 'ss://$userInfo@$host:$port$fragment';
+      final query = <String, String>{
+        if (pick(['plugin']).isNotEmpty) 'plugin': pick(['plugin']),
+        if (pick(['udp-over-tcp']).toLowerCase() == 'true') 'uot': '1',
+        if (pick(['udp-over-tcp-version']).isNotEmpty)
+          'udp-over-tcp-version': pick(['udp-over-tcp-version']),
+      };
+      final tail = query.isEmpty
+          ? ''
+          : '?${Uri(queryParameters: query).query}';
+      return 'ss://$userInfo@$host:$port$tail$fragment';
+    }
+
+    if (type == 'ssr' || type == 'shadowsocksr') {
+      final cipher = pick(['cipher', 'method']);
+      final password = pick(['password', 'passwd', 'pass']);
+      final obfs = pick(['obfs']);
+      final ssrProtocol = pick(['protocol']);
+      if (host.isEmpty ||
+          port <= 0 ||
+          cipher.isEmpty ||
+          password.isEmpty ||
+          obfs.isEmpty ||
+          ssrProtocol.isEmpty) {
+        return null;
+      }
+      return SsrLink(
+        host: host,
+        port: port,
+        protocol: ssrProtocol,
+        method: cipher,
+        obfs: obfs,
+        password: password,
+        obfsParam: pick(['obfs-param', 'obfsparam']),
+        protocolParam: pick(['protocol-param', 'protoparam']),
+        remarks: name,
+      ).encode();
+    }
+
+    if (type == 'tuic') {
+      final uuid = pick(['uuid']);
+      final token = pick(['token']);
+      final password = pick(['password']);
+      // Пятая версия — пара, четвёртая — токен. Ни того ни другого не бывает.
+      final userInfo = uuid.isNotEmpty
+          ? '${Uri.encodeComponent(uuid)}:${Uri.encodeComponent(password)}'
+          : Uri.encodeComponent(token);
+      if (host.isEmpty || port <= 0 || (uuid.isEmpty && token.isEmpty)) {
+        return null;
+      }
+      final query = <String, String>{
+        if (pick(['sni', 'servername']).isNotEmpty)
+          'sni': pick(['sni', 'servername']),
+        if (pick(['alpn']).isNotEmpty) 'alpn': pick(['alpn']),
+        if (pick(['congestion-controller']).isNotEmpty)
+          'congestion_control': pick(['congestion-controller']),
+        if (pick(['udp-relay-mode']).isNotEmpty)
+          'udp_relay_mode': pick(['udp-relay-mode']),
+        if (pick(['disable-sni']).toLowerCase() == 'true') 'disable_sni': '1',
+      };
+      return Uri(
+        scheme: 'tuic',
+        userInfo: userInfo,
+        host: host,
+        port: port,
+        queryParameters: query.isEmpty ? null : query,
+        fragment: name.isEmpty ? null : name,
+      ).toString();
+    }
+
+    if (type == 'anytls') {
+      final password = pick(['password', 'passwd', 'pass']);
+      if (host.isEmpty || port <= 0 || password.isEmpty) return null;
+      final query = <String, String>{
+        if (pick(['sni', 'servername']).isNotEmpty)
+          'sni': pick(['sni', 'servername']),
+        if (pick(['alpn']).isNotEmpty) 'alpn': pick(['alpn']),
+        if (pick(['client-fingerprint']).isNotEmpty)
+          'fp': pick(['client-fingerprint']),
+        // У anytls пин сертификата зовётся `hpkp`, а не `pcs`.
+        if (pick(['fingerprint']).isNotEmpty) 'hpkp': pick(['fingerprint']),
+      };
+      return Uri(
+        scheme: 'anytls',
+        userInfo: password,
+        host: host,
+        port: port,
+        queryParameters: query.isEmpty ? null : query,
+        fragment: name.isEmpty ? null : name,
+      ).toString();
+    }
+
+    if (type == 'mieru') {
+      final username = pick(['username']);
+      final password = pick(['password', 'passwd', 'pass']);
+      final transport = pick(['transport']);
+      final portRange = pick(['port-range']);
+      if (host.isEmpty ||
+          username.isEmpty ||
+          transport.isEmpty ||
+          (port <= 0 && portRange.isEmpty)) {
+        return null;
+      }
+      // Порт у mieru не в адресе, а в запросе — парой с транспортом.
+      final query = <String, String>{
+        'port': portRange.isNotEmpty ? portRange : '$port',
+        'protocol': transport,
+        if (pick(['multiplexing']).isNotEmpty)
+          'multiplexing': pick(['multiplexing']),
+        if (pick(['handshake-mode']).isNotEmpty)
+          'handshake-mode': pick(['handshake-mode']),
+        if (pick(['traffic-pattern']).isNotEmpty)
+          'traffic-pattern': pick(['traffic-pattern']),
+      };
+      return Uri(
+        scheme: 'mierus',
+        userInfo: '${Uri.encodeComponent(username)}:'
+            '${Uri.encodeComponent(password)}',
+        host: host,
+        queryParameters: query,
+        fragment: name.isEmpty ? null : name,
+      ).toString();
     }
 
     // `type: hysteria` у Clash — всегда первая версия: у второй свой тип. Раньше
@@ -1854,8 +2010,13 @@ class SubscriptionService {
       if (up.isNotEmpty) query['up'] = up;
       final down = pick(['down', 'downmbps']);
       if (down.isNotEmpty) query['down'] = down;
-      final pin = pick(['pinSHA256', 'pinsha256']);
+      final pin = pick(['pinSHA256', 'pinsha256', 'fingerprint']);
       if (pin.isNotEmpty) query['pinSHA256'] = pin;
+      // Перебор портов: у Clash это `ports`, в ссылке — `mport`.
+      final ports = pick(['ports']);
+      if (ports.isNotEmpty) query['mport'] = ports;
+      final hop = pick(['hop-interval']);
+      if (hop.isNotEmpty) query['hop-interval'] = hop;
       final uri = Uri(
         scheme: scheme,
         host: host,
@@ -1885,6 +2046,18 @@ class SubscriptionService {
     if (serviceName.isNotEmpty) query['serviceName'] = serviceName;
     final mode = pick(['mode']);
     if (mode.isNotEmpty) query['mode'] = mode;
+    // `network: http` у Clash — это маскировка поверх tcp, а в ссылке она
+    // называется иначе: транспорт `tcp` плюс `headerType=http`.
+    if (network.toLowerCase() == 'http') {
+      query['type'] = 'tcp';
+      query['headerType'] = 'http';
+      final method = pick(['method']);
+      if (method.isNotEmpty) query['method'] = method;
+    }
+    final ed = pick(['ed', 'max-early-data']);
+    if (ed.isNotEmpty) query['ed'] = ed;
+    final eh = pick(['eh', 'early-data-header-name']);
+    if (eh.isNotEmpty) query['eh'] = eh;
     return query;
   }
 
@@ -1915,6 +2088,16 @@ class SubscriptionService {
     if (flow.isNotEmpty) query['flow'] = flow;
     final alpn = pick(['alpn']);
     if (alpn.isNotEmpty) query['alpn'] = alpn;
+    // `fingerprint` у Clash — пин сертификата, а не отпечаток uTLS: тот лежит
+    // в `client-fingerprint` и уехал выше.
+    final pin = pick(['fingerprint']);
+    if (pin.isNotEmpty) query['pcs'] = pin;
+    final verify = pick(['name-cert-verify']);
+    if (verify.isNotEmpty) query['vcn'] = verify;
+    // Только сам список ECH: «спроси у DNS» ссылкой не выразить — там нужен
+    // адрес резолвера, которого у узла Clash нет.
+    final ech = pick(['ech']);
+    if (ech.isNotEmpty) query['ech'] = ech;
     return query;
   }
 

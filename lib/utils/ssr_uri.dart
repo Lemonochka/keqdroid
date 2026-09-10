@@ -68,6 +68,23 @@ class SsrLink {
     );
   }
 
+  /// Обратно в ссылку — для перевода узла Clash, у которого поля лежат россыпью.
+  ///
+  /// Алфавит url-safe и без `=`: так эти ссылки и выглядят в подписках, и так
+  /// их читает [tryParse].
+  String encode() {
+    String b64(String value) =>
+        base64Url.encode(utf8.encode(value)).replaceAll('=', '');
+    final query = [
+      if (obfsParam.isNotEmpty) 'obfsparam=${b64(obfsParam)}',
+      if (protocolParam.isNotEmpty) 'protoparam=${b64(protocolParam)}',
+      if (remarks.isNotEmpty) 'remarks=${b64(remarks)}',
+    ].join('&');
+    final payload =
+        '$host:$port:$protocol:$method:$obfs:${b64(password)}/?$query';
+    return 'ssr://${b64(payload)}';
+  }
+
   /// Значения параметров без percent-декодирования: там base64, а не текст.
   static Map<String, String> _params(String query) {
     final out = <String, String>{};

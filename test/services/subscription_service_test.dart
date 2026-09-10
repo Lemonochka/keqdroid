@@ -7,6 +7,8 @@ import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/services/storage_service.dart';
 import 'package:keqdroid/services/subscription_service.dart';
+import 'package:keqdroid/utils/mieru_uri.dart';
+import 'package:keqdroid/utils/ssr_uri.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockStorageService extends Mock implements StorageService {}
@@ -417,6 +419,190 @@ rules:
       final configs = SubscriptionService.parseBodyForTest(mixed);
       expect(configs, hasLength(1));
       expect(Uri.parse(configs.single).host, 'v2.example');
+    });
+
+    // Стадия 2: узлы этих типов у Clash молча выпадали — `_proxyMapToUri`
+    // отвечал на них null, и в списке их просто не было.
+    test('узлы tuic, anytls, ssr и mieru переводятся в ссылки', () {
+      const profile = '''
+proxies:
+  - name: "T"
+    type: tuic
+    server: tuic.example
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+    password: secret
+    sni: tuic.example
+    congestion-controller: bbr
+    udp-relay-mode: quic
+  - name: "A"
+    type: anytls
+    server: anytls.example
+    port: 443
+    password: anysecret
+    sni: anytls.example
+  - name: "R"
+    type: ssr
+    server: ssr.example
+    port: 8388
+    cipher: aes-256-cfb
+    password: ssrsecret
+    obfs: tls1.2_ticket_auth
+    protocol: auth_aes128_md5
+    obfs-param: cdn.example
+  - name: "M"
+    type: mieru
+    server: mieru.example
+    port: 2999
+    transport: TCP
+    username: mieruser
+    password: mierupass
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: ["T", "A", "R", "M"]
+rules:
+  - MATCH,Proxy
+''';
+      final configs = SubscriptionService.parseBodyForTest(profile);
+      expect(configs, hasLength(4));
+
+      final tuic = Uri.parse(configs[0]);
+      expect(tuic.scheme, 'tuic');
+      expect(tuic.userInfo, '11111111-2222-3333-4444-555555555555:secret');
+      expect(tuic.queryParameters['congestion_control'], 'bbr');
+      expect(tuic.queryParameters['udp_relay_mode'], 'quic');
+
+      final anytls = Uri.parse(configs[1]);
+      expect(anytls.scheme, 'anytls');
+      expect(anytls.userInfo, 'anysecret');
+      expect(anytls.queryParameters['sni'], 'anytls.example');
+
+      final ssr = SsrLink.tryParse(configs[2])!;
+      expect(ssr.host, 'ssr.example');
+      expect(ssr.method, 'aes-256-cfb');
+      expect(ssr.obfs, 'tls1.2_ticket_auth');
+      expect(ssr.protocol, 'auth_aes128_md5');
+      expect(ssr.obfsParam, 'cdn.example');
+      expect(ssr.remarks, 'R');
+
+      final mieru = MieruLink.tryParse(configs[3])!;
+      expect(mieru.host, 'mieru.example');
+      expect(mieru.port, 2999);
+      expect(mieru.transport, 'TCP');
+      expect(mieru.username, 'mieruser');
+      expect(mieru.password, 'mierupass');
+    });
+
+    // То, что этап 1 научил понимать генераторы, обязано доезжать и через
+    // перевод из Clash: иначе тот же сервер работает ссылкой и не работает
+    // профилем.
+    test('поля из вложенных блоков доезжают в ссылку', () {
+      const profile = '''
+proxies:
+  - name: "WS"
+    type: vless
+    server: ws.example
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+    tls: true
+    servername: ws.example
+    network: ws
+    ws-opts:
+      path: /ws
+      max-early-data: 2048
+      early-data-header-name: Sec-WebSocket-Protocol
+      headers:
+        Host: cdn.example
+  - name: "MASQ"
+    type: vmess
+    server: masq.example
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+    cipher: auto
+    network: http
+    http-opts:
+      method: POST
+      path:
+        - /masq
+      headers:
+        Host:
+          - masq.example
+  - name: "PLUG"
+    type: ss
+    server: ss.example
+    port: 8388
+    cipher: aes-256-gcm
+    password: sspass
+    plugin: obfs
+    plugin-opts:
+      mode: http
+      host: cdn.example
+  - name: "HOP"
+    type: hysteria2
+    server: hop.example
+    port: 443
+    password: hoppass
+    ports: 20000-20050
+    hop-interval: 30
+    fingerprint: QQ+WW/EE=
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: ["WS", "MASQ", "PLUG", "HOP"]
+rules:
+  - MATCH,Proxy
+''';
+      final configs = SubscriptionService.parseBodyForTest(profile);
+      expect(configs, hasLength(4));
+
+      final ws = Uri.parse(configs[0]);
+      expect(ws.queryParameters['ed'], '2048');
+      expect(ws.queryParameters['eh'], 'Sec-WebSocket-Protocol');
+      expect(ws.queryParameters['host'], 'cdn.example');
+
+      // `network: http` у Clash — это маскировка поверх tcp, и в ссылке она
+      // называется иначе.
+      final masq = jsonDecode(utf8.decode(base64.decode(base64.normalize(
+        configs[1].substring('vmess://'.length),
+      )))) as Map<String, dynamic>;
+      expect(masq['net'], 'http');
+
+      final ss = Uri.parse(configs[2]);
+      expect(ss.queryParameters['plugin'],
+          'obfs-local;obfs=http;obfs-host=cdn.example');
+
+      final hop = Uri.parse(configs[3]);
+      expect(hop.queryParameters['mport'], '20000-20050');
+      expect(hop.queryParameters['hop-interval'], '30');
+      expect(hop.queryParameters['pinSHA256'], 'QQ+WW/EE=');
+    });
+
+    // `spx` — это spiderX у REALITY, а у Clash такого поля нет вовсе. Туда
+    // уезжал флаг постквантового ключа, то есть в ядро ехал мусор.
+    test('флаг постквантового ключа не выдаётся за spiderX', () {
+      const profile = '''
+proxies:
+  - name: "R"
+    type: vless
+    server: r.example
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+    tls: true
+    reality-opts:
+      public-key: aGVsbG8gd29ybGQgaGVsbG8gd29ybGQgaGVsbG8gd28
+      short-id: 0123abcd
+      support-x25519mlkem768: true
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: ["R"]
+rules:
+  - MATCH,Proxy
+''';
+      final uri = Uri.parse(SubscriptionService.parseBodyForTest(profile).single);
+      expect(uri.queryParameters['pbk'], isNotEmpty);
+      expect(uri.queryParameters.containsKey('spx'), isFalse);
     });
 
     test('профиль без разбираемых узлов остаётся конфигом целиком', () {
