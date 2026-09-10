@@ -196,6 +196,9 @@ final _rows = <_Row>[
   _row('vless', 'grpc',
       'vless://$_uuid@$_host?type=grpc&security=tls&sni=grpc.example', 'mode',
       'multi'),
+  _row('vless', 'grpc',
+      'vless://$_uuid@$_host?type=grpc&security=tls&sni=grpc.example',
+      'authority', 'auth.example'),
 
   _row('vless', 'xhttp',
       'vless://$_uuid@$_host?type=xhttp&security=tls&sni=xh.example', 'path',
@@ -308,6 +311,9 @@ final _rows = <_Row>[
   _row('trojan', 'grpc',
       'trojan://password@$_host?type=grpc&security=tls&sni=tjg.example',
       'serviceName', 'tjgrpcsvc'),
+  _row('trojan', 'grpc',
+      'trojan://password@$_host?type=grpc&security=tls&sni=tjg.example',
+      'authority', 'tjauth.example'),
   _row('trojan', 'xhttp',
       'trojan://password@$_host?type=xhttp&security=tls&sni=tjx.example',
       'path', '%2Ftjx'),
@@ -399,22 +405,6 @@ const _gapsXray = <String, String>{
   'vless/httpupgrade/ed': 'G-24: то же у HttpUpgradeConfig.Build',
   'vless/kcp/seed': 'G-12: kcpSettings не собираются вовсе',
   'vless/kcp/headerType': 'G-12: там же',
-  'vless/tcp-http/path': 'G-10: в tcpSettings.header.request пишется только '
-      'Host, путь маскировки теряется',
-  'vmess/grpc/path': 'G-10: имя gRPC-сервиса у vmess лежит в path, а читается '
-      'несуществующее поле serviceName',
-  'vmess/httpupgrade/path': 'G-10: у vmess собираются только ws и grpc',
-  'vmess/xhttp/path': 'G-10: там же',
-  'vmess/tcp-http/host': 'G-10: HTTP-маскировка у vmess не собирается',
-  'vmess/tcp-http/path': 'G-10: там же',
-  'trojan/tls/pcs': 'G-10: сборка trojan зовёт TLS без пина сертификата',
-  'trojan/tls/vcn': 'G-10: там же',
-  'trojan/xhttp/path': 'G-10: у trojan собираются только ws и grpc',
-  'trojan/xhttp/mode': 'G-10: там же',
-  'trojan/httpupgrade/path': 'G-10: там же',
-  'trojan/tcp-http/headerType': 'G-10: там же',
-  'trojan/reality/pbk': 'G-11: сборка trojan ставит security tls жёстко',
-  'trojan/reality/sid': 'G-11: там же',
   'ss/sip002/udp-over-tcp': 'G-22: читается только алиас uot',
 };
 
@@ -425,6 +415,8 @@ const _waivedMihomo = <String, String>{
   'vless/reality/pqv': 'там же нет поля постквантовой подписи',
   'vless/grpc/mode': 'GrpcOptions это только grpc-service-name и '
       'grpc-user-agent (adapter/outbound/vmess.go)',
+  'vless/grpc/authority': 'там же: authority у GrpcOptions нет',
+  'trojan/grpc/authority': 'там же',
   'vless/kcp/seed': 'у VlessOption нет mkcp-opts — ссылка целиком не для '
       'mihomo, это разводит G-03',
   'vless/kcp/headerType': 'там же',

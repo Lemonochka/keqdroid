@@ -135,6 +135,38 @@ void main() {
       return ConfigGeneratorV2.generateConfig('vmess://$vmess', _settings);
     });
 
+    _golden('vmess-httpupgrade', () {
+      // httpupgrade и HTTP-маскировка у vmess не собирались вовсе: сборка знала
+      // только ws и grpc. Заодно видно `type` — у vmess это заголовок, а не
+      // транспорт.
+      final vmess = base64.encode(utf8.encode(jsonEncode({
+        'v': '2',
+        'ps': 'vmess-hu',
+        'add': '198.51.100.26',
+        'port': '443',
+        'id': _uuid,
+        'aid': '0',
+        'net': 'httpupgrade',
+        'type': 'none',
+        'host': 'hu.example',
+        'path': '/hu',
+        'tls': 'tls',
+        'sni': 'hu.example',
+      })));
+      return ConfigGeneratorV2.generateConfig('vmess://$vmess', _settings);
+    });
+
+    _golden('trojan-xhttp', () {
+      // Тот же транспорт, что и у VLESS выше, — включая `extra`. У trojan он
+      // раньше терялся целиком, и сервер отвечал на запрос не той формы.
+      return ConfigGeneratorV2.generateConfig(
+        'trojan://password@198.51.100.27:443?type=xhttp&security=tls'
+        '&sni=tjx.example&path=%2Ftjx&mode=stream-one'
+        '&extra=%7B%22xPaddingBytes%22%3A%22100-1000%22%7D#trojanxhttp',
+        _settings,
+      );
+    });
+
     _golden('trojan-grpc', () {
       return ConfigGeneratorV2.generateConfig(
         'trojan://password@198.51.100.14:443?type=grpc&security=tls'

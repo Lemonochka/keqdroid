@@ -76,23 +76,24 @@
   "outbounds": [
     {
       "tag": "proxy",
-      "protocol": "trojan",
+      "protocol": "vmess",
       "settings": {
-        "address": "198.51.100.14",
+        "address": "198.51.100.26",
         "port": 443,
-        "password": "password",
+        "id": "00000000-0000-4000-8000-000000000000",
+        "security": "auto",
         "level": 0
       },
       "streamSettings": {
-        "network": "grpc",
+        "network": "httpupgrade",
         "security": "tls",
         "tlsSettings": {
-          "serverName": "grpc.example",
+          "serverName": "hu.example",
           "fingerprint": "firefox"
         },
-        "grpcSettings": {
-          "serviceName": "grpcsvc",
-          "multiMode": false
+        "httpupgradeSettings": {
+          "path": "/hu",
+          "host": "hu.example"
         }
       }
     },
@@ -144,7 +145,7 @@
       {
         "type": "field",
         "ip": [
-          "198.51.100.14"
+          "198.51.100.26"
         ],
         "outboundTag": "direct",
         "ruleTag": "server-ip"

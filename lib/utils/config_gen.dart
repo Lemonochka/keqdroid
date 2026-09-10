@@ -1221,7 +1221,7 @@ class ConfigGeneratorV2 {
         if (flow.isNotEmpty) 'flow': flow,
         'level': 0,
       },
-      'streamSettings': _buildStreamSettings(uri, getParam, address, streamSettings),
+      'streamSettings': _buildStreamSettings(getParam, address, streamSettings),
     };
   }
 
@@ -1248,42 +1248,45 @@ class ConfigGeneratorV2 {
         'level': 0,
         if (flow.isNotEmpty) 'flow': flow,
       },
-      'streamSettings': _buildVmessStreamSettings(vmessConfig, streamSettings),
+      'streamSettings': _buildStreamSettings(
+        _vmessStreamParams(vmessConfig),
+        address,
+        streamSettings,
+      ),
     };
   }
 
-  static Map<String, dynamic> _buildVmessStreamSettings(
-      Map<String, dynamic>? vmessConfig, Map<String, dynamic> streamSettings) {
-    final network = vmessConfig?['net']?.toString() ?? 'tcp';
-    final security = vmessConfig?['tls']?.toString() ?? 'none';
-    final sni = vmessConfig?['sni']?.toString() ?? vmessConfig?['host']?.toString() ?? '';
-
-    if (security == 'tls') {
-      streamSettings['security'] = 'tls';
-      final fp = vmessConfig?['fp']?.toString() ?? '';
-      final alpn = vmessConfig?['alpn']?.toString();
-      final ech = vmessConfig?['ech']?.toString();
-      streamSettings['tlsSettings'] = _tlsClientSettings(
-        serverName: sni.isNotEmpty ? sni : (vmessConfig?['add']?.toString() ?? ''),
-        network: network,
-        fingerprint: fp,
-        alpnQuery: alpn,
-        echConfigList: ech,
-      );
+  /// Параметры транспорта vmess-ссылки в том виде, в каком их спрашивает
+  /// [_buildStreamSettings]: у vmess они не в запросе, а полями base64-json, и
+  /// имена там свои.
+  ///
+  /// Три поля разведены руками. `type` в json — это заголовок маскировки, сам
+  /// транспорт лежит в `net`. `security` там бывает шифром vmess, а не
+  /// `tls`/`reality`: совпади имена, ссылка с `"security":"auto"` осталась бы
+  /// без TLS вовсе. Имя gRPC-сервиса v2rayN кладёт в `path` — своего поля у
+  /// него нет, и потому grpc у vmess не собирался никогда.
+  static String Function(String, [String]) _vmessStreamParams(
+      Map<String, dynamic>? cfg) {
+    String raw(String key) {
+      final value = cfg?[key];
+      if (value == null) return '';
+      // `extra` у xhttp приезжает вложенным объектом, а дальше его ждёт
+      // jsonDecode, — не `toString()` дартовой карты.
+      return (value is Map || value is List)
+          ? jsonEncode(value)
+          : value.toString();
     }
 
-    if (network == 'ws') {
-      streamSettings['wsSettings'] = {
-        'path': vmessConfig?['path']?.toString() ?? '/',
-        'headers': {'Host': vmessConfig?['host']?.toString() ?? sni},
+    return (String key, [String def = '']) {
+      final value = switch (key) {
+        'type' => raw('net'),
+        'headerType' => raw('type'),
+        'security' => raw('tls').toLowerCase() == 'tls' ? 'tls' : '',
+        'serviceName' => raw('path'),
+        _ => raw(key),
       };
-    } else if (network == 'grpc') {
-      streamSettings['grpcSettings'] = {
-        'serviceName': vmessConfig?['serviceName']?.toString() ?? '',
-      };
-    }
-
-    return streamSettings;
+      return value.isEmpty ? def : value;
+    };
   }
 
   // trojan
@@ -1299,30 +1302,23 @@ class ConfigGeneratorV2 {
 
     final email = getParam('email');
 
-    final type = getParam('type', 'tcp');
-    final sni = getParam('sni', address);
-    final fingerprint = getParam('fp', '');
-
-    streamSettings['network'] = type;
-    streamSettings['security'] = 'tls';
-    streamSettings['tlsSettings'] = _tlsClientSettings(
-      serverName: sni,
-      network: type,
-      fingerprint: fingerprint,
-      alpnQuery: getParam('alpn'),
-      echConfigList: getParam('ech'),
-    );
-
-    if (type == 'ws') {
-      streamSettings['wsSettings'] = {
-        'path': getParam('path', '/'),
-        'headers': {'Host': getParam('host', sni)},
-      };
-    } else if (type == 'grpc') {
-      streamSettings['grpcSettings'] = {
-        'serviceName': getParam('serviceName'),
-      };
+    // Trojan без TLS не бывает: протокол — это TLS плюс пароль. Ссылки при этом
+    // сплошь пишут `security=none` копипастой, поэтому чужое значение здесь не
+    // слушаем — кроме REALITY, ради которого поле и читается.
+    String stream(String key, [String def = '']) {
+      if (key != 'security') return getParam(key, def);
+      return getParam('security').trim().toLowerCase() == 'reality'
+          ? 'reality'
+          : 'tls';
     }
+
+    _buildStreamSettings(
+      stream,
+      address,
+      streamSettings,
+      defaultSecurity: 'tls',
+      sniFallback: address,
+    );
 
     return {
       'tag': 'proxy',
@@ -1501,11 +1497,27 @@ class ConfigGeneratorV2 {
   }
 
   // stream settings
+  /// Транспорт и TLS из ссылки — один сборщик на vless, vmess и trojan.
+  ///
+  /// Сборок было три, и две из них умели только ws и grpc: сервер VMess или
+  /// Trojan на httpupgrade, xhttp или с HTTP-маскировкой собирался без своих
+  /// настроек и молча не подключался.
+  ///
+  /// Различия протоколов остались параметрами, потому что они настоящие.
+  /// [defaultSecurity] — для trojan: TLS там подразумевается самим протоколом,
+  /// и ссылки сплошь не пишут `security`. [sniFallback] — тоже для него: имя
+  /// берётся от адреса, а не от `host`, как и в mihomo-генераторе, иначе смена
+  /// ядра меняла бы имя в ClientHello.
   static Map<String, dynamic> _buildStreamSettings(
-      Uri uri, String Function(String, [String]) getParam, String address, Map<String, dynamic> existing) {
+    String Function(String, [String]) getParam,
+    String address,
+    Map<String, dynamic> existing, {
+    String defaultSecurity = 'none',
+    String? sniFallback,
+  }) {
     final type = getParam('type', 'tcp');
-    final security = getParam('security', 'none');
-    final sni = getParam('sni', getParam('host', address));
+    final security = getParam('security', defaultSecurity);
+    final sni = getParam('sni', sniFallback ?? getParam('host', address));
 
     final stream = existing;
     stream['network'] = type;
@@ -1542,7 +1554,14 @@ class ConfigGeneratorV2 {
       case 'ws':
         stream['wsSettings'] = {'path': getParam('path', '/'), 'headers': {'Host': getParam('host', sni)}};
       case 'grpc':
-        stream['grpcSettings'] = {'serviceName': getParam('serviceName'), 'multiMode': getParam('mode') == 'multi'};
+        // `authority` — то имя, под которым запрос уезжает в HTTP/2; без него
+        // ядро подставляет адрес узла, и сервер за общим фронтом отвечает 404.
+        final authority = getParam('authority');
+        stream['grpcSettings'] = {
+          'serviceName': getParam('serviceName'),
+          'multiMode': getParam('mode') == 'multi',
+          if (authority.isNotEmpty) 'authority': authority,
+        };
       case 'xhttp': case 'splithttp':
         final host = getParam('host');
         stream['xhttpSettings'] = {
@@ -1560,7 +1579,19 @@ class ConfigGeneratorV2 {
       // mihomo-генератор давно считает их одним транспортом.
       case 'tcp' || 'raw':
         if (getParam('headerType') == 'http') {
-          stream['tcpSettings'] = {'header': {'type': 'http', 'request': {'headers': {'Host': [getParam('host', address)]}}}};
+          // Путь маскировки ядро берёт списком (`AuthenticatorRequest.Path`).
+          // Пустым его не пишем: у ядра по умолчанию `/`, а пустой список оно
+          // поняло бы как запрос без пути вовсе.
+          final path = getParam('path');
+          stream['tcpSettings'] = {
+            'header': {
+              'type': 'http',
+              'request': {
+                if (path.isNotEmpty) 'path': [path],
+                'headers': {'Host': [getParam('host', address)]},
+              },
+            },
+          };
         }
     }
     return stream;
