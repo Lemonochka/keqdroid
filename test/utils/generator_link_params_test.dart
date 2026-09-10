@@ -416,6 +416,12 @@ const _waivedXray = <String, String>{
   'vless/tcp/packetEncoding':
       'у VLESS-аутбаунда xray такого поля нет (infra/conf/vless.go), XUDP '
           'включает мультиплексор, а не ссылка',
+  'vless/h2/path': 'транспорт HTTP/2 xray 26 снёс целиком '
+      '(TransportProtocol.Build отвечает PrintRemovedFeatureError и роняет весь '
+      'конфиг); такую ссылку правило выбора ядра отдаёт mihomo',
+  'vless/h2/host': 'там же',
+  'vmess/h2/path': 'там же',
+  'vmess/h2/host': 'там же',
   'vless/ws/eh': 'имя заголовка ранних данных у xray жёстко '
       'Sec-WebSocket-Protocol (transport/internet/websocket/dialer.go), '
       'задать своё нечем',
@@ -434,12 +440,6 @@ const _waivedXray = <String, String>{
 
 /// Известные дыры xray-пути. Задача блока чинит и вычёркивает свои строки.
 const _gapsXray = <String, String>{
-  'vless/h2/path': 'G-03: транспорт h2 xray 26 снёс целиком '
-      '(TransportProtocol.Build → PrintRemovedFeatureError), такая ссылка '
-      'только для mihomo',
-  'vless/h2/host': 'G-03: там же',
-  'vmess/h2/path': 'G-03: там же',
-  'vmess/h2/host': 'G-03: там же',
   'vless/kcp/seed': 'G-12: kcpSettings не собираются вовсе',
   'vless/kcp/headerType': 'G-12: там же',
 };
@@ -466,11 +466,8 @@ const _waivedMihomo = <String, String>{
 
 /// Известные дыры mihomo-пути.
 const _gapsMihomo = <String, String>{
-  // Двух задач ниже в QUEUE.md ещё нет — они найдены этой переписью и описаны
-  // в PROGRESS.md, откуда советник заведёт их в очередь.
-  'vless/h2/host': 'G-25: h2-opts.host берётся из sni, параметр host ссылки '
-      'не читается',
-  'vmess/h2/host': 'G-25: там же',
+  // Задачи ниже в QUEUE.md нет — она найдена этой переписью и описана
+  // в PROGRESS.md, откуда советник заведёт её в очередь.
   'vless/tcp/packetEncoding': 'G-26: packet-encoding, xudp и packet-addr у '
       'VlessOption есть, ссылка их не доносит',
 };

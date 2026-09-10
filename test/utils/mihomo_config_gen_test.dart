@@ -1453,6 +1453,26 @@ void main() {
 
   // Ранние данные: первый пакет уезжает вместе с рукопожатием WebSocket. На
   // подключение не влияет, на скорость первого запроса — да.
+  // У h2 имя в заголовке запроса бывает не тем, что в сертификате: сервер за
+  // общим фронтом различает узлы именно по нему.
+  test('h2: host берётся из ссылки, а не из sni', () {
+    final proxy = MihomoConfigGen.buildProxy(
+      'vless://uuid@198.51.100.10:443?type=http&security=tls'
+      '&sni=front.example&host=node.example&path=%2Fh2',
+    );
+    final opts = proxy['h2-opts'] as Map<String, dynamic>;
+    expect(opts['host'], ['node.example']);
+    expect(opts['path'], '/h2');
+    expect(proxy['servername'], 'front.example');
+  });
+
+  test('h2 без host: имя берётся от sni, как и раньше', () {
+    final proxy = MihomoConfigGen.buildProxy(
+      'vless://uuid@198.51.100.10:443?type=http&security=tls&sni=front.example',
+    );
+    expect((proxy['h2-opts'] as Map)['host'], ['front.example']);
+  });
+
   group('ранние данные WebSocket', () {
     test('ed и eh из параметров ссылки', () {
       final proxy = MihomoConfigGen.buildProxy(

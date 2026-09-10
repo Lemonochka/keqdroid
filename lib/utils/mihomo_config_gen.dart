@@ -882,10 +882,13 @@ class MihomoConfigGen {
           'grpc-service-name': _param(uri, 'serviceName'),
         };
       case 'http' || 'h2':
+        // `host` ссылки, а не sni: у h2 это имя в заголовке запроса, и оно
+        // бывает другим — сервер за общим фронтом различает узлы по нему.
+        final h2Host = _param(uri, 'host', host);
         out['network'] = 'h2';
         out['h2-opts'] = {
           'path': _param(uri, 'path', '/'),
-          if (host.isNotEmpty) 'host': [host],
+          if (h2Host.isNotEmpty) 'host': [h2Host],
         };
       case 'httpupgrade':
         final upgrade = _earlyData(uri, _param(uri, 'path', '/'));
