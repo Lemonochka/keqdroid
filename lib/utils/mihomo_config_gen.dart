@@ -932,6 +932,21 @@ class MihomoConfigGen {
     }
   }
 
+  /// Как ссылка просит упаковывать UDP — `packetEncoding` из стандарта #716.
+  ///
+  /// Три значения (`handleVShareLink` в `common/convert/v.go`): `none` — как
+  /// есть, `packet` — адрес в каждом пакете, всё прочее — xudp. Ссылка без
+  /// параметра оставлена как была, хотя ядро в своём разборе включает там
+  /// xudp: менять упаковку UDP всем подряд — отдельное решение, а не побочный
+  /// эффект правки про параметр, которого в ссылке нет.
+  static Map<String, dynamic> _packetEncoding(String raw) =>
+      switch (raw.trim().toLowerCase()) {
+        '' => const {},
+        'none' => const {},
+        'packet' => const {'packet-addr': true},
+        _ => const {'xudp': true},
+      };
+
   /// Ранние данные WebSocket: первый пакет уезжает вместе с рукопожатием.
   ///
   /// Размер ссылка называет двумя способами: параметром `ed` или тем же `ed`
@@ -1252,6 +1267,7 @@ class MihomoConfigGen {
       'port': uri.port,
       'uuid': uuid,
       'udp': true,
+      ..._packetEncoding(_param(uri, 'packetEncoding')),
       ...protocolFields,
     };
 

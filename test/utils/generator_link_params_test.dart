@@ -465,12 +465,7 @@ const _waivedMihomo = <String, String>{
 };
 
 /// Известные дыры mihomo-пути.
-const _gapsMihomo = <String, String>{
-  // Задачи ниже в QUEUE.md нет — она найдена этой переписью и описана
-  // в PROGRESS.md, откуда советник заведёт её в очередь.
-  'vless/tcp/packetEncoding': 'G-26: packet-encoding, xudp и packet-addr у '
-      'VlessOption есть, ссылка их не доносит',
-};
+const _gapsMihomo = <String, String>{};
 
 void main() {
   setUp(() => Socks5Credentials().init('u', 'p'));

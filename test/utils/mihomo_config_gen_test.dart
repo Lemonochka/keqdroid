@@ -1453,6 +1453,33 @@ void main() {
 
   // Ранние данные: первый пакет уезжает вместе с рукопожатием WebSocket. На
   // подключение не влияет, на скорость первого запроса — да.
+  // Как упаковывать UDP: `none` — как есть, `packet` — адрес в каждом пакете,
+  // всё прочее — xudp. Ссылку без параметра намеренно не трогаем.
+  group('packetEncoding', () {
+    Map<String, dynamic> proxyFor(String value) => MihomoConfigGen.buildProxy(
+          'vless://uuid@198.51.100.10:443?type=tcp&security=none'
+          '${value.isEmpty ? '' : '&packetEncoding=$value'}',
+        );
+
+    test('xudp и packet-addr', () {
+      expect(proxyFor('xudp')['xudp'], isTrue);
+      expect(proxyFor('packet')['packet-addr'], isTrue);
+      expect(proxyFor('packet').containsKey('xudp'), isFalse);
+    });
+
+    test('none не включает ничего', () {
+      final proxy = proxyFor('none');
+      expect(proxy.containsKey('xudp'), isFalse);
+      expect(proxy.containsKey('packet-addr'), isFalse);
+    });
+
+    test('без параметра упаковка не меняется', () {
+      final proxy = proxyFor('');
+      expect(proxy.containsKey('xudp'), isFalse);
+      expect(proxy.containsKey('packet-addr'), isFalse);
+    });
+  });
+
   // У h2 имя в заголовке запроса бывает не тем, что в сертификате: сервер за
   // общим фронтом различает узлы именно по нему.
   test('h2: host берётся из ссылки, а не из sni', () {
