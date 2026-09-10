@@ -423,6 +423,25 @@ void main() {
       expect(tls['fingerprint'], 'firefox');
     });
 
+    // Строку постквантового шифрования разбирает само ядро, и разбирает её по
+    // длинам: ключ обязан декодироваться в 32 или 1184 байта, а всё короткое
+    // между точками считается паддингом. Любая правка строки по пути — и ядро
+    // отвечает «unsupported encryption», поэтому переносим дословно.
+    test('VLESS переносит строку encryption дословно', () {
+      Socks5Credentials().init('u', 'p');
+      const encryption =
+          'mlkem768x25519plus.xorpub.0rtt.TQWG00S9SOQfvBRqDpXGzHBAagxTkExzd';
+      final config = ConfigGeneratorV2.generateConfig(
+        'vless://5783a3e7-e373-51cd-8642-c83782b807c5@example.com:443'
+        '?encryption=$encryption&security=tls&sni=example.com&type=tcp',
+        settings,
+      );
+      final map = jsonDecode(config) as Map<String, dynamic>;
+      final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
+      final vless = outbound['settings'] as Map<String, dynamic>;
+      expect(vless['encryption'], encryption);
+    });
+
     test('builds Trojan outbound with WebSocket', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(

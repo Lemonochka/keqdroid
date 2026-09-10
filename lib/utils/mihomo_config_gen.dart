@@ -930,6 +930,11 @@ class MihomoConfigGen {
     final sni = _param(uri, 'sni', _param(uri, 'host', uri.host));
     final flow = _param(uri, 'flow');
     final fp = _param(uri, 'fp');
+    // Постквантовое шифрование VLESS (`mlkem768x25519plus...`). Без него ядро
+    // подключается открытым VLESS: сервер ждёт mlkem-рукопожатие, не получает
+    // его и рвёт соединение молча, в логе остаётся только обрыв. Пустую строку
+    // и `none` ядро понимает одинаково, поэтому их не пишем вовсе.
+    final encryption = _param(uri, 'encryption').trim();
 
     final out = <String, dynamic>{
       'name': proxyName,
@@ -939,6 +944,7 @@ class MihomoConfigGen {
       'uuid': uuid,
       'udp': true,
       if (flow.isNotEmpty) 'flow': flow,
+      if (encryption.isNotEmpty && encryption != 'none') 'encryption': encryption,
     };
 
     if (security == 'tls' || security == 'reality') {

@@ -145,6 +145,31 @@ void main() {
       expect(p['client-fingerprint'], 'chrome');
     });
 
+    // Живая ссылка провайдера: mihomo постквантовое шифрование VLESS умеет
+    // (`encryption` в proxies, разбор тот же, что у xray), но пока мы это поле
+    // выбрасывали, ядро подключалось открытым VLESS и сервер рвал соединение.
+    test('vless переносит постквантовое шифрование', () {
+      const encryption =
+          'mlkem768x25519plus.xorpub.0rtt.TQWG00S9SOQfvBRqDpXGzHBAagxTkExzd';
+      final p = _proxy(MihomoConfigGen.build(
+        'vless://uuid@e.example:443?type=tcp&security=tls&sni=e.example'
+        '&encryption=$encryption',
+        const AppSettings(),
+        socksPort: 2080,
+      ));
+      expect(p['encryption'], encryption);
+    });
+
+    test('encryption=none в конфиг не попадает', () {
+      final p = _proxy(MihomoConfigGen.build(
+        'vless://uuid@e.example:443?type=tcp&security=tls&sni=e.example'
+        '&encryption=none',
+        const AppSettings(),
+        socksPort: 2080,
+      ));
+      expect(p.containsKey('encryption'), isFalse);
+    });
+
     test('vless + ws переносит path и Host', () {
       final p = _proxy(MihomoConfigGen.build(
         'vless://uuid@w.example:443?type=ws&security=tls&sni=w.example'
