@@ -40,6 +40,9 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 const _uuid = '00000000-0000-4000-8000-000000000000';
 const _host = '198.51.100.10:443';
 
+/// У mieru порт лежит в запросе, поэтому адрес — без порта.
+const _mieruHost = '198.51.100.33';
+
 /// Синтетика: настоящих ключей и паролей ниже быть не должно.
 const _pcs = 'YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=';
 const _ech = 'AEX+DQBBzQAgACD0RY0ZGF9nQqPMhTPT8xzDLoyPTgUYNGyLGUqPXGEXCg==';
@@ -412,6 +415,23 @@ final _rows = <_Row>[
   _Row('ssr', 'base', 'obfsparam', _ssr(), _ssr(obfsParam: 'cdn.example')),
   _Row('ssr', 'base', 'protoparam', _ssr(), _ssr(protoParam: '32')),
 
+  // ───────────────────────────── Mieru ─────────────────────────────
+  // Порт и транспорт у mieru — пара повторяющихся параметров запроса, а не
+  // часть адреса; отсюда и `?port=` в базовых ссылках.
+  _Row('mieru', 'base', 'транспорт', 'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+      'mierus://u:p@$_mieruHost?port=2999&protocol=UDP'),
+  _Row('mieru', 'base', 'порт', 'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+      'mierus://u:p@$_mieruHost?port=3000&protocol=TCP'),
+  _Row('mieru', 'base', 'диапазон портов',
+      'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+      'mierus://u:p@$_mieruHost?port=2999-3010&protocol=TCP'),
+  _row('mieru', 'base', 'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+      'multiplexing', 'MULTIPLEXING_HIGH'),
+  _row('mieru', 'base', 'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+      'handshake-mode', 'standard'),
+  _row('mieru', 'base', 'mierus://u:p@$_mieruHost?port=2999&protocol=TCP',
+      'traffic-pattern', 'chatty'),
+
   // ─────────────────────────── Hysteria2 ───────────────────────────
   _row('hysteria2', 'base', 'hysteria2://password@$_host?x=1', 'sni',
       'hy2.example'),
@@ -510,6 +530,13 @@ const _waivedXray = <String, String>{
   'anytls/base/hpkp': 'там же',
   'anytls/base/ech': 'там же',
   'anytls/base/insecure': 'там же',
+  'mieru/base/транспорт': 'Mieru у xray нет вовсе — своего аутбаунда под него '
+      'в ядре не заведено; ссылку целиком разводит правило выбора ядра',
+  'mieru/base/порт': 'там же',
+  'mieru/base/диапазон портов': 'там же',
+  'mieru/base/multiplexing': 'там же',
+  'mieru/base/handshake-mode': 'там же',
+  'mieru/base/traffic-pattern': 'там же',
   'ssr/base/метод': 'SSR у xray нет вовсе — своего аутбаунда под него в ядре '
       'не заведено; ссылку целиком разводит правило выбора ядра',
   'ssr/base/протокол': 'там же',

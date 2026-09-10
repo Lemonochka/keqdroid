@@ -1724,6 +1724,41 @@ void main() {
     });
   });
 
+  // У mieru порт и транспорт — пара параметров запроса, а не часть адреса.
+  group('Mieru', () {
+    test('собирается со всеми полями', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'mierus://user:secret@198.51.100.33?port=2999&protocol=TCP'
+        '&multiplexing=MULTIPLEXING_HIGH&handshake-mode=standard'
+        '&traffic-pattern=chatty',
+      );
+      expect(proxy['type'], 'mieru');
+      expect(proxy['server'], '198.51.100.33');
+      expect(proxy['port'], 2999);
+      expect(proxy['transport'], 'TCP');
+      expect(proxy['username'], 'user');
+      expect(proxy['password'], 'secret');
+      expect(proxy['multiplexing'], 'MULTIPLEXING_HIGH');
+      expect(proxy['handshake-mode'], 'standard');
+      expect(proxy['traffic-pattern'], 'chatty');
+    });
+
+    test('диапазон портов уезжает в своё поле', () {
+      final proxy = MihomoConfigGen.buildProxy(
+        'mierus://user:secret@198.51.100.33?port=2999-3010&protocol=TCP',
+      );
+      expect(proxy['port-range'], '2999-3010');
+      expect(proxy.containsKey('port'), isFalse);
+    });
+
+    test('без пары порт/протокол — отказ', () {
+      expect(
+        () => MihomoConfigGen.buildProxy('mierus://user:secret@198.51.100.33'),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+  });
+
   group('hysteria', () {
     // Схема одна на обе версии. Первую не собираем вовсе, вторую под этой же
     // схемой терять нельзя — панели со старым шаблоном выдают именно её.

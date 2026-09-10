@@ -6,6 +6,7 @@ import '../models/xray_core_settings.dart';
 import '../tunnel/app_routing_mode.dart';
 import 'custom_clash_config.dart';
 import 'hysteria_uri.dart';
+import 'mieru_uri.dart';
 import 'routing_entry.dart';
 import 'socks5_credentials.dart';
 import 'ssr_uri.dart';
@@ -746,6 +747,7 @@ class MihomoConfigGen {
     if (lower.startsWith('tuic://')) return _tuic(link);
     if (lower.startsWith('anytls://')) return _anytls(link);
     if (lower.startsWith('ssr://')) return _ssr(link);
+    if (lower.startsWith('mierus://')) return _mieru(link);
     // `hysteria://` носят обе версии. Первую не поддерживаем — она устарела, и
     // собранная как вторая даёт молчащий сервер; всё остальное под этой схемой
     // это hysteria2 у панели со старым шаблоном, и терять его нельзя.
@@ -1704,6 +1706,34 @@ class MihomoConfigGen {
       if (parsed.obfsParam.isNotEmpty) 'obfs-param': parsed.obfsParam,
       if (parsed.protocolParam.isNotEmpty)
         'protocol-param': parsed.protocolParam,
+    };
+  }
+
+  /// Mieru. Ссылка описывает порт и транспорт парой параметров, и таких пар в
+  /// ней может быть несколько — тогда это несколько серверов, и разложены они
+  /// уже на импорте (`MieruLink.expand`). Сюда доходит ссылка с одной парой.
+  static Map<String, dynamic> _mieru(String link) {
+    final parsed = MieruLink.tryParse(link);
+    if (parsed == null) {
+      throw ArgumentError('mihomo: invalid Mieru link (port/protocol pair)');
+    }
+    return <String, dynamic>{
+      'name': proxyName,
+      'type': 'mieru',
+      'server': parsed.host,
+      if (parsed.port != null) 'port': parsed.port,
+      if (parsed.portRange.isNotEmpty) 'port-range': parsed.portRange,
+      // `transport`, `username` и `password` у ядра обязательны: их отсутствие
+      // оно считает ошибкой конфига, а не значением по умолчанию.
+      'transport': parsed.transport,
+      'username': parsed.username,
+      'password': parsed.password,
+      'udp': true,
+      if (parsed.multiplexing.isNotEmpty) 'multiplexing': parsed.multiplexing,
+      if (parsed.handshakeMode.isNotEmpty)
+        'handshake-mode': parsed.handshakeMode,
+      if (parsed.trafficPattern.isNotEmpty)
+        'traffic-pattern': parsed.trafficPattern,
     };
   }
 

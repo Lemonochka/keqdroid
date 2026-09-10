@@ -26,6 +26,7 @@ Color serverProtocolColor(BuildContext context, String protocol) =>
       'anytls' => AppTheme.harmonize(context, const Color(0xFF5E35B1)),
       // Родня shadowsocks, оттенок оттуда же.
       'ssr' => AppTheme.harmonize(context, const Color(0xFF2E7D32)),
+      'mieru' => AppTheme.harmonize(context, const Color(0xFFEF6C00)),
       // Готовый конфиг ядра: протокол внутри может быть любым, поэтому цвет
       // отдельный — «это конфиг целиком, со своим роутингом».
       'custom' => AppTheme.harmonize(context, const Color(0xFFF9A825)),

@@ -160,12 +160,22 @@ class ServersNotifier extends Notifier<ServersState> {
     final config = normalizeImportedConfig(rawConfig);
     final validationError = validateServerConfig(config);
     if (validationError != null) throw Exception(validationError);
-    if (state.servers.any((s) => s.config == config)) {
-      throw Exception('This server is already added');
+
+    // Ссылка mieru описывает столько серверов, сколько в ней пар порт/протокол.
+    // Остальные форматы разворачиваются сами в себя, и путь для них прежний.
+    final configs = MieruLink.expand(config);
+    final fresh = configs
+        .where((c) => !state.servers.any((s) => s.config == c))
+        .toList();
+    if (fresh.isEmpty) throw Exception('This server is already added');
+
+    final added = <ServerItem>[];
+    for (final c in fresh) {
+      final server = ServerItem.fromRaw(c);
+      await ref.read(storageProvider).upsertServer(server);
+      added.add(server);
     }
-    final server = ServerItem.fromRaw(config);
-    await ref.read(storageProvider).upsertServer(server);
-    state = state.copyWith(servers: [...state.servers, server]);
+    state = state.copyWith(servers: [...state.servers, ...added]);
   }
 
   /// Пользовательское имя сервера; null/пусто — сброс к имени из конфига.
@@ -302,8 +312,9 @@ class ServersNotifier extends Notifier<ServersState> {
         lower.startsWith('hysteria2://') ||
         lower.startsWith('hy2://') ||
         lower.startsWith('tuic://') ||
-        lower.startsWith('anytls://'))) {
-      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic://, anytls://, wg://, an Xray JSON config, a Clash YAML config or an AmneziaWG .conf';
+        lower.startsWith('anytls://') ||
+        lower.startsWith('mierus://'))) {
+      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic://, anytls://, mierus://, wg://, an Xray JSON config, a Clash YAML config or an AmneziaWG .conf';
     }
 
     // Схема `hysteria://` носит обе версии, и различить их можно только по

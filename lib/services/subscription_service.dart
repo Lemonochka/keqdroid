@@ -17,6 +17,7 @@ import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
 import '../utils/hysteria_uri.dart';
 import '../utils/identity_presets.dart';
+import '../utils/mieru_uri.dart';
 import '../utils/ssr_uri.dart';
 import '../core/exceptions.dart';
 
@@ -1293,7 +1294,7 @@ class SubscriptionService {
       }
     }
     throw const FormatException(
-      'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic:// or anytls://',
+      'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic://, anytls:// or mierus://',
     );
   }
 
@@ -2181,7 +2182,7 @@ class SubscriptionService {
     // иначе `wss://host` из JS/HTML панелей матчился как `ss://host`, плодя
     // фантомные shadowsocks-сервера при HTML-краулинге подписки.
     final matches = RegExp(
-      r'''(?<![A-Za-z0-9+.\-])(?:vless|vmess|trojan|ss|ssr|hysteria2?|hy2|tuic|anytls)://(?:(?!(?:vless|vmess|trojan|ssr|ss|hysteria2?|hy2|tuic|anytls)://)[^\r\n<>"'])+''',
+      r'''(?<![A-Za-z0-9+.\-])(?:vless|vmess|trojan|ss|ssr|hysteria2?|hy2|tuic|anytls|mierus)://(?:(?!(?:vless|vmess|trojan|ssr|ss|hysteria2?|hy2|tuic|anytls|mierus)://)[^\r\n<>"'])+''',
       caseSensitive: false,
     ).allMatches(text);
     final links = <String>[];
@@ -2193,7 +2194,9 @@ class SubscriptionService {
           .replaceAll('&#38;', '&')
           .replaceAll('\\/', '/');
       if (_isValidConfig(normalized)) {
-        links.add(normalized);
+        // Одна ссылка mieru описывает столько серверов, сколько в ней пар
+        // порт/протокол; остальные форматы разворачиваются сами в себя.
+        links.addAll(MieruLink.expand(normalized));
       }
     }
     return links.toSet().toList();
@@ -2227,7 +2230,8 @@ class SubscriptionService {
         lower.startsWith('hysteria2://') ||
         lower.startsWith('hy2://') ||
         lower.startsWith('tuic://') ||
-        lower.startsWith('anytls://');
+        lower.startsWith('anytls://') ||
+        lower.startsWith('mierus://');
   }
 
   static bool _isMetadataConfig(String raw) {

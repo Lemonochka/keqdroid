@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../utils/awg_profile.dart';
 import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
+import '../utils/mieru_uri.dart';
 import '../utils/proxy_chain.dart';
 import '../utils/ssr_uri.dart';
 import 'server_flag.dart';
@@ -340,6 +341,7 @@ class ServerItem {
       // У SSR адрес внутри base64, а не там, где его ищет `Uri`: без разбора
       // в списке был бы виден кусок base64, а пинг мерил бы несуществующий хост.
       if (protocol == 'ssr') return SsrLink.tryParse(config)?.host ?? '';
+      if (protocol == 'mieru') return MieruLink.tryParse(config)?.host ?? '';
       return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).host;
     } catch (_) {
       return '';
@@ -369,6 +371,8 @@ class ServerItem {
       if (protocol == 'vmess') {
         return int.tryParse((_vmessPayload()?['port'] ?? '').toString()) ?? 0;
       }
+      // Порт mieru лежит в запросе, а не в адресе; диапазоном — тогда 0.
+      if (protocol == 'mieru') return MieruLink.tryParse(config)?.port ?? 0;
       if (protocol == 'ssr') return SsrLink.tryParse(config)?.port ?? 0;
       return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).port;
     } catch (_) {
@@ -434,7 +438,7 @@ class ServerItem {
   }
 
   /// Протокол ('vless', 'vmess', 'trojan', 'ss', 'ssr', 'hysteria', 'hy2',
-  /// 'tuic', 'anytls', 'awg', 'custom', 'clash', 'chain', 'unknown')
+  /// 'tuic', 'anytls', 'mieru', 'awg', 'custom', 'clash', 'chain', 'unknown')
   String get protocol {
     final lower = config.toLowerCase();
     if (lower.startsWith('${ProxyChainConfig.scheme}://')) {
@@ -453,6 +457,7 @@ class ServerItem {
     if (lower.startsWith('hysteria://')) return 'hysteria';
     if (lower.startsWith('tuic://')) return 'tuic';
     if (lower.startsWith('anytls://')) return 'anytls';
+    if (lower.startsWith('mierus://')) return 'mieru';
     if (AwgProfile.isAwgConfig(config)) return 'awg';
     // Clash — раньше xray: json-конфиг Clash тоже начинается с '{', и
     // разбирать его как xray-конфиг бессмысленно (у него нет outbounds).
