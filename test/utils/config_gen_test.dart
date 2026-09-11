@@ -747,6 +747,108 @@ void main() {
       expect(interval('полминуты'), isNull);
     });
 
+    // mKCP: xray 26 снял seed и header из kcpSettings и прежнюю обфускацию по
+    // умолчанию. Ссылка старого вида едет масками mkcp-legacy — в порядке,
+    // который проверен трафиком против xray 25.12.8 (PROGRESS.md, G-12).
+    group('mKCP', () {
+      const base = 'vless://00000000-0000-4000-8000-000000000000'
+          '@198.51.100.30:443?type=kcp&security=none';
+      Map<String, dynamic> streamOf(String link) {
+        Socks5Credentials().init('u', 'p');
+        final config = ConfigGeneratorV2.generateConfig(link, settings);
+        return ((jsonDecode(config) as Map)['outbounds'] as List)
+            .first['streamSettings'] as Map<String, dynamic>;
+      }
+
+      const orig = {'type': 'mkcp-legacy'};
+      Map<String, Object> aes(String seed) => {
+            'type': 'mkcp-legacy',
+            'settings': {'value': seed},
+          };
+      Map<String, Object> header(String name) => {
+            'type': 'mkcp-legacy',
+            'settings': {'header': name},
+          };
+
+      test('ни seed, ни заголовка — прежняя обфускация: без неё старый '
+          'сервер молчит', () {
+        expect(streamOf('$base&headerType=none')['finalmask'], {
+          'udp': [orig],
+        });
+      });
+
+      test('seed — шифрование на нём', () {
+        expect(streamOf('$base&seed=s3cret')['finalmask'], {
+          'udp': [aes('s3cret')],
+        });
+      });
+
+      test('заголовок — последним, ближе к сети', () {
+        expect(streamOf('$base&headerType=srtp')['finalmask'], {
+          'udp': [orig, header('srtp')],
+        });
+        expect(streamOf('$base&headerType=srtp&seed=s3cret')['finalmask'], {
+          'udp': [aes('s3cret'), header('srtp')],
+        });
+      });
+
+      test('старое имя wechat-video — это wechat', () {
+        expect(streamOf('$base&headerType=wechat-video')['finalmask'], {
+          'udp': [orig, header('wechat')],
+        });
+      });
+
+      test('незнакомый заголовок — отказ, а не конфиг, который ядро не '
+          'примет', () {
+        expect(() => streamOf('$base&headerType=kazoo'), throwsArgumentError);
+      });
+
+      // Новые панели не пишут у kcp ни seed, ни заголовка: такой сервер без
+      // масок, и прежняя обфускация его бы сломала.
+      test('ссылка без seed и заголовка — без масок, mtu и tti доезжают', () {
+        final stream = streamOf('$base&mtu=1350&tti=20');
+        expect(stream.containsKey('finalmask'), isFalse);
+        expect(stream['kcpSettings'], {'mtu': 1350, 'tti': 20});
+      });
+
+      test('mtu и tti вне границ ядра не переносятся: уронили бы конфиг', () {
+        expect(
+          streamOf('$base&mtu=10&tti=5').containsKey('kcpSettings'),
+          isFalse,
+        );
+      });
+
+      test('fm — маски сервера как есть и главнее старых параметров', () {
+        final masks = {
+          'udp': [aes('a+b/c=')],
+        };
+        final encoded = Uri.encodeComponent(jsonEncode(masks));
+        expect(streamOf('$base&seed=other&fm=$encoded')['finalmask'], masks);
+        // Панель, которая не закодировала `+`: разбор формы сделал бы из
+        // него пробел, и ключ маски приехал бы испорченным.
+        final rawPlus = encoded.replaceAll('%2B', '+');
+        expect(streamOf('$base&fm=$rawPlus')['finalmask'], masks);
+      });
+
+      test('vmess-json: seed лежит в path, заголовок — в type', () {
+        final vmess = base64.encode(utf8.encode(jsonEncode({
+          'v': '2',
+          'ps': 'kcp',
+          'add': '198.51.100.30',
+          'port': '443',
+          'id': '00000000-0000-4000-8000-000000000000',
+          'aid': '0',
+          'net': 'kcp',
+          'type': 'srtp',
+          'path': 's3cret',
+          'tls': '',
+        })));
+        expect(streamOf('vmess://$vmess')['finalmask'], {
+          'udp': [aes('s3cret'), header('srtp')],
+        });
+      });
+    });
+
     test('hysteria2:// scheme with tls fp alpn ech (share link style)', () {
       Socks5Credentials().init('u', 'p');
       final uri =

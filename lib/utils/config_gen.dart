@@ -346,7 +346,10 @@ class ConfigGeneratorV2 {
       // правилам HTML-формы, где `+` означает пробел. Панели сплошь не
       // кодируют `+` как `%2B`, и значение приезжало испорченным — ядру это
       // неотличимо от неверного ключа, оно просто не подключается.
-      if (key == 'ech' || key == 'pcs') return _rawQueryParam(uri, key, def);
+      // `fm` — json масок, в нём тоже бывает base64.
+      if (key == 'ech' || key == 'pcs' || key == 'fm') {
+        return _rawQueryParam(uri, key, def);
+      }
       final val = uri.queryParametersAll[key];
       return (val != null && val.isNotEmpty) ? val.first : def;
     }
@@ -1322,11 +1325,12 @@ class ConfigGeneratorV2 {
   /// [_buildStreamSettings]: у vmess они не в запросе, а полями base64-json, и
   /// имена там свои.
   ///
-  /// Три поля разведены руками. `type` в json — это заголовок маскировки, сам
+  /// Поля разведены руками. `type` в json — это заголовок маскировки, сам
   /// транспорт лежит в `net`. `security` там бывает шифром vmess, а не
   /// `tls`/`reality`: совпади имена, ссылка с `"security":"auto"` осталась бы
-  /// без TLS вовсе. Имя gRPC-сервиса v2rayN кладёт в `path` — своего поля у
-  /// него нет, и потому grpc у vmess не собирался никогда.
+  /// без TLS вовсе. Имя gRPC-сервиса и seed mKCP v2rayN кладёт в `path`
+  /// (VmessFmt.cs) — своих полей у них нет, и потому grpc у vmess не
+  /// собирался никогда.
   static String Function(String, [String]) _vmessStreamParams(
       Map<String, dynamic>? cfg) {
     String raw(String key) {
@@ -1345,6 +1349,9 @@ class ConfigGeneratorV2 {
         'headerType' => raw('type'),
         'security' => raw('tls').toLowerCase() == 'tls' ? 'tls' : '',
         'serviceName' => raw('path'),
+        'seed' => const {'kcp', 'mkcp'}.contains(raw('net').toLowerCase())
+            ? raw('path')
+            : raw('seed'),
         _ => raw(key),
       };
       return value.isEmpty ? def : value;
@@ -1654,6 +1661,15 @@ class ConfigGeneratorV2 {
       };
     }
 
+    // `fm` — finalmask сервера целиком: так его отдаёт 3X-UI эпохи xray 26
+    // (`applyFinalMaskToParams`, inbound-link.ts) для любого транспорта. Маски
+    // на обеих сторонах одни и те же, поэтому берём как есть. Одна оговорка
+    // вне нашей власти: порядок масок в списке xray между 26.3 и 26.7
+    // перевернул (стенд G-12), и две маски сервера на 26.3 наш клиент прочтёт
+    // наоборот. Версии сервера ссылка не несёт.
+    final finalmask = _finalmaskFromLink(getParam('fm'));
+    if (finalmask != null) stream['finalmask'] = finalmask;
+
     switch (type) {
       case 'ws':
         stream['wsSettings'] = {
@@ -1685,6 +1701,19 @@ class ConfigGeneratorV2 {
           'path': _pathWithEarlyData(getParam('path', '/'), getParam('ed')),
           'host': getParam('host', sni),
         };
+      case 'kcp' || 'mkcp':
+        final kcp = <String, dynamic>{
+          'mtu': ?_intInRange(getParam('mtu'), 21, 65535),
+          'tti': ?_intInRange(getParam('tti'), 10, 1000),
+        };
+        if (kcp.isNotEmpty) stream['kcpSettings'] = kcp;
+        if (finalmask == null) {
+          final masks = _legacyKcpMasks(
+            getParam('headerType'),
+            getParam('seed'),
+          );
+          if (masks != null) stream['finalmask'] = {'udp': masks};
+        }
       // `raw` — новое имя `tcp` в ядре; в ссылках встречаются оба, и
       // mihomo-генератор давно считает их одним транспортом.
       case 'tcp' || 'raw':
@@ -1707,6 +1736,76 @@ class ConfigGeneratorV2 {
         }
     }
     return stream;
+  }
+
+  /// `fm` ссылки — finalmask сервера целиком. Нечитаемый json не переносим:
+  /// ядро отказалось бы от конфига целиком.
+  static Map<String, dynamic>? _finalmaskFromLink(String raw) {
+    if (raw.trim().isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map<String, dynamic> && decoded.isNotEmpty
+          ? decoded
+          : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Маски mKCP по ссылке старого вида — с `headerType` или `seed`.
+  ///
+  /// xray 26 снял оба поля из kcpSettings (с ними KCPConfig.Build роняет весь
+  /// конфиг) и заодно прежнюю обфускацию по умолчанию: без масок он шлёт
+  /// голые кадры, и сервер до 26 их не принимает. Прежний провод — маска
+  /// mkcp-legacy: пустая — та обфускация, `value` — шифрование на seed,
+  /// `header` — маскировка. Заголовок последним, ближе к сети, как клеил его
+  /// старый сервер. Каждое сочетание проверено трафиком против xray 25.12.8,
+  /// и подходит ровно одно (refactor/PROGRESS.md, G-12).
+  ///
+  /// Новые панели (3X-UI под xray 26) ни `headerType`, ни `seed` у kcp не
+  /// пишут, а маски отдают в `fm`. Ссылка без них — сервер без масок: null.
+  static List<Map<String, dynamic>>? _legacyKcpMasks(
+    String header,
+    String seed,
+  ) {
+    var h = header.trim().toLowerCase();
+    final s = seed.trim();
+    if (h.isEmpty && s.isEmpty) return null;
+    // У старых ядер этот заголовок звался wechat-video.
+    if (h == 'wechat-video') h = 'wechat';
+    final withHeader = h.isNotEmpty && h != 'none';
+    if (withHeader && !_mkcpHeaders.contains(h)) {
+      throw ArgumentError('mKCP header "$header" is not known to the core');
+    }
+    return [
+      {
+        'type': 'mkcp-legacy',
+        if (s.isNotEmpty) 'settings': {'value': s},
+      },
+      if (withHeader)
+        {
+          'type': 'mkcp-legacy',
+          'settings': {'header': h},
+        },
+    ];
+  }
+
+  /// Заголовки, которые знает mkcp-legacy (MkcpLegacy.Build,
+  /// infra/conf/transport_finalmask.go); с любым другим ядро роняет конфиг.
+  static const _mkcpHeaders = {
+    'dns',
+    'dtls',
+    'srtp',
+    'utp',
+    'wechat',
+    'wireguard',
+  };
+
+  /// Число из ссылки, если ядро его примет: вне своих границ mtu и tti xray
+  /// роняет весь конфиг (KCPConfig.Build).
+  static int? _intInRange(String raw, int min, int max) {
+    final value = int.tryParse(raw.trim());
+    return value != null && value >= min && value <= max ? value : null;
   }
 
   // обёртка конфига

@@ -127,8 +127,8 @@ const _mihomoOnlySchemes = {'tuic', 'anytls', 'ssr', 'mierus'};
 /// (`adapter/outbound/vmess.go`), а xray на транспорте h2 роняет весь конфиг:
 /// он его снёс, и `TransportProtocol.Build` отвечает отказом.
 ///
-/// Разбирается только то, от чего зависит ответ: схема, транспорт и плагин
-/// shadowsocks. Ссылка, которую не удалось прочесть, — «оба»: решать про неё
+/// Разбирается только то, от чего зависит ответ: схема, транспорт, плагин
+/// shadowsocks и маски finalmask. Ссылка, которую не удалось прочесть, — «оба»: решать про неё
 /// не нам, дальше её всё равно развернёт генератор со своим сообщением.
 Set<VpnBackend> backendsForLink(String link) {
   final trimmed = link.trim();
@@ -167,6 +167,12 @@ Set<VpnBackend> backendsForLink(String link) {
     return const {VpnBackend.mihomo};
   }
 
+  // Маски finalmask (`fm`, так их отдаёт 3X-UI) есть только у xray: у mihomo
+  // их нет вовсе, и без них сервер получает пакеты не той формы.
+  if ((scheme == 'vless' || scheme == 'trojan') && param('fm').isNotEmpty) {
+    return const {VpnBackend.xray};
+  }
+
   return _transportBackends(scheme, param('type'), param('headerType'));
 }
 
@@ -179,6 +185,9 @@ Set<VpnBackend> _vmessBackends(String link) {
       base64.normalize(payload),
     )));
     if (decoded is! Map) return _bothCores;
+    if ((decoded['fm']?.toString() ?? '').trim().isNotEmpty) {
+      return const {VpnBackend.xray};
+    }
     return _transportBackends(
       'vmess',
       decoded['net']?.toString().trim().toLowerCase() ?? '',

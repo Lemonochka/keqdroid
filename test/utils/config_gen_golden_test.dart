@@ -196,6 +196,18 @@ void main() {
       );
     });
 
+    _golden('vless-kcp-legacy', () {
+      // mKCP по ссылке старого вида: xray 26 снял seed и header из
+      // kcpSettings, прежний провод выражается масками mkcp-legacy —
+      // шифрование на seed первым, заголовок последним. Порядок проверен
+      // трафиком против xray 25.12.8 (PROGRESS.md, G-12).
+      return ConfigGeneratorV2.generateConfig(
+        'vless://$_uuid@198.51.100.23:443?type=kcp&security=none'
+        '&headerType=srtp&seed=kcpseed&mtu=1350&tti=20#kcp',
+        _settings,
+      );
+    });
+
     _golden('shadowsocks-sip002', () {
       final userInfo = base64Url.encode(utf8.encode('aes-256-gcm:password'));
       return ConfigGeneratorV2.generateConfig(

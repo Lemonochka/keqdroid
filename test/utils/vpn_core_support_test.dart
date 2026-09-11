@@ -286,6 +286,19 @@ rules:
       );
     });
 
+    // Маски finalmask (`fm` у 3X-UI) — только у xray: у mihomo их нет вовсе.
+    test('ссылка с масками fm — только xray', () {
+      final fm = Uri.encodeQueryComponent('{"udp":[{"type":"mkcp-legacy"}]}');
+      expect(
+        backendsForLink('vless://$uuid@198.51.100.10:443?type=tcp&fm=$fm'),
+        {VpnBackend.xray},
+      );
+      expect(
+        backendsForLink('trojan://password@198.51.100.10:443?fm=$fm'),
+        {VpnBackend.xray},
+      );
+    });
+
     test('HTTP-маскировка у trojan — только xray', () {
       expect(
         backendsForLink(

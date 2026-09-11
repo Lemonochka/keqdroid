@@ -49,6 +49,16 @@ const _ech = 'AEX+DQBBzQAgACD0RY0ZGF9nQqPMhTPT8xzDLoyPTgUYNGyLGUqPXGEXCg==';
 const _pqv = 'bWxkc2E2NXZlcmlmeWtleQ';
 const _encryption = 'mlkem768x25519plus.native.600s.dGVzdGtleQ';
 
+/// Маски сервера целиком — так их кладёт в ссылку 3X-UI под xray 26.
+const _fmMasks = {
+  'udp': [
+    {
+      'type': 'mkcp-legacy',
+      'settings': {'value': 'kcpseed'},
+    },
+  ],
+};
+
 const _settings = AppSettings();
 
 /// Одна строка переписи.
@@ -239,6 +249,16 @@ final _rows = <_Row>[
       'kcpseed'),
   _row('vless', 'kcp', 'vless://$_uuid@$_host?type=kcp&security=none',
       'headerType', 'srtp'),
+  _row('vless', 'kcp', 'vless://$_uuid@$_host?type=kcp&security=none', 'mtu',
+      '1200'),
+  _row('vless', 'kcp', 'vless://$_uuid@$_host?type=kcp&security=none', 'tti',
+      '20'),
+  _row('vless', 'kcp', 'vless://$_uuid@$_host?type=kcp&security=none', 'fm',
+      Uri.encodeQueryComponent(jsonEncode(_fmMasks))),
+  // vmess-json: seed mKCP v2rayN кладёт в `path`, заголовок — в `type`.
+  _vmessRow('kcp', {..._vmessBase, 'net': 'kcp'}, 'path', 'kcpseed'),
+  _vmessRow('kcp', {..._vmessBase, 'net': 'kcp'}, 'type', 'srtp'),
+  _vmessRow('kcp', {..._vmessBase, 'net': 'kcp'}, 'fm', jsonEncode(_fmMasks)),
 
   _row('vless', 'h2',
       'vless://$_uuid@$_host?type=http&security=tls&sni=h2.example', 'path',
@@ -553,10 +573,7 @@ const _waivedXray = <String, String>{
 };
 
 /// Известные дыры xray-пути. Задача блока чинит и вычёркивает свои строки.
-const _gapsXray = <String, String>{
-  'vless/kcp/seed': 'G-12: kcpSettings не собираются вовсе',
-  'vless/kcp/headerType': 'G-12: там же',
-};
+const _gapsXray = <String, String>{};
 
 /// Выброшено сознательно на mihomo.
 const _waivedMihomo = <String, String>{
@@ -573,6 +590,14 @@ const _waivedMihomo = <String, String>{
   'vless/kcp/seed': 'у VlessOption нет mkcp-opts — ссылка целиком не для '
       'mihomo, это разводит G-03',
   'vless/kcp/headerType': 'там же',
+  'vless/kcp/mtu': 'там же',
+  'vless/kcp/tti': 'там же',
+  'vless/kcp/fm': 'масок finalmask у mihomo нет вовсе; ссылку с fm правило '
+      'выбора ядра отдаёт xray',
+  'vmess/kcp/path': 'mkcp-opts у VmessOption есть, но генератор его не '
+      'собирает; vmess на mKCP правило выбора ядра отдаёт xray',
+  'vmess/kcp/type': 'там же',
+  'vmess/kcp/fm': 'как vless/kcp/fm: масок у mihomo нет',
   'vmess/xhttp/path': 'xhttp-opts есть только у VlessOption; с G-03 генератор '
       'на такую ссылку честно отказывается, а не пишет ключи в пустоту',
   'trojan/xhttp/path': 'там же',
