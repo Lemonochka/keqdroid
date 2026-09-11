@@ -58,90 +58,6 @@ static void core_log_line(const char *logpath, const char *line) {
     close(lf);
 }
 
-/*
- * double_fork_exec — запускает бинарник через двойной fork.
- *
- * Схема:
- *   JVM (родитель)
- *     └─ fork() → промежуточный (pid1)
- *                   setsid()          ← новая сессия
- *                   └─ fork() → внук (pid2) — execv(binary)
- *                   _exit(0)          ← промежуточный завершается
- *
- * JVM делает waitpid(pid1) — быстро, pid1 уже мёртв.
- * Внук (pid2) усыновляется init/zygote, полностью отвязан от JVM.
- * Phantom Process Killer не видит связи между JVM и pid2.
- *
- * pid2 передаётся через pipe обратно в JVM.
- */
-static pid_t double_fork_exec(const char *binPath, char *const argv[], const char *assetDir) {
-    /* pipe для передачи pid внука родителю */
-    int pidpipe[2];
-    if (pipe(pidpipe) != 0) {
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "double_fork_exec: pipe failed errno=%d", errno);
-        return -1;
-    }
-
-    pid_t pid1 = fork();
-    if (pid1 < 0) {
-        close(pidpipe[0]); close(pidpipe[1]);
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "double_fork_exec: first fork failed errno=%d", errno);
-        return -1;
-    }
-
-    if (pid1 == 0) {
-        /* ── промежуточный процесс ── */
-        close(pidpipe[0]); /* не читаем */
-
-        setsid();
-        prctl(PR_SET_PDEATHSIG, 0);
-
-        pid_t pid2 = fork();
-        if (pid2 < 0) {
-            /* не смогли форкнуть внука */
-            pid_t err = -1;
-            write(pidpipe[1], &err, sizeof(err));
-            close(pidpipe[1]);
-            _exit(1);
-        }
-
-        if (pid2 == 0) {
-            /* ── внук: целевой процесс ── */
-            close(pidpipe[1]);
-            prctl(PR_SET_PDEATHSIG, 0);
-
-            /* Закрываем все fd кроме stdin/stdout/stderr */
-            int max = (int)sysconf(_SC_OPEN_MAX);
-            for (int i = 3; i < max; i++) close(i);
-
-            if (assetDir) setenv("XRAY_LOCATION_ASSET", assetDir, 1);
-
-            execv(binPath, argv);
-            /* execv вернулся — ошибка */
-            _exit(127);
-        }
-
-        /* промежуточный: отправляем pid2 родителю и умираем */
-        write(pidpipe[1], &pid2, sizeof(pid2));
-        close(pidpipe[1]);
-        _exit(0);
-    }
-
-    /* ── родитель (JVM) ── */
-    close(pidpipe[1]);
-
-    /* ждём завершения промежуточного (быстро) */
-    int wstatus;
-    waitpid(pid1, &wstatus, 0);
-
-    /* читаем pid внука */
-    pid_t pid2 = -1;
-    read(pidpipe[0], &pid2, sizeof(pid2));
-    close(pidpipe[0]);
-
-    return pid2;
-}
-
 /* ── Ядро прокси (xray / mihomo) ─────────────────────────────────────────── */
 
 JNIEXPORT jint JNICALL
@@ -228,6 +144,12 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
         return -3;
     }
 
+    /*
+     * Двойной fork с setsid: ядро усыновляет init, и JVM не нужно его
+     * дожидаться. От ограничения дочерних процессов (Android 12+) это не
+     * прячет: система ищет их по cgroup приложения, а не по родителю, поэтому
+     * смерть ядра сервис переживает сам (см. reviveCore в KeqdisVpnService).
+     */
     pid_t pid1 = fork();
     if (pid1 < 0) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "startCore: first fork failed errno=%d", errno);

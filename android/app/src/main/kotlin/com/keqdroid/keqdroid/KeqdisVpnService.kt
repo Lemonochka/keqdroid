@@ -74,7 +74,8 @@ class KeqdisVpnService : VpnService() {
         const val CORE_GONE_HINT =
             "a process killed from outside gets no chance to write a farewell, " +
                 "so silence above this line is the symptom, not a missing log; " +
-                "check the battery saver and the autostart limits for the app"
+                "the usual killers are the child process limits of Android 12+ " +
+                "and vendor battery savers"
         // Вердикт mihomo о собственном туннеле — единственный способ узнать,
         // взял ли он наш дескриптор (см. awaitMihomoTun). Строки из
         // listener/listener.go: ReCreateTun.
@@ -152,6 +153,15 @@ class KeqdisVpnService : VpnService() {
         /// default network. Сбрасывать на каждое значило бы рвать сессию по три
         /// раза подряд; замерено, что до устойчивого состояния проходит ~2 с.
         private const val HANDOVER_DEBOUNCE_MS = 2_000L
+
+        /// Когда перестать поднимать ядро, убитое под живой сессией (см. reviveCore).
+        ///
+        /// Ядро, прожившее дольше CORE_QUICK_DEATH_MS, поднимаем всегда, сколько
+        /// бы раз его ни убивали. Если же оно трижды подряд умирает почти сразу
+        /// после подъёма, оно сломано само, и круг перезапусков только прятал бы
+        /// это за «подключено».
+        private const val CORE_QUICK_DEATH_MS = 30_000L
+        private const val CORE_MAX_QUICK_DEATHS = 3
     }
 
     // Credentials приходят через Intent от MainActivity — так они гарантированно совпадают с теми что были записаны в Xray конфиг
@@ -168,6 +178,9 @@ class KeqdisVpnService : VpnService() {
     @Volatile private var lastExcludePackages: List<String> = emptyList()
     @Volatile private var lastIncludePackages: List<String> = emptyList()
     @Volatile private var xrayPid:            Int                   = -1
+    // Когда поднято текущее ядро и сколько раз подряд оно умерло быстро — см. reviveCore.
+    @Volatile private var coreStartedAt:      Long                  = 0L
+    @Volatile private var quickCoreDeaths:    Int                   = 0
     // AmneziaWG tunnel handle из amneziawg-go (>=0 когда активен awg-бэкенд).
     @Volatile private var awgHandle:          Int                   = -1
     @Volatile private var tunInterface:       ParcelFileDescriptor? = null
@@ -467,6 +480,7 @@ class KeqdisVpnService : VpnService() {
             return@withLock
         }
         setStatus(VpnRunStatus.STARTING)
+        quickCoreDeaths = 0
         try {
             if (!socksNoAuth && (socksUsername.isEmpty() || socksPassword.isEmpty())) {
                 throw IllegalStateException("SOCKS5 credentials are empty — Intent was malformed")
@@ -872,56 +886,23 @@ class KeqdisVpnService : VpnService() {
         if (port <= 0 || secret.isEmpty()) null else port to secret
     }.getOrNull()
 
-    /// Перезапуск ядра на месте: тот же конфиг, тот же порт, тот же TUN.
-    ///
-    /// Интерфейс не трогаем вовсе — иначе система показала бы разрыв VPN, а
-    /// его здесь нет. Но интерфейса мало: дескриптор жил в убитом процессе, и
-    /// новому ядру его надо отдать заново.
+    /// Сброс соединений xray после смены сети: убить ядро и поднять его на месте.
     private suspend fun restartCoreAfterHandover() = opMutex.withLock {
         if (status != VpnRunStatus.RUNNING) return@withLock
         val config = lastXrayConfigPath ?: return@withLock
         val previousPid = xrayPid
         if (previousPid <= 0) return@withLock
-        val port = activeSocksPort
 
         try {
             // Обнулить ДО убийства обязательно: монитор процесса (см. startXray)
-            // сверяет свой pid с xrayPid и на совпадении уводит сессию в ERROR
-            // с полным cleanup — то есть принял бы наш перезапуск за падение.
+            // сверяет свой pid с xrayPid и на совпадении принял бы наш
+            // перезапуск за смерть ядра — и полез бы поднимать его второй раз.
             xrayPid = -1
             runCatching { android.os.Process.killProcess(previousPid) }
             withTimeoutOrNull(3000) {
                 while (File("/proc/$previousPid").exists()) delay(100)
             }
-            // SIGKILL асинхронен: слушающий сокет освобождается не в тот же миг.
-            var waitedFree = 0
-            while (isPortOpen("127.0.0.1", port) && waitedFree < 2000) {
-                delay(100); waitedFree += 100
-            }
-
-            // Без дескриптора ядро считает туннелем нулевой fd — собственный
-            // stdin. Ничего не падает: интерфейс поднят, порт слушается, статус
-            // «подключено», и только из туннеля никто не читает. Поймано на
-            // устройстве — после смены сети связь пропадала молча и насовсем.
-            //
-            // Владелец спрашивается у конфига, а не у настройки: конфиг и есть
-            // то, по чему ядро себя ведёт, и он же переживает перезапуск
-            // сервиса.
-            val tunFd = if (xrayConfigHasTun(config)) tunInterface?.fd ?: -1 else -1
-            xrayPid = startXray(
-                getBinaryPath("libxray.so"),
-                config,
-                lastCoreKind,
-                tunFd = tunFd,
-            )
-
-            var waited = 0
-            while (!isPortOpen("127.0.0.1", port) && waited < 10000) {
-                delay(300); waited += 300
-            }
-            if (!isPortOpen("127.0.0.1", port)) {
-                throw IllegalStateException("SOCKS5 port $port not ready after handover restart")
-            }
+            relaunchCore(config)
             android.util.Log.i("KEQDIS", "handover: core restarted pid=$xrayPid")
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -935,6 +916,52 @@ class KeqdisVpnService : VpnService() {
             withContext(Dispatchers.Main) { stopForeground(STOP_FOREGROUND_REMOVE) }
             showControlNotification("Error", isConnected = false, isTransitioning = false)
         }
+    }
+
+    /// Поднять ядро заново на живой сессии: тот же конфиг, тот же порт, тот же TUN.
+    /// Прежнее ядро к этому моменту уже мертво; зовут под opMutex.
+    ///
+    /// Интерфейс не трогаем вовсе — иначе система показала бы разрыв VPN, а
+    /// его здесь нет. Но интерфейса мало: дескриптор жил в убитом процессе, и
+    /// новому ядру его надо отдать заново.
+    private suspend fun relaunchCore(config: String) {
+        val port = activeSocksPort
+        // SIGKILL асинхронен: слушающий сокет освобождается не в тот же миг.
+        var waitedFree = 0
+        while (isPortOpen("127.0.0.1", port) && waitedFree < 2000) {
+            delay(100); waitedFree += 100
+        }
+
+        // Без дескриптора ядро считает туннелем нулевой fd — собственный
+        // stdin. Ничего не падает: интерфейс поднят, порт слушается, статус
+        // «подключено», и только из туннеля никто не читает. Поймано на
+        // устройстве — после смены сети связь пропадала молча и насовсем.
+        //
+        // Владелец спрашивается у конфига, а не у настройки: конфиг и есть
+        // то, по чему ядро себя ведёт, и он же переживает перезапуск
+        // сервиса. У mihomo номер дескриптора вписан в конфиг ещё на старте
+        // (injectTunFd), и он прежний: интерфейс не пересоздавался.
+        val isMihomo = lastCoreKind == CORE_KIND_MIHOMO
+        val tunFd = tunInterface?.takeIf { isMihomo || xrayConfigHasTun(config) }?.fd ?: -1
+        // Лог не обнуляется, и вердикт mihomo о туннеле от прошлого ядра в нём
+        // ещё лежит — смотрим только то, что допишет новое.
+        val logFrom = File(filesDir, CORE_LOG_FILE).length()
+        xrayPid = startXray(
+            getBinaryPath(if (isMihomo) "libmihomo.so" else "libxray.so"),
+            config,
+            lastCoreKind,
+            tunFd = tunFd,
+            freshLog = false,
+        )
+
+        var waited = 0
+        while (!isPortOpen("127.0.0.1", port) && waited < 10000) {
+            delay(300); waited += 300
+        }
+        if (!isPortOpen("127.0.0.1", port)) {
+            throw IllegalStateException("SOCKS5 port $port not ready after core restart")
+        }
+        if (isMihomo && tunFd >= 0) awaitMihomoTun(from = logFrom)
     }
 
     // ── TUN interface ────────────────────────────────────────────────────────
@@ -1242,6 +1269,14 @@ class KeqdisVpnService : VpnService() {
             if (tail.isBlank()) "" else "\n$tail"
         }.getOrDefault("")
 
+    /// Лог ядра начиная с байта [from]. Файл кольцуется усечением в ноль (см.
+    /// core_log_line в forkexec.c): если он стал короче метки, новое в нём всё.
+    private fun coreLogSince(file: File, from: Long): String {
+        val bytes = file.readBytes()
+        val start = if (from in 0..bytes.size.toLong()) from.toInt() else 0
+        return String(bytes, start, bytes.size - start, Charsets.UTF_8)
+    }
+
     /**
      * Ждёт, пока mihomo действительно возьмёт наш дескриптор.
      *
@@ -1255,12 +1290,15 @@ class KeqdisVpnService : VpnService() {
      * лога выбирает пользователь, и на `warning` строки просто не будет. Ошибка
      * же видна на всех уровнях, кроме `silent`, — поэтому вышедшее время
      * означает «доказательств отказа нет», и это не повод рвать подключение.
+     *
+     * [from] — с какого байта лога смотреть: перезапуск на живой сессии лог
+     * не обнуляет (см. relaunchCore).
      */
-    private suspend fun awaitMihomoTun(timeoutMs: Int = 4000) {
+    private suspend fun awaitMihomoTun(timeoutMs: Int = 4000, from: Long = 0L) {
         val file = File(filesDir, CORE_LOG_FILE)
         var waited = 0
         while (waited < timeoutMs) {
-            val log = runCatching { file.readText() }.getOrDefault("")
+            val log = runCatching { coreLogSince(file, from) }.getOrDefault("")
             val failure = log.lineSequence().lastOrNull { it.contains(MIHOMO_TUN_FAILED) }
             if (failure != null) {
                 throw IllegalStateException(
@@ -1390,18 +1428,51 @@ class KeqdisVpnService : VpnService() {
         return out.toString()
     }
 
+    /// Поднять заново ядро, убитое под живой сессией. Зовёт монитор процесса
+    /// под opMutex; false — не стали или не смогли, и сессию надо закрывать.
+    ///
+    /// Ядро живёт отдельным процессом, и система вправе убить его, не трогая
+    /// сервис: с Android 12 она ограничивает дочерние процессы приложений и
+    /// находит их по cgroup приложения, так что двойной fork от этого не
+    /// прячет. Раньше такая смерть закрывала всю сессию, и туннель в фоне
+    /// просто пропадал. Интерфейс же при этом цел, поэтому ядро поднимаем на
+    /// нём: приложения видят секунду тишины, а не разрыв VPN.
+    private suspend fun reviveCore(deadPid: Int): Boolean {
+        val config = lastXrayConfigPath ?: return false
+        val lived = android.os.SystemClock.elapsedRealtime() - coreStartedAt
+        quickCoreDeaths = if (lived < CORE_QUICK_DEATH_MS) quickCoreDeaths + 1 else 0
+        if (quickCoreDeaths >= CORE_MAX_QUICK_DEATHS) {
+            appendCoreLog("the core keeps dying right after start, closing the session")
+            return false
+        }
+        return try {
+            relaunchCore(config)
+            appendCoreLog("started the core again on the same tunnel, pid $xrayPid")
+            android.util.Log.i("KEQDIS", "[xray] pid=$deadPid revived as pid=$xrayPid")
+            true
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            android.util.Log.e("KEQDIS", "[xray] revive of pid=$deadPid failed: ${e.message}", e)
+            appendCoreLog("could not start the core again: ${e.message}")
+            false
+        }
+    }
+
     private fun startXray(
         binary: String,
         config: String,
         coreKind: String = CORE_KIND_XRAY,
         tunFd: Int = -1,
+        freshLog: Boolean = true,
     ): Int {
         // NativeHelper.startCore: fork+execv из nativeLibraryDir, дублирует вывод ядра
         // в logcat (KEQDIS_XRAY) и в файл CORE_LOG_FILE (его читает getXrayLogs).
         // Возвращает: pid > 0 — успех, -1 binary not found, -2 config not found, -4 crashed immediately
         XrayGeoAssets.ensure(this, filesDir)
         // Свежий лог ядра на каждую сессию (ping пишет в свой файл/никуда — не мешает).
-        runCatching { File(filesDir, CORE_LOG_FILE).writeText("") }
+        // Перезапуск внутри сессии его не трогает: строки перед перезапуском и
+        // объясняют, зачем он понадобился.
+        if (freshLog) runCatching { File(filesDir, CORE_LOG_FILE).writeText("") }
         val pid = NativeHelper.startCore(
             binary, config, filesDir.absolutePath, CORE_LOG_FILE, coreKind, tunFd,
         )
@@ -1413,6 +1484,7 @@ class KeqdisVpnService : VpnService() {
             else -> {} // valid pid
         }
         android.util.Log.i("KEQDIS", "Xray started pid=$pid")
+        coreStartedAt = android.os.SystemClock.elapsedRealtime()
 
         // Запускаем мониторинг процесса Xray
         val monitorPid = pid
@@ -1423,12 +1495,13 @@ class KeqdisVpnService : VpnService() {
                 opMutex.withLock {
                     if ((status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) &&
                         monitorPid == xrayPid) {
-                        android.util.Log.w("KEQDIS", "[xray] triggering full cleanup after unexpected exit")
                         appendCoreLog(
                             "core process $pid is gone, and the app did not stop it",
                             CORE_GONE_HINT,
                         )
                         xrayPid = -1  // уже мёртв — не пытаемся убить повторно в cleanup()
+                        if (status == VpnRunStatus.RUNNING && reviveCore(pid)) return@withLock
+                        android.util.Log.w("KEQDIS", "[xray] triggering full cleanup after unexpected exit")
                         setStatus(VpnRunStatus.ERROR, "Xray exited unexpectedly")
                         cleanup()
                         cleanupDone = true
