@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'ssr_uri.dart';
+import 'vmess_json_link.dart';
 
 /// Узлы конфига sing-box — каждый своей ссылкой.
 ///
@@ -162,8 +163,6 @@ class SingboxOutbounds {
     });
   }
 
-  /// VMess — base64-json v2rayN, как и у перевода Clash: у этой формы есть
-  /// `aid`, которого нет у ссылки AEAD.
   static String? _vmess(
     Map<String, dynamic> o,
     Map<String, String> transport,
@@ -173,40 +172,15 @@ class SingboxOutbounds {
     final server = _str(o['server']);
     final port = _int(o['server_port']);
     if (uuid.isEmpty || server.isEmpty || port <= 0) return null;
-    // HTTP/2 json v2rayN зовёт `h2`, ссылка — `http`.
-    final net = switch (transport['type']) {
-      null => 'tcp',
-      'http' => 'h2',
-      final String type => type,
-    };
-    // Своих полей для имени gRPC-сервиса и ранних данных у json нет: v2rayN
-    // кладёт то и другое в `path`, так их и читают генераторы.
-    var path = transport['path'] ?? '';
-    final ed = transport['ed'];
-    if (net == 'grpc') {
-      path = transport['serviceName'] ?? '';
-    } else if (ed != null) {
-      if (path.isEmpty) path = '/';
-      path = '$path${path.contains('?') ? '&' : '?'}ed=$ed';
-    }
-    final cipher = _str(o['security']);
-    final json = <String, String>{
-      'v': '2',
-      'ps': _str(o['tag']),
-      'add': server,
-      'port': '$port',
-      'id': uuid,
-      'aid': '${_int(o['alter_id'])}',
-      'scy': cipher.isEmpty ? 'auto' : cipher,
-      'net': net,
-      'type': transport['headerType'] ?? 'none',
-      'host': transport['host'] ?? '',
-      'path': path,
-      'tls': security.isEmpty ? '' : 'tls',
-      for (final key in const ['sni', 'alpn', 'fp', 'ech'])
-        if (security[key] != null) key: security[key]!,
-    };
-    return 'vmess://${base64.encode(utf8.encode(jsonEncode(json)))}';
+    return vmessJsonLink(
+      name: _str(o['tag']),
+      host: server,
+      port: port,
+      uuid: uuid,
+      alterId: _int(o['alter_id']),
+      cipher: _str(o['security']),
+      query: {...transport, ...security},
+    );
   }
 
   static String? _shadowsocks(Map<String, dynamic> o) {

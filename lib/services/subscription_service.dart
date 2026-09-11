@@ -20,6 +20,7 @@ import '../utils/identity_presets.dart';
 import '../utils/mieru_uri.dart';
 import '../utils/singbox_outbounds.dart';
 import '../utils/ssr_uri.dart';
+import '../utils/vmess_json_link.dart';
 import '../core/exceptions.dart';
 
 /// Косметика, которую панель отдаёт заголовками ответа на запрос подписки.
@@ -1795,7 +1796,15 @@ class SubscriptionService {
       put('method', http['method']);
       final path = http['path'];
       put('path', path is List && path.isNotEmpty ? path.first : path);
-      final host = http['host'] ?? http['Host'];
+      // У h2-opts имя сервера — поле `host`, у http-opts такого поля нет вовсе:
+      // Host там заголовок (HTTPOptions в adapter/outbound/vmess.go).
+      var host = http['host'] ?? http['Host'];
+      final headers = http['headers'];
+      if (host == null && headers is Map) {
+        for (final entry in headers.entries) {
+          if (entry.key.toString().toLowerCase() == 'host') host = entry.value;
+        }
+      }
       put('host', host is List && host.isNotEmpty ? host.first : host);
     }
     final grpc = nested('grpc-opts');
@@ -1866,21 +1875,32 @@ class SubscriptionService {
     if (type == 'vmess' || (type.isEmpty && map.containsKey('uuid') && map.containsKey('cipher'))) {
       final id = pick(['uuid', 'id']);
       if (host.isEmpty || port <= 0 || id.isEmpty) return null;
-      final vmess = <String, String>{
-        'v': '2',
-        'ps': name,
-        'add': host,
-        'port': '$port',
-        'id': id,
-        'aid': pick(['alterid', 'alter_id', 'aid']).isNotEmpty ? pick(['alterid', 'alter_id', 'aid']) : '0',
-        'net': pick(['network', 'net']).isNotEmpty ? pick(['network', 'net']) : 'tcp',
-        'type': pick(['header', 'header_type']).isNotEmpty ? pick(['header', 'header_type']) : 'none',
-        'host': pick(['servername', 'sni', 'host']),
-        'path': pick(['path']),
-        'tls': _normalizeTlsValue(pick(['tls', 'security'])),
+      // Параметры — теми же разборщиками, что у vless и trojan. Свой json мимо
+      // них терял имя gRPC-сервиса, отдельный sni, отпечаток и ранние данные,
+      // а `network: http` уезжал как `net: http` — это HTTP/2, а не
+      // маскировка поверх tcp.
+      final query = {
+        ..._clashTransportQuery(pick),
+        ..._clashSecurityQuery(pick),
       };
-      final encoded = base64.encode(utf8.encode(jsonEncode(vmess)));
-      return 'vmess://$encoded';
+      // REALITY у vmess не соберёт ни одно ядро.
+      if (query['security'] == 'reality') return null;
+      // `security` у vmess бывает шифром (auto, aes-128-gcm), поэтому TLS —
+      // по `tls` в первую очередь, как и прежде.
+      query['security'] = _normalizeTlsValue(pick(['tls', 'security']));
+      final header = pick(['header', 'header_type']);
+      if (header.isNotEmpty && header != 'none') {
+        query.putIfAbsent('headerType', () => header);
+      }
+      return vmessJsonLink(
+        name: name,
+        host: host,
+        port: port,
+        uuid: id,
+        alterId: int.tryParse(pick(['alterid', 'alter_id', 'aid'])) ?? 0,
+        cipher: pick(['cipher', 'scy']),
+        query: query,
+      );
     }
 
     if (type == 'vless') {

@@ -8,6 +8,8 @@ import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/services/storage_service.dart';
 import 'package:keqdroid/services/subscription_service.dart';
 import 'package:keqdroid/utils/mieru_uri.dart';
+import 'package:keqdroid/utils/mihomo_config_gen.dart';
+import 'package:keqdroid/utils/socks5_credentials.dart';
 import 'package:keqdroid/utils/ssr_uri.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -561,12 +563,17 @@ rules:
       expect(ws.queryParameters['eh'], 'Sec-WebSocket-Protocol');
       expect(ws.queryParameters['host'], 'cdn.example');
 
-      // `network: http` у Clash — это маскировка поверх tcp, и в ссылке она
-      // называется иначе.
+      // `network: http` у Clash — это маскировка поверх tcp. В vmess-json она
+      // пишется `net: tcp` + `type: http`, а `net: http` оба генератора читают
+      // как HTTP/2 — узел собирался не тем транспортом. Host у http-opts —
+      // заголовок, а не поле.
       final masq = jsonDecode(utf8.decode(base64.decode(base64.normalize(
         configs[1].substring('vmess://'.length),
       )))) as Map<String, dynamic>;
-      expect(masq['net'], 'http');
+      expect(masq['net'], 'tcp');
+      expect(masq['type'], 'http');
+      expect(masq['path'], '/masq');
+      expect(masq['host'], 'masq.example');
 
       final ss = Uri.parse(configs[2]);
       expect(ss.queryParameters['plugin'],
@@ -576,6 +583,102 @@ rules:
       expect(hop.queryParameters['mport'], '20000-20050');
       expect(hop.queryParameters['hop-interval'], '30');
       expect(hop.queryParameters['pinSHA256'], 'QQ+WW/EE=');
+    });
+
+    // Ветка vmess собирала свой json мимо общих разборщиков и теряла то, что
+    // vless и trojan переносят. Главное — имя gRPC-сервиса: без него vmess на
+    // gRPC из Clash не подключался вовсе.
+    test('vmess из Clash несёт то же, что vless: gRPC, sni, отпечаток, '
+        'ранние данные', () {
+      const profile = '''
+proxies:
+  - name: "GRPC"
+    type: vmess
+    server: grpc.example
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+    alterId: 0
+    cipher: aes-128-gcm
+    tls: true
+    servername: sni.example
+    client-fingerprint: safari
+    alpn: [h2]
+    network: grpc
+    grpc-opts:
+      grpc-service-name: svc
+  - name: "WS"
+    type: vmess
+    server: ws.example
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+    cipher: auto
+    tls: true
+    servername: sni.example
+    network: ws
+    ws-opts:
+      path: /ws
+      max-early-data: 2048
+      early-data-header-name: Sec-WebSocket-Protocol
+      headers:
+        Host: cdn.example
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: ["GRPC", "WS"]
+rules:
+  - MATCH,Proxy
+''';
+      final configs = SubscriptionService.parseBodyForTest(profile);
+      expect(configs, hasLength(2));
+      Map<String, dynamic> json(String link) => jsonDecode(utf8.decode(
+            base64.decode(base64.normalize(link.substring('vmess://'.length))),
+          )) as Map<String, dynamic>;
+
+      final grpc = json(configs[0]);
+      expect(grpc['net'], 'grpc');
+      expect(grpc['path'], 'svc');
+      expect(grpc['scy'], 'aes-128-gcm');
+      expect(grpc['sni'], 'sni.example');
+      expect(grpc['fp'], 'safari');
+      expect(grpc['alpn'], 'h2');
+
+      final ws = json(configs[1]);
+      expect(ws['host'], 'cdn.example');
+      expect(ws['sni'], 'sni.example');
+      expect(ws['path'], '/ws?ed=2048');
+
+      // И до ядра: имя сервиса доезжает до grpc-opts mihomo.
+      Socks5Credentials().init('u', 'p');
+      final proxy = (MihomoConfigGen.build(
+        configs[0],
+        const AppSettings(),
+        socksPort: 2080,
+      )['proxies'] as List)
+          .first as Map;
+      expect((proxy['grpc-opts'] as Map)['grpc-service-name'], 'svc');
+      expect(proxy['servername'], 'sni.example');
+    });
+
+    test('vmess с REALITY из Clash — в пропущенных: его не соберёт никто', () {
+      const profile = '''
+proxies:
+  - name: "R"
+    type: vmess
+    server: r.example
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+    cipher: auto
+    tls: true
+    reality-opts:
+      public-key: pbk
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: ["R"]
+rules:
+  - MATCH,Proxy
+''';
+      expect(SubscriptionService.unsupportedClashNodes(profile), {'vmess': 1});
     });
 
     // `spx` — это spiderX у REALITY, а у Clash такого поля нет вовсе. Туда
