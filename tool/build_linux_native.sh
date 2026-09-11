@@ -21,6 +21,11 @@ rsync -a --delete \
   "$SRC/" "$DST/"
 
 cd "$DST"
+# rsync бережёт исключённый build/ от --delete, и сборка шла поверх прошлой:
+# устаревшие файлы из неё уезжали в пакеты, раздувая их. Релиз — с чистого.
+echo "==> Removing the previous build in $DST"
+rm -rf "$DST/build"
+
 echo "==> Building + packaging in $DST"
 bash tool/build_linux_wsl.sh
 bash tool/package_linux.sh
@@ -28,7 +33,8 @@ bash tool/package_linux.sh
 VER="$(grep -E '^version:' pubspec.yaml | sed -E 's/^version:[[:space:]]*([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/')"
 echo "==> Copying artifacts back to C: (release/$VER)"
 mkdir -p "$SRC/release/$VER"
-cp -f "$DST/release/$VER/"* "$SRC/release/$VER/"
+# С точкой, а не звёздочкой: иначе не доедут подкаталог aur/ и его .SRCINFO.
+cp -rf "$DST/release/$VER/." "$SRC/release/$VER/"
 
 echo "==> Done. Artifacts on C::"
 ls -la "$SRC/release/$VER"

@@ -2,10 +2,12 @@
 #
 # Package the built Linux desktop bundle into distributable artifacts:
 #   release/<ver>/keqdroid_<ver>_amd64.deb            (Debian/Ubuntu)
+#   release/<ver>/keqdroid-<ver>-1.x86_64.rpm         (Fedora/openSUSE)
 #   release/<ver>/keqdroid-<ver>-x86_64.AppImage      (universal incl. Arch)
 #   release/<ver>/keqdroid-<ver>-linux-x64.tar.gz     (portable; AUR source)
-#   release/<ver>/PKGBUILD                            (Arch / AUR)
-#   release/<ver>/*.sha256                            (matches the updater)
+#   release/<ver>/PKGBUILD                            (Arch, manual makepkg)
+#   release/<ver>/aur/PKGBUILD + aur/.SRCINFO         (tool/publish_aur.sh)
+#   release/<ver>/SHA256SUMS                          (the updater reads it)
 #
 # Run inside WSL/Linux AFTER tool/build_linux_wsl.sh:
 #   wsl -e bash /mnt/c/.../keqdroid/tool/package_linux.sh
@@ -21,6 +23,9 @@ GH_REPO=keqdroid
 MAINTAINER="Lemonochka <noreply@users.noreply.github.com>"
 ARCH_DEB=amd64
 ARCH_AI=x86_64
+PKGDESC="KEQDIS proxy/VPN client (Xray, mihomo, sing-box; proxy + TUN)"
+# У -bin-пакета лицензий больше своей: внутри лежат ядра, а у Xray она MPL.
+LICENSES=(GPL-3.0-only MPL-2.0)
 
 log() { echo ""; echo "==> $*"; }
 
@@ -61,6 +66,9 @@ OUT="$REPO_DIR/release/$VERSION"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK" 2>/dev/null || true' EXIT
 mkdir -p "$OUT"
+# Sidecars from an earlier run would end up in the release next to SHA256SUMS,
+# which is exactly the duplication the manifest replaces.
+rm -f "$OUT"/*.sha256
 
 # --- staged payload (prune Windows cores; Linux build does not use them) ----
 PAYLOAD="$WORK/payload"
@@ -161,7 +169,7 @@ Installed-Size: $INSTALLED_KB
 Depends: libgtk-3-0, libglib2.0-0, libstdc++6, zlib1g, libayatana-appindicator3-1
 Recommends: polkit-1 | policykit-1, gnome-shell-extension-appindicator, xdg-desktop-portal-gtk | xdg-desktop-portal-kde | xdg-desktop-portal-gnome | zenity
 Description: KEQDIS proxy/VPN client
- Xray / sing-box / AmneziaWG client with proxy and TUN modes.
+ Xray, mihomo and sing-box client with proxy and TUN modes.
  TUN mode requests root via pkexec (polkit) at connect time.
 EOF
 DEB="$OUT/${APP}_${VERSION}_${ARCH_DEB}.deb"
@@ -169,7 +177,78 @@ dpkg-deb --root-owner-group --build "$DEBROOT" "$DEB" >/dev/null
 echo "  -> $(basename "$DEB")"
 
 # ============================================================================
-# 3) AppImage
+# 3) .rpm
+# ============================================================================
+# Собирается rpmbuild'ом прямо здесь, на Ubuntu: пакет только перекладывает
+# готовый бандл в /opt, компилировать под Fedora нечего.
+#
+# AutoReqProv выключен намеренно. Автоматика прочла бы каждую .so бандла и
+# потребовала бы в том числе то, что лежит в нём же (libflutter_linux_gtk,
+# appindicator), а имена пакетов у Fedora и openSUSE разные. Зависимости
+# названы sonames — их резолвит любой rpm-дистрибутив. Build-id-ссылки тоже
+# выключены: у любого другого Flutter-приложения libflutter_linux_gtk.so с тем
+# же build-id, и два пакета подрались бы за один файл в /usr/lib/.build-id.
+log ".rpm"
+command -v rpmbuild >/dev/null || { apt-get update -y >/dev/null && apt-get install -y rpm >/dev/null; }
+RPMTOP="$WORK/rpm"
+mkdir -p "$RPMTOP/BUILD" "$RPMTOP/RPMS" "$RPMTOP/SOURCES" "$RPMTOP/SPECS" "$RPMTOP/SRPMS"
+RPM_DESKTOP="$WORK/rpm-$APP.desktop"
+write_desktop "$APP" "$RPM_DESKTOP"
+RPM_ICON_INSTALL=""
+RPM_ICON_FILE=""
+if [ -n "$ICON_SRC" ]; then
+  RPM_ICON_INSTALL="install -Dm644 \"$ICON_SRC\" %{buildroot}/usr/share/icons/hicolor/256x256/apps/$APP.png"
+  RPM_ICON_FILE="/usr/share/icons/hicolor/256x256/apps/$APP.png"
+fi
+cat > "$RPMTOP/SPECS/$APP.spec" <<EOF
+Name:           $APP
+Version:        $VERSION
+Release:        1
+Summary:        KEQDIS proxy/VPN client
+License:        GPL-3.0-only AND MPL-2.0
+URL:            https://github.com/$GH_OWNER/$GH_REPO
+BuildArch:      $ARCH_AI
+AutoReqProv:    no
+Requires:       libgtk-3.so.0()(64bit)
+Requires:       libglib-2.0.so.0()(64bit)
+Requires:       libstdc++.so.6()(64bit)
+Requires:       libz.so.1()(64bit)
+Recommends:     polkit
+
+%global debug_package %{nil}
+%global __os_install_post %{nil}
+%define _build_id_links none
+%define _binary_payload w6.xzdio
+
+%description
+Xray, mihomo and sing-box client with proxy and TUN modes.
+TUN mode requests root via pkexec (polkit) at connect time.
+
+%install
+mkdir -p %{buildroot}/opt/$APP %{buildroot}/usr/bin
+cp -a "$PAYLOAD/." %{buildroot}/opt/$APP/
+ln -s /opt/$APP/$APP %{buildroot}/usr/bin/$APP
+install -Dm644 "$RPM_DESKTOP" %{buildroot}/usr/share/applications/$APP.desktop
+$RPM_ICON_INSTALL
+
+%files
+%defattr(-,root,root,-)
+/opt/$APP
+/usr/bin/$APP
+/usr/share/applications/$APP.desktop
+$RPM_ICON_FILE
+EOF
+rpmbuild -bb --quiet \
+  --define "_topdir $RPMTOP" \
+  --define "_rpmdir $OUT" \
+  --define "_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm" \
+  "$RPMTOP/SPECS/$APP.spec"
+RPM="$OUT/$APP-$VERSION-1.$ARCH_AI.rpm"
+[ -f "$RPM" ] || { echo "  ERROR: rpmbuild did not produce $(basename "$RPM")"; exit 1; }
+echo "  -> $(basename "$RPM")"
+
+# ============================================================================
+# 4) AppImage
 # ============================================================================
 log "AppImage"
 command -v mksquashfs >/dev/null || { apt-get update -y >/dev/null && apt-get install -y squashfs-tools >/dev/null; }
@@ -208,28 +287,40 @@ ARCH=$ARCH_AI APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGETOOL" \
 echo "  -> $(basename "$APPIMAGE")"
 
 # ============================================================================
-# 4) PKGBUILD (Arch / AUR) — builds from the release tar.gz
+# 5) PKGBUILD + .SRCINFO (Arch / AUR) — builds from the release tar.gz
 # ============================================================================
-log "PKGBUILD"
+# Одни и те же поля уезжают в два файла, и расходиться им нельзя: AUR не
+# примет пакет, у которого .SRCINFO описывает не тот PKGBUILD.
+log "PKGBUILD + .SRCINFO"
 TAR_SHA="$(sha256sum "$TARBALL" | cut -d' ' -f1)"
-cat > "$OUT/PKGBUILD" <<EOF
-# Maintainer: $MAINTAINER
-pkgname=$APP-bin
-pkgver=$VERSION
-pkgrel=1
-pkgdesc="KEQDIS proxy/VPN client (Xray/sing-box/AmneziaWG, proxy + TUN)"
-arch=('x86_64')
-url="https://github.com/$GH_OWNER/$GH_REPO"
-license=('custom')
-depends=('gtk3' 'glibc' 'libayatana-appindicator')
-optdepends=('polkit: TUN mode (root via pkexec)'
-            'gnome-shell-extension-appindicator: tray icon on GNOME'
-            'xdg-desktop-portal-gtk: file dialogs (import/export, any portal backend works)'
-            'zenity: file dialogs without an xdg-desktop-portal backend')
-provides=('$APP')
-conflicts=('$APP')
-source=("\$pkgname-\$pkgver.tar.gz::https://github.com/$GH_OWNER/$GH_REPO/releases/download/v\$pkgver/$APP-\$pkgver-linux-x64.tar.gz")
-sha256sums=('$TAR_SHA')
+DEPENDS=(gtk3 glibc libayatana-appindicator)
+OPTDEPENDS=(
+  'polkit: TUN mode (root via pkexec)'
+  'gnome-shell-extension-appindicator: tray icon on GNOME'
+  'xdg-desktop-portal-gtk: file dialogs (import/export, any portal backend works)'
+  'zenity: file dialogs without an xdg-desktop-portal backend'
+)
+SOURCE_NAME="$APP-bin-$VERSION.tar.gz"
+SOURCE_URL="https://github.com/$GH_OWNER/$GH_REPO/releases/download/v$VERSION/$APP-$VERSION-linux-x64.tar.gz"
+
+{
+  echo "# Maintainer: $MAINTAINER"
+  echo "pkgname=$APP-bin"
+  echo "pkgver=$VERSION"
+  echo "pkgrel=1"
+  echo "pkgdesc=\"$PKGDESC\""
+  echo "arch=('x86_64')"
+  echo "url=\"https://github.com/$GH_OWNER/$GH_REPO\""
+  printf "license=(%s)\n" "$(printf "'%s' " "${LICENSES[@]}" | sed 's/ $//')"
+  printf "depends=(%s)\n" "$(printf "'%s' " "${DEPENDS[@]}" | sed 's/ $//')"
+  echo "optdepends=("
+  for d in "${OPTDEPENDS[@]}"; do echo "            '$d'"; done
+  echo "           )"
+  echo "provides=('$APP')"
+  echo "conflicts=('$APP')"
+  echo "source=(\"\$pkgname-\$pkgver.tar.gz::https://github.com/$GH_OWNER/$GH_REPO/releases/download/v\$pkgver/$APP-\$pkgver-linux-x64.tar.gz\")"
+  echo "sha256sums=('$TAR_SHA')"
+  cat <<EOF
 
 package() {
   install -dm755 "\$pkgdir/opt/$APP"
@@ -249,16 +340,39 @@ StartupWMClass=$APP
 DESKTOP
 }
 EOF
-echo "  -> PKGBUILD (tar sha256 $TAR_SHA)"
+} > "$OUT/PKGBUILD"
+
+mkdir -p "$OUT/aur"
+cp "$OUT/PKGBUILD" "$OUT/aur/PKGBUILD"
+{
+  printf 'pkgbase = %s-bin\n' "$APP"
+  printf '\tpkgdesc = %s\n' "$PKGDESC"
+  printf '\tpkgver = %s\n' "$VERSION"
+  printf '\tpkgrel = 1\n'
+  printf '\turl = https://github.com/%s/%s\n' "$GH_OWNER" "$GH_REPO"
+  printf '\tarch = x86_64\n'
+  for l in "${LICENSES[@]}"; do printf '\tlicense = %s\n' "$l"; done
+  for d in "${DEPENDS[@]}"; do printf '\tdepends = %s\n' "$d"; done
+  for d in "${OPTDEPENDS[@]}"; do printf '\toptdepends = %s\n' "$d"; done
+  printf '\tprovides = %s\n' "$APP"
+  printf '\tconflicts = %s\n' "$APP"
+  printf '\tsource = %s::%s\n' "$SOURCE_NAME" "$SOURCE_URL"
+  printf '\tsha256sums = %s\n' "$TAR_SHA"
+  printf '\n'
+  printf 'pkgname = %s-bin\n' "$APP"
+} > "$OUT/aur/.SRCINFO"
+echo "  -> PKGBUILD, aur/PKGBUILD, aur/.SRCINFO (tar sha256 $TAR_SHA)"
 
 # ============================================================================
-# 5) sha256 sidecars (ASCII, no BOM) for deb / AppImage / tar.gz
+# 6) SHA256SUMS
 # ============================================================================
-log "sha256 sidecars"
-for f in "$DEB" "$APPIMAGE" "$TARBALL"; do
-  sha256sum "$f" | cut -d' ' -f1 | tr -d '\n' > "$f.sha256"
-  echo "  $(basename "$f").sha256 = $(cat "$f.sha256")"
-done
+# Один файл на весь релиз вместо .sha256 рядом с каждым ассетом. Апдейтер
+# читает его с 0.5.0; make_release.ps1 переписывает этот файл заново, когда в
+# релиз добавятся APK и Windows-архив.
+log "SHA256SUMS"
+( cd "$OUT" && find . -maxdepth 1 -type f ! -name SHA256SUMS ! -name '*.sha256' -printf '%f\n' \
+    | LC_ALL=C sort | xargs -d '\n' sha256sum > SHA256SUMS )
+cat "$OUT/SHA256SUMS"
 
 log "Done. Artifacts in $OUT"
 ls -la "$OUT"

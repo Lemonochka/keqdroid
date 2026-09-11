@@ -2,11 +2,13 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 
 import '../core/app_logger.dart';
 import '../utils/geo_asset_index.dart';
 import 'geo_asset_service.dart';
+import 'update_service.dart';
 
 /// Догружает полную базу `geoip.dat` поверх вшитой урезанной.
 ///
@@ -26,8 +28,8 @@ class GeoBaseDownloader {
   static const _owner = 'Lemonochka';
   static const _repo = 'keqdroid';
 
-  /// Имя ассета в релизе. Рядом обязан лежать `<имя>.sha256` — как у остальных
-  /// ассетов, иначе установка отклоняется.
+  /// Имя ассета в релизе. Его хеш — в `<имя>.sha256` рядом или в общем
+  /// `SHA256SUMS` релиза; без хеша установка отклоняется.
   static const assetName = 'geoip.dat';
 
   static bool isFullBase(GeoAssetIndex index) => index.hasFullGeoip;
@@ -114,24 +116,41 @@ class GeoBaseDownloader {
       throw const GeoBaseDownloadException('release has no assets');
     }
 
-    String? find(String name) {
-      for (final a in assets) {
-        if (a is Map && a['name'] == name) {
-          final url = a['browser_download_url'];
-          if (url is String && url.isNotEmpty) return url;
-        }
-      }
-      return null;
-    }
-
-    final url = find(assetName);
-    final shaUrl = find('$assetName.sha256');
-    if (url == null || shaUrl == null) {
+    final urls = urlsFromAssets(assets);
+    if (urls == null) {
       throw const GeoBaseDownloadException(
         'the latest release does not carry geoip.dat with its checksum',
       );
     }
-    return (url, shaUrl);
+    return urls;
+  }
+
+  /// Адреса базы и её хеша среди ассетов релиза; null — чего-то из двух нет.
+  ///
+  /// Хеш ищется тем же правилом, что у апдейтера: свой `.sha256` или общий
+  /// `SHA256SUMS`. Раньше здесь понимали только первое, и релиз с одним общим
+  /// файлом оставил бы кнопку «скачать полную базу» без хеша.
+  @visibleForTesting
+  static (String, String)? urlsFromAssets(List<dynamic> assets) {
+    String? urlOf(Object? asset) {
+      if (asset is! Map) return null;
+      final url = asset['browser_download_url'];
+      return url is String && url.isNotEmpty ? url : null;
+    }
+
+    String? baseUrl;
+    for (final a in assets) {
+      if (a is Map && a['name'] == assetName) baseUrl = urlOf(a);
+    }
+    final checksumUrl = urlOf(UpdateService.checksumAssetFor(
+      [
+        for (final a in assets)
+          if (a is Map) Map<String, dynamic>.from(a),
+      ],
+      assetName,
+    ));
+    if (baseUrl == null || checksumUrl == null) return null;
+    return (baseUrl, checksumUrl);
   }
 
   static Future<String> _expectedSha256(Dio dio, String url) async {
@@ -139,13 +158,13 @@ class GeoBaseDownloader {
       url,
       options: Options(responseType: ResponseType.plain),
     );
-    // Сайдкар бывает и голым хешем, и строкой в стиле `sha256sum`:
-    // `<hash>  <file>`. Берём первое шестнадцатеричное слово нужной длины.
-    final match = RegExp(r'\b[0-9a-fA-F]{64}\b').firstMatch(res.data ?? '');
-    if (match == null) {
+    // Голый хеш своего `.sha256` или строка `<hash>  geoip.dat` из общего
+    // `SHA256SUMS` — разбор тот же, что у апдейтера.
+    final hash = UpdateService.extractSha256(res.data ?? '', assetName);
+    if (hash == null) {
       throw const GeoBaseDownloadException('checksum file is unreadable');
     }
-    return match.group(0)!;
+    return hash;
   }
 }
 

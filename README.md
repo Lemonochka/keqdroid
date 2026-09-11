@@ -45,13 +45,13 @@
 ## Download
 
 Pre-built binaries are on [Releases](https://github.com/Lemonochka/keqdroid/releases).  
-Every asset ships with a `.sha256` next to it. The built-in updater checks the hash and refuses to install when the sidecar is missing or does not match.
+One `SHA256SUMS` holds the hash of every file in the release. The built-in updater looks its own asset up there and refuses to install when the line is missing or the hash does not match.
 
 | Platform | Files in release |
 |----------|------------------|
 | **Android** 7.0+ | `keqdroid-<version>-android.apk` |
 | **Windows** x64 | `keqdroid-windows-x64-<version>.zip` (portable) |
-| **Linux** x64 | `keqdroid-<version>-linux-x64.tar.gz` · `keqdroid-<version>-x86_64.AppImage` · `keqdroid_<version>_amd64.deb` · `PKGBUILD` for Arch |
+| **Linux** x64 | `keqdroid-<version>-x86_64.AppImage` · `keqdroid_<version>_amd64.deb` · `keqdroid-<version>-1.x86_64.rpm` · `keqdroid-<version>-linux-x64.tar.gz` · Arch: `keqdroid-bin` on the AUR |
 
 The app **does not provide servers**. Bring your own subscription or configs. Comply with the laws of your country.
 
@@ -141,7 +141,7 @@ The window minimizes to the tray and remembers its size and position. Launch at 
 
 ### Linux
 
-Debian/Arch, x86_64. Releases ship tar.gz, AppImage and deb; Arch users get a `PKGBUILD` among the release assets.
+Debian/Fedora/Arch, x86_64. Releases ship AppImage, deb, rpm and tar.gz. On Arch the package lives on the AUR — `yay -S keqdroid-bin` — and the same `PKGBUILD` is among the release assets, for a manual `makepkg -si`.
 
 | Mode | What it does |
 |------|--------------|
@@ -187,14 +187,20 @@ Place the required core binaries in `assets/bin/windows/` before a Windows build
 ### Releases
 
 ```powershell
-# APK + Windows zip, SHA-256, output to release\<version>\
+# Android + Windows + Linux (that part runs in WSL), SHA256SUMS, output to release\<version>\
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
 
 # same + publish GitHub Release (requires gh CLI)
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
 ```
 
-Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, attach a `.sha256` for every asset — the updater treats a missing one as a reason to refuse.
+The AUR package goes out separately, once the GitHub release exists — its `PKGBUILD` downloads the tarball from there:
+
+```bash
+wsl -e bash /mnt/c/.../keqdroid/tool/publish_aur.sh
+```
+
+Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, upload `SHA256SUMS` along with the assets — a hash the updater cannot find is a reason to refuse.
 
 ---
 
@@ -241,13 +247,13 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, atta
 Скриншоты — [выше](#screenshots).
 
 Готовые сборки — в [Releases](https://github.com/Lemonochka/keqdroid/releases).  
-К каждому файлу приложен `.sha256`: встроенный апдейтер сверяет хеш и не ставит обновление, если файла с хешем нет или он не сошёлся.
+Хеши всего релиза лежат в одном `SHA256SUMS`: встроенный апдейтер находит там свой файл и не ставит обновление, если строки нет или хеш не сошёлся.
 
 | Платформа | Файлы в релизе |
 |-----------|----------------|
 | **Android** 7.0+ | `keqdroid-<версия>-android.apk` |
 | **Windows** x64 | `keqdroid-windows-x64-<версия>.zip` (portable) |
-| **Linux** x64 | `keqdroid-<версия>-linux-x64.tar.gz` · `keqdroid-<версия>-x86_64.AppImage` · `keqdroid_<версия>_amd64.deb` · `PKGBUILD` для Arch |
+| **Linux** x64 | `keqdroid-<версия>-x86_64.AppImage` · `keqdroid_<версия>_amd64.deb` · `keqdroid-<версия>-1.x86_64.rpm` · `keqdroid-<версия>-linux-x64.tar.gz` · Arch: `keqdroid-bin` на AUR |
 
 Приложение **не раздаёт серверы** — нужна своя подписка или конфиги. Соблюдайте законы вашей страны.
 
@@ -337,7 +343,7 @@ Hysteria v1 не поддерживается.
 
 ### Linux
 
-Debian/Arch, x86_64. В релизе — tar.gz, AppImage, deb; для Arch среди файлов релиза есть `PKGBUILD`.
+Debian/Fedora/Arch, x86_64. В релизе — AppImage, deb, rpm и tar.gz. Для Arch пакет лежит на AUR — `yay -S keqdroid-bin`; тот же `PKGBUILD` есть и среди файлов релиза — для ручного `makepkg -si`.
 
 | Режим | Что делает |
 |-------|------------|
@@ -383,14 +389,20 @@ wsl -e bash /mnt/c/.../keqdroid/tool/build_linux_wsl.sh
 ### Релизы
 
 ```powershell
-# APK + Windows-zip, SHA-256, папка release\<версия>\
+# Android + Windows + Linux (эта часть — в WSL), SHA256SUMS, папка release\<версия>\
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
 
 # то же + GitHub Release (нужен gh CLI)
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
 ```
 
-Версия и тег `vX.Y.Z` берутся из `pubspec.yaml`. При ручной заливке к каждому файлу нужен `.sha256` — без него апдейтер откажется ставить обновление.
+Пакет для AUR уезжает отдельно и после того, как релиз на GitHub уже есть: его `PKGBUILD` качает архив оттуда.
+
+```bash
+wsl -e bash /mnt/c/.../keqdroid/tool/publish_aur.sh
+```
+
+Версия и тег `vX.Y.Z` берутся из `pubspec.yaml`. При ручной заливке рядом с файлами нужен `SHA256SUMS` — хеш, которого апдейтер не нашёл, для него повод отказаться.
 
 ---
 

@@ -25,8 +25,9 @@ class UpdateInfo {
   /// Used to locate its SHA-256 line inside a multi-asset checksums file.
   final String assetName;
 
-  /// `browser_download_url` of the SHA-256 sidecar for [assetName], if the
-  /// release published one. `null` means no checksum is available.
+  /// `browser_download_url` of the file holding the SHA-256 for [assetName]:
+  /// its own `.sha256` or the release-wide `SHA256SUMS`. `null` means no
+  /// checksum is available.
   final String? checksumUrl;
 
   UpdateInfo({
@@ -348,9 +349,19 @@ class UpdateService {
     return null;
   }
 
+  /// Ассет с контрольной суммой для [assetName] — то же правило, по которому
+  /// ищет его апдейтер. Нужен и загрузчику geo-базы: иначе у них разошлось бы
+  /// то, где лежит хеш.
+  static Map<String, dynamic>? checksumAssetFor(
+    List? assets,
+    String assetName,
+  ) =>
+      _findChecksumAsset(assets, assetName);
+
   /// Locates the SHA-256 checksum asset for [assetName]. Supports either a
   /// per-asset sidecar (`<assetName>.sha256`) or a shared checksums file
   /// (`SHA256SUMS` / `checksums.txt`) listing `<hash>  <filename>` lines.
+  /// Releases from 0.19.0 carry only the shared file.
   static Map<String, dynamic>? _findChecksumAsset(
     List? assets,
     String assetName,

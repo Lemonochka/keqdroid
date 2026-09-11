@@ -1,27 +1,47 @@
-<#
+﻿<#
 .SYNOPSIS
-  Build keqdroid, package release assets, generate SHA-256 sidecars, and
-  (optionally) publish a GitHub release.
+  Build keqdroid for every platform, package the release assets and write one
+  SHA256SUMS that covers all of them.
 
 .DESCRIPTION
   Produces, under release\<version>\:
     keqdroid-<version>-android.apk              (Android)
-    keqdroid-<version>-android.apk.sha256
     keqdroid-windows-x64-<version>.zip          (Windows portable)
-    keqdroid-windows-x64-<version>.zip.sha256
+    keqdroid-<version>-x86_64.AppImage          (Linux)
+    keqdroid_<version>_amd64.deb                (Debian / Ubuntu)
+    keqdroid-<version>-1.x86_64.rpm             (Fedora / openSUSE)
+    keqdroid-<version>-linux-x64.tar.gz         (Linux portable, the AUR source)
+    PKGBUILD                                    (Arch, for a manual makepkg)
+    aur\PKGBUILD, aur\.SRCINFO                  (what tool/publish_aur.sh pushes)
+    geoip.dat, geoip.dat.sha256                 (full geo database for Android)
+    SHA256SUMS                                  (sha256sum format, every asset)
 
-  The in-app updater (UpdateService) refuses to install any asset whose
-  matching <asset>.sha256 is missing or does not match. Every published
-  release MUST therefore carry the sidecars this script generates.
+  The in-app updater refuses any asset it cannot verify. Every version since
+  0.5.0 reads the hash from a release-wide SHA256SUMS, so assets no longer need
+  a .sha256 of their own. The one exception is geoip.dat.sha256: the full geo
+  base download in 0.15.0 - 0.18.0 fetches it from the LATEST release and asks
+  for exactly that name.
 
-  Sidecars are written as ASCII without BOM on purpose: Windows PowerShell 5.1
-  otherwise emits UTF-16/BOM, which corrupts generated files.
+  Linux is built inside WSL by tool/build_linux_native.sh.
+
+  Checksum files are ASCII without BOM and with LF line ends: Windows
+  PowerShell 5.1 otherwise writes UTF-16 or a BOM, and `sha256sum -c` wants LF.
 
 .PARAMETER SkipAndroid
   Do not build/package the APK.
 
 .PARAMETER SkipWindows
   Do not build/package the Windows zip.
+
+.PARAMETER SkipLinux
+  Do not build the Linux packages in WSL.
+
+.PARAMETER NoClean
+  Skip `flutter clean`. A release should not: persistent build directories
+  carry stale files into the packages.
+
+.PARAMETER WslDistro
+  WSL distribution that builds Linux.
 
 .PARAMETER Publish
   Create the GitHub release via the `gh` CLI and upload all assets.
@@ -31,7 +51,7 @@
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
-  # build everything + sha256, no upload
+  # build everything + SHA256SUMS, no upload
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
@@ -40,6 +60,9 @@
 param(
   [switch]$SkipAndroid,
   [switch]$SkipWindows,
+  [switch]$SkipLinux,
+  [switch]$NoClean,
+  [string]$WslDistro = 'Ubuntu-24.04',
   [switch]$Publish,
   [string]$NotesFile
 )
@@ -73,6 +96,16 @@ Repair-PubCacheEnv
 
 function Write-Step($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
 
+# ASCII, no BOM, LF (see the note in the header).
+function Write-AsciiLf([string]$path, [string[]]$lines) {
+  $text = ($lines -join "`n") + "`n"
+  [System.IO.File]::WriteAllText($path, $text, (New-Object System.Text.ASCIIEncoding))
+}
+
+function Get-Sha256([string]$path) {
+  (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLower()
+}
+
 # --- version from pubspec.yaml: "version: 0.4.9+1" -> "0.4.9", tag "v0.4.9" ---
 $pubspec = Get-Content (Join-Path $repoRoot 'pubspec.yaml') -Raw
 $m = [regex]::Match($pubspec, '(?m)^\s*version:\s*([0-9]+\.[0-9]+(?:\.[0-9]+)?)')
@@ -84,12 +117,17 @@ Write-Step "Releasing $tag"
 $outDir = Join-Path $repoRoot "release\$version"
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
-# ASCII, no BOM (avoids the cp1251/UTF-8 trap that breaks the updater).
-function Write-Sha256Sidecar([string]$assetPath) {
-  $hash = (Get-FileHash -LiteralPath $assetPath -Algorithm SHA256).Hash.ToLower()
-  $sidecar = "$assetPath.sha256"
-  [System.IO.File]::WriteAllText($sidecar, $hash, (New-Object System.Text.ASCIIEncoding))
-  Write-Host "    sha256 $([System.IO.Path]::GetFileName($assetPath)) = $hash"
+# Per-asset sidecars from an earlier run would ride along into the upload and
+# put every file into the release twice, which is exactly what SHA256SUMS
+# replaces. geoip.dat.sha256 is rewritten below.
+Get-ChildItem -LiteralPath $outDir -Filter '*.sha256' -File -ErrorAction SilentlyContinue |
+  Remove-Item -Force
+Remove-Item -LiteralPath (Join-Path $outDir 'SHA256SUMS') -Force -ErrorAction SilentlyContinue
+
+if (-not $NoClean) {
+  Write-Step "flutter clean"
+  flutter clean
+  if ($LASTEXITCODE -ne 0) { throw "flutter clean failed" }
 }
 
 Write-Step "flutter pub get"
@@ -115,7 +153,7 @@ if (-not $SkipAndroid) {
   # просто *.apk, ему суффикс не важен.
   $apkOut = Join-Path $outDir "keqdroid-$version-android.apk"
   Copy-Item -LiteralPath $apkSrc -Destination $apkOut -Force
-  Write-Sha256Sidecar $apkOut
+  Write-Host "    $(Split-Path $apkOut -Leaf) ($([math]::Round((Get-Item -LiteralPath $apkOut).Length / 1MB, 1)) MB)"
 }
 
 # --- Windows ---------------------------------------------------------------
@@ -182,44 +220,79 @@ if (-not $SkipWindows) {
   # Zip the contents so keqdroid.exe sits at the archive root (the updater's
   # findPayloadRoot expects keqdroid.exe at root or in a single subfolder).
   Compress-Archive -Path (Join-Path $relDir '*') -DestinationPath $zipOut
-  Write-Sha256Sidecar $zipOut
+  Write-Host "    $(Split-Path $zipOut -Leaf) ($([math]::Round((Get-Item -LiteralPath $zipOut).Length / 1MB, 1)) MB)"
 }
 
-# --- Verify sidecars match (cheap sanity) ----------------------------------
+# --- Linux (in WSL) ----------------------------------------------------------
+if (-not $SkipLinux) {
+  Write-Step "Building Linux packages in WSL ($WslDistro)"
+  $root = $repoRoot.Path
+  $wslRepo = '/mnt/' + $root.Substring(0, 1).ToLower() + $root.Substring(2).Replace('\', '/')
+  wsl -d $WslDistro -e bash "$wslRepo/tool/build_linux_native.sh"
+  if ($LASTEXITCODE -ne 0) { throw "Linux build in WSL failed" }
+  foreach ($f in @(
+      "keqdroid-$version-x86_64.AppImage",
+      "keqdroid_$($version)_amd64.deb",
+      "keqdroid-$version-1.x86_64.rpm",
+      "keqdroid-$version-linux-x64.tar.gz",
+      'PKGBUILD',
+      'aur\PKGBUILD',
+      'aur\.SRCINFO')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $outDir $f))) {
+      throw "The Linux build did not produce $f"
+    }
+  }
+}
+
 # --- Full geo database ------------------------------------------------------
 # The APK carries a trimmed geoip.dat (four codes, 0.6 MB) — see
 # tool/geo_lite.dart. GeoBaseDownloader fetches the full one from the LATEST
-# release, so every release has to carry it, checksum included: the downloader
-# refuses an asset whose .sha256 is missing or does not match, exactly like the
-# app updater does.
+# release, so every release has to carry it. Its own .sha256 stays: the
+# downloader in 0.15.0 - 0.18.0 knows no other place to look.
 Write-Step "Publishing the full geo database"
 $geoSrc = Join-Path $repoRoot 'assets\bin\windows\geoip.dat'
 if (-not (Test-Path -LiteralPath $geoSrc)) { throw "full geoip.dat not found at $geoSrc" }
 $geoOut = Join-Path $outDir 'geoip.dat'
 Copy-Item -LiteralPath $geoSrc -Destination $geoOut -Force
-Write-Sha256Sidecar $geoOut
+Write-AsciiLf "$geoOut.sha256" @(Get-Sha256 $geoOut)
 Write-Host ("    geoip.dat OK ({0} MB)" -f [math]::Round((Get-Item -LiteralPath $geoOut).Length / 1MB, 1))
 
-Write-Step "Verifying sidecars"
-Get-ChildItem -LiteralPath $outDir -Filter '*.sha256' | ForEach-Object {
-  $asset = $_.FullName.Substring(0, $_.FullName.Length - '.sha256'.Length)
-  $expected = (Get-Content -LiteralPath $_.FullName -Raw).Trim().ToLower()
-  $actual = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLower()
-  if ($expected -ne $actual) { throw "Sidecar mismatch for $asset" }
+# --- SHA256SUMS --------------------------------------------------------------
+Write-Step "Writing SHA256SUMS"
+$sumsPath = Join-Path $outDir 'SHA256SUMS'
+$assets = Get-ChildItem -LiteralPath $outDir -File |
+  Where-Object { $_.Name -ne 'SHA256SUMS' -and $_.Extension -ne '.sha256' } |
+  Sort-Object Name
+Write-AsciiLf $sumsPath @($assets | ForEach-Object { '{0}  {1}' -f (Get-Sha256 $_.FullName), $_.Name })
+
+Write-Step "Verifying checksums"
+$sumLines = Get-Content -LiteralPath $sumsPath
+foreach ($line in $sumLines) {
+  $hash, $name = $line -split '  ', 2
+  if ((Get-Sha256 (Join-Path $outDir $name)) -ne $hash) { throw "SHA256SUMS mismatch for $name" }
+  # Every updater so far takes the first line that CONTAINS the asset name. A
+  # name that is part of another line would hand it someone else's hash.
+  $hits = @($sumLines | Where-Object { $_.ToLower().Contains($name.ToLower()) })
+  if ($hits.Count -ne 1) { throw "Asset name $name appears in $($hits.Count) lines of SHA256SUMS" }
 }
-Write-Host "    all sidecars OK"
+if ((Get-Content -LiteralPath "$geoOut.sha256" -Raw).Trim() -ne (Get-Sha256 $geoOut)) {
+  throw "geoip.dat.sha256 mismatch"
+}
+Write-Host "    $($sumLines.Count) assets OK"
 
 Write-Host ""
 Write-Step "Artifacts in $outDir"
-Get-ChildItem -LiteralPath $outDir | Select-Object Name, Length | Format-Table -AutoSize
+Get-ChildItem -LiteralPath $outDir -File | Select-Object Name, Length | Format-Table -AutoSize
 
 # --- Publish ---------------------------------------------------------------
 if ($Publish) {
   $gh = Get-Command gh -ErrorAction SilentlyContinue
   if (-not $gh) { throw "gh CLI not found on PATH; install it or upload manually." }
 
-  $assets = Get-ChildItem -LiteralPath $outDir -File | ForEach-Object { $_.FullName }
-  $ghArgs = @('release', 'create', $tag) + $assets + @('--title', $tag)
+  # Top-level files only: aur\ is pushed to AUR by tool/publish_aur.sh, and a
+  # release asset named .SRCINFO would be renamed by GitHub anyway.
+  $files = Get-ChildItem -LiteralPath $outDir -File | ForEach-Object { $_.FullName }
+  $ghArgs = @('release', 'create', $tag) + $files + @('--title', $tag)
   if ($NotesFile -and (Test-Path -LiteralPath $NotesFile)) {
     $ghArgs += @('--notes-file', $NotesFile)
   } else {
@@ -232,6 +305,5 @@ if ($Publish) {
   Write-Host "    published $tag" -ForegroundColor Green
 } else {
   Write-Host ""
-  Write-Host "Not published. To upload manually:" -ForegroundColor Yellow
-  Write-Host "  gh release create $tag $outDir\* --title $tag --generate-notes"
+  Write-Host "Not published. Upload every file in $outDir (not the aur folder) to the $tag release." -ForegroundColor Yellow
 }

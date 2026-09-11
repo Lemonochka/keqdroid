@@ -130,4 +130,61 @@ void main() {
       expect(UpdateService.extractSha256('not a hash', 'x.apk'), isNull);
     });
   });
+
+  group('one SHA256SUMS for the whole release', () {
+    // Так выглядит релиз с 0.19.0: рядом с ассетами нет ни одного .sha256,
+    // кроме geoip.dat.sha256 для загрузчика geo-базы в 0.15–0.18.
+    const names = [
+      'PKGBUILD',
+      'geoip.dat',
+      'keqdroid-0.19.0-1.x86_64.rpm',
+      'keqdroid-0.19.0-android.apk',
+      'keqdroid-0.19.0-linux-x64.tar.gz',
+      'keqdroid-0.19.0-x86_64.AppImage',
+      'keqdroid-windows-x64-0.19.0.zip',
+      'keqdroid_0.19.0_amd64.deb',
+    ];
+    String hashOf(int i) => (i + 1).toRadixString(16).padLeft(64, '0');
+    final manifest = [
+      for (var i = 0; i < names.length; i++) '${hashOf(i)}  ${names[i]}',
+    ].join('\n');
+    final assets = <Map<String, dynamic>>[
+      for (final n in [...names, 'geoip.dat.sha256', 'SHA256SUMS'])
+        {'name': n, 'browser_download_url': 'https://example.invalid/$n'},
+    ];
+
+    test('every platform asset is verified against the manifest', () {
+      for (final platform in ['android', 'windows', 'linux']) {
+        final name = UpdateService.findAssetNameForPlatform(assets, platform)!;
+        expect(
+          UpdateService.checksumAssetFor(assets, name)?['name'],
+          'SHA256SUMS',
+          reason: name,
+        );
+      }
+    });
+
+    test('each asset reads its own line, the way every version reads it', () {
+      for (var i = 0; i < names.length; i++) {
+        expect(
+          UpdateService.extractSha256(manifest, names[i]),
+          hashOf(i),
+          reason: names[i],
+        );
+        // Все версии берут первую строку, СОДЕРЖАЩУЮ имя ассета: имя, которое
+        // оказалось частью чужой строки, получило бы чужой хеш.
+        final lines = manifest
+            .split('\n')
+            .where((l) => l.toLowerCase().contains(names[i].toLowerCase()));
+        expect(lines, hasLength(1), reason: names[i]);
+      }
+    });
+
+    test('Linux still updates from the AppImage, the rpm is not picked', () {
+      expect(
+        UpdateService.findAssetNameForPlatform(assets, 'linux'),
+        'keqdroid-0.19.0-x86_64.AppImage',
+      );
+    });
+  });
 }

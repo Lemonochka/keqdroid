@@ -74,7 +74,7 @@ Native Linux or WSL only. There are two scripts with different jobs:
 # flutter build linux --release
 wsl -e bash /mnt/c/Users/<you>/StudioProjects/keqdroid/tool/build_linux_wsl.sh
 
-# package a finished bundle: tar.gz + deb + AppImage + PKGBUILD + sidecars
+# package a finished bundle: tar.gz + deb + rpm + AppImage + PKGBUILD/.SRCINFO + SHA256SUMS
 wsl -e bash /mnt/c/Users/<you>/StudioProjects/keqdroid/tool/package_linux.sh
 ```
 
@@ -188,25 +188,32 @@ key. Generation runs on its own during `flutter pub get` / `flutter run` (or man
 ## 7. Release
 
 ```powershell
-# APK + Windows zip + SHA-256 → release\<version>\
+# Android + Windows + Linux (that part in WSL) + SHA256SUMS → release\<version>\
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
 
 # the same plus publishing a GitHub release (needs the gh CLI)
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
+
+# after the release is up: push PKGBUILD + .SRCINFO to the AUR
+wsl -e bash /mnt/c/Users/<you>/StudioProjects/keqdroid/tool/publish_aur.sh
 ```
 
 Rules that must not be broken:
 
 - the version and the `vX.Y.Z` tag come from `version:` in `pubspec.yaml` — that is the
   single source;
-- **every** asset carries a `<name>.sha256` sidecar (ASCII, no BOM): the updater is
-  fail-closed and installs nothing without a matching hash. `tool/make_release.ps1` and
-  `tool/package_linux.sh` generate the sidecars themselves; when uploading by hand, do not
-  forget them;
+- the release carries one `SHA256SUMS` (ASCII, no BOM, LF, `sha256sum` format): the updater
+  is fail-closed and installs nothing without a matching hash. Every build since 0.5.0
+  reads it, which is why per-asset `.sha256` sidecars are gone; 0.4.x knows only the
+  sidecar and has to be updated by hand. An asset name must appear in exactly **one** line
+  — the updater takes the first line containing it, so a name that is part of another one
+  would be handed the wrong hash. `tool/make_release.ps1` checks that before publishing;
+- `geoip.dat.sha256` is the one sidecar that stays: the full geo base download in
+  0.15.0 - 0.18.0 asks the latest release for exactly that name;
 - asset names are fixed: `keqdroid-<version>-android.apk`,
   `keqdroid-windows-x64-<version>.zip` (exactly that word order),
   `keqdroid-<version>-linux-x64.tar.gz`, `keqdroid_<version>_amd64.deb`,
-  `keqdroid-<version>-x86_64.AppImage`;
+  `keqdroid-<version>-x86_64.AppImage`, `keqdroid-<version>-1.x86_64.rpm`;
 - check the APK with `aapt dump badging | grep versionName` before copying it — after a
   failed build the **old** APK from the previous success is still sitting in `build/`.
 
@@ -288,7 +295,7 @@ flutter build windows --release
 # flutter build linux --release
 wsl -e bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/tool/build_linux_wsl.sh
 
-# упаковка готового бандла: tar.gz + deb + AppImage + PKGBUILD + сайдкары
+# упаковка готового бандла: tar.gz + deb + rpm + AppImage + PKGBUILD/.SRCINFO + SHA256SUMS
 wsl -e bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/tool/package_linux.sh
 ```
 
@@ -403,22 +410,30 @@ Android-часть тянет `amneziawg-android` (там лежат
 ## 7. Релиз
 
 ```powershell
-# APK + Windows-zip + SHA-256 → release\<версия>\
+# Android + Windows + Linux (эта часть — в WSL) + SHA256SUMS → release\<версия>\
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
 
 # то же + публикация GitHub-релиза (нужен gh CLI)
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
+
+# когда релиз уже опубликован: PKGBUILD + .SRCINFO уезжают на AUR
+wsl -e bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/tool/publish_aur.sh
 ```
 
 Правила, которые нельзя нарушать:
 
 - версия и тег `vX.Y.Z` берутся из `version:` в `pubspec.yaml` — это единственный источник;
-- **каждый** ассет несёт сайдкар `<имя>.sha256` (ASCII без BOM): апдейтер fail-closed и без
-  совпавшего хеша обновление не поставит. `tool/make_release.ps1` и
-  `tool/package_linux.sh` генерируют сайдкары сами; при ручной заливке — не забудь;
+- на весь релиз один `SHA256SUMS` (ASCII без BOM, LF, формат `sha256sum`): апдейтер
+  fail-closed и без совпавшего хеша обновление не поставит. Его читают все сборки с 0.5.0 —
+  поэтому сайдкаров `.sha256` у каждого ассета больше нет; 0.4.x знает только сайдкар,
+  оттуда обновляются руками. Имя ассета обязано встречаться ровно в **одной** строке:
+  апдейтер берёт первую строку, содержащую имя, и имя, оказавшееся частью чужой строки,
+  получило бы чужой хеш. `tool/make_release.ps1` проверяет это перед публикацией;
+- `geoip.dat.sha256` — единственный сайдкар, который остаётся: загрузчик полной geo-базы
+  в 0.15.0 - 0.18.0 просит у последнего релиза именно это имя;
 - имена ассетов фиксированные: `keqdroid-<версия>-android.apk`,
   `keqdroid-windows-x64-<версия>.zip` (именно такой порядок слов),
   `keqdroid-<версия>-linux-x64.tar.gz`, `keqdroid_<версия>_amd64.deb`,
-  `keqdroid-<версия>-x86_64.AppImage`;
+  `keqdroid-<версия>-x86_64.AppImage`, `keqdroid-<версия>-1.x86_64.rpm`;
 - APK перед копированием проверяй через `aapt dump badging | grep versionName` — после
   упавшей сборки в `build/` остаётся **старый** APK от прошлого успеха.
