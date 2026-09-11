@@ -77,7 +77,7 @@ const _gvisorStacks = {TunSettings.stackGvisor, TunSettings.stackMixed};
 /// доступен в любой сборке.
 ///
 /// [gvisorAvailable] — `null`, когда выяснить не удалось (бинарь не Go, блок
-/// настроек сборки не прочитался). Тогда конфиг не трогаем: «неизвестно» — не
+/// настроек сборки не прочитался). Тогда конфиг не трогаем: неизвестно — не
 /// повод переписывать выбор пользователя.
 ({String config, String? downgradedFrom}) applyTunStackFallback(
   String singboxConfig, {
