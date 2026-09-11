@@ -1,0 +1,1 @@
+The sing-box config has no servers in it. From a subscription this is usually a provider stub: check subscription status and HWID binding in the provider panel.

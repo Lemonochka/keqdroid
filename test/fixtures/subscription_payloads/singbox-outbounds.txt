@@ -1,0 +1,177 @@
+{
+  "log": {"level": "warn"},
+  "dns": {
+    "servers": [{"tag": "remote", "type": "https", "server": "1.1.1.1"}]
+  },
+  "inbounds": [
+    {"type": "tun", "tag": "tun-in", "address": ["172.19.0.1/30"], "auto_route": true},
+    {"type": "mixed", "tag": "mixed-in", "listen": "127.0.0.1", "listen_port": 2080}
+  ],
+  "outbounds": [
+    {
+      "type": "selector",
+      "tag": "proxy",
+      "outbounds": ["auto", "NL Reality", "DE WS", "VMess WS", "VMess gRPC", "Trojan gRPC", "Trojan Reality", "SS 2022", "SS obfs", "SSR", "Hy2 hop", "TUIC", "AnyTLS"]
+    },
+    {"type": "urltest", "tag": "auto", "outbounds": ["NL Reality", "DE WS"]},
+    {
+      "type": "vless",
+      "tag": "NL Reality",
+      "server": "198.51.100.40",
+      "server_port": 443,
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "flow": "xtls-rprx-vision",
+      "packet_encoding": "xudp",
+      "tls": {
+        "enabled": true,
+        "server_name": "reality.example",
+        "utls": {"enabled": true, "fingerprint": "firefox"},
+        "reality": {"enabled": true, "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "short_id": "0123abcd"}
+      }
+    },
+    {
+      "type": "vless",
+      "tag": "DE WS",
+      "server": "198.51.100.41",
+      "server_port": 443,
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "tls": {"enabled": true, "server_name": "ws.example", "alpn": ["http/1.1"], "utls": {"enabled": true, "fingerprint": "chrome"}},
+      "transport": {
+        "type": "ws",
+        "path": "/ws",
+        "headers": {"Host": "ws.example"},
+        "max_early_data": 2048,
+        "early_data_header_name": "Sec-WebSocket-Protocol"
+      }
+    },
+    {
+      "type": "vmess",
+      "tag": "VMess WS",
+      "server": "198.51.100.42",
+      "server_port": 443,
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "security": "auto",
+      "alter_id": 0,
+      "tls": {"enabled": true, "server_name": "vmess.example"},
+      "transport": {"type": "ws", "path": "/vmess", "headers": {"Host": "vmess.example"}}
+    },
+    {
+      "type": "vmess",
+      "tag": "VMess gRPC",
+      "server": "198.51.100.43",
+      "server_port": 443,
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "security": "aes-128-gcm",
+      "tls": {"enabled": true, "server_name": "grpc.example"},
+      "transport": {"type": "grpc", "service_name": "vmessgrpc"}
+    },
+    {
+      "type": "trojan",
+      "tag": "Trojan gRPC",
+      "server": "198.51.100.44",
+      "server_port": 443,
+      "password": "password",
+      "tls": {"enabled": true, "server_name": "trojan.example", "insecure": true},
+      "transport": {"type": "grpc", "service_name": "trojangrpc"}
+    },
+    {
+      "type": "trojan",
+      "tag": "Trojan Reality",
+      "server": "198.51.100.45",
+      "server_port": 443,
+      "password": "password",
+      "tls": {
+        "enabled": true,
+        "server_name": "reality.example",
+        "utls": {"enabled": true, "fingerprint": ""},
+        "reality": {"enabled": true, "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "short_id": ""}
+      }
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "SS 2022",
+      "server": "198.51.100.46",
+      "server_port": 8388,
+      "method": "2022-blake3-aes-128-gcm",
+      "password": "AAAAAAAAAAAAAAAAAAAAAA==",
+      "udp_over_tcp": true,
+      "multiplex": {"enabled": true, "protocol": "h2mux"}
+    },
+    {
+      "type": "shadowsocks",
+      "tag": "SS obfs",
+      "server": "198.51.100.47",
+      "server_port": 8388,
+      "method": "chacha20-ietf-poly1305",
+      "password": "password",
+      "plugin": "obfs-local",
+      "plugin_opts": "obfs=http;obfs-host=obfs.example"
+    },
+    {
+      "type": "shadowsocksr",
+      "tag": "SSR",
+      "server": "198.51.100.48",
+      "server_port": 8389,
+      "method": "aes-256-cfb",
+      "password": "password",
+      "obfs": "http_simple",
+      "obfs_param": "ssr.example",
+      "protocol": "auth_aes128_md5",
+      "protocol_param": ""
+    },
+    {
+      "type": "hysteria2",
+      "tag": "Hy2 hop",
+      "server": "198.51.100.49",
+      "server_port": 443,
+      "server_ports": ["20000:20050"],
+      "hop_interval": "30s",
+      "up_mbps": 50,
+      "down_mbps": 200,
+      "password": "password",
+      "obfs": {"type": "salamander", "password": "password"},
+      "tls": {"enabled": true, "server_name": "hy2.example", "alpn": ["h3"], "certificate_public_key_sha256": ["YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE="]}
+    },
+    {
+      "type": "tuic",
+      "tag": "TUIC",
+      "server": "203.0.113.50",
+      "server_port": 443,
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "password": "password",
+      "congestion_control": "bbr",
+      "udp_relay_mode": "native",
+      "zero_rtt_handshake": true,
+      "tls": {"enabled": true, "server_name": "tuic.example", "alpn": ["h3"]}
+    },
+    {
+      "type": "anytls",
+      "tag": "AnyTLS",
+      "server": "203.0.113.51",
+      "server_port": 443,
+      "password": "password",
+      "tls": {"enabled": true, "server_name": "anytls.example", "utls": {"enabled": true, "fingerprint": "firefox"}}
+    },
+    {"type": "ssh", "tag": "SSH", "server": "203.0.113.52", "server_port": 22, "user": "root", "password": "password"},
+    {"type": "hysteria", "tag": "Hy1", "server": "203.0.113.53", "server_port": 443, "up_mbps": 10, "down_mbps": 50, "auth_str": "password"},
+    {
+      "type": "vless",
+      "tag": "QUIC",
+      "server": "203.0.113.54",
+      "server_port": 443,
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "tls": {"enabled": true, "server_name": "quic.example"},
+      "transport": {"type": "quic"}
+    },
+    {"type": "direct", "tag": "direct"},
+    {"type": "block", "tag": "block"}
+  ],
+  "endpoints": [
+    {"type": "wireguard", "tag": "WG", "address": ["10.0.0.2/32"], "private_key": "password", "peers": [{"address": "203.0.113.55", "port": 51820, "public_key": "password", "allowed_ips": ["0.0.0.0/0"]}]}
+  ],
+  "route": {
+    "rules": [{"action": "sniff"}, {"protocol": "dns", "action": "hijack-dns"}],
+    "final": "proxy",
+    "auto_detect_interface": true
+  }
+}

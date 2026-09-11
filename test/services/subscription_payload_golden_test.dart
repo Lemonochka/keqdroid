@@ -41,6 +41,7 @@ void main() {
     _golden('mixed-links-and-config');
     _golden('fragment-with-spaces');
     _golden('wss-in-html');
+    _golden('singbox-outbounds');
   });
 
   group('golden: base64-обёртки', () {
@@ -70,6 +71,8 @@ void main() {
     // фикстурах маркер есть у каждой строки.
     _goldenError('metadata-stub');
     _goldenError('hwid-stub');
+    // Конфиг sing-box из одних групп и выходов мимо прокси — та же болванка.
+    _goldenError('singbox-stub');
   });
 }
 

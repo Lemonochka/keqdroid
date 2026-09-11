@@ -18,6 +18,7 @@ import '../utils/custom_xray_config.dart';
 import '../utils/hysteria_uri.dart';
 import '../utils/identity_presets.dart';
 import '../utils/mieru_uri.dart';
+import '../utils/singbox_outbounds.dart';
 import '../utils/ssr_uri.dart';
 import '../core/exceptions.dart';
 
@@ -511,14 +512,15 @@ class SubscriptionService {
       // Узлы, которых мы не умеем, до сих пор просто исчезали из списка.
       // Молчание тут хуже короткого списка: человек видит 12 серверов вместо
       // 20 и не знает, у кого спрашивать.
-      if (CustomClashConfig.looksLikeClash(effectiveBody)) {
-        final summary =
-            _skippedNodesSummary(unsupportedClashNodes(effectiveBody));
-        if (summary != null) {
-          AppLogger.instance.warn(
-            'Subscription: skipped nodes this client cannot run: $summary',
-          );
-        }
+      final summary = _skippedNodesSummary(
+        CustomClashConfig.looksLikeClash(effectiveBody)
+            ? unsupportedClashNodes(effectiveBody)
+            : SingboxOutbounds.translate(effectiveBody).skipped,
+      );
+      if (summary != null) {
+        AppLogger.instance.warn(
+          'Subscription: skipped nodes this client cannot run: $summary',
+        );
       }
 
       // fallback для панелей, которые суют дату/трафик в служебные ноды
@@ -1259,6 +1261,15 @@ class SubscriptionService {
         return [...customConfigs, ...extractedLinks];
       }
 
+      // Конфиг sing-box, в отличие от xray и Clash, сервером целиком не
+      // становится: исполнить его как есть нечем. Зато его узлы — те же
+      // серверы, и ссылками их берут оба ядра.
+      final singbox = SingboxOutbounds.translate(candidate)
+          .links
+          .where((c) => !_isMetadataConfig(c))
+          .toList();
+      if (singbox.isNotEmpty) return singbox;
+
       final structured = _extractConfigsFromStructuredContent(candidate);
       if (structured.isNotEmpty) return structured;
 
@@ -1473,6 +1484,14 @@ class SubscriptionService {
           'HWID binding in the provider panel.';
     }
 
+    // sing-box доходит сюда, только если серверов из него не вышло: их нет
+    // вовсе, нет ни одного нашего типа или все они — служебные ноды панели.
+    // Последнего describeProblem не видит, отсюда запасное сообщение.
+    if (SingboxOutbounds.looksLike(text)) {
+      return SingboxOutbounds.describeProblem(text) ??
+          SingboxOutbounds.noServers;
+    }
+
     if (text.startsWith('{') || text.startsWith('[')) {
       try {
         final parsed = jsonDecode(text);
@@ -1481,15 +1500,15 @@ class SubscriptionService {
           if (keys.contains('outbounds') || keys.contains('inbounds') || keys.contains('proxies')) {
             // Рабочий конфиг xray сюда не доходит — его забирает
             // _extractCustomConfigs. Значит либо это болванка без адреса
-            // сервера (истёкшая подписка, непривязанный HWID), либо sing-box /
-            // clash, которых наше ядро не исполняет.
+            // сервера (истёкшая подписка, непривязанный HWID), либо clash в
+            // json-виде, который не разобрался.
             if (CustomXrayConfig.tryParse(text) != null) {
               return 'Subscription returned an Xray config without a server address. '
                   'This is usually a provider stub: check subscription status and '
                   'HWID binding in the provider panel.';
             }
-            return 'Unsupported subscription format: sing-box JSON '
-                '(only Xray and Clash configs are supported)';
+            return 'Unsupported subscription format: JSON config '
+                '(only Xray, sing-box and Clash configs are supported)';
           }
         } else if (parsed is List && parsed.isNotEmpty) {
           return 'Unsupported subscription format: JSON array config';

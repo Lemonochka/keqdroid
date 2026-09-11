@@ -1,0 +1,9 @@
+{
+  "log": {"level": "warn"},
+  "outbounds": [
+    {"type": "selector", "tag": "proxy", "outbounds": ["direct"]},
+    {"type": "direct", "tag": "direct"},
+    {"type": "block", "tag": "block"}
+  ],
+  "route": {"final": "proxy"}
+}

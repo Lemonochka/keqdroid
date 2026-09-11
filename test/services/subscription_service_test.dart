@@ -834,16 +834,30 @@ proxies:
       );
     });
 
-    test('still refuses sing-box json, and says which format it is', () {
-      const singbox = '{"inbounds": [{"type": "tun"}], "outbounds": '
-          '[{"type": "vless", "server": "nl1.example.com", "server_port": 443}]}';
+    test('takes a sing-box config apart into the servers it holds', () {
+      const singbox = '{"inbounds": [{"type": "tun"}], "outbounds": ['
+          '{"type": "vless", "tag": "nl", "server": "nl1.example.com", '
+          '"server_port": 443, "uuid": "00000000-0000-4000-8000-000000000000"}, '
+          '{"type": "direct", "tag": "direct"}]}';
+      expect(SubscriptionService.parseBodyForTest(singbox), [
+        'vless://00000000-0000-4000-8000-000000000000@nl1.example.com:443#nl',
+      ]);
+    });
+
+    // Раньше отказ был на весь формат, теперь — только когда брать нечего, и
+    // тогда в тексте видно, каких узлов мы не умеем.
+    test('a sing-box config with nothing to run says what it held', () {
+      const singbox = '{"inbounds": [{"type": "tun"}], "outbounds": ['
+          '{"type": "vless", "server": "nl1.example.com", "server_port": 443}, '
+          '{"type": "ssh", "tag": "s", "server": "nl2.example.com", '
+          '"server_port": 22}]}';
       expect(
         () => SubscriptionService.parseBodyForTest(singbox),
         throwsA(
           isA<FormatException>().having(
             (e) => e.message,
             'message',
-            contains('sing-box'),
+            allOf(contains('sing-box'), contains('ssh')),
           ),
         ),
       );

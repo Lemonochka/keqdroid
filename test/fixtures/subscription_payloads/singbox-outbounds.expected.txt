@@ -1,0 +1,12 @@
+vless://00000000-0000-4000-8000-000000000000@198.51.100.40:443?security=reality&sni=reality.example&fp=firefox&pbk=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&sid=0123abcd&flow=xtls-rprx-vision&packetEncoding=xudp#NL%20Reality
+vless://00000000-0000-4000-8000-000000000000@198.51.100.41:443?type=ws&path=%2Fws&host=ws.example&ed=2048&security=tls&sni=ws.example&alpn=http%2F1.1&fp=chrome#DE%20WS
+vmess://eyJ2IjoiMiIsInBzIjoiVk1lc3MgV1MiLCJhZGQiOiIxOTguNTEuMTAwLjQyIiwicG9ydCI6IjQ0MyIsImlkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAwIiwiYWlkIjoiMCIsInNjeSI6ImF1dG8iLCJuZXQiOiJ3cyIsInR5cGUiOiJub25lIiwiaG9zdCI6InZtZXNzLmV4YW1wbGUiLCJwYXRoIjoiL3ZtZXNzIiwidGxzIjoidGxzIiwic25pIjoidm1lc3MuZXhhbXBsZSJ9
+vmess://eyJ2IjoiMiIsInBzIjoiVk1lc3MgZ1JQQyIsImFkZCI6IjE5OC41MS4xMDAuNDMiLCJwb3J0IjoiNDQzIiwiaWQiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDAiLCJhaWQiOiIwIiwic2N5IjoiYWVzLTEyOC1nY20iLCJuZXQiOiJncnBjIiwidHlwZSI6Im5vbmUiLCJob3N0IjoiIiwicGF0aCI6InZtZXNzZ3JwYyIsInRscyI6InRscyIsInNuaSI6ImdycGMuZXhhbXBsZSJ9
+trojan://password@198.51.100.44:443?type=grpc&serviceName=trojangrpc&security=tls&sni=trojan.example#Trojan%20gRPC
+trojan://password@198.51.100.45:443?security=reality&sni=reality.example&pbk=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA#Trojan%20Reality
+ss://MjAyMi1ibGFrZTMtYWVzLTEyOC1nY206QUFBQUFBQUFBQUFBQUFBQUFBQUFBQT09@198.51.100.46:8388?uot=1&udp-over-tcp-version=2#SS%202022
+ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpwYXNzd29yZA@198.51.100.47:8388?plugin=obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3Dobfs.example#SS%20obfs
+ssr://MTk4LjUxLjEwMC40ODo4Mzg5OmF1dGhfYWVzMTI4X21kNTphZXMtMjU2LWNmYjpodHRwX3NpbXBsZTpjR0Z6YzNkdmNtUS8_b2Jmc3BhcmFtPWMzTnlMbVY0WVcxd2JHVSZyZW1hcmtzPVUxTlM
+hysteria2://password@198.51.100.49:20000?sni=hy2.example&alpn=h3&obfs=salamander&obfs-password=password&up=50&down=200&mport=20000-20050&hop-interval=30#Hy2%20hop
+tuic://00000000-0000-4000-8000-000000000000:password@203.0.113.50:443?sni=tuic.example&alpn=h3&congestion_control=bbr&udp_relay_mode=native#TUIC
+anytls://password@203.0.113.51:443?sni=anytls.example&fp=firefox#AnyTLS
