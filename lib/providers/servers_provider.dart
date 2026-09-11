@@ -298,6 +298,14 @@ class ServersNotifier extends Notifier<ServersState> {
     if (CustomClashConfig.looksLikeClash(rawConfig)) {
       return CustomClashConfig.describeProblem(rawConfig);
     }
+    // Конфиг sing-box импорт раскладывает на ссылки, так что целиком он
+    // доходит сюда, только если брать из него нечего или его вставили в
+    // редактор одного сервера. Сервером целиком он не станет ни там, ни тут.
+    if (SingboxOutbounds.looksLike(rawConfig)) {
+      return SingboxOutbounds.describeProblem(rawConfig) ??
+          'A sing-box config lists several servers: add it through import, '
+              'not as the config of one server';
+    }
     if (CustomXrayConfig.looksLikeJson(rawConfig)) {
       return CustomXrayConfig.describeProblem(rawConfig);
     }
@@ -314,7 +322,7 @@ class ServersNotifier extends Notifier<ServersState> {
         lower.startsWith('tuic://') ||
         lower.startsWith('anytls://') ||
         lower.startsWith('mierus://'))) {
-      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic://, anytls://, mierus://, wg://, an Xray JSON config, a Clash YAML config or an AmneziaWG .conf';
+      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic://, anytls://, mierus://, wg://, an Xray JSON config, a sing-box config, a Clash YAML config or an AmneziaWG .conf';
     }
 
     // Схема `hysteria://` носит обе версии, и различить их можно только по

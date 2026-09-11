@@ -1,6 +1,7 @@
 import 'awg_profile.dart';
 import 'custom_clash_config.dart';
 import 'custom_xray_config.dart';
+import 'singbox_outbounds.dart';
 
 /// Делит текст, который пользователь вставил (буфер, файл, QR, deep link), на
 /// конфиги серверов.
@@ -9,7 +10,8 @@ import 'custom_xray_config.dart';
 /// блоком: `.conf` AmneziaWG, json xray (а массив таких объектов — сразу
 /// несколько серверов) и yaml Clash. Последний хуже всех: в нём нет ни
 /// фигурной скобки в начале, ни строки-ссылки, и построчный разбор превращал
-/// один профиль в десятки «неподдерживаемых форматов».
+/// один профиль в десятки «неподдерживаемых форматов». Конфиг sing-box —
+/// исключение: он раскладывается на ссылки, по одной на узел.
 List<String> splitServerImportPayload(String raw) {
   final text = raw.trim();
   if (text.isEmpty) return const [];
@@ -26,12 +28,21 @@ List<String> splitServerImportPayload(String raw) {
     return clash.isNotEmpty ? clash : [text];
   }
 
+  // sing-box — тоже раньше xray: у его SSR-узла есть поле `protocol`, и
+  // xray-разбор счёл бы конфиг своим. Целиком его исполнить нечем, а узлы —
+  // те же серверы, что и в подписке. Ни одного нашего узла — отдаём целиком,
+  // причину назовёт `validateServerConfig`.
+  if (SingboxOutbounds.looksLike(text)) {
+    final links = SingboxOutbounds.translate(text).links;
+    return links.isNotEmpty ? links : [text];
+  }
+
   final custom = CustomXrayConfig.extractConfigs(text);
   if (custom.isNotEmpty) return custom;
 
-  // json, который конфигом не оказался (sing-box, ответ панели): отдаём целиком
-  // — так пользователь получит одну внятную причину отказа, а не по ошибке на
-  // каждую строку разбитого json.
+  // json, который конфигом не оказался (ответ панели, обрезанный конфиг):
+  // отдаём целиком — так пользователь получит одну внятную причину отказа, а
+  // не по ошибке на каждую строку разбитого json.
   if (text.startsWith('{') || text.startsWith('[')) return [text];
 
   return text

@@ -57,8 +57,9 @@ class CustomXrayConfig {
     final outbounds = _outboundsOf(map);
     if (outbounds.isEmpty) return null;
     // sing-box описывает аутбаунд полем `type`, xray — `protocol`. Похожие
-    // конфиги, но наше ядро исполняет только второй.
-    if (!outbounds.any((o) => o.containsKey('protocol'))) return null;
+    // конфиги, но наше ядро исполняет только второй. Одного `protocol` мало:
+    // у SSR-узла sing-box оно тоже есть, там это протокол обфускации.
+    if (!outbounds.any(_isXrayOutbound)) return null;
     return CustomXrayConfig._(map);
   }
 
@@ -78,12 +79,15 @@ class CustomXrayConfig {
     if (outbounds.isEmpty) {
       return 'JSON config has no "outbounds" — this is not an Xray config';
     }
-    if (!outbounds.any((o) => o.containsKey('protocol'))) {
+    if (!outbounds.any(_isXrayOutbound)) {
       return 'This looks like a sing-box config (outbounds use "type"). '
           'Only Xray JSON configs are supported.';
     }
     return null;
   }
+
+  static bool _isXrayOutbound(Map<String, dynamic> outbound) =>
+      outbound.containsKey('protocol') && !outbound.containsKey('type');
 
   /// Все конфиги из одного payload: объект — один, массив — по элементу.
   /// Возвращает исходные json-строки (компактные), пригодные как config сервера.

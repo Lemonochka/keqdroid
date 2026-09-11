@@ -59,6 +59,18 @@ const _singboxConfig = '''
 }
 ''';
 
+/// sing-box с настоящими узлами. SSR здесь не для разнообразия: у его узла
+/// есть поле `protocol`, и по нему конфиг сходил за xray.
+const _singboxWithServers = '''
+{
+  "outbounds": [
+    {"type": "vless", "tag": "a", "server": "a.example.com", "server_port": 443, "uuid": "00000000-0000-4000-8000-000000000000"},
+    {"type": "shadowsocksr", "tag": "b", "server": "b.example.com", "server_port": 8388, "method": "aes-256-cfb", "password": "password", "protocol": "origin", "obfs": "plain"},
+    {"type": "direct", "tag": "direct"}
+  ]
+}
+''';
+
 Map<String, dynamic> _decode(String raw) =>
     jsonDecode(raw) as Map<String, dynamic>;
 
@@ -129,6 +141,15 @@ void main() {
       expect(CustomXrayConfig.tryParse(_singboxConfig), isNull);
       expect(
         CustomXrayConfig.describeProblem(_singboxConfig),
+        contains('sing-box'),
+      );
+    });
+
+    test('an SSR node does not make a sing-box config an xray one', () {
+      expect(CustomXrayConfig.tryParse(_singboxWithServers), isNull);
+      expect(CustomXrayConfig.extractConfigs(_singboxWithServers), isEmpty);
+      expect(
+        CustomXrayConfig.describeProblem(_singboxWithServers),
         contains('sing-box'),
       );
     });
@@ -263,6 +284,13 @@ void main() {
       final error = ServersNotifier.validateServerConfig(_singboxConfig);
       expect(error, contains('sing-box'));
     });
+
+    // В редактор одного сервера целый профиль вставить можно, но сервером
+    // он не станет: ссылки из него делает только импорт.
+    test('a sing-box config with servers is not the config of one server', () {
+      final error = ServersNotifier.validateServerConfig(_singboxWithServers);
+      expect(error, contains('import'));
+    });
   });
 
   group('splitServerImportPayload', () {
@@ -285,6 +313,16 @@ void main() {
 
     test('hands broken json over as one payload, not as line noise', () {
       expect(splitServerImportPayload(_singboxConfig).length, 1);
+    });
+
+    test('takes a sing-box config apart into its servers', () {
+      final configs = splitServerImportPayload(_singboxWithServers);
+      expect(configs, hasLength(2));
+      expect(configs.first, startsWith('vless://'));
+      expect(configs.last, startsWith('ssr://'));
+      for (final config in configs) {
+        expect(ServersNotifier.validateServerConfig(config), isNull);
+      }
     });
   });
 
