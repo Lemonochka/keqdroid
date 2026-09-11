@@ -1385,9 +1385,21 @@ class MihomoConfigGen {
     return out;
   }
 
+  /// userInfo ссылки раскодированным. Пароль со спецсимволами стандарт ссылки
+  /// несёт закодированным (`p%40ss`), так его читает и разбор самого mihomo
+  /// (`url.User` в common/convert); без этого в ядро уезжал `p%40ss`. Битое
+  /// кодирование оставляем как есть — это тоже бывает паролем.
+  static String _decodedUserInfo(Uri uri) {
+    try {
+      return Uri.decodeComponent(uri.userInfo);
+    } catch (_) {
+      return uri.userInfo;
+    }
+  }
+
   static Map<String, dynamic> _trojan(String link) {
     final uri = _parse(link);
-    final password = uri.userInfo;
+    final password = _decodedUserInfo(uri);
     if (password.isEmpty) throw ArgumentError('Trojan requires password');
 
     final sni = _param(uri, 'sni', uri.host);
@@ -1568,7 +1580,7 @@ class MihomoConfigGen {
     // `Uri.parse` не берёт: раньше ссылка разваливалась целиком.
     final params = HysteriaLinkParams.fromConfig(link);
     final uri = _parse(HysteriaLinkParams.splitPorts(link).$1);
-    var password = uri.userInfo;
+    var password = _decodedUserInfo(uri);
     if (password.isEmpty) password = _param(uri, 'password', _param(uri, 'auth'));
     if (password.isEmpty) throw ArgumentError('Hysteria2 requires password');
 

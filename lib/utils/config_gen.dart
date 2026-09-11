@@ -1351,13 +1351,25 @@ class ConfigGeneratorV2 {
     };
   }
 
+  /// userInfo ссылки раскодированным. Пароль со спецсимволами стандарт ссылки
+  /// несёт закодированным (`p%40ss`), так его читает и разбор mihomo
+  /// (`url.User` в common/convert); без этого в ядро уезжал `p%40ss`. Битое
+  /// кодирование оставляем как есть — это тоже бывает паролем.
+  static String _decodedUserInfo(Uri uri) {
+    try {
+      return Uri.decodeComponent(uri.userInfo);
+    } catch (_) {
+      return uri.userInfo;
+    }
+  }
+
   // trojan
   static Map<String, dynamic> _buildTrojanOutbound(
       Uri uri, String Function(String, [String]) getParam, Map<String, dynamic>? vmessConfig,
       String address, int port, Map<String, dynamic> streamSettings) {
     final password = vmessConfig != null
         ? (vmessConfig['id']?.toString() ?? '')
-        : uri.userInfo;
+        : _decodedUserInfo(uri);
     if (password.isEmpty) {
       throw ArgumentError('Trojan requires password in userInfo');
     }
@@ -1463,7 +1475,7 @@ class ConfigGeneratorV2 {
   ) {
     var auth = getParam('auth', getParam('password', '')).trim();
     if (auth.isEmpty && uri.userInfo.isNotEmpty) {
-      auth = Uri.decodeComponent(uri.userInfo).trim();
+      auth = _decodedUserInfo(uri).trim();
     }
     if (auth.isEmpty) {
       throw ArgumentError('Hysteria requires auth/password in URI (query or userInfo)');
