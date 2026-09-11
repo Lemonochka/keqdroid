@@ -1989,7 +1989,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get connectionsSourceUnavailable => 'нет источника';
 
   @override
-  String get connectionsRuleHint => 'Ядро пишет, какое правило сработало, только на уровне логов Info.';
+  String get connectionsRuleHint => 'Домены и сработавшее правило ядро пишет только на уровне логов Info.';
 
   @override
   String get connectionsRuleHintAction => 'Включить Info';
@@ -2019,7 +2019,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get connectionsClosed => 'закрыто';
 
   @override
-  String get connectionsAppNamesHint => 'Названия приложений появятся после переподключения: подробный лог туннеля включается при старте вместе с дебаг-режимом.';
+  String get connectionsAppNamesHint => 'Название приложения сообщает система, а она знает только живые соединения — у закрытых его не будет.';
 
   @override
   String get connectionsSplitTunnelNote => 'Приложения, выведенные из туннеля, здесь не появятся: Android пускает их мимо, и до ядра их трафик не доходит.';

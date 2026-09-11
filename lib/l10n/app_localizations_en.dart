@@ -1986,7 +1986,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionsSourceUnavailable => 'no source';
 
   @override
-  String get connectionsRuleHint => 'The core only logs which rule matched at log level Info.';
+  String get connectionsRuleHint => 'The core logs domains and the matched rule only at log level Info.';
 
   @override
   String get connectionsRuleHintAction => 'Set Info';
@@ -2016,7 +2016,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionsClosed => 'closed';
 
   @override
-  String get connectionsAppNamesHint => 'App names appear after reconnecting: the tunnel starts its detailed log together with debug mode.';
+  String get connectionsAppNamesHint => 'App names come from the system, and it knows only live connections — closed ones stay unnamed.';
 
   @override
   String get connectionsSplitTunnelNote => 'Apps kept out of the tunnel are not listed here: Android routes them past it, so their traffic never reaches the core.';

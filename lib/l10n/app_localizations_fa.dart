@@ -1986,7 +1986,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get connectionsSourceUnavailable => 'بدون منبع';
 
   @override
-  String get connectionsRuleHint => 'هسته فقط در سطح گزارش Info می‌نویسد کدام قانون گرفته است.';
+  String get connectionsRuleHint => 'هسته دامنه‌ها و قانونی را که گرفته است فقط در سطح گزارش Info می‌نویسد.';
 
   @override
   String get connectionsRuleHintAction => 'روی Info بگذار';
@@ -2016,7 +2016,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get connectionsClosed => 'بسته شد';
 
   @override
-  String get connectionsAppNamesHint => 'نام برنامه‌ها بعد از اتصال دوباره ظاهر می‌شود: گزارش دقیق تونل همراه با حالت اشکال‌زدایی شروع می‌شود.';
+  String get connectionsAppNamesHint => 'نام برنامه را سیستم می‌دهد و فقط اتصال‌های زنده را می‌شناسد؛ اتصال‌های بسته نامی ندارند.';
 
   @override
   String get connectionsSplitTunnelNote => 'برنامه‌هایی که بیرون تونل مانده‌اند اینجا نمی‌آیند: اندروید آن‌ها را از کنار تونل رد می‌کند و ترافیکشان اصلاً به هسته نمی‌رسد.';

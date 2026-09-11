@@ -1985,7 +1985,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get connectionsSourceUnavailable => '无数据源';
 
   @override
-  String get connectionsRuleHint => '只有日志级别为 Info 时，内核才会记录命中的规则。';
+  String get connectionsRuleHint => '只有日志级别为 Info 时，内核才会记录域名和命中的规则。';
 
   @override
   String get connectionsRuleHintAction => '设为 Info';
@@ -2015,7 +2015,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get connectionsClosed => '已关闭';
 
   @override
-  String get connectionsAppNamesHint => '重新连接后才会显示应用名称：隧道的详细日志随调试模式一同启动。';
+  String get connectionsAppNamesHint => '应用名称由系统提供，而系统只知道仍在进行的连接——已关闭的连接不会显示名称。';
 
   @override
   String get connectionsSplitTunnelNote => '被排除在隧道之外的应用不会列出：Android 让它们绕过隧道，其流量根本不会到达内核。';

@@ -3878,7 +3878,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectionsRuleHint.
   ///
   /// In en, this message translates to:
-  /// **'The core only logs which rule matched at log level Info.'**
+  /// **'The core logs domains and the matched rule only at log level Info.'**
   String get connectionsRuleHint;
 
   /// No description provided for @connectionsRuleHintAction.
@@ -3938,7 +3938,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectionsAppNamesHint.
   ///
   /// In en, this message translates to:
-  /// **'App names appear after reconnecting: the tunnel starts its detailed log together with debug mode.'**
+  /// **'App names come from the system, and it knows only live connections — closed ones stay unnamed.'**
   String get connectionsAppNamesHint;
 
   /// No description provided for @connectionsSplitTunnelNote.

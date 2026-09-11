@@ -68,7 +68,7 @@ void main() {
       final entry = _find(snapshot, 's.youtube.com:443');
 
       expect(entry.destIp, '142.251.154.6');
-      expect(entry.source, 'udp:127.0.0.1:38603');
+      expect(entry.source, '127.0.0.1:38603');
     });
 
     test('order inside the log does not matter', () {
@@ -139,7 +139,7 @@ void main() {
       expect(closed.closed, isTrue);
       // Порт в строке закрытия свой (42870), с клиентским (36948) он не
       // совпадает — связь только через идентификатор сессии.
-      expect(closed.source, 'udp:127.0.0.1:36948');
+      expect(closed.source, '127.0.0.1:36948');
     });
 
     test('connections without such a line are not marked', () {
@@ -168,8 +168,8 @@ void main() {
       };
 
       expect(bySource.length, 2);
-      expect(bySource['tcp:127.0.0.1:40001']!.closed, isFalse);
-      expect(bySource['tcp:127.0.0.1:40002']!.closed, isTrue);
+      expect(bySource['127.0.0.1:40001']!.closed, isFalse);
+      expect(bySource['127.0.0.1:40002']!.closed, isTrue);
     });
 
     test('closed ones sink below the live ones', () {
@@ -201,6 +201,63 @@ void main() {
       );
 
       expect(sessions, isEmpty);
+    });
+  });
+
+  group('tun inbound: the core reads the tunnel itself', () {
+    // Так лог выглядит с тех пор, как туннель читает само ядро: вместо строк
+    // socks-инбаунда одна строка tun-инбаунда с клиентом и назначением
+    // (proxy/tun/handler.go), а адрес клиента xray пишет с приставкой сети.
+    const tunLog = '''
+09-11 21:10:01 2026/09/11 17:10:01.100000 [Info] [4001] proxy/tun: processing from tcp:172.19.0.1:40100 to tcp:142.250.74.46:443
+09-11 21:10:01 2026/09/11 17:10:01.101000 [Info] [4001] app/dispatcher: sniffed domain: www.youtube.com
+09-11 21:10:01 2026/09/11 17:10:01.102000 [Info] [4001] app/dispatcher: Hit route rule: [proxy-list] so taking detour [proxy] for [tcp:www.youtube.com:443]
+09-11 21:10:01 2026/09/11 17:10:01.103000 from tcp:172.19.0.1:40100 accepted tcp:142.250.74.46:443 [tun-in -> proxy]
+09-11 21:10:02 2026/09/11 17:10:02.100000 [Info] [4002] proxy/tun: processing from udp:172.19.0.1:51000 to udp:142.250.74.46:443
+09-11 21:10:02 2026/09/11 17:10:02.101000 [Info] [4002] app/dispatcher: sniffed domain: rr1.googlevideo.com
+09-11 21:10:02 2026/09/11 17:10:02.103000 from udp:172.19.0.1:51000 accepted udp:142.250.74.46:443 [tun-in -> proxy]
+''';
+
+    test('TCP: domain and rule come from the tun session', () {
+      final entry =
+          _find(XrayAccessLogParser.parse(tunLog), 'www.youtube.com:443');
+
+      expect(entry.destIp, '142.250.74.46');
+      expect(entry.rule, 'proxy-list');
+      expect(entry.inbound, 'tun-in');
+      expect(entry.outbound, 'proxy');
+    });
+
+    test('UDP to the same address gets its own domain', () {
+      final entry =
+          _find(XrayAccessLogParser.parse(tunLog), 'rr1.googlevideo.com:443');
+
+      expect(entry.network, 'udp');
+      expect(entry.destIp, '142.250.74.46');
+    });
+
+    test('the owner is asked by a bare address the system understands',
+        () async {
+      // С приставкой `tcp:` система не находила владельца ни разу.
+      List<Map<String, Object?>>? asked;
+      await ConnectionsService.withAppNamesFromSource(
+        XrayAccessLogParser.parse(tunLog),
+        resolve: (requests) async {
+          asked = requests;
+          return List.filled(requests.length, 'YouTube');
+        },
+      );
+
+      expect(
+        asked,
+        anyElement(equals({
+          'protocol': 'tcp',
+          'srcIp': '172.19.0.1',
+          'srcPort': 40100,
+          'dstIp': '142.250.74.46',
+          'dstPort': 443,
+        })),
+      );
     });
   });
 }

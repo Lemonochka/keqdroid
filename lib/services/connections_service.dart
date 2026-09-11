@@ -514,8 +514,8 @@ class XrayAccessLogParser {
 
   /// `proxy/socks: TCP Connect request to tcp:216.58.198.162:443` и
   /// `transport/internet/udp: establishing new connection for udp:8.8.8.8:53`
-  /// — единственные строки, где сессия названа вместе с настоящим адресом
-  /// назначения (до подмены доменом).
+  /// — строки socks-инбаунда, где сессия названа вместе с настоящим адресом
+  /// назначения (до подмены доменом). У tun-инбаунда то же несёт [_sessionTun].
   static final _sessionDest = RegExp(
     r'(?:TCP Connect request to|establishing new connection for)\s+'
     r'([a-z0-9]+):(.+?):(\d+)\s*$',
@@ -526,6 +526,17 @@ class XrayAccessLogParser {
   /// клиента, тот же, что стоит в access-строке после `from`.
   static final _sessionClient = RegExp(
     r'client UDP connection from\s+(\S+)',
+    caseSensitive: false,
+  );
+
+  /// `proxy/tun: processing from tcp:172.19.0.1:40100 to tcp:142.250.74.46:443`
+  /// — строка tun-инбаунда, когда туннель читает само ядро. Клиент и настоящее
+  /// назначение в ней вместе, и access-строка находит свою сессию по клиенту,
+  /// то есть точно, для TCP так же, как для UDP. Строк socks-инбаунда в таком
+  /// логе нет вовсе: без этой домен и правило не находились ни у одного
+  /// соединения.
+  static final _sessionTun = RegExp(
+    r'processing from\s+(\S+)\s+to\s+([a-z0-9]+):(.+?):(\d+)\s*$',
     caseSensitive: false,
   );
 
@@ -607,6 +618,12 @@ class XrayAccessLogParser {
       final sniffed = _sessionSniffed.firstMatch(rest);
       if (sniffed != null) {
         trace.domain = sniffed.group(1)!.trim();
+        continue;
+      }
+      final tun = _sessionTun.firstMatch(rest);
+      if (tun != null) {
+        trace.clientKey = tun.group(1)!.trim().toLowerCase();
+        trace.destKey = _targetKey(tun.group(2), tun.group(3), tun.group(4));
         continue;
       }
       final client = _sessionClient.firstMatch(rest);
@@ -693,7 +710,7 @@ class XrayAccessLogParser {
         host: domain.isNotEmpty ? domain : host,
         destPort: port,
         destIp: domain.isNotEmpty ? host : '',
-        source: source,
+        source: _plainAddress(source),
         inbound: inbound,
         outbound: outbound.isNotEmpty
             ? outbound
@@ -758,6 +775,13 @@ class XrayAccessLogParser {
   static String _targetKey(String? network, String? host, String? port) =>
       '${network?.toLowerCase()}:${host?.trim().toLowerCase()}:$port';
 
+  /// `tcp:172.19.0.1:40100` → `172.19.0.1:40100`. Сеть xray приписывает к
+  /// адресу клиента сам (`net.Destination.String`), а система ищет владельца
+  /// соединения по голому адресу: с приставкой имя приложения не находилось
+  /// никогда, хотя сокет жив и туннель наш.
+  static String _plainAddress(String address) =>
+      address.replaceFirst(RegExp(r'^(tcp|udp):', caseSensitive: false), '');
+
   /// `socks-in -> proxy` / `socks-in >> proxy` / `proxy` (без инбаунда).
   static (String inbound, String outbound) _splitDetour(String raw) {
     if (raw.isEmpty) return ('', '');
@@ -812,7 +836,8 @@ class XraySessionTrace {
   String destKey = '';
 
   /// Адрес клиента (`udp:127.0.0.1:36948`) — им access-строка и сессия
-  /// связываются точно, один к одному. Ядро называет его только для UDP.
+  /// связываются точно, один к одному. Socks-инбаунд называет его только для
+  /// UDP, tun-инбаунд — всегда.
   String clientKey = '';
 
   /// Домен из SNI/HTTP Host, если сниффер его достал.

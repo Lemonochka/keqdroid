@@ -855,7 +855,7 @@
   "connectionsSourceApi": "живой снимок ядра",
   "connectionsSourceLog": "из лога ядра",
   "connectionsSourceUnavailable": "нет источника",
-  "connectionsRuleHint": "Ядро пишет, какое правило сработало, только на уровне логов Info.",
+  "connectionsRuleHint": "Домены и сработавшее правило ядро пишет только на уровне логов Info.",
   "connectionsRuleHintAction": "Включить Info",
   "connectionsRuleHintApplied": "Уровень логов ядра — Info. Переподключитесь, чтобы применить",
   "connectionsRuleDefault": "без правила (действие по умолчанию)",
@@ -865,7 +865,7 @@
   "connectionsVerdictDirect": "НАПРЯМУЮ",
   "connectionsVerdictBlock": "БЛОК",
   "connectionsClosed": "закрыто",
-  "connectionsAppNamesHint": "Названия приложений появятся после переподключения: подробный лог туннеля включается при старте вместе с дебаг-режимом.",
+  "connectionsAppNamesHint": "Название приложения сообщает система, а она знает только живые соединения — у закрытых его не будет.",
   "connectionsSplitTunnelNote": "Приложения, выведенные из туннеля, здесь не появятся: Android пускает их мимо, и до ядра их трафик не доходит.",
   "subscriptionsExpiredOn": "Подписка истекла {date}",
   "@subscriptionsExpiredOn": {

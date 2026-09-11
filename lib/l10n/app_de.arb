@@ -855,7 +855,7 @@
   "connectionsSourceApi": "live aus dem Core",
   "connectionsSourceLog": "aus dem Core-Log",
   "connectionsSourceUnavailable": "keine Quelle",
-  "connectionsRuleHint": "Der Core protokolliert die zutreffende Regel nur bei Log-Level Info.",
+  "connectionsRuleHint": "Domains und die zutreffende Regel protokolliert der Core nur bei Log-Level Info.",
   "connectionsRuleHintAction": "Info setzen",
   "connectionsRuleHintApplied": "Core-Log-Level auf Info gesetzt — neu verbinden zum Übernehmen",
   "connectionsRuleDefault": "keine Regel (Standardaktion)",
@@ -865,7 +865,7 @@
   "connectionsVerdictDirect": "DIREKT",
   "connectionsVerdictBlock": "GESPERRT",
   "connectionsClosed": "geschlossen",
-  "connectionsAppNamesHint": "App-Namen erscheinen nach dem erneuten Verbinden: Das ausführliche Tunnel-Log startet zusammen mit dem Debug-Modus.",
+  "connectionsAppNamesHint": "App-Namen liefert das System, und es kennt nur offene Verbindungen — geschlossene bleiben ohne Namen.",
   "connectionsSplitTunnelNote": "Apps außerhalb des Tunnels stehen hier nicht: Android leitet sie daran vorbei, ihr Datenverkehr erreicht den Core nie.",
   "subscriptionsExpiredOn": "Abo am {date} abgelaufen",
   "@subscriptionsExpiredOn": {
