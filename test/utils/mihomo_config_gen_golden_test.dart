@@ -163,6 +163,28 @@ void main() {
         httpPort: 2081,
       );
     });
+
+    _golden('amneziawg', () {
+      // Профиль, а не ссылка. Ключи синтетические, но валидные 32-байтные
+      // base64: ядро декодирует их на старте.
+      return MihomoConfigGen.generate(
+        '[Interface]\n'
+        'PrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=\n'
+        'Address = 10.8.1.2/32, fd00::2/128\n'
+        'DNS = 1.1.1.1\n'
+        'Jc = 4\nJmin = 40\nJmax = 70\nS1 = 86\nS2 = 574\n'
+        'H1 = 1\nH2 = 2\nH3 = 3\nH4 = 4\n'
+        '\n'
+        '[Peer]\n'
+        'PublicKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA=\n'
+        'Endpoint = 198.51.100.17:51820\n'
+        'AllowedIPs = 0.0.0.0/0, ::/0\n'
+        'PersistentKeepalive = 25\n',
+        _settings,
+        socksPort: 2080,
+        httpPort: 2081,
+      );
+    });
   });
 }
 

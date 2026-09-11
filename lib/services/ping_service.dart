@@ -483,9 +483,6 @@ class PingService {
   /// подключении. Пока замер всегда поднимал xray, «зелёный пинг» и «сервер
   /// работает» были про разные ядра — сервер, живой на mihomo, краснел из-за
   /// того, что его не понял xray, и наоборот. Теперь расходиться нечему.
-  ///
-  /// AmneziaWG сюда попадает как xray и, как и раньше, краснеет: его формат
-  /// исполняет только своё ядро, а короткоживущего wg-замера у нас нет.
   static VpnBackend pingCoreFor(String serverConfig, AppSettings settings) {
     final choice = resolveVpnBackend(
       config: serverConfig,
@@ -711,10 +708,6 @@ class PingService {
   }
 
   static PingType effectivePingType(ServerItem server, PingType type) {
-    // AmneziaWG (.conf) нельзя пинговать через xray (url/speed парсят config как URI
-    // → "Invalid URI format: [Interface]") и бессмысленно через tcp/udp к WG-порту.
-    // Всегда ICMP, независимо от выбранного в настройках типа.
-    if (server.protocol == 'awg') return PingType.icmp;
     if (type == PingType.speed) return PingType.speed;
     // У цепочки tcp/icmp померил бы только входной узел — цифра, не имеющая
     // отношения к тому, как цепочка работает целиком. Реальный round-trip даёт

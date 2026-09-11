@@ -296,8 +296,6 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     _awaitingSessionStart = true;
 
     try {
-      final isAwg = AwgProfile.isAwgConfig(server.config);
-
       await ref.read(serversProvider.notifier).setActive(server);
 
       final engine = ref.read(vpnEngineProvider);
@@ -365,10 +363,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             )
           : const <String>[];
 
-      var connectionMode = TunnelSessionBuilder.resolveMode(
-        settings,
-        vpnBackend: isAwg ? VpnBackend.awg : VpnBackend.xray,
-      );
+      var connectionMode = TunnelSessionBuilder.resolveMode(settings);
 
       // Разрешение на VPN — только если сессия и правда поднимет интерфейс.
       // В режиме «прокси» на Android establish() не вызывается, и системный
@@ -390,17 +385,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           'to apply per-process rules.',
         );
       }
-      if (Platform.isWindows && isAwg && connectionMode == ConnectionMode.tun) {
-        // AmneziaWG TUN использует sing-box (wintun) → нужны права администратора.
-        // Proxy-режим (wireproxy-awg) работает без админ-прав.
-        final elevated = await engine.requestVpnPermission();
-        if (!elevated) {
-          AppLogger.instance.warn(
-            'AmneziaWG TUN requires admin rights for the sing-box wintun adapter.',
-          );
-        }
-      }
-      if (Platform.isWindows && !isAwg && connectionMode == ConnectionMode.tun) {
+      if (Platform.isWindows && connectionMode == ConnectionMode.tun) {
         final elevated = await engine.requestVpnPermission();
         if (!elevated) {
           if (autostartTunFallback) {
@@ -480,7 +465,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // Firefox user.js — has no field for SOCKS/HTTP credentials, so password
       // auth on the localhost inbounds makes browsers prompt endlessly. Use
       // noauth on the loopback inbounds in desktop proxy mode (safe: they bind
-      // to 127.0.0.1 only). AmneziaWG proxy is already noauth via wireproxy.
+      // to 127.0.0.1 only).
       //
       // На Android в режиме прокси — та же причина, и она там жёстче.
       // Пароль к локальному SOCKS придуман для тех, кто
@@ -635,17 +620,15 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         }
       }
 
-      // AmneziaWG поднимается из сырого .conf своим ядром — xray-конфиг не нужен.
       // У mihomo свой конфиг, xray-генератор для него не запускаем.
       // Туннель отдаём самому ядру только там, где ему есть что отдавать:
       // на Android, в режиме VPN и на самом xray. В режиме «прокси»
-      // интерфейса нет вовсе, у AmneziaWG и mihomo туннель свой.
+      // интерфейса нет вовсе, у mihomo туннель свой.
       final nativeTun = Platform.isAndroid &&
           connectionMode == ConnectionMode.tun &&
-          !isAwg &&
           !mihomoPicked;
 
-      final xrayConfig = (isAwg || mihomoPicked)
+      final xrayConfig = mihomoPicked
           ? ''
           : ConfigGeneratorV2.generateConfig(
               server.config,
@@ -703,7 +686,6 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         settings: settings,
         xrayConfig: xrayConfig,
         vpnBackend: vpnBackend,
-        awgConfig: isAwg ? server.config : null,
         mihomoConfig: mihomoConfig,
         resolvedServerIp: serverIp,
         socksUsername: creds.username,

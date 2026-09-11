@@ -154,7 +154,7 @@ rules:
       expect(choose(link).backend, VpnBackend.xray);
       expect(choose(xrayJson).backend, VpnBackend.xray);
       expect(choose(clashYaml).backend, VpnBackend.mihomo);
-      expect(choose(awg).backend, VpnBackend.awg);
+      expect(choose(awg).backend, VpnBackend.mihomo);
       expect(choose(chain).backend, VpnBackend.xray);
       // auto ничего не «пропускает»: пользователь ядро и не выбирал.
       for (final config in [link, xrayJson, clashYaml, awg, chain]) {
@@ -187,7 +187,7 @@ rules:
         VpnCoreSkip.clashConfig,
       );
       expect(
-        choose(awg, preference: AppSettings.vpnCoreMihomo).skip,
+        choose(awg, preference: AppSettings.vpnCoreXray).skip,
         VpnCoreSkip.amneziaWg,
       );
     });

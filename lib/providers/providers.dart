@@ -45,7 +45,6 @@ import '../utils/geo_asset_index.dart';
 import '../utils/hysteria_uri.dart';
 import '../utils/mieru_uri.dart';
 import '../utils/host_ipv6.dart';
-import '../utils/local_vpn_proxy.dart';
 import '../utils/process_name_utils.dart';
 import '../utils/mihomo_api_session.dart';
 import '../utils/mihomo_config_gen.dart';
@@ -115,14 +114,7 @@ final serverSortModesProvider =
 int? _activeLocalHttpProxyPort(Ref ref, StorageService storage) {
   final vpnConnected =
       ref.read(vpnStateProvider).value?.status == VpnStatus.connected;
-  final active = ref.read(serversProvider).activeServer;
-  final awgBackend = active != null && AwgProfile.isAwgConfig(active.config);
-  if (!tunnelHasLocalHttpProxy(
-    vpnConnected: vpnConnected,
-    awgBackend: awgBackend,
-  )) {
-    return null;
-  }
+  if (!vpnConnected) return null;
   // Порт активной сессии, а не из настроек: когда настроенный был занят,
   // ядро слушает подменённый (см. [LocalPortPlan]). Сессионные порты ставит
   // только десктоп — на Android подмены нет, там настройка и есть правда.
@@ -251,22 +243,10 @@ final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
   final vpnConnected = ref.watch(
     vpnStateProvider.select((s) => s.value?.status == VpnStatus.connected),
   );
-  // Android+AWG — единственный случай без локального HTTP-прокси (Dio тогда
-  // идёт напрямую, но пакет приложения включён в TUN и трафик всё равно в
-  // туннеле). select — чтобы ре-ран был только при смене awg↔xray.
-  final awgActive = ref.watch(
-    serversProvider.select((s) {
-      final srv = s.activeServer;
-      return srv != null && AwgProfile.isAwgConfig(srv.config);
-    }),
-  );
   final settings = await ref.read(storageProvider).getSettings();
   return UpdateService.checkForUpdate(
     force: false,
-    viaLocalProxy: tunnelHasLocalHttpProxy(
-      vpnConnected: vpnConnected,
-      awgBackend: awgActive,
-    ),
+    viaLocalProxy: vpnConnected,
     // Порт активной сессии, а не из настроек: когда настроенный был занят или
     // изъят системой, ядро слушает подменённый (см. [LocalPortPlan]).
     httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),

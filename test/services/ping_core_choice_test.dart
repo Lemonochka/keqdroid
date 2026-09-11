@@ -58,6 +58,24 @@ void main() {
         VpnBackend.mihomo,
       );
     });
+
+    test('AmneziaWG меряется mihomo, как и едет', () {
+      // Раньше профиль уходил в xray, который `.conf` не разбирает, и замер
+      // краснел всегда.
+      const awg = '[Interface]\n'
+          'PrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=\n'
+          'Address = 10.8.1.2/32\n'
+          '[Peer]\n'
+          'PublicKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA=\n'
+          'Endpoint = 203.0.113.10:51820\n';
+      expect(
+        PingService.pingCoreFor(
+          awg,
+          const AppSettings(vpnCore: AppSettings.vpnCoreXray),
+        ),
+        VpnBackend.mihomo,
+      );
+    });
   });
 
   group('конфиг замера у mihomo', () {

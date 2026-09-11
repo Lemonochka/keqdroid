@@ -1,0 +1,119 @@
+{
+  "socks-port": 2080,
+  "port": 2081,
+  "bind-address": "127.0.0.1",
+  "allow-lan": false,
+  "ipv6": false,
+  "authentication": [
+    "u:p"
+  ],
+  "mode": "rule",
+  "log-level": "warning",
+  "geodata-mode": true,
+  "geo-auto-update": false,
+  "find-process-mode": "off",
+  "sniffer": {
+    "enable": true,
+    "parse-pure-ip": true,
+    "override-destination": true,
+    "sniff": {
+      "HTTP": {
+        "ports": [
+          "80",
+          "8080-8880"
+        ]
+      },
+      "TLS": {
+        "ports": [
+          "443",
+          "8443"
+        ]
+      },
+      "QUIC": {
+        "ports": [
+          "443",
+          "8443"
+        ]
+      }
+    }
+  },
+  "dns": {
+    "enable": true,
+    "ipv6": false,
+    "enhanced-mode": "normal",
+    "default-nameserver": [
+      "https://1.1.1.1/dns-query",
+      "https://8.8.8.8/dns-query"
+    ],
+    "proxy-server-nameserver": [
+      "https://1.1.1.1/dns-query",
+      "https://8.8.8.8/dns-query"
+    ],
+    "nameserver": [
+      "https://1.1.1.1/dns-query",
+      "https://8.8.8.8/dns-query"
+    ],
+    "respect-rules": true
+  },
+  "proxies": [
+    {
+      "name": "proxy",
+      "type": "wireguard",
+      "server": "198.51.100.17",
+      "port": 51820,
+      "ip": "10.8.1.2/32",
+      "ipv6": "fd00::2/128",
+      "private-key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=",
+      "peers": [
+        {
+          "server": "198.51.100.17",
+          "port": 51820,
+          "public-key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA=",
+          "allowed-ips": [
+            "0.0.0.0/0",
+            "::/0"
+          ]
+        }
+      ],
+      "mtu": 1280,
+      "udp": true,
+      "persistent-keepalive": 25,
+      "dns": [
+        "1.1.1.1"
+      ],
+      "remote-dns-resolve": true,
+      "amnezia-wg-option": {
+        "version": 3,
+        "jc": 4,
+        "jmin": 40,
+        "jmax": 70,
+        "s1": 86,
+        "s2": 574,
+        "h1": "1",
+        "h2": "2",
+        "h3": "3",
+        "h4": "4"
+      }
+    }
+  ],
+  "rules": [
+    "DOMAIN-SUFFIX,ads.example,REJECT",
+    "GEOSITE,category-ads-all,REJECT",
+    "IP-CIDR,198.51.100.17/32,DIRECT,no-resolve",
+    "DOMAIN-SUFFIX,direct.example,DIRECT",
+    "IP-CIDR,10.10.0.0/16,DIRECT",
+    "IP-CIDR,0.0.0.0/8,DIRECT,no-resolve",
+    "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+    "IP-CIDR,100.64.0.0/10,DIRECT,no-resolve",
+    "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+    "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+    "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+    "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+    "IP-CIDR,192.0.0.0/24,DIRECT,no-resolve",
+    "IP-CIDR,198.51.100.0/24,DIRECT,no-resolve",
+    "IP-CIDR,203.0.113.0/24,DIRECT,no-resolve",
+    "DOMAIN-SUFFIX,proxy.example,proxy",
+    "GEOSITE,google,proxy",
+    "MATCH,proxy"
+  ]
+}

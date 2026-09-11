@@ -4,6 +4,7 @@ import 'dart:io';
 import '../models/app_settings.dart';
 import '../models/xray_core_settings.dart';
 import '../tunnel/app_routing_mode.dart';
+import 'awg_profile.dart';
 import 'custom_clash_config.dart';
 import 'hysteria_uri.dart';
 import 'mieru_uri.dart';
@@ -734,8 +735,10 @@ class MihomoConfigGen {
 
   // ───────────────────────────── прокси ─────────────────────────────
 
-  /// Ссылка сервера → запись в `proxies`.
+  /// Ссылка сервера или профиль AmneziaWG → запись в `proxies`.
   static Map<String, dynamic> buildProxy(String link) {
+    // Профиль AWG — не ссылка, а `.conf` с секциями, и схемы у него нет.
+    if (AwgProfile.isAwgConfig(link)) return _amneziaWg(link);
     final lower = link.toLowerCase();
     if (lower.startsWith('vmess://')) return _vmess(link);
     if (lower.startsWith('vless://')) return _vless(link);
@@ -1695,6 +1698,164 @@ class MihomoConfigGen {
     if (pin.isNotEmpty) out['fingerprint'] = pin;
     final ech = _echOpts(_rawParam(uri, 'ech'));
     if (ech != null) out['ech-opts'] = ech;
+    return out;
+  }
+
+  /// AmneziaWG и обычный WireGuard: профиль `.conf` → `type: wireguard`.
+  ///
+  /// Отдельное ядро под AWG не нужно: у mihomo тот же amneziawg-go, и всё,
+  /// что разбирает [AwgProfile], от обфускации 1.0 до защиты заголовков 3.1,
+  /// ложится в `amnezia-wg-option` (`adapter/outbound/wireguard.go`). Ветку
+  /// реализации там выбирает `version`: 3 — amneziawg-go v3, на которой AWG
+  /// ездил у нас и раньше, всё прочее — старая v1. Отсюда `version: 3` у любого
+  /// профиля с параметрами AWG.
+  static Map<String, dynamic> _amneziaWg(String conf) {
+    final profile = AwgProfile.parse(conf);
+    final iface = profile.iface;
+
+    // Адрес у ядра по одному на семейство, полями `ip` и `ipv6`.
+    String? v4;
+    String? v6;
+    for (final address in iface.addresses) {
+      if (address.split('/').first.contains(':')) {
+        v6 ??= address;
+      } else {
+        v4 ??= address;
+      }
+    }
+    if (v4 == null && v6 == null) {
+      throw ArgumentError('AmneziaWG config: Interface.Address is required');
+    }
+
+    final peers = [for (final peer in profile.peers) _awgPeer(peer)];
+
+    // Keepalive у ядра один на устройство и целым числом, а AWG 3.1 пишет
+    // диапазон `22-30`. Берём нижнюю границу: реже слать нельзя — за NAT это
+    // разрыв через минуту тишины, — а чаще безвредно.
+    final keepalive = profile.peers
+        .map((peer) => peer.persistentKeepalive)
+        .whereType<String>()
+        .map((value) => int.parse(value.split('-').first))
+        .firstOrNull;
+
+    // Только адреса: wg-quick пускает в `DNS` ещё и домены поиска, а ядро
+    // приняло бы такой домен за резолвер.
+    final dns = iface.dns
+        .where((server) => InternetAddress.tryParse(server) != null)
+        .toList();
+
+    final awg = _awgOption(iface.awgParams);
+    return <String, dynamic>{
+      'name': proxyName,
+      'type': 'wireguard',
+      // Сервер первого пира — для правила «сервер мимо туннеля»: ядро само
+      // ходит по `peers`, а верхний адрес берёт только в описание прокси.
+      'server': peers.first['server'],
+      'port': peers.first['port'],
+      'ip': ?v4,
+      'ipv6': ?v6,
+      'private-key': _awgKey(iface.privateKey, 'Interface.PrivateKey'),
+      // Списком даже для одного пира: в плоской форме ядро ставит allowed-ips
+      // в 0.0.0.0/0 и ::/0 само (genIpcConf), а список профиля выбрасывает.
+      'peers': peers,
+      'mtu': iface.mtu ?? _awgDefaultMtu,
+      'udp': true,
+      if (keepalive != null && keepalive > 0) 'persistent-keepalive': keepalive,
+      // Резолвер профиля спрашивается через сам туннель, как и прежде: чаще
+      // всего это адрес внутри него (10.8.0.1), снаружи он не отвечает.
+      if (dns.isNotEmpty) ...{'dns': dns, 'remote-dns-resolve': true},
+      'amnezia-wg-option': ?awg,
+    };
+  }
+
+  /// MTU, когда профиль его не называет. У ядра своё умолчание, 1408, но на
+  /// Android AWG ездил с 1280, и менять размер пакета вместе с ядром значило бы
+  /// получить вторую перемену там, где проверяют первую.
+  static const _awgDefaultMtu = 1280;
+
+  static Map<String, dynamic> _awgPeer(AwgPeer peer) {
+    final (host, port) = AwgProfile.splitEndpoint(peer.endpoint);
+    final psk = peer.presharedKey;
+    return <String, dynamic>{
+      'server': host,
+      'port': port,
+      'public-key': _awgKey(peer.publicKey, 'Peer.PublicKey'),
+      if (psk != null && psk.isNotEmpty)
+        'pre-shared-key': _awgKey(psk, 'Peer.PresharedKey'),
+      // Пира без AllowedIPs ядро не принимает вовсе, а в туннель такой профиль
+      // и раньше пускал всё.
+      'allowed-ips': peer.allowedIps.isEmpty
+          ? const ['0.0.0.0/0', '::/0']
+          : peer.allowedIps,
+    };
+  }
+
+  /// Ключ WireGuard в том base64, какой примет ядро. Оно декодирует строгим
+  /// `StdEncoding` и ключу без `=` в конце отказывает, а наш разбор и прежнее
+  /// ядро такой ключ принимали — профиль, работавший вчера, сломался бы.
+  static String _awgKey(String raw, String field) {
+    try {
+      return base64.normalize(raw.trim());
+    } on FormatException {
+      throw ArgumentError('AmneziaWG config: $field is not a base64 key');
+    }
+  }
+
+  /// Имена параметров AWG у ядра: ключ `.conf` в нижнем регистре → поле
+  /// `amnezia-wg-option`. Список закрыт так же, как у [AwgProfile].
+  static const _awgOptionNames = <String, String>{
+    'jc': 'jc',
+    'jmin': 'jmin',
+    'jmax': 'jmax',
+    's1': 's1',
+    's2': 's2',
+    's3': 's3',
+    's4': 's4',
+    'h1': 'h1',
+    'h2': 'h2',
+    'h3': 'h3',
+    'h4': 'h4',
+    'i1': 'i1',
+    'i2': 'i2',
+    'i3': 'i3',
+    'i4': 'i4',
+    'i5': 'i5',
+    'headerprotectionkey': 'header-protection-key',
+    'contentpaddingaddition': 'content-padding-addition',
+    'rekeyaftertime': 'rekey-after-time',
+    'rekeytimeout': 'rekey-timeout',
+    'rejectaftertime': 'reject-after-time',
+    'keepalivetimeout': 'keepalive-timeout',
+    'maxhandshakeattempts': 'max-handshake-attempts',
+    'randomtrailers': 'random-trailers',
+    'disablecookies': 'disable-cookies',
+  };
+
+  /// Параметры AWG из `[Interface]` → `amnezia-wg-option` с типами полей ядра.
+  /// Значения уже проверены разбором [AwgProfile].
+  static Map<String, dynamic>? _awgOption(Map<String, String> params) {
+    if (params.isEmpty) return null;
+    final out = <String, dynamic>{'version': 3};
+    for (final MapEntry(:key, :value) in params.entries) {
+      final name = _awgOptionNames[key];
+      // Ключ без имени здесь потерялся бы молча, и сервер получил бы пакеты не
+      // той формы. Отказ на подключении с названием ключа честнее.
+      if (name == null) {
+        throw ArgumentError(
+          'mihomo: AmneziaWG parameter "$key" is not supported',
+        );
+      }
+      final v = value.trim();
+      out[name] = switch (key) {
+        'jc' || 'jmin' || 'jmax' || 's1' || 's2' || 's3' || 's4' =>
+          int.tryParse(v) ??
+              (throw ArgumentError('AmneziaWG config: $key must be a number')),
+        'randomtrailers' || 'disablecookies' =>
+          const {'true', 't', '1', 'yes', 'on'}.contains(v.toLowerCase()),
+        'headerprotectionkey' => _awgKey(v, 'HeaderProtectionKey'),
+        _ => v,
+      };
+    }
     return out;
   }
 

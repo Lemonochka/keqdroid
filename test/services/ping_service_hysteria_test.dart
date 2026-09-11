@@ -28,6 +28,26 @@ void main() {
     );
   });
 
+  test('AmneziaWG меряется тем типом, что выбран: url и speed больше не ICMP', () {
+    // Раньше профиль всегда уходил в ICMP: url-замер поднимал xray, который
+    // `.conf` не разбирает. Теперь его меряет mihomo, как и везёт.
+    final server = ServerItem(
+      id: '3',
+      config: '[Interface]\n'
+          'PrivateKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=\n'
+          'Address = 10.8.1.2/32\n'
+          '[Peer]\n'
+          'PublicKey = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA=\n'
+          'Endpoint = 203.0.113.10:51820\n',
+      type: ServerItemType.manual,
+    );
+    expect(PingService.effectivePingType(server, PingType.url), PingType.url);
+    expect(
+      PingService.effectivePingType(server, PingType.speed),
+      PingType.speed,
+    );
+  });
+
   test('TCP ping color thresholds', () {
     expect(PingService.pingLatencyQuality(50, PingType.tcp), PingLatencyQuality.good);
     expect(PingService.pingLatencyQuality(100, PingType.tcp), PingLatencyQuality.fair);

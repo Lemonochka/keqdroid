@@ -97,11 +97,6 @@ void configureDioForLocalVpnHttpProxy(
 /// app's own package from the TUN (иначе in-process xray зациклился бы), так
 /// что «сокеты и так в туннеле» — неправда, прямой Dio ходит мимо VPN и
 /// упирается в блокировку release-assets.githubusercontent.com.
-///
-/// Единственный случай без локального прокси — Android + AmneziaWG (чистый
-/// amneziawg-go, xray не запущен): там собственный пакет включён в TUN и
-/// прямой Dio едет через туннель сам. Вызывающий код обязан передать
-/// useLocalProxy=false в этом случае — см. [tunnelHasLocalHttpProxy].
 void configureDioForActiveVpn(
   Dio dio, {
   required bool useLocalProxy,
@@ -110,16 +105,6 @@ void configureDioForActiveVpn(
   if (!useLocalProxy) return;
   configureDioForLocalVpnHttpProxy(dio, httpPort: httpPort);
 }
-
-/// Есть ли у активного туннеля локальный HTTP-инбаунд, через который Dio выйдет
-/// в сеть по туннелю. На десктопе он есть всегда, на Android с xray тоже.
-/// Исключение — Android с AmneziaWG: инбаунда нет, но пакет приложения включён
-/// в TUN, и прокси там не нужен.
-bool tunnelHasLocalHttpProxy({
-  required bool vpnConnected,
-  required bool awgBackend,
-}) =>
-    vpnConnected && !(Platform.isAndroid && awgBackend);
 
 /// Резолвер для фоновых обновлений, где состояния VPN нет под рукой:
 /// WorkManager-изолят на Android и таймер/резюм на десктопе.

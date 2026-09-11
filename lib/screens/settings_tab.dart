@@ -50,8 +50,6 @@ import 'package:keqdroid/utils/app_locale.dart';
 import 'package:keqdroid/utils/error_messages.dart';
 import 'package:keqdroid/utils/bidi.dart';
 import 'package:keqdroid/utils/byte_format.dart';
-import 'package:keqdroid/utils/awg_profile.dart';
-import 'package:keqdroid/utils/local_vpn_proxy.dart';
 import 'package:keqdroid/utils/geo_asset_index.dart';
 import 'package:keqdroid/utils/geo_rule_sanitizer.dart';
 import 'package:keqdroid/utils/routing_presets.dart';
@@ -574,16 +572,10 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
     setState(() => _forceChecking = true);
     try {
       final vpn = ref.read(vpnStateProvider).value;
-      final activeServer = ref.read(serversProvider).activeServer;
       final settings = await ref.read(storageProvider).getSettings();
       final info = await UpdateService.checkForUpdate(
         force: true,
-        viaLocalProxy: tunnelHasLocalHttpProxy(
-          vpnConnected: vpn?.status == VpnStatus.connected,
-          awgBackend:
-              activeServer != null &&
-              AwgProfile.isAwgConfig(activeServer.config),
-        ),
+        viaLocalProxy: vpn?.status == VpnStatus.connected,
         // Порт активной сессии, а не из настроек: когда настроенный был занят,
         // ядро слушает подменённый (см. LocalPortPlan). Автопроверка в
         // updateInfoProvider давно берёт его отсюда, ручная — брала из настроек.

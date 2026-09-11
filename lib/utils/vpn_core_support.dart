@@ -46,7 +46,7 @@ enum VpnCoreSkip {
   /// Цепочка: только xray.
   chain,
 
-  /// AmneziaWG: только своё ядро.
+  /// AmneziaWG: только mihomo.
   amneziaWg,
 
   /// Готовый clash-конфиг: только mihomo.
@@ -108,7 +108,7 @@ Set<VpnBackend> backendsForFormat(ServerFormat format) => switch (format) {
       ServerFormat.link => const {VpnBackend.xray, VpnBackend.mihomo},
       ServerFormat.xrayJson || ServerFormat.chain => const {VpnBackend.xray},
       ServerFormat.clashYaml => const {VpnBackend.mihomo},
-      ServerFormat.amneziaWg => const {VpnBackend.awg},
+      ServerFormat.amneziaWg => const {VpnBackend.mihomo},
       ServerFormat.unknown => const {VpnBackend.xray},
     };
 
