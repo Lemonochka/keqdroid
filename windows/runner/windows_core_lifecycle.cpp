@@ -101,6 +101,8 @@ bool IsKeqdisCoreProcess(DWORD pid) {
               EndsWithIgnoreCase(image, L"mihomo.exe") ||
               EndsWithIgnoreCase(image, L"xray.exe") ||
               EndsWithIgnoreCase(image, L"sing-box.exe") ||
+              // wireproxy.exe приложение больше не запускает (AmneziaWG едет
+              // через mihomo), но сирота от прошлой версии переживает обновление.
               EndsWithIgnoreCase(image, L"wireproxy.exe");
   }
   ::CloseHandle(process);

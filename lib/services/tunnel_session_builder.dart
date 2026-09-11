@@ -18,22 +18,13 @@ class TunnelSessionBuilder {
   /// слушает 127.0.0.1, а кого через него пускать, решает пользовательница в
   /// настройках приложений или Wi-Fi.
   ///
-  /// AmneziaWG — исключение, и не по нашей воле: на Android его исполняет
-  /// libwg-go, который сам владеет TUN и локального прокси не открывает вовсе
-  /// (на десктопе эту роль играет wireproxy, которого в APK нет). Для таких
-  /// серверов режим остаётся VPN, иначе подключение просто не к чему было бы
-  /// подключить.
-  /// [isAndroid] параметром, а не только из [Platform]: иначе ветку про AWG не
-  /// проверить — тесты идут на хосте, где `Platform.isAndroid` всегда false.
+  /// [isAndroid] параметром, а не только из [Platform]: тесты идут на хосте,
+  /// где `Platform.isAndroid` всегда false, и ветку Android иначе не проверить.
   static ConnectionMode resolveMode(
     AppSettings settings, {
-    VpnBackend vpnBackend = VpnBackend.xray,
     bool? isAndroid,
   }) {
     final android = isAndroid ?? Platform.isAndroid;
-    if (android && vpnBackend == VpnBackend.awg) {
-      return ConnectionMode.tun;
-    }
     // Сохранённый режим на Android учитываем только если его выбирали руками.
     // До 0.13.0 поле там не читалось вовсе, и в настройках у всех лежит
     // десктопный дефолт `proxy`, которого никто не просил: уважить его молча —
@@ -46,7 +37,6 @@ class TunnelSessionBuilder {
     required AppSettings settings,
     required String xrayConfig,
     VpnBackend vpnBackend = VpnBackend.xray,
-    String? awgConfig,
     String? mihomoConfig,
     required String resolvedServerIp,
     required String socksUsername,
@@ -63,12 +53,9 @@ class TunnelSessionBuilder {
     /// метод синхронный, а перечисление интерфейсов — нет.
     bool hostHasIpv6 = false,
   }) {
-    final mode = modeOverride ?? resolveMode(settings, vpnBackend: vpnBackend);
-    final isAwg = vpnBackend == VpnBackend.awg;
+    final mode = modeOverride ?? resolveMode(settings);
 
-    // TUN на Windows: sing-box оборачивает tun→локальный SOCKS.
-    //  - xray: SOCKS с auth от xray.
-    //  - AmneziaWG: SOCKS от wireproxy-awg (без auth).
+    // TUN на десктопе: sing-box оборачивает tun → локальный SOCKS xray с auth.
     // В proxy-режиме sing-box не нужен (системный прокси).
     String? singboxConfig;
     if ((Platform.isWindows || Platform.isLinux) && mode == ConnectionMode.tun) {
@@ -85,7 +72,6 @@ class TunnelSessionBuilder {
         settings: settings,
         managedProcessNames: managed,
         routingMode: routingMode,
-        localSocksNoAuth: isAwg,
         appProcessName: p.basename(Platform.resolvedExecutable),
         hostHasIpv6: hostHasIpv6,
       );
@@ -95,7 +81,6 @@ class TunnelSessionBuilder {
       mode: mode,
       vpnBackend: vpnBackend,
       xrayConfig: xrayConfig,
-      awgConfig: awgConfig,
       mihomoConfig: mihomoConfig,
       socksPort: settings.localPort,
       httpPort: settings.httpPort,

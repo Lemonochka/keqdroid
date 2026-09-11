@@ -2186,7 +2186,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsCoreSkipChain => 'Der aktive Server ist eine Proxy-Kette: Ihre Knoten hängen an Xrays dialerProxy, sie läuft deshalb unabhängig von der Kernauswahl über libxray.';
 
   @override
-  String get settingsCoreSkipAwg => 'Der aktive Server ist ein AmneziaWG-Profil — er läuft unabhängig von der Kernauswahl über seinen eigenen Kern wg-go.';
+  String get settingsCoreSkipAwg => 'Der aktive Server ist ein AmneziaWG-Profil — er läuft unabhängig von der Kernauswahl auf mihomo.';
 
   @override
   String get settingsCoreSkipPlatform => 'Der mihomo-Kern wird für diese Plattform nicht mitgeliefert — die Verbindung läuft über den Xray-Kern.';
@@ -2232,9 +2232,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsInternalsRoleTun => 'TUN-Gerät';
-
-  @override
-  String get settingsInternalsRoleAwg => 'AmneziaWG';
 
   @override
   String settingsInternalsGeoCodes(int count) {

@@ -419,30 +419,6 @@ class MainActivity : FlutterFragmentActivity() {
                                         tunnelMode = tunnelMode,
                                     )
                                 }
-                                KeqdisVpnService.VPN_BACKEND_AWG -> {
-                                    val uapi = call.argument<String>("awgUapi") ?: run {
-                                        result.error("INVALID_ARGS", "Missing awgUapi", null)
-                                        return@setMethodCallHandler
-                                    }
-                                    val addresses = call.argument<List<*>>("awgAddresses")
-                                        ?.filterIsInstance<String>() ?: emptyList()
-                                    val dns = call.argument<List<*>>("awgDns")
-                                        ?.filterIsInstance<String>() ?: emptyList()
-                                    val allowedIps = call.argument<List<*>>("awgAllowedIps")
-                                        ?.filterIsInstance<String>() ?: emptyList()
-                                    val mtu = call.argument<Int>("awgMtu") ?: 0
-                                    startVpnWithAwg(
-                                        uapi,
-                                        addresses,
-                                        dns,
-                                        allowedIps,
-                                        mtu,
-                                        excludePackages,
-                                        includePackages,
-                                        serverName,
-                                        result,
-                                    )
-                                }
                                 else -> result.error("UNSUPPORTED_BACKEND", "Unsupported VPN backend: $backend", null)
                             }
                         }
@@ -834,41 +810,6 @@ class MainActivity : FlutterFragmentActivity() {
 
             result.success(null)
         }
-    }
-
-    private fun startVpnWithAwg(
-        uapi: String,
-        addresses: List<String>,
-        dns: List<String>,
-        allowedIps: List<String>,
-        mtu: Int,
-        excludePackages: List<String>,
-        includePackages: List<String>,
-        serverName: String?,
-        result: MethodChannel.Result,
-    ) {
-        if (VpnService.prepare(this) != null) {
-            result.error("PERMISSION_DENIED", "VPN permission not granted", null)
-            return
-        }
-
-        // AmneziaWG не нуждается в SOCKS-credentials — ядро само владеет TUN.
-        startService(Intent(this@MainActivity, KeqdisVpnService::class.java).apply {
-            action = KeqdisVpnService.ACTION_START
-            putExtra(KeqdisVpnService.EXTRA_VPN_BACKEND, KeqdisVpnService.VPN_BACKEND_AWG)
-            putExtra(KeqdisVpnService.EXTRA_AWG_UAPI, uapi)
-            putStringArrayListExtra(KeqdisVpnService.EXTRA_AWG_ADDRESSES, ArrayList(addresses))
-            putStringArrayListExtra(KeqdisVpnService.EXTRA_AWG_DNS, ArrayList(dns))
-            putStringArrayListExtra(KeqdisVpnService.EXTRA_AWG_ALLOWED_IPS, ArrayList(allowedIps))
-            if (mtu > 0) putExtra(KeqdisVpnService.EXTRA_AWG_MTU, mtu)
-            putStringArrayListExtra("exclude_packages", ArrayList(excludePackages))
-            putStringArrayListExtra("include_packages", ArrayList(includePackages))
-            if (!serverName.isNullOrBlank()) {
-                putExtra(KeqdisVpnService.EXTRA_SERVER_NAME, serverName)
-            }
-        })
-
-        result.success(null)
     }
 
     private fun stopVpn(result: MethodChannel.Result) {

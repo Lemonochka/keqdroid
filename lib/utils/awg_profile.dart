@@ -8,9 +8,8 @@ import 'dart:convert';
 /// с AWG 3.1, защита уже поднятого туннеля (`HeaderProtectionKey`,
 /// `ContentPaddingAddition`, таймеры, `RandomTrailers`, `DisableCookies`).
 ///
-/// На десктопе `.conf` уезжает в wireproxy как есть, и ключи разбирает он сам;
-/// на Android ядро принимает только UAPI, поэтому каждый ключ должен быть
-/// назван в [_uapiNames] — иначе он тихо потеряется по дороге.
+/// В ядро профиль переводит MihomoConfigGen по ключу, поэтому каждый ключ AWG
+/// должен быть назван в [_uapiNames] — иначе он тихо потеряется по дороге.
 class AwgProfile {
   final String? remark;
   final AwgInterface iface;
@@ -133,7 +132,7 @@ class AwgProfile {
       throw ArgumentError('AmneziaWG config: Interface.PrivateKey is required');
     }
 
-    // Значения проверяем здесь, а не в [toUapi]: на импорте ошибка видна в
+    // Значения проверяем здесь, а не при сборке конфига: на импорте ошибка видна в
     // диалоге и рядом с местом, где конфиг правят, а на подключении — только
     // как отказ ядра поднять устройство, одинаковый для любой опечатки.
     for (final entry in awgParams.entries) {
@@ -179,53 +178,6 @@ class AwgProfile {
 
   /// Порт сервера из `Endpoint` первого пира.
   int get endpointPort => splitEndpoint(peer.endpoint).$2;
-
-  /// Имя туннеля для Windows-сервиса: безопасный slug (буквы/цифры/`_-`).
-  String tunnelName() {
-    final base = (remark != null && remark!.trim().isNotEmpty)
-        ? remark!.trim()
-        : endpointHost;
-    final slug = base.replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_');
-    final trimmed = slug.replaceAll(RegExp(r'^_+|_+$'), '');
-    final name = trimmed.isEmpty ? 'awg' : trimmed;
-    return name.length > 32 ? name.substring(0, 32) : name;
-  }
-
-  /// UAPI-строка для amneziawg-go (Android `wgTurnOn`). Ключи WG в `.conf` —
-  /// base64, UAPI требует hex. AWG-параметры идут на уровне устройства.
-  ///
-  /// [endpointOverrides] — подмена `Endpoint` по его исходной строке из
-  /// `.conf`: UAPI ядра принимает endpoint только как литеральный IP:port
-  /// (netip.ParseAddrPort, без DNS), так что доменные endpoint'ы вызывающий
-  /// код обязан отрезолвить заранее.
-  String toUapi({Map<String, String> endpointOverrides = const {}}) {
-    final sb = StringBuffer();
-    sb.writeln('private_key=${_b64ToHex(iface.privateKey)}');
-    // Параметры AmneziaWG — на уровне device, до пиров.
-    for (final entry in iface.awgParams.entries) {
-      final name = _uapiNames[entry.key];
-      // Ключ не из таблицы в UAPI не отдаём ни при каких условиях: ядро
-      // отвечает на него ошибкой и не поднимает устройство целиком.
-      if (name == null) continue;
-      sb.writeln('$name=${_uapiValue(entry.key, entry.value)}');
-    }
-    sb.writeln('replace_peers=true');
-    for (final p in peers) {
-      sb.writeln('public_key=${_b64ToHex(p.publicKey)}');
-      if (p.presharedKey != null && p.presharedKey!.isNotEmpty) {
-        sb.writeln('preshared_key=${_b64ToHex(p.presharedKey!)}');
-      }
-      sb.writeln('endpoint=${endpointOverrides[p.endpoint] ?? p.endpoint}');
-      if (p.persistentKeepalive != null) {
-        sb.writeln('persistent_keepalive_interval=${p.persistentKeepalive}');
-      }
-      sb.writeln('replace_allowed_ips=true');
-      for (final ip in p.allowedIps) {
-        sb.writeln('allowed_ip=$ip');
-      }
-    }
-    return sb.toString();
-  }
 
   /// Значение параметра в той форме, какую ждёт UAPI. Бросает [ArgumentError],
   /// если значение не той формы: ядру такое отдавать нельзя, оно откажется
@@ -285,8 +237,8 @@ class AwgProfile {
   }
 
   /// Флаг AWG 3.1. В UAPI это `strconv.ParseBool`, а в `.conf` пишут ещё и
-  /// `yes`/`on` — их понимает ini-разбор wireproxy, так что на десктопе такой
-  /// конфиг работает, и отдать Android'у меньше было бы расхождением ядер.
+  /// `yes`/`on`: такие профили работали и раньше, и отказ на импорте потерял
+  /// бы рабочий сервер. В ядро флаг уезжает уже булевым (MihomoConfigGen).
   static String _boolFlag(String raw, String name) {
     switch (raw.trim().toLowerCase()) {
       case 'true':
@@ -345,8 +297,8 @@ class AwgProfile {
         .toList();
   }
 
-  /// `host:port` / `[v6]:port` → (host, port). Публичный: нужен бэкендам,
-  /// чтобы резолвить доменные endpoint'ы каждого пира перед [toUapi].
+  /// `host:port` / `[v6]:port` → (host, port). Публичный: пиры для ядра из него
+  /// собирает MihomoConfigGen.
   static (String, int) splitEndpoint(String endpoint) {
     final ep = endpoint.trim();
     // IPv6 в скобках: [::1]:51820

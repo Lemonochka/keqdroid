@@ -92,7 +92,7 @@ Four cores ship inside the app. Which one runs a given server is decided by the 
 | Ready-made Xray config (`.json`) | Xray |
 | Ready-made Clash / mihomo config | mihomo |
 | Proxy chain | Xray |
-| AmneziaWG profile (`.conf`) | amneziawg-go |
+| AmneziaWG profile (`.conf`) | mihomo |
 
 The choice lives in **Settings → About** and applies to links, where both cores fit. **Automatic** leaves it to the format. When a server cannot run on the core you picked, the app says so on the spot instead of quietly switching — a silent fallback is exactly what makes "I selected mihomo and it says Xray" impossible to debug.
 
@@ -126,7 +126,7 @@ A ready-made config runs as its author wrote it — routing, DNS and outbound ch
 | **VPN** | Everything on the device goes through the tunnel. VPN permission on first connect. |
 | **Proxy** | SOCKS and HTTP on `127.0.0.1`, nothing captured on its own — point an app or the Wi-Fi proxy settings at it. |
 
-Per-app routing and DNS interception belong to VPN mode; AmneziaWG servers always run as VPN. Notification shade icon and a Quick Settings tile; subscriptions update in the background.
+Per-app routing and DNS interception belong to VPN mode. Notification shade icon and a Quick Settings tile; subscriptions update in the background.
 
 ### Windows
 
@@ -200,7 +200,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, atta
 
 ## License
 
-[GPL-3.0](LICENSE). The bundled cores keep their upstream licenses: Xray-core (MPL-2.0), mihomo (GPL-3.0), sing-box (GPL-3.0), amneziawg-go (MIT).
+[GPL-3.0](LICENSE). The bundled cores keep their upstream licenses: Xray-core (MPL-2.0), mihomo (GPL-3.0), sing-box (GPL-3.0).
 
 ---
 
@@ -288,7 +288,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, atta
 | Готовый конфиг Xray (`.json`) | Xray |
 | Готовый конфиг Clash / mihomo | mihomo |
 | Цепочка прокси | Xray |
-| Профиль AmneziaWG (`.conf`) | amneziawg-go |
+| Профиль AmneziaWG (`.conf`) | mihomo |
 
 Выбор живёт в **Настройки → О приложении** и касается ссылок — там подходят оба ядра. **Автоматически** отдаёт решение формату. Если сервер не может поехать на выбранном ядре, приложение скажет об этом сразу, а не переключится молча: именно тихий откат превращает «включила mihomo, а пишет Xray» в неразрешимую загадку.
 
@@ -322,7 +322,7 @@ Hysteria v1 не поддерживается.
 | **VPN** | Через туннель идёт всё устройство. При первом подключении — разрешение VPN. |
 | **Proxy** | SOCKS и HTTP на `127.0.0.1`, сам по себе не перехватывает ничего — на него нужно направить программу или настройки прокси в Wi-Fi. |
 
-Маршрутизация по приложениям и перехват DNS живут в режиме VPN; серверы AmneziaWG всегда идут как VPN. Значок в шторке и плитка в быстрых настройках; подписки обновляются в фоне.
+Маршрутизация по приложениям и перехват DNS живут в режиме VPN. Значок в шторке и плитка в быстрых настройках; подписки обновляются в фоне.
 
 ### Windows
 
@@ -396,7 +396,7 @@ powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFi
 
 ## Лицензия
 
-[GPL-3.0](LICENSE). Встроенные ядра — под своими лицензиями: Xray-core (MPL-2.0), mihomo (GPL-3.0), sing-box (GPL-3.0), amneziawg-go (MIT).
+[GPL-3.0](LICENSE). Встроенные ядра — под своими лицензиями: Xray-core (MPL-2.0), mihomo (GPL-3.0), sing-box (GPL-3.0).
 
 ---
 

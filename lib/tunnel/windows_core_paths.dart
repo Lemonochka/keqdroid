@@ -14,10 +14,9 @@ class WindowsCorePaths {
   static const assetGeoip = 'assets/bin/windows/geoip.dat';
   static const assetGeosite = 'assets/bin/windows/geosite.dat';
   static const geoFileNames = ['geoip.dat', 'geosite.dat'];
-  static const assetWireproxy = 'assets/bin/windows/wireproxy.exe';
 
   static const binariesHint =
-      'Положите keqrnel.exe, mihomo.exe, wireproxy.exe (для AmneziaWG) и '
+      'Положите keqrnel.exe, mihomo.exe и '
       'wintun.dll (нужен для TUN) в assets/bin/windows/ (см. README) и '
       'пересоберите приложение, или рядом с keqdroid.exe.';
 
@@ -82,13 +81,6 @@ class WindowsCorePaths {
   /// TUN-режиме само владеет wintun-адаптером (keqrnel ему для этого не нужен).
   static Future<String?> mihomoExecutable() =>
       _resolveExecutable(assetMihomo, 'mihomo.exe');
-
-  /// wireproxy-awg — userspace AmneziaWG (embeds amneziawg-go), exposes a local
-  /// SOCKS5/HTTP proxy. Used for both Proxy and TUN mode (TUN: wireproxy SOCKS →
-  /// sing-box). Bundled in flutter_assets like xray/sing-box and resolved from
-  /// there; wintun.dll is what sing-box needs for the TUN adapter.
-  static Future<String?> wireproxyExecutable() =>
-      _resolveExecutable(assetWireproxy, 'wireproxy.exe');
 
   /// Домашний каталог mihomo (аргумент `-d`).
   ///

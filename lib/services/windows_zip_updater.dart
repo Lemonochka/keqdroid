@@ -171,8 +171,8 @@ Start-Sleep -Seconds 3
 
 # 2) stop leftover processes that may lock binaries in the install dir.
 #    Match by executable path, not just name: the same names (xray, sing-box,
-#    wireproxy) may belong to other apps on this machine.
-foreach ($name in @('keqdroid', 'keqrnel', 'xray', 'sing-box', 'wireproxy')) {
+#    mihomo) may belong to other apps on this machine.
+foreach ($name in @('keqdroid', 'keqrnel', 'mihomo', 'xray', 'sing-box')) {
   Get-Process -Name $name -ErrorAction SilentlyContinue | Where-Object {
     try {
       $_.Path -and $_.Path.StartsWith($TargetDir, [System.StringComparison]::OrdinalIgnoreCase)

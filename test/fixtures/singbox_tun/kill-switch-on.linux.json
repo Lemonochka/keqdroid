@@ -94,8 +94,7 @@
           "keqrnel",
           "mihomo",
           "xray",
-          "sing-box",
-          "wireproxy"
+          "sing-box"
         ],
         "outbound": "direct"
       },

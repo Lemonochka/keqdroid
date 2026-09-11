@@ -10,7 +10,6 @@ import '../services/ephemeral_xray_ping.dart';
 import '../utils/keqrnel_config.dart';
 import '../utils/mihomo_api_session.dart';
 import '../utils/singbox_tun_config.dart';
-import '../utils/wireproxy_config.dart';
 import 'connection_mode.dart';
 import 'core_capabilities.dart';
 import 'desktop_traffic_stats.dart';
@@ -62,7 +61,6 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   final _stateCtrl = StreamController<VpnState>.broadcast();
 
   Process? _xrayProcess;
-  Process? _wireproxyProcess;
   Process? _singboxProcess;
   // Sentinel the elevated TUN wrapper polls: deleting it asks the root keqrnel
   // to stop (reverts auto_route/nftables) without re-elevation. See _runKeqrnelAsRoot.
@@ -75,7 +73,6 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   final StringBuffer _xrayLog = StringBuffer();
   final StringBuffer _singboxLog = StringBuffer();
 
-  int? _awgInfoPort;
   String? _xrayBinPath;
   // Порт clash_api keqrnel — из него читаем кумулятивный трафик (proxy-режим)
   // и список соединений для дебаг-экрана (оба режима).
@@ -104,7 +101,6 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     if (_xrayProcess != null) 'keqrnel': _xrayProcess!.pid,
     if (_mihomoProcess != null)
       _mihomoRunsAsRoot ? 'mihomo (root, TUN)' : 'mihomo': _mihomoProcess!.pid,
-    if (_wireproxyProcess != null) 'wireproxy': _wireproxyProcess!.pid,
     if (_singboxProcess != null) 'keqrnel (root, TUN)': _singboxProcess!.pid,
   };
 
@@ -134,7 +130,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   /// Tail of xray + sing-box stdout/stderr for the debug screen.
   String exportSessionLogs({int maxLines = 400}) {
     final combined = StringBuffer()
-      ..writeln('=== xray / wireproxy ===')
+      ..writeln('=== xray ===')
       ..writeln(_xrayLog)
       ..writeln('=== sing-box ===')
       ..writeln(_singboxLog);
@@ -178,10 +174,6 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
       final isTun = request.mode == ConnectionMode.tun;
       switch (request.vpnBackend) {
-        case VpnBackend.awg:
-          await (isTun
-              ? _startAwgTunSession(request)
-              : _startAwgProxySession(request));
         case VpnBackend.mihomo:
           await _startMihomoSession(request);
         case VpnBackend.xray:
@@ -205,7 +197,6 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       _watchProcessExit(_xrayProcess, 'keqrnel');
       _watchProcessExit(_mihomoProcess, 'mihomo');
       _watchProcessExit(_singboxProcess, 'keqrnel TUN');
-      _watchProcessExit(_wireproxyProcess, 'wireproxy');
     } catch (e, st) {
       AppLogger.instance.error(
         'Linux tunnel start failed',
@@ -429,87 +420,6 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     }
   }
 
-  // ---- wireproxy (AmneziaWG) ----------------------------------------------
-
-  Future<void> _startWireproxy(
-    TunnelSessionRequest request, {
-    required bool withHttp,
-  }) async {
-    final wpBin = await LinuxCorePaths.wireproxyExecutable();
-    if (wpBin == null) {
-      throw VpnStartException(
-        'wireproxy not found. ${LinuxCorePaths.binariesHint}',
-      );
-    }
-    final conf = request.awgConfig;
-    if (conf == null || conf.isEmpty) {
-      throw const VpnStartException('awgConfig is required for AmneziaWG');
-    }
-
-    final wpConf = WireproxyConfigGen.generate(
-      conf,
-      socksPort: request.socksPort,
-      httpPort: request.httpPort,
-      withHttp: withHttp,
-    );
-    final confFile = File(p.join(_sessionDir!.path, 'wireproxy.conf'));
-    await confFile.writeAsString(wpConf);
-
-    final infoPort = await _freePort();
-    _awgInfoPort = infoPort;
-
-    _wireproxyProcess = await Process.start(
-      wpBin,
-      ['-i', '127.0.0.1:$infoPort', '-c', confFile.path],
-      workingDirectory: _sessionDir!.path,
-      mode: ProcessStartMode.normal,
-    );
-    _pipeProcessOutput(_wireproxyProcess!, _xrayLog);
-
-    final socksReady = await _waitForPort(
-      '127.0.0.1',
-      request.socksPort,
-      process: _wireproxyProcess,
-      log: _xrayLog,
-      processLabel: 'wireproxy',
-    );
-    if (!socksReady) {
-      throw VpnStartException(
-        'wireproxy SOCKS port ${request.socksPort} did not open.\n${_tail(_xrayLog)}',
-      );
-    }
-  }
-
-  Future<void> _startAwgProxySession(TunnelSessionRequest request) async {
-    await _startWireproxy(request, withHttp: true);
-    if (request.systemProxy) {
-      final httpReady = await _waitForPort(
-        '127.0.0.1',
-        request.httpPort,
-        process: _wireproxyProcess,
-        log: _xrayLog,
-        processLabel: 'wireproxy HTTP',
-      );
-      if (!httpReady) {
-        throw VpnStartException(
-          'wireproxy HTTP port ${request.httpPort} did not open.\n${_tail(_xrayLog)}',
-        );
-      }
-      await _applySystemProxy(request);
-    }
-  }
-
-  // withHttp и в TUN-режиме: процесс приложения идёт мимо TUN (direct-правило
-  // sing-box), обновления качаются через локальный HTTP-инбаунд wireproxy.
-  Future<void> _startAwgTunSession(TunnelSessionRequest request) async {
-    await _startWireproxy(request, withHttp: true);
-    final singConfig = request.singboxConfig;
-    if (singConfig == null || singConfig.isEmpty) {
-      throw const VpnStartException('singboxConfig is required for TUN mode');
-    }
-    await _runKeqrnelAsRoot(singConfig);
-  }
-
   // ---- passwordless TUN (polkit rule) -------------------------------------
 
   /// Root-owned хелпер, который pkexec запускает вместо inline `sh -c`.
@@ -664,8 +574,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
   // ---- sing-box TUN (root via pkexec) -------------------------------------
 
   /// Запускает keqrnel под root через pkexec (TUN нужен root). keqrnel — это
-  /// sing-box host: поднимает переданный sing-box-конфиг, один и тот же путь
-  /// и для xray-протоколов, и для AmneziaWG-TUN.
+  /// sing-box host: поднимает переданный sing-box-конфиг xray-протоколов.
   Future<void> _runKeqrnelAsRoot(String config) async {
     final singBin = await LinuxCorePaths.keqrnelExecutable();
     if (singBin == null) {
@@ -1131,8 +1040,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       // Процесс уже не из активной сессии (штатный stop занулил поля).
       if (!identical(process, _xrayProcess) &&
           !identical(process, _singboxProcess) &&
-          !identical(process, _mihomoProcess) &&
-          !identical(process, _wireproxyProcess)) {
+          !identical(process, _mihomoProcess)) {
         return;
       }
       AppLogger.instance.error(
@@ -1178,8 +1086,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
 
     if (_singboxProcess != null ||
         _xrayProcess != null ||
-        _mihomoProcess != null ||
-        _wireproxyProcess != null) {
+        _mihomoProcess != null) {
       await _dumpLogsToFile();
     }
 
@@ -1198,13 +1105,10 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     } else {
       await _killProcess(_mihomoProcess);
     }
-    await _killProcess(_wireproxyProcess);
     await _killProcess(_xrayProcess);
     _singboxProcess = null;
     _mihomoProcess = null;
     _mihomoRunsAsRoot = false;
-    _wireproxyProcess = null;
-    _awgInfoPort = null;
     _xrayProcess = null;
     _xrayBinPath = null;
     _keqrnelClashPort = null;
@@ -1228,7 +1132,6 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
   @override
   Future<VpnState> getCurrentState() async {
     if (_xrayProcess != null ||
-        _wireproxyProcess != null ||
         _mihomoProcess != null ||
         _singboxProcess != null) {
       return buildConnectedState(_activeMode);
@@ -1571,7 +1474,6 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
   Future<void> pollTrafficStats(ConnectionMode mode, {bool force = false}) async {
     if (!statsPollingEnabled && !force) return;
     if (_xrayProcess == null &&
-        _wireproxyProcess == null &&
         _mihomoProcess == null &&
         _singboxProcess == null) {
       return;
@@ -1607,14 +1509,6 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
         }
         inOctets = c.rx;
         outOctets = c.tx;
-      } else if (_wireproxyProcess != null && _awgInfoPort != null) {
-        final m = await queryWireproxyMetrics(_awgInfoPort!);
-        if (m == null) {
-          emitConnectedTelemetry(mode);
-          return;
-        }
-        inOctets = m.rx;
-        outOctets = m.tx;
       } else if (_keqrnelClashPort != null) {
         // keqrnel proxy: кумулятивный трафик из clash_api sing-box.
         final t = await queryClashTraffic(_keqrnelClashPort!);

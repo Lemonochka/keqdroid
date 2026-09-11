@@ -128,8 +128,6 @@ class SingBoxTunConfigGen {
     required AppSettings settings,
     List<String> managedProcessNames = const [],
     AppRoutingMode routingMode = AppRoutingMode.allProxy,
-    /// AmneziaWG: wireproxy SOCKS5 без auth — не шлём username/password в outbound.
-    bool localSocksNoAuth = false,
     /// this app's own exe (e.g. keqdroid.exe). routed direct so our tcp/url ping
     /// sockets measure latency from the local pc, not through the active server.
     String appProcessName = '',
@@ -366,8 +364,6 @@ class SingBoxTunConfigGen {
       'mihomo$exe',
       'xray$exe',
       'sing-box$exe',
-      // wireproxy (AmneziaWG): его WG-UDP к серверу должен идти мимо туннеля
-      'wireproxy$exe',
       // Через варианты, а не .toLowerCase(): sing-box сравнивает process_name
       // map-lookup'ом, без приведения регистра. Заниженное имя не совпадёт с
       // реальным (переименованный портативный `KEQDIS.exe`), правило молча
@@ -544,10 +540,8 @@ class SingBoxTunConfigGen {
       'server': '127.0.0.1',
       'server_port': localSocksPort,
       'version': '5',
-      if (!localSocksNoAuth) ...{
-        'username': socksUsername,
-        'password': socksPassword,
-      },
+      'username': socksUsername,
+      'password': socksPassword,
     };
 
     // Direct-домены резолвим системным резолвером (local-dns): он знает

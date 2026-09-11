@@ -16,7 +16,7 @@ import 'tunnel_state.dart';
 ///
 /// Сюда переехало только совпадавшее посимвольно. Всё, что отличается по делу,
 /// осталось в бэкендах и объявлено здесь абстрактным: источники счётчиков разные
-/// (sysfs tun, MethodChannel, clash_api, wireproxy), и порядок перебора тоже.
+/// (sysfs tun, MethodChannel, clash_api), и порядок перебора тоже.
 ///
 /// Состояние ниже помечено [protected] и объявлено без подчёркивания намеренно:
 /// [pollTrafficStats] живёт в бэкендах, то есть в других библиотеках, а
@@ -51,7 +51,7 @@ mixin DesktopTrafficStats {
   bool resumeBaselinePending = false;
 
   /// Один keep-alive клиент на сессию вместо нового HttpClient (сокет+закрытие)
-  /// на каждый секундный опрос clash_api/wireproxy.
+  /// на каждый секундный опрос clash_api.
   HttpClient? _statsHttpClient;
 
   @protected
@@ -151,38 +151,6 @@ mixin DesktopTrafficStats {
   void resetStatsHttp() {
     _statsHttpClient?.close(force: true);
     _statsHttpClient = null;
-  }
-
-  Future<({int rx, int tx})?> queryWireproxyMetrics(int port) async {
-    try {
-      final req = await statsHttp
-          .get('127.0.0.1', port, '/metrics')
-          .timeout(const Duration(seconds: 2));
-      final resp = await req.close().timeout(const Duration(seconds: 2));
-      if (resp.statusCode != 200) {
-        await resp.drain<void>();
-        return null;
-      }
-      final body = await resp.transform(utf8.decoder).join();
-      var rx = 0;
-      var tx = 0;
-      for (final line in const LineSplitter().convert(body)) {
-        final i = line.indexOf('=');
-        if (i < 0) continue;
-        final key = line.substring(0, i).trim();
-        final value = int.tryParse(line.substring(i + 1).trim());
-        if (value == null) continue;
-        if (key == 'rx_bytes') {
-          rx += value;
-        } else if (key == 'tx_bytes') {
-          tx += value;
-        }
-      }
-      return (rx: rx, tx: tx);
-    } catch (_) {
-      resetStatsHttp();
-      return null;
-    }
   }
 
   /// [secret] — токен RESTful API. У keqrnel его нет (API слушает петлю), у

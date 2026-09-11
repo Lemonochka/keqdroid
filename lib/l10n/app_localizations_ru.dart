@@ -2191,7 +2191,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsCoreSkipChain => 'Активный сервер — цепочка: её узлы связаны через dialerProxy Xray, поэтому она идёт через libxray при любом выборе ядра.';
 
   @override
-  String get settingsCoreSkipAwg => 'Активный сервер — профиль AmneziaWG: его исполняет своё ядро wg-go при любом выборе.';
+  String get settingsCoreSkipAwg => 'Активный сервер — профиль AmneziaWG: его исполняет mihomo при любом выборе ядра.';
 
   @override
   String get settingsCoreSkipPlatform => 'Ядро mihomo не поставляется на этой платформе — подключение идёт через ядро Xray.';
@@ -2237,9 +2237,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsInternalsRoleTun => 'TUN-устройство';
-
-  @override
-  String get settingsInternalsRoleAwg => 'AmneziaWG';
 
   @override
   String settingsInternalsGeoCodes(int count) {

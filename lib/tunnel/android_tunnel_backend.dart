@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
-import '../utils/awg_profile.dart';
 import 'tunnel_backend.dart';
 import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
@@ -126,59 +125,10 @@ class AndroidTunnelBackend implements TunnelBackend {
           'serverName': request.serverName,
       };
 
-      // AmneziaWG: парсим .conf в Dart и отдаём ядру UAPI + сетевые параметры TUN.
-      if (request.vpnBackend == VpnBackend.awg && request.awgConfig != null) {
-        final profile = AwgProfile.parse(request.awgConfig!);
-        final allowed = <String>{};
-        for (final p in profile.peers) {
-          allowed.addAll(p.allowedIps);
-        }
-        args['awgUapi'] = profile.toUapi(
-          endpointOverrides: await _resolveAwgEndpoints(profile),
-        );
-        args['awgAddresses'] = profile.iface.addresses;
-        args['awgDns'] = profile.iface.dns;
-        args['awgAllowedIps'] = allowed.toList();
-        if (profile.iface.mtu != null) args['awgMtu'] = profile.iface.mtu;
-      }
-
       await _method.invokeMethod<void>('startVpn', args);
     } on PlatformException catch (e) {
       throw _wrap(e, 'startVpn');
     }
-  }
-
-  /// Доменные `Endpoint` → IP:port. UAPI amneziawg-go принимает endpoint
-  /// только литеральным IP (netip.ParseAddrPort, DNS не делает) — с доменом
-  /// IpcSet падает и туннель не стартует вовсе.
-  Future<Map<String, String>> _resolveAwgEndpoints(AwgProfile profile) async {
-    final overrides = <String, String>{};
-    for (final p in profile.peers) {
-      final (host, port) = AwgProfile.splitEndpoint(p.endpoint);
-      if (InternetAddress.tryParse(host) != null) continue;
-      final List<InternetAddress> addrs;
-      try {
-        addrs = await InternetAddress.lookup(host);
-      } catch (e) {
-        throw VpnStartException(
-          'Failed to resolve AmneziaWG endpoint "$host": $e',
-        );
-      }
-      if (addrs.isEmpty) {
-        throw VpnStartException(
-          'Failed to resolve AmneziaWG endpoint "$host": no addresses',
-        );
-      }
-      // IPv4 предпочтительнее: v6-маршрута до сервера может не быть.
-      final addr = addrs.firstWhere(
-        (a) => a.type == InternetAddressType.IPv4,
-        orElse: () => addrs.first,
-      );
-      overrides[p.endpoint] = addr.type == InternetAddressType.IPv6
-          ? '[${addr.address}]:$port'
-          : '${addr.address}:$port';
-    }
-    return overrides;
   }
 
   @override

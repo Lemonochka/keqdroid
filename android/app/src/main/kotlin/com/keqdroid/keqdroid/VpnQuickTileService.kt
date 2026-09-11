@@ -194,9 +194,13 @@ class VpnQuickTileService : TileService() {
         // его явно, чтобы и сохранённый из старых версий engine=keqrnel не всплыл.
         val coreEngine = KeqdisVpnService.CORE_ENGINE_CHAIN
 
-        // AmneziaWG не хранит snapshot для быстрого реконнекта из плитки — открываем приложение.
-        if (backend == KeqdisVpnService.VPN_BACKEND_AWG) {
-            android.util.Log.i("KEQDIS_QS", "onClick: backend=awg has no snapshot → opening app")
+        // Прошлые версии писали сюда `awg`: AmneziaWG жил в своём ядре, и снапшота
+        // под реконнект у него не было. Такую запись плитке поднять нечем —
+        // открываем приложение, оно подключит тот же сервер через mihomo.
+        if (backend != KeqdisVpnService.VPN_BACKEND_XRAY &&
+            backend != KeqdisVpnService.VPN_BACKEND_MIHOMO
+        ) {
+            android.util.Log.i("KEQDIS_QS", "onClick: backend=$backend has no snapshot → opening app")
             openAppForConnect()
             return
         }

@@ -2184,7 +2184,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsCoreSkipChain => '当前服务器是代理链：各节点通过 Xray 的 dialerProxy 串联，因此无论选择哪个内核都由 libxray 运行。';
 
   @override
-  String get settingsCoreSkipAwg => '当前服务器是 AmneziaWG 配置 — 无论选择哪个内核，都由它自己的内核 wg-go 运行。';
+  String get settingsCoreSkipAwg => '当前服务器是 AmneziaWG 配置 — 无论选择哪个内核，都由 mihomo 运行。';
 
   @override
   String get settingsCoreSkipPlatform => '此平台未附带 mihomo 内核，连接将改用 Xray 内核。';
@@ -2230,9 +2230,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsInternalsRoleTun => 'TUN 设备';
-
-  @override
-  String get settingsInternalsRoleAwg => 'AmneziaWG';
 
   @override
   String settingsInternalsGeoCodes(int count) {

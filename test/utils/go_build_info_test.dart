@@ -226,15 +226,5 @@ void main() {
         },
       );
     });
-
-    test('wireproxy отдаёт свою версию и версию amneziawg внутри', () async {
-      await expectCore(
-        'assets/bin/windows/wireproxy.exe',
-        (info) {
-          expect(info.moduleVersion, startsWith('v'));
-          expect(info.depVersion('amnezia-vpn/amneziawg-go'), startsWith('v'));
-        },
-      );
-    });
   });
 }

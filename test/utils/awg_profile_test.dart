@@ -63,35 +63,12 @@ PersistentKeepalive = 25
     expect(p.endpointPort, 443);
   });
 
-  test('toUapi emits hex keys and lowercase AWG params', () {
-    final uapi = AwgProfile.parse(sample).toUapi();
-    expect(uapi, contains('private_key='));
-    expect(uapi, contains('public_key='));
-    expect(uapi, contains('jc=4'));
-    expect(uapi, contains('s2=574'));
-    expect(uapi, contains('endpoint=203.0.113.10:51820'));
-    expect(uapi, contains('allowed_ip=0.0.0.0/0'));
-    expect(uapi, contains('persistent_keepalive_interval=25'));
-    // hex, не base64
-    expect(uapi, isNot(contains(privBlock)));
-  });
-
-  test('toUapi substitutes resolved endpoint for domain hosts', () {
+  test('splits a domain endpoint into host and port', () {
     final conf = sample.replaceFirst(
         'Endpoint = 203.0.113.10:51820', 'Endpoint = vpn.example.com:945');
     final p = AwgProfile.parse(conf);
     expect(AwgProfile.splitEndpoint(p.peer.endpoint),
         ('vpn.example.com', 945));
-    final uapi = p.toUapi(
-      endpointOverrides: {'vpn.example.com:945': '198.51.100.7:945'},
-    );
-    // amneziawg-go UAPI не резолвит DNS — в endpoint обязан уйти IP.
-    expect(uapi, contains('endpoint=198.51.100.7:945'));
-    expect(uapi, isNot(contains('endpoint=vpn.example.com:945')));
-  });
-
-  test('tunnelName produces safe slug', () {
-    expect(AwgProfile.parse(sample).tunnelName(), 'Test_AWG');
   });
 
   test('rejects non-AWG and incomplete configs', () {
@@ -132,46 +109,24 @@ DisableCookies = false''';
       expect(p.iface.awgParams.containsKey('mtu'), isFalse);
     });
 
-    test('toUapi renames the 3.1 keys and converts their values', () {
-      final uapi = AwgProfile.parse(withAwg31(params)).toUapi();
-      // В UAPI имена snake_case, а не то, что написано в .conf.
-      expect(uapi, isNot(contains('headerprotectionkey=')));
-      expect(uapi, contains('content_padding_addition=2-10'));
-      expect(uapi, contains('rekey_after_time=100-140'));
-      expect(uapi, contains('rekey_timeout=5'));
-      expect(uapi, contains('reject_after_time=180-220'));
-      expect(uapi, contains('keepalive_timeout=10-15'));
-      expect(uapi, contains('max_handshake_attempts=18'));
-      expect(uapi, contains('random_trailers=true'));
-      expect(uapi, contains('disable_cookies=false'));
-      // Ключ уходит в hex, как private_key, а не строкой из конфига.
-      expect(uapi, isNot(contains(hpkBlock)));
-      expect(
-        RegExp(r'^header_protection_key=[0-9a-f]{64}$', multiLine: true)
-            .hasMatch(uapi),
-        isTrue,
-      );
-    });
-
     test('keepalive keeps a range and turns off into 0', () {
       final ranged = AwgProfile.parse(withAwg31(params));
       expect(ranged.peer.persistentKeepalive, '22-30');
-      expect(ranged.toUapi(), contains('persistent_keepalive_interval=22-30'));
 
       final off = AwgProfile.parse(
         sample.replaceFirst('PersistentKeepalive = 25', 'PersistentKeepalive = off'),
       );
-      // `off` понимает wg-quick, но не UAPI — иначе ядро уронит весь IpcSet.
+      // `off` понимает wg-quick, но не ядро: оно уронило бы весь IpcSet.
       expect(off.peer.persistentKeepalive, '0');
-      expect(off.toUapi(), contains('persistent_keepalive_interval=0'));
     });
 
     test('accepts yes/no spellings for the 3.1 flags', () {
-      final uapi = AwgProfile.parse(
+      // wg-quick пишет и так; отказ на импорте потерял бы рабочий профиль.
+      final p = AwgProfile.parse(
         withAwg31('RandomTrailers = yes\nDisableCookies = off'),
-      ).toUapi();
-      expect(uapi, contains('random_trailers=true'));
-      expect(uapi, contains('disable_cookies=false'));
+      );
+      expect(p.iface.awgParams['randomtrailers'], 'yes');
+      expect(p.iface.awgParams['disablecookies'], 'off');
     });
 
     test('rejects malformed 3.1 values at import', () {
@@ -199,12 +154,12 @@ DisableCookies = false''';
       );
     });
 
-    test('never puts an unknown interface key into UAPI', () {
+    test('never takes an unknown interface key for an AWG parameter', () {
       // Itime жил в AWG 2.0 и из v3 пропал: незнакомый ключ ядро не игнорирует,
       // а отвечает `invalid UAPI device key` и не поднимает устройство вовсе.
-      final uapi = AwgProfile.parse(withAwg31('Itime = 60\nTable = off')).toUapi();
-      expect(uapi, isNot(contains('itime')));
-      expect(uapi, isNot(contains('table')));
+      final p = AwgProfile.parse(withAwg31('Itime = 60\nTable = off'));
+      expect(p.iface.awgParams.containsKey('itime'), isFalse);
+      expect(p.iface.awgParams.containsKey('table'), isFalse);
     });
   });
 }

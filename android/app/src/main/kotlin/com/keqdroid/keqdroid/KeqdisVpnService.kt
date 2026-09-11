@@ -21,7 +21,6 @@ import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.amnezia.awg.GoBackend
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.InetSocketAddress
@@ -45,7 +44,6 @@ class KeqdisVpnService : VpnService() {
         const val EXTRA_VPN_BACKEND    = "vpn_backend"
         const val VPN_BACKEND_XRAY     = "xray"
         const val VPN_BACKEND_MIHOMO   = "mihomo"
-        const val VPN_BACKEND_AWG      = "awg"
 
         // Какое ядро исполняет конфиг. Уходит в NativeHelper.startCore: у xray и
         // mihomo разный argv и разный способ показать базы geo.
@@ -81,12 +79,6 @@ class KeqdisVpnService : VpnService() {
         // listener/listener.go: ReCreateTun.
         const val MIHOMO_TUN_READY     = "[TUN] Tun adapter listening at:"
         const val MIHOMO_TUN_FAILED    = "Start TUN listening error:"
-        // AmneziaWG: ядро amneziawg-go само владеет TUN, конфиг приходит из .conf.
-        const val EXTRA_AWG_UAPI        = "awg_uapi"
-        const val EXTRA_AWG_ADDRESSES   = "awg_addresses"
-        const val EXTRA_AWG_DNS         = "awg_dns"
-        const val EXTRA_AWG_ALLOWED_IPS = "awg_allowed_ips"
-        const val EXTRA_AWG_MTU         = "awg_mtu"
         const val NOTIFICATION_ID      = 1337
         const val CHANNEL_ID           = "keqdis_vpn"
         const val CHANNEL_ID_CONTROL   = "keqdis_vpn_control"
@@ -181,8 +173,6 @@ class KeqdisVpnService : VpnService() {
     // Когда поднято текущее ядро и сколько раз подряд оно умерло быстро — см. reviveCore.
     @Volatile private var coreStartedAt:      Long                  = 0L
     @Volatile private var quickCoreDeaths:    Int                   = 0
-    // AmneziaWG tunnel handle из amneziawg-go (>=0 когда активен awg-бэкенд).
-    @Volatile private var awgHandle:          Int                   = -1
     @Volatile private var tunInterface:       ParcelFileDescriptor? = null
     @Volatile private var cleanupDone:       Boolean              = false
     @Volatile private var activeSocksPort:   Int                  = 2080
@@ -297,36 +287,6 @@ class KeqdisVpnService : VpnService() {
                 lastSocksPort = socksPort
                 lastExcludePackages = excludePkgs
                 lastIncludePackages = includePkgs
-
-                if (backend == VPN_BACKEND_AWG) {
-                    val uapi = intent.getStringExtra(EXTRA_AWG_UAPI) ?: run {
-                        android.util.Log.e("KEQDIS", "onStartCommand: missing EXTRA_AWG_UAPI")
-                        return START_NOT_STICKY
-                    }
-                    val addresses = intent.getStringArrayListExtra(EXTRA_AWG_ADDRESSES) ?: arrayListOf()
-                    val dns = intent.getStringArrayListExtra(EXTRA_AWG_DNS) ?: arrayListOf()
-                    val allowedIps = intent.getStringArrayListExtra(EXTRA_AWG_ALLOWED_IPS) ?: arrayListOf()
-                    val mtu = intent.getIntExtra(EXTRA_AWG_MTU, 0)
-
-                    runCatching {
-                        getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE).edit()
-                            .putString(KEY_QS_LAST_BACKEND, backend)
-                            .putString(KEY_QS_LAST_SERVER_NAME, currentServerName)
-                            .apply()
-                    }
-
-                    registerNotificationReceiver()
-                    startForeground(
-                        NOTIFICATION_ID,
-                        buildControlNotification("Connecting…", isConnected = false, isTransitioning = true)
-                    )
-                    serviceScope.launch {
-                        startGuarded(startId) {
-                            startVpnWithAwg(startId, uapi, addresses, dns, allowedIps, mtu, excludePkgs, includePkgs)
-                        }
-                    }
-                    return START_NOT_STICKY
-                }
 
                 val configPath = intent.getStringExtra(EXTRA_XRAY_CONFIG) ?: run {
                     android.util.Log.e("KEQDIS", "onStartCommand: missing EXTRA_XRAY_CONFIG")
@@ -676,14 +636,6 @@ class KeqdisVpnService : VpnService() {
     private suspend fun cleanup() {
         stopNetworkWatch()
 
-        val h = awgHandle
-        if (h >= 0) {
-            try { GoBackend.awgTurnOff(h) }
-            catch (e: Exception) { android.util.Log.w("KEQDIS", "awgTurnOff failed: ${e.message}") }
-            awgHandle = -1
-        }
-
-
         try { tunInterface?.close() } catch (_: Exception) {}
         tunInterface = null
 
@@ -836,10 +788,6 @@ class KeqdisVpnService : VpnService() {
     /// полутора минут на медленном канале.
     private suspend fun resetCoreConnections() {
         if (status != VpnRunStatus.RUNNING) return
-        // AmneziaWG: сокет держит amneziawg-go, killProcess тут ни при чём, а
-        // своего «сбросить соединения» у GoBackend нет. Переезд лечится только
-        // пересозданием туннеля, и делать это молча под пользователем нельзя.
-        if (awgHandle >= 0) return
 
         if (lastCoreKind == CORE_KIND_MIHOMO) {
             if (closeMihomoConnections()) {
@@ -1010,20 +958,12 @@ class KeqdisVpnService : VpnService() {
     }
 
 
-    /// inc/exc split-tunnel app filter, общий для xray- и awg-туннелей.
+    /// inc/exc split-tunnel app filter.
     ///
-    /// [excludeSelf]: в xray-режиме собственный пакет ОБЯЗАН идти мимо туннеля —
-    /// исходящие сокеты in-process xray не protect()-ятся и зациклились бы.
-    /// В awg-режиме наоборот: WG-сокет защищён protect(), а трафик самого
-    /// приложения (чек/скачивание обновлений с GitHub, апдейт подписок) должен
-    /// ехать через туннель — напрямую его режут (RKN), и локального прокси,
-    /// как у xray, в awg-режиме нет.
-    private fun applyAppFilter(
-        b: Builder,
-        inc: List<String>,
-        exc: List<String>,
-        excludeSelf: Boolean = true,
-    ) {
+    /// Собственный пакет обязан идти мимо туннеля: ядро работает под нашим uid,
+    /// его исходящие сокеты не protect()-ятся и зациклились бы. Поэтому трафик
+    /// самого приложения ездит через локальный прокси ядра.
+    private fun applyAppFilter(b: Builder, inc: List<String>, exc: List<String>) {
         if (inc.isNotEmpty()) {
             // Считаем, сколько пакетов реально добавилось: NameNotFoundException
             // нельзя просто глотать — если невалидны ВСЕ пакеты, establish()
@@ -1038,15 +978,11 @@ class KeqdisVpnService : VpnService() {
                 }
             }
             if (addedInc == 0) {
-                // Полный туннель: в awg-режиме (excludeSelf=false) он уже включает
-                // и наш пакет, отдельного addAllowed не нужно.
                 android.util.Log.w("KEQDIS", "buildTun: include list produced 0 valid apps, falling back to full tunnel")
-                if (excludeSelf) runCatching { b.addDisallowedApplication(packageName) }
-            } else if (!excludeSelf) {
-                runCatching { b.addAllowedApplication(packageName) }
+                runCatching { b.addDisallowedApplication(packageName) }
             }
         } else {
-            if (excludeSelf) runCatching { b.addDisallowedApplication(packageName) }
+            runCatching { b.addDisallowedApplication(packageName) }
             exc.forEach { pkg ->
                 try {
                     b.addDisallowedApplication(pkg)
@@ -1091,138 +1027,6 @@ class KeqdisVpnService : VpnService() {
         if (tunInterface == null) return   // режим прокси: establish() не звался
         runCatching { setUnderlyingNetworks(arrayOf(network)) }
             .onFailure { android.util.Log.w("KEQDIS", "handover: setUnderlyingNetworks failed: ${it.message}") }
-    }
-
-    // ── AmneziaWG ─────────────────────────────────────────────────────────────
-
-    private suspend fun startVpnWithAwg(
-        startId: Int,
-        uapi: String,
-        addresses: List<String>,
-        dns: List<String>,
-        allowedIps: List<String>,
-        mtu: Int,
-        excludePkgs: List<String>,
-        includePkgs: List<String>,
-    ) = opMutex.withLock {
-        if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) {
-            if (status == VpnRunStatus.RUNNING) {
-                showControlNotification("Connected", isConnected = true, isTransitioning = false)
-            }
-            return@withLock
-        }
-        setStatus(VpnRunStatus.STARTING)
-        try {
-            val tun = buildAwgTunInterface(addresses, dns, allowedIps, mtu, excludePkgs, includePkgs)
-            tunInterface = tun
-
-            // awgTurnOn забирает владение fd ЦЕЛИКОМ: и на успехе (device.Close()
-            // закроет), и на ЛЮБОЙ ошибке (все error-пути api-android.go делают
-            // unix.Close). Поэтому detachFd() — строго ДО вызова: если detach'ить
-            // только после успеха, провальный awgTurnOn (например, доменный
-            // Endpoint, который UAPI не парсит) оставляет fd во владении
-            // ParcelFileDescriptor, cleanup() закрывает его вторым разом, и fdsan
-            // (Android 11+) валит процесс SIGABRT'ом — приложение «мгновенно
-            // закрывается» вместо показа ошибки.
-            val tunFd = tun.detachFd()
-            val handle = GoBackend.awgTurnOn("awg0", tunFd, uapi)
-            if (handle < 0)
-                throw IllegalStateException("amneziawg-go failed to start (awgTurnOn=$handle)")
-            awgHandle = handle
-
-            // WG egress-сокет должен идти мимо туннеля, иначе петля маршрутизации.
-            protectAwgSockets(handle)
-
-            startTime = System.currentTimeMillis()
-            setStatus(VpnRunStatus.RUNNING)
-            showControlNotification("Connected", isConnected = true, isTransitioning = false)
-            startStatsLoop()
-            // Соединения тут рвать нечего (см. resetCoreConnections), но
-            // подложку туннеля обновлять надо и в awg-режиме.
-            startNetworkWatch()
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) {
-                runCatching { cleanup() }
-                throw e
-            }
-            android.util.Log.e("KEQDIS", "startVpnWithAwg failed: ${e.message}", e)
-            setStatus(VpnRunStatus.ERROR, e.message)
-            cleanup()
-            showControlNotification(e.message ?: "Error", isConnected = false, isTransitioning = false)
-            stopForeground(true)
-            unregisterNotificationReceiver()
-            stopSelf(startId)
-        }
-    }
-
-    private fun protectAwgSockets(handle: Int) {
-        val v4 = GoBackend.awgGetSocketV4(handle)
-        if (v4 >= 0) runCatching { protect(v4) }
-        val v6 = GoBackend.awgGetSocketV6(handle)
-        if (v6 >= 0) runCatching { protect(v6) }
-    }
-
-    private fun buildAwgTunInterface(
-        addresses: List<String>,
-        dns: List<String>,
-        allowedIps: List<String>,
-        mtu: Int,
-        exc: List<String>,
-        inc: List<String>,
-    ): ParcelFileDescriptor {
-        val b = Builder()
-            .setMtu(if (mtu > 0) mtu else 1280)
-            .setSession("KEQDIS-AWG")
-            .setBlocking(true)
-
-        var addrCount = 0
-        addresses.forEach { addr ->
-            parseCidr(addr)?.let { (ip, prefix) ->
-                try { b.addAddress(ip, prefix); addrCount++ }
-                catch (e: Exception) { android.util.Log.w("KEQDIS", "awg addAddress skipped $addr: ${e.message}") }
-            }
-        }
-        if (addrCount == 0)
-            throw IllegalStateException("AmneziaWG config has no valid Interface Address")
-
-        var routeCount = 0
-        allowedIps.forEach { cidr ->
-            parseCidr(cidr)?.let { (ip, prefix) ->
-                try { b.addRoute(ip, prefix); routeCount++ }
-                catch (e: Exception) { android.util.Log.w("KEQDIS", "awg addRoute skipped $cidr: ${e.message}") }
-            }
-        }
-        if (routeCount == 0) runCatching { b.addRoute("0.0.0.0", 0) }
-
-        if (dns.isEmpty()) {
-            b.addDnsServer("1.1.1.1")
-        } else {
-            dns.forEach { d ->
-                val ip = d.substringBefore('/').trim()
-                runCatching { b.addDnsServer(ip) }
-            }
-        }
-
-        // excludeSelf=false: WG-сокет и так protect()-ится, а собственному
-        // трафику приложения (GitHub-обновления, подписки) нужен туннель.
-        applyAppFilter(b, inc, exc, excludeSelf = false)
-        applyHuaweiUnderlying(b)
-
-        return b.establish() ?: throw IllegalStateException(
-            "TUN establish() returned null on ${Build.MANUFACTURER} ${Build.MODEL}")
-    }
-
-    /// Разбирает `ip/prefix` (или голый ip → /32 для v4, /128 для v6).
-    private fun parseCidr(raw: String): Pair<String, Int>? {
-        val s = raw.trim()
-        if (s.isEmpty()) return null
-        val slash = s.indexOf('/')
-        if (slash < 0) {
-            return Pair(s, if (s.contains(':')) 128 else 32)
-        }
-        val ip = s.substring(0, slash).trim()
-        val prefix = s.substring(slash + 1).trim().toIntOrNull() ?: return null
-        return if (ip.isEmpty()) null else Pair(ip, prefix)
     }
 
     // ── Xray ─────────────────────────────────────────────────────────────────

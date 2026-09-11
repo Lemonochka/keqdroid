@@ -95,7 +95,6 @@
           "mihomo.exe",
           "xray.exe",
           "sing-box.exe",
-          "wireproxy.exe",
           "keqdroid.exe"
         ],
         "outbound": "direct"

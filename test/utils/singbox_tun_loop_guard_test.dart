@@ -105,7 +105,6 @@ void main() {
       // keqrnel исполняет и sing-box, и xray: именно его сокет идёт к серверу.
       expect(bypass, contains('keqrnel'));
       expect(bypass, contains('mihomo'));
-      expect(bypass, contains('wireproxy'));
       // Без суффикса: на Linux find_process сравнивает с comm-именем.
       expect(bypass, isNot(contains('keqrnel.exe')));
     });

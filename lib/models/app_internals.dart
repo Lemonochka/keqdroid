@@ -31,9 +31,6 @@ enum CoreRole {
 
   /// Владеет TUN-устройством.
   tun,
-
-  /// AmneziaWG.
-  amneziawg,
 }
 
 /// Ядро — поставляемый с приложением Go-бинарь.
@@ -50,8 +47,8 @@ class CoreInfo {
     this.missing = false,
   });
 
-  /// Отсутствующий бинарь — не ошибка: wireproxy нужен только для AmneziaWG,
-  /// а на Android нет ни keqrnel, ни wireproxy вовсе.
+  /// Отсутствующий бинарь — не ошибка, а находка: панель для того и есть,
+  /// чтобы показать, что ядра в сборке нет.
   const CoreInfo.missing({required this.name, required this.role})
       : version = null,
         goVersion = null,

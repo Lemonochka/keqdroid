@@ -7,9 +7,6 @@ class TunnelSessionRequest {
   final VpnBackend vpnBackend;
   final String xrayConfig;
 
-  /// Сырой AmneziaWG `.conf` (когда [vpnBackend] == awg).
-  final String? awgConfig;
-
   /// Конфиг mihomo (когда [vpnBackend] == mihomo). JSON — ядро читает его как
   /// YAML, тот надмножество; см. MihomoConfigGen.
   final String? mihomoConfig;
@@ -36,7 +33,6 @@ class TunnelSessionRequest {
     required this.mode,
     this.vpnBackend = VpnBackend.xray,
     required this.xrayConfig,
-    this.awgConfig,
     this.mihomoConfig,
     this.socksPort = 2080,
     this.httpPort = 2081,
@@ -60,7 +56,6 @@ class TunnelSessionRequest {
         'connectionMode': mode.storageValue,
         'vpnBackend': vpnBackend.wireValue,
         'xrayConfig': xrayConfig,
-        if (awgConfig != null && awgConfig!.isNotEmpty) 'awgConfig': awgConfig,
         if (mihomoConfig != null && mihomoConfig!.isNotEmpty)
           'mihomoConfig': mihomoConfig,
         'socksPort': socksPort,

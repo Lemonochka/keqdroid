@@ -2186,7 +2186,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsCoreSkipChain => 'سرور فعال یک زنجیره است: گره‌های آن با dialerProxy در Xray به هم وصل شده‌اند، پس صرف‌نظر از هستهٔ انتخاب‌شده با libxray اجرا می‌شود.';
 
   @override
-  String get settingsCoreSkipAwg => 'سرور فعال یک پروفایل AmneziaWG است — صرف‌نظر از هستهٔ انتخاب‌شده با هستهٔ خودش، wg-go، اجرا می‌شود.';
+  String get settingsCoreSkipAwg => 'سرور فعال یک پروفایل AmneziaWG است — صرف‌نظر از هستهٔ انتخاب‌شده با mihomo اجرا می‌شود.';
 
   @override
   String get settingsCoreSkipPlatform => 'هستهٔ mihomo برای این پلتفرم ارائه نمی‌شود — اتصال از هستهٔ Xray انجام می‌شود.';
@@ -2232,9 +2232,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get settingsInternalsRoleTun => 'دستگاه TUN';
-
-  @override
-  String get settingsInternalsRoleAwg => 'AmneziaWG';
 
   @override
   String settingsInternalsGeoCodes(int count) {

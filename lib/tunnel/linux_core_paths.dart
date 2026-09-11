@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
-/// Linux counterpart of [WindowsCorePaths]: locates the bundled xray / sing-box
-/// / wireproxy ELF binaries and the geoip/geosite data files.
+/// Linux counterpart of [WindowsCorePaths]: locates the bundled core ELF
+/// binaries and the geoip/geosite data files.
 ///
 /// Resolution order mirrors Windows: next to flutter_assets, next to the
 /// executable, extracted from the asset bundle to a temp dir, then `$PATH`.
@@ -17,13 +17,12 @@ class LinuxCorePaths {
   static const assetSingbox = 'assets/bin/linux/sing-box';
   static const assetKeqrnel = 'assets/bin/linux/keqrnel';
   static const assetMihomo = 'assets/bin/linux/mihomo';
-  static const assetWireproxy = 'assets/bin/linux/wireproxy';
   static const assetGeoip = 'assets/bin/linux/geoip.dat';
   static const assetGeosite = 'assets/bin/linux/geosite.dat';
   static const geoFileNames = ['geoip.dat', 'geosite.dat'];
 
   static const binariesHint =
-      'Положите keqrnel, mihomo и wireproxy в assets/bin/linux/ '
+      'Положите keqrnel и mihomo в assets/bin/linux/ '
       '(см. README) и пересоберите приложение, '
       'или поместите их рядом с исполняемым файлом / в \$PATH.';
 
@@ -45,9 +44,6 @@ class LinuxCorePaths {
   /// TUN-режиме само создаёт tun-устройство (для этого его и запускают под root).
   static Future<String?> mihomoExecutable() =>
       _resolveExecutable(assetMihomo, 'mihomo');
-
-  static Future<String?> wireproxyExecutable() =>
-      _resolveExecutable(assetWireproxy, 'wireproxy');
 
   /// Домашний каталог mihomo (аргумент `-d`).
   ///

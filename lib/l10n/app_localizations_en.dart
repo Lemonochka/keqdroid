@@ -2186,7 +2186,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCoreSkipChain => 'The active server is a proxy chain: its hops are linked by Xray\'s dialerProxy, so it runs on libxray no matter which core is selected.';
 
   @override
-  String get settingsCoreSkipAwg => 'The active server is an AmneziaWG profile — it runs on its own core, wg-go, no matter which core is selected.';
+  String get settingsCoreSkipAwg => 'The active server is an AmneziaWG profile — it runs on mihomo no matter which core is selected.';
 
   @override
   String get settingsCoreSkipPlatform => 'The mihomo core is not bundled for this platform, so the connection runs on the Xray core instead.';
@@ -2232,9 +2232,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsInternalsRoleTun => 'TUN device';
-
-  @override
-  String get settingsInternalsRoleAwg => 'AmneziaWG';
 
   @override
   String settingsInternalsGeoCodes(int count) {

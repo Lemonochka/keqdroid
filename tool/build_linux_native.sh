@@ -17,7 +17,7 @@ command -v rsync >/dev/null || { apt-get update -y && apt-get install -y rsync; 
 mkdir -p "$DST"
 rsync -a --delete \
   --exclude 'build/' --exclude '.dart_tool/' --exclude '.git/' \
-  --exclude 'release/' --exclude '*.log' --exclude 'awg-build/' \
+  --exclude 'release/' --exclude '*.log' \
   "$SRC/" "$DST/"
 
 cd "$DST"

@@ -94,8 +94,7 @@
           "keqrnel.exe",
           "mihomo.exe",
           "xray.exe",
-          "sing-box.exe",
-          "wireproxy.exe"
+          "sing-box.exe"
         ],
         "outbound": "direct"
       },

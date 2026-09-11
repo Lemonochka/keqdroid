@@ -131,8 +131,8 @@ install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
 # written in xray terms — proxy, TUN and the stats query. mihomo is the second
 # core: it runs Clash configs and, in TUN mode, owns the tun device itself.
 # Standalone xray/sing-box (~96 MB) were never executed here and are no longer
-# bundled (as on Windows). wireproxy = AmneziaWG; *.dat = geoip/geosite. Linux ELF
-# cores have no extension.
+# bundled (as on Windows). *.dat = geoip/geosite. Linux ELF cores have no
+# extension.
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/../assets/bin/linux/"
   DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime
@@ -140,7 +140,6 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/../assets/bin/linux/"
   FILES_MATCHING
     PATTERN "keqrnel"
     PATTERN "mihomo"
-    PATTERN "wireproxy"
     PATTERN "*.dat")
 
 # Install the AOT library on non-Debug builds only.

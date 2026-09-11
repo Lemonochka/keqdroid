@@ -30,7 +30,6 @@ class AppInternalsService {
   static const _engineModules = <String, String>{
     'xtls/xray-core': 'xray-core',
     'sagernet/sing-box': 'sing-box',
-    'amnezia-vpn/amneziawg-go': 'amneziawg-go',
   };
 
   static Future<AppInternals> collect({
@@ -74,8 +73,6 @@ class AppInternalsService {
         // (AppSettings.vpnCore).
         await _core(p.join(dir, 'libxray.so'), 'libxray.so', CoreRole.proxy),
         await _core(p.join(dir, 'libmihomo.so'), 'libmihomo.so', CoreRole.proxy),
-        await _core(
-            p.join(dir, 'libwg-go.so'), 'libwg-go.so', CoreRole.amneziawg),
       ];
     }
     if (Platform.isWindows) {
@@ -86,8 +83,6 @@ class AppInternalsService {
         // адаптером само, и keqrnel в такой сессии не участвует вовсе.
         await _core(await WindowsCorePaths.mihomoExecutable(), 'mihomo.exe',
             CoreRole.core),
-        await _core(await WindowsCorePaths.wireproxyExecutable(),
-            'wireproxy.exe', CoreRole.amneziawg),
       ];
     }
     if (Platform.isLinux) {
@@ -96,8 +91,6 @@ class AppInternalsService {
             await LinuxCorePaths.keqrnelExecutable(), 'keqrnel', CoreRole.core),
         await _core(
             await LinuxCorePaths.mihomoExecutable(), 'mihomo', CoreRole.core),
-        await _core(await LinuxCorePaths.wireproxyExecutable(), 'wireproxy',
-            CoreRole.amneziawg),
       ];
     }
     return const [];

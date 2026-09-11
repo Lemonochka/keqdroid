@@ -14,7 +14,6 @@ import '../services/windows_desktop_service.dart';
 import '../utils/keqrnel_config.dart';
 import '../utils/mihomo_api_session.dart';
 import '../utils/singbox_tun_config.dart';
-import '../utils/wireproxy_config.dart';
 import 'connection_mode.dart';
 import 'core_capabilities.dart';
 import 'desktop_traffic_stats.dart';
@@ -42,9 +41,8 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   final _stateCtrl = StreamController<VpnState>.broadcast();
   Process? _xrayProcess;
-  Process? _singboxProcess;
-  // keqrnel: единое ядро (sing-box host + встроенный xray) — заменяет связку
-  // _xrayProcess + _singboxProcess. null когда неактивно.
+  // keqrnel: единое ядро (sing-box host + встроенный xray) — заменяет прежнюю
+  // связку xray.exe + sing-box.exe. null когда неактивно.
   Process? _keqrnelProcess;
   // Порт clash_api keqrnel — из него читаем кумулятивный трафик (proxy-режим)
   // и список соединений для дебаг-экрана (оба режима).
@@ -69,8 +67,6 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     if (_keqrnelProcess != null) 'keqrnel': _keqrnelProcess!.pid,
     if (_mihomoProcess != null) 'mihomo': _mihomoProcess!.pid,
     if (_xrayProcess != null) 'xray': _xrayProcess!.pid,
-    if (_wireproxyProcess != null) 'wireproxy': _wireproxyProcess!.pid,
-    if (_singboxProcess != null) 'sing-box (TUN)': _singboxProcess!.pid,
   };
   Directory? _sessionDir;
   ({String username, String password})? _pendingCreds;
@@ -80,12 +76,6 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   ConnectionMode? get activeMode => _activeMode;
   final StringBuffer _xrayLog = StringBuffer();
   final StringBuffer _singboxLog = StringBuffer();
-
-  // AmneziaWG: процесс wireproxy-awg (SOCKS5[/HTTP]); используется и для proxy-,
-  // и для TUN-режима (в TUN дополнительно поднимается sing-box). null когда неактивен.
-  Process? _wireproxyProcess;
-  // Порт info/metrics эндпоинта wireproxy (`-i`) для подсчёта трафика в proxy-режиме.
-  int? _awgInfoPort;
 
   // true пока идёт штатный stopSession — чтобы вотчдог не принял наш же
   // kill за внезапную смерть ядра.
@@ -177,8 +167,6 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       _sessionDir = await WindowsCorePaths.sessionDir();
 
       switch (request.vpnBackend) {
-        case VpnBackend.awg:
-          await _startAwgSession(request);
         case VpnBackend.mihomo:
           await _startMihomoSession(request);
         case VpnBackend.xray:
@@ -201,8 +189,6 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       // а системный прокси — направленным на мёртвый порт.
       _watchProcessExit(_keqrnelProcess, 'keqrnel');
       _watchProcessExit(_mihomoProcess, 'mihomo');
-      _watchProcessExit(_singboxProcess, 'keqrnel TUN');
-      _watchProcessExit(_wireproxyProcess, 'wireproxy');
       _watchProcessExit(_xrayProcess, 'xray');
     } catch (e, st) {
       AppLogger.instance.error('Windows tunnel start failed', error: e, stackTrace: st);
@@ -482,153 +468,12 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     return false;
   }
 
-  /// AmneziaWG, оба режима на wireproxy-awg. В proxy он поднимает локальные
-  /// SOCKS/HTTP и они прописываются системным прокси Windows, без админа; в TUN
-  /// поверх того же SOCKS встаёт sing-box, как и у xray, и админ уже нужен.
-  Future<void> _startAwgSession(TunnelSessionRequest request) async {
-    if (request.mode == ConnectionMode.proxy) {
-      await _startAwgProxySession(request);
-    } else {
-      await _startAwgTunSession(request);
-    }
-  }
-
-  /// Запускает wireproxy-awg. [withHttp] — поднимать ли HTTP-прокси (для proxy-режима).
-  /// info-эндпоинт (`-i`) поднимаем всегда — из него читаем счётчики трафика.
-  Future<void> _startWireproxy(
-    TunnelSessionRequest request, {
-    required bool withHttp,
-  }) async {
-    final wpBin = await WindowsCorePaths.wireproxyExecutable();
-    if (wpBin == null) {
-      throw VpnStartException(
-        'wireproxy.exe not found. ${WindowsCorePaths.binariesHint}',
-      );
-    }
-    final conf = request.awgConfig;
-    if (conf == null || conf.isEmpty) {
-      throw const VpnStartException('awgConfig is required for AmneziaWG');
-    }
-
-    final wpConf = WireproxyConfigGen.generate(
-      conf,
-      socksPort: request.socksPort,
-      httpPort: request.httpPort,
-      withHttp: withHttp,
-    );
-    final confFile = File('${_sessionDir!.path}/wireproxy.conf');
-    await confFile.writeAsString(wpConf);
-
-    final infoPort = await _freePort();
-    _awgInfoPort = infoPort;
-
-    _wireproxyProcess = await Process.start(
-      wpBin,
-      ['-i', '127.0.0.1:$infoPort', '-c', confFile.path],
-      workingDirectory: _sessionDir!.path,
-      mode: ProcessStartMode.normal,
-    );
-    _pipeProcessOutput(_wireproxyProcess!, _xrayLog, 'wireproxy');
-
-    final socksReady = await _waitForPort(
-      '127.0.0.1',
-      request.socksPort,
-      process: _wireproxyProcess,
-      log: _xrayLog,
-      processLabel: 'wireproxy',
-    );
-    if (!socksReady) {
-      throw VpnStartException(
-        'wireproxy SOCKS port ${request.socksPort} did not open.\n${_tail(_xrayLog)}',
-      );
-    }
-  }
-
-  Future<void> _startAwgProxySession(TunnelSessionRequest request) async {
-    await _startWireproxy(request, withHttp: true);
-
-    await WindowsDesktopService.registerSessionCoreProcesses(
-      xrayPid: _wireproxyProcess?.pid ?? 0,
-      singboxPid: 0,
-    );
-
-    if (request.systemProxy) {
-      final httpReady = await _waitForPort(
-        '127.0.0.1',
-        request.httpPort,
-        process: _wireproxyProcess,
-        log: _xrayLog,
-        processLabel: 'wireproxy HTTP',
-      );
-      if (!httpReady) {
-        throw VpnStartException(
-          'wireproxy HTTP port ${request.httpPort} did not open.\n${_tail(_xrayLog)}',
-        );
-      }
-      await _applySystemProxy(request);
-    }
-  }
-
-  /// TUN: wireproxy отдаёт локальный SOCKS5, sing-box заворачивает в него tun.
-  /// Переиспользует проверенный xray-TUN пайплайн (роутинг/split/kill-switch).
-  ///
-  /// withHttp: сам процесс приложения роутится в TUN «direct» (ради честных
-  /// пингов, см. singbox_tun_config), поэтому чекер/загрузчик обновлений ходит
-  /// через локальный HTTP-инбаунд — без него апдейт при активном AWG TUN
-  /// уходил напрямую на 127.0.0.1:httpPort без слушателя и падал.
-  Future<void> _startAwgTunSession(TunnelSessionRequest request) async {
-    await _startWireproxy(request, withHttp: true);
-    await _startSingboxSession(request);
-
-    await WindowsDesktopService.registerSessionCoreProcesses(
-      xrayPid: _wireproxyProcess?.pid ?? 0,
-      singboxPid: _singboxProcess?.pid ?? 0,
-    );
-  }
-
-  /// Свободный TCP-порт на loopback (для info-эндпоинта wireproxy).
+  /// Свободный TCP-порт на loopback (для clash_api ядра).
   Future<int> _freePort() async {
     final s = await ServerSocket.bind('127.0.0.1', 0);
     final port = s.port;
     await s.close();
     return port;
-  }
-
-  /// TUN-обёртка для AmneziaWG: keqrnel (как sing-box host) заворачивает
-  /// локальный SOCKS5 wireproxy в TUN — отдельный sing-box.exe не нужен.
-  Future<void> _startSingboxSession(TunnelSessionRequest request) async {
-    final bin = await WindowsCorePaths.keqrnelExecutable();
-    if (bin == null) {
-      throw VpnStartException(
-        'keqrnel.exe not found. ${WindowsCorePaths.binariesHint}',
-      );
-    }
-    final singConfig = request.singboxConfig;
-    if (singConfig == null || singConfig.isEmpty) {
-      throw const VpnStartException('singboxConfig is required');
-    }
-
-    final singConfigFile = File('${_sessionDir!.path}/keqrnel-tun.json');
-    await singConfigFile.writeAsString(await _tunStackForCore(singConfig, bin));
-
-    final workDir = p.dirname(bin);
-    _singboxProcess = await Process.start(
-      bin,
-      ['run', '-c', singConfigFile.path],
-      workingDirectory: workDir,
-      mode: ProcessStartMode.normal,
-    );
-    _pipeProcessOutput(_singboxProcess!, _singboxLog, 'keqrnel-tun');
-
-    if (request.mode == ConnectionMode.tun) {
-      final singReady = await _waitForSingbox(
-        process: _singboxProcess!,
-        log: _singboxLog,
-      );
-      if (!singReady) {
-        throw VpnStartException(_tunStartError(_singboxLog));
-      }
-    }
   }
 
   /// Что должно быть на месте до старта TUN, но проверяется только там.
@@ -756,8 +601,6 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       // Процесс уже не из активной сессии (штатный stop занулил поля).
       if (!identical(process, _keqrnelProcess) &&
           !identical(process, _mihomoProcess) &&
-          !identical(process, _singboxProcess) &&
-          !identical(process, _wireproxyProcess) &&
           !identical(process, _xrayProcess)) {
         return;
       }
@@ -832,12 +675,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     // TerminateProcess, поэтому уборку адаптера доделывает драйвер wintun —
     // её и дожидается _awaitTunAdapterGone ниже.
     await _killProcess(_mihomoProcess);
-    await _killProcess(_singboxProcess, graceful: true);
-    await _killProcess(_wireproxyProcess);
     await _killProcess(_xrayProcess);
-    _wireproxyProcess = null;
-    _awgInfoPort = null;
-    _singboxProcess = null;
     _xrayProcess = null;
     _keqrnelProcess = null;
     _mihomoProcess = null;
@@ -885,7 +723,6 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   @override
   Future<VpnState> getCurrentState() async {
     if (_xrayProcess != null ||
-        _wireproxyProcess != null ||
         _keqrnelProcess != null ||
         _mihomoProcess != null) {
       return buildConnectedState(_activeMode);
@@ -1292,7 +1129,6 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   Future<void> pollTrafficStats(ConnectionMode mode, {bool force = false}) async {
     if (!statsPollingEnabled && !force) return;
     if (_xrayProcess == null &&
-        _wireproxyProcess == null &&
         _keqrnelProcess == null &&
         _mihomoProcess == null) {
       return;
@@ -1318,16 +1154,6 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         }
         inOctets = t.down;
         outOctets = t.up;
-      } else if (_wireproxyProcess != null && _awgInfoPort != null && mode == ConnectionMode.proxy) {
-        // AmneziaWG proxy: кумулятивные rx/tx из wireproxy /metrics.
-        final m = await queryWireproxyMetrics(_awgInfoPort!);
-        if (m == null) {
-          // метрики недоступны — хотя бы тикаем длительность сессии
-          emitConnectedTelemetry(mode);
-          return;
-        }
-        inOctets = m.rx;
-        outOctets = m.tx;
       } else if (mode == ConnectionMode.proxy && _xrayProcess != null) {
         final xrayBin = _xrayBinPath;
         if (xrayBin == null) return;

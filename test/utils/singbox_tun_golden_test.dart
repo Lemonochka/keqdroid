@@ -48,7 +48,6 @@ String _generate({
   AppSettings settings = _settings,
   List<String> managedProcessNames = const [],
   AppRoutingMode routingMode = AppRoutingMode.allProxy,
-  bool localSocksNoAuth = false,
   String appProcessName = '',
 }) {
   return SingBoxTunConfigGen.generate(
@@ -59,7 +58,6 @@ String _generate({
     settings: settings,
     managedProcessNames: managedProcessNames,
     routingMode: routingMode,
-    localSocksNoAuth: localSocksNoAuth,
     appProcessName: appProcessName,
     windows: windows,
   );
@@ -129,12 +127,6 @@ void main() {
           finalOutbound: AppSettings.finalOutboundBlock,
         ),
       ),
-    );
-
-    _golden(
-      'local-socks-no-auth',
-      // Путь AmneziaWG: wireproxy отдаёт SOCKS5 без auth.
-      (w) => _generate(windows: w, localSocksNoAuth: true),
     );
 
     _golden(

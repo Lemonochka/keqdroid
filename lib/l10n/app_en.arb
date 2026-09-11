@@ -955,7 +955,7 @@
   "settingsCoreSkipClash": "The active server is a ready-made Clash config — only mihomo can run it, no matter which core is selected.",
   "settingsCoreSkipCustom": "The active server is a ready-made Xray JSON config, so it runs on libxray whatever core you pick. mihomo needs a subscription with plain links.",
   "settingsCoreSkipChain": "The active server is a proxy chain: its hops are linked by Xray's dialerProxy, so it runs on libxray no matter which core is selected.",
-  "settingsCoreSkipAwg": "The active server is an AmneziaWG profile — it runs on its own core, wg-go, no matter which core is selected.",
+  "settingsCoreSkipAwg": "The active server is an AmneziaWG profile — it runs on mihomo no matter which core is selected.",
   "settingsCoreSkipPlatform": "The mihomo core is not bundled for this platform, so the connection runs on the Xray core instead.",
   "settingsCoreSkipLinkXrayOnly": "The active server's link uses a transport mihomo has no fields for in this protocol, so it runs on Xray no matter which core is selected.",
   "settingsCoreSkipLinkMihomoOnly": "The active server's link uses a transport Xray 26 removed, so it runs on mihomo no matter which core is selected.",
@@ -971,7 +971,6 @@
   "settingsInternalsRoleCore": "Proxy engine and TUN",
   "settingsInternalsRoleProxy": "Proxy engine",
   "settingsInternalsRoleTun": "TUN device",
-  "settingsInternalsRoleAwg": "AmneziaWG",
   "settingsInternalsGeoCodes": "codes: {count}",
   "@settingsInternalsGeoCodes": {
     "placeholders": {

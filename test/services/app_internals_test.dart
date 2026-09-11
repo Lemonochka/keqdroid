@@ -88,8 +88,8 @@ void main() {
                 },
               ),
               const CoreInfo.missing(
-                name: 'wireproxy.exe',
-                role: CoreRole.amneziawg,
+                name: 'mihomo.exe',
+                role: CoreRole.core,
               ),
             ],
         geoBases: const [
@@ -132,7 +132,7 @@ void main() {
     test('отсутствующее ядро и база помечены, а не пропущены', () {
       final report = AppInternalsService.report(sample());
 
-      expect(report, contains('wireproxy.exe: missing'));
+      expect(report, contains('mihomo.exe: missing'));
       expect(report, contains('geosite.dat: missing'));
       expect(report, contains('geoip.dat: 253 codes'));
     });

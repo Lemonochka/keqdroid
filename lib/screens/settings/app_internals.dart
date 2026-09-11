@@ -273,7 +273,7 @@ class _AppInternalsScreen extends ConsumerWidget {
 class _CoreTile extends StatelessWidget {
   final CoreInfo core;
 
-  /// null — ядро не участвует в выборе (wg-go, десктопные бинари).
+  /// null — ядро не участвует в выборе (десктопные бинари).
   final bool? selected;
 
   /// Заменяет подпись роли: у двух прокси-движков она одинаковая и в момент
@@ -405,7 +405,6 @@ class _CoreTile extends StatelessWidget {
         CoreRole.core => l10n.settingsInternalsRoleCore,
         CoreRole.proxy => l10n.settingsInternalsRoleProxy,
         CoreRole.tun => l10n.settingsInternalsRoleTun,
-        CoreRole.amneziawg => l10n.settingsInternalsRoleAwg,
       };
 }
 

@@ -4244,7 +4244,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCoreSkipAwg.
   ///
   /// In en, this message translates to:
-  /// **'The active server is an AmneziaWG profile — it runs on its own core, wg-go, no matter which core is selected.'**
+  /// **'The active server is an AmneziaWG profile — it runs on mihomo no matter which core is selected.'**
   String get settingsCoreSkipAwg;
 
   /// No description provided for @settingsCoreSkipPlatform.
@@ -4336,12 +4336,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'TUN device'**
   String get settingsInternalsRoleTun;
-
-  /// No description provided for @settingsInternalsRoleAwg.
-  ///
-  /// In en, this message translates to:
-  /// **'AmneziaWG'**
-  String get settingsInternalsRoleAwg;
 
   /// No description provided for @settingsInternalsGeoCodes.
   ///
