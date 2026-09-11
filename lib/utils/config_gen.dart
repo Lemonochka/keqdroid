@@ -498,12 +498,20 @@ class ConfigGeneratorV2 {
     sockopt.remove('domainStrategy');
     stream['sockopt'] = sockopt;
 
-    // Перебор портов hysteria (`mport`) работает только на самом внешнем узле:
-    // получив от dialerProxy готовый поток, ядро отвечает «udphop requires
-    // being at the outermost level» и коннект падает целиком. Роняем перебор,
-    // а не соединение — базовый порт из ссылки остаётся рабочим.
-    final hysteria = stream['hysteriaSettings'];
-    if (hysteria is Map) hysteria.remove('udphop');
+    // Перебор портов hysteria оставляем только внешнему узлу. Отказа «udphop
+    // requires being at the outermost level», на который тут ссылались, в xray
+    // 26.7.28 нет — такой остался у масок xicmp и realm, — но перебор за
+    // dialerProxy не проверен ни на устройстве, ни по коду дозвона. Поэтому как
+    // и прежде: базовый порт из ссылки рабочий, перебор отбрасываем.
+    final finalmask = stream['finalmask'];
+    if (finalmask is Map) {
+      final quicParams = finalmask['quicParams'];
+      if (quicParams is Map) {
+        quicParams.remove('udpHop');
+        if (quicParams.isEmpty) finalmask.remove('quicParams');
+      }
+      if (finalmask.isEmpty) stream.remove('finalmask');
+    }
 
     outbound['streamSettings'] = stream;
   }
@@ -533,9 +541,8 @@ class ConfigGeneratorV2 {
       final dialer = sockopt?['dialerProxy']?.toString() ?? '';
       // Уже дозванивается через другое звено — значит не внешний.
       if (dialer.isNotEmpty) continue;
-      // UDP-транспорт резать нечем: ClientHello там нет вовсе, а dialerProxy
-      // поверх hysteria ядро встречает «udphop requires being at the outermost
-      // level» и роняет соединение целиком (та же грабля, что и в цепочках).
+      // UDP-транспорт резать нечем: фрагментатор режет ClientHello в потоке
+      // TCP, а у hysteria и mKCP такого потока нет вовсе.
       if (_isDatagramOutbound(outbound)) return null;
 
       final newStream = Map<String, dynamic>.from(
@@ -1514,36 +1521,39 @@ class ConfigGeneratorV2 {
       pinnedPeerCertSha256: getParam('pinSHA256', hyParams.pinSha256),
     );
 
-    final hysteriaSettings = <String, dynamic>{
+    streamSettings['hysteriaSettings'] = <String, dynamic>{
       'version': version,
       'auth': auth,
       'udpIdleTimeout': udpIdleTimeout,
       'masquerade': ?buildMasquerade(),
     };
 
+    // Полоса и перебор портов в xray 26 живут в finalmask.quicParams. Из
+    // hysteriaSettings ядро их читает, пишет предупреждение и выбрасывает
+    // (HysteriaConfig.Build, infra/conf/transport_method.go) — там заданная
+    // скорость и смена портов молча не работали.
+    final quicParams = <String, dynamic>{};
     final up = HysteriaLinkParams.formatBandwidth(
       getParam('up', hyParams.up),
     );
     final down = HysteriaLinkParams.formatBandwidth(
       getParam('down', hyParams.down),
     );
-    if (up != null) hysteriaSettings['up'] = up;
-    if (down != null) hysteriaSettings['down'] = down;
-
+    if (up != null) quicParams['brutalUp'] = up;
+    if (down != null) quicParams['brutalDown'] = down;
     final mport = getParam('mport', hyParams.mport);
     if (mport.isNotEmpty) {
-      final hop = <String, dynamic>{'ports': mport};
-      final interval = getParam('hop-interval', hyParams.hopInterval);
-      if (interval.isNotEmpty) hop['interval'] = interval;
-      hysteriaSettings['udphop'] = hop;
+      quicParams['udpHop'] = <String, dynamic>{
+        'ports': mport,
+        'interval': ?_hopInterval(
+          getParam('hop-interval', hyParams.hopInterval),
+        ),
+      };
     }
 
-    streamSettings['hysteriaSettings'] = hysteriaSettings;
-
-    final finalmask = hyParams.buildFinalmask();
-    if (finalmask != null) {
-      streamSettings['finalmask'] = finalmask;
-    }
+    final finalmask = hyParams.buildFinalmask() ?? <String, dynamic>{};
+    if (quicParams.isNotEmpty) finalmask['quicParams'] = quicParams;
+    if (finalmask.isNotEmpty) streamSettings['finalmask'] = finalmask;
 
     return {
       'tag': 'proxy',
@@ -1551,10 +1561,31 @@ class ConfigGeneratorV2 {
       'settings': {
         'address': address,
         'port': port,
-        'version': hysteriaSettings['version'],
+        'version': version,
       },
       'streamSettings': streamSettings,
     };
+  }
+
+  /// Интервал перебора портов в секундах, числом или диапазоном `30-60`.
+  ///
+  /// Меньше 5 секунд xray не принимает и отказывается от конфига целиком
+  /// (infra/conf/transport_internet.go), mihomo такой поднимает до 5 —
+  /// поднимаем так же. Нечитаемое значение отбрасываем: оно уронило бы весь
+  /// конфиг, а без него ядро берёт свои 30 секунд.
+  static String? _hopInterval(String raw) {
+    final match = RegExp(r'^\s*(\d+)\s*(?:-\s*(\d+)\s*)?$').firstMatch(raw);
+    if (match == null) return null;
+    int? atLeast5(String? value) {
+      final seconds = int.tryParse(value ?? '');
+      if (seconds == null) return null;
+      return seconds < 5 ? 5 : seconds;
+    }
+
+    final from = atLeast5(match.group(1));
+    if (from == null) return null;
+    final to = atLeast5(match.group(2)) ?? from;
+    return to > from ? '$from-$to' : '$from';
   }
 
   // stream settings

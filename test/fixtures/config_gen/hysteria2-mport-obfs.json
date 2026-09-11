@@ -94,10 +94,7 @@
         "hysteriaSettings": {
           "version": 2,
           "auth": "password",
-          "udpIdleTimeout": 60,
-          "udphop": {
-            "ports": "20000-20050"
-          }
+          "udpIdleTimeout": 60
         },
         "finalmask": {
           "udp": [
@@ -107,7 +104,12 @@
                 "password": "obfspass"
               }
             }
-          ]
+          ],
+          "quicParams": {
+            "udpHop": {
+              "ports": "20000-20050"
+            }
+          }
         }
       }
     },

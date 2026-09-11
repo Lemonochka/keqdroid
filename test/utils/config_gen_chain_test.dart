@@ -150,16 +150,17 @@ void main() {
         ConfigGeneratorV2.generateConfig(_link([hyEntry, hyExit]), settings),
       ) as Map<String, dynamic>;
 
-      Map<String, dynamic> hysteriaOf(String tag) =>
-          ((_outboundByTag(config, tag)['streamSettings']
-              as Map<String, dynamic>)['hysteriaSettings']
-              as Map<String, dynamic>);
+      Object? udpHopOf(String tag) {
+        final stream = _outboundByTag(config, tag)['streamSettings']
+            as Map<String, dynamic>;
+        final quic = (stream['finalmask'] as Map?)?['quicParams'] as Map?;
+        return quic?['udpHop'];
+      }
 
       // Внешнему узлу перебор портов оставляем — он звонит сам.
-      expect(hysteriaOf('chain-0')['udphop'], isNotNull);
-      // А вот за dialerProxy ядро отвечает «udphop requires being at the
-      // outermost level» и роняет коннект целиком.
-      expect(hysteriaOf('proxy')['udphop'], isNull);
+      expect(udpHopOf('chain-0'), isNotNull);
+      // За dialerProxy перебор не проверен — отбрасываем его, а не соединение.
+      expect(udpHopOf('proxy'), isNull);
     });
 
     test('single-node chain is still a valid config', () {

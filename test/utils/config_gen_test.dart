@@ -273,8 +273,8 @@ void main() {
       final map = jsonDecode(config) as Map<String, dynamic>;
       final outbound = (map['outbounds'] as List).first as Map<String, dynamic>;
       final stream = outbound['streamSettings'] as Map<String, dynamic>;
-      final hysteria = stream['hysteriaSettings'] as Map<String, dynamic>;
-      expect((hysteria['udphop'] as Map)['ports'], '20000-20050,443');
+      final quic = (stream['finalmask'] as Map)['quicParams'] as Map;
+      expect((quic['udpHop'] as Map)['ports'], '20000-20050,443');
       expect((stream['tlsSettings'] as Map)['serverName'], 'hy2.example');
     });
 
@@ -697,6 +697,54 @@ void main() {
         ((udp.first as Map)['settings'] as Map)['password'],
         'test123',
       );
+    });
+
+    // Полоса и перебор портов в xray 26 живут в finalmask.quicParams: из
+    // hysteriaSettings ядро их выбрасывает (HysteriaConfig.Build), и там они
+    // молча не работали.
+    test('Hysteria2: полоса и перебор портов — в quicParams', () {
+      Socks5Credentials().init('u', 'p');
+      final config = ConfigGeneratorV2.generateConfig(
+        'hy2://secret@example.com:443?sni=example.com&up=50&down=200'
+        '&mport=20000-20050&hop-interval=30'
+        '&obfs=salamander&obfs-password=test123',
+        settings,
+      );
+      final stream = ((jsonDecode(config) as Map)['outbounds'] as List)
+          .first['streamSettings'] as Map<String, dynamic>;
+      final hysteria = stream['hysteriaSettings'] as Map<String, dynamic>;
+      for (final key in ['up', 'down', 'udphop', 'congestion']) {
+        expect(hysteria.containsKey(key), isFalse, reason: key);
+      }
+      final finalmask = stream['finalmask'] as Map<String, dynamic>;
+      expect(((finalmask['udp'] as List).single as Map)['type'], 'salamander');
+      expect(finalmask['quicParams'], {
+        'brutalUp': '50mbps',
+        'brutalDown': '200mbps',
+        'udpHop': {'ports': '20000-20050', 'interval': '30'},
+      });
+    });
+
+    // Меньше 5 секунд xray не принимает и отказывается от конфига целиком,
+    // mihomo такой интервал поднимает до 5 — здесь так же.
+    test('Hysteria2: интервал перебора не меньше 5 секунд', () {
+      Socks5Credentials().init('u', 'p');
+      Object? interval(String value) {
+        final config = ConfigGeneratorV2.generateConfig(
+          'hy2://secret@example.com:443?mport=20000-20050'
+          '&hop-interval=${Uri.encodeQueryComponent(value)}',
+          settings,
+        );
+        final stream = ((jsonDecode(config) as Map)['outbounds'] as List)
+            .first['streamSettings'] as Map;
+        final quic = (stream['finalmask'] as Map)['quicParams'] as Map;
+        return (quic['udpHop'] as Map)['interval'];
+      }
+
+      expect(interval('3'), '5');
+      expect(interval('30-60'), '30-60');
+      expect(interval('2-8'), '5-8');
+      expect(interval('полминуты'), isNull);
     });
 
     test('hysteria2:// scheme with tls fp alpn ech (share link style)', () {
