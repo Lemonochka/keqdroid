@@ -325,6 +325,21 @@ class ServersNotifier extends Notifier<ServersState> {
       return 'Hysteria v1 is not supported. Ask the provider for a hysteria2:// link';
     }
 
+    // У SSR хост и порт лежат внутри base64, у Mieru порт — в запросе. Общая
+    // проверка ниже находила у них пустой хост или нулевой порт, и руками
+    // нельзя было добавить ни то, ни другое, хотя подписка их приносила.
+    if (lower.startsWith('ssr://')) {
+      return SsrLink.tryParse(rawConfig) == null
+          ? 'Invalid SSR link: expected ssr:// with base64 of '
+              'host:port:protocol:method:obfs:password'
+          : null;
+    }
+    if (lower.startsWith('mierus://')) {
+      return MieruLink.tryParse(rawConfig) == null
+          ? 'Invalid Mieru link: it needs a host and port/protocol pairs'
+          : null;
+    }
+
     if (lower.startsWith('vmess://')) {
       final payload = rawConfig.substring('vmess://'.length).trim();
       try {
