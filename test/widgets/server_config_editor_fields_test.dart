@@ -6,6 +6,9 @@ import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/servers/server_config_editor.dart';
+import 'package:keqdroid/services/vpn_engine.dart';
+
+import '../helpers/fake_tunnel_backend.dart';
 
 /// Редактор и параметры, которые приложение давно исполняет.
 ///
@@ -43,6 +46,12 @@ Future<_FakeServers> _open(WidgetTester tester, String link) async {
       overrides: [
         serversProvider.overrideWith(() => servers),
         settingsNotifierProvider.overrideWith(_FakeSettings.new),
+        // Сохранение спрашивает состояние туннеля, а настоящий бэкенд на Linux
+        // в dispose зовёт gsettings — на раннере это роняло тест, на Windows
+        // того же кода нет и было зелено (см. FakeTunnelBackend).
+        vpnEngineProvider.overrideWithValue(
+          VpnEngine.withBackend(FakeTunnelBackend()),
+        ),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
