@@ -2,7 +2,7 @@ name: keqdroid
 description: "KEQDIS proxy/VPN client for Android and Windows."
 publish_to: 'none'
 
-version: 0.19.0+47
+version: 0.20.0+48
 
 environment:
   sdk: ^3.11.3
