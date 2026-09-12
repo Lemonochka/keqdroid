@@ -7,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
+import 'package:keqdroid/shared/ui/expressive_button_group.dart';
+import 'package:keqdroid/shared/ui/expressive_elements.dart';
+import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/scrolled_under.dart';
 
@@ -17,6 +20,7 @@ import '../../services/vpn_engine.dart';
 import '../../utils/custom_xray_config.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/raw_share_uri.dart';
+import '../../utils/server_field_rules.dart';
 
 /// GUI-редактор конфигурации сервера: разбирает share-ссылку (vless / vmess /
 /// trojan / ss / hysteria2) на поля по протоколу, даёт править их формой с
@@ -136,6 +140,12 @@ class _ServerConfigEditorScreenState
         break;
       case 'trojan':
         _ctrl('userInfo', uri.userInfo);
+        // У trojan TLS подразумевается самим протоколом, и ссылки сплошь не
+        // пишут `security` — пустое значение означает здесь именно tls, а не
+        // «без защиты» (так же считает и генератор конфига).
+        final trojanSecurity = uri.takeParam('security');
+        _drop['security'] =
+            trojanSecurity.isEmpty ? 'tls' : trojanSecurity;
         break;
       case 'ss':
         final userInfo = uri.userInfo;
@@ -185,19 +195,30 @@ class _ServerConfigEditorScreenState
       _ctrl('alpn', uri.takeParam('alpn'));
       _ctrl('ech', uri.takeParam('ech'));
       _toggle['insecure'] = _takeInsecure(uri);
-      // reality
-      if (protocol == 'vless') {
-        _ctrl('pbk', uri.takeParam('pbk'));
-        _ctrl('sid', uri.takeParam('sid'));
-        _ctrl('spx', uri.takeParam('spx'));
-      }
+      // Проверки сертификата сверх обычной: закреплённый отпечаток и имя,
+      // по которому его сверять. Оба уезжают в tlsSettings генератором.
+      _ctrl('pcs', uri.takeParam('pcs'));
+      _ctrl('vcn', uri.takeParam('vcn'));
+      // reality: у trojan он тоже бывает, ветка разбора общая
+      _ctrl('pbk', uri.takeParam('pbk'));
+      _ctrl('sid', uri.takeParam('sid'));
+      _ctrl('spx', uri.takeParam('spx'));
+      _ctrl('pqv', uri.takeParam('pqv'));
       // транспорт
       final type = uri.takeParam('type');
       _drop['type'] = type.isEmpty ? 'tcp' : type;
       _ctrl('path', uri.takeParam('path'));
       _ctrl('host', uri.takeParam('host'));
       _ctrl('serviceName', uri.takeParam('serviceName'));
-      _ctrl('mode', uri.takeParam('mode'));
+      _drop['mode'] = uri.takeParam('mode');
+      _ctrl('authority', uri.takeParam('authority'));
+      _ctrl('ed', uri.takeParam('ed'));
+      _ctrl('extra', uri.takeParam('extra'));
+      _ctrl('x_padding_bytes', uri.takeParam('x_padding_bytes'));
+      _ctrl('seed', uri.takeParam('seed'));
+      _ctrl('mtu', uri.takeParam('mtu'));
+      _ctrl('tti', uri.takeParam('tti'));
+      _ctrl('method', uri.takeParam('method'));
       _drop['headerType'] = uri.takeParam('headerType');
     }
 
@@ -306,20 +327,39 @@ class _ServerConfigEditorScreenState
           add('ech', _v('ech'));
           if (_toggle['insecure'] ?? false) add('insecure', '1');
         }
+        if (security == 'tls' || security == 'reality') {
+          add('pcs', _v('pcs'));
+          add('vcn', _v('vcn'));
+        }
         if (security == 'reality') {
           add('pbk', _v('pbk'));
           add('sid', _v('sid'));
           add('spx', _v('spx'));
+          add('pqv', _v('pqv'));
         }
         _addTransportParams(add);
         break;
       case 'trojan':
         uri.userInfo = _v('userInfo');
+        final trojanSecurity = _drop['security'] ?? 'tls';
+        // `tls` не пишем: он у trojan и так по умолчанию, а лишний параметр в
+        // ссылке — повод пометить сервер как изменённый на ровном месте.
+        add('security', trojanSecurity == 'tls' ? '' : trojanSecurity);
         add('sni', _v('sni'));
         add('fp', _drop['fp'] ?? '');
-        add('alpn', _v('alpn'));
-        add('ech', _v('ech'));
-        if (_toggle['insecure'] ?? false) add('insecure', '1');
+        if (trojanSecurity == 'tls') {
+          add('alpn', _v('alpn'));
+          add('ech', _v('ech'));
+          add('pcs', _v('pcs'));
+          add('vcn', _v('vcn'));
+          if (_toggle['insecure'] ?? false) add('insecure', '1');
+        }
+        if (trojanSecurity == 'reality') {
+          add('pbk', _v('pbk'));
+          add('sid', _v('sid'));
+          add('spx', _v('spx'));
+          add('pqv', _v('pqv'));
+        }
         _addTransportParams(add);
         break;
       case 'ss':
@@ -363,26 +403,44 @@ class _ServerConfigEditorScreenState
     return uri.build(managedParams: managed);
   }
 
+  /// Параметры транспорта в ссылку.
+  ///
+  /// Пишутся только те, что относятся к выбранному транспорту. Остальные
+  /// исчезают сами: при разборе их забрал `takeParam`, а обратно в ссылку
+  /// уезжает только то, что здесь названо. Поэтому смена ws на grpc не тащит
+  /// за собой путь и хост.
   void _addTransportParams(void Function(String, String) add) {
     final type = _drop['type'] ?? 'tcp';
     add('type', type);
-    switch (type) {
+    switch (normalizeTransport(type)) {
       case 'ws':
       case 'httpupgrade':
         add('path', _v('path'));
         add('host', _v('host'));
+        add('ed', _v('ed'));
       case 'xhttp':
-      case 'splithttp':
         add('path', _v('path'));
         add('host', _v('host'));
-        add('mode', _v('mode'));
+        add('mode', _drop['mode'] ?? '');
+        add('extra', _v('extra'));
+        add('x_padding_bytes', _v('x_padding_bytes'));
       case 'grpc':
         add('serviceName', _v('serviceName'));
-        add('mode', _v('mode'));
+        add('mode', _drop['mode'] ?? '');
+        add('authority', _v('authority'));
+      case 'kcp':
+        add('headerType', _drop['headerType'] ?? '');
+        add('seed', _v('seed'));
+        add('mtu', _v('mtu'));
+        add('tti', _v('tti'));
       case 'tcp':
         final headerType = _drop['headerType'] ?? '';
         add('headerType', headerType);
-        if (headerType == 'http') add('host', _v('host'));
+        if (headerType == 'http') {
+          add('host', _v('host'));
+          add('path', _v('path'));
+          add('method', _v('method'));
+        }
     }
   }
 
@@ -602,6 +660,7 @@ class _ServerConfigEditorScreenState
           if (server.type == ServerItemType.subscription)
             _subscriptionBanner(server, l10n),
           if (_error != null) _errorBanner(),
+          ?_issuesNotice(l10n),
           if (_rawMode)
             _rawSection(l10n)
           else ...[
@@ -690,6 +749,46 @@ class _ServerConfigEditorScreenState
       body: body,
     );
   }
+
+  /// Что в наборе полей не сойдётся у ядра.
+  ///
+  /// Плашка, а не запрет: правила описывают ядро, а ссылку мог выдать сервер,
+  /// живущий по своим (тот же REALITY поверх ws умеет mihomo). Поэтому здесь
+  /// сказано, что именно не так, а решение остаётся за человеком — молча
+  /// переписывать чужую ссылку хуже, чем показать причину.
+  Widget? _issuesNotice(AppLocalizations l10n) {
+    if (_rawMode) return null;
+    final issues = serverRuleIssues(
+      protocol: _protocol,
+      transport: _drop['type'] ?? 'tcp',
+      security: _drop['security'] ?? (_protocol == 'trojan' ? 'tls' : 'none'),
+      flow: _drop['flow'] ?? '',
+      encryption: _v('encryption'),
+      publicKey: _v('pbk'),
+    );
+    if (issues.isEmpty) return null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: ExpressiveNotice(
+        color: AppTheme.orange(context),
+        icon: Icons.error_outline_rounded,
+        text: [for (final issue in issues) _issueText(l10n, issue)].join('\n'),
+      ),
+    );
+  }
+
+  String _issueText(AppLocalizations l10n, ServerRuleIssue issue) =>
+      switch (issue) {
+        ServerRuleIssue.visionNeedsRawTls => l10n.serverEditorIssueVision,
+        ServerRuleIssue.flowUnknown => l10n.serverEditorIssueFlow,
+        ServerRuleIssue.realityNeedsOwnTransport =>
+          l10n.serverEditorIssueRealityTransport,
+        ServerRuleIssue.realityNeedsPublicKey =>
+          l10n.serverEditorIssueRealityKey,
+        ServerRuleIssue.encryptionMalformed =>
+          l10n.serverEditorIssueEncryption,
+        ServerRuleIssue.noSecurityAtAll => l10n.serverEditorIssueNoSecurity,
+      };
 
   Widget _subscriptionBanner(ServerItem server, AppLocalizations l10n) {
     final overridden = server.configOverridden;
@@ -882,7 +981,7 @@ class _ServerConfigEditorScreenState
         return [
           _generalSection(l10n, credLabel: 'UUID'),
           _vmessSecuritySection(l10n),
-          _vmessTransportSection(l10n),
+          _transportSection(l10n),
         ];
       case 'ss':
         return [_ssSection(l10n)];
@@ -909,125 +1008,208 @@ class _ServerConfigEditorScreenState
             l10n.serverEditorEncryption,
             hint: 'none',
           ),
+        // Vision предлагается только в рабочем сочетании: на xhttp и ws ядро
+        // отвечает «XTLS only supports TLS and REALITY directly», то есть
+        // сервер просто не подключается. Уже выставленное чужое значение
+        // список сохраняет (см. _dropdown) — чтобы его было видно и можно было
+        // убрать.
         if (_protocol == 'vless')
           _dropdown(
             'flow',
             'Flow',
-            const ['', 'xtls-rprx-vision', 'xtls-rprx-vision-udp443'],
+            flowOptionsFor(
+              protocol: _protocol,
+              transport: _drop['type'] ?? 'tcp',
+              security: _drop['security'] ?? 'none',
+              encryption: _v('encryption'),
+            ),
           ),
       ],
     );
   }
 
-  Widget _vlessSecuritySection(AppLocalizations l10n) {
-    final security = _drop['security'] ?? 'none';
-    return _section(
-      l10n.serverEditorSectionSecurity,
-      [
-        _dropdown(
-          'security',
-          l10n.serverEditorSecurityMode,
-          const ['none', 'tls', 'reality'],
-        ),
-        if (security == 'tls' || security == 'reality') ...[
-          _textField('sni', 'SNI'),
-          _fpDropdown(l10n),
-        ],
-        if (security == 'tls') ...[
-          _textField('alpn', l10n.serverEditorAlpn, hint: 'h2,http/1.1'),
-          _textField('ech', 'ECH'),
-          _insecureToggle(l10n),
-        ],
-        if (security == 'reality') ...[
-          _textField('pbk', l10n.serverEditorPbk),
-          _textField('sid', l10n.serverEditorSid),
-          _textField('spx', l10n.serverEditorSpx, hint: '/'),
-        ],
-      ],
-    );
-  }
+  Widget _vlessSecuritySection(AppLocalizations l10n) => _section(
+        l10n.serverEditorSectionSecurity,
+        _securityFields(l10n, reality: true),
+      );
 
-  Widget _tlsSection(AppLocalizations l10n) {
-    return _section(
-      l10n.serverEditorSectionSecurity,
-      [
+  /// Поля защиты — одни и те же у vless, trojan и vmess.
+  ///
+  /// [reality] — предлагать ли REALITY. У vmess его нет в самой ссылке
+  /// (json-формат сложился до него), у остальных он зависит ещё и от
+  /// транспорта: ws, httpupgrade и mkcp его не несут.
+  List<Widget> _securityFields(
+    AppLocalizations l10n, {
+    required bool reality,
+  }) {
+    final transport = _drop['type'] ?? 'tcp';
+    final security = _drop['security'] ?? 'none';
+    final allowed =
+        reality ? securityOptionsFor(transport) : const ['none', 'tls'];
+    final options = [
+      ...allowed,
+      // Чужое значение не теряем: ссылка могла прийти из клиента, который
+      // умеет то, чего здесь нельзя выбрать.
+      if (!allowed.contains(security)) security,
+    ];
+    return [
+      _segmented(
+        'security',
+        l10n.serverEditorSecurityMode,
+        [for (final o in options) (o, o == 'none' ? '—' : o.toUpperCase())],
+      ),
+      if (security == 'tls' || security == 'reality') ...[
         _textField('sni', 'SNI'),
         _fpDropdown(l10n),
+      ],
+      if (security == 'tls') ...[
         _textField('alpn', l10n.serverEditorAlpn, hint: 'h2,http/1.1'),
         _textField('ech', 'ECH'),
+        _textField('pcs', l10n.serverEditorPinnedCert),
+        _textField('vcn', l10n.serverEditorVerifyCertName),
         _insecureToggle(l10n),
       ],
-    );
+      if (security == 'reality') ...[
+        _textField('pbk', l10n.serverEditorPbk),
+        _textField('sid', l10n.serverEditorSid),
+        _textField('spx', l10n.serverEditorSpx, hint: '/'),
+        _textField('pqv', l10n.serverEditorPqv),
+      ],
+    ];
   }
 
+  /// Trojan. Раньше секция была «всегда TLS», хотя ядро берёт у него и
+  /// REALITY (матрица «протокол × защита» в документации транспорта), и такие
+  /// ссылки существуют.
+  Widget _tlsSection(AppLocalizations l10n) => _section(
+        l10n.serverEditorSectionSecurity,
+        _securityFields(l10n, reality: true),
+      );
+
+  /// Транспорт и его параметры.
+  ///
+  /// Список одинаков у vless, vmess и trojan: ядро собирает их одним и тем же
+  /// сборщиком (`_buildStreamSettings`). Раньше половина транспортов здесь не
+  /// показывалась — сервер на httpupgrade или mkcp редактировать было нечем,
+  /// хотя приложение их исполняет.
   Widget _transportSection(AppLocalizations l10n) {
-    final type = _drop['type'] ?? 'tcp';
-    final options = _protocol == 'vless'
-        ? ['tcp', 'ws', 'grpc', 'xhttp', 'httpupgrade']
-        : ['tcp', 'ws', 'grpc'];
+    final type = normalizeTransport(_drop['type'] ?? 'tcp');
     return _section(
       l10n.serverEditorSectionTransport,
       [
-        _dropdown('type', l10n.serverEditorTransportType, options),
-        if (type == 'ws' ||
-            type == 'httpupgrade' ||
-            type == 'xhttp' ||
-            type == 'splithttp') ...[
+        _dropdown('type', l10n.serverEditorTransportType, kServerTransports),
+        if (type == 'ws' || type == 'httpupgrade') ...[
           _textField('path', l10n.serverEditorPath, hint: '/'),
           _textField('host', 'Host'),
+          _textField(
+            'ed',
+            l10n.serverEditorEarlyData,
+            hint: '2048',
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          ),
         ],
-        if (type == 'xhttp' || type == 'splithttp')
-          _textField('mode', l10n.serverEditorMode, hint: 'auto'),
+        if (type == 'xhttp') ...[
+          _textField('path', l10n.serverEditorPath, hint: '/'),
+          _textField('host', 'Host'),
+          _dropdown(
+            'mode',
+            l10n.serverEditorMode,
+            const ['', 'auto', 'packet-up', 'stream-up', 'stream-one'],
+          ),
+          _textField(
+            'x_padding_bytes',
+            l10n.serverEditorPadding,
+            hint: '100-1000',
+          ),
+          _textField('extra', l10n.serverEditorExtra, hint: '{ }'),
+        ],
         if (type == 'grpc') ...[
           _textField('serviceName', l10n.serverEditorServiceName),
-          _textField('mode', l10n.serverEditorMode, hint: 'multi'),
+          _segmented('mode', l10n.serverEditorMode, const [
+            ('', 'gun'),
+            ('multi', 'multi'),
+          ]),
+          _textField('authority', l10n.serverEditorAuthority),
+        ],
+        if (type == 'kcp') ...[
+          // Имена заголовков — те, что знает mkcp-legacy; с любым другим ядро
+          // роняет конфиг целиком (config_gen._mkcpHeaders).
+          _dropdown(
+            'headerType',
+            l10n.serverEditorHeaderType,
+            const [
+              '',
+              'none',
+              'srtp',
+              'utp',
+              'wechat-video',
+              'dtls',
+              'wireguard',
+              'dns',
+            ],
+          ),
+          _textField('seed', l10n.serverEditorSeed),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _textField(
+                  'mtu',
+                  'MTU',
+                  hint: '1350',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _textField(
+                  'tti',
+                  'TTI',
+                  hint: '50',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
+              ),
+            ],
+          ),
         ],
         if (type == 'tcp') ...[
-          _dropdown('headerType', l10n.serverEditorHeaderType, const ['', 'http']),
-          if ((_drop['headerType'] ?? '') == 'http')
+          _segmented('headerType', l10n.serverEditorHeaderType, const [
+            ('', '—'),
+            ('http', 'http'),
+          ]),
+          if ((_drop['headerType'] ?? '') == 'http') ...[
             _textField('host', 'Host'),
+            _textField('path', l10n.serverEditorPath, hint: '/'),
+            _textField('method', l10n.serverEditorHttpMethod, hint: 'GET'),
+          ],
         ],
       ],
     );
   }
 
-  Widget _vmessSecuritySection(AppLocalizations l10n) {
-    final tls = (_drop['security'] ?? 'none') == 'tls';
-    return _section(
-      l10n.serverEditorSectionSecurity,
-      [
-        _dropdown(
-          'scy',
-          l10n.serverEditorMethod,
-          const ['', 'auto', 'none', 'zero', 'aes-128-gcm', 'chacha20-poly1305'],
-        ),
-        _dropdown('security', l10n.serverEditorSecurityMode, const ['none', 'tls']),
-        if (tls) ...[
-          _textField('sni', 'SNI'),
-          _fpDropdown(l10n),
-          _textField('alpn', l10n.serverEditorAlpn, hint: 'h2,http/1.1'),
-          _textField('ech', 'ECH'),
-          _insecureToggle(l10n),
+  Widget _vmessSecuritySection(AppLocalizations l10n) => _section(
+        l10n.serverEditorSectionSecurity,
+        [
+          _dropdown(
+            'scy',
+            l10n.serverEditorMethod,
+            const [
+              '',
+              'auto',
+              'none',
+              'zero',
+              'aes-128-gcm',
+              'chacha20-poly1305',
+            ],
+          ),
+          // REALITY в vmess-ссылке передать нечем: у json-формата нет для него
+          // полей, и ядро получило бы вместо него обычный TLS.
+          ..._securityFields(l10n, reality: false),
         ],
-      ],
-    );
-  }
-
-  Widget _vmessTransportSection(AppLocalizations l10n) {
-    final type = _drop['type'] ?? 'tcp';
-    return _section(
-      l10n.serverEditorSectionTransport,
-      [
-        _dropdown('type', l10n.serverEditorTransportType, const ['tcp', 'ws', 'grpc']),
-        if (type == 'ws') ...[
-          _textField('path', l10n.serverEditorPath, hint: '/'),
-          _textField('host', 'Host'),
-        ],
-        if (type == 'grpc')
-          _textField('serviceName', l10n.serverEditorServiceName),
-      ],
-    );
-  }
+      );
 
   Widget _ssSection(AppLocalizations l10n) {
     return _section(
@@ -1204,49 +1386,39 @@ class _ServerConfigEditorScreenState
 
   // ---------- строительные блоки ----------
 
-  /// Карточка секции.
+  /// Секция: заголовок над карточкой, как на остальных экранах настроек.
   ///
-  /// Именно `Material`, а не `Container` с `BoxDecoration`: внутри секций живут
-  /// `SwitchListTile` (`allowInsecure`), а `ListTile` рисует свой фон и чернила
-  /// на ближайшем `Material`-предке. Когда ближе оказывается крашеный
-  /// `DecoratedBox`, Flutter роняет ассерт «ListTile background color or ink
-  /// splashes may be invisible» — в дебаге это отваливший кусок экрана при
-  /// заходе в редактор, в релизе тихо съеденные чернила. Цвет, радиус и рамка
-  /// те же, что были у декорации, так что вид не меняется.
+  /// Раньше это была своя карточка с рамкой и серой подписью внутри — вид из
+  /// доэкспрессивных времён, единственный такой в приложении. Карточка теперь
+  /// общая ([ExpressiveCard]) и заголовок общий ([ExpressiveSectionHeader]),
+  /// поэтому редактор больше не выпадает из остального интерфейса.
+  ///
+  /// [ExpressiveCard] внутри — `Material`, и это важно: `SwitchListTile`
+  /// (allowInsecure) рисует чернила на ближайшем Material-предке, а на крашеном
+  /// `DecoratedBox` Flutter роняет ассерт про невидимые всплески.
   Widget _section(String title, List<Widget> children) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: AppTheme.card(context),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(ExpressiveShape.large),
-          side: BorderSide(color: AppTheme.divider(context)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ExpressiveSectionHeader(title),
+        ExpressiveCard(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context)
-                    .textTheme
-                    .emphasized(Theme.of(context).textTheme.labelMedium)
-                    ?.copyWith(
-                      letterSpacing: 0.3,
-                      color: AppTheme.textLight(context),
-                    ),
-              ),
-              const SizedBox(height: 10),
-              ...children,
-            ],
+            children: children,
           ),
         ),
-      ),
+      ],
     );
   }
 
+  /// Поле ввода: заливка вместо рамки.
+  ///
+  /// Обводка на каждом поле поверх обведённой же карточки давала сетку из
+  /// прямоугольников; в M3 заполненное поле отделяется от карточки тоном, а
+  /// рамка остаётся только у поля в фокусе.
   InputDecoration _inputDecoration({String? label, String? hint}) {
+    final scheme = Theme.of(context).colorScheme;
     return InputDecoration(
       labelText: label,
       hintText: hint,
@@ -1259,19 +1431,60 @@ class _ServerConfigEditorScreenState
           ),
       isDense: true,
       filled: true,
-      fillColor: AppTheme.bg(context),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      fillColor: scheme.surfaceContainerHighest,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-        borderSide: BorderSide(color: AppTheme.divider(context)),
+        borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
+        borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-        borderSide: BorderSide(color: AppTheme.divider(context)),
+        borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
+        borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(ExpressiveShape.medium),
+        borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
         borderSide: BorderSide(color: AppTheme.accent(context), width: 2),
+      ),
+    );
+  }
+
+  /// Выбор из двух-трёх вариантов — связанной группой кнопок, а не списком:
+  /// все варианты видны сразу, и выбор меняется одним касанием.
+  Widget _segmented(
+    String id,
+    String label,
+    List<(String value, String text)> options,
+  ) {
+    final current = _drop[id] ?? options.first.$1;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 6),
+            child: Text(
+              label,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: AppTheme.textLight(context)),
+            ),
+          ),
+          ExpressiveConnectedButtons<String>(
+            segments: [
+              for (final (value, text) in options)
+                ExpressiveSegment(value: value, label: text),
+            ],
+            // Чужое значение (ссылка из другого клиента) в группу не влезает —
+            // тогда показываем первое, но в модели его не трогаем: сохранение
+            // не должно молча переписывать то, чего мы не поняли.
+            selected: options.any((o) => o.$1 == current)
+                ? current
+                : options.first.$1,
+            onChanged: (v) => setState(() => _drop[id] = v),
+          ),
+        ],
       ),
     );
   }
