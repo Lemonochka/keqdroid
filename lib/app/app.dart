@@ -16,6 +16,7 @@ import '../shared/ui/expressive.dart';
 import '../shared/ui/expressive_elements.dart';
 import '../shared/ui/haptics.dart';
 import '../shared/ui/kawaii_decorations.dart';
+import '../shared/ui/server_avatar.dart';
 import '../utils/app_locale.dart';
 
 const kSeedFallback = Color(0xFFFFAEBC);
@@ -312,6 +313,7 @@ typedef _AppThemeKey = ({
   bool flair,
   String? fontFamily,
   IconShape iconShape,
+  ServerIconPalette iconPalette,
 });
 
 /// Собранные `ThemeData` — по одной на набор аргументов.
@@ -336,16 +338,19 @@ ThemeData buildAppTheme(
   bool flair = false,
   String? fontFamily,
   IconShape iconShape = IconShape.circle,
+  ServerIconPalette iconPalette = ServerIconPalette.themed,
 }) {
   final key = (
     scheme: scheme,
     flair: flair,
     fontFamily: fontFamily,
     iconShape: iconShape,
+    iconPalette: iconPalette,
   );
   final cached = _appThemeCache[key];
   if (cached != null) return cached;
-  final built = _buildAppTheme(scheme, flair, fontFamily, iconShape);
+  final built =
+      _buildAppTheme(scheme, flair, fontFamily, iconShape, iconPalette);
   // Простое вытеснение целиком: набор ключей крошечный, и держать LRU ради
   // восьми записей дороже, чем изредка пересобрать тему.
   if (_appThemeCache.length >= _appThemeCacheLimit) _appThemeCache.clear();
@@ -357,6 +362,7 @@ ThemeData _buildAppTheme(
   bool flair,
   String? fontFamily,
   IconShape iconShape,
+  ServerIconPalette iconPalette,
 ) {
   // Токены M3 Expressive: шкала форм, выразительные веса типографики и
   // компонентные темы. Экраны, пока живущие на хардкоде, от этого не ломаются —
@@ -371,8 +377,12 @@ ThemeData _buildAppTheme(
     colorScheme: scheme,
     useMaterial3: true,
     // Форма кружков-иконок едет расширением темы: так её видит любой
-    // ExpressiveIconBadge, не таща за собой ни настройки, ни провайдеры.
-    extensions: [ExpressiveIconShapeTheme(shape: iconShape)],
+    // ExpressiveIconBadge, не таща за собой ни настройки, ни провайдеры. Тем же
+    // путём — чем красить сервер без флага.
+    extensions: [
+      ExpressiveIconShapeTheme(shape: iconShape),
+      ServerIconPaletteTheme(palette: iconPalette),
+    ],
     textTheme: textTheme,
     chipTheme: components.chip,
     filledButtonTheme: components.filledButton,
@@ -507,6 +517,9 @@ class _ThemedApp extends ConsumerWidget {
     final font = resolveAppFont(settings.fontId);
     final fontFamily = font.family ?? (flair ? 'Comfortaa' : null);
     final iconShape = IconShape.fromId(settings.iconShapeId);
+    final iconPalette = settings.serverIconThemeColors
+        ? ServerIconPalette.themed
+        : ServerIconPalette.protocol;
 
     final locale = localeFromSettings(settings);
 
@@ -533,9 +546,15 @@ class _ThemedApp extends ConsumerWidget {
       // сделано: одна короткая задержка вместо трёхсот миллисекунд каши.
       themeAnimationDuration: Duration.zero,
       theme: buildAppTheme(useSystem ? lightScheme : customLight,
-          flair: flair, fontFamily: fontFamily, iconShape: iconShape),
+          flair: flair,
+          fontFamily: fontFamily,
+          iconShape: iconShape,
+          iconPalette: iconPalette),
       darkTheme: buildAppTheme(dark(useSystem ? darkScheme : customDark),
-          flair: flair, fontFamily: fontFamily, iconShape: iconShape),
+          flair: flair,
+          fontFamily: fontFamily,
+          iconShape: iconShape,
+          iconPalette: iconPalette),
       builder: (context, child) {
         final content = (!flair || child == null)
             ? (child ?? const SizedBox.shrink())

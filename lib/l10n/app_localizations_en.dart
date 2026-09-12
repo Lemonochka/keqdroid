@@ -262,28 +262,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRoutingDirectTitle => 'Direct (bypass VPN)';
 
   @override
-  String get settingsRoutingDirectDesc => 'Domains and IPs here connect directly, without the VPN.';
-
-  @override
   String get settingsRoutingProxyTitle => 'Proxy (force VPN)';
 
   @override
-  String get settingsRoutingProxyDesc => 'Domains and IPs here always go through the VPN.';
-
-  @override
   String get settingsRoutingBlockTitle => 'Blocked';
-
-  @override
-  String get settingsRoutingBlockDesc => 'Domains and IPs here are dropped and never connect.';
 
   @override
   String get settingsRoutingValuesHint => 'One per line, or comma separated';
 
   @override
   String get settingsRoutingFinalTitle => 'Unmatched traffic';
-
-  @override
-  String get settingsRoutingFinalDesc => 'Default action for traffic outside the rules.';
 
   @override
   String get settingsRoutingFinalProxy => 'Proxy';
@@ -389,16 +377,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeUseDynamicColors => 'Use Android dynamic colors';
 
   @override
-  String get themeUseDynamicColorsSubtitle => 'When Android provides them';
-
-  @override
   String get themePaletteHint => 'Light/Dark still switches on its own';
 
   @override
   String get themeUseSystemColors => 'Use system accent colors';
-
-  @override
-  String get themeUseSystemColorsSubtitle => 'From the Windows or Linux accent';
 
   @override
   String get themeColorThemesTitle => 'Color themes';
@@ -407,7 +389,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversTwoColumnsTitle => 'Two-column server list';
 
   @override
-  String get serversTwoColumnsSubtitle => 'Show servers in two columns to fit more on screen';
+  String get appearanceServerIconThemeColors => 'Flagless icons in theme colours';
 
   @override
   String get settingsLanProxyTitle => 'LAN Proxy';
@@ -468,7 +450,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayCoreTitle => 'Core settings';
 
   @override
-  String get settingsXrayCoreSubtitle => 'Ports, DNS, XMUX, TUN, log and routing';
+  String get settingsXrayCoreSubtitle => 'Ports, DNS, TUN, log and routing';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -510,7 +492,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayMuxEnable => 'Enable Mux';
 
   @override
-  String get settingsXrayMuxEnableHint => 'Many connections inside one: fewer handshakes, but usually worse on downloads and speed tests. Xray core only.';
+  String get settingsXrayMuxEnableHint => 'Many connections inside one: fewer handshakes, but usually worse on downloads and speed tests.';
 
   @override
   String get settingsXrayMuxParamsTitle => 'Streams per connection';
@@ -597,7 +579,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayFragmentEnable => 'Split the TLS ClientHello';
 
   @override
-  String get settingsXrayFragmentEnableHint => 'The first packet goes out in pieces, so DPI cannot read the SNI. Xray core only.';
+  String get settingsXrayFragmentEnableHint => 'The first packet goes out in pieces, so DPI cannot read the SNI.';
 
   @override
   String get settingsXrayNoiseSection => 'UDP noise';
@@ -606,7 +588,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayNoiseEnable => 'Send noise before UDP';
 
   @override
-  String get settingsXrayNoiseEnableHint => 'A junk packet goes to the server before the first real one. For hysteria and mkcp, where there is no ClientHello to cut. Xray core only.';
+  String get settingsXrayNoiseEnableHint => 'A junk packet goes to the server before the first real one. For hysteria and mkcp, where there is no ClientHello to cut.';
 
   @override
   String get settingsXrayNoiseKindTitle => 'What to send';
@@ -666,7 +648,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTunSection => 'TUN mode';
 
   @override
-  String get settingsTunSectionNote => 'sing-box TUN interface options (desktop). Applied on next connection.';
+  String get settingsTunSectionNote => 'Applied on next connection.';
 
   @override
   String get settingsTunStackTitle => 'Network stack';
@@ -726,7 +708,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTunIpv6 => 'Keep IPv6 inside the tunnel';
 
   @override
-  String get settingsTunIpv6Hint => 'Gives the TUN interface an IPv6 address; without it all IPv6 bypasses the tunnel. Xray/keqrnel core only.';
+  String get settingsTunIpv6Hint => 'Gives the TUN interface an IPv6 address; without it all IPv6 bypasses the tunnel.';
 
   @override
   String get settingsMihomoSection => 'mihomo core';
@@ -735,7 +717,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsMihomoFakeIp => 'Fake IP';
 
   @override
-  String get settingsMihomoFakeIpHint => 'Instant resolution via fake addresses. Only where mihomo owns the tunnel: TUN and Android.';
+  String get settingsMihomoFakeIpHint => 'Instant resolution via fake addresses. Not used in Proxy mode.';
 
   @override
   String get settingsPingTitle => 'Server ping';
@@ -1078,9 +1060,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAppSettings => 'App settings';
 
   @override
-  String get settingsAppSettingsHint => 'Routing, DNS, appearance, ping, language. Not ports, LAN sharing or TUN.';
-
-  @override
   String get settingsImport => 'Import';
 
   @override
@@ -1260,19 +1239,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsMinimizeToTray => 'Minimize to tray on close';
 
   @override
-  String get settingsMinimizeToTrayHint => 'When off, closing the window exits the app';
-
-  @override
   String get settingsLaunchAtStartup => 'Start with Windows';
 
   @override
-  String get settingsLaunchAtStartupHint => 'Launch the app when you sign in';
+  String get settingsLaunchAtStartupAdmin => 'Start with admin rights';
+
+  @override
+  String get settingsAutostartAdminFailed => 'Administrator rights were not granted';
 
   @override
   String get settingsAutoConnectOnAutostart => 'Connect on autostart';
-
-  @override
-  String get settingsAutoConnectOnAutostartHint => 'Connect to the last selected server using the mode from the sidebar. If TUN needs admin rights and they are unavailable, Proxy is used';
 
   @override
   String get settingsAutoConnectRequiresAutostart => 'Enable \"Start with Windows\" first';
@@ -1437,25 +1413,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hotkeyActionToggleConnection => 'Connect / disconnect';
 
   @override
-  String get hotkeyActionToggleConnectionDesc => 'Toggle the tunnel for the active server';
-
-  @override
   String get hotkeyActionToggleTun => 'Toggle TUN mode';
-
-  @override
-  String get hotkeyActionToggleTunDesc => 'Switch between Proxy and TUN, reconnecting if needed';
 
   @override
   String get hotkeyActionBestPing => 'Best-ping server';
 
   @override
-  String get hotkeyActionBestPingDesc => 'Switch to the server with the lowest ping';
-
-  @override
   String get hotkeyActionToggleWindow => 'Show / hide window';
-
-  @override
-  String get hotkeyActionToggleWindowDesc => 'Restore the window from the tray or hide it';
 
   @override
   String get hotkeyNotSet => 'Not set';
@@ -1603,9 +1567,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversUnpin => 'Unpin server';
 
   @override
-  String get serversPinDesc => 'Pinned servers stay on top of the list';
-
-  @override
   String get serversRename => 'Rename';
 
   @override
@@ -1624,9 +1585,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serversEditConfig => 'Edit configuration';
-
-  @override
-  String get serversEditConfigDesc => 'SNI, fingerprint, transport and other settings';
 
   @override
   String get serverEditorTitle => 'Server configuration';
@@ -1678,6 +1636,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get serverEditorSpx => 'SpiderX (spx)';
+
+  @override
+  String get serverEditorPinnedCert => 'Pinned certificate (SHA-256)';
+
+  @override
+  String get serverEditorVerifyCertName => 'Verify certificate name';
+
+  @override
+  String get serverEditorPqv => 'Post-quantum key (ML-DSA-65)';
+
+  @override
+  String get serverEditorEarlyData => 'Early data, bytes';
+
+  @override
+  String get serverEditorPadding => 'Padding, bytes';
+
+  @override
+  String get serverEditorExtra => 'Extra (JSON)';
+
+  @override
+  String get serverEditorAuthority => 'Authority';
+
+  @override
+  String get serverEditorSeed => 'Seed';
+
+  @override
+  String get serverEditorHttpMethod => 'HTTP method';
+
+  @override
+  String get serverEditorIssueVision => 'Vision only works on TCP with TLS or REALITY.';
+
+  @override
+  String get serverEditorIssueFlow => 'The core does not know this flow and will refuse the whole config.';
+
+  @override
+  String get serverEditorIssueRealityTransport => 'REALITY does not run over this transport.';
+
+  @override
+  String get serverEditorIssueRealityKey => 'REALITY needs the server public key.';
+
+  @override
+  String get serverEditorIssueEncryption => 'Encryption must be none or an mlkem768x25519plus key.';
+
+  @override
+  String get serverEditorIssueNoSecurity => 'Without TLS, REALITY or Encryption the core only allows private addresses.';
 
   @override
   String get serverEditorTransportType => 'Type';
@@ -1761,40 +1764,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceAmoled => 'Pure black (AMOLED)';
 
   @override
-  String get appearanceAmoledSubtitle => 'True black in the dark theme — saves OLED power';
-
-  @override
   String get appearanceAmoledNeedsDark => 'Available with the dark theme on';
 
   @override
   String get appearanceHaptics => 'Haptic feedback';
 
   @override
-  String get appearanceHapticsSubtitle => 'Vibrate on connect, tab and server taps';
-
-  @override
   String get appearanceShowTraffic => 'Show traffic';
-
-  @override
-  String get appearanceShowTrafficSubtitle => 'Speed and data usage chips under the connect button';
 
   @override
   String get appearanceShowTime => 'Show connection time';
 
   @override
-  String get appearanceShowTimeSubtitle => 'Session duration chip under the connect button';
-
-  @override
   String get appearanceShowTrafficSplit => 'Show VPN and direct apart';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => 'A block per route, through the tunnel and direct, instead of the shared chips. Only the mihomo core can count it.';
-
-  @override
   String get appearanceWaveLatencyColor => 'Colour the indicator by latency';
-
-  @override
-  String get appearanceWaveLatencyColorSubtitle => 'Green, amber or red by the active server\'s ping';
 
   @override
   String get appearanceFontTitle => 'Font';
@@ -1857,9 +1842,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPermTunPasswordlessTitle => 'Passwordless TUN';
 
   @override
-  String get settingsPermTunPasswordlessSubtitle => 'Start TUN mode without entering the polkit password each time';
-
-  @override
   String get settingsPermTunDisabled => 'Passwordless TUN disabled';
 
   @override
@@ -1869,19 +1851,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceNotifSpeedTitle => 'Connection speed in notification';
 
   @override
-  String get appearanceNotifSpeedSubtitle => 'Show ↓/↑ speed in the VPN status notification';
-
-  @override
   String get appearanceNotifUptimeTitle => 'Connection time in notification';
 
   @override
-  String get appearanceNotifUptimeSubtitle => 'Show session uptime in the VPN status notification';
-
-  @override
   String get appearanceNotifSubUpdatesTitle => 'Subscription update notifications';
-
-  @override
-  String get appearanceNotifSubUpdatesSubtitle => 'Notify when subscriptions refresh in the background';
 
   @override
   String get tunRememberTitle => 'Remember authorization?';
@@ -2367,9 +2340,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subscriptionCardThemeInServers => 'Show in server list';
 
   @override
-  String get subscriptionCardThemeInServersHint => 'The picture also fills the group header. Colours taken from it stay either way.';
-
-  @override
   String get subscriptionCardLookTitle => 'Card look';
 
   @override
@@ -2386,9 +2356,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subscriptionCardVeilStrong => 'Heavy';
-
-  @override
-  String get subscriptionCardVeilHint => 'The text sits over the left side of the picture. Without dimming it can get lost on a light photo.';
 
   @override
   String get subscriptionCardContentTitle => 'What to show';

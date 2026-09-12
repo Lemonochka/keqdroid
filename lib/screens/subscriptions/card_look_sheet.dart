@@ -128,8 +128,6 @@ class _CardLookSheet extends ConsumerWidget {
                   selected: sub.cardVeil,
                   onChanged: (veil) => _apply(ref, veil: veil),
                 ),
-                const SizedBox(height: 6),
-                _SheetHint(l10n.subscriptionCardVeilHint),
               ],
               const SizedBox(height: 16),
               _SheetSectionTitle(l10n.subscriptionCardContentTitle),

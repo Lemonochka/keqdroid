@@ -130,30 +130,26 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     _lastHotkeys = settings.hotkeys;
 
-    final actions = <(HotkeyAction, IconData, String, String)>[
+    final actions = <(HotkeyAction, IconData, String)>[
       (
         HotkeyAction.toggleConnection,
         Icons.power_settings_new_rounded,
         l10n.hotkeyActionToggleConnection,
-        l10n.hotkeyActionToggleConnectionDesc,
       ),
       (
         HotkeyAction.toggleTunMode,
         Icons.vpn_lock_rounded,
         l10n.hotkeyActionToggleTun,
-        l10n.hotkeyActionToggleTunDesc,
       ),
       (
         HotkeyAction.bestPingServer,
         Icons.network_check_rounded,
         l10n.hotkeyActionBestPing,
-        l10n.hotkeyActionBestPingDesc,
       ),
       (
         HotkeyAction.toggleWindow,
         Icons.flip_to_front_rounded,
         l10n.hotkeyActionToggleWindow,
-        l10n.hotkeyActionToggleWindowDesc,
       ),
     ];
 
@@ -208,11 +204,10 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                for (final (action, icon, title, subtitle) in actions) ...[
+                for (final (action, icon, title) in actions) ...[
                   _HotkeyRow(
                     icon: icon,
                     title: title,
-                    subtitle: subtitle,
                     binding:
                         HotkeyBinding.fromToken(settings.hotkeys[action.id]),
                     recording: _recording == action,
@@ -246,7 +241,6 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
 class _HotkeyRow extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String subtitle;
   final HotkeyBinding? binding;
   final bool recording;
   final String recordingHint;
@@ -260,7 +254,6 @@ class _HotkeyRow extends StatelessWidget {
   const _HotkeyRow({
     required this.icon,
     required this.title,
-    required this.subtitle,
     required this.binding,
     required this.recording,
     required this.recordingHint,
@@ -291,22 +284,12 @@ class _HotkeyRow extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.text(context),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context), height: 1.3),
-                    ),
-                  ],
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.text(context),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

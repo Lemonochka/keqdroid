@@ -201,3 +201,33 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
 
 final settingsNotifierProvider =
 AsyncNotifierProvider<SettingsNotifier, AppSettings>(SettingsNotifier.new);
+
+/// Ядро, которое исполнит активный сервер прямо сейчас.
+///
+/// Настройки бывают не у обоих ядер, и раньше они стояли на экране всегда: под
+/// переключателем мелким шрифтом было сказано, при каком ядре он работает.
+/// Читают это уже после того, как включили и не увидели эффекта, — поэтому
+/// такие настройки теперь просто не показываются, когда поедет не их ядро.
+///
+/// Считается по активному серверу, а не по одной настройке `vpnCore`: формат
+/// сервера решает за пользователя (готовый конфиг, цепочка, профиль AmneziaWG),
+/// и выбор значим ровно для обычной ссылки. Сервера нет — берём то, что поедет
+/// при следующем: ссылке отдаётся выбранное ядро, а `auto` — это xray.
+final activeVpnBackendProvider = Provider<VpnBackend>((ref) {
+  final preference = ref.watch(
+    settingsNotifierProvider.select(
+      (a) => a.value?.vpnCore ?? AppSettings.vpnCoreAuto,
+    ),
+  );
+  final server = ref.watch(serversProvider).activeServer;
+  if (server == null) {
+    return preference == AppSettings.vpnCoreMihomo && mihomoShipsHere
+        ? VpnBackend.mihomo
+        : VpnBackend.xray;
+  }
+  return resolveVpnBackend(
+    config: server.config,
+    preference: preference,
+    mihomoAvailable: mihomoShipsHere,
+  ).backend;
+});

@@ -276,12 +276,6 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                   value: _exportSettings,
                   activeThumbColor: AppTheme.accent(context),
                   title: Text(l10n.settingsAppSettings),
-                  subtitle: Text(
-                    l10n.settingsAppSettingsHint,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textLight(context),
-                        ),
-                  ),
                   onChanged: _busy ? null : (v) => setState(() => _exportSettings = v),
                 ),
                 const SizedBox(height: 8),

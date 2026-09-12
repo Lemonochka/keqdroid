@@ -171,4 +171,51 @@ void main() {
       expect(report, isNot(contains('uptime:')));
     });
   });
+
+  group('версия Windows', () {
+    // Жалоба: «почему у меня 11 винда, а пишет что десятая». В реестре у
+    // одиннадцатой и правда записана десятка, отличает их только сборка.
+    test('сборка 22000 и выше — это 11', () {
+      expect(
+        AppInternalsService.prettyWindowsVersion(
+          '"Windows 10 Pro" 10.0 (Build 26100)',
+        ),
+        'Windows 11 Pro (build 26100)',
+      );
+    });
+
+    test('настоящая десятка остаётся десяткой', () {
+      expect(
+        AppInternalsService.prettyWindowsVersion(
+          '"Windows 10 Home" 10.0 (Build 19045)',
+        ),
+        'Windows 10 Home (build 19045)',
+      );
+    });
+
+    test('серверные редакции не переименовываются', () {
+      expect(
+        AppInternalsService.prettyWindowsVersion(
+          '"Windows Server 2025 Standard" 10.0 (Build 26100)',
+        ),
+        'Windows Server 2025 Standard (build 26100)',
+      );
+    });
+
+    test('локализованное имя не ломается', () {
+      expect(
+        AppInternalsService.prettyWindowsVersion(
+          '"Майкрософт Windows 11 Pro" 10.0 (Build 26100)',
+        ),
+        'Майкрософт Windows 11 Pro (build 26100)',
+      );
+    });
+
+    test('строку незнакомого вида не трогаем', () {
+      expect(
+        AppInternalsService.prettyWindowsVersion('Windows 10.0 (Build 26100)'),
+        'Windows 10.0 (Build 26100)',
+      );
+    });
+  });
 }

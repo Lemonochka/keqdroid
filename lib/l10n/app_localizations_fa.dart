@@ -262,28 +262,16 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsRoutingDirectTitle => 'مستقیم (بدون VPN)';
 
   @override
-  String get settingsRoutingDirectDesc => 'دامنه‌ها و آی‌پی‌های این فهرست مستقیم و بدون VPN وصل می‌شوند.';
-
-  @override
   String get settingsRoutingProxyTitle => 'پروکسی (اجبار به VPN)';
 
   @override
-  String get settingsRoutingProxyDesc => 'دامنه‌ها و آی‌پی‌های این فهرست همیشه از VPN رد می‌شوند.';
-
-  @override
   String get settingsRoutingBlockTitle => 'مسدود';
-
-  @override
-  String get settingsRoutingBlockDesc => 'دامنه‌ها و آی‌پی‌های این فهرست حذف می‌شوند و اصلاً وصل نمی‌شوند.';
 
   @override
   String get settingsRoutingValuesHint => 'هر مورد در یک خط، یا جدا شده با ویرگول';
 
   @override
   String get settingsRoutingFinalTitle => 'ترافیک بدون قانون';
-
-  @override
-  String get settingsRoutingFinalDesc => 'کاری که با ترافیک خارج از قوانین انجام می‌شود.';
 
   @override
   String get settingsRoutingFinalProxy => 'پروکسی';
@@ -389,16 +377,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get themeUseDynamicColors => 'استفاده از رنگ‌های پویای اندروید';
 
   @override
-  String get themeUseDynamicColorsSubtitle => 'اگر اندروید آن‌ها را بدهد';
-
-  @override
   String get themePaletteHint => 'روشن/تیره جداگانه عوض می‌شود';
 
   @override
   String get themeUseSystemColors => 'استفاده از رنگ تأکیدی سیستم';
-
-  @override
-  String get themeUseSystemColorsSubtitle => 'رنگ تأکیدی ویندوز یا لینوکس';
 
   @override
   String get themeColorThemesTitle => 'پوسته‌های رنگی';
@@ -407,7 +389,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversTwoColumnsTitle => 'فهرست دوستونی سرورها';
 
   @override
-  String get serversTwoColumnsSubtitle => 'نمایش سرورها در دو ستون تا تعداد بیشتری در صفحه جا شود';
+  String get appearanceServerIconThemeColors => 'نشان‌های بدون پرچم با رنگ پوسته';
 
   @override
   String get settingsLanProxyTitle => 'پروکسی شبکهٔ محلی';
@@ -468,7 +450,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayCoreTitle => 'تنظیمات هسته';
 
   @override
-  String get settingsXrayCoreSubtitle => 'پورت‌ها، DNS، XMUX، TUN، گزارش و مسیریابی';
+  String get settingsXrayCoreSubtitle => 'پورت‌ها، DNS، TUN، گزارش و مسیریابی';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -510,7 +492,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayMuxEnable => 'فعال‌سازی Mux';
 
   @override
-  String get settingsXrayMuxEnableHint => 'چند اتصال درون یک اتصال: دست‌دادن کمتر، اما معمولاً در دانلود و تست سرعت بدتر است. فقط هستهٔ xray.';
+  String get settingsXrayMuxEnableHint => 'چند اتصال درون یک اتصال: دست‌دادن کمتر، اما معمولاً در دانلود و تست سرعت بدتر است.';
 
   @override
   String get settingsXrayMuxParamsTitle => 'تعداد جریان در هر اتصال';
@@ -597,7 +579,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayFragmentEnable => 'تکه‌تکه کردن TLS ClientHello';
 
   @override
-  String get settingsXrayFragmentEnableHint => 'بستهٔ نخست تکه‌تکه می‌رود و DPI نمی‌تواند SNI را بخواند. فقط هستهٔ Xray.';
+  String get settingsXrayFragmentEnableHint => 'بستهٔ نخست تکه‌تکه می‌رود و DPI نمی‌تواند SNI را بخواند.';
 
   @override
   String get settingsXrayNoiseSection => 'نویز پیش از UDP';
@@ -606,7 +588,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayNoiseEnable => 'ارسال نویز پیش از UDP';
 
   @override
-  String get settingsXrayNoiseEnableHint => 'پیش از نخستین بستهٔ واقعی، بستهٔ بی‌معنا به سرور فرستاده می‌شود. برای hysteria و mkcp که ClientHello برای تکه‌کردن ندارند. فقط هستهٔ xray.';
+  String get settingsXrayNoiseEnableHint => 'پیش از نخستین بستهٔ واقعی، بستهٔ بی‌معنا به سرور فرستاده می‌شود. برای hysteria و mkcp که ClientHello برای تکه‌کردن ندارند.';
 
   @override
   String get settingsXrayNoiseKindTitle => 'چه چیزی فرستاده شود';
@@ -666,7 +648,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsTunSection => 'حالت TUN';
 
   @override
-  String get settingsTunSectionNote => 'گزینه‌های رابط TUN در sing-box (نسخهٔ دسکتاپ). از اتصال بعدی اعمال می‌شود.';
+  String get settingsTunSectionNote => 'از اتصال بعدی اعمال می‌شود.';
 
   @override
   String get settingsTunStackTitle => 'پشتهٔ شبکه';
@@ -726,7 +708,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsTunIpv6 => 'IPv6 را داخل تونل نگه دار';
 
   @override
-  String get settingsTunIpv6Hint => 'به رابط TUN نشانی IPv6 می‌دهد؛ بدون آن همهٔ IPv6 از تونل بیرون می‌ماند. فقط هستهٔ Xray/keqrnel.';
+  String get settingsTunIpv6Hint => 'به رابط TUN نشانی IPv6 می‌دهد؛ بدون آن همهٔ IPv6 از تونل بیرون می‌ماند.';
 
   @override
   String get settingsMihomoSection => 'هسته mihomo';
@@ -735,7 +717,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsMihomoFakeIp => 'Fake IP';
 
   @override
-  String get settingsMihomoFakeIpHint => 'تفکیک آنی با نشانی‌های ساختگی. فقط جایی که تونل با mihomo است: TUN و اندروید.';
+  String get settingsMihomoFakeIpHint => 'تفکیک آنی با نشانی‌های ساختگی. در حالت پراکسی کار نمی‌کند.';
 
   @override
   String get settingsPingTitle => 'پینگ سرور';
@@ -1078,9 +1060,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsAppSettings => 'تنظیمات برنامه';
 
   @override
-  String get settingsAppSettingsHint => 'مسیریابی، DNS، ظاهر، پینگ، زبان. پورت‌ها، اشتراک شبکهٔ محلی و TUN نه.';
-
-  @override
   String get settingsImport => 'وارد کردن';
 
   @override
@@ -1260,19 +1239,16 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsMinimizeToTray => 'هنگام بستن، به سینی سیستم برود';
 
   @override
-  String get settingsMinimizeToTrayHint => 'اگر خاموش باشد، بستن پنجره برنامه را می‌بندد';
-
-  @override
   String get settingsLaunchAtStartup => 'اجرا همراه ویندوز';
 
   @override
-  String get settingsLaunchAtStartupHint => 'برنامه هنگام ورود شما به سیستم اجرا شود';
+  String get settingsLaunchAtStartupAdmin => 'اجرا با دسترسی مدیر';
+
+  @override
+  String get settingsAutostartAdminFailed => 'دسترسی مدیر داده نشد';
 
   @override
   String get settingsAutoConnectOnAutostart => 'اتصال هنگام اجرای خودکار';
-
-  @override
-  String get settingsAutoConnectOnAutostartHint => 'به آخرین سرور انتخاب‌شده با حالت انتخابی در پنل کناری وصل می‌شود. اگر TUN به دسترسی مدیر نیاز داشته باشد و در دسترس نباشد، از حالت پروکسی استفاده می‌شود';
 
   @override
   String get settingsAutoConnectRequiresAutostart => 'اول «اجرا همراه ویندوز» را روشن کنید';
@@ -1437,25 +1413,13 @@ class AppLocalizationsFa extends AppLocalizations {
   String get hotkeyActionToggleConnection => 'اتصال / قطع اتصال';
 
   @override
-  String get hotkeyActionToggleConnectionDesc => 'تونل سرور فعال را روشن یا خاموش می‌کند';
-
-  @override
   String get hotkeyActionToggleTun => 'تغییر حالت TUN';
-
-  @override
-  String get hotkeyActionToggleTunDesc => 'بین پروکسی و TUN جابه‌جا می‌شود و در صورت نیاز دوباره وصل می‌کند';
 
   @override
   String get hotkeyActionBestPing => 'سرور با بهترین پینگ';
 
   @override
-  String get hotkeyActionBestPingDesc => 'به سروری با کمترین پینگ سوییچ می‌کند';
-
-  @override
   String get hotkeyActionToggleWindow => 'نمایش / پنهان کردن پنجره';
-
-  @override
-  String get hotkeyActionToggleWindowDesc => 'پنجره را از سینی سیستم برمی‌گرداند یا پنهان می‌کند';
 
   @override
   String get hotkeyNotSet => 'تعیین نشده';
@@ -1603,9 +1567,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversUnpin => 'برداشتن سنجاق';
 
   @override
-  String get serversPinDesc => 'سرورهای سنجاق‌شده بالای فهرست می‌مانند';
-
-  @override
   String get serversRename => 'تغییر نام';
 
   @override
@@ -1624,9 +1585,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get serversEditConfig => 'ویرایش کانفیگ';
-
-  @override
-  String get serversEditConfigDesc => 'SNI، اثر انگشت، انتقال و تنظیمات دیگر';
 
   @override
   String get serverEditorTitle => 'کانفیگ سرور';
@@ -1678,6 +1636,51 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get serverEditorSpx => 'SpiderX (spx)';
+
+  @override
+  String get serverEditorPinnedCert => 'گواهی پین‌شده (SHA-256)';
+
+  @override
+  String get serverEditorVerifyCertName => 'بررسی نام گواهی';
+
+  @override
+  String get serverEditorPqv => 'کلید پساکوانتومی (ML-DSA-65)';
+
+  @override
+  String get serverEditorEarlyData => 'داده زودهنگام، بایت';
+
+  @override
+  String get serverEditorPadding => 'لایی، بایت';
+
+  @override
+  String get serverEditorExtra => 'Extra (JSON)';
+
+  @override
+  String get serverEditorAuthority => 'Authority';
+
+  @override
+  String get serverEditorSeed => 'Seed';
+
+  @override
+  String get serverEditorHttpMethod => 'روش HTTP';
+
+  @override
+  String get serverEditorIssueVision => 'Vision فقط روی TCP با TLS یا REALITY کار می‌کند.';
+
+  @override
+  String get serverEditorIssueFlow => 'هسته این flow را نمی‌شناسد و کل پیکربندی را رد می‌کند.';
+
+  @override
+  String get serverEditorIssueRealityTransport => 'REALITY روی این ترابری اجرا نمی‌شود.';
+
+  @override
+  String get serverEditorIssueRealityKey => 'REALITY به کلید عمومی سرور نیاز دارد.';
+
+  @override
+  String get serverEditorIssueEncryption => 'Encryption باید none یا کلید mlkem768x25519plus باشد.';
+
+  @override
+  String get serverEditorIssueNoSecurity => 'بدون TLS، REALITY یا Encryption هسته تنها نشانی‌های خصوصی را می‌پذیرد.';
 
   @override
   String get serverEditorTransportType => 'نوع';
@@ -1761,40 +1764,22 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceAmoled => 'مشکی کامل (AMOLED)';
 
   @override
-  String get appearanceAmoledSubtitle => 'مشکی واقعی در پوستهٔ تیره — روی OLED کم‌مصرف‌تر';
-
-  @override
   String get appearanceAmoledNeedsDark => 'با روشن بودن پوستهٔ تیره در دسترس است';
 
   @override
   String get appearanceHaptics => 'بازخورد لمسی';
 
   @override
-  String get appearanceHapticsSubtitle => 'لرزش هنگام اتصال و زدن روی تب‌ها و سرورها';
-
-  @override
   String get appearanceShowTraffic => 'نمایش ترافیک';
-
-  @override
-  String get appearanceShowTrafficSubtitle => 'نشان دادن سرعت و مصرف داده زیر دکمهٔ اتصال';
 
   @override
   String get appearanceShowTime => 'نمایش زمان اتصال';
 
   @override
-  String get appearanceShowTimeSubtitle => 'نشان دادن مدت نشست زیر دکمهٔ اتصال';
-
-  @override
   String get appearanceShowTrafficSplit => 'نمایش جداگانهٔ وی‌پی‌ان و مستقیم';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => 'به جای چیپ‌های مشترک، برای هر مسیر یک بلوک: از تونل و مستقیم. تنها هستهٔ mihomo آن را می‌شمارد.';
-
-  @override
   String get appearanceWaveLatencyColor => 'رنگ نوار بر پایهٔ تأخیر';
-
-  @override
-  String get appearanceWaveLatencyColorSubtitle => 'سبز، نارنجی یا قرمز بر پایهٔ پینگ سرور فعال';
 
   @override
   String get appearanceFontTitle => 'قلم';
@@ -1857,9 +1842,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsPermTunPasswordlessTitle => 'TUN بدون رمز';
 
   @override
-  String get settingsPermTunPasswordlessSubtitle => 'اجرای حالت TUN بدون وارد کردن هر بارهٔ رمز polkit';
-
-  @override
   String get settingsPermTunDisabled => 'TUN بدون رمز غیرفعال است';
 
   @override
@@ -1869,19 +1851,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceNotifSpeedTitle => 'سرعت اتصال در اعلان';
 
   @override
-  String get appearanceNotifSpeedSubtitle => 'نمایش سرعت ↓/↑ در اعلان وضعیت VPN';
-
-  @override
   String get appearanceNotifUptimeTitle => 'زمان اتصال در اعلان';
 
   @override
-  String get appearanceNotifUptimeSubtitle => 'نمایش مدت نشست در اعلان وضعیت VPN';
-
-  @override
   String get appearanceNotifSubUpdatesTitle => 'اعلان به‌روزرسانی اشتراک';
-
-  @override
-  String get appearanceNotifSubUpdatesSubtitle => 'وقتی اشتراک‌ها در پس‌زمینه به‌روز می‌شوند خبر بده';
 
   @override
   String get tunRememberTitle => 'اجازه به خاطر سپرده شود؟';
@@ -2367,9 +2340,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get subscriptionCardThemeInServers => 'نمایش در فهرست سرورها';
 
   @override
-  String get subscriptionCardThemeInServersHint => 'تصویر سربرگ گروه را هم پر می‌کند. رنگ‌های گرفته‌شده از آن در هر حالت باقی می‌مانند.';
-
-  @override
   String get subscriptionCardLookTitle => 'ظاهر کارت';
 
   @override
@@ -2386,9 +2356,6 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get subscriptionCardVeilStrong => 'زیاد';
-
-  @override
-  String get subscriptionCardVeilHint => 'متن روی سمت چپ تصویر قرار می‌گیرد. بدون تیرگی، روی عکس روشن گم می‌شود.';
 
   @override
   String get subscriptionCardContentTitle => 'چه چیزی نمایش داده شود';

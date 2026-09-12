@@ -47,6 +47,9 @@ const _machineLocalKeys = <String>{
   // Десктопные флаги: на телефоне бессмысленны, на другом десктопе — сюрприз.
   'minimizeToTray',
   'launchAtStartup',
+  // И то, чем именно он поднимается: задача планировщика заведена на пути
+  // этого exe и на SID этого пользователя — на другой машине пустой звук.
+  'launchAtStartupElevated',
   'hotkeys',
   'linuxTunRememberDismissed',
   // Состояние отладки, а не настройка: перевезти включённый debug на чистую

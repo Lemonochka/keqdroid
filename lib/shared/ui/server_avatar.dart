@@ -6,6 +6,65 @@ import '../../models/server_flag.dart';
 import 'app_theme.dart';
 import 'expressive_elements.dart';
 
+/// Чем красить кружок сервера, у которого нет флага.
+///
+/// Не константа: цвет протокола — опознавательный знак для тех, у кого много
+/// серверов, но на чужой палитре синий кружок выпадает из темы, и просили
+/// именно этого — чтобы подстраивался. Выбор живёт в настройках внешнего вида.
+enum ServerIconPalette {
+  /// Цвет протокола: синий vless, зелёный ss и так далее.
+  protocol,
+
+  /// Тон акцента текущей темы — один на все протоколы.
+  themed,
+}
+
+/// Выбор едет расширением темы, а не параметром виджета: [ServerAvatar] лежит
+/// в shared/ui, провайдеров не знает, и рисуют его в том числе те места, куда
+/// настройку пришлось бы тащить через три слоя (строка списка, узел цепочки).
+class ServerIconPaletteTheme extends ThemeExtension<ServerIconPaletteTheme> {
+  const ServerIconPaletteTheme({this.palette = ServerIconPalette.themed});
+
+  final ServerIconPalette palette;
+
+  static ServerIconPalette of(BuildContext context) =>
+      Theme.of(context).extension<ServerIconPaletteTheme>()?.palette ??
+      ServerIconPalette.themed;
+
+  @override
+  ServerIconPaletteTheme copyWith({ServerIconPalette? palette}) =>
+      ServerIconPaletteTheme(palette: palette ?? this.palette);
+
+  /// Величина дискретная, промежуточных состояний нет — как и у формы иконок.
+  @override
+  ServerIconPaletteTheme lerp(
+    ThemeExtension<ServerIconPaletteTheme>? other,
+    double t,
+  ) {
+    if (other is! ServerIconPaletteTheme) return this;
+    return t < 0.5 ? this : other;
+  }
+}
+
+/// Фон кружка без флага и цвет буквы на нём.
+///
+/// В режиме темы это тональная пара акцента — та же, что у контейнеров по
+/// всему приложению, поэтому кружок садится в палитру при любом пресете.
+({Color background, Color foreground}) serverIconColors(
+  BuildContext context,
+  String protocol,
+) =>
+    switch (ServerIconPaletteTheme.of(context)) {
+      ServerIconPalette.themed => (
+          background: AppTheme.accentContainer(context),
+          foreground: AppTheme.onAccentContainer(context),
+        ),
+      ServerIconPalette.protocol => (
+          background: serverProtocolColor(context, protocol),
+          foreground: Colors.white,
+        ),
+    };
+
 /// Цвет протокола сервера.
 ///
 /// Оттенки свои (протокол — это идентичность сервера, роль схемы её не
@@ -154,23 +213,30 @@ class ServerAvatar extends StatelessWidget {
         : _FlatFlag(art: flat, size: size);
   }
 
-  Widget _protocolBadge(BuildContext context) => ColoredBox(
-    color: serverProtocolColor(context, protocol),
-    child: Center(
-      // У цепочки первая буква («C») ничего не сообщает и путается с custom —
-      // рисуем звенья.
-      child: protocol == 'chain'
-          ? Icon(Icons.link_rounded, size: size * 0.5, color: Colors.white)
-          : Text(
-              protocol.isNotEmpty ? protocol[0].toUpperCase() : '?',
-              style: TextStyle(
-                fontSize: size * 0.35,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+  Widget _protocolBadge(BuildContext context) {
+    final colors = serverIconColors(context, protocol);
+    return ColoredBox(
+      color: colors.background,
+      child: Center(
+        // У цепочки первая буква («C») ничего не сообщает и путается с custom —
+        // рисуем звенья.
+        child: protocol == 'chain'
+            ? Icon(
+                Icons.link_rounded,
+                size: size * 0.5,
+                color: colors.foreground,
+              )
+            : Text(
+                protocol.isNotEmpty ? protocol[0].toUpperCase() : '?',
+                style: TextStyle(
+                  fontSize: size * 0.35,
+                  fontWeight: FontWeight.w700,
+                  color: colors.foreground,
+                ),
               ),
-            ),
-    ),
-  );
+      ),
+    );
+  }
 }
 
 /// Рисунок полотнища: горизонтальные полосы (сверху вниз) либо клетка, плюс

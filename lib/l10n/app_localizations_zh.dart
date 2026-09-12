@@ -262,28 +262,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingDirectTitle => '直连（绕过 VPN）';
 
   @override
-  String get settingsRoutingDirectDesc => '此列表中的域名和 IP 将直接连接，不经过 VPN。';
-
-  @override
   String get settingsRoutingProxyTitle => '代理（强制 VPN）';
 
   @override
-  String get settingsRoutingProxyDesc => '此列表中的域名和 IP 始终经过 VPN。';
-
-  @override
   String get settingsRoutingBlockTitle => '已阻止';
-
-  @override
-  String get settingsRoutingBlockDesc => '此列表中的域名和 IP 将被丢弃且永不连接。';
 
   @override
   String get settingsRoutingValuesHint => '每行一个，或用逗号分隔';
 
   @override
   String get settingsRoutingFinalTitle => '其余流量';
-
-  @override
-  String get settingsRoutingFinalDesc => '规则之外流量的默认动作。';
 
   @override
   String get settingsRoutingFinalProxy => '代理';
@@ -389,16 +377,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeUseDynamicColors => '使用 Android 动态颜色';
 
   @override
-  String get themeUseDynamicColorsSubtitle => '在 Android 提供时';
-
-  @override
   String get themePaletteHint => '浅色/深色仍可单独切换';
 
   @override
   String get themeUseSystemColors => '使用系统强调色';
-
-  @override
-  String get themeUseSystemColorsSubtitle => '来自 Windows 或 Linux 的强调色';
 
   @override
   String get themeColorThemesTitle => '颜色主题';
@@ -407,7 +389,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversTwoColumnsTitle => '服务器双列显示';
 
   @override
-  String get serversTwoColumnsSubtitle => '以双列显示服务器，屏幕可容纳更多内容';
+  String get appearanceServerIconThemeColors => '无国旗图标使用主题配色';
 
   @override
   String get settingsLanProxyTitle => 'LAN 代理';
@@ -468,7 +450,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayCoreTitle => '内核设置';
 
   @override
-  String get settingsXrayCoreSubtitle => '端口、DNS、XMUX、TUN、日志与路由';
+  String get settingsXrayCoreSubtitle => '端口、DNS、TUN、日志与路由';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -510,7 +492,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayMuxEnable => '启用 Mux';
 
   @override
-  String get settingsXrayMuxEnableHint => '多条连接复用一条：握手更少，但下载和测速通常更差。仅 xray 内核。';
+  String get settingsXrayMuxEnableHint => '多条连接复用一条：握手更少，但下载和测速通常更差。';
 
   @override
   String get settingsXrayMuxParamsTitle => '每条连接的子连接数';
@@ -597,7 +579,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayFragmentEnable => '拆分 TLS ClientHello';
 
   @override
-  String get settingsXrayFragmentEnableHint => '首包分片发送，DPI 读不到 SNI。仅 Xray 内核。';
+  String get settingsXrayFragmentEnableHint => '首包分片发送，DPI 读不到 SNI。';
 
   @override
   String get settingsXrayNoiseSection => 'UDP 噪声';
@@ -606,7 +588,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayNoiseEnable => 'UDP 前发送噪声';
 
   @override
-  String get settingsXrayNoiseEnableHint => '在第一个真实数据包之前先向服务器发一个垃圾包。用于 hysteria 和 mkcp——它们没有可切分的 ClientHello。仅 xray 内核。';
+  String get settingsXrayNoiseEnableHint => '在第一个真实数据包之前先向服务器发一个垃圾包。用于 hysteria 和 mkcp——它们没有可切分的 ClientHello。';
 
   @override
   String get settingsXrayNoiseKindTitle => '发送什么';
@@ -666,7 +648,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunSection => 'TUN 模式';
 
   @override
-  String get settingsTunSectionNote => 'sing-box TUN 接口选项（桌面端）。下次连接时生效。';
+  String get settingsTunSectionNote => '下次连接时生效。';
 
   @override
   String get settingsTunStackTitle => '网络栈';
@@ -726,7 +708,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunIpv6 => '把 IPv6 留在隧道内';
 
   @override
-  String get settingsTunIpv6Hint => '为 TUN 接口分配 IPv6 地址；否则所有 IPv6 都绕过隧道。仅 Xray/keqrnel 内核。';
+  String get settingsTunIpv6Hint => '为 TUN 接口分配 IPv6 地址；否则所有 IPv6 都绕过隧道。';
 
   @override
   String get settingsMihomoSection => 'mihomo 内核';
@@ -735,7 +717,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsMihomoFakeIp => 'Fake IP';
 
   @override
-  String get settingsMihomoFakeIpHint => '用假地址即时解析。仅在 mihomo 掌管隧道时生效：TUN 与 Android。';
+  String get settingsMihomoFakeIpHint => '用假地址即时解析。代理模式下不生效。';
 
   @override
   String get settingsPingTitle => '服务器 Ping';
@@ -1078,9 +1060,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAppSettings => '应用设置';
 
   @override
-  String get settingsAppSettingsHint => '路由、DNS、外观、延迟、语言。端口、局域网共享和 TUN 除外。';
-
-  @override
   String get settingsImport => '导入';
 
   @override
@@ -1260,19 +1239,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsMinimizeToTray => '关闭时最小化到托盘';
 
   @override
-  String get settingsMinimizeToTrayHint => '关闭后应用不会退出';
-
-  @override
   String get settingsLaunchAtStartup => '随 Windows 启动';
 
   @override
-  String get settingsLaunchAtStartupHint => '登录系统时启动应用';
+  String get settingsLaunchAtStartupAdmin => '以管理员权限启动';
+
+  @override
+  String get settingsAutostartAdminFailed => '未获得管理员权限';
 
   @override
   String get settingsAutoConnectOnAutostart => '启动时自动连接';
-
-  @override
-  String get settingsAutoConnectOnAutostartHint => '连接上次选择的服务器，使用侧栏中的模式。TUN 需要管理员权限，否则使用 Proxy';
 
   @override
   String get settingsAutoConnectRequiresAutostart => '请先启用「随 Windows 启动」';
@@ -1437,25 +1413,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hotkeyActionToggleConnection => '连接 / 断开';
 
   @override
-  String get hotkeyActionToggleConnectionDesc => '切换当前服务器的隧道';
-
-  @override
   String get hotkeyActionToggleTun => '切换 TUN 模式';
-
-  @override
-  String get hotkeyActionToggleTunDesc => '在 Proxy 与 TUN 之间切换，必要时自动重连';
 
   @override
   String get hotkeyActionBestPing => '最低延迟服务器';
 
   @override
-  String get hotkeyActionBestPingDesc => '切换到延迟最低的服务器';
-
-  @override
   String get hotkeyActionToggleWindow => '显示 / 隐藏窗口';
-
-  @override
-  String get hotkeyActionToggleWindowDesc => '从托盘恢复窗口或将其隐藏';
 
   @override
   String get hotkeyNotSet => '未设置';
@@ -1603,9 +1567,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversUnpin => '取消置顶';
 
   @override
-  String get serversPinDesc => '置顶的服务器始终显示在列表顶部';
-
-  @override
   String get serversRename => '重命名';
 
   @override
@@ -1624,9 +1585,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get serversEditConfig => '编辑配置';
-
-  @override
-  String get serversEditConfigDesc => 'SNI、指纹、传输方式等参数';
 
   @override
   String get serverEditorTitle => '服务器配置';
@@ -1678,6 +1636,51 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get serverEditorSpx => 'SpiderX (spx)';
+
+  @override
+  String get serverEditorPinnedCert => '固定证书（SHA-256）';
+
+  @override
+  String get serverEditorVerifyCertName => '校验证书名称';
+
+  @override
+  String get serverEditorPqv => '后量子密钥（ML-DSA-65）';
+
+  @override
+  String get serverEditorEarlyData => '前置数据（字节）';
+
+  @override
+  String get serverEditorPadding => '填充（字节）';
+
+  @override
+  String get serverEditorExtra => 'Extra（JSON）';
+
+  @override
+  String get serverEditorAuthority => 'Authority';
+
+  @override
+  String get serverEditorSeed => 'Seed';
+
+  @override
+  String get serverEditorHttpMethod => 'HTTP 方法';
+
+  @override
+  String get serverEditorIssueVision => 'Vision 仅在 TCP 配合 TLS 或 REALITY 时可用。';
+
+  @override
+  String get serverEditorIssueFlow => '内核不认识该 flow，会拒绝整份配置。';
+
+  @override
+  String get serverEditorIssueRealityTransport => 'REALITY 无法在该传输上运行。';
+
+  @override
+  String get serverEditorIssueRealityKey => 'REALITY 需要服务端公钥。';
+
+  @override
+  String get serverEditorIssueEncryption => 'Encryption 只能是 none 或 mlkem768x25519plus 密钥。';
+
+  @override
+  String get serverEditorIssueNoSecurity => '没有 TLS、REALITY 或 Encryption，内核只允许连接私有地址。';
 
   @override
   String get serverEditorTransportType => '类型';
@@ -1761,40 +1764,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceAmoled => '纯黑 (AMOLED)';
 
   @override
-  String get appearanceAmoledSubtitle => '深色主题用纯黑背景，OLED 更省电';
-
-  @override
   String get appearanceAmoledNeedsDark => '需要开启深色主题';
 
   @override
   String get appearanceHaptics => '触感反馈';
 
   @override
-  String get appearanceHapticsSubtitle => '连接、切换标签页和选择服务器时振动';
-
-  @override
   String get appearanceShowTraffic => '显示流量';
-
-  @override
-  String get appearanceShowTrafficSubtitle => '连接按钮下方的速度和流量信息';
 
   @override
   String get appearanceShowTime => '显示连接时长';
 
   @override
-  String get appearanceShowTimeSubtitle => '连接按钮下方的会话时长';
-
-  @override
   String get appearanceShowTrafficSplit => '分开显示代理与直连';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => '不再显示共用信息，而是按线路各占一块：走隧道与直连。仅 mihomo 内核支持。';
-
-  @override
   String get appearanceWaveLatencyColor => '按延迟为指示条着色';
-
-  @override
-  String get appearanceWaveLatencyColorSubtitle => '按当前服务器的延迟显示绿色、橙色或红色';
 
   @override
   String get appearanceFontTitle => '字体';
@@ -1857,9 +1842,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPermTunPasswordlessTitle => '免密码 TUN';
 
   @override
-  String get settingsPermTunPasswordlessSubtitle => '启动 TUN 模式时无需每次输入 polkit 密码';
-
-  @override
   String get settingsPermTunDisabled => '已关闭免密码 TUN';
 
   @override
@@ -1869,19 +1851,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceNotifSpeedTitle => '通知中的连接速度';
 
   @override
-  String get appearanceNotifSpeedSubtitle => '在 VPN 状态通知中显示 ↓/↑ 速度';
-
-  @override
   String get appearanceNotifUptimeTitle => '通知中的连接时间';
 
   @override
-  String get appearanceNotifUptimeSubtitle => '在 VPN 状态通知中显示会话时长';
-
-  @override
   String get appearanceNotifSubUpdatesTitle => '订阅更新通知';
-
-  @override
-  String get appearanceNotifSubUpdatesSubtitle => '后台更新订阅后发送通知';
 
   @override
   String get tunRememberTitle => '记住授权？';
@@ -2365,9 +2338,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subscriptionCardThemeInServers => '在服务器列表中显示';
 
   @override
-  String get subscriptionCardThemeInServersHint => '图片也会填充分组标题栏。无论是否开启，从图片取到的配色都会保留。';
-
-  @override
   String get subscriptionCardLookTitle => '卡片外观';
 
   @override
@@ -2384,9 +2354,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get subscriptionCardVeilStrong => '重';
-
-  @override
-  String get subscriptionCardVeilHint => '文字位于图片左侧上方。不压暗时，浅色照片上的文字会看不清。';
 
   @override
   String get subscriptionCardContentTitle => '显示内容';

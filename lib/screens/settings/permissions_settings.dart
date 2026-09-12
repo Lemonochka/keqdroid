@@ -251,7 +251,6 @@ class _LinuxTunPasswordlessTileState
           ? ShapeLoadingIndicator(size: 24, color: accent)
           : Icon(Icons.lock_open_rounded, color: accent),
       title: Text(l10n.settingsPermTunPasswordlessTitle),
-      subtitle: Text(l10n.settingsPermTunPasswordlessSubtitle),
     );
   }
 }

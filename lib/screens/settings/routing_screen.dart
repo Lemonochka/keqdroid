@@ -250,7 +250,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             color: AppTheme.green(context),
             icon: Icons.call_made_rounded,
             title: l10n.settingsRoutingDirectTitle,
-            desc: l10n.settingsRoutingDirectDesc,
             controller: _directRules,
             hint: 'ru, vk.com, .example.com, 10.0.0.0/8',
             l10n: l10n,
@@ -263,7 +262,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             color: AppTheme.accent(context),
             icon: Icons.vpn_lock_rounded,
             title: l10n.settingsRoutingProxyTitle,
-            desc: l10n.settingsRoutingProxyDesc,
             controller: _proxyRules,
             hint: 'youtube.com, discord.com, 1.1.1.1',
             l10n: l10n,
@@ -276,7 +274,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             color: AppTheme.red(context),
             icon: Icons.block_rounded,
             title: l10n.settingsRoutingBlockTitle,
-            desc: l10n.settingsRoutingBlockDesc,
             controller: _blockedRules,
             hint: 'doubleclick.net, 0.0.0.0/8',
             l10n: l10n,
@@ -337,14 +334,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            l10n.settingsRoutingFinalDesc,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: AppTheme.textLight(context)),
           ),
           const SizedBox(height: 12),
           // Связанная группа кнопок вместо трёх самодельных плиток с рамкой в
@@ -790,7 +779,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     required Color color,
     required IconData icon,
     required String title,
-    required String desc,
     required TextEditingController controller,
     required String hint,
     required AppLocalizations l10n,
@@ -850,14 +838,6 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                   onPressed: () => _showGeoCodePicker(field, geoIndex),
                 ),
             ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            desc,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(color: AppTheme.textLight(context)),
           ),
           const SizedBox(height: 10),
           TextField(

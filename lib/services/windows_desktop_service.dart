@@ -21,14 +21,58 @@ class WindowsDesktopService {
     await _channel.invokeMethod<void>('setMinimizeToTray', {
       'enabled': settings.minimizeToTray,
     });
-    await _channel.invokeMethod<void>('setLaunchAtStartup', {
-      'enabled': settings.launchAtStartup,
-    });
+    // allowElevation здесь снят: это приведение системы к сохранённым
+    // настройкам при запуске, и спрашивать UAC на каждом запуске нельзя.
+    await applyLaunchAtStartup(
+      enabled: settings.launchAtStartup,
+      elevated: settings.launchAtStartupElevated,
+    );
+  }
+
+  /// Приводит автозапуск Windows к заданному виду.
+  ///
+  /// [elevated] — стартовать сразу с правами администратора (задача
+  /// планировщика вместо ключа Run). Создать или снести такую задачу может
+  /// только администратор, поэтому смена этого режима требует [allowElevation]
+  /// и показывает UAC — один раз, а не при каждом входе в систему.
+  ///
+  /// false — задачу не создали и не удалили (отказ от UAC, нет прав). Обычный
+  /// автозапуск при этом уже выставлен, приложение стартовать будет.
+  static Future<bool> applyLaunchAtStartup({
+    required bool enabled,
+    required bool elevated,
+    bool allowElevation = false,
+  }) async {
+    if (!Platform.isWindows) return false;
+    try {
+      return await _channel.invokeMethod<bool>('setLaunchAtStartup', {
+            'enabled': enabled,
+            'elevated': elevated,
+            'allowElevation': allowElevation,
+          }) ??
+          false;
+    } on PlatformException {
+      return false;
+    }
   }
 
   static Future<bool> isLaunchAtStartupEnabled() async {
     if (!Platform.isWindows) return false;
     return await _channel.invokeMethod<bool>('isLaunchAtStartup') ?? false;
+  }
+
+  /// Есть ли задача планировщика, поднимающая именно этот exe.
+  ///
+  /// Спрашивается у системы, а не у настроек: задачу могли снести руками, а
+  /// папку с приложением — перенести, и тогда сохранённый флаг врёт.
+  static Future<bool> isLaunchAtStartupElevated() async {
+    if (!Platform.isWindows) return false;
+    try {
+      return await _channel.invokeMethod<bool>('isLaunchAtStartupElevated') ??
+          false;
+    } on PlatformException {
+      return false;
+    }
   }
 
   static Future<bool> isProcessElevated() async {

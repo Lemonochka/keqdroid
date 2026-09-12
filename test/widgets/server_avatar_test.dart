@@ -148,4 +148,48 @@ void main() {
       expect(tester.getSize(find.byType(ServerAvatar)), const Size(40, 40));
     });
   });
+
+  group('кружок без флага', () {
+    // Просьба пользователей: «пусть иконка сервера без локации подстраивается
+    // под цвета темы, а не будет синей». Цвет стал настройкой, поэтому тест
+    // сторожит оба её положения.
+    Widget host(ServerIconPalette palette) => MaterialApp(
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF)),
+            extensions: [ServerIconPaletteTheme(palette: palette)],
+          ),
+          home: const Scaffold(
+            body: Center(child: ServerAvatar(flag: null, protocol: 'vless')),
+          ),
+        );
+
+    Color background(WidgetTester tester) => tester
+        .widget<ColoredBox>(
+          find.descendant(
+            of: find.byType(ServerAvatar),
+            matching: find.byType(ColoredBox),
+          ),
+        )
+        .color;
+
+    testWidgets('по умолчанию — тон акцента темы', (tester) async {
+      await tester.pumpWidget(host(ServerIconPalette.themed));
+      final scheme =
+          ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF));
+      expect(background(tester), scheme.primaryContainer);
+      // Буква остаётся читаемой: цвет из той же тональной пары, не белый.
+      expect(
+        tester.widget<Text>(find.text('V')).style!.color,
+        scheme.onPrimaryContainer,
+      );
+    });
+
+    testWidgets('с выключенной настройкой — цвет протокола', (tester) async {
+      await tester.pumpWidget(host(ServerIconPalette.protocol));
+      final scheme =
+          ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF));
+      expect(background(tester), isNot(scheme.primaryContainer));
+      expect(tester.widget<Text>(find.text('V')).style!.color, Colors.white);
+    });
+  });
 }

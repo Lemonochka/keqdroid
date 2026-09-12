@@ -104,6 +104,22 @@ class AppSettings {
   final bool minimizeToTray;
   /// Windows: запуск вместе с системой.
   final bool launchAtStartup;
+
+  /// Windows: автозапуск сразу с правами администратора.
+  ///
+  /// Обычный автозапуск поднимает приложение неповышенным, и TUN каждый раз
+  /// требует перезапуска с UAC. Здесь вместо ключа Run заводится задача
+  /// планировщика, которую Windows запускает уже с правами. Флаг — намерение
+  /// пользователя; есть ли задача на самом деле, знает только система, и экран
+  /// настроек сверяется с ней при открытии.
+  final bool launchAtStartupElevated;
+  /// Значок сервера без флага — в цветах темы, а не в цвете протокола.
+  ///
+  /// Просили пользователи: на своей палитре синий кружок vless выпадает из
+  /// темы. Выключенная настройка возвращает цвета протоколов — по ним сервер
+  /// узнаётся, когда их много.
+  final bool serverIconThemeColors;
+
   /// Ядро: `keqrnel` (единое ядро со встроенным xray, дефолт) или `chain`
   /// (связка xray → sing-box; только если явно сохранён в настройках).
   final String coreEngine;
@@ -226,6 +242,8 @@ class AppSettings {
     this.appLanguageCode = 'system',
     this.minimizeToTray = true,
     this.launchAtStartup = false,
+    this.launchAtStartupElevated = false,
+    this.serverIconThemeColors = true,
     this.coreEngine = coreEngineKeqrnel,
     this.vpnCore = vpnCoreAuto,
     this.mihomoFakeIp = false,
@@ -282,6 +300,8 @@ class AppSettings {
     'appLanguageCode': appLanguageCode,
     'minimizeToTray': minimizeToTray,
     'launchAtStartup': launchAtStartup,
+    'launchAtStartupElevated': launchAtStartupElevated,
+    'serverIconThemeColors': serverIconThemeColors,
     'coreEngine': coreEngine,
     'vpnCore': vpnCore,
     'mihomoFakeIp': mihomoFakeIp,
@@ -367,6 +387,9 @@ class AppSettings {
       ),
       minimizeToTray: json['minimizeToTray'] as bool? ?? true,
       launchAtStartup: json['launchAtStartup'] as bool? ?? false,
+      launchAtStartupElevated:
+          json['launchAtStartupElevated'] as bool? ?? false,
+      serverIconThemeColors: json['serverIconThemeColors'] as bool? ?? true,
       coreEngine: normalizeCoreEngine(json['coreEngine'] as String?),
       vpnCore: normalizeVpnCore(json['vpnCore'] as String?),
       mihomoFakeIp: json['mihomoFakeIp'] as bool? ?? false,
@@ -540,6 +563,8 @@ class AppSettings {
     String? appLanguageCode,
     bool? minimizeToTray,
     bool? launchAtStartup,
+    bool? launchAtStartupElevated,
+    bool? serverIconThemeColors,
     String? coreEngine,
     String? vpnCore,
     bool? mihomoFakeIp,
@@ -595,6 +620,10 @@ class AppSettings {
         appLanguageCode: appLanguageCode ?? this.appLanguageCode,
         minimizeToTray: minimizeToTray ?? this.minimizeToTray,
         launchAtStartup: launchAtStartup ?? this.launchAtStartup,
+        launchAtStartupElevated:
+            launchAtStartupElevated ?? this.launchAtStartupElevated,
+        serverIconThemeColors:
+            serverIconThemeColors ?? this.serverIconThemeColors,
         coreEngine: coreEngine ?? this.coreEngine,
         vpnCore: vpnCore ?? this.vpnCore,
         mihomoFakeIp: mihomoFakeIp ?? this.mihomoFakeIp,
@@ -678,6 +707,8 @@ class AppSettings {
               appLanguageCode == other.appLanguageCode &&
               minimizeToTray == other.minimizeToTray &&
               launchAtStartup == other.launchAtStartup &&
+              launchAtStartupElevated == other.launchAtStartupElevated &&
+              serverIconThemeColors == other.serverIconThemeColors &&
               coreEngine == other.coreEngine &&
               vpnCore == other.vpnCore &&
               mihomoFakeIp == other.mihomoFakeIp &&
@@ -743,6 +774,8 @@ class AppSettings {
     appLanguageCode,
     minimizeToTray,
     launchAtStartup,
+    launchAtStartupElevated,
+    serverIconThemeColors,
     coreEngine,
     vpnCore,
     mihomoFakeIp,

@@ -104,6 +104,7 @@ class SettingsBackupService {
     'fontId',
     'amoledBlack',
     'serversTwoColumns',
+    'serverIconThemeColors',
     'uiScale',
     'hapticFeedback',
     'showTrafficStats',

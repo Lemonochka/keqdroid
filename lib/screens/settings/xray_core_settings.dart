@@ -144,6 +144,10 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
     final settings =
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final accent = AppTheme.accent(context);
+    // Экран общий для обоих ядер, но половина его разделов — поля конфига
+    // ровно одного из них. Раньше стояли все сразу, а про то, что раздел не
+    // про твоё ядро, было сказано мелким шрифтом под переключателем.
+    final xray = ref.watch(activeVpnBackendProvider) == VpnBackend.xray;
 
     return ExpressivePage(
       title: l10n.settingsXrayCoreTitle,
@@ -171,19 +175,22 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
         // название экрана, зато первым делом занимала полтора сантиметра
         // высоты и отодвигала настройки вниз.
         const _LocalPortsSection(),
+        // DNS и общие настройки читают оба ядра: mihomo собирает свой dns-блок
+        // и сниффер из них же (mihomo_config_gen).
         const _XrayDnsSection(),
-        const _XrayMuxSection(),
-        const _XrayXmuxSection(),
-        const _XrayFragmentSection(),
-        const _XrayNoiseSection(),
+        // Мультиплексирование, фрагментация и шум — поля аутбаунда xray.
+        if (xray) ...[
+          const _XrayMuxSection(),
+          const _XrayXmuxSection(),
+          const _XrayFragmentSection(),
+          const _XrayNoiseSection(),
+        ],
         const _XrayGeneralSection(),
-        // sing-box TUN есть только на десктопе: Android держит TUN через
-        // VpnService, эти опции там ни на что не влияют.
+        // TUN есть только на десктопе: на Android интерфейс поднимает
+        // VpnService, и эти поля туда не едут. Ядру при этом всё равно —
+        // стек, MTU и маршруты читают оба.
         if (Platform.isWindows || Platform.isLinux) const _XrayTunSection(),
-        // mihomo поставляется на всех трёх платформах, поэтому секция здесь
-        // безусловна — в отличие от TUN-настроек выше, которые описывают
-        // sing-box-инбаунд и на Android не значат ничего.
-        const _XrayMihomoSection(),
+        if (!xray) const _XrayMihomoSection(),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: () => _resetDefaults(settings),
@@ -218,6 +225,9 @@ class _XrayDnsSection extends ConsumerWidget {
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final core = settings.xrayCore;
     final accent = AppTheme.accent(context);
+    // Сами серверы и стратегию запросов mihomo читает (собирает из них свой
+    // dns-блок), а раздельного резолвера и отключения кэша у него нет вовсе.
+    final xray = ref.watch(activeVpnBackendProvider) == VpnBackend.xray;
     return Column(
       // Дети слайвера растягиваются по ширине сами. Column по умолчанию
       // центрирует, и без stretch карточки схлопнулись бы по содержимому.
@@ -259,16 +269,18 @@ class _XrayDnsSection extends ConsumerWidget {
               duration: const Duration(milliseconds: 200),
               sizeCurve: Curves.easeOutCubic,
             ),
-            SwitchListTile(
-              value: core.dnsSplitDirectDomains,
-              onChanged: (v) =>
-                  _saveXrayCore(ref, settings, core.copyWith(dnsSplitDirectDomains: v)),
-              activeThumbColor: accent,
-              title: Text(l10n.settingsXrayDnsSplitDirect),
-              subtitle: Text(
-                l10n.settingsXrayDnsSplitDirectHint,
+            if (xray)
+              SwitchListTile(
+                value: core.dnsSplitDirectDomains,
+                onChanged: (v) => _saveXrayCore(
+                  ref,
+                  settings,
+                  core.copyWith(dnsSplitDirectDomains: v),
+                ),
+                activeThumbColor: accent,
+                title: Text(l10n.settingsXrayDnsSplitDirect),
+                subtitle: Text(l10n.settingsXrayDnsSplitDirectHint),
               ),
-            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
@@ -296,13 +308,17 @@ class _XrayDnsSection extends ConsumerWidget {
                 ],
               ),
             ),
-            SwitchListTile(
-              value: core.dnsDisableCache,
-              onChanged: (v) =>
-                  _saveXrayCore(ref, settings, core.copyWith(dnsDisableCache: v)),
-              activeThumbColor: accent,
-              title: Text(l10n.settingsXrayDnsDisableCache),
-            ),
+            if (xray)
+              SwitchListTile(
+                value: core.dnsDisableCache,
+                onChanged: (v) => _saveXrayCore(
+                  ref,
+                  settings,
+                  core.copyWith(dnsDisableCache: v),
+                ),
+                activeThumbColor: accent,
+                title: Text(l10n.settingsXrayDnsDisableCache),
+              ),
           ],
         ),
       ],
@@ -1056,6 +1072,10 @@ class _XrayGeneralSection extends ConsumerWidget {
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final core = settings.xrayCore;
     final accent = AppTheme.accent(context);
+    // Уровень лога и сниффер читают оба ядра, а вот стратегию доменов mihomo
+    // не спрашивает: резолвить ли IP-правила, он решает сам по тому, есть ли
+    // они и снят ли sniffingRouteOnly (buildRules).
+    final xray = ref.watch(activeVpnBackendProvider) == VpnBackend.xray;
     return Column(
       // Дети слайвера растягиваются по ширине сами. Column по умолчанию
       // центрирует, и без stretch карточки схлопнулись бы по содержимому.
@@ -1092,35 +1112,42 @@ class _XrayGeneralSection extends ConsumerWidget {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                l10n.settingsXrayDomainStrategy,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(color: AppTheme.text(context)),
+            if (xray) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  l10n.settingsXrayDomainStrategy,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(color: AppTheme.text(context)),
+                ),
               ),
-            ),
-            RadioGroup<String>(
-              groupValue: core.routingDomainStrategy,
-              onChanged: (v) {
-                if (v != null) {
-                  _saveXrayCore(ref, settings, core.copyWith(routingDomainStrategy: v));
-                }
-              },
-              child: Column(
-                children: [
-                  for (final strategy in XrayCoreSettings.routingDomainStrategies)
-                    _xrayChoiceTile(
-                      context: context,
-                      value: strategy,
-                      accent: accent,
-                      title: strategy,
-                    ),
-                ],
+              RadioGroup<String>(
+                groupValue: core.routingDomainStrategy,
+                onChanged: (v) {
+                  if (v != null) {
+                    _saveXrayCore(
+                      ref,
+                      settings,
+                      core.copyWith(routingDomainStrategy: v),
+                    );
+                  }
+                },
+                child: Column(
+                  children: [
+                    for (final strategy
+                        in XrayCoreSettings.routingDomainStrategies)
+                      _xrayChoiceTile(
+                        context: context,
+                        value: strategy,
+                        accent: accent,
+                        title: strategy,
+                      ),
+                  ],
+                ),
               ),
-            ),
+            ],
             SwitchListTile(
               value: core.sniffingEnabled,
               onChanged: (v) {
@@ -1175,6 +1202,9 @@ class _XrayTunSection extends ConsumerWidget {
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final tun = settings.tun;
     final accent = AppTheme.accent(context);
+    // Стек, MTU, маршруты и strict-route уезжают в tun-блок обоих ядер, а вот
+    // этих полей у mihomo нет вовсе: они из конфига sing-box.
+    final xray = ref.watch(activeVpnBackendProvider) == VpnBackend.xray;
     return Column(
       // Дети слайвера растягиваются по ширине сами. Column по умолчанию
       // центрирует, и без stretch карточки схлопнулись бы по содержимому.
@@ -1256,26 +1286,28 @@ class _XrayTunSection extends ConsumerWidget {
                       },
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _XrayCoreTextField(
-                      key: ValueKey('tun_udp_${tun.udpTimeoutSec}'),
-                      label: l10n.settingsTunUdpTimeout,
-                      hint: '${TunSettings.defaultUdpTimeoutSec}',
-                      initialValue: '${tun.udpTimeoutSec}',
-                      keyboardType: TextInputType.number,
-                      onSave: (v) {
-                        final n = int.tryParse(v.trim());
-                        if (n == null) return;
-                        _saveXrayTun(ref, 
-                          settings,
-                          tun.copyWith(
-                            udpTimeoutSec: TunSettings.clampUdpTimeout(n),
-                          ),
-                        );
-                      },
+                  if (xray) const SizedBox(width: 10),
+                  if (xray)
+                    Expanded(
+                      child: _XrayCoreTextField(
+                        key: ValueKey('tun_udp_${tun.udpTimeoutSec}'),
+                        label: l10n.settingsTunUdpTimeout,
+                        hint: '${TunSettings.defaultUdpTimeoutSec}',
+                        initialValue: '${tun.udpTimeoutSec}',
+                        keyboardType: TextInputType.number,
+                        onSave: (v) {
+                          final n = int.tryParse(v.trim());
+                          if (n == null) return;
+                          _saveXrayTun(
+                            ref,
+                            settings,
+                            tun.copyWith(
+                              udpTimeoutSec: TunSettings.clampUdpTimeout(n),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -1289,12 +1321,13 @@ class _XrayTunSection extends ConsumerWidget {
                       l10n.settingsTunMtuHint,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      l10n.settingsTunUdpTimeoutHint,
+                  if (xray) const SizedBox(width: 10),
+                  if (xray)
+                    Expanded(
+                      child: Text(
+                        l10n.settingsTunUdpTimeoutHint,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -1345,24 +1378,24 @@ class _XrayTunSection extends ConsumerWidget {
                 ],
               ),
             ),
-            AnimatedOpacity(
-              opacity: tun.stack != TunSettings.stackSystem ? 1 : 0.45,
-              duration: const Duration(milliseconds: 180),
-              child: SwitchListTile(
-                value: tun.endpointIndependentNat,
-                onChanged: tun.stack != TunSettings.stackSystem
-                    ? (v) => _saveXrayTun(ref, 
-                          settings,
-                          tun.copyWith(endpointIndependentNat: v),
-                        )
-                    : null,
-                activeThumbColor: accent,
-                title: Text(l10n.settingsTunEin),
-                subtitle: Text(
-                  l10n.settingsTunEinHint,
+            if (xray)
+              AnimatedOpacity(
+                opacity: tun.stack != TunSettings.stackSystem ? 1 : 0.45,
+                duration: const Duration(milliseconds: 180),
+                child: SwitchListTile(
+                  value: tun.endpointIndependentNat,
+                  onChanged: tun.stack != TunSettings.stackSystem
+                      ? (v) => _saveXrayTun(
+                            ref,
+                            settings,
+                            tun.copyWith(endpointIndependentNat: v),
+                          )
+                      : null,
+                  activeThumbColor: accent,
+                  title: Text(l10n.settingsTunEin),
+                  subtitle: Text(l10n.settingsTunEinHint),
                 ),
               ),
-            ),
             SwitchListTile(
               value: tun.autoRoute,
               onChanged: (v) =>
@@ -1373,16 +1406,15 @@ class _XrayTunSection extends ConsumerWidget {
                 l10n.settingsTunAutoRouteHint,
               ),
             ),
-            SwitchListTile(
-              value: tun.blockIpv6Leak,
-              onChanged: (v) =>
-                  _saveXrayTun(ref, settings, tun.copyWith(blockIpv6Leak: v)),
-              activeThumbColor: accent,
-              title: Text(l10n.settingsTunIpv6),
-              subtitle: Text(
-                l10n.settingsTunIpv6Hint,
+            if (xray)
+              SwitchListTile(
+                value: tun.blockIpv6Leak,
+                onChanged: (v) =>
+                    _saveXrayTun(ref, settings, tun.copyWith(blockIpv6Leak: v)),
+                activeThumbColor: accent,
+                title: Text(l10n.settingsTunIpv6),
+                subtitle: Text(l10n.settingsTunIpv6Hint),
               ),
-            ),
           ],
         ),
       ],

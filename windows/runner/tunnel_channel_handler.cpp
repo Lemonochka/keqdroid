@@ -2,6 +2,7 @@
 #include "proxy_debug_log.h"
 #include "single_instance.h"
 #include "windows_apps_list.h"
+#include "windows_autostart.h"
 #include "windows_core_lifecycle.h"
 #include "windows_hotkeys.h"
 #include "windows_traffic_stats.h"
@@ -765,63 +766,6 @@ bool IsProcessElevated() {
   return ok && elevation.TokenIsElevated;
 }
 
-bool SetLaunchAtStartupEnabled(bool enable) {
-  const wchar_t kRunKey[] =
-      L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-  const wchar_t kValueName[] = L"KeqDroid";
-
-  HKEY key = nullptr;
-  if (::RegOpenKeyExW(HKEY_CURRENT_USER, kRunKey, 0,
-                      KEY_SET_VALUE | KEY_QUERY_VALUE,
-                      &key) != ERROR_SUCCESS) {
-    return false;
-  }
-
-  if (!enable) {
-    ::RegDeleteValueW(key, kValueName);
-    ::RegCloseKey(key);
-    return true;
-  }
-
-  wchar_t exe_path[MAX_PATH] = {};
-  const DWORD path_len = ::GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
-  if (path_len == 0 || path_len >= MAX_PATH) {
-    ::RegCloseKey(key);
-    return false;
-  }
-
-  std::wstring command = L"\"";
-  command += exe_path;
-  command += L"\" --autostart";
-  const LSTATUS status = ::RegSetValueExW(
-      key, kValueName, 0, REG_SZ,
-      reinterpret_cast<const BYTE*>(command.c_str()),
-      static_cast<DWORD>((command.size() + 1) * sizeof(wchar_t)));
-  ::RegCloseKey(key);
-  return status == ERROR_SUCCESS;
-}
-
-bool IsLaunchAtStartupEnabled() {
-  const wchar_t kRunKey[] =
-      L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-  const wchar_t kValueName[] = L"KeqDroid";
-
-  HKEY key = nullptr;
-  if (::RegOpenKeyExW(HKEY_CURRENT_USER, kRunKey, 0, KEY_QUERY_VALUE,
-                      &key) != ERROR_SUCCESS) {
-    return false;
-  }
-
-  wchar_t buffer[1024] = {};
-  DWORD buffer_size = sizeof(buffer);
-  DWORD type = 0;
-  const LSTATUS status = ::RegQueryValueExW(
-      key, kValueName, nullptr, &type,
-      reinterpret_cast<LPBYTE>(buffer), &buffer_size);
-  ::RegCloseKey(key);
-  return status == ERROR_SUCCESS && type == REG_SZ;
-}
-
 bool RestartAsAdministrator() {
   wchar_t exe_path[MAX_PATH] = {};
   if (::GetModuleFileNameW(nullptr, exe_path, MAX_PATH) == 0) {
@@ -1334,26 +1278,31 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
         }
 
         if (call.method_name() == "setLaunchAtStartup") {
-          bool enabled = false;
           const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
-          if (args) {
-            auto it = args->find(flutter::EncodableValue("enabled"));
-            if (it != args->end()) {
-              enabled = std::get<bool>(it->second);
-            }
-          }
-          if (!SetLaunchAtStartupEnabled(enabled)) {
-            result->Error("AUTOSTART_FAILED",
-                          "Failed to update Windows startup registry");
-            return;
-          }
-          result->Success();
+          const auto flag = [args](const char* key) {
+            if (args == nullptr) return false;
+            const auto it = args->find(flutter::EncodableValue(key));
+            if (it == args->end()) return false;
+            const auto* value = std::get_if<bool>(&it->second);
+            return value != nullptr && *value;
+          };
+          // Повышение прав просит только сам переключатель в настройках; на
+          // старте приложения (allowElevation == false) задача планировщика не
+          // трогается, и UAC не всплывает.
+          result->Success(flutter::EncodableValue(KeqdroidApplyAutostart(
+              flag("enabled"), flag("elevated"), flag("allowElevation"))));
           return;
         }
 
         if (call.method_name() == "isLaunchAtStartup") {
           result->Success(
-              flutter::EncodableValue(IsLaunchAtStartupEnabled()));
+              flutter::EncodableValue(KeqdroidIsAutostartEnabled()));
+          return;
+        }
+
+        if (call.method_name() == "isLaunchAtStartupElevated") {
+          result->Success(
+              flutter::EncodableValue(KeqdroidIsAutostartElevated()));
           return;
         }
 

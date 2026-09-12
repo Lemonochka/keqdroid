@@ -355,7 +355,6 @@ class _ServerTile extends ConsumerWidget {
                       title: server.isPinned
                           ? l10n.serversUnpin
                           : l10n.serversPin,
-                      subtitle: server.isPinned ? null : l10n.serversPinDesc,
                       accent: ExpressiveAccent.tertiary,
                       onTap: () {
                         Navigator.pop(context);
@@ -403,7 +402,6 @@ class _ServerTile extends ConsumerWidget {
                       ExpressiveActionTile(
                         icon: Icons.tune_rounded,
                         title: l10n.serversEditConfig,
-                        subtitle: l10n.serversEditConfigDesc,
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.of(context).push(

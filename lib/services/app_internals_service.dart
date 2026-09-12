@@ -301,7 +301,36 @@ class AppInternalsService {
       final device = manufacturer.isEmpty ? '' : ' · $manufacturer';
       return 'Android $release (API $sdk)$device';
     }
+    if (Platform.isWindows) return prettyWindowsVersion(Platform.operatingSystemVersion);
     return Platform.operatingSystemVersion;
+  }
+
+  /// Читаемое имя версии Windows.
+  ///
+  /// Сама Windows о себе врёт: у одиннадцатой в реестре по-прежнему записано
+  /// «Windows 10 Pro», и `Platform.operatingSystemVersion` отдаёт это как есть
+  /// — в панели на Windows 11 стояла десятка. Отличает их только номер сборки:
+  /// с 22000 начинается 11. Серверные редакции не трогаем: у них своя нумерация
+  /// имён (2019, 2022, 2025), и «11» там было бы новой ложью.
+  ///
+  /// Заодно уходят кавычки вокруг имени и «10.0» перед сборкой: номер сборки
+  /// говорит то же самое точнее.
+  static String prettyWindowsVersion(String raw) {
+    final quoted = RegExp(r'"([^"]+)"').firstMatch(raw);
+    if (quoted == null) return raw;
+    var name = quoted.group(1)!.trim();
+    final build = int.tryParse(
+      RegExp(r'\(Build\s+(\d+)', caseSensitive: false)
+              .firstMatch(raw)
+              ?.group(1) ??
+          '',
+    );
+    if (build != null &&
+        build >= 22000 &&
+        !name.toLowerCase().contains('server')) {
+      name = name.replaceFirst(RegExp(r'Windows\s*10'), 'Windows 11');
+    }
+    return build == null ? name : '$name (build $build)';
   }
 
   static String _abi(Map<String, Object?> android) {

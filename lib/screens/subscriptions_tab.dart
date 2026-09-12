@@ -1891,12 +1891,6 @@ class _CardThemePickerState extends State<_CardThemePicker> {
                 l10n.subscriptionCardThemeInServers,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
-              subtitle: Text(
-                l10n.subscriptionCardThemeInServersHint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textLight(context),
-                    ),
-              ),
             ),
           ),
       ],

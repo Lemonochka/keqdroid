@@ -107,13 +107,13 @@ class _ThemeCustomizationScreen extends ConsumerWidget {
 }
 
 /// Вкладка «Общие»: раскладка списка серверов и чипы статистики под кнопкой.
-class _AppearanceGeneralTab extends StatelessWidget {
+class _AppearanceGeneralTab extends ConsumerWidget {
   final AppSettings current;
   final Future<void> Function(AppSettings) onSave;
   const _AppearanceGeneralTab({required this.current, required this.onSave});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     return SmoothScroll(
       builder: (context, controller) => ListView(
@@ -148,15 +148,20 @@ class _AppearanceGeneralTab extends StatelessWidget {
               _AppearanceSwitchTile(
                 icon: Icons.view_column_rounded,
                 title: l10n.serversTwoColumnsTitle,
-                subtitle: l10n.serversTwoColumnsSubtitle,
                 value: current.serversTwoColumns,
                 onChanged: (v) =>
                     onSave(current.copyWith(serversTwoColumns: v)),
               ),
               _AppearanceSwitchTile(
+                icon: Icons.palette_outlined,
+                title: l10n.appearanceServerIconThemeColors,
+                value: current.serverIconThemeColors,
+                onChanged: (v) =>
+                    onSave(current.copyWith(serverIconThemeColors: v)),
+              ),
+              _AppearanceSwitchTile(
                 icon: Icons.swap_vert_rounded,
                 title: l10n.appearanceShowTraffic,
-                subtitle: l10n.appearanceShowTrafficSubtitle,
                 value: current.showTrafficStats,
                 // Включение гасит разбивку, и наоборот: чипы там и там одни и
                 // те же, просто в разном виде. Раньше включённая разбивка
@@ -164,17 +169,19 @@ class _AppearanceGeneralTab extends StatelessWidget {
                 // сломанным.
                 onChanged: (v) => onSave(current.withTrafficStats(v)),
               ),
-              _AppearanceSwitchTile(
-                icon: Icons.alt_route_rounded,
-                title: l10n.appearanceShowTrafficSplit,
-                subtitle: l10n.appearanceShowTrafficSplitSubtitle,
-                value: current.showTrafficSplit,
-                onChanged: (v) => onSave(current.withTrafficSplit(v)),
-              ),
+              // Разбивку по маршрутам считает только mihomo: xray отдаёт одну
+              // общую пару счётчиков, и на нём переключатель молча ничего не
+              // делал. Поэтому при его ядре его здесь просто нет.
+              if (ref.watch(activeVpnBackendProvider) == VpnBackend.mihomo)
+                _AppearanceSwitchTile(
+                  icon: Icons.alt_route_rounded,
+                  title: l10n.appearanceShowTrafficSplit,
+                  value: current.showTrafficSplit,
+                  onChanged: (v) => onSave(current.withTrafficSplit(v)),
+                ),
               _AppearanceSwitchTile(
                 icon: Icons.timer_rounded,
                 title: l10n.appearanceShowTime,
-                subtitle: l10n.appearanceShowTimeSubtitle,
                 value: current.showConnectionTime,
                 onChanged: (v) =>
                     onSave(current.copyWith(showConnectionTime: v)),
@@ -182,7 +189,6 @@ class _AppearanceGeneralTab extends StatelessWidget {
               _AppearanceSwitchTile(
                 icon: Icons.palette_rounded,
                 title: l10n.appearanceWaveLatencyColor,
-                subtitle: l10n.appearanceWaveLatencyColorSubtitle,
                 value: current.waveLatencyColor,
                 onChanged: (v) => onSave(current.copyWith(waveLatencyColor: v)),
               ),
@@ -199,7 +205,6 @@ class _AppearanceGeneralTab extends StatelessWidget {
                 _AppearanceSwitchTile(
                   icon: Icons.vibration_rounded,
                   title: l10n.appearanceHaptics,
-                  subtitle: l10n.appearanceHapticsSubtitle,
                   value: current.hapticFeedback,
                   onChanged: (v) =>
                       onSave(current.copyWith(hapticFeedback: v)),
@@ -213,7 +218,6 @@ class _AppearanceGeneralTab extends StatelessWidget {
               _AppearanceSwitchTile(
                 icon: Icons.speed_rounded,
                 title: l10n.appearanceNotifSpeedTitle,
-                subtitle: l10n.appearanceNotifSpeedSubtitle,
                 value: current.showSpeedInNotification,
                 onChanged: (v) =>
                     onSave(current.copyWith(showSpeedInNotification: v)),
@@ -221,7 +225,6 @@ class _AppearanceGeneralTab extends StatelessWidget {
               _AppearanceSwitchTile(
                 icon: Icons.timer_outlined,
                 title: l10n.appearanceNotifUptimeTitle,
-                subtitle: l10n.appearanceNotifUptimeSubtitle,
                 value: current.showUptimeInNotification,
                 onChanged: (v) =>
                     onSave(current.copyWith(showUptimeInNotification: v)),
@@ -229,7 +232,6 @@ class _AppearanceGeneralTab extends StatelessWidget {
               _AppearanceSwitchTile(
                 icon: Icons.sync_rounded,
                 title: l10n.appearanceNotifSubUpdatesTitle,
-                subtitle: l10n.appearanceNotifSubUpdatesSubtitle,
                 value: current.notifySubscriptionUpdates,
                 onChanged: (v) =>
                     onSave(current.copyWith(notifySubscriptionUpdates: v)),
@@ -256,7 +258,10 @@ class _AppearanceGeneralTab extends StatelessWidget {
 class _AppearanceSwitchTile extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String subtitle;
+
+  /// Обычно null: название говорит всё само. Остаётся там, где под рукой есть
+  /// то, чего из названия не узнать, — например, почему строка недоступна.
+  final String? subtitle;
   final bool value;
 
   /// null — настройка недоступна в текущем состоянии (AMOLED на светлой теме).
@@ -265,7 +270,7 @@ class _AppearanceSwitchTile extends StatelessWidget {
   const _AppearanceSwitchTile({
     required this.icon,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     required this.value,
     required this.onChanged,
   });
@@ -300,13 +305,14 @@ class _AppearanceSwitchTile extends StatelessWidget {
                         : AppTheme.textLight(context),
                   ),
                 ),
-                Text(
-                  subtitle,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textLight(context),
-                    height: 1.3,
+                if (subtitle case final subtitle?)
+                  Text(
+                    subtitle,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textLight(context),
+                      height: 1.3,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -667,9 +673,7 @@ class _AppearanceThemesTab extends StatelessWidget {
                 icon: Icons.contrast_rounded,
                 title: l10n.appearanceAmoled,
                 // Гасим, а не прячем: иначе он «пропадает» и его ищут.
-                subtitle: current.darkTheme
-                    ? l10n.appearanceAmoledSubtitle
-                    : l10n.appearanceAmoledNeedsDark,
+                subtitle: current.darkTheme ? null : l10n.appearanceAmoledNeedsDark,
                 value: current.amoledBlack,
                 onChanged: current.darkTheme
                     ? (v) => onSave(current.copyWith(amoledBlack: v))
@@ -682,9 +686,6 @@ class _AppearanceThemesTab extends StatelessWidget {
                 title: isDesktop
                     ? l10n.themeUseSystemColors
                     : l10n.themeUseDynamicColors,
-                subtitle: isDesktop
-                    ? l10n.themeUseSystemColorsSubtitle
-                    : l10n.themeUseDynamicColorsSubtitle,
                 value: current.followSystemTheme,
                 onChanged: (v) =>
                     onSave(current.copyWith(followSystemTheme: v)),

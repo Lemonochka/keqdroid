@@ -262,28 +262,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsRoutingDirectTitle => 'Напрямую (мимо VPN)';
 
   @override
-  String get settingsRoutingDirectDesc => 'Домены и IP из этого списка подключаются напрямую, без VPN.';
-
-  @override
   String get settingsRoutingProxyTitle => 'Через VPN';
 
   @override
-  String get settingsRoutingProxyDesc => 'Домены и IP из этого списка всегда идут через VPN.';
-
-  @override
   String get settingsRoutingBlockTitle => 'Заблокировано';
-
-  @override
-  String get settingsRoutingBlockDesc => 'Домены и IP из этого списка блокируются и не подключаются.';
 
   @override
   String get settingsRoutingValuesHint => 'По одному в строке или через запятую';
 
   @override
   String get settingsRoutingFinalTitle => 'Остальной трафик';
-
-  @override
-  String get settingsRoutingFinalDesc => 'Действие по умолчанию для трафика вне правил.';
 
   @override
   String get settingsRoutingFinalProxy => 'Прокси';
@@ -391,16 +379,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get themeUseDynamicColors => 'Использовать тему Android';
 
   @override
-  String get themeUseDynamicColorsSubtitle => 'Если Android их отдаёт';
-
-  @override
   String get themePaletteHint => 'Светлая/тёмная переключается отдельно';
 
   @override
   String get themeUseSystemColors => 'Использовать системные цвета';
-
-  @override
-  String get themeUseSystemColorsSubtitle => 'Акцент Windows или Linux';
 
   @override
   String get themeColorThemesTitle => 'Цветовые темы';
@@ -409,7 +391,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversTwoColumnsTitle => 'Список серверов в две колонки';
 
   @override
-  String get serversTwoColumnsSubtitle => 'Показывать серверы в две колонки — на экране помещается больше';
+  String get appearanceServerIconThemeColors => 'Значки без флага — в цветах темы';
 
   @override
   String get settingsLanProxyTitle => 'LAN прокси';
@@ -470,7 +452,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayCoreTitle => 'Настройки ядра';
 
   @override
-  String get settingsXrayCoreSubtitle => 'Порты, DNS, XMUX, TUN, лог и маршрутизация';
+  String get settingsXrayCoreSubtitle => 'Порты, DNS, TUN, лог и маршрутизация';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -512,7 +494,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayMuxEnable => 'Включить Mux';
 
   @override
-  String get settingsXrayMuxEnableHint => 'Несколько соединений внутри одного: меньше рукопожатий, но на загрузках и замерах скорости обычно хуже. Только ядро xray.';
+  String get settingsXrayMuxEnableHint => 'Несколько соединений внутри одного: меньше рукопожатий, но на загрузках и замерах скорости обычно хуже.';
 
   @override
   String get settingsXrayMuxParamsTitle => 'Потоков в одном соединении';
@@ -599,7 +581,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayFragmentEnable => 'Резать TLS ClientHello';
 
   @override
-  String get settingsXrayFragmentEnableHint => 'Первый пакет уходит кусками, и DPI не видит SNI. Только ядро xray.';
+  String get settingsXrayFragmentEnableHint => 'Первый пакет уходит кусками, и DPI не видит SNI.';
 
   @override
   String get settingsXrayNoiseSection => 'Шум перед UDP';
@@ -608,7 +590,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayNoiseEnable => 'Слать шум перед UDP';
 
   @override
-  String get settingsXrayNoiseEnableHint => 'Перед первым настоящим пакетом к серверу уходит мусор. Для hysteria и mkcp, где резать ClientHello нечего. Только ядро xray.';
+  String get settingsXrayNoiseEnableHint => 'Перед первым настоящим пакетом к серверу уходит мусор. Для hysteria и mkcp, где резать ClientHello нечего.';
 
   @override
   String get settingsXrayNoiseKindTitle => 'Чем шуметь';
@@ -668,7 +650,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunSection => 'TUN-режим';
 
   @override
-  String get settingsTunSectionNote => 'Опции TUN-интерфейса sing-box (десктоп). Применяются при следующем подключении.';
+  String get settingsTunSectionNote => 'Применяются при следующем подключении.';
 
   @override
   String get settingsTunStackTitle => 'Сетевой стек';
@@ -728,7 +710,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunIpv6 => 'Не выпускать IPv6 мимо туннеля';
 
   @override
-  String get settingsTunIpv6Hint => 'Даёт TUN-интерфейсу IPv6-адрес, иначе весь IPv6 идёт мимо туннеля. Только ядро xray/keqrnel.';
+  String get settingsTunIpv6Hint => 'Даёт TUN-интерфейсу IPv6-адрес, иначе весь IPv6 идёт мимо туннеля.';
 
   @override
   String get settingsMihomoSection => 'Ядро mihomo';
@@ -737,7 +719,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsMihomoFakeIp => 'Fake IP';
 
   @override
-  String get settingsMihomoFakeIpHint => 'Мгновенный резолв подменными адресами. Только там, где туннелем владеет mihomo: TUN и Android.';
+  String get settingsMihomoFakeIpHint => 'Мгновенный резолв подменными адресами. В режиме «Прокси» не работает.';
 
   @override
   String get settingsPingTitle => 'Пинг серверов';
@@ -1080,9 +1062,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsAppSettings => 'Настройки приложения';
 
   @override
-  String get settingsAppSettingsHint => 'Маршрутизация, DNS, вид, пинг, язык. Порты, LAN и TUN — нет.';
-
-  @override
   String get settingsImport => 'Импорт';
 
   @override
@@ -1262,19 +1241,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsMinimizeToTray => 'Сворачивать в трей при закрытии';
 
   @override
-  String get settingsMinimizeToTrayHint => 'Если выключено, закрытие окна завершает приложение';
-
-  @override
   String get settingsLaunchAtStartup => 'Запускать с Windows';
 
   @override
-  String get settingsLaunchAtStartupHint => 'Запуск при входе в систему';
+  String get settingsLaunchAtStartupAdmin => 'Запуск с правами администратора';
+
+  @override
+  String get settingsAutostartAdminFailed => 'Права администратора не выданы';
 
   @override
   String get settingsAutoConnectOnAutostart => 'Подключаться при автозапуске';
-
-  @override
-  String get settingsAutoConnectOnAutostartHint => 'Подключение к последнему серверу в режиме из боковой панели. Если для TUN нет прав администратора, используется Proxy';
 
   @override
   String get settingsAutoConnectRequiresAutostart => 'Сначала включите «Запускать с Windows»';
@@ -1439,25 +1415,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get hotkeyActionToggleConnection => 'Подключить / отключить';
 
   @override
-  String get hotkeyActionToggleConnectionDesc => 'Переключить туннель для активного сервера';
-
-  @override
   String get hotkeyActionToggleTun => 'Переключить режим TUN';
-
-  @override
-  String get hotkeyActionToggleTunDesc => 'Переключение между Proxy и TUN, при активном туннеле — с переподключением';
 
   @override
   String get hotkeyActionBestPing => 'Сервер с лучшим пингом';
 
   @override
-  String get hotkeyActionBestPingDesc => 'Переключиться на сервер с наименьшим пингом';
-
-  @override
   String get hotkeyActionToggleWindow => 'Показать / скрыть окно';
-
-  @override
-  String get hotkeyActionToggleWindowDesc => 'Развернуть окно из трея или спрятать его';
 
   @override
   String get hotkeyNotSet => 'Не задано';
@@ -1605,9 +1569,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversUnpin => 'Открепить сервер';
 
   @override
-  String get serversPinDesc => 'Закреплённый сервер всегда наверху списка';
-
-  @override
   String get serversRename => 'Переименовать';
 
   @override
@@ -1626,9 +1587,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get serversEditConfig => 'Редактировать конфигурацию';
-
-  @override
-  String get serversEditConfigDesc => 'SNI, fingerprint, транспорт и другие параметры';
 
   @override
   String get serverEditorTitle => 'Конфигурация сервера';
@@ -1680,6 +1638,51 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get serverEditorSpx => 'SpiderX (spx)';
+
+  @override
+  String get serverEditorPinnedCert => 'Закреплённый сертификат (SHA-256)';
+
+  @override
+  String get serverEditorVerifyCertName => 'Имя для проверки сертификата';
+
+  @override
+  String get serverEditorPqv => 'Постквантовый ключ (ML-DSA-65)';
+
+  @override
+  String get serverEditorEarlyData => 'Early data, байт';
+
+  @override
+  String get serverEditorPadding => 'Набивка, байт';
+
+  @override
+  String get serverEditorExtra => 'Extra (JSON)';
+
+  @override
+  String get serverEditorAuthority => 'Authority';
+
+  @override
+  String get serverEditorSeed => 'Seed';
+
+  @override
+  String get serverEditorHttpMethod => 'Метод HTTP';
+
+  @override
+  String get serverEditorIssueVision => 'Vision работает только на TCP с TLS или REALITY.';
+
+  @override
+  String get serverEditorIssueFlow => 'Такого flow ядро не знает и откажется от всего конфига.';
+
+  @override
+  String get serverEditorIssueRealityTransport => 'На этом транспорте REALITY не работает.';
+
+  @override
+  String get serverEditorIssueRealityKey => 'REALITY нужен публичный ключ сервера.';
+
+  @override
+  String get serverEditorIssueEncryption => 'Encryption — это none или ключ mlkem768x25519plus.';
+
+  @override
+  String get serverEditorIssueNoSecurity => 'Без TLS, REALITY и Encryption ядро пустит только в локальную сеть.';
 
   @override
   String get serverEditorTransportType => 'Тип';
@@ -1763,40 +1766,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceAmoled => 'Чистый чёрный (AMOLED)';
 
   @override
-  String get appearanceAmoledSubtitle => 'Чистый чёрный фон в тёмной теме — экономит заряд OLED';
-
-  @override
   String get appearanceAmoledNeedsDark => 'Доступно при включённой тёмной теме';
 
   @override
   String get appearanceHaptics => 'Тактильная отдача';
 
   @override
-  String get appearanceHapticsSubtitle => 'Вибрация при подключении, смене вкладки и выборе сервера';
-
-  @override
   String get appearanceShowTraffic => 'Показывать трафик';
-
-  @override
-  String get appearanceShowTrafficSubtitle => 'Чипы скорости и объёма трафика под кнопкой подключения';
 
   @override
   String get appearanceShowTime => 'Показывать время подключения';
 
   @override
-  String get appearanceShowTimeSubtitle => 'Чип длительности сессии под кнопкой подключения';
-
-  @override
   String get appearanceShowTrafficSplit => 'Показывать VPN и обход раздельно';
 
   @override
-  String get appearanceShowTrafficSplitSubtitle => 'Вместо общих чипов — свой блок на каждый маршрут: в туннель и мимо. Умеет только ядро mihomo.';
-
-  @override
   String get appearanceWaveLatencyColor => 'Красить индикатор по задержке';
-
-  @override
-  String get appearanceWaveLatencyColorSubtitle => 'Зелёная, оранжевая или красная по пингу активного сервера';
 
   @override
   String get appearanceFontTitle => 'Шрифт';
@@ -1859,9 +1844,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPermTunPasswordlessTitle => 'TUN без пароля';
 
   @override
-  String get settingsPermTunPasswordlessSubtitle => 'Запускать режим TUN без ввода пароля polkit каждый раз';
-
-  @override
   String get settingsPermTunDisabled => 'Беспарольный TUN выключен';
 
   @override
@@ -1871,19 +1853,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceNotifSpeedTitle => 'Скорость соединения в уведомлении';
 
   @override
-  String get appearanceNotifSpeedSubtitle => 'Показывать скорость ↓/↑ в уведомлении статуса VPN';
-
-  @override
   String get appearanceNotifUptimeTitle => 'Время подключения в уведомлении';
 
   @override
-  String get appearanceNotifUptimeSubtitle => 'Показывать длительность сессии в уведомлении статуса VPN';
-
-  @override
   String get appearanceNotifSubUpdatesTitle => 'Уведомления об обновлении подписок';
-
-  @override
-  String get appearanceNotifSubUpdatesSubtitle => 'Показывать уведомление после фонового обновления подписок';
 
   @override
   String get tunRememberTitle => 'Запомнить авторизацию?';
@@ -2372,9 +2345,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get subscriptionCardThemeInServers => 'Показывать в списке серверов';
 
   @override
-  String get subscriptionCardThemeInServersHint => 'Картинка заполнит и шапку группы. Цвета, взятые из неё, остаются в любом случае.';
-
-  @override
   String get subscriptionCardLookTitle => 'Оформление карточки';
 
   @override
@@ -2391,9 +2361,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get subscriptionCardVeilStrong => 'Плотное';
-
-  @override
-  String get subscriptionCardVeilHint => 'Текст лежит поверх картинки слева. Без затемнения он теряется на светлой фотографии.';
 
   @override
   String get subscriptionCardContentTitle => 'Что показывать';

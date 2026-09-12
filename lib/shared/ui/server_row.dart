@@ -278,7 +278,7 @@ class ChainRouteStrip extends StatelessWidget {
         width: dotSize,
         height: dotSize,
         decoration: BoxDecoration(
-          color: serverProtocolColor(context, hop.protocol),
+          color: serverIconColors(context, hop.protocol).background,
           shape: BoxShape.circle,
         ),
       );

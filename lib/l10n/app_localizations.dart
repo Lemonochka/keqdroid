@@ -575,35 +575,17 @@ abstract class AppLocalizations {
   /// **'Direct (bypass VPN)'**
   String get settingsRoutingDirectTitle;
 
-  /// No description provided for @settingsRoutingDirectDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Domains and IPs here connect directly, without the VPN.'**
-  String get settingsRoutingDirectDesc;
-
   /// No description provided for @settingsRoutingProxyTitle.
   ///
   /// In en, this message translates to:
   /// **'Proxy (force VPN)'**
   String get settingsRoutingProxyTitle;
 
-  /// No description provided for @settingsRoutingProxyDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Domains and IPs here always go through the VPN.'**
-  String get settingsRoutingProxyDesc;
-
   /// No description provided for @settingsRoutingBlockTitle.
   ///
   /// In en, this message translates to:
   /// **'Blocked'**
   String get settingsRoutingBlockTitle;
-
-  /// No description provided for @settingsRoutingBlockDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Domains and IPs here are dropped and never connect.'**
-  String get settingsRoutingBlockDesc;
 
   /// No description provided for @settingsRoutingValuesHint.
   ///
@@ -616,12 +598,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unmatched traffic'**
   String get settingsRoutingFinalTitle;
-
-  /// No description provided for @settingsRoutingFinalDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Default action for traffic outside the rules.'**
-  String get settingsRoutingFinalDesc;
 
   /// No description provided for @settingsRoutingFinalProxy.
   ///
@@ -803,12 +779,6 @@ abstract class AppLocalizations {
   /// **'Use Android dynamic colors'**
   String get themeUseDynamicColors;
 
-  /// No description provided for @themeUseDynamicColorsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'When Android provides them'**
-  String get themeUseDynamicColorsSubtitle;
-
   /// No description provided for @themePaletteHint.
   ///
   /// In en, this message translates to:
@@ -820,12 +790,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use system accent colors'**
   String get themeUseSystemColors;
-
-  /// No description provided for @themeUseSystemColorsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'From the Windows or Linux accent'**
-  String get themeUseSystemColorsSubtitle;
 
   /// No description provided for @themeColorThemesTitle.
   ///
@@ -839,11 +803,11 @@ abstract class AppLocalizations {
   /// **'Two-column server list'**
   String get serversTwoColumnsTitle;
 
-  /// No description provided for @serversTwoColumnsSubtitle.
+  /// No description provided for @appearanceServerIconThemeColors.
   ///
   /// In en, this message translates to:
-  /// **'Show servers in two columns to fit more on screen'**
-  String get serversTwoColumnsSubtitle;
+  /// **'Flagless icons in theme colours'**
+  String get appearanceServerIconThemeColors;
 
   /// No description provided for @settingsLanProxyTitle.
   ///
@@ -956,7 +920,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXrayCoreSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Ports, DNS, XMUX, TUN, log and routing'**
+  /// **'Ports, DNS, TUN, log and routing'**
   String get settingsXrayCoreSubtitle;
 
   /// No description provided for @settingsXrayDnsSection.
@@ -1040,7 +1004,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXrayMuxEnableHint.
   ///
   /// In en, this message translates to:
-  /// **'Many connections inside one: fewer handshakes, but usually worse on downloads and speed tests. Xray core only.'**
+  /// **'Many connections inside one: fewer handshakes, but usually worse on downloads and speed tests.'**
   String get settingsXrayMuxEnableHint;
 
   /// No description provided for @settingsXrayMuxParamsTitle.
@@ -1214,7 +1178,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXrayFragmentEnableHint.
   ///
   /// In en, this message translates to:
-  /// **'The first packet goes out in pieces, so DPI cannot read the SNI. Xray core only.'**
+  /// **'The first packet goes out in pieces, so DPI cannot read the SNI.'**
   String get settingsXrayFragmentEnableHint;
 
   /// No description provided for @settingsXrayNoiseSection.
@@ -1232,7 +1196,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXrayNoiseEnableHint.
   ///
   /// In en, this message translates to:
-  /// **'A junk packet goes to the server before the first real one. For hysteria and mkcp, where there is no ClientHello to cut. Xray core only.'**
+  /// **'A junk packet goes to the server before the first real one. For hysteria and mkcp, where there is no ClientHello to cut.'**
   String get settingsXrayNoiseEnableHint;
 
   /// No description provided for @settingsXrayNoiseKindTitle.
@@ -1352,7 +1316,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunSectionNote.
   ///
   /// In en, this message translates to:
-  /// **'sing-box TUN interface options (desktop). Applied on next connection.'**
+  /// **'Applied on next connection.'**
   String get settingsTunSectionNote;
 
   /// No description provided for @settingsTunStackTitle.
@@ -1472,7 +1436,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunIpv6Hint.
   ///
   /// In en, this message translates to:
-  /// **'Gives the TUN interface an IPv6 address; without it all IPv6 bypasses the tunnel. Xray/keqrnel core only.'**
+  /// **'Gives the TUN interface an IPv6 address; without it all IPv6 bypasses the tunnel.'**
   String get settingsTunIpv6Hint;
 
   /// No description provided for @settingsMihomoSection.
@@ -1490,7 +1454,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsMihomoFakeIpHint.
   ///
   /// In en, this message translates to:
-  /// **'Instant resolution via fake addresses. Only where mihomo owns the tunnel: TUN and Android.'**
+  /// **'Instant resolution via fake addresses. Not used in Proxy mode.'**
   String get settingsMihomoFakeIpHint;
 
   /// No description provided for @settingsPingTitle.
@@ -2129,12 +2093,6 @@ abstract class AppLocalizations {
   /// **'App settings'**
   String get settingsAppSettings;
 
-  /// No description provided for @settingsAppSettingsHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Routing, DNS, appearance, ping, language. Not ports, LAN sharing or TUN.'**
-  String get settingsAppSettingsHint;
-
   /// No description provided for @settingsImport.
   ///
   /// In en, this message translates to:
@@ -2465,35 +2423,29 @@ abstract class AppLocalizations {
   /// **'Minimize to tray on close'**
   String get settingsMinimizeToTray;
 
-  /// No description provided for @settingsMinimizeToTrayHint.
-  ///
-  /// In en, this message translates to:
-  /// **'When off, closing the window exits the app'**
-  String get settingsMinimizeToTrayHint;
-
   /// No description provided for @settingsLaunchAtStartup.
   ///
   /// In en, this message translates to:
   /// **'Start with Windows'**
   String get settingsLaunchAtStartup;
 
-  /// No description provided for @settingsLaunchAtStartupHint.
+  /// No description provided for @settingsLaunchAtStartupAdmin.
   ///
   /// In en, this message translates to:
-  /// **'Launch the app when you sign in'**
-  String get settingsLaunchAtStartupHint;
+  /// **'Start with admin rights'**
+  String get settingsLaunchAtStartupAdmin;
+
+  /// No description provided for @settingsAutostartAdminFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Administrator rights were not granted'**
+  String get settingsAutostartAdminFailed;
 
   /// No description provided for @settingsAutoConnectOnAutostart.
   ///
   /// In en, this message translates to:
   /// **'Connect on autostart'**
   String get settingsAutoConnectOnAutostart;
-
-  /// No description provided for @settingsAutoConnectOnAutostartHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Connect to the last selected server using the mode from the sidebar. If TUN needs admin rights and they are unavailable, Proxy is used'**
-  String get settingsAutoConnectOnAutostartHint;
 
   /// No description provided for @settingsAutoConnectRequiresAutostart.
   ///
@@ -2807,23 +2759,11 @@ abstract class AppLocalizations {
   /// **'Connect / disconnect'**
   String get hotkeyActionToggleConnection;
 
-  /// No description provided for @hotkeyActionToggleConnectionDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Toggle the tunnel for the active server'**
-  String get hotkeyActionToggleConnectionDesc;
-
   /// No description provided for @hotkeyActionToggleTun.
   ///
   /// In en, this message translates to:
   /// **'Toggle TUN mode'**
   String get hotkeyActionToggleTun;
-
-  /// No description provided for @hotkeyActionToggleTunDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Switch between Proxy and TUN, reconnecting if needed'**
-  String get hotkeyActionToggleTunDesc;
 
   /// No description provided for @hotkeyActionBestPing.
   ///
@@ -2831,23 +2771,11 @@ abstract class AppLocalizations {
   /// **'Best-ping server'**
   String get hotkeyActionBestPing;
 
-  /// No description provided for @hotkeyActionBestPingDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Switch to the server with the lowest ping'**
-  String get hotkeyActionBestPingDesc;
-
   /// No description provided for @hotkeyActionToggleWindow.
   ///
   /// In en, this message translates to:
   /// **'Show / hide window'**
   String get hotkeyActionToggleWindow;
-
-  /// No description provided for @hotkeyActionToggleWindowDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Restore the window from the tray or hide it'**
-  String get hotkeyActionToggleWindowDesc;
 
   /// No description provided for @hotkeyNotSet.
   ///
@@ -3131,12 +3059,6 @@ abstract class AppLocalizations {
   /// **'Unpin server'**
   String get serversUnpin;
 
-  /// No description provided for @serversPinDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Pinned servers stay on top of the list'**
-  String get serversPinDesc;
-
   /// No description provided for @serversRename.
   ///
   /// In en, this message translates to:
@@ -3172,12 +3094,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit configuration'**
   String get serversEditConfig;
-
-  /// No description provided for @serversEditConfigDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'SNI, fingerprint, transport and other settings'**
-  String get serversEditConfigDesc;
 
   /// No description provided for @serverEditorTitle.
   ///
@@ -3280,6 +3196,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'SpiderX (spx)'**
   String get serverEditorSpx;
+
+  /// No description provided for @serverEditorPinnedCert.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned certificate (SHA-256)'**
+  String get serverEditorPinnedCert;
+
+  /// No description provided for @serverEditorVerifyCertName.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify certificate name'**
+  String get serverEditorVerifyCertName;
+
+  /// No description provided for @serverEditorPqv.
+  ///
+  /// In en, this message translates to:
+  /// **'Post-quantum key (ML-DSA-65)'**
+  String get serverEditorPqv;
+
+  /// No description provided for @serverEditorEarlyData.
+  ///
+  /// In en, this message translates to:
+  /// **'Early data, bytes'**
+  String get serverEditorEarlyData;
+
+  /// No description provided for @serverEditorPadding.
+  ///
+  /// In en, this message translates to:
+  /// **'Padding, bytes'**
+  String get serverEditorPadding;
+
+  /// No description provided for @serverEditorExtra.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra (JSON)'**
+  String get serverEditorExtra;
+
+  /// No description provided for @serverEditorAuthority.
+  ///
+  /// In en, this message translates to:
+  /// **'Authority'**
+  String get serverEditorAuthority;
+
+  /// No description provided for @serverEditorSeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Seed'**
+  String get serverEditorSeed;
+
+  /// No description provided for @serverEditorHttpMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP method'**
+  String get serverEditorHttpMethod;
+
+  /// No description provided for @serverEditorIssueVision.
+  ///
+  /// In en, this message translates to:
+  /// **'Vision only works on TCP with TLS or REALITY.'**
+  String get serverEditorIssueVision;
+
+  /// No description provided for @serverEditorIssueFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'The core does not know this flow and will refuse the whole config.'**
+  String get serverEditorIssueFlow;
+
+  /// No description provided for @serverEditorIssueRealityTransport.
+  ///
+  /// In en, this message translates to:
+  /// **'REALITY does not run over this transport.'**
+  String get serverEditorIssueRealityTransport;
+
+  /// No description provided for @serverEditorIssueRealityKey.
+  ///
+  /// In en, this message translates to:
+  /// **'REALITY needs the server public key.'**
+  String get serverEditorIssueRealityKey;
+
+  /// No description provided for @serverEditorIssueEncryption.
+  ///
+  /// In en, this message translates to:
+  /// **'Encryption must be none or an mlkem768x25519plus key.'**
+  String get serverEditorIssueEncryption;
+
+  /// No description provided for @serverEditorIssueNoSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Without TLS, REALITY or Encryption the core only allows private addresses.'**
+  String get serverEditorIssueNoSecurity;
 
   /// No description provided for @serverEditorTransportType.
   ///
@@ -3443,12 +3449,6 @@ abstract class AppLocalizations {
   /// **'Pure black (AMOLED)'**
   String get appearanceAmoled;
 
-  /// No description provided for @appearanceAmoledSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'True black in the dark theme — saves OLED power'**
-  String get appearanceAmoledSubtitle;
-
   /// No description provided for @appearanceAmoledNeedsDark.
   ///
   /// In en, this message translates to:
@@ -3461,23 +3461,11 @@ abstract class AppLocalizations {
   /// **'Haptic feedback'**
   String get appearanceHaptics;
 
-  /// No description provided for @appearanceHapticsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Vibrate on connect, tab and server taps'**
-  String get appearanceHapticsSubtitle;
-
   /// No description provided for @appearanceShowTraffic.
   ///
   /// In en, this message translates to:
   /// **'Show traffic'**
   String get appearanceShowTraffic;
-
-  /// No description provided for @appearanceShowTrafficSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Speed and data usage chips under the connect button'**
-  String get appearanceShowTrafficSubtitle;
 
   /// No description provided for @appearanceShowTime.
   ///
@@ -3485,35 +3473,17 @@ abstract class AppLocalizations {
   /// **'Show connection time'**
   String get appearanceShowTime;
 
-  /// No description provided for @appearanceShowTimeSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Session duration chip under the connect button'**
-  String get appearanceShowTimeSubtitle;
-
   /// No description provided for @appearanceShowTrafficSplit.
   ///
   /// In en, this message translates to:
   /// **'Show VPN and direct apart'**
   String get appearanceShowTrafficSplit;
 
-  /// No description provided for @appearanceShowTrafficSplitSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'A block per route, through the tunnel and direct, instead of the shared chips. Only the mihomo core can count it.'**
-  String get appearanceShowTrafficSplitSubtitle;
-
   /// No description provided for @appearanceWaveLatencyColor.
   ///
   /// In en, this message translates to:
   /// **'Colour the indicator by latency'**
   String get appearanceWaveLatencyColor;
-
-  /// No description provided for @appearanceWaveLatencyColorSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Green, amber or red by the active server\'s ping'**
-  String get appearanceWaveLatencyColorSubtitle;
 
   /// No description provided for @appearanceFontTitle.
   ///
@@ -3635,12 +3605,6 @@ abstract class AppLocalizations {
   /// **'Passwordless TUN'**
   String get settingsPermTunPasswordlessTitle;
 
-  /// No description provided for @settingsPermTunPasswordlessSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Start TUN mode without entering the polkit password each time'**
-  String get settingsPermTunPasswordlessSubtitle;
-
   /// No description provided for @settingsPermTunDisabled.
   ///
   /// In en, this message translates to:
@@ -3659,35 +3623,17 @@ abstract class AppLocalizations {
   /// **'Connection speed in notification'**
   String get appearanceNotifSpeedTitle;
 
-  /// No description provided for @appearanceNotifSpeedSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show ↓/↑ speed in the VPN status notification'**
-  String get appearanceNotifSpeedSubtitle;
-
   /// No description provided for @appearanceNotifUptimeTitle.
   ///
   /// In en, this message translates to:
   /// **'Connection time in notification'**
   String get appearanceNotifUptimeTitle;
 
-  /// No description provided for @appearanceNotifUptimeSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show session uptime in the VPN status notification'**
-  String get appearanceNotifUptimeSubtitle;
-
   /// No description provided for @appearanceNotifSubUpdatesTitle.
   ///
   /// In en, this message translates to:
   /// **'Subscription update notifications'**
   String get appearanceNotifSubUpdatesTitle;
-
-  /// No description provided for @appearanceNotifSubUpdatesSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Notify when subscriptions refresh in the background'**
-  String get appearanceNotifSubUpdatesSubtitle;
 
   /// No description provided for @tunRememberTitle.
   ///
@@ -4595,12 +4541,6 @@ abstract class AppLocalizations {
   /// **'Show in server list'**
   String get subscriptionCardThemeInServers;
 
-  /// No description provided for @subscriptionCardThemeInServersHint.
-  ///
-  /// In en, this message translates to:
-  /// **'The picture also fills the group header. Colours taken from it stay either way.'**
-  String get subscriptionCardThemeInServersHint;
-
   /// No description provided for @subscriptionCardLookTitle.
   ///
   /// In en, this message translates to:
@@ -4636,12 +4576,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Heavy'**
   String get subscriptionCardVeilStrong;
-
-  /// No description provided for @subscriptionCardVeilHint.
-  ///
-  /// In en, this message translates to:
-  /// **'The text sits over the left side of the picture. Without dimming it can get lost on a light photo.'**
-  String get subscriptionCardVeilHint;
 
   /// No description provided for @subscriptionCardContentTitle.
   ///
