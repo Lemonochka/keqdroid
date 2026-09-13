@@ -386,10 +386,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get themeColorThemesTitle => 'Farbthemen';
 
   @override
-  String get serversTwoColumnsTitle => 'Serverliste in zwei Spalten';
+  String get serversTwoColumnsTitle => 'Zwei Spalten';
 
   @override
-  String get appearanceServerIconThemeColors => 'Icons ohne Flagge in Themenfarben';
+  String get appearanceServerIconThemeColors => 'Server-Icons ohne Flagge in Themenfarben';
 
   @override
   String get settingsLanProxyTitle => 'LAN-Proxy';
@@ -450,7 +450,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayCoreTitle => 'Kern-Einstellungen';
 
   @override
-  String get settingsXrayCoreSubtitle => 'Ports, DNS, TUN, Log und Routing';
+  String get settingsXrayCoreSubtitle => 'DNS, Mux, Fragmentierung, TUN und Logs';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -528,10 +528,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayDomainStrategy => 'Routing-Domainstrategie';
 
   @override
-  String get settingsXraySniffing => 'Inbound-Sniffing';
+  String get settingsXraySniffing => 'Domains im Verkehr erkennen (Sniffing)';
 
   @override
-  String get settingsXraySniffingRouteOnly => 'Sniffing nur für Routing';
+  String get settingsXraySniffingRouteOnly => 'Erkannte Domain nur fürs Routing';
 
   @override
   String get settingsXrayDnsDefaultNote => 'Standard: Cloudflare und Google DoH';
@@ -744,13 +744,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsPingMethodUrlHint => 'Misst die GET-Latenz über den Server';
 
   @override
-  String get settingsPingKeepAliveTitle => 'Messung';
+  String get settingsPingKeepAliveTitle => 'Art der Messung';
 
   @override
-  String get settingsPingKeepAlive => 'Keep-alive';
+  String get settingsPingKeepAlive => 'Auf warmer Verbindung messen';
 
   @override
-  String get settingsPingKeepAliveHint => 'Antwortzeit ohne Handshake. Aus — die ganze Anfrage, wie ein Browser sie sieht';
+  String get settingsPingKeepAliveHint => 'Die Anfrage geht zweimal raus, gezählt wird die zweite — ohne Handshake. Aus: eine einzige Anfrage samt Aufwärmen, wie beim ersten Öffnen einer Seite.';
 
   @override
   String get settingsPingMethodSpeed => 'Geschwindigkeitstest';
@@ -855,6 +855,39 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get subscriptionIdentitySectionUsed => 'Bereits verwendet';
+
+  @override
+  String get subscriptionIdentitySectionUaAndroid => 'Android-Clients';
+
+  @override
+  String get subscriptionIdentitySectionUaApple => 'iPhone- und iPad-Clients';
+
+  @override
+  String get subscriptionIdentitySectionUaDesktop => 'Desktop-Clients';
+
+  @override
+  String get subscriptionIdentitySectionUaCores => 'Cores und nacktes HTTP';
+
+  @override
+  String get subscriptionIdentitySectionOs => 'Betriebssysteme';
+
+  @override
+  String get subscriptionIdentitySectionApple => 'iPhone und iPad';
+
+  @override
+  String get subscriptionIdentitySectionDesktop => 'Desktop';
+
+  @override
+  String get subscriptionIdentitySectionAndroidRelease => 'Android — Release';
+
+  @override
+  String get subscriptionIdentitySectionAndroidBuild => 'Android — Build';
+
+  @override
+  String get subscriptionIdentitySectionIosRelease => 'iOS — Release';
+
+  @override
+  String get subscriptionIdentitySectionIosBuild => 'iOS — Build';
 
   @override
   String get subscriptionIdentitySearchOrEnter => 'Suchen oder eigenen Wert eingeben';
@@ -1078,6 +1111,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String settingsImportedSections(int count) {
     return 'Importiert: $count Abschnitt(e)';
   }
+
+  @override
+  String get settingsShareHwidTitle => 'Geräte-HWID teilen';
+
+  @override
+  String get settingsShareHwidOn => 'Wird mit Abo-Anfragen gesendet';
+
+  @override
+  String get settingsShareHwidOff => 'Wird nicht gesendet';
 
   @override
   String get settingsDebugMode => 'Debug-Modus';
@@ -1413,10 +1455,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get hotkeyActionToggleConnection => 'Verbinden / Trennen';
 
   @override
-  String get hotkeyActionToggleTun => 'TUN-Modus umschalten';
+  String get hotkeyActionToggleTun => 'TUN / Proxy umschalten';
 
   @override
-  String get hotkeyActionBestPing => 'Server mit bestem Ping';
+  String get hotkeyActionBestPing => 'Zum Server mit bestem Ping wechseln';
 
   @override
   String get hotkeyActionToggleWindow => 'Fenster zeigen / verstecken';
@@ -1767,19 +1809,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appearanceAmoledNeedsDark => 'Verfügbar bei aktiviertem dunklen Design';
 
   @override
-  String get appearanceHaptics => 'Haptisches Feedback';
+  String get appearanceHaptics => 'Vibration';
 
   @override
-  String get appearanceShowTraffic => 'Datenverkehr anzeigen';
+  String get appearanceShowTraffic => 'Tempo und Datenmenge';
 
   @override
-  String get appearanceShowTime => 'Verbindungsdauer anzeigen';
+  String get appearanceShowTime => 'Verbindungsdauer';
 
   @override
-  String get appearanceShowTrafficSplit => 'VPN und direkt getrennt anzeigen';
+  String get appearanceShowTrafficSplit => 'VPN- und Direkt-Verkehr getrennt';
 
   @override
-  String get appearanceWaveLatencyColor => 'Anzeige nach Latenz färben';
+  String get appearanceWaveLatencyColor => 'Wellenfarbe nach Ping';
 
   @override
   String get appearanceFontTitle => 'Schriftart';
@@ -1836,7 +1878,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsPermRevokeHint => 'Jede Berechtigung lässt sich in den System-App-Einstellungen widerrufen.';
 
   @override
-  String get settingsPermTunHeader => 'TUN-MODUS (LINUX)';
+  String get settingsPermTunHeader => 'TUN-Modus (Linux)';
 
   @override
   String get settingsPermTunPasswordlessTitle => 'TUN ohne Passwort';
@@ -1845,7 +1887,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsPermTunDisabled => 'TUN ohne Passwort deaktiviert';
 
   @override
-  String get appearanceNotifSectionTitle => 'BENACHRICHTIGUNG';
+  String get appearanceNotifSectionTitle => 'Benachrichtigungen';
 
   @override
   String get appearanceNotifSpeedTitle => 'Verbindungsgeschwindigkeit in Benachrichtigung';
@@ -2394,10 +2436,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appearanceIconShapeArch => 'Bogen';
 
   @override
-  String get appearanceSectionServers => 'Serverliste und Startbildschirm';
+  String get appearanceSectionServers => 'Serverliste';
 
   @override
-  String get appearanceSectionFeel => 'Design und Feedback';
+  String get appearanceSectionUnderButton => 'Unter dem Verbinden-Button';
+
+  @override
+  String get appearanceSectionFeel => 'Touch-Feedback';
 
   @override
   String get appearanceIconShapeClover => 'Kleeblatt';

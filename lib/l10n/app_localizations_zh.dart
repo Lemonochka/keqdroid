@@ -386,10 +386,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeColorThemesTitle => '颜色主题';
 
   @override
-  String get serversTwoColumnsTitle => '服务器双列显示';
+  String get serversTwoColumnsTitle => '两列显示';
 
   @override
-  String get appearanceServerIconThemeColors => '无国旗图标使用主题配色';
+  String get appearanceServerIconThemeColors => '无国旗的服务器图标使用主题配色';
 
   @override
   String get settingsLanProxyTitle => 'LAN 代理';
@@ -450,7 +450,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayCoreTitle => '内核设置';
 
   @override
-  String get settingsXrayCoreSubtitle => '端口、DNS、TUN、日志与路由';
+  String get settingsXrayCoreSubtitle => 'DNS、Mux、分片、TUN 与日志';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -528,10 +528,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayDomainStrategy => '路由域名策略';
 
   @override
-  String get settingsXraySniffing => '入站嗅探';
+  String get settingsXraySniffing => '识别流量中的域名（嗅探）';
 
   @override
-  String get settingsXraySniffingRouteOnly => '仅用于路由的嗅探';
+  String get settingsXraySniffingRouteOnly => '嗅探到的域名仅用于路由';
 
   @override
   String get settingsXrayDnsDefaultNote => '默认：Cloudflare 和 Google DoH';
@@ -747,10 +747,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPingKeepAliveTitle => '测量方式';
 
   @override
-  String get settingsPingKeepAlive => 'Keep-alive';
+  String get settingsPingKeepAlive => '在已建立的连接上测量';
 
   @override
-  String get settingsPingKeepAliveHint => '响应时间，不含握手。关闭则测量完整请求，更接近浏览器的等待';
+  String get settingsPingKeepAliveHint => '请求发两次，计入第二次——不含握手。关闭时只发一次，连预热一起算，就像第一次打开网页。';
 
   @override
   String get settingsPingMethodSpeed => '速度测试';
@@ -855,6 +855,39 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get subscriptionIdentitySectionUsed => '已在使用';
+
+  @override
+  String get subscriptionIdentitySectionUaAndroid => 'Android 客户端';
+
+  @override
+  String get subscriptionIdentitySectionUaApple => 'iPhone 与 iPad 客户端';
+
+  @override
+  String get subscriptionIdentitySectionUaDesktop => '桌面客户端';
+
+  @override
+  String get subscriptionIdentitySectionUaCores => '内核与纯 http';
+
+  @override
+  String get subscriptionIdentitySectionOs => '操作系统';
+
+  @override
+  String get subscriptionIdentitySectionApple => 'iPhone 与 iPad';
+
+  @override
+  String get subscriptionIdentitySectionDesktop => '桌面';
+
+  @override
+  String get subscriptionIdentitySectionAndroidRelease => 'Android — 版本';
+
+  @override
+  String get subscriptionIdentitySectionAndroidBuild => 'Android — 构建号';
+
+  @override
+  String get subscriptionIdentitySectionIosRelease => 'iOS — 版本';
+
+  @override
+  String get subscriptionIdentitySectionIosBuild => 'iOS — 构建号';
 
   @override
   String get subscriptionIdentitySearchOrEnter => '搜索或自行输入';
@@ -1078,6 +1111,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String settingsImportedSections(int count) {
     return '已导入：$count 个部分';
   }
+
+  @override
+  String get settingsShareHwidTitle => '分享设备 HWID';
+
+  @override
+  String get settingsShareHwidOn => '随订阅请求发送';
+
+  @override
+  String get settingsShareHwidOff => '不发送';
 
   @override
   String get settingsDebugMode => '调试模式';
@@ -1413,10 +1455,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hotkeyActionToggleConnection => '连接 / 断开';
 
   @override
-  String get hotkeyActionToggleTun => '切换 TUN 模式';
+  String get hotkeyActionToggleTun => '切换 TUN / Proxy';
 
   @override
-  String get hotkeyActionBestPing => '最低延迟服务器';
+  String get hotkeyActionBestPing => '切换到延迟最低的服务器';
 
   @override
   String get hotkeyActionToggleWindow => '显示 / 隐藏窗口';
@@ -1767,19 +1809,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceAmoledNeedsDark => '需要开启深色主题';
 
   @override
-  String get appearanceHaptics => '触感反馈';
+  String get appearanceHaptics => '振动';
 
   @override
-  String get appearanceShowTraffic => '显示流量';
+  String get appearanceShowTraffic => '速度与流量';
 
   @override
-  String get appearanceShowTime => '显示连接时长';
+  String get appearanceShowTime => '连接时长';
 
   @override
-  String get appearanceShowTrafficSplit => '分开显示代理与直连';
+  String get appearanceShowTrafficSplit => '代理与直连流量分开';
 
   @override
-  String get appearanceWaveLatencyColor => '按延迟为指示条着色';
+  String get appearanceWaveLatencyColor => '波形颜色按延迟';
 
   @override
   String get appearanceFontTitle => '字体';
@@ -1836,7 +1878,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPermRevokeHint => '可在系统应用设置中撤销任意权限。';
 
   @override
-  String get settingsPermTunHeader => 'TUN 模式（LINUX）';
+  String get settingsPermTunHeader => 'TUN 模式（Linux）';
 
   @override
   String get settingsPermTunPasswordlessTitle => '免密码 TUN';
@@ -2392,10 +2434,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceIconShapeArch => '拱形';
 
   @override
-  String get appearanceSectionServers => '服务器列表与主屏幕';
+  String get appearanceSectionServers => '服务器列表';
 
   @override
-  String get appearanceSectionFeel => '主题与反馈';
+  String get appearanceSectionUnderButton => '连接按钮下方';
+
+  @override
+  String get appearanceSectionFeel => '触摸反馈';
 
   @override
   String get appearanceIconShapeClover => '四叶草';

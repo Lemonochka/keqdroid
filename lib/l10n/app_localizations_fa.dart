@@ -386,10 +386,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get themeColorThemesTitle => 'پوسته‌های رنگی';
 
   @override
-  String get serversTwoColumnsTitle => 'فهرست دوستونی سرورها';
+  String get serversTwoColumnsTitle => 'دو ستونه';
 
   @override
-  String get appearanceServerIconThemeColors => 'نشان‌های بدون پرچم با رنگ پوسته';
+  String get appearanceServerIconThemeColors => 'نشان سرورهای بدون پرچم با رنگ پوسته';
 
   @override
   String get settingsLanProxyTitle => 'پروکسی شبکهٔ محلی';
@@ -450,7 +450,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayCoreTitle => 'تنظیمات هسته';
 
   @override
-  String get settingsXrayCoreSubtitle => 'پورت‌ها، DNS، TUN، گزارش و مسیریابی';
+  String get settingsXrayCoreSubtitle => 'DNS، Mux، تکه‌تکه‌سازی، TUN و لاگ‌ها';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -528,7 +528,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayDomainStrategy => 'استراتژی دامنه در مسیریابی';
 
   @override
-  String get settingsXraySniffing => 'شناسایی ترافیک ورودی';
+  String get settingsXraySniffing => 'شناسایی دامنه در ترافیک (sniffing)';
 
   @override
   String get settingsXraySniffingRouteOnly => 'شناسایی فقط برای مسیریابی';
@@ -747,10 +747,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsPingKeepAliveTitle => 'روش اندازه‌گیری';
 
   @override
-  String get settingsPingKeepAlive => 'Keep-alive';
+  String get settingsPingKeepAlive => 'اندازه‌گیری روی اتصال گرم';
 
   @override
-  String get settingsPingKeepAliveHint => 'زمان پاسخ بدون دست‌دادن. خاموش — کل درخواست، همان‌طور که مرورگر می‌بیند';
+  String get settingsPingKeepAliveHint => 'درخواست دو بار می‌رود و دومی شمرده می‌شود — بدون دست‌دادن. خاموش: یک درخواست همراه گرم‌شدن، مثل اولین باز کردن یک سایت.';
 
   @override
   String get settingsPingMethodSpeed => 'تست سرعت';
@@ -855,6 +855,39 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get subscriptionIdentitySectionUsed => 'در حال استفاده';
+
+  @override
+  String get subscriptionIdentitySectionUaAndroid => 'کلاینت‌های اندروید';
+
+  @override
+  String get subscriptionIdentitySectionUaApple => 'کلاینت‌های آیفون و آی‌پد';
+
+  @override
+  String get subscriptionIdentitySectionUaDesktop => 'کلاینت‌های دسکتاپ';
+
+  @override
+  String get subscriptionIdentitySectionUaCores => 'هسته‌ها و http ساده';
+
+  @override
+  String get subscriptionIdentitySectionOs => 'سیستم‌عامل‌ها';
+
+  @override
+  String get subscriptionIdentitySectionApple => 'آیفون و آی‌پد';
+
+  @override
+  String get subscriptionIdentitySectionDesktop => 'دسکتاپ';
+
+  @override
+  String get subscriptionIdentitySectionAndroidRelease => 'اندروید — نسخه';
+
+  @override
+  String get subscriptionIdentitySectionAndroidBuild => 'اندروید — بیلد';
+
+  @override
+  String get subscriptionIdentitySectionIosRelease => 'iOS — نسخه';
+
+  @override
+  String get subscriptionIdentitySectionIosBuild => 'iOS — بیلد';
 
   @override
   String get subscriptionIdentitySearchOrEnter => 'جست‌وجو یا وارد کردن مقدار دلخواه';
@@ -1078,6 +1111,15 @@ class AppLocalizationsFa extends AppLocalizations {
   String settingsImportedSections(int count) {
     return '$count بخش وارد شد';
   }
+
+  @override
+  String get settingsShareHwidTitle => 'اشتراک HWID دستگاه';
+
+  @override
+  String get settingsShareHwidOn => 'همراه درخواست‌های اشتراک ارسال می‌شود';
+
+  @override
+  String get settingsShareHwidOff => 'ارسال نمی‌شود';
 
   @override
   String get settingsDebugMode => 'حالت اشکال‌زدایی';
@@ -1413,10 +1455,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get hotkeyActionToggleConnection => 'اتصال / قطع اتصال';
 
   @override
-  String get hotkeyActionToggleTun => 'تغییر حالت TUN';
+  String get hotkeyActionToggleTun => 'تغییر بین TUN و Proxy';
 
   @override
-  String get hotkeyActionBestPing => 'سرور با بهترین پینگ';
+  String get hotkeyActionBestPing => 'رفتن به سرور با بهترین پینگ';
 
   @override
   String get hotkeyActionToggleWindow => 'نمایش / پنهان کردن پنجره';
@@ -1767,19 +1809,19 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceAmoledNeedsDark => 'با روشن بودن پوستهٔ تیره در دسترس است';
 
   @override
-  String get appearanceHaptics => 'بازخورد لمسی';
+  String get appearanceHaptics => 'لرزش';
 
   @override
-  String get appearanceShowTraffic => 'نمایش ترافیک';
+  String get appearanceShowTraffic => 'سرعت و حجم ترافیک';
 
   @override
-  String get appearanceShowTime => 'نمایش زمان اتصال';
+  String get appearanceShowTime => 'زمان اتصال';
 
   @override
-  String get appearanceShowTrafficSplit => 'نمایش جداگانهٔ وی‌پی‌ان و مستقیم';
+  String get appearanceShowTrafficSplit => 'ترافیک وی‌پی‌ان و مستقیم جداگانه';
 
   @override
-  String get appearanceWaveLatencyColor => 'رنگ نوار بر پایهٔ تأخیر';
+  String get appearanceWaveLatencyColor => 'رنگ موج بر پایهٔ پینگ';
 
   @override
   String get appearanceFontTitle => 'قلم';
@@ -1845,7 +1887,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsPermTunDisabled => 'TUN بدون رمز غیرفعال است';
 
   @override
-  String get appearanceNotifSectionTitle => 'اعلان';
+  String get appearanceNotifSectionTitle => 'اعلان‌ها';
 
   @override
   String get appearanceNotifSpeedTitle => 'سرعت اتصال در اعلان';
@@ -2047,10 +2089,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get chainRemoveNode => 'Remove node';
 
   @override
-  String get chainExitNodeHint => 'Exit node — sites see this address';
+  String get chainExitNodeHint => 'Exit node, sites see this address';
 
   @override
-  String get chainNodeMissing => 'Server is gone — using the saved copy';
+  String get chainNodeMissing => 'Server is gone, using the saved copy';
 
   @override
   String get chainSave => 'Save chain';
@@ -2394,10 +2436,13 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceIconShapeArch => 'قوس';
 
   @override
-  String get appearanceSectionServers => 'فهرست سرورها و صفحهٔ اصلی';
+  String get appearanceSectionServers => 'فهرست سرورها';
 
   @override
-  String get appearanceSectionFeel => 'پوسته و بازخورد';
+  String get appearanceSectionUnderButton => 'زیر دکمهٔ اتصال';
+
+  @override
+  String get appearanceSectionFeel => 'بازخورد لمسی';
 
   @override
   String get appearanceIconShapeClover => 'شبدر';

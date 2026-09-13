@@ -296,14 +296,14 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
                             label: l10n.subscriptionIdentityUserAgent,
                             icon: Icons.http_rounded,
                             value: _userAgent,
-                            sections: _sections(_uaPresets, (i) => i.userAgent),
+                            sections: _sections(_uaPresets(l10n), (i) => i.userAgent),
                             onChanged: (v) => setState(() => _userAgent = v),
                           ),
                           _IdentityOptionRow(
                             label: l10n.subscriptionIdentityDeviceOs,
                             icon: Icons.phone_android_rounded,
                             value: _deviceOs,
-                            sections: _sections(_osPresets, (i) => i.deviceOs),
+                            sections: _sections(_osPresets(l10n), (i) => i.deviceOs),
                             onChanged: (v) => setState(() => _deviceOs = v),
                           ),
                           _IdentityOptionRow(
@@ -311,7 +311,7 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
                             icon: Icons.smartphone_rounded,
                             value: _deviceModel,
                             sections:
-                                _sections(_modelPresets, (i) => i.deviceModel),
+                                _sections(_modelPresets(l10n), (i) => i.deviceModel),
                             onChanged: (v) => setState(() => _deviceModel = v),
                           ),
                           _IdentityOptionRow(
@@ -319,7 +319,7 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
                             icon: Icons.system_update_alt_rounded,
                             value: _osVersion,
                             sections: _sections(
-                              _osVersionPresets,
+                              _osVersionPresets(l10n),
                               (i) => i.osVersion,
                             ),
                             onChanged: (v) => setState(() => _osVersion = v),
@@ -366,78 +366,81 @@ class _IdentitySheetState extends ConsumerState<_IdentitySheet> {
     );
   }
 
-  static const _uaPresets = [
+  // Списки — не const: заголовки берутся из локализации, а items остаются
+  // теми же константами каталога.
+  static List<_IdentitySection> _uaPresets(AppLocalizations l10n) => [
     _IdentitySection(
-      title: 'Android clients',
+      title: l10n.subscriptionIdentitySectionUaAndroid,
       icon: Icons.android_rounded,
       items: ClientUaPresets.android,
     ),
     _IdentitySection(
-      title: 'iPhone & iPad clients',
+      title: l10n.subscriptionIdentitySectionUaApple,
       icon: Icons.phone_iphone_rounded,
       items: ClientUaPresets.ios,
     ),
     _IdentitySection(
-      title: 'Desktop clients',
+      title: l10n.subscriptionIdentitySectionUaDesktop,
       icon: Icons.computer_rounded,
       items: ClientUaPresets.desktop,
     ),
     _IdentitySection(
-      title: 'Cores & plain http',
+      title: l10n.subscriptionIdentitySectionUaCores,
       icon: Icons.terminal_rounded,
       items: ClientUaPresets.cores,
     ),
   ];
 
-  static const _osPresets = [
+  static List<_IdentitySection> _osPresets(AppLocalizations l10n) => [
     _IdentitySection(
-      title: 'OS',
+      title: l10n.subscriptionIdentitySectionOs,
       icon: Icons.devices_rounded,
       items: DeviceOsPresets.all,
     ),
   ];
 
-  static const _modelPresets = [
-    _IdentitySection(
+  static List<_IdentitySection> _modelPresets(AppLocalizations l10n) => [
+    // Android — имя платформы, переводить нечего.
+    const _IdentitySection(
       title: 'Android',
       icon: Icons.android_rounded,
       items: DeviceModelPresets.android,
     ),
     _IdentitySection(
-      title: 'iPhone & iPad',
+      title: l10n.subscriptionIdentitySectionApple,
       icon: Icons.phone_iphone_rounded,
       items: DeviceModelPresets.ios,
     ),
     _IdentitySection(
-      title: 'Desktop',
+      title: l10n.subscriptionIdentitySectionDesktop,
       icon: Icons.computer_rounded,
       items: DeviceModelPresets.desktop,
     ),
   ];
 
-  static const _osVersionPresets = [
+  static List<_IdentitySection> _osVersionPresets(AppLocalizations l10n) => [
     _IdentitySection(
-      title: 'Android — release',
+      title: l10n.subscriptionIdentitySectionAndroidRelease,
       icon: Icons.android_rounded,
       items: OsVersionPresets.androidRelease,
     ),
     _IdentitySection(
-      title: 'Android — build',
+      title: l10n.subscriptionIdentitySectionAndroidBuild,
       icon: Icons.build_circle_rounded,
       items: OsVersionPresets.androidBuilds,
     ),
     _IdentitySection(
-      title: 'iOS — release',
+      title: l10n.subscriptionIdentitySectionIosRelease,
       icon: Icons.phone_iphone_rounded,
       items: OsVersionPresets.iosRelease,
     ),
     _IdentitySection(
-      title: 'iOS — build',
+      title: l10n.subscriptionIdentitySectionIosBuild,
       icon: Icons.numbers_rounded,
       items: OsVersionPresets.iosBuilds,
     ),
     _IdentitySection(
-      title: 'Desktop',
+      title: l10n.subscriptionIdentitySectionDesktop,
       icon: Icons.computer_rounded,
       items: OsVersionPresets.desktop,
     ),
@@ -496,7 +499,7 @@ class _IdentityOptionRow extends StatelessWidget {
 
   /// Приводить набранное вручную к нижнему регистру. Так и уходит HWID —
   /// показывать в списке одно, а слать другое было бы враньём. Для остальных
-  /// полей регистр значим: `Happ/3.20.4` и `happ/3.20.4` для панели разные.
+  /// полей регистр значим: `Happ/4.1.0` и `happ/4.1.0` для панели разные.
   final bool lowercaseCustom;
 
   final ValueChanged<String?> onChanged;

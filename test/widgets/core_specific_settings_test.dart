@@ -73,7 +73,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await _openAppearance(tester, AppSettings.vpnCoreMihomo);
-    expect(find.text('Show VPN and direct apart'), findsOneWidget);
+    expect(find.text('VPN and direct traffic separately'), findsOneWidget);
   });
 
   testWidgets('на xray её нет: считать разбивку он не умеет', (tester) async {
@@ -83,9 +83,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await _openAppearance(tester, AppSettings.vpnCoreXray);
-    expect(find.text('Show VPN and direct apart'), findsNothing);
+    expect(find.text('VPN and direct traffic separately'), findsNothing);
     // Соседние переключатели той же группы на месте — спрятана ровно одна
     // строка, а не вся секция.
-    expect(find.text('Show traffic'), findsOneWidget);
+    expect(find.text('Traffic speed and volume'), findsOneWidget);
   });
 }

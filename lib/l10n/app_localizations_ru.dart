@@ -191,7 +191,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsRoutingPresetsTitle => 'Быстрые пресеты';
 
   @override
-  String get settingsRoutingPresetsHint => 'Готовый список — добавится в поле ниже';
+  String get settingsRoutingPresetsHint => 'Готовый список, добавится в поле ниже';
 
   @override
   String get settingsRoutingPresetChoose => 'Выберите пресет…';
@@ -200,55 +200,55 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsRoutingPresetAdd => 'Добавить';
 
   @override
-  String get settingsRoutingPresetRuTitle => 'Российские сайты — напрямую';
+  String get settingsRoutingPresetRuTitle => 'Российские сайты напрямую';
 
   @override
   String get settingsRoutingPresetRuDesc => 'Все домены .ru / .рф и крупные сервисы РФ идут мимо VPN (добавляет домены в «Напрямую»)';
 
   @override
-  String get settingsRoutingPresetRuGeoipTitle => 'IP России (GeoIP) — напрямую';
+  String get settingsRoutingPresetRuGeoipTitle => 'IP России (GeoIP) напрямую';
 
   @override
-  String get settingsRoutingPresetRuGeoipDesc => 'Все российские диапазоны IP идут мимо VPN через GeoIP — работает в режиме Proxy';
+  String get settingsRoutingPresetRuGeoipDesc => 'Все российские диапазоны IP идут мимо VPN через GeoIP. Работает в режиме Proxy';
 
   @override
-  String get settingsRoutingPresetRuGeositeTitle => 'Сайты РФ (GeoSite) — Direct';
+  String get settingsRoutingPresetRuGeositeTitle => 'Сайты РФ (GeoSite) напрямую';
 
   @override
   String get settingsRoutingPresetRuGeositeDesc => 'Российские домены из базы GeoSite идут мимо VPN';
 
   @override
-  String get settingsRoutingPresetBanksTitle => 'Банки и госуслуги — напрямую';
+  String get settingsRoutingPresetBanksTitle => 'Банки и госуслуги напрямую';
 
   @override
   String get settingsRoutingPresetBanksDesc => 'Банки, платежи и госпорталы идут мимо VPN';
 
   @override
-  String get settingsRoutingPresetLanIpsTitle => 'Локальная сеть — напрямую';
+  String get settingsRoutingPresetLanIpsTitle => 'Локальная сеть напрямую';
 
   @override
   String get settingsRoutingPresetLanIpsDesc => 'Приватные диапазоны IP локальной сети (192.168.x, 10.x, …) идут мимо VPN';
 
   @override
-  String get settingsRoutingPresetAdsTitle => 'Реклама и трекеры — блок';
+  String get settingsRoutingPresetAdsTitle => 'Реклама и трекеры в блок';
 
   @override
   String get settingsRoutingPresetAdsDesc => 'Блокировать частые рекламные и аналитические домены';
 
   @override
-  String get settingsRoutingPresetAdsGeositeTitle => 'Реклама (GeoSite) — Block';
+  String get settingsRoutingPresetAdsGeositeTitle => 'Реклама (GeoSite) в блок';
 
   @override
   String get settingsRoutingPresetAdsGeositeDesc => 'Блокировать широкий список рекламы/трекеров из базы GeoSite';
 
   @override
-  String get settingsRoutingPresetStreamingTitle => 'Стриминг — через VPN';
+  String get settingsRoutingPresetStreamingTitle => 'Стриминг через VPN';
 
   @override
   String get settingsRoutingPresetStreamingDesc => 'YouTube, Netflix, Twitch принудительно через VPN';
 
   @override
-  String get settingsRoutingPresetMessengersTitle => 'Мессенджеры — через VPN';
+  String get settingsRoutingPresetMessengersTitle => 'Мессенджеры через VPN';
 
   @override
   String get settingsRoutingPresetMessengersDesc => 'Telegram, Discord, WhatsApp принудительно через VPN';
@@ -340,7 +340,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get routingCheatSheetTitle => 'Как писать правила';
 
   @override
-  String get routingCheatSheetBody => 'Правила — это просто список: что куда отправить. Каждая строка — домен, IP или гео-метка, а рядом действие: напрямую (обход), через VPN (прокси) или в блок.\n\n## Домены\nvk.com — сам домен и все его поддомены\nru — всё, что оканчивается на .ru (просто слово без точки)\n.example.com — только поддомены, без самого домена\nfull:example.com — ровно этот адрес, без поддоменов\nregexp:… — если совсем надо, можно регуляркой\n\n## IP-адреса\n1.2.3.4 — один адрес\n10.0.0.0/8 — целый диапазон (CIDR)\n\n## GeoIP — по стране\ngeoip:ru — все российские IP. Вместо ru любая страна: us, de, cn, ua, kz…\nПлюс готовые пачки: geoip:private (локалка), geoip:telegram, geoip:google.\nНужно «по стране» — это сюда, geoip знает все.\n\n## GeoSite — готовые списки\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nЭто не страны, а категории сервисов, которые уже собрали за тебя.\nСтран тут почти нет (только geolocation-cn и geolocation-!cn), так что «по стране» — всё-таки geoip.\n\n## На ПК (ядро keqrnel)\nГео работает так же, как на телефоне: его считает встроенный в keqrnel xray. Нужно лишь, чтобы рядом с keqdroid.exe лежали geoip.dat и geosite.dat — в релизе они уже там. Если гео-правила будто не работают, первым делом проверь эти два файла.\n\n## Порядок\nСверху вниз: сначала блок, потом твой сервер (он всегда напрямую, иначе будет петля), потом обход, потом прокси. Всё, что не подошло, идёт по переключателю «Остальной трафик» вверху.';
+  String get routingCheatSheetBody => 'Правила работают как список: что куда отправить. В каждой строке домен, IP или гео-метка, а рядом действие: напрямую (обход), через VPN (прокси) или в блок.\n\n## Домены\nvk.com — сам домен и все его поддомены\nru — всё, что оканчивается на .ru (просто слово без точки)\n.example.com — только поддомены, без самого домена\nfull:example.com — ровно этот адрес, без поддоменов\nregexp:… — если совсем надо, можно регуляркой\n\n## IP-адреса\n1.2.3.4 — один адрес\n10.0.0.0/8 — целый диапазон (CIDR)\n\n## GeoIP: по стране\ngeoip:ru — все российские IP. Вместо ru любая страна: us, de, cn, ua, kz…\nПлюс готовые пачки: geoip:private (локалка), geoip:telegram, geoip:google.\nНужно «по стране»? Это сюда, geoip знает все.\n\n## GeoSite: готовые списки\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nЭто не страны, а категории сервисов, которые уже собрали за тебя.\nСтран тут почти нет (только geolocation-cn и geolocation-!cn), так что «по стране» всё-таки geoip.\n\n## На ПК (ядро keqrnel)\nГео работает так же, как на телефоне: его считает встроенный в keqrnel xray. Нужно лишь, чтобы рядом с keqdroid.exe лежали geoip.dat и geosite.dat. В релизе они уже там. Если гео-правила будто не работают, первым делом проверь эти два файла.\n\n## Порядок\nСверху вниз: сначала блок, потом твой сервер (он всегда напрямую, иначе будет петля), потом обход, потом прокси. Всё, что не подошло, идёт по переключателю «Остальной трафик» вверху.';
 
   @override
   String settingsRoutingItemCount(int count) {
@@ -388,10 +388,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get themeColorThemesTitle => 'Цветовые темы';
 
   @override
-  String get serversTwoColumnsTitle => 'Список серверов в две колонки';
+  String get serversTwoColumnsTitle => 'Показывать в две колонки';
 
   @override
-  String get appearanceServerIconThemeColors => 'Значки без флага — в цветах темы';
+  String get appearanceServerIconThemeColors => 'Красить значки серверов без флага в цвет темы';
 
   @override
   String get settingsLanProxyTitle => 'LAN прокси';
@@ -426,7 +426,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsLanPasswordLabel => 'Пароль';
 
   @override
-  String get settingsLanAuthHint => 'Оба поля заполнены — устройства подключаются к прокси по ним. Пусто — без пароля (прокси открыт для всех в вашей сети).';
+  String get settingsLanAuthHint => 'Если оба поля заполнены, устройства подключаются к прокси по ним. Если пусто, пароля нет: прокси открыт для всех в вашей сети.';
 
   @override
   String get settingsLocalPortsTitle => 'Локальные порты прокси';
@@ -452,7 +452,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayCoreTitle => 'Настройки ядра';
 
   @override
-  String get settingsXrayCoreSubtitle => 'Порты, DNS, TUN, лог и маршрутизация';
+  String get settingsXrayCoreSubtitle => 'DNS, Mux, фрагментация, TUN и логи';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -470,7 +470,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayDnsSplitDirect => 'Отдельный резолвер для direct-доменов';
 
   @override
-  String get settingsXrayDnsSplitDirectHint => 'Первый сервер — для доменов из списка direct';
+  String get settingsXrayDnsSplitDirectHint => 'Первый сервер отвечает за домены из списка direct';
 
   @override
   String get settingsXrayDnsQueryStrategy => 'Стратегия запросов';
@@ -500,7 +500,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayMuxParamsTitle => 'Потоков в одном соединении';
 
   @override
-  String get settingsXrayMuxParamsHint => '-1 — не мультиплексировать. TCP до 128, UDP до 1024.';
+  String get settingsXrayMuxParamsHint => '-1 отключает мультиплексирование. TCP до 128, UDP до 1024.';
 
   @override
   String get settingsXrayMuxConcurrency => 'TCP-потоки';
@@ -527,13 +527,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayLogLevel => 'Уровень логов';
 
   @override
-  String get settingsXrayDomainStrategy => 'Стратегия доменов';
+  String get settingsXrayDomainStrategy => 'Стратегия доменов в правилах';
 
   @override
-  String get settingsXraySniffing => 'Sniffing на inbound';
+  String get settingsXraySniffing => 'Определять домены в трафике (sniffing)';
 
   @override
-  String get settingsXraySniffingRouteOnly => 'Sniffing route only';
+  String get settingsXraySniffingRouteOnly => 'Использовать домен только для правил';
 
   @override
   String get settingsXrayDnsDefaultNote => 'По умолчанию: DoH Cloudflare и Google';
@@ -542,7 +542,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayXmuxParamsTitle => 'Тонкая настройка';
 
   @override
-  String get settingsXrayXmuxParamsHint => 'Пусто — дефолт Xray. Число или диапазон, например 16-32.';
+  String get settingsXrayXmuxParamsHint => 'Пусто оставит дефолт Xray. Число или диапазон, например 16-32.';
 
   @override
   String get settingsXraySniffingHint => 'Определять протокол и домен назначения по входящему трафику';
@@ -623,7 +623,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayNoiseReset => 'Повтор, сек';
 
   @override
-  String get settingsXrayNoiseParamsHint => 'Число или диапазон, например 50-100. Пусто — на усмотрение ядра.';
+  String get settingsXrayNoiseParamsHint => 'Число или диапазон, например 50-100. Пусто оставит выбор ядру.';
 
   @override
   String get settingsXrayFragmentPacketsTitle => 'Что резать';
@@ -677,7 +677,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunUdpTimeoutHint => 'Время жизни NAT-записи простаивающей UDP-сессии, по умолчанию 300';
 
   @override
-  String get settingsTunStrictRouteTitle => 'Strict route';
+  String get settingsTunStrictRouteTitle => 'Строгая маршрутизация (strict route)';
 
   @override
   String get settingsTunStrictRouteHint => 'Не даёт трафику утекать мимо TUN. На Windows может ломать маршруты при другом активном VPN (например, Tailscale)';
@@ -698,10 +698,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunEin => 'Endpoint-independent NAT';
 
   @override
-  String get settingsTunEinHint => 'Full-cone NAT для UDP — помогает P2P и играм. Только стек gVisor/mixed';
+  String get settingsTunEinHint => 'Full-cone NAT для UDP, помогает P2P и играм. Только стек gVisor/mixed';
 
   @override
-  String get settingsTunAutoRoute => 'Auto route';
+  String get settingsTunAutoRoute => 'Заворачивать трафик в туннель (auto route)';
 
   @override
   String get settingsTunAutoRouteHint => 'Добавляет системные маршруты в туннель. Без него трафик в TUN не попадает.';
@@ -743,25 +743,25 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPingMethodUrl => 'HTTP пинг через прокси';
 
   @override
-  String get settingsPingMethodUrlHint => 'Замеряет пинг через GET запрос к серверу';
+  String get settingsPingMethodUrlHint => 'Ходит GET-запросом через сервер и меряет ответ';
 
   @override
-  String get settingsPingKeepAliveTitle => 'Способ замера';
+  String get settingsPingKeepAliveTitle => 'Как считать время';
 
   @override
-  String get settingsPingKeepAlive => 'Keep-alive';
+  String get settingsPingKeepAlive => 'Мерить по прогретому соединению';
 
   @override
-  String get settingsPingKeepAliveHint => 'Время ответа без рукопожатия. Выключено — запрос целиком, как его ждёт браузер';
+  String get settingsPingKeepAliveHint => 'Запрос уходит дважды, в счёт идёт второй, уже без рукопожатия. Выключено: один запрос со всем прогревом, как при первом открытии сайта.';
 
   @override
   String get settingsPingMethodSpeed => 'Тест скорости';
 
   @override
-  String get settingsPingMethodSpeedHint => 'Качает некоторый объём данных через сервер и показывает скорость в Мбит/с';
+  String get settingsPingMethodSpeedHint => 'Качает через сервер файл и показывает скорость в Мбит/с. Работает и без подключённого VPN.';
 
   @override
-  String get settingsPingTargetTitle => 'URL для HTTP-пинга';
+  String get settingsPingTargetTitle => 'Куда ходит пинг';
 
   @override
   String get settingsPingTargetGstatic => 'Google (generate_204)';
@@ -841,7 +841,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get subscriptionIdentityHwid => 'HWID';
 
   @override
-  String get subscriptionIdentityHwidOff => 'В дополнительных настройках выключено «Делиться HWID устройства» — никакой HWID не уходит, в том числе подставной.';
+  String get subscriptionIdentityHwidOff => 'В дополнительных настройках выключено «Отдавать HWID устройства», поэтому никакой HWID не уходит, в том числе подставной.';
 
   @override
   String get subscriptionIdentityUserAgent => 'User-Agent';
@@ -857,6 +857,39 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get subscriptionIdentitySectionUsed => 'Уже используется';
+
+  @override
+  String get subscriptionIdentitySectionUaAndroid => 'Клиенты для Android';
+
+  @override
+  String get subscriptionIdentitySectionUaApple => 'Клиенты для iPhone и iPad';
+
+  @override
+  String get subscriptionIdentitySectionUaDesktop => 'Клиенты для компьютера';
+
+  @override
+  String get subscriptionIdentitySectionUaCores => 'Ядра и голый http';
+
+  @override
+  String get subscriptionIdentitySectionOs => 'Операционные системы';
+
+  @override
+  String get subscriptionIdentitySectionApple => 'iPhone и iPad';
+
+  @override
+  String get subscriptionIdentitySectionDesktop => 'Компьютеры';
+
+  @override
+  String get subscriptionIdentitySectionAndroidRelease => 'Версии Android';
+
+  @override
+  String get subscriptionIdentitySectionAndroidBuild => 'Сборки Android';
+
+  @override
+  String get subscriptionIdentitySectionIosRelease => 'Версии iOS';
+
+  @override
+  String get subscriptionIdentitySectionIosBuild => 'Сборки iOS';
 
   @override
   String get subscriptionIdentitySearchOrEnter => 'Искать или вписать своё';
@@ -875,7 +908,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String subscriptionsDeleteConfirm(Object name) {
-    return 'Вы уверены, что хотите удалить \"$name\"?\n\nЭто также удалит все связанные серверы.';
+    return 'Удалить «$name»?\n\nСерверы этой подписки уйдут вместе с ней.';
   }
 
   @override
@@ -1050,13 +1083,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsChooseWhatToImport => 'Выбранные разделы заменят текущие данные';
 
   @override
-  String get settingsSplitTunnelingApps => 'Приложения раздельного туннелирования';
+  String get settingsSplitTunnelingApps => 'Раздельное туннелирование';
 
   @override
   String get settingsSubscriptions => 'Подписки';
 
   @override
-  String get settingsServersActive => 'Серверы (и активный сервер)';
+  String get settingsServersActive => 'Серверы, включая активный';
 
   @override
   String get settingsAppSettings => 'Настройки приложения';
@@ -1071,7 +1104,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsCreateFileToSave => 'Файл можно перенести на другое устройство';
 
   @override
-  String get settingsPickExportedFile => 'Что восстановить — выберете после файла';
+  String get settingsPickExportedFile => 'Сначала файл, потом выбор, что из него восстановить';
 
   @override
   String get settingsWorking => 'Работаем...';
@@ -1080,6 +1113,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String settingsImportedSections(int count) {
     return 'Импортировано: $count раздел(ов)';
   }
+
+  @override
+  String get settingsShareHwidTitle => 'Отдавать HWID устройства';
+
+  @override
+  String get settingsShareHwidOn => 'Уходит с запросами подписки';
+
+  @override
+  String get settingsShareHwidOff => 'Не передаётся';
 
   @override
   String get settingsDebugMode => 'Режим отладки';
@@ -1196,7 +1238,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get splitProxyModeWarning => 'В режиме Proxy раздельное туннелирование не применяется — весь трафик идёт через системный прокси. Переключите режим подключения на TUN (в боковой панели), чтобы правила для процессов работали.';
+  String get splitProxyModeWarning => 'В режиме Proxy раздельное туннелирование не применяется: весь трафик идёт через системный прокси. Переключите режим подключения на TUN (в боковой панели), чтобы правила для процессов работали.';
 
   @override
   String get settingsLatestVersionInstalled => 'У вас последняя версия';
@@ -1220,10 +1262,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversDeleteServer => 'Удалить сервер';
 
   @override
-  String get settingsDebugHintDesktop => 'Показывает логи сессии Xray. Живые метрики VPN отображаются под кнопкой подключения.';
+  String get settingsDebugHintDesktop => 'Показывает логи сессии ядра. Живые метрики VPN показываются под кнопкой подключения.';
 
   @override
-  String get settingsDebugHintMobile => 'Показывает живые метрики VPN в карточках серверов и логи Xray.';
+  String get settingsDebugHintMobile => 'Показывает живые метрики VPN в карточках серверов и логи ядра.';
 
   @override
   String get desktopConnectionMode => 'Режим подключения';
@@ -1244,7 +1286,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsLaunchAtStartup => 'Запускать с Windows';
 
   @override
-  String get settingsLaunchAtStartupAdmin => 'Запуск с правами администратора';
+  String get settingsLaunchAtStartupAdmin => 'Запускать с правами администратора';
 
   @override
   String get settingsAutostartAdminFailed => 'Права администратора не выданы';
@@ -1259,7 +1301,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get desktopTunAdminTitle => 'Нужны права администратора';
 
   @override
-  String get desktopTunAdminMessage => 'Режим TUN требует запуск от имени администратора. Перезапустите приложение с повышенными правами — выбранный в боковой панели режим сохранится.';
+  String get desktopTunAdminMessage => 'Для TUN нужны права администратора. Перезапустите приложение с ними, выбранный в боковой панели режим сохранится.';
 
   @override
   String get desktopTunAdminRestart => 'Перезапустить от администратора';
@@ -1406,19 +1448,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsHotkeysSubtitle => 'Сочетания для подключения, режима и серверов';
 
   @override
-  String get hotkeysHintGlobal => 'Хоткеи работают глобально — даже когда окно свёрнуто в трей. Все хоткеи выключены, пока вы их не назначите.';
+  String get hotkeysHintGlobal => 'Работают из любого окна и даже когда приложение свёрнуто в трей. Пока в строке «Не задано», сочетание не срабатывает.';
 
   @override
-  String get hotkeysHintInApp => 'На Linux хоткеи работают, пока окно приложения в фокусе. Все хоткеи выключены, пока вы их не назначите.';
+  String get hotkeysHintInApp => 'На Linux ловятся, только пока окно приложения в фокусе. Пока в строке «Не задано», сочетание не срабатывает.';
 
   @override
   String get hotkeyActionToggleConnection => 'Подключить / отключить';
 
   @override
-  String get hotkeyActionToggleTun => 'Переключить режим TUN';
+  String get hotkeyActionToggleTun => 'Переключить TUN и Proxy';
 
   @override
-  String get hotkeyActionBestPing => 'Сервер с лучшим пингом';
+  String get hotkeyActionBestPing => 'Перейти на сервер с лучшим пингом';
 
   @override
   String get hotkeyActionToggleWindow => 'Показать / скрыть окно';
@@ -1430,7 +1472,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get hotkeyPressKeys => 'Нажмите сочетание…';
 
   @override
-  String get hotkeyRecordingHint => 'Esc — отмена, Backspace — очистить';
+  String get hotkeyRecordingHint => 'Esc отменяет, Backspace очищает';
 
   @override
   String get hotkeyNeedsModifier => 'Нужен модификатор (Ctrl/Alt/Shift/Win) или F-клавиша';
@@ -1444,7 +1486,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get hotkeyClearTooltip => 'Сбросить сочетание';
 
   @override
-  String get hotkeyNoPingData => 'Нет результатов пинга — сначала запустите проверку';
+  String get hotkeyNoPingData => 'Нет результатов пинга, сначала запустите проверку';
 
   @override
   String get clipboardNoSubscriptionLink => 'В буфере нет ссылки подписки (http/https)';
@@ -1485,13 +1527,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorConfigInvalidMessage => 'Конфигурация подписки или сервера некорректна.';
 
   @override
-  String get errorConfigInvalidAction => 'Проверьте формат ссылки/конфига и импортируйте корректную ссылку подписки.';
+  String get errorConfigInvalidAction => 'Проверьте ссылку или конфиг и импортируйте заново.';
 
   @override
   String get errorAuthDeniedMessage => 'Провайдер отказал в доступе к подписке.';
 
   @override
-  String get errorAuthDeniedAction => 'Проверьте токен/учётные данные и срок действия подписки.';
+  String get errorAuthDeniedAction => 'Проверьте токен или логин с паролем и не истёк ли срок подписки.';
 
   @override
   String get errorSubUrlInvalidMessage => 'Ссылка подписки не найдена или устарела.';
@@ -1506,7 +1548,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorSubInsecureHttpAction => 'Замените ссылку на её https-версию.';
 
   @override
-  String get subInsecureHttpWarning => 'http-ссылка — обновления заблокированы';
+  String get subInsecureHttpWarning => 'http-ссылка, обновления заблокированы';
 
   @override
   String get subSwitchToHttps => 'Исправить на https';
@@ -1518,7 +1560,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorNetworkAction => 'Проверьте интернет, DNS и доступность сервера, затем повторите.';
 
   @override
-  String get errorUnknownAction => 'Повторите операцию. Если ошибка повторяется, проверьте сервер и настройки приложения.';
+  String get errorUnknownAction => 'Попробуйте ещё раз. Если повторяется, проверьте сервер и настройки приложения.';
 
   @override
   String get errorFileDialogMessage => 'В этой сессии нечем показать выбор файла: нет ни backend\'а портала XDG, ни zenity/kdialog.';
@@ -1679,7 +1721,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serverEditorIssueRealityKey => 'REALITY нужен публичный ключ сервера.';
 
   @override
-  String get serverEditorIssueEncryption => 'Encryption — это none или ключ mlkem768x25519plus.';
+  String get serverEditorIssueEncryption => 'В Encryption пишут none или ключ mlkem768x25519plus.';
 
   @override
   String get serverEditorIssueNoSecurity => 'Без TLS, REALITY и Encryption ядро пустит только в локальную сеть.';
@@ -1739,7 +1781,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serverEditorSubscriptionNote => 'Сервер из подписки: правки сохранятся при её обновлении.';
 
   @override
-  String get serverEditorOverriddenNote => 'Конфиг изменён вручную — обновления подписки его больше не заменяют.';
+  String get serverEditorOverriddenNote => 'Конфиг изменён вручную, обновления подписки его больше не заменяют.';
 
   @override
   String get serverEditorRevert => 'Вернуть конфиг из подписки';
@@ -1769,19 +1811,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceAmoledNeedsDark => 'Доступно при включённой тёмной теме';
 
   @override
-  String get appearanceHaptics => 'Тактильная отдача';
+  String get appearanceHaptics => 'Отзываться вибрацией';
 
   @override
-  String get appearanceShowTraffic => 'Показывать трафик';
+  String get appearanceShowTraffic => 'Показывать скорость и объём трафика';
 
   @override
-  String get appearanceShowTime => 'Показывать время подключения';
+  String get appearanceShowTime => 'Показывать, сколько длится подключение';
 
   @override
-  String get appearanceShowTrafficSplit => 'Показывать VPN и обход раздельно';
+  String get appearanceShowTrafficSplit => 'Считать трафик VPN и обхода раздельно';
 
   @override
-  String get appearanceWaveLatencyColor => 'Красить индикатор по задержке';
+  String get appearanceWaveLatencyColor => 'Красить волну по пингу';
 
   @override
   String get appearanceFontTitle => 'Шрифт';
@@ -1805,7 +1847,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPermissionsTitle => 'Разрешения';
 
   @override
-  String get settingsPermissionsSubtitle => 'Разрешения приложения — посмотреть и отозвать';
+  String get settingsPermissionsSubtitle => 'Посмотреть и отозвать разрешения приложения';
 
   @override
   String get settingsPermNotifTitle => 'Уведомления';
@@ -1838,7 +1880,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPermRevokeHint => 'Отозвать любое разрешение можно в системных настройках приложения.';
 
   @override
-  String get settingsPermTunHeader => 'РЕЖИМ TUN (LINUX)';
+  String get settingsPermTunHeader => 'Режим TUN (Linux)';
 
   @override
   String get settingsPermTunPasswordlessTitle => 'TUN без пароля';
@@ -1847,16 +1889,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPermTunDisabled => 'Беспарольный TUN выключен';
 
   @override
-  String get appearanceNotifSectionTitle => 'УВЕДОМЛЕНИЕ';
+  String get appearanceNotifSectionTitle => 'Уведомления';
 
   @override
-  String get appearanceNotifSpeedTitle => 'Скорость соединения в уведомлении';
+  String get appearanceNotifSpeedTitle => 'Показывать скорость в уведомлении';
 
   @override
-  String get appearanceNotifUptimeTitle => 'Время подключения в уведомлении';
+  String get appearanceNotifUptimeTitle => 'Показывать время подключения в уведомлении';
 
   @override
-  String get appearanceNotifSubUpdatesTitle => 'Уведомления об обновлении подписок';
+  String get appearanceNotifSubUpdatesTitle => 'Уведомлять об обновлении подписок';
 
   @override
   String get tunRememberTitle => 'Запомнить авторизацию?';
@@ -1880,19 +1922,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tunRememberFailed => 'Не удалось изменить авторизацию TUN';
 
   @override
-  String get settingsRoutingPresetTelegramGeoTitle => 'Telegram (GeoIP+GeoSite) — через VPN';
+  String get settingsRoutingPresetTelegramGeoTitle => 'Telegram (GeoIP+GeoSite) через VPN';
 
   @override
   String get settingsRoutingPresetTelegramGeoDesc => 'Telegram по доменам и по диапазонам IP (MTProto ходит на голые IP)';
 
   @override
-  String get settingsRoutingPresetRefilterTitle => 'Заблокировано в РФ (Re-filter) — через VPN';
+  String get settingsRoutingPresetRefilterTitle => 'Заблокировано в РФ (Re-filter) через VPN';
 
   @override
-  String get settingsRoutingPresetRefilterDesc => 'Домены и IP, заблокированные в России, идут через VPN, остальное — напрямую';
+  String get settingsRoutingPresetRefilterDesc => 'Домены и IP, заблокированные в России, идут через VPN, остальное напрямую';
 
   @override
-  String get settingsRoutingGeoUnknownTitle => 'Нет в гео-базах — будет проигнорировано';
+  String get settingsRoutingGeoUnknownTitle => 'Нет в гео-базах, будет проигнорировано';
 
   @override
   String get settingsRoutingGeoUnknownHint => 'На неизвестном гео-коде ядро роняет весь конфиг, поэтому такие записи выкидываются перед подключением. Выберите существующий код кнопкой с глобусом выше.';
@@ -1968,7 +2010,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get connectionsRuleHintAction => 'Включить Info';
 
   @override
-  String get connectionsRuleHintApplied => 'Уровень логов ядра — Info. Переподключитесь, чтобы применить';
+  String get connectionsRuleHintApplied => 'Уровень логов ядра теперь Info. Переподключитесь, чтобы применить';
 
   @override
   String get connectionsRuleDefault => 'без правила (действие по умолчанию)';
@@ -1992,7 +2034,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get connectionsClosed => 'закрыто';
 
   @override
-  String get connectionsAppNamesHint => 'Название приложения сообщает система, а она знает только живые соединения — у закрытых его не будет.';
+  String get connectionsAppNamesHint => 'Название приложения сообщает система, а она знает только живые соединения, поэтому у закрытых имени не будет.';
 
   @override
   String get connectionsSplitTunnelNote => 'Приложения, выведенные из туннеля, здесь не появятся: Android пускает их мимо, и до ядра их трафик не доходит.';
@@ -2010,7 +2052,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String subscriptionsExpiredNotifBody(String name, String date) {
-    return '«$name» истекла $date. Провайдер перестал обновлять список серверов — продлите подписку, чтобы серверы продолжали работать.';
+    return '«$name» истекла $date. Провайдер перестал обновлять список серверов. Продлите подписку, чтобы серверы продолжали работать.';
   }
 
   @override
@@ -2032,10 +2074,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get chainNameLabel => 'Название цепочки';
 
   @override
-  String get chainNameHint => 'Пусто — назовём по маршруту';
+  String get chainNameHint => 'Оставьте пустым, назовём по маршруту';
 
   @override
-  String get chainHint => 'Трафик идёт сверху вниз. Первый узел — тот, к кому подключается это устройство; последний — тот, чей адрес видят сайты.';
+  String get chainHint => 'Трафик идёт сверху вниз: устройство подключается к первому узлу, а адрес последнего видят сайты.';
 
   @override
   String get chainDeviceNode => 'Это устройство';
@@ -2050,10 +2092,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get chainRemoveNode => 'Убрать узел';
 
   @override
-  String get chainExitNodeHint => 'Выходной узел — его адрес видят сайты';
+  String get chainExitNodeHint => 'Выходной узел, его адрес видят сайты';
 
   @override
-  String get chainNodeMissing => 'Сервера больше нет — работаем по сохранённой копии';
+  String get chainNodeMissing => 'Сервера больше нет, работаем по сохранённой копии';
 
   @override
   String get chainSave => 'Сохранить цепочку';
@@ -2068,7 +2110,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get chainPickSearch => 'Поиск по серверам';
 
   @override
-  String get chainPickEmpty => 'Нет серверов, которые могут быть узлом цепочки. Подходят VLESS, VMess, Trojan, Shadowsocks и Hysteria2; AmneziaWG и готовые JSON-конфиги — нет.';
+  String get chainPickEmpty => 'Нет серверов, которые могут быть узлом цепочки. Подходят VLESS, VMess, Trojan, Shadowsocks и Hysteria2; AmneziaWG и готовые JSON-конфиги не подходят.';
 
   @override
   String get chainEdit => 'Изменить цепочку';
@@ -2116,13 +2158,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsCoreMihomoSubtitle => 'Ядро, совместимое с Clash. Цепочки и готовые конфиги xray остаются на Xray.';
 
   @override
-  String get settingsCoreHint => 'Применится на следующем подключении — текущая сессия не перезапускается.';
+  String get settingsCoreHint => 'Применится на следующем подключении, текущая сессия не перезапускается.';
 
   @override
   String get settingsProxyAuthTitle => 'Пароль для локального прокси';
 
   @override
-  String get settingsProxyAuthSubtitle => 'Выключите там, где пароль вписать некуда — например, в поле прокси у Wi-Fi';
+  String get settingsProxyAuthSubtitle => 'Выключите там, где пароль вписать некуда, например в поле прокси у Wi-Fi';
 
   @override
   String get settingsProxyAuthUser => 'Логин';
@@ -2146,34 +2188,34 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunnelModeProxySubtitle => 'Только локальный прокси, системный VPN не включается';
 
   @override
-  String get settingsTunnelModeHint => '«Прокси» поднимает SOCKS и HTTP на 127.0.0.1 — направьте на них приложение или Wi-Fi. Прокси открыт любому приложению на устройстве. Маршрутизация по приложениям и перехват DNS — только в VPN.';
+  String get settingsTunnelModeHint => '«Прокси» поднимает SOCKS и HTTP на 127.0.0.1, направьте на них приложение или Wi-Fi. Прокси открыт любому приложению на устройстве. Маршрутизация по приложениям и перехват DNS работают только в VPN.';
 
   @override
   String get settingsCoreAuto => 'Автоматически';
 
   @override
-  String get settingsCoreAutoSubtitle => 'Ссылки идут на Xray, готовые конфиги — на своё ядро';
+  String get settingsCoreAutoSubtitle => 'Ссылки идут на Xray, а готовые конфиги на своё ядро';
 
   @override
-  String get settingsCoreSkipClash => 'Активный сервер — готовый конфиг Clash: его исполняет только mihomo, при любом выборе ядра.';
+  String get settingsCoreSkipClash => 'У активного сервера готовый конфиг Clash: его исполняет только mihomo, при любом выборе ядра.';
 
   @override
-  String get settingsCoreSkipCustom => 'Активный сервер — готовый JSON-конфиг Xray: идёт через libxray при любом выборе ядра. Для mihomo нужна подписка с обычными ссылками.';
+  String get settingsCoreSkipCustom => 'У активного сервера готовый JSON-конфиг Xray: он идёт через libxray при любом выборе ядра. Для mihomo нужна подписка с обычными ссылками.';
 
   @override
-  String get settingsCoreSkipChain => 'Активный сервер — цепочка: её узлы связаны через dialerProxy Xray, поэтому она идёт через libxray при любом выборе ядра.';
+  String get settingsCoreSkipChain => 'У активного сервера цепочка: её узлы связаны через dialerProxy Xray, поэтому она идёт через libxray при любом выборе ядра.';
 
   @override
-  String get settingsCoreSkipAwg => 'Активный сервер — профиль AmneziaWG: его исполняет mihomo при любом выборе ядра.';
+  String get settingsCoreSkipAwg => 'У активного сервера профиль AmneziaWG: его исполняет mihomo при любом выборе ядра.';
 
   @override
-  String get settingsCoreSkipPlatform => 'Ядро mihomo не поставляется на этой платформе — подключение идёт через ядро Xray.';
+  String get settingsCoreSkipPlatform => 'Ядро mihomo не поставляется на этой платформе, поэтому подключение идёт через ядро Xray.';
 
   @override
-  String get settingsCoreSkipLinkXrayOnly => 'Ссылка активного сервера — на транспорте, которого у mihomo для этого протокола нет: она исполняется на Xray при любом выборе ядра.';
+  String get settingsCoreSkipLinkXrayOnly => 'Ссылка активного сервера на транспорте, которого у mihomo для этого протокола нет: она исполняется на Xray при любом выборе ядра.';
 
   @override
-  String get settingsCoreSkipLinkMihomoOnly => 'Ссылка активного сервера — на транспорте, который Xray 26 убрал: она исполняется на mihomo при любом выборе ядра.';
+  String get settingsCoreSkipLinkMihomoOnly => 'Ссылка активного сервера на транспорте, который Xray 26 убрал: она исполняется на mihomo при любом выборе ядра.';
 
   @override
   String get settingsInternalsCores => 'Ядра';
@@ -2399,10 +2441,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceIconShapeArch => 'Арка';
 
   @override
-  String get appearanceSectionServers => 'Список серверов и главный экран';
+  String get appearanceSectionServers => 'Список серверов';
 
   @override
-  String get appearanceSectionFeel => 'Тема и отклик';
+  String get appearanceSectionUnderButton => 'Под кнопкой подключения';
+
+  @override
+  String get appearanceSectionFeel => 'Нажатия';
 
   @override
   String get appearanceIconShapeClover => 'Клевер';
@@ -2432,7 +2477,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceIconShapePebble => 'Галька';
 
   @override
-  String get cardImageRejectAspect => 'Картинка слишком высокая для карточки. Нужна широкая — примерно от 3:2 до 5:1.';
+  String get cardImageRejectAspect => 'Картинка слишком высокая для карточки. Нужна широкая, примерно от 3:2 до 5:1.';
 
   @override
   String cardImageRejectSmall(int width) {

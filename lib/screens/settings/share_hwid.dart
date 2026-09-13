@@ -6,6 +6,7 @@ class _ShareHwidCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final settings = settingsAsync.value ?? const AppSettings();
     final enabled = settings.shareDeviceHwid;
 
@@ -38,13 +39,13 @@ class _ShareHwidCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Share device HWID',
+                  l10n.settingsShareHwidTitle,
                   style: textTheme.titleMedium?.copyWith(
                     color: AppTheme.text(context),
                   ),
                 ),
                 Text(
-                  enabled ? 'HWID will be sent with subscription requests' : 'HWID not shared',
+                  enabled ? l10n.settingsShareHwidOn : l10n.settingsShareHwidOff,
                   style: textTheme.bodyMedium?.copyWith(color: enabled ? AppTheme.accent(context) : AppTheme.textLight(context)),
                 ),
               ],

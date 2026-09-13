@@ -458,7 +458,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetRuTitle.
   ///
   /// In en, this message translates to:
-  /// **'Russian sites — Direct'**
+  /// **'Russian sites go direct'**
   String get settingsRoutingPresetRuTitle;
 
   /// No description provided for @settingsRoutingPresetRuDesc.
@@ -470,19 +470,19 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetRuGeoipTitle.
   ///
   /// In en, this message translates to:
-  /// **'Russia IPs (GeoIP) — Direct'**
+  /// **'Russia IPs (GeoIP) go direct'**
   String get settingsRoutingPresetRuGeoipTitle;
 
   /// No description provided for @settingsRoutingPresetRuGeoipDesc.
   ///
   /// In en, this message translates to:
-  /// **'All Russian IP ranges bypass the VPN via GeoIP — works in Proxy mode'**
+  /// **'All Russian IP ranges bypass the VPN via GeoIP. Works in Proxy mode.'**
   String get settingsRoutingPresetRuGeoipDesc;
 
   /// No description provided for @settingsRoutingPresetRuGeositeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Russia sites (GeoSite) — Direct'**
+  /// **'Russia sites (GeoSite) go direct'**
   String get settingsRoutingPresetRuGeositeTitle;
 
   /// No description provided for @settingsRoutingPresetRuGeositeDesc.
@@ -494,7 +494,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetBanksTitle.
   ///
   /// In en, this message translates to:
-  /// **'Banks & gov — Direct'**
+  /// **'Banks & gov go direct'**
   String get settingsRoutingPresetBanksTitle;
 
   /// No description provided for @settingsRoutingPresetBanksDesc.
@@ -506,7 +506,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetLanIpsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Local network — Direct'**
+  /// **'Local network goes direct'**
   String get settingsRoutingPresetLanIpsTitle;
 
   /// No description provided for @settingsRoutingPresetLanIpsDesc.
@@ -518,7 +518,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetAdsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Ads & trackers — Block'**
+  /// **'Ads & trackers get blocked'**
   String get settingsRoutingPresetAdsTitle;
 
   /// No description provided for @settingsRoutingPresetAdsDesc.
@@ -530,7 +530,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetAdsGeositeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Ads (GeoSite) — Block'**
+  /// **'Ads (GeoSite) get blocked'**
   String get settingsRoutingPresetAdsGeositeTitle;
 
   /// No description provided for @settingsRoutingPresetAdsGeositeDesc.
@@ -542,7 +542,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetStreamingTitle.
   ///
   /// In en, this message translates to:
-  /// **'Streaming — Proxy'**
+  /// **'Streaming through the VPN'**
   String get settingsRoutingPresetStreamingTitle;
 
   /// No description provided for @settingsRoutingPresetStreamingDesc.
@@ -554,7 +554,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetMessengersTitle.
   ///
   /// In en, this message translates to:
-  /// **'Messengers — Proxy'**
+  /// **'Messengers through the VPN'**
   String get settingsRoutingPresetMessengersTitle;
 
   /// No description provided for @settingsRoutingPresetMessengersDesc.
@@ -734,7 +734,7 @@ abstract class AppLocalizations {
   /// No description provided for @routingCheatSheetBody.
   ///
   /// In en, this message translates to:
-  /// **'Rules are just a list: what goes where. Each line is a domain, an IP, or a geo tag, and next to it the action — straight out (bypass), through the VPN (proxy), or blocked.\n\n## Domains\nvk.com — the domain itself and all its subdomains\nru — anything ending in .ru (a bare word, no dot)\n.example.com — subdomains only, not the domain itself\nfull:example.com — exactly this host, no subdomains\nregexp:… — a regex, if you really need to get fancy\n\n## IP addresses\n1.2.3.4 — a single address\n10.0.0.0/8 — a whole range (CIDR)\n\n## GeoIP — by country\ngeoip:ru — every Russian IP. Swap ru for any country: us, de, cn, ua, kz…\nPlus ready-made bundles: geoip:private (LAN), geoip:telegram, geoip:google.\nNeed it by country? This is the one — geoip knows them all.\n\n## GeoSite — ready-made lists\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nThese aren\'t countries but service categories someone already put together for you.\nHardly any countries here (just geolocation-cn and geolocation-!cn), so by-country is really geoip\'s job.\n\n## On PC (keqrnel core)\nGeo works the same as on the phone: the xray built into keqrnel does the matching. It just needs geoip.dat and geosite.dat sitting next to keqdroid.exe — a release build already has them there. If geo rules look ignored, check those two files first.\n\n## Order\nTop to bottom: block first, then your server (always direct, or you\'d get a loop), then bypass, then proxy. Whatever is left follows the Unmatched traffic switch up top.'**
+  /// **'Rules are just a list: what goes where. Each line is a domain, an IP, or a geo tag, and next to it the action: straight out (bypass), through the VPN (proxy), or blocked.\n\n## Domains\nvk.com — the domain itself and all its subdomains\nru — anything ending in .ru (a bare word, no dot)\n.example.com — subdomains only, not the domain itself\nfull:example.com — exactly this host, no subdomains\nregexp:… — a regex, if you really need to get fancy\n\n## IP addresses\n1.2.3.4 — a single address\n10.0.0.0/8 — a whole range (CIDR)\n\n## GeoIP: by country\ngeoip:ru — every Russian IP. Swap ru for any country: us, de, cn, ua, kz…\nPlus ready-made bundles: geoip:private (LAN), geoip:telegram, geoip:google.\nNeed it by country? This is the one, geoip knows them all.\n\n## GeoSite: ready-made lists\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nThese aren\'t countries but service categories someone already put together for you.\nHardly any countries here (just geolocation-cn and geolocation-!cn), so by-country is really geoip\'s job.\n\n## On PC (keqrnel core)\nGeo works the same as on the phone: the xray built into keqrnel does the matching. It just needs geoip.dat and geosite.dat sitting next to keqdroid.exe. A release build already has them there. If geo rules look ignored, check those two files first.\n\n## Order\nTop to bottom: block first, then your server (always direct, or you\'d get a loop), then bypass, then proxy. Whatever is left follows the Unmatched traffic switch up top.'**
   String get routingCheatSheetBody;
 
   /// No description provided for @settingsRoutingItemCount.
@@ -800,13 +800,13 @@ abstract class AppLocalizations {
   /// No description provided for @serversTwoColumnsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Two-column server list'**
+  /// **'Two columns'**
   String get serversTwoColumnsTitle;
 
   /// No description provided for @appearanceServerIconThemeColors.
   ///
   /// In en, this message translates to:
-  /// **'Flagless icons in theme colours'**
+  /// **'Flagless server icons in theme colours'**
   String get appearanceServerIconThemeColors;
 
   /// No description provided for @settingsLanProxyTitle.
@@ -872,7 +872,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLanAuthHint.
   ///
   /// In en, this message translates to:
-  /// **'Both fields set — devices sign in to the proxy with them. Empty — no password (anyone on your network can use it).'**
+  /// **'With both fields set, devices sign in to the proxy with them. Left empty, there is no password and anyone on your network can use it.'**
   String get settingsLanAuthHint;
 
   /// No description provided for @settingsLocalPortsTitle.
@@ -920,7 +920,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXrayCoreSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Ports, DNS, TUN, log and routing'**
+  /// **'DNS, Mux, fragmentation, TUN and logs'**
   String get settingsXrayCoreSubtitle;
 
   /// No description provided for @settingsXrayDnsSection.
@@ -1076,13 +1076,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXraySniffing.
   ///
   /// In en, this message translates to:
-  /// **'Inbound sniffing'**
+  /// **'Detect domains in traffic (sniffing)'**
   String get settingsXraySniffing;
 
   /// No description provided for @settingsXraySniffingRouteOnly.
   ///
   /// In en, this message translates to:
-  /// **'Sniffing route only'**
+  /// **'Sniffed domain for routing only'**
   String get settingsXraySniffingRouteOnly;
 
   /// No description provided for @settingsXrayDnsDefaultNote.
@@ -1412,7 +1412,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunEinHint.
   ///
   /// In en, this message translates to:
-  /// **'Full-cone NAT for UDP — helps P2P and games. gVisor/mixed stack only'**
+  /// **'Full-cone NAT for UDP, helps P2P and games. gVisor/mixed stack only'**
   String get settingsTunEinHint;
 
   /// No description provided for @settingsTunAutoRoute.
@@ -1508,19 +1508,19 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPingKeepAliveTitle.
   ///
   /// In en, this message translates to:
-  /// **'Measurement'**
+  /// **'How it\'s measured'**
   String get settingsPingKeepAliveTitle;
 
   /// No description provided for @settingsPingKeepAlive.
   ///
   /// In en, this message translates to:
-  /// **'Keep-alive'**
+  /// **'Measure on a warm connection'**
   String get settingsPingKeepAlive;
 
   /// No description provided for @settingsPingKeepAliveHint.
   ///
   /// In en, this message translates to:
-  /// **'Response time without the handshake. Off — the whole request, as a browser sees it'**
+  /// **'The request goes out twice and the second one counts, so the handshake stays out of the number. Off: a single request with the warm-up, like opening a site for the first time.'**
   String get settingsPingKeepAliveHint;
 
   /// No description provided for @settingsPingMethodSpeed.
@@ -1694,7 +1694,7 @@ abstract class AppLocalizations {
   /// No description provided for @subscriptionIdentityHwidOff.
   ///
   /// In en, this message translates to:
-  /// **'Sharing the device HWID is turned off in Advanced settings, so no HWID is sent — custom or not.'**
+  /// **'Sharing the device HWID is turned off in Advanced settings, so no HWID is sent, custom or not.'**
   String get subscriptionIdentityHwidOff;
 
   /// No description provided for @subscriptionIdentityUserAgent.
@@ -1726,6 +1726,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Already in use'**
   String get subscriptionIdentitySectionUsed;
+
+  /// No description provided for @subscriptionIdentitySectionUaAndroid.
+  ///
+  /// In en, this message translates to:
+  /// **'Android clients'**
+  String get subscriptionIdentitySectionUaAndroid;
+
+  /// No description provided for @subscriptionIdentitySectionUaApple.
+  ///
+  /// In en, this message translates to:
+  /// **'iPhone & iPad clients'**
+  String get subscriptionIdentitySectionUaApple;
+
+  /// No description provided for @subscriptionIdentitySectionUaDesktop.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop clients'**
+  String get subscriptionIdentitySectionUaDesktop;
+
+  /// No description provided for @subscriptionIdentitySectionUaCores.
+  ///
+  /// In en, this message translates to:
+  /// **'Cores & plain http'**
+  String get subscriptionIdentitySectionUaCores;
+
+  /// No description provided for @subscriptionIdentitySectionOs.
+  ///
+  /// In en, this message translates to:
+  /// **'OS'**
+  String get subscriptionIdentitySectionOs;
+
+  /// No description provided for @subscriptionIdentitySectionApple.
+  ///
+  /// In en, this message translates to:
+  /// **'iPhone & iPad'**
+  String get subscriptionIdentitySectionApple;
+
+  /// No description provided for @subscriptionIdentitySectionDesktop.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop'**
+  String get subscriptionIdentitySectionDesktop;
+
+  /// No description provided for @subscriptionIdentitySectionAndroidRelease.
+  ///
+  /// In en, this message translates to:
+  /// **'Android releases'**
+  String get subscriptionIdentitySectionAndroidRelease;
+
+  /// No description provided for @subscriptionIdentitySectionAndroidBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Android builds'**
+  String get subscriptionIdentitySectionAndroidBuild;
+
+  /// No description provided for @subscriptionIdentitySectionIosRelease.
+  ///
+  /// In en, this message translates to:
+  /// **'iOS releases'**
+  String get subscriptionIdentitySectionIosRelease;
+
+  /// No description provided for @subscriptionIdentitySectionIosBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'iOS builds'**
+  String get subscriptionIdentitySectionIosBuild;
 
   /// No description provided for @subscriptionIdentitySearchOrEnter.
   ///
@@ -2129,6 +2195,24 @@ abstract class AppLocalizations {
   /// **'Imported: {count} section(s)'**
   String settingsImportedSections(int count);
 
+  /// No description provided for @settingsShareHwidTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share device HWID'**
+  String get settingsShareHwidTitle;
+
+  /// No description provided for @settingsShareHwidOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent with subscription requests'**
+  String get settingsShareHwidOn;
+
+  /// No description provided for @settingsShareHwidOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Not shared'**
+  String get settingsShareHwidOff;
+
   /// No description provided for @settingsDebugMode.
   ///
   /// In en, this message translates to:
@@ -2336,7 +2420,7 @@ abstract class AppLocalizations {
   /// No description provided for @splitProxyModeWarning.
   ///
   /// In en, this message translates to:
-  /// **'Split tunneling is not applied in Proxy mode — all traffic goes through the system proxy. Switch the connection mode to TUN (in the side panel) so per-process rules work.'**
+  /// **'Split tunneling is not applied in Proxy mode: all traffic goes through the system proxy. Switch the connection mode to TUN (in the side panel) so per-process rules work.'**
   String get splitProxyModeWarning;
 
   /// No description provided for @settingsLatestVersionInstalled.
@@ -2762,13 +2846,13 @@ abstract class AppLocalizations {
   /// No description provided for @hotkeyActionToggleTun.
   ///
   /// In en, this message translates to:
-  /// **'Toggle TUN mode'**
+  /// **'Switch TUN / Proxy'**
   String get hotkeyActionToggleTun;
 
   /// No description provided for @hotkeyActionBestPing.
   ///
   /// In en, this message translates to:
-  /// **'Best-ping server'**
+  /// **'Switch to the best-ping server'**
   String get hotkeyActionBestPing;
 
   /// No description provided for @hotkeyActionToggleWindow.
@@ -2792,7 +2876,7 @@ abstract class AppLocalizations {
   /// No description provided for @hotkeyRecordingHint.
   ///
   /// In en, this message translates to:
-  /// **'Esc — cancel, Backspace — clear'**
+  /// **'Esc cancels, Backspace clears'**
   String get hotkeyRecordingHint;
 
   /// No description provided for @hotkeyNeedsModifier.
@@ -2816,7 +2900,7 @@ abstract class AppLocalizations {
   /// No description provided for @hotkeyNoPingData.
   ///
   /// In en, this message translates to:
-  /// **'No ping results yet — run a ping test first'**
+  /// **'No ping results yet, run a ping test first'**
   String get hotkeyNoPingData;
 
   /// No description provided for @clipboardNoSubscriptionLink.
@@ -2936,7 +3020,7 @@ abstract class AppLocalizations {
   /// No description provided for @subInsecureHttpWarning.
   ///
   /// In en, this message translates to:
-  /// **'http link — updates are blocked'**
+  /// **'http link, updates are blocked'**
   String get subInsecureHttpWarning;
 
   /// No description provided for @subSwitchToHttps.
@@ -3398,7 +3482,7 @@ abstract class AppLocalizations {
   /// No description provided for @serverEditorOverriddenNote.
   ///
   /// In en, this message translates to:
-  /// **'Config edited manually — subscription updates no longer replace it.'**
+  /// **'Config edited manually, so subscription updates no longer replace it.'**
   String get serverEditorOverriddenNote;
 
   /// No description provided for @serverEditorRevert.
@@ -3458,31 +3542,31 @@ abstract class AppLocalizations {
   /// No description provided for @appearanceHaptics.
   ///
   /// In en, this message translates to:
-  /// **'Haptic feedback'**
+  /// **'Vibration'**
   String get appearanceHaptics;
 
   /// No description provided for @appearanceShowTraffic.
   ///
   /// In en, this message translates to:
-  /// **'Show traffic'**
+  /// **'Traffic speed and volume'**
   String get appearanceShowTraffic;
 
   /// No description provided for @appearanceShowTime.
   ///
   /// In en, this message translates to:
-  /// **'Show connection time'**
+  /// **'Connection time'**
   String get appearanceShowTime;
 
   /// No description provided for @appearanceShowTrafficSplit.
   ///
   /// In en, this message translates to:
-  /// **'Show VPN and direct apart'**
+  /// **'VPN and direct traffic separately'**
   String get appearanceShowTrafficSplit;
 
   /// No description provided for @appearanceWaveLatencyColor.
   ///
   /// In en, this message translates to:
-  /// **'Colour the indicator by latency'**
+  /// **'Wave colour by ping'**
   String get appearanceWaveLatencyColor;
 
   /// No description provided for @appearanceFontTitle.
@@ -3596,7 +3680,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPermTunHeader.
   ///
   /// In en, this message translates to:
-  /// **'TUN MODE (LINUX)'**
+  /// **'TUN mode (Linux)'**
   String get settingsPermTunHeader;
 
   /// No description provided for @settingsPermTunPasswordlessTitle.
@@ -3614,7 +3698,7 @@ abstract class AppLocalizations {
   /// No description provided for @appearanceNotifSectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'NOTIFICATION'**
+  /// **'Notifications'**
   String get appearanceNotifSectionTitle;
 
   /// No description provided for @appearanceNotifSpeedTitle.
@@ -3680,7 +3764,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetTelegramGeoTitle.
   ///
   /// In en, this message translates to:
-  /// **'Telegram (GeoIP+GeoSite) — Proxy'**
+  /// **'Telegram (GeoIP+GeoSite) through the VPN'**
   String get settingsRoutingPresetTelegramGeoTitle;
 
   /// No description provided for @settingsRoutingPresetTelegramGeoDesc.
@@ -3692,7 +3776,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingPresetRefilterTitle.
   ///
   /// In en, this message translates to:
-  /// **'Blocked in Russia (Re-filter) — Proxy'**
+  /// **'Blocked in Russia (Re-filter) through the VPN'**
   String get settingsRoutingPresetRefilterTitle;
 
   /// No description provided for @settingsRoutingPresetRefilterDesc.
@@ -3704,7 +3788,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoutingGeoUnknownTitle.
   ///
   /// In en, this message translates to:
-  /// **'Missing from the geo databases — will be ignored'**
+  /// **'Missing from the geo databases, will be ignored'**
   String get settingsRoutingGeoUnknownTitle;
 
   /// No description provided for @settingsRoutingGeoUnknownHint.
@@ -3836,7 +3920,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectionsRuleHintApplied.
   ///
   /// In en, this message translates to:
-  /// **'Core log level set to Info — reconnect to apply'**
+  /// **'Core log level set to Info, reconnect to apply'**
   String get connectionsRuleHintApplied;
 
   /// No description provided for @connectionsRuleDefault.
@@ -3884,7 +3968,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectionsAppNamesHint.
   ///
   /// In en, this message translates to:
-  /// **'App names come from the system, and it knows only live connections — closed ones stay unnamed.'**
+  /// **'App names come from the system, and it knows only live connections, so closed ones stay unnamed.'**
   String get connectionsAppNamesHint;
 
   /// No description provided for @connectionsSplitTunnelNote.
@@ -3914,7 +3998,7 @@ abstract class AppLocalizations {
   /// No description provided for @subscriptionsExpiredNotifBody.
   ///
   /// In en, this message translates to:
-  /// **'\"{name}\" expired on {date}. The provider has stopped updating the server list — renew it to keep the servers working.'**
+  /// **'\"{name}\" expired on {date}. The provider has stopped updating the server list. Renew it to keep the servers working.'**
   String subscriptionsExpiredNotifBody(String name, String date);
 
   /// No description provided for @chainTitle.
@@ -3992,13 +4076,13 @@ abstract class AppLocalizations {
   /// No description provided for @chainExitNodeHint.
   ///
   /// In en, this message translates to:
-  /// **'Exit node — sites see this address'**
+  /// **'Exit node, sites see this address'**
   String get chainExitNodeHint;
 
   /// No description provided for @chainNodeMissing.
   ///
   /// In en, this message translates to:
-  /// **'Server is gone — using the saved copy'**
+  /// **'Server is gone, using the saved copy'**
   String get chainNodeMissing;
 
   /// No description provided for @chainSave.
@@ -4094,7 +4178,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCoreHint.
   ///
   /// In en, this message translates to:
-  /// **'Applies on the next connection — the running session is not restarted.'**
+  /// **'Applies on the next connection, the running session is not restarted.'**
   String get settingsCoreHint;
 
   /// No description provided for @settingsProxyAuthTitle.
@@ -4106,7 +4190,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsProxyAuthSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Turn off where there is nowhere to enter it — the Wi-Fi proxy field, for one'**
+  /// **'Turn off where there is nowhere to enter it, like the Wi-Fi proxy field'**
   String get settingsProxyAuthSubtitle;
 
   /// No description provided for @settingsProxyAuthUser.
@@ -4154,7 +4238,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunnelModeHint.
   ///
   /// In en, this message translates to:
-  /// **'Proxy mode runs SOCKS and HTTP on 127.0.0.1 — point an app or Wi-Fi at them. The proxy is open to every app on the device. Per-app routing and DNS interception need VPN mode.'**
+  /// **'Proxy mode runs SOCKS and HTTP on 127.0.0.1, so point an app or Wi-Fi at them. The proxy is open to every app on the device. Per-app routing and DNS interception need VPN mode.'**
   String get settingsTunnelModeHint;
 
   /// No description provided for @settingsCoreAuto.
@@ -4172,7 +4256,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCoreSkipClash.
   ///
   /// In en, this message translates to:
-  /// **'The active server is a ready-made Clash config — only mihomo can run it, no matter which core is selected.'**
+  /// **'The active server is a ready-made Clash config, and only mihomo can run it, no matter which core is selected.'**
   String get settingsCoreSkipClash;
 
   /// No description provided for @settingsCoreSkipCustom.
@@ -4190,7 +4274,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsCoreSkipAwg.
   ///
   /// In en, this message translates to:
-  /// **'The active server is an AmneziaWG profile — it runs on mihomo no matter which core is selected.'**
+  /// **'The active server is an AmneziaWG profile, and it runs on mihomo no matter which core is selected.'**
   String get settingsCoreSkipAwg;
 
   /// No description provided for @settingsCoreSkipPlatform.
@@ -4652,13 +4736,19 @@ abstract class AppLocalizations {
   /// No description provided for @appearanceSectionServers.
   ///
   /// In en, this message translates to:
-  /// **'Server list and main screen'**
+  /// **'Server list'**
   String get appearanceSectionServers;
+
+  /// No description provided for @appearanceSectionUnderButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Under the connect button'**
+  String get appearanceSectionUnderButton;
 
   /// No description provided for @appearanceSectionFeel.
   ///
   /// In en, this message translates to:
-  /// **'Theme and feedback'**
+  /// **'Touch feedback'**
   String get appearanceSectionFeel;
 
   /// No description provided for @appearanceIconShapeClover.
@@ -4718,7 +4808,7 @@ abstract class AppLocalizations {
   /// No description provided for @cardImageRejectAspect.
   ///
   /// In en, this message translates to:
-  /// **'This image is too tall for a card. Pick a wide one — roughly from 3:2 to 5:1.'**
+  /// **'This image is too tall for a card. Pick a wide one, roughly from 3:2 to 5:1.'**
   String get cardImageRejectAspect;
 
   /// No description provided for @cardImageRejectSmall.

@@ -159,6 +159,15 @@ class _AppearanceGeneralTab extends ConsumerWidget {
                 onChanged: (v) =>
                     onSave(current.copyWith(serverIconThemeColors: v)),
               ),
+            ],
+          ),
+          // Чипы и волна — своей секцией, хотя это тот же «главный экран».
+          // Место вынесено в заголовок, чтобы не повторять «под кнопкой» в
+          // каждом названии: одного общего заголовка хватает, чтобы понять,
+          // где именно появится то, что включаешь.
+          ExpressiveSectionHeader(l10n.appearanceSectionUnderButton),
+          ExpressiveGroup(
+            children: [
               _AppearanceSwitchTile(
                 icon: Icons.swap_vert_rounded,
                 title: l10n.appearanceShowTraffic,

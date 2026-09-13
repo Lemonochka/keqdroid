@@ -200,55 +200,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRoutingPresetAdd => 'Add';
 
   @override
-  String get settingsRoutingPresetRuTitle => 'Russian sites — Direct';
+  String get settingsRoutingPresetRuTitle => 'Russian sites go direct';
 
   @override
   String get settingsRoutingPresetRuDesc => 'All .ru / .рф domains and major RU services bypass the VPN (adds domains to Direct)';
 
   @override
-  String get settingsRoutingPresetRuGeoipTitle => 'Russia IPs (GeoIP) — Direct';
+  String get settingsRoutingPresetRuGeoipTitle => 'Russia IPs (GeoIP) go direct';
 
   @override
-  String get settingsRoutingPresetRuGeoipDesc => 'All Russian IP ranges bypass the VPN via GeoIP — works in Proxy mode';
+  String get settingsRoutingPresetRuGeoipDesc => 'All Russian IP ranges bypass the VPN via GeoIP. Works in Proxy mode.';
 
   @override
-  String get settingsRoutingPresetRuGeositeTitle => 'Russia sites (GeoSite) — Direct';
+  String get settingsRoutingPresetRuGeositeTitle => 'Russia sites (GeoSite) go direct';
 
   @override
   String get settingsRoutingPresetRuGeositeDesc => 'Russian domains from the GeoSite database bypass the VPN';
 
   @override
-  String get settingsRoutingPresetBanksTitle => 'Banks & gov — Direct';
+  String get settingsRoutingPresetBanksTitle => 'Banks & gov go direct';
 
   @override
   String get settingsRoutingPresetBanksDesc => 'Banking, payments and state portals bypass the VPN';
 
   @override
-  String get settingsRoutingPresetLanIpsTitle => 'Local network — Direct';
+  String get settingsRoutingPresetLanIpsTitle => 'Local network goes direct';
 
   @override
   String get settingsRoutingPresetLanIpsDesc => 'Private LAN IP ranges (192.168.x, 10.x, …) bypass the VPN';
 
   @override
-  String get settingsRoutingPresetAdsTitle => 'Ads & trackers — Block';
+  String get settingsRoutingPresetAdsTitle => 'Ads & trackers get blocked';
 
   @override
   String get settingsRoutingPresetAdsDesc => 'Drop common ad / analytics hosts';
 
   @override
-  String get settingsRoutingPresetAdsGeositeTitle => 'Ads (GeoSite) — Block';
+  String get settingsRoutingPresetAdsGeositeTitle => 'Ads (GeoSite) get blocked';
 
   @override
   String get settingsRoutingPresetAdsGeositeDesc => 'Block a broad ad / tracker list from the GeoSite database';
 
   @override
-  String get settingsRoutingPresetStreamingTitle => 'Streaming — Proxy';
+  String get settingsRoutingPresetStreamingTitle => 'Streaming through the VPN';
 
   @override
   String get settingsRoutingPresetStreamingDesc => 'Force YouTube, Netflix, Twitch through the VPN';
 
   @override
-  String get settingsRoutingPresetMessengersTitle => 'Messengers — Proxy';
+  String get settingsRoutingPresetMessengersTitle => 'Messengers through the VPN';
 
   @override
   String get settingsRoutingPresetMessengersDesc => 'Force Telegram, Discord, WhatsApp through the VPN';
@@ -340,7 +340,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routingCheatSheetTitle => 'How to write rules';
 
   @override
-  String get routingCheatSheetBody => 'Rules are just a list: what goes where. Each line is a domain, an IP, or a geo tag, and next to it the action — straight out (bypass), through the VPN (proxy), or blocked.\n\n## Domains\nvk.com — the domain itself and all its subdomains\nru — anything ending in .ru (a bare word, no dot)\n.example.com — subdomains only, not the domain itself\nfull:example.com — exactly this host, no subdomains\nregexp:… — a regex, if you really need to get fancy\n\n## IP addresses\n1.2.3.4 — a single address\n10.0.0.0/8 — a whole range (CIDR)\n\n## GeoIP — by country\ngeoip:ru — every Russian IP. Swap ru for any country: us, de, cn, ua, kz…\nPlus ready-made bundles: geoip:private (LAN), geoip:telegram, geoip:google.\nNeed it by country? This is the one — geoip knows them all.\n\n## GeoSite — ready-made lists\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nThese aren\'t countries but service categories someone already put together for you.\nHardly any countries here (just geolocation-cn and geolocation-!cn), so by-country is really geoip\'s job.\n\n## On PC (keqrnel core)\nGeo works the same as on the phone: the xray built into keqrnel does the matching. It just needs geoip.dat and geosite.dat sitting next to keqdroid.exe — a release build already has them there. If geo rules look ignored, check those two files first.\n\n## Order\nTop to bottom: block first, then your server (always direct, or you\'d get a loop), then bypass, then proxy. Whatever is left follows the Unmatched traffic switch up top.';
+  String get routingCheatSheetBody => 'Rules are just a list: what goes where. Each line is a domain, an IP, or a geo tag, and next to it the action: straight out (bypass), through the VPN (proxy), or blocked.\n\n## Domains\nvk.com — the domain itself and all its subdomains\nru — anything ending in .ru (a bare word, no dot)\n.example.com — subdomains only, not the domain itself\nfull:example.com — exactly this host, no subdomains\nregexp:… — a regex, if you really need to get fancy\n\n## IP addresses\n1.2.3.4 — a single address\n10.0.0.0/8 — a whole range (CIDR)\n\n## GeoIP: by country\ngeoip:ru — every Russian IP. Swap ru for any country: us, de, cn, ua, kz…\nPlus ready-made bundles: geoip:private (LAN), geoip:telegram, geoip:google.\nNeed it by country? This is the one, geoip knows them all.\n\n## GeoSite: ready-made lists\ngeosite:google, geosite:netflix, geosite:telegram, geosite:category-ads-all…\nThese aren\'t countries but service categories someone already put together for you.\nHardly any countries here (just geolocation-cn and geolocation-!cn), so by-country is really geoip\'s job.\n\n## On PC (keqrnel core)\nGeo works the same as on the phone: the xray built into keqrnel does the matching. It just needs geoip.dat and geosite.dat sitting next to keqdroid.exe. A release build already has them there. If geo rules look ignored, check those two files first.\n\n## Order\nTop to bottom: block first, then your server (always direct, or you\'d get a loop), then bypass, then proxy. Whatever is left follows the Unmatched traffic switch up top.';
 
   @override
   String settingsRoutingItemCount(int count) {
@@ -386,10 +386,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeColorThemesTitle => 'Color themes';
 
   @override
-  String get serversTwoColumnsTitle => 'Two-column server list';
+  String get serversTwoColumnsTitle => 'Two columns';
 
   @override
-  String get appearanceServerIconThemeColors => 'Flagless icons in theme colours';
+  String get appearanceServerIconThemeColors => 'Flagless server icons in theme colours';
 
   @override
   String get settingsLanProxyTitle => 'LAN Proxy';
@@ -424,7 +424,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanPasswordLabel => 'Password';
 
   @override
-  String get settingsLanAuthHint => 'Both fields set — devices sign in to the proxy with them. Empty — no password (anyone on your network can use it).';
+  String get settingsLanAuthHint => 'With both fields set, devices sign in to the proxy with them. Left empty, there is no password and anyone on your network can use it.';
 
   @override
   String get settingsLocalPortsTitle => 'Local proxy ports';
@@ -450,7 +450,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayCoreTitle => 'Core settings';
 
   @override
-  String get settingsXrayCoreSubtitle => 'Ports, DNS, TUN, log and routing';
+  String get settingsXrayCoreSubtitle => 'DNS, Mux, fragmentation, TUN and logs';
 
   @override
   String get settingsXrayDnsSection => 'DNS';
@@ -528,10 +528,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayDomainStrategy => 'Routing domain strategy';
 
   @override
-  String get settingsXraySniffing => 'Inbound sniffing';
+  String get settingsXraySniffing => 'Detect domains in traffic (sniffing)';
 
   @override
-  String get settingsXraySniffingRouteOnly => 'Sniffing route only';
+  String get settingsXraySniffingRouteOnly => 'Sniffed domain for routing only';
 
   @override
   String get settingsXrayDnsDefaultNote => 'Default: Cloudflare and Google DoH';
@@ -696,7 +696,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTunEin => 'Endpoint-independent NAT';
 
   @override
-  String get settingsTunEinHint => 'Full-cone NAT for UDP — helps P2P and games. gVisor/mixed stack only';
+  String get settingsTunEinHint => 'Full-cone NAT for UDP, helps P2P and games. gVisor/mixed stack only';
 
   @override
   String get settingsTunAutoRoute => 'Auto route';
@@ -744,13 +744,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPingMethodUrlHint => 'Measures GET latency through the server';
 
   @override
-  String get settingsPingKeepAliveTitle => 'Measurement';
+  String get settingsPingKeepAliveTitle => 'How it\'s measured';
 
   @override
-  String get settingsPingKeepAlive => 'Keep-alive';
+  String get settingsPingKeepAlive => 'Measure on a warm connection';
 
   @override
-  String get settingsPingKeepAliveHint => 'Response time without the handshake. Off — the whole request, as a browser sees it';
+  String get settingsPingKeepAliveHint => 'The request goes out twice and the second one counts, so the handshake stays out of the number. Off: a single request with the warm-up, like opening a site for the first time.';
 
   @override
   String get settingsPingMethodSpeed => 'Speed test';
@@ -839,7 +839,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subscriptionIdentityHwid => 'HWID';
 
   @override
-  String get subscriptionIdentityHwidOff => 'Sharing the device HWID is turned off in Advanced settings, so no HWID is sent — custom or not.';
+  String get subscriptionIdentityHwidOff => 'Sharing the device HWID is turned off in Advanced settings, so no HWID is sent, custom or not.';
 
   @override
   String get subscriptionIdentityUserAgent => 'User-Agent';
@@ -855,6 +855,39 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get subscriptionIdentitySectionUsed => 'Already in use';
+
+  @override
+  String get subscriptionIdentitySectionUaAndroid => 'Android clients';
+
+  @override
+  String get subscriptionIdentitySectionUaApple => 'iPhone & iPad clients';
+
+  @override
+  String get subscriptionIdentitySectionUaDesktop => 'Desktop clients';
+
+  @override
+  String get subscriptionIdentitySectionUaCores => 'Cores & plain http';
+
+  @override
+  String get subscriptionIdentitySectionOs => 'OS';
+
+  @override
+  String get subscriptionIdentitySectionApple => 'iPhone & iPad';
+
+  @override
+  String get subscriptionIdentitySectionDesktop => 'Desktop';
+
+  @override
+  String get subscriptionIdentitySectionAndroidRelease => 'Android releases';
+
+  @override
+  String get subscriptionIdentitySectionAndroidBuild => 'Android builds';
+
+  @override
+  String get subscriptionIdentitySectionIosRelease => 'iOS releases';
+
+  @override
+  String get subscriptionIdentitySectionIosBuild => 'iOS builds';
 
   @override
   String get subscriptionIdentitySearchOrEnter => 'Search or type your own';
@@ -1080,6 +1113,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingsShareHwidTitle => 'Share device HWID';
+
+  @override
+  String get settingsShareHwidOn => 'Sent with subscription requests';
+
+  @override
+  String get settingsShareHwidOff => 'Not shared';
+
+  @override
   String get settingsDebugMode => 'Debug mode';
 
   @override
@@ -1194,7 +1236,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get splitProxyModeWarning => 'Split tunneling is not applied in Proxy mode — all traffic goes through the system proxy. Switch the connection mode to TUN (in the side panel) so per-process rules work.';
+  String get splitProxyModeWarning => 'Split tunneling is not applied in Proxy mode: all traffic goes through the system proxy. Switch the connection mode to TUN (in the side panel) so per-process rules work.';
 
   @override
   String get settingsLatestVersionInstalled => 'You have the latest version';
@@ -1413,10 +1455,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hotkeyActionToggleConnection => 'Connect / disconnect';
 
   @override
-  String get hotkeyActionToggleTun => 'Toggle TUN mode';
+  String get hotkeyActionToggleTun => 'Switch TUN / Proxy';
 
   @override
-  String get hotkeyActionBestPing => 'Best-ping server';
+  String get hotkeyActionBestPing => 'Switch to the best-ping server';
 
   @override
   String get hotkeyActionToggleWindow => 'Show / hide window';
@@ -1428,7 +1470,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hotkeyPressKeys => 'Press a shortcut…';
 
   @override
-  String get hotkeyRecordingHint => 'Esc — cancel, Backspace — clear';
+  String get hotkeyRecordingHint => 'Esc cancels, Backspace clears';
 
   @override
   String get hotkeyNeedsModifier => 'Use a modifier (Ctrl/Alt/Shift/Win) or an F-key';
@@ -1442,7 +1484,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hotkeyClearTooltip => 'Clear shortcut';
 
   @override
-  String get hotkeyNoPingData => 'No ping results yet — run a ping test first';
+  String get hotkeyNoPingData => 'No ping results yet, run a ping test first';
 
   @override
   String get clipboardNoSubscriptionLink => 'Clipboard has no subscription link (http/https)';
@@ -1504,7 +1546,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorSubInsecureHttpAction => 'Replace the link with its https:// version.';
 
   @override
-  String get subInsecureHttpWarning => 'http link — updates are blocked';
+  String get subInsecureHttpWarning => 'http link, updates are blocked';
 
   @override
   String get subSwitchToHttps => 'Switch to https';
@@ -1737,7 +1779,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serverEditorSubscriptionNote => 'This server comes from a subscription: your edits are kept when it refreshes.';
 
   @override
-  String get serverEditorOverriddenNote => 'Config edited manually — subscription updates no longer replace it.';
+  String get serverEditorOverriddenNote => 'Config edited manually, so subscription updates no longer replace it.';
 
   @override
   String get serverEditorRevert => 'Restore subscription config';
@@ -1767,19 +1809,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceAmoledNeedsDark => 'Available with the dark theme on';
 
   @override
-  String get appearanceHaptics => 'Haptic feedback';
+  String get appearanceHaptics => 'Vibration';
 
   @override
-  String get appearanceShowTraffic => 'Show traffic';
+  String get appearanceShowTraffic => 'Traffic speed and volume';
 
   @override
-  String get appearanceShowTime => 'Show connection time';
+  String get appearanceShowTime => 'Connection time';
 
   @override
-  String get appearanceShowTrafficSplit => 'Show VPN and direct apart';
+  String get appearanceShowTrafficSplit => 'VPN and direct traffic separately';
 
   @override
-  String get appearanceWaveLatencyColor => 'Colour the indicator by latency';
+  String get appearanceWaveLatencyColor => 'Wave colour by ping';
 
   @override
   String get appearanceFontTitle => 'Font';
@@ -1836,7 +1878,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPermRevokeHint => 'Revoke any permission in the system app settings.';
 
   @override
-  String get settingsPermTunHeader => 'TUN MODE (LINUX)';
+  String get settingsPermTunHeader => 'TUN mode (Linux)';
 
   @override
   String get settingsPermTunPasswordlessTitle => 'Passwordless TUN';
@@ -1845,7 +1887,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPermTunDisabled => 'Passwordless TUN disabled';
 
   @override
-  String get appearanceNotifSectionTitle => 'NOTIFICATION';
+  String get appearanceNotifSectionTitle => 'Notifications';
 
   @override
   String get appearanceNotifSpeedTitle => 'Connection speed in notification';
@@ -1878,19 +1920,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tunRememberFailed => 'Could not change TUN authorization';
 
   @override
-  String get settingsRoutingPresetTelegramGeoTitle => 'Telegram (GeoIP+GeoSite) — Proxy';
+  String get settingsRoutingPresetTelegramGeoTitle => 'Telegram (GeoIP+GeoSite) through the VPN';
 
   @override
   String get settingsRoutingPresetTelegramGeoDesc => 'Telegram by domains and by IP ranges (MTProto uses bare IPs)';
 
   @override
-  String get settingsRoutingPresetRefilterTitle => 'Blocked in Russia (Re-filter) — Proxy';
+  String get settingsRoutingPresetRefilterTitle => 'Blocked in Russia (Re-filter) through the VPN';
 
   @override
   String get settingsRoutingPresetRefilterDesc => 'Domains and IPs blocked in Russia go through the VPN, everything else stays direct';
 
   @override
-  String get settingsRoutingGeoUnknownTitle => 'Missing from the geo databases — will be ignored';
+  String get settingsRoutingGeoUnknownTitle => 'Missing from the geo databases, will be ignored';
 
   @override
   String get settingsRoutingGeoUnknownHint => 'The core aborts the whole config on an unknown geo code, so these entries are dropped before connecting. Pick an existing code with the globe button above.';
@@ -1965,7 +2007,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionsRuleHintAction => 'Set Info';
 
   @override
-  String get connectionsRuleHintApplied => 'Core log level set to Info — reconnect to apply';
+  String get connectionsRuleHintApplied => 'Core log level set to Info, reconnect to apply';
 
   @override
   String get connectionsRuleDefault => 'no rule (default action)';
@@ -1989,7 +2031,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionsClosed => 'closed';
 
   @override
-  String get connectionsAppNamesHint => 'App names come from the system, and it knows only live connections — closed ones stay unnamed.';
+  String get connectionsAppNamesHint => 'App names come from the system, and it knows only live connections, so closed ones stay unnamed.';
 
   @override
   String get connectionsSplitTunnelNote => 'Apps kept out of the tunnel are not listed here: Android routes them past it, so their traffic never reaches the core.';
@@ -2007,7 +2049,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String subscriptionsExpiredNotifBody(String name, String date) {
-    return '\"$name\" expired on $date. The provider has stopped updating the server list — renew it to keep the servers working.';
+    return '\"$name\" expired on $date. The provider has stopped updating the server list. Renew it to keep the servers working.';
   }
 
   @override
@@ -2047,10 +2089,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chainRemoveNode => 'Remove node';
 
   @override
-  String get chainExitNodeHint => 'Exit node — sites see this address';
+  String get chainExitNodeHint => 'Exit node, sites see this address';
 
   @override
-  String get chainNodeMissing => 'Server is gone — using the saved copy';
+  String get chainNodeMissing => 'Server is gone, using the saved copy';
 
   @override
   String get chainSave => 'Save chain';
@@ -2111,13 +2153,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCoreMihomoSubtitle => 'Clash-compatible core. Chains and ready-made xray configs stay on Xray.';
 
   @override
-  String get settingsCoreHint => 'Applies on the next connection — the running session is not restarted.';
+  String get settingsCoreHint => 'Applies on the next connection, the running session is not restarted.';
 
   @override
   String get settingsProxyAuthTitle => 'Password for the local proxy';
 
   @override
-  String get settingsProxyAuthSubtitle => 'Turn off where there is nowhere to enter it — the Wi-Fi proxy field, for one';
+  String get settingsProxyAuthSubtitle => 'Turn off where there is nowhere to enter it, like the Wi-Fi proxy field';
 
   @override
   String get settingsProxyAuthUser => 'Username';
@@ -2141,7 +2183,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTunnelModeProxySubtitle => 'Local proxy only, no system VPN';
 
   @override
-  String get settingsTunnelModeHint => 'Proxy mode runs SOCKS and HTTP on 127.0.0.1 — point an app or Wi-Fi at them. The proxy is open to every app on the device. Per-app routing and DNS interception need VPN mode.';
+  String get settingsTunnelModeHint => 'Proxy mode runs SOCKS and HTTP on 127.0.0.1, so point an app or Wi-Fi at them. The proxy is open to every app on the device. Per-app routing and DNS interception need VPN mode.';
 
   @override
   String get settingsCoreAuto => 'Automatic';
@@ -2150,7 +2192,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCoreAutoSubtitle => 'Links go to Xray, ready-made configs to their own core';
 
   @override
-  String get settingsCoreSkipClash => 'The active server is a ready-made Clash config — only mihomo can run it, no matter which core is selected.';
+  String get settingsCoreSkipClash => 'The active server is a ready-made Clash config, and only mihomo can run it, no matter which core is selected.';
 
   @override
   String get settingsCoreSkipCustom => 'The active server is a ready-made Xray JSON config, so it runs on libxray whatever core you pick. mihomo needs a subscription with plain links.';
@@ -2159,7 +2201,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCoreSkipChain => 'The active server is a proxy chain: its hops are linked by Xray\'s dialerProxy, so it runs on libxray no matter which core is selected.';
 
   @override
-  String get settingsCoreSkipAwg => 'The active server is an AmneziaWG profile — it runs on mihomo no matter which core is selected.';
+  String get settingsCoreSkipAwg => 'The active server is an AmneziaWG profile, and it runs on mihomo no matter which core is selected.';
 
   @override
   String get settingsCoreSkipPlatform => 'The mihomo core is not bundled for this platform, so the connection runs on the Xray core instead.';
@@ -2394,10 +2436,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceIconShapeArch => 'Arch';
 
   @override
-  String get appearanceSectionServers => 'Server list and main screen';
+  String get appearanceSectionServers => 'Server list';
 
   @override
-  String get appearanceSectionFeel => 'Theme and feedback';
+  String get appearanceSectionUnderButton => 'Under the connect button';
+
+  @override
+  String get appearanceSectionFeel => 'Touch feedback';
 
   @override
   String get appearanceIconShapeClover => 'Clover';
@@ -2427,7 +2472,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceIconShapePebble => 'Pebble';
 
   @override
-  String get cardImageRejectAspect => 'This image is too tall for a card. Pick a wide one — roughly from 3:2 to 5:1.';
+  String get cardImageRejectAspect => 'This image is too tall for a card. Pick a wide one, roughly from 3:2 to 5:1.';
 
   @override
   String cardImageRejectSmall(int width) {
