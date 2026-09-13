@@ -5,6 +5,7 @@ import 'package:androidx_graphics_shapes/material_shapes.dart';
 import 'package:androidx_graphics_shapes/shapes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/scheduler.dart';
 
 /// Цикл морфинга фигур M3 Expressive — общий для индикатора загрузки и формы
 /// кнопки подключения.
@@ -22,14 +23,8 @@ class ShapeMorphCycle extends ChangeNotifier {
     _rotation = AnimationController(
       vsync: vsync,
       duration: const Duration(milliseconds: _globalRotationDurationMillis),
-    )
-      ..addListener(notifyListeners)
-      ..repeat();
-    _step();
-    _timer = Timer.periodic(
-      const Duration(milliseconds: _morphIntervalMillis),
-      (_) => _step(),
-    );
+    )..addListener(notifyListeners);
+    _start();
   }
 
   static const _morphIntervalMillis = 650;
@@ -72,6 +67,29 @@ class ShapeMorphCycle extends ChangeNotifier {
   int _index = 0;
   double _stepAngle = 0;
 
+  /// Сдвиг оборота: свой контроллер у каждого цикла начинается с нуля, а
+  /// повернуть фигуру надо туда, где сейчас все остальные.
+  double _rotationOffset = 0;
+
+  /// Часы фазы — общие для всех циклов в приложении.
+  ///
+  /// Берём время планировщика, а не свой секундомер: оно то же самое, по
+  /// которому тикают контроллеры, и в тестах идёт по `pump`, а не мимо него.
+  static Duration get _now =>
+      SchedulerBinding.instance.currentSystemFrameTimeStamp;
+
+  /// Номер идущего сейчас шага на общей сетке.
+  static int _stepsNow(Duration now) =>
+      now.inMilliseconds ~/ _morphIntervalMillis;
+
+  /// Номер шага для сработавшего таймера — с округлением до ближайшей границы.
+  ///
+  /// Таймер срабатывает на границе, а часы планировщика отстают от неё на
+  /// последний кадр. По floor это давало бы номер предыдущего шага, то есть ту
+  /// же пару фигур ещё раз: пружина дёргала бы форму на месте.
+  static int _stepsAtBoundary(Duration now) =>
+      (now.inMilliseconds + _morphIntervalMillis ~/ 2) ~/ _morphIntervalMillis;
+
   /// Морф «текущая фигура → круг» для завершения цикла, см. [settle].
   Morph? _settleMorph;
 
@@ -85,7 +103,9 @@ class ShapeMorphCycle extends ChangeNotifier {
   double get progress => _morph.value;
 
   double get degrees =>
-      progress * _quarterRotation + _stepAngle + _rotation.value * 360;
+      progress * _quarterRotation +
+      _stepAngle +
+      (_rotation.value + _rotationOffset) * 360;
 
   /// Довести фигуру до круга и остановиться.
   ///
@@ -130,12 +150,7 @@ class ShapeMorphCycle extends ChangeNotifier {
   void resume() {
     if (!isSettling) return;
     _settleMorph = null;
-    _rotation.repeat();
-    _step();
-    _timer = Timer.periodic(
-      const Duration(milliseconds: _morphIntervalMillis),
-      (_) => _step(),
-    );
+    _start();
   }
 
   static final _circle = MaterialShapes.circle;
@@ -152,10 +167,47 @@ class ShapeMorphCycle extends ChangeNotifier {
   /// конце он не должен.
   static const _settleDuration = Duration(milliseconds: 320);
 
+  /// Заводит цикл с той фазы, на которой он сейчас у остальных индикаторов.
+  ///
+  /// Тайлы списка строятся лениво и, уехав из кадра, умирают вместе со своим
+  /// циклом. Начинай он с первой фигуры, вернувшийся в кадр индикатор
+  /// откатывал бы анимацию к её началу — при пинге пачки серверов это видно
+  /// как рывок на каждой прокрутке. Поэтому и шаг, и доворот, и оборот
+  /// считаются от общих часов, а не от момента создания.
+  void _start() {
+    final now = _now;
+    final steps = _stepsNow(now);
+    _index = steps % morphs.length;
+    _stepAngle = (steps * _quarterRotation) % 360;
+    // Пружина отрабатывает заметно быстрее самого шага и остаток интервала
+    // стоит на завершённом переходе — с середины шага честнее показать эту
+    // отстоявшуюся форму, чем догонять симуляцию с произвольного места.
+    _morph.value = 1;
+    _rotationOffset =
+        (now.inMilliseconds % _globalRotationDurationMillis) /
+            _globalRotationDurationMillis;
+    _rotation.repeat();
+    // Первый шаг — по общей сетке, дальше по ней же идёт periodic.
+    final untilNext =
+        _morphIntervalMillis - now.inMilliseconds % _morphIntervalMillis;
+    _timer = Timer(Duration(milliseconds: untilNext), () {
+      _step();
+      _timer = Timer.periodic(
+        const Duration(milliseconds: _morphIntervalMillis),
+        (_) => _step(),
+      );
+    });
+  }
+
   /// Следующая пара фигур: прогресс с нуля, доворот на четверть.
+  ///
+  /// Номер шага берётся у общих часов, а не инкрементом: periodic-таймеры
+  /// разных индикаторов расходятся на миллисекунды, и за минуту работы соседи
+  /// разъезжались бы по фигурам.
   void _step() {
-    _index = (_index + 1) % morphs.length;
-    _stepAngle = (_stepAngle + _quarterRotation) % 360;
+    final steps = _stepsAtBoundary(_now);
+    _index = steps % morphs.length;
+    _stepAngle = (steps * _quarterRotation) % 360;
     _morph
       ..value = 0
       ..animateWith(SpringSimulation(_spring, 0, 1, 0));
