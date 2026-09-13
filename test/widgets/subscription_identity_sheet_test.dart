@@ -83,18 +83,18 @@ void main() {
 
     await tester.tap(find.text('User-Agent'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Happ/3.20.4').last);
+    await tester.tap(find.text('Happ/4.1.0').last);
     await tester.pumpAndSettle();
 
     // Выбранное значение видно в строке ещё до применения.
-    expect(find.textContaining('Happ/3.20.4'), findsOneWidget);
+    expect(find.textContaining('Happ/4.1.0'), findsOneWidget);
 
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
 
     // Форма добавления снова на экране, и подмена в ней уже сведена в строку.
     expect(find.text('Add Subscription'), findsOneWidget);
-    expect(find.textContaining('Happ/3.20.4'), findsOneWidget);
+    expect(find.textContaining('Happ/4.1.0'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -238,12 +238,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('User-Agent'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Happ/3.20.4').last);
+    await tester.tap(find.text('Happ/4.1.0').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Reset'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Happ/3.20.4'), findsNothing);
+    expect(find.textContaining('Happ/4.1.0'), findsNothing);
     expect(find.text('App default'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

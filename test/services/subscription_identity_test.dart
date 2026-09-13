@@ -86,7 +86,7 @@ void main() {
         identity: const SubscriptionFetchIdentity(
           enabled: true,
           hwid: 'CAFEBABE1234',
-          userAgent: 'Happ/3.20.4',
+          userAgent: 'Happ/4.1.0',
           deviceOs: 'iOS',
           deviceModel: 'iPhone 15 Pro',
           osVersion: '17.6',
@@ -96,7 +96,7 @@ void main() {
       expect(adapter.requests, hasLength(1));
       // HWID приводится к нижнему регистру: панели сверяют его как строку.
       expect(adapter.header('x-hwid'), 'cafebabe1234');
-      expect(adapter.header('User-Agent'), 'Happ/3.20.4');
+      expect(adapter.header('User-Agent'), 'Happ/4.1.0');
       expect(adapter.header('x-device-os'), 'iOS');
       expect(adapter.header('x-device-model'), 'iPhone 15 Pro');
       expect(adapter.header('x-ver-os'), '17.6');
@@ -140,7 +140,7 @@ void main() {
         'https://example.com/sub',
         identity: const SubscriptionFetchIdentity(
           enabled: true,
-          userAgent: 'Happ/3.20.4',
+          userAgent: 'Happ/4.1.0',
         ),
       );
 
@@ -157,12 +157,12 @@ void main() {
         'https://example.com/sub',
         identity: const SubscriptionFetchIdentity(
           hwid: 'CAFEBABE1234',
-          userAgent: 'Happ/3.20.4',
+          userAgent: 'Happ/4.1.0',
         ),
       );
 
       expect(adapter.header('x-hwid'), 'devicehwid0000');
-      expect(adapter.header('User-Agent'), isNot('Happ/3.20.4'));
+      expect(adapter.header('User-Agent'), isNot('Happ/4.1.0'));
     });
 
     test('custom hwid never becomes the device hwid', () async {
@@ -216,7 +216,7 @@ void main() {
         'https://example.com/sub',
         identity: const SubscriptionFetchIdentity(
           enabled: true,
-          userAgent: 'Happ/3.20.4',
+          userAgent: 'Happ/4.1.0',
         ),
       );
 
@@ -224,7 +224,7 @@ void main() {
       // Ровно один запрос: подмена личности не должна молча схлопываться в
       // наш обычный клиентский UA.
       expect(adapter.requests, hasLength(1));
-      expect(adapter.header('User-Agent'), 'Happ/3.20.4');
+      expect(adapter.header('User-Agent'), 'Happ/4.1.0');
     });
 
     test('without it the fallback list is still iterated', () async {
@@ -251,10 +251,10 @@ void main() {
           id: 's1',
           name: 'S',
           url: 'https://example.com/sub',
-          userAgent: 'NekoBox/1.3.9',
+          userAgent: 'NekoBox/1.4.2',
           fetchIdentity: SubscriptionFetchIdentity(
             enabled: true,
-            userAgent: 'Happ/3.20.4',
+            userAgent: 'Happ/4.1.0',
           ),
         ),
       );
@@ -262,7 +262,7 @@ void main() {
       expect(result.success, isTrue);
       // Закреплённый UA — выбор пользовательницы, а не «UA, который тут
       // работает»: выключив подмену, она обязана вернуться к прежнему.
-      expect(result.subscription.userAgent, 'NekoBox/1.3.9');
+      expect(result.subscription.userAgent, 'NekoBox/1.4.2');
     });
   });
 
@@ -301,7 +301,7 @@ void main() {
         fetchIdentity: SubscriptionFetchIdentity(
           enabled: true,
           hwid: 'cafebabe',
-          userAgent: 'Happ/3.20.4',
+          userAgent: 'Happ/4.1.0',
           deviceOs: 'iOS',
           deviceModel: 'iPhone 15 Pro',
           osVersion: '17.6',
@@ -332,7 +332,7 @@ void main() {
         url: 'https://a',
         fetchIdentity: SubscriptionFetchIdentity(
           enabled: true,
-          userAgent: 'Happ/3.20.4',
+          userAgent: 'Happ/4.1.0',
         ),
       );
 

@@ -210,7 +210,7 @@ void main() {
       // html-страницу подписки (её бэкенд может лежать → 502), а известным
       // клиентским — payload. UA-ретрай обязан жить и в error-ветке: dio
       // кидает на 502 до того, как успешная ветка (200+html) до него дойдёт.
-      service = buildService((ua) => ua == 'v2rayNG/1.9.28');
+      service = buildService((ua) => ua == 'v2rayNG/2.2.6');
 
       final result = await service.updateSubscription(
         const Subscription(id: 's1', name: 'S', url: 'https://example.com/sub'),
@@ -231,49 +231,49 @@ void main() {
         1,
       );
       // сработавший UA сохранился в подписке
-      expect(result.subscription.userAgent, 'v2rayNG/1.9.28');
+      expect(result.subscription.userAgent, 'v2rayNG/2.2.6');
     });
 
     test('saved UA is used for the first request without iteration', () async {
-      service = buildService((ua) => ua == 'NekoBox/1.3.9');
+      service = buildService((ua) => ua == 'NekoBox/1.4.2');
 
       final result = await service.updateSubscription(
         const Subscription(
           id: 's1',
           name: 'S',
           url: 'https://example.com/sub',
-          userAgent: 'NekoBox/1.3.9',
+          userAgent: 'NekoBox/1.4.2',
         ),
       );
 
       expect(result.error, isNull);
       expect(result.success, isTrue);
-      expect(adapter.requestedUserAgents, ['NekoBox/1.3.9']);
-      expect(result.subscription.userAgent, 'NekoBox/1.3.9');
+      expect(adapter.requestedUserAgents, ['NekoBox/1.4.2']);
+      expect(result.subscription.userAgent, 'NekoBox/1.4.2');
     });
 
     test('re-iterates UA list when saved UA stopped working', () async {
-      service = buildService((ua) => ua == 'v2rayNG/1.9.28');
+      service = buildService((ua) => ua == 'v2rayNG/2.2.6');
 
       final result = await service.updateSubscription(
         const Subscription(
           id: 's1',
           name: 'S',
           url: 'https://example.com/sub',
-          userAgent: 'NekoBox/1.3.9', // сохранённый UA, который панель перестала принимать
+          userAgent: 'NekoBox/1.4.2', // сохранённый UA, который панель перестала принимать
         ),
       );
 
       expect(result.error, isNull);
       expect(result.success, isTrue);
       // сломанный сохранённый UA пробуем ровно один раз, без повтора в переборе
-      expect(adapter.requestedUserAgents.first, 'NekoBox/1.3.9');
+      expect(adapter.requestedUserAgents.first, 'NekoBox/1.4.2');
       expect(
-        adapter.requestedUserAgents.where((ua) => ua == 'NekoBox/1.3.9').length,
+        adapter.requestedUserAgents.where((ua) => ua == 'NekoBox/1.4.2').length,
         1,
       );
       // новый рабочий UA перезаписал сохранённый
-      expect(result.subscription.userAgent, 'v2rayNG/1.9.28');
+      expect(result.subscription.userAgent, 'v2rayNG/2.2.6');
     });
   });
 

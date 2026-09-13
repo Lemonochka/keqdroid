@@ -5,10 +5,23 @@
 /// официальные клиенты. Вводить такую строку руками — верный способ ошибиться
 /// в пробеле или регистре, поэтому типовые варианты лежат готовыми.
 ///
-/// Про версии в этих строках: панели почти всегда смотрят на имя клиента, а
-/// номер версии остаётся антуражем — здесь он правдоподобный, а не выверенный
-/// по релизам каждого проекта. Если конкретная панель придирается к точной
-/// версии, нужную строку можно вписать руками прямо в списке выбора.
+/// Версии сверены с релизами клиентов 13.09.2026. Имя клиента панели смотрят
+/// почти всегда, версию — реже, но встречаются и такие, что сравнивают её с
+/// нынешней и отдают старому клиенту заглушку вместо подписки. Поэтому список
+/// стареет и требует прогона по релизам (GitHub, App Store, happ.report), а не
+/// вписывания нужной строки руками в каждой подписке.
+///
+/// Порядок внутри платформы — по тому, насколько клиент в ходу у
+/// русскоязычных: панели, которые гейтят по UA, настроены в первую очередь на
+/// них, и перебору (см. [ClientUaPresets.rotation]) выгодно начинать оттуда же.
+/// Мёртвым клиентам здесь не место: Clash for Windows не обновлялся с 2023-го,
+/// Nekoray переехал в Throne, FoXray выпал из сторов, Clash Nyanpasu стоит с
+/// 2024-го — их UA панели узнают всё хуже, а список замусоривают.
+///
+/// Форки стоят отдельными строками, а не подменяются апстримом: FlClashX,
+/// Koala Clash, Prizrak-Box и Sparkle панели знают под их собственными
+/// именами. Если такой
+/// UA не подошёл, апстрим лежит рядом — FlClash, clash-verge, Mihomo Party.
 library;
 
 /// User-Agent сторонних клиентов, разложенные по платформе, на которой клиент
@@ -20,42 +33,56 @@ library;
 /// Нужен UA с конкретной версией ОС внутри — он вписывается руками.
 abstract final class ClientUaPresets {
   static const android = [
-    'Happ/3.20.4',
-    'v2rayNG/1.10.5',
-    'v2rayNG/1.9.28',
-    'NekoBox/1.3.9',
-    'husi/1.0.5',
-    'ClashMetaForAndroid/2.11.5',
-    'FlClash/0.8.84',
-    'SFA/1.11.0 (5011; sing-box 1.11.0)',
-    'HiddifyNext/2.0.5 (android)',
-    'V2rayTun/6.5.0',
-    'Karing/1.1.5.0',
+    'Happ/4.1.0',
+    'INCY/3.6.5',
+    'v2RayTun/5.25.82',
+    'v2rayNG/2.2.6',
+    'FlClashX/0.4.2',
+    'ClashMetaForAndroid/2.11.33',
+    'FlClash/0.8.97',
+    'Surfboard/2.34.4',
+    'Hiddify/4.1.1 (android)',
+    'husi/2.1.2',
+    'NekoBox/1.4.2',
+    'Exclave/0.17.56',
+    'SFA/1.14.0 (5014; sing-box 1.14.0)',
+    'Karing/1.2.25.2802',
+    'VPN4TV/5.2.6',
   ];
 
   static const ios = [
-    'Shadowrocket/2.2.65',
-    'Streisand/1.6.44',
-    'Quantumult%20X/1.0.30',
-    'Loon/3.2.3',
-    'Stash/2.9.0',
-    'Surge/5.9.0',
-    'SFI/1.11.0 (1; sing-box 1.11.0)',
-    'V2Box/1.0.0',
-    'FoXray/1.5.0',
-    'HiddifyNext/2.0.5 (ios)',
+    // У Happ и INCY на каждой платформе своя нумерация — это не опечатка:
+    // Happ на iOS ушёл в пятые версии, на Android в четвёртые, на ПК остался
+    // в третьих; у INCY то же самое, только наоборот.
+    'Happ/5.5.0',
+    'INCY/2.6.1',
+    'Streisand/1.6.76',
+    'Shadowrocket/2.2.92',
+    'ClashMi/1.0.29.1503',
+    'RabbitHole/1.5.0',
+    'V2Box/10.1.7',
+    'Hiddify/4.1.1 (ios)',
+    'SFI/1.14.0 (1; sing-box 1.14.0)',
+    'Quantumult%20X/1.7.0',
+    'Loon/3.5.0',
+    'Stash/3.4.1',
+    'Surge/5.22.0',
   ];
 
   static const desktop = [
-    'v2rayN/7.12.5',
-    'clash-verge/v2.2.2',
-    'Nekoray/4.0.1',
-    'Throne/1.0.3',
-    'Hiddify/2.5.7',
-    'Mihomo Party/1.6.5',
-    'Furious/0.3.2',
-    'ClashforWindows/0.20.39',
-    'SFM/1.11.0 (1; sing-box 1.11.0)',
+    'Happ/3.3.6',
+    'INCY/3.8.6',
+    'clash-verge/v2.5.2',
+    'Koala Clash/1.4.1',
+    'Prizrak-Box/1.0.21',
+    'Mihomo Party/2.0.2',
+    'Sparkle/1.26.8',
+    'ClashX Meta/1.4.44',
+    'v2rayN/7.24.9',
+    'v2RayTun/3.10.15',
+    'Hiddify/4.1.1 (windows)',
+    'Throne/1.2.4',
+    'SFM/1.14.0 (1; sing-box 1.14.0)',
   ];
 
   /// Голые ядра и обычные http-клиенты. Нужны для панелей, которые не столько
@@ -63,11 +90,11 @@ abstract final class ClientUaPresets {
   /// не похожего на Chrome.
   static const cores = [
     'sing-box',
-    'sing-box 1.11.0',
-    'mihomo/1.19.0',
-    'Xray/25.3.6',
-    'v2ray/5.28.0',
-    'curl/8.9.1',
+    'sing-box 1.14.0',
+    'mihomo/1.19.30',
+    'Xray/26.9.9',
+    'v2ray/5.53.0',
+    'curl/8.22.0',
     'Go-http-client/2.0',
   ];
 
@@ -76,21 +103,25 @@ abstract final class ClientUaPresets {
   /// полный каталог превратил бы неудачную загрузку в полминуты ожидания.
   /// Порядок — по частоте, с которой панели на них настроены.
   static const rotation = [
-    'Happ/3.20.4',
-    'v2rayNG/1.9.28',
-    'NekoBox/1.3.9',
-    'ClashMetaForAndroid/2.11.5',
-    'clash-verge/v2.2.2',
-    'Streisand/1.6.44',
+    'Happ/4.1.0',
+    'INCY/3.6.5',
+    'v2RayTun/5.25.82',
+    'v2rayNG/2.2.6',
+    'Streisand/1.6.76',
+    'Shadowrocket/2.2.92',
+    'FlClashX/0.4.2',
+    'ClashMetaForAndroid/2.11.33',
+    'clash-verge/v2.5.2',
     'sing-box',
-    'QuantumultX',
-    'Shadowrocket',
   ];
 }
 
 /// Значения заголовка `x-device-model`.
 abstract final class DeviceModelPresets {
   static const android = [
+    'Google Pixel 11 Pro XL',
+    'Google Pixel 11 Pro',
+    'Google Pixel 11',
     'Google Pixel 10 Pro XL',
     'Google Pixel 10 Pro',
     'Google Pixel 10',
@@ -101,6 +132,9 @@ abstract final class DeviceModelPresets {
     'Google Pixel 8',
     'Google Pixel 7 Pro',
     'Google Pixel 6a',
+    'Samsung Galaxy S26 Ultra',
+    'Samsung Galaxy S26+',
+    'Samsung Galaxy S26',
     'Samsung Galaxy S25 Ultra',
     'Samsung Galaxy S25+',
     'Samsung Galaxy S25',
@@ -142,9 +176,11 @@ abstract final class DeviceModelPresets {
   ];
 
   static const ios = [
+    'iPhone 18 Pro Max',
+    'iPhone 18 Pro',
     'iPhone 17 Pro Max',
     'iPhone 17 Pro',
-    'iPhone 17 Air',
+    'iPhone Air',
     'iPhone 17',
     'iPhone 16 Pro Max',
     'iPhone 16 Pro',
@@ -190,6 +226,7 @@ abstract final class DeviceModelPresets {
 /// build-ID прошивки — какой именно ждут, снаружи не видно, поэтому есть оба.
 abstract final class OsVersionPresets {
   static const androidRelease = [
+    '17',
     '16',
     '15',
     '14',
@@ -201,6 +238,9 @@ abstract final class OsVersionPresets {
   ];
 
   static const androidBuilds = [
+    'CP2A.260805.005',
+    'CP2A.260705.006',
+    'CP2A.260605.012',
     'BP2A.250605.031',
     'BP1A.250505.005',
     'AP4A.250105.002',
@@ -215,6 +255,7 @@ abstract final class OsVersionPresets {
   ];
 
   static const iosRelease = [
+    '27.0',
     '26.1',
     '26.0',
     '18.6',
@@ -252,6 +293,7 @@ abstract final class OsVersionPresets {
     'Windows 10.0.26100',
     'Windows 10.0.22631',
     'Windows 10.0.19045',
+    'macOS 27.0',
     'macOS 26.0',
     'macOS 15.6',
     'macOS 14.0',
