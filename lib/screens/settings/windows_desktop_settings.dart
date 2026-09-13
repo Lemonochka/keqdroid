@@ -82,36 +82,13 @@ class _WindowsDesktopSettingsScreenState
     final settings =
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
 
+    // Строки — те же переключатели, что во «Внешнем виде»: кружок с иконкой,
+    // нажатие по всей строке, сегменты одной группы. Своя плоская карточка без
+    // иконки была здесь единственной такой на все настройки.
+    //
     // Подписи под названиями здесь были пересказом самих названий, поэтому их
-    // нет вовсе. Остались только пояснения под недоступными строками — они
-    // отвечают на вопрос «почему серое», из названия этого не узнать.
-    Widget toggleRow({
-      required String title,
-      required bool value,
-      required ValueChanged<bool>? onChanged,
-    }) {
-      return ExpressiveCard(
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.text(context),
-                ),
-              ),
-            ),
-            Switch(
-              value: value,
-              activeThumbColor: AppTheme.accent(context),
-              onChanged: onChanged,
-            ),
-          ],
-        ),
-      );
-    }
-
+    // нет вовсе. Остался только абзац под группой — он отвечает на вопрос
+    // «почему серое», из названия этого не узнать.
     Widget note(String text) => Padding(
           padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
           child: Text(
@@ -127,38 +104,43 @@ class _WindowsDesktopSettingsScreenState
       title: l10n.settingsDesktopTitle,
       physics: const ClampingScrollPhysics(),
       children: [
-        toggleRow(
-          title: l10n.settingsMinimizeToTray,
-          value: settings.minimizeToTray,
-          onChanged: (v) => _save(settings.copyWith(minimizeToTray: v)),
-        ),
-        const SizedBox(height: 12),
-        toggleRow(
-          title: l10n.settingsLaunchAtStartup,
-          value: settings.launchAtStartup,
-          onChanged: (v) => unawaited(
-            _applyAutostart(settings.copyWith(launchAtStartup: v)),
-          ),
-        ),
-        const SizedBox(height: 12),
-        toggleRow(
-          title: l10n.settingsLaunchAtStartupAdmin,
-          value: settings.launchAtStartupElevated,
-          onChanged: settings.launchAtStartup
-              ? (v) => unawaited(
-                    _applyAutostart(
-                      settings.copyWith(launchAtStartupElevated: v),
-                    ),
-                  )
-              : null,
-        ),
-        const SizedBox(height: 12),
-        toggleRow(
-          title: l10n.settingsAutoConnectOnAutostart,
-          value: settings.autoConnectLastServer,
-          onChanged: settings.launchAtStartup
-              ? (v) => _save(settings.copyWith(autoConnectLastServer: v))
-              : null,
+        ExpressiveGroup(
+          children: [
+            _AppearanceSwitchTile(
+              icon: Icons.close_fullscreen_rounded,
+              title: l10n.settingsMinimizeToTray,
+              value: settings.minimizeToTray,
+              onChanged: (v) => _save(settings.copyWith(minimizeToTray: v)),
+            ),
+            _AppearanceSwitchTile(
+              icon: Icons.power_settings_new_rounded,
+              title: l10n.settingsLaunchAtStartup,
+              value: settings.launchAtStartup,
+              onChanged: (v) => unawaited(
+                _applyAutostart(settings.copyWith(launchAtStartup: v)),
+              ),
+            ),
+            _AppearanceSwitchTile(
+              icon: Icons.admin_panel_settings_rounded,
+              title: l10n.settingsLaunchAtStartupAdmin,
+              value: settings.launchAtStartupElevated,
+              onChanged: settings.launchAtStartup
+                  ? (v) => unawaited(
+                        _applyAutostart(
+                          settings.copyWith(launchAtStartupElevated: v),
+                        ),
+                      )
+                  : null,
+            ),
+            _AppearanceSwitchTile(
+              icon: Icons.vpn_lock_rounded,
+              title: l10n.settingsAutoConnectOnAutostart,
+              value: settings.autoConnectLastServer,
+              onChanged: settings.launchAtStartup
+                  ? (v) => _save(settings.copyWith(autoConnectLastServer: v))
+                  : null,
+            ),
+          ],
         ),
         if (!settings.launchAtStartup)
           note(l10n.settingsAutoConnectRequiresAutostart),
