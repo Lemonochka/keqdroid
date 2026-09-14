@@ -3629,6 +3629,18 @@ abstract class AppLocalizations {
   /// **'VPN status bar and subscription-update alerts'**
   String get settingsPermNotifDesc;
 
+  /// No description provided for @settingsPermBatteryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unrestricted background work'**
+  String get settingsPermBatteryTitle;
+
+  /// No description provided for @settingsPermBatteryDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Without it the system can block starting the VPN from the tile'**
+  String get settingsPermBatteryDesc;
+
   /// No description provided for @settingsPermStatusGranted.
   ///
   /// In en, this message translates to:

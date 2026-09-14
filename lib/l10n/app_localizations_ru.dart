@@ -1856,6 +1856,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPermNotifDesc => 'Строка статуса VPN и уведы об обновлении подписок';
 
   @override
+  String get settingsPermBatteryTitle => 'Работа в фоне без ограничений';
+
+  @override
+  String get settingsPermBatteryDesc => 'Без неё система может не дать включить VPN из шторки';
+
+  @override
   String get settingsPermStatusGranted => 'Разрешено';
 
   @override

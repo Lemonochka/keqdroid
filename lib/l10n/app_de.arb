@@ -807,6 +807,8 @@
   "settingsPermissionsSubtitle": "App-Berechtigungen ansehen und widerrufen",
   "settingsPermNotifTitle": "Benachrichtigungen",
   "settingsPermNotifDesc": "VPN-Statusleiste und Abo-Update-Hinweise",
+  "settingsPermBatteryTitle": "Uneingeschränkte Hintergrundaktivität",
+  "settingsPermBatteryDesc": "Ohne sie kann das System den VPN-Start über die Kachel blockieren",
   "settingsPermStatusGranted": "Erteilt",
   "settingsPermStatusDenied": "Verweigert",
   "settingsPermCameraTitle": "Kamera",

@@ -1854,6 +1854,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPermNotifDesc => 'VPN 状态栏和订阅更新提醒';
 
   @override
+  String get settingsPermBatteryTitle => '不受限制的后台运行';
+
+  @override
+  String get settingsPermBatteryDesc => '否则系统可能阻止从快捷设置磁贴启动 VPN';
+
+  @override
   String get settingsPermStatusGranted => '已授予';
 
   @override

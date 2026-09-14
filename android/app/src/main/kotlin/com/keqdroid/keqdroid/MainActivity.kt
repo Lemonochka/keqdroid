@@ -480,6 +480,30 @@ class MainActivity : FlutterFragmentActivity() {
                                 result.error("OPEN_SETTINGS_FAILED", e.message, null)
                             }
                         }
+                        // Снятая оптимизация батареи — единственное исключение из
+                        // официального списка Android, которое обычное приложение
+                        // может получить само. Без него запуск сервиса из шторки
+                        // держится на честном слове: клика по плитке в том списке
+                        // нет вовсе, на стоке он проходит лишь потому, что SystemUI
+                        // держит плитку привязанной, — и первым же отваливается на
+                        // прошивках с «Автозапуском» (ColorOS, MIUI и родня).
+                        "isIgnoringBatteryOptimizations" -> {
+                            val pm = getSystemService(android.os.PowerManager::class.java)
+                            result.success(pm?.isIgnoringBatteryOptimizations(packageName) ?: false)
+                        }
+                        "requestIgnoreBatteryOptimizations" -> {
+                            try {
+                                startActivity(
+                                    Intent(
+                                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                        android.net.Uri.fromParts("package", packageName, null),
+                                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                                result.success(true)
+                            } catch (e: Exception) {
+                                result.error("BATTERY_OPT_REQUEST_FAILED", e.message, null)
+                            }
+                        }
                         "getDeviceModel" -> result.success(android.os.Build.MODEL ?: "Android Device")
                         "getNativeInternals" -> {
                             // Панель «Внутренности» читает версии ядер прямо из

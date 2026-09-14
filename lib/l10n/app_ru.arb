@@ -807,6 +807,8 @@
   "settingsPermissionsSubtitle": "Посмотреть и отозвать разрешения приложения",
   "settingsPermNotifTitle": "Уведомления",
   "settingsPermNotifDesc": "Строка статуса VPN и уведы об обновлении подписок",
+  "settingsPermBatteryTitle": "Работа в фоне без ограничений",
+  "settingsPermBatteryDesc": "Без неё система может не дать включить VPN из шторки",
   "settingsPermStatusGranted": "Разрешено",
   "settingsPermStatusDenied": "Запрещено",
   "settingsPermCameraTitle": "Камера",

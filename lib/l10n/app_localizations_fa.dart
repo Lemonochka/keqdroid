@@ -1854,6 +1854,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsPermNotifDesc => 'نوار وضعیت VPN و اطلاع‌رسانی به‌روزرسانی اشتراک';
 
   @override
+  String get settingsPermBatteryTitle => 'اجرای بدون محدودیت در پس‌زمینه';
+
+  @override
+  String get settingsPermBatteryDesc => 'بدون آن، سیستم ممکن است اجازه روشن‌کردن VPN از کاشی را ندهد';
+
+  @override
   String get settingsPermStatusGranted => 'داده شده';
 
   @override

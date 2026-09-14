@@ -808,6 +808,8 @@
   "settingsPermissionsSubtitle": "App permissions you can review and revoke",
   "settingsPermNotifTitle": "Notifications",
   "settingsPermNotifDesc": "VPN status bar and subscription-update alerts",
+  "settingsPermBatteryTitle": "Unrestricted background work",
+  "settingsPermBatteryDesc": "Without it the system can block starting the VPN from the tile",
   "settingsPermStatusGranted": "Granted",
   "settingsPermStatusDenied": "Denied",
   "settingsPermCameraTitle": "Camera",

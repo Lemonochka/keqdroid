@@ -1854,6 +1854,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsPermNotifDesc => 'VPN-Statusleiste und Abo-Update-Hinweise';
 
   @override
+  String get settingsPermBatteryTitle => 'Uneingeschränkte Hintergrundaktivität';
+
+  @override
+  String get settingsPermBatteryDesc => 'Ohne sie kann das System den VPN-Start über die Kachel blockieren';
+
+  @override
   String get settingsPermStatusGranted => 'Erteilt';
 
   @override

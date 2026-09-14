@@ -807,6 +807,8 @@
   "settingsPermissionsSubtitle": "可查看和撤销的应用权限",
   "settingsPermNotifTitle": "通知",
   "settingsPermNotifDesc": "VPN 状态栏和订阅更新提醒",
+  "settingsPermBatteryTitle": "不受限制的后台运行",
+  "settingsPermBatteryDesc": "否则系统可能阻止从快捷设置磁贴启动 VPN",
   "settingsPermStatusGranted": "已授予",
   "settingsPermStatusDenied": "已拒绝",
   "settingsPermCameraTitle": "相机",

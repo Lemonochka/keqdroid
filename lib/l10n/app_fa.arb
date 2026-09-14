@@ -588,6 +588,8 @@
   "settingsPermissionsSubtitle": "دسترسی‌های برنامه که می‌توانید ببینید و پس بگیرید",
   "settingsPermNotifTitle": "اعلان‌ها",
   "settingsPermNotifDesc": "نوار وضعیت VPN و اطلاع‌رسانی به‌روزرسانی اشتراک",
+  "settingsPermBatteryTitle": "اجرای بدون محدودیت در پس‌زمینه",
+  "settingsPermBatteryDesc": "بدون آن، سیستم ممکن است اجازه روشن‌کردن VPN از کاشی را ندهد",
   "settingsPermStatusGranted": "داده شده",
   "settingsPermStatusDenied": "داده نشده",
   "settingsPermCameraTitle": "دوربین",

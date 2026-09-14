@@ -1854,6 +1854,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPermNotifDesc => 'VPN status bar and subscription-update alerts';
 
   @override
+  String get settingsPermBatteryTitle => 'Unrestricted background work';
+
+  @override
+  String get settingsPermBatteryDesc => 'Without it the system can block starting the VPN from the tile';
+
+  @override
   String get settingsPermStatusGranted => 'Granted';
 
   @override

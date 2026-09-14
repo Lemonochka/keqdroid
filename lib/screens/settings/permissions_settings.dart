@@ -15,12 +15,14 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
     with WidgetsBindingObserver {
   static const _channel = MethodChannel('keqdis_vpn_channel');
   bool? _notifEnabled;
+  bool? _batteryUnrestricted;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _refreshNotifStatus();
+    _refreshBatteryStatus();
   }
 
   @override
@@ -32,7 +34,10 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Вернулись из системных настроек — статус разрешения мог измениться.
-    if (state == AppLifecycleState.resumed) _refreshNotifStatus();
+    if (state == AppLifecycleState.resumed) {
+      _refreshNotifStatus();
+      _refreshBatteryStatus();
+    }
   }
 
   AndroidFlutterLocalNotificationsPlugin? get _androidNotif =>
@@ -55,6 +60,26 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
       await _androidNotif?.requestNotificationsPermission();
     } catch (_) {}
     await _refreshNotifStatus();
+  }
+
+  Future<void> _refreshBatteryStatus() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final ok = await _channel.invokeMethod<bool>(
+        'isIgnoringBatteryOptimizations',
+      );
+      if (mounted) setState(() => _batteryUnrestricted = ok ?? false);
+    } catch (_) {
+      if (mounted) setState(() => _batteryUnrestricted = null);
+    }
+  }
+
+  Future<void> _requestBattery() async {
+    try {
+      await _channel.invokeMethod<void>('requestIgnoreBatteryOptimizations');
+    } catch (_) {}
+    // Статус придёт не отсюда: диалог системный, и ответ виден только по
+    // возвращении в приложение — см. didChangeAppLifecycleState.
   }
 
   Future<void> _openAppSettings() async {
@@ -95,6 +120,20 @@ class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
               subtitle: Text(l10n.settingsPermNotifDesc),
               trailing: _statusChip(granted),
               onTap: granted ? _openAppSettings : _requestNotif,
+            ),
+            // Не косметика: снятая оптимизация батареи — единственное право из
+            // официального списка исключений Android, дающее поднять сервис из
+            // фона. Без неё включение VPN из шторки живёт на честном слове и
+            // отваливается на прошивках с «Автозапуском».
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              leading: Icon(Icons.battery_saver_rounded, color: accent),
+              title: Text(l10n.settingsPermBatteryTitle),
+              subtitle: Text(l10n.settingsPermBatteryDesc),
+              trailing: _statusChip(_batteryUnrestricted == true),
+              onTap: _batteryUnrestricted == true
+                  ? _openAppSettings
+                  : _requestBattery,
             ),
             _PermissionInfoTile(
               icon: Icons.qr_code_scanner_rounded,
