@@ -1249,6 +1249,33 @@ void main() {
       expect(rules.first, 'PROCESS-NAME,keqdroid.exe,DIRECT');
     });
 
+    // Замер url-пинга поднимает СВОЁ временное ядро отдельным процессом. Без
+    // этих правил туннель забирал его соединение к измеряемому серверу себе и
+    // отдавал в прокси: замер ехал через живой туннель, мерил его задержку и
+    // чаще всего не укладывался в таймаут. Зелёными оставались ровно те
+    // серверы, чей адрес уже вынесен [buildServerDirectRules], — подключённый и
+    // его соседи по адресу, то есть «пингуется два сервера из двадцати».
+    test('временные ядра замера идут мимо туннеля', () {
+      final rules = rulesFor(mode: AppRoutingMode.allProxy);
+      for (final core in const [
+        'keqrnel.exe',
+        'mihomo.exe',
+        'xray.exe',
+        'sing-box.exe',
+      ]) {
+        expect(rules, contains('PROCESS-NAME,$core,DIRECT'));
+      }
+    });
+
+    test('ядра идут мимо туннеля и при пер-аппном сплите', () {
+      final rules = rulesFor(
+        mode: AppRoutingMode.allExceptSelected,
+        managed: const ['Telegram.exe'],
+      );
+      expect(rules, contains('PROCESS-NAME,keqrnel.exe,DIRECT'));
+      expect(rules, contains('PROCESS-NAME,mihomo.exe,DIRECT'));
+    });
+
     test('чужие VPN-клиенты не заворачиваются в туннель в туннеле', () {
       final rules = rulesFor(mode: AppRoutingMode.allProxy);
       expect(rules, contains('PROCESS-NAME,tailscaled.exe,DIRECT'));
