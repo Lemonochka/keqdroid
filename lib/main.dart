@@ -14,6 +14,7 @@ import 'package:keqdroid/services/background_service.dart';
 import 'package:keqdroid/services/card_image_service.dart';
 import 'package:keqdroid/services/desktop_background_service.dart';
 import 'package:keqdroid/services/notification_service.dart';
+import 'package:keqdroid/services/prefs_recovery.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/servers_tab.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
@@ -31,6 +32,11 @@ import 'package:keqdroid/ui/desktop/desktop_home_screen.dart';
 Future<void> main() async {
   await runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    // Раньше всего остального: всё, что упадёт ниже, иначе не оставит следа —
+    // на десктопе Crashlytics нет, а исключение до runApp глушит runZonedGuarded
+    // и приложение остаётся процессом без окна.
+    await AppLogger.instance.enableFileLog();
+    await PrefsRecovery.prepare();
 
     var crashlyticsReady = false;
     if (Platform.isAndroid) {

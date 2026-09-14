@@ -13,6 +13,17 @@
 
 namespace {
 constexpr UINT kAutostartConnectMsg = WM_APP + 100;
+
+// Окно показывается только по первому кадру (см. SetNextFrameCallback ниже).
+// Если кадра нет — например, старт упал до runApp, — человек получает живой
+// процесс без окна и без трея: иконку трея заводит Dart, которого нет. Убрать
+// такое можно только через диспетчер задач, а понять причину нельзя вовсе.
+//
+// Идентификатор нарочно не единица: её первой берёт всякий, кто подсаживается
+// на это же окно (window_manager сабклассит его), а таймеры нумеруются на окно.
+constexpr UINT_PTR kStartupWatchdogTimerId = 0x4B440001;
+// Запас на самый медленный честный старт.
+constexpr UINT kStartupWatchdogMs = 20000;
 }  // namespace
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
@@ -40,8 +51,12 @@ bool FlutterWindow::OnCreate() {
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
+    first_frame_seen_ = true;
+    ::KillTimer(GetHandle(), kStartupWatchdogTimerId);
     this->Show();
   });
+  ::SetTimer(GetHandle(), kStartupWatchdogTimerId, kStartupWatchdogMs,
+             nullptr);
 
   // Flutter can complete the first frame before the "show window" callback is
   // registered. The following call ensures a frame is pending to ensure the
@@ -63,6 +78,20 @@ void FlutterWindow::OnDestroy() {
   }
 
   Win32Window::OnDestroy();
+}
+
+void FlutterWindow::ReportStartupFailure(HWND hwnd) {
+  // Закрытие обязано завершать процесс: спрятать окно в трей некуда, иконку
+  // туда ставит Dart, а его тут нет — иначе был бы кадр.
+  WindowsTraySetMinimizeToTray(false);
+  ::ShowWindow(hwnd, SW_SHOW);
+  ::SetForegroundWindow(hwnd);
+  ::MessageBoxW(
+      hwnd,
+      L"keqdroid запустился, но не смог показать интерфейс.\n\n"
+      L"Закройте это окно и пришлите файл app.log из папки\n"
+      L"%APPDATA%\\com.keqdroid\\keqdroid — по нему видно, что сломалось.",
+      L"keqdroid", MB_OK | MB_ICONERROR);
 }
 
 LRESULT
@@ -113,6 +142,15 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
       }
       break;
     }
+    case WM_TIMER:
+      if (wparam == kStartupWatchdogTimerId) {
+        ::KillTimer(hwnd, kStartupWatchdogTimerId);
+        if (!first_frame_seen_) {
+          ReportStartupFailure(hwnd);
+        }
+        return 0;
+      }
+      break;
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();
       break;
