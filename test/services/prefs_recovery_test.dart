@@ -98,4 +98,14 @@ void main() {
     expect(prefs().existsSync(), isFalse);
     expect(backup().readAsStringSync(), goodJson);
   });
+
+  test('бэкап снимается через временный файл и не оставляет его рядом', () {
+    prefs().writeAsStringSync(goodJson);
+    backup().writeAsStringSync(otherJson);
+
+    PrefsRecovery.repairIn(dir);
+
+    expect(backup().readAsStringSync(), goodJson);
+    expect(File('${backup().path}.tmp').existsSync(), isFalse);
+  });
 }

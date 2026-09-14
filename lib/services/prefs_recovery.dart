@@ -48,7 +48,7 @@ class PrefsRecovery {
     if (!prefs.existsSync()) return;
 
     if (_isUsable(prefs)) {
-      prefs.copySync(backup.path);
+      _refreshBackup(prefs, backup);
       return;
     }
 
@@ -62,6 +62,21 @@ class PrefsRecovery {
     if (_isUsable(backup)) {
       backup.copySync(prefs.path);
       AppLogger.instance.info('Prefs restored from backup');
+    }
+  }
+
+  /// Копия снимается через временный файл и проверяется перед заменой.
+  ///
+  /// На Linux второй запуск доходит до Dart (на Windows его отсекает мьютекс
+  /// ещё в раннере), и копия может сняться ровно посреди чужой записи. Затереть
+  /// годный бэкап рваным — ровно та потеря, ради которой он и заведён.
+  static void _refreshBackup(File prefs, File backup) {
+    final temp = File('${backup.path}.tmp');
+    prefs.copySync(temp.path);
+    if (_isUsable(temp)) {
+      temp.renameSync(backup.path);
+    } else {
+      temp.deleteSync();
     }
   }
 
