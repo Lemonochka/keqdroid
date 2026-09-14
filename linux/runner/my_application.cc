@@ -10,12 +10,54 @@
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
+  GtkWindow* window;
+  gboolean first_frame_seen;
+  guint startup_watchdog_id;
 };
+
+// Запас на самый медленный честный старт.
+constexpr guint kStartupWatchdogSeconds = 20;
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+// Окно показывается только по первому кадру (см. first_frame_cb). Если кадра
+// нет — например, старт упал до runApp, — остаётся живой процесс без окна и без
+// трея: иконку трея заводит Dart, которого нет. Снять такое можно только через
+// kill, а понять причину нельзя вовсе.
+static gboolean startup_watchdog_cb(gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  self->startup_watchdog_id = 0;
+  if (self->first_frame_seen || !GTK_IS_WINDOW(self->window)) {
+    return G_SOURCE_REMOVE;
+  }
+
+  gtk_widget_show(GTK_WIDGET(self->window));
+  // Каталог тот же, что вычисляет path_provider: он спрашивает у GLib id
+  // приложения, а это и есть APPLICATION_ID.
+  g_autofree gchar* dir =
+      g_build_filename(g_get_user_data_dir(), APPLICATION_ID, nullptr);
+  g_autofree gchar* text = g_strdup_printf(
+      "keqdroid запустился, но не смог показать интерфейс.\n\n"
+      "Закройте это окно и пришлите файл app.log из каталога\n"
+      "%s — по нему видно, что сломалось.",
+      dir);
+  // Формат отдельным аргументом: с текстом вместо формата сборка падает там,
+  // где -Wformat-security включён ошибкой (а это почти все дистрибутивы).
+  GtkWidget* dialog =
+      gtk_message_dialog_new(self->window, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR,
+                             GTK_BUTTONS_CLOSE, "%s", text);
+  gtk_dialog_run(GTK_DIALOG(dialog));
+  gtk_widget_destroy(dialog);
+  return G_SOURCE_REMOVE;
+}
+
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
+  self->first_frame_seen = TRUE;
+  if (self->startup_watchdog_id != 0) {
+    g_source_remove(self->startup_watchdog_id);
+    self->startup_watchdog_id = 0;
+  }
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
@@ -78,6 +120,10 @@ static void my_application_activate(GApplication* application) {
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
 
+  self->window = window;
+  self->startup_watchdog_id =
+      g_timeout_add_seconds(kStartupWatchdogSeconds, startup_watchdog_cb, self);
+
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
 
@@ -123,6 +169,10 @@ static void my_application_shutdown(GApplication* application) {
 // Implements GObject::dispose.
 static void my_application_dispose(GObject* object) {
   MyApplication* self = MY_APPLICATION(object);
+  if (self->startup_watchdog_id != 0) {
+    g_source_remove(self->startup_watchdog_id);
+    self->startup_watchdog_id = 0;
+  }
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
