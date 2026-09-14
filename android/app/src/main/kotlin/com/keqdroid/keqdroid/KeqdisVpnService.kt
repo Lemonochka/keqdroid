@@ -358,6 +358,17 @@ class KeqdisVpnService : VpnService() {
                     buildControlNotification("Connecting…", isConnected = false, isTransitioning = true)
                 )
 
+                // «Сервис жив и взялся за старт» — этого ждёт плитка
+                // (VpnQuickTileService.verifyStarted), чтобы отличить запрет
+                // системы от обычной задержки. Полный setStatus() здесь звать
+                // нельзя: STARTING в status принимается за дубль-старт, и
+                // startVpnWithXray молча вышел бы, не подключившись.
+                // Только с холодного: повторный ACTION_START поверх живой сессии
+                // откатил бы плитку с «подключено» на «подключается».
+                if (status == VpnRunStatus.STOPPED || status == VpnRunStatus.ERROR) {
+                    liveStatus = "connecting"
+                }
+
                 serviceScope.launch {
                     startGuarded(startId) {
                         startVpnWithXray(
