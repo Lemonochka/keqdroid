@@ -26,4 +26,9 @@ void KeqdisNotifyHotkeyPressed(const std::string& action);
 // tray SW_HIDE only as `inactive`, not `hidden`, so those guards never engage.
 void KeqdisNotifyWindowVisibility(bool visible);
 
+// WM_ENDSESSION with wParam TRUE: Windows is shutting down, restarting or
+// logging off. Drops our loopback system proxy so the next boot has internet
+// before keqdroid is opened again.
+void KeqdisClearSystemProxyOnSessionEnd();
+
 #endif  // RUNNER_TUNNEL_CHANNEL_HANDLER_H_

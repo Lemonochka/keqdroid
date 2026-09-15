@@ -98,6 +98,13 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // До Flutter и плагинов и без перехвата: любой из них может ответить на
+  // сообщение сам, и тогда прокси остался бы висеть. На WM_QUERYENDSESSION
+  // рано — выключение ещё могут отменить, и VPN молча остался бы без прокси.
+  if (message == WM_ENDSESSION && wparam) {
+    KeqdisClearSystemProxyOnSessionEnd();
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =

@@ -733,19 +733,23 @@ bool ReadRegistryProxy(bool* enabled, std::wstring* server) {
   return true;
 }
 
+// Only loopback proxies count as ours — a user-configured corporate proxy is
+// left alone by both cleanups.
+bool LoopbackSystemProxyActive(std::wstring* server) {
+  bool enabled = false;
+  if (!ReadRegistryProxy(&enabled, server)) {
+    return false;
+  }
+  return enabled && server->find(L"127.0.0.1") != std::wstring::npos;
+}
+
 // Recover from an unclean previous exit (crash, forced kill, tray exit that
 // skipped stopVpn): the registry may still route the whole system into a dead
 // 127.0.0.1 port. Symmetric to LinuxTunnelBackend.cleanupStaleState(). Runs
 // synchronously before Dart main, so it cannot race an autostart connect.
-// Only loopback proxies are touched — a user-configured corporate proxy is
-// left alone.
 void CleanupStaleSystemProxy() {
-  bool enabled = false;
   std::wstring server;
-  if (!ReadRegistryProxy(&enabled, &server)) {
-    return;
-  }
-  if (!enabled || server.find(L"127.0.0.1") == std::wstring::npos) {
+  if (!LoopbackSystemProxyActive(&server)) {
     return;
   }
   ProxyDebugLog("Startup: clearing stale loopback system proxy \"%s\"",
@@ -979,6 +983,27 @@ void KeqdisNotifyHotkeyPressed(const std::string& action) {
 
 void KeqdisNotifyWindowVisibility(bool visible) {
   PostToPlatformThread([visible]() { DispatchWindowVisibilityToDart(visible); });
+}
+
+// Уборка при запуске чинит оставшийся прокси, только когда приложение снова
+// открыли; до того после перезагрузки весь системный трафик шёл в мёртвый порт.
+//
+// То же, что отключение в ApplySystemProxy, но без рассылки WM_SETTINGCHANGE:
+// сеанс кончается, перечитывать настройку некому, а два SendMessageTimeout по
+// окнам, которые сами сейчас закрываются, могут съесть до десяти секунд из
+// тех, что Windows даёт на выход. Следующий вход прочитает реестр и так.
+void KeqdisClearSystemProxyOnSessionEnd() {
+  std::wstring server;
+  if (!LoopbackSystemProxyActive(&server)) {
+    return;
+  }
+  ProxyDebugLog("Session end: clearing loopback system proxy \"%s\"",
+                WideToUtf8(server).c_str());
+  SetRegistryInternetProxy(false, L"");
+  WriteConnectionSettingsBlob(false, L"", kProxyBypass);
+  DWORD ignored = 0;
+  SetPerConnectionProxy(false, L"", kPerConnBypass, &ignored);
+  SetWinHttpProxy(false, L"");
 }
 
 void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
