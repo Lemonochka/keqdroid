@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import '../services/desktop_background_service.dart';
 import '../services/windows_desktop_service.dart';
 
@@ -12,6 +14,12 @@ class PlatformBootstrap {
     }
   }
 
+  /// Тесты гоняются на Windows, и без подмены раскладку телефона там не
+  /// проверить.
+  @visibleForTesting
+  static bool? debugIsDesktopOverride;
+
   static bool get isDesktop =>
-      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+      debugIsDesktopOverride ??
+      (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 }

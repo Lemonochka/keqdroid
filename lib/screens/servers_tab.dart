@@ -40,6 +40,7 @@ import '../services/vpn_engine.dart';
 import '../platform/platform_bootstrap.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../ui/responsive/desktop_page_layout.dart';
+import '../ui/responsive/window_breakpoints.dart';
 import '../utils/clipboard_import.dart';
 import '../utils/subscription_deep_link.dart';
 import '../utils/bidi.dart';
@@ -158,6 +159,7 @@ Widget _serversStatusText(
 /// списком серверов под ней — а список тут самая дорогая часть.
 class _ConnectHeader extends ConsumerWidget {
   const _ConnectHeader({
+    super.key,
     required this.stateCtrl,
     required this.waveCtrl,
     required this.onToggle,
@@ -323,6 +325,14 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
   bool _handlingLaunchAction = false;
   bool _appInForeground = true;
+
+  /// Поворот переносит шапку и список между одной колонкой и двумя панелями;
+  /// глобальные ключи переносят их вместе с состоянием.
+  final _headerKey = GlobalKey();
+  final _listKey = GlobalKey();
+
+  /// Фиксированная панель в двух панелях — 360dp по спеке M3 для «expanded».
+  static const double _headerPaneWidth = 360;
 
   @override
   void initState() {
@@ -658,55 +668,89 @@ class _ServersTabState extends ConsumerState<ServersTab>
     // Состояние VPN здесь больше не читается: на него подписана сама шапка, и
     // смена статуса перерисовывает её, а не вкладку со списком серверов.
     final isDesktop = PlatformBootstrap.isDesktop;
+    final twoPane = WindowBreakpoints.isExpandedMobile(context);
+    // Без нижней панели (рейка) жестовая полоса системы лежит прямо под
+    // вкладкой. С панелью Scaffold этот отступ уже снял, и здесь ноль.
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    // Ключи — чтобы при повороте шапка и список переехали в другую раскладку
+    // живыми: без них сбросились бы прокрутка списка и анимации кнопки.
+    final header = _ConnectHeader(
+      key: _headerKey,
+      stateCtrl: _stateCtrl,
+      waveCtrl: _waveCtrl,
+      onToggle: _toggleVpn,
+      onJumpToActive: _jumpToActiveServer,
+    );
+
+    // Градиент лежит в одном Stack со списком, а не в общем по измеренной
+    // высоте шапки. Замер делался после кадра, поэтому пока шапка меняла
+    // высоту (подключение убирает часть отступов и укорачивает волну),
+    // градиент отставал на кадр — и из-под волны на мгновение выглядывал
+    // список. Здесь верх Stack и есть низ шапки, всегда в том же кадре.
+    final listArea = Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: [
+        _ServersListPanel(
+          key: _listKey,
+          topPadding: _listTopFadeHeight - _listTopFadeTileOverlap,
+          onSelectServer: _selectServer,
+          emptyState: _emptyState(),
+        ),
+        Positioned(
+          top: -_listTopFadeUpExtension,
+          left: 0,
+          right: 0,
+          height: _listTopFadeOverlayHeight,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.bg(context),
+                    AppTheme.bg(context).withValues(alpha: 1.0),
+                    AppTheme.bg(context).withValues(alpha: 0.0),
+                  ],
+                  stops: const [0.0, _listTopFadeSolidStop, 1.0],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (twoPane) {
+      // Телефон боком: шапка по высоте съедала весь экран, и списку не
+      // оставалось ни пикселя. На ширине «expanded» спека M3 ставит две
+      // панели — фиксированную 360dp и гибкую рядом.
+      return Row(
+        children: [
+          SizedBox(
+            width: _headerPaneWidth,
+            // По центру высоты; не влезла (крупный шрифт, чипы трафика) —
+            // прокручивается, а не режется.
+            child: Center(child: SingleChildScrollView(child: header)),
+          ),
+          Expanded(
+            // Статус-бар и вырез камеры со стороны списка. Со стороны рейки
+            // врезку уже забрала она.
+            child: SafeArea(
+              bottom: false,
+              child: _withListChrome(context, listArea, bottomInset),
+            ),
+          ),
+        ],
+      );
+    }
 
     Widget body = Column(
       children: [
-        _ConnectHeader(
-          stateCtrl: _stateCtrl,
-          waveCtrl: _waveCtrl,
-          onToggle: _toggleVpn,
-          onJumpToActive: _jumpToActiveServer,
-        ),
-        Expanded(
-          // Градиент лежит в этой же колонке, а не в общем Stack по измеренной
-          // высоте шапки. Замер делался после кадра, поэтому пока шапка меняла
-          // высоту (подключение убирает часть отступов и укорачивает волну),
-          // градиент отставал на кадр — и из-под волны на мгновение выглядывал
-          // список. Здесь верх Stack и есть низ шапки, всегда в том же кадре.
-          child: Stack(
-            fit: StackFit.expand,
-            clipBehavior: Clip.none,
-            children: [
-              _ServersListPanel(
-                topPadding: _listTopFadeHeight - _listTopFadeTileOverlap,
-                onSelectServer: _selectServer,
-                emptyState: _emptyState(),
-              ),
-              Positioned(
-                top: -_listTopFadeUpExtension,
-                left: 0,
-                right: 0,
-                height: _listTopFadeOverlayHeight,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppTheme.bg(context),
-                          AppTheme.bg(context).withValues(alpha: 1.0),
-                          AppTheme.bg(context).withValues(alpha: 0.0),
-                        ],
-                        stops: const [0.0, _listTopFadeSolidStop, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        header,
+        Expanded(child: listArea),
       ],
     );
 
@@ -722,6 +766,15 @@ class _ServersTabState extends ConsumerState<ServersTab>
       );
     }
 
+    return _withListChrome(context, body, bottomInset);
+  }
+
+  /// Нижний градиент, кнопка добавления и прыжок по списку.
+  ///
+  /// Принадлежат списку, а не вкладке: в двух панелях они обязаны стоять над
+  /// ним, а не посреди окна поверх шапки.
+  Widget _withListChrome(BuildContext context, Widget child, double bottomInset) {
+    final isDesktop = PlatformBootstrap.isDesktop;
     return ScrollJumpOverlay(
       // Только телефон: на десктопе по группам возит боковой навигатор, а
       // всплывающая кнопка посреди окна там просто мусор.
@@ -729,18 +782,18 @@ class _ServersTabState extends ConsumerState<ServersTab>
       endLabel: context.l10n.serversScrollToEnd,
       topLabel: context.l10n.serversScrollToTop,
       // Над нижним градиентом списка и на одной линии с кнопкой добавления.
-      bottomInset: 20,
+      bottomInset: 20 + bottomInset,
       child: SizedBox.expand(
           child: Stack(
             fit: StackFit.expand,
             children: [
-              body,
+              child,
 
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: 56,
+                height: 56 + bottomInset,
                 child: IgnorePointer(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -763,7 +816,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
               // кнопка разъезжалась с двумя другими такими же в приложении.
               Positioned(
                 right: 16,
-                bottom: 16,
+                bottom: 16 + bottomInset,
                 child: FloatingActionButton(
                   heroTag: 'servers_add_server_fab',
                   backgroundColor: AppTheme.accentContainer(context),

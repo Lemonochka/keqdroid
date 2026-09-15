@@ -4,6 +4,18 @@ import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
 
+/// Разделы приложения — одни и те же у нижней панели и у рейки
+/// (`nav_rail.dart`): разойтись составом или значками им нельзя.
+List<({IconData icon, String label, bool badge})> appNavDestinations(
+  AppLocalizations l10n, {
+  required bool showConnectedBadge,
+}) =>
+    [
+      (icon: Icons.lan_rounded, label: l10n.navServers, badge: showConnectedBadge),
+      (icon: Icons.language_rounded, label: l10n.navSubscriptions, badge: false),
+      (icon: Icons.settings_rounded, label: l10n.navSettings, badge: false),
+    ];
+
 /// Нижняя навигация в горизонтальной раскладке M3 Expressive: иконка и подпись
 /// стоят в один ряд внутри пилюли-индикатора, а не подпись под иконкой.
 ///
@@ -70,11 +82,10 @@ class _AppBottomNavState extends State<AppBottomNav>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final items = <(IconData, String, bool)>[
-      (Icons.lan_rounded, l10n.navServers, widget.showConnectedBadge),
-      (Icons.language_rounded, l10n.navSubscriptions, false),
-      (Icons.settings_rounded, l10n.navSettings, false),
-    ];
+    final items = appNavDestinations(
+      l10n,
+      showConnectedBadge: widget.showConnectedBadge,
+    );
 
     return Container(
       color: cs.surface,
@@ -95,9 +106,9 @@ class _AppBottomNavState extends State<AppBottomNav>
                   children: [
                     for (var i = 0; i < _count; i++)
                       _NavItem(
-                        icon: items[i].$1,
-                        label: items[i].$2,
-                        badge: items[i].$3,
+                        icon: items[i].icon,
+                        label: items[i].label,
+                        badge: items[i].badge,
                         selected: widget.index == i,
                         t: _ctrls[i].value,
                         maxLabelWidth: budgets[i],
@@ -204,7 +215,7 @@ class _NavItem extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _Icon(
+                NavIcon(
                   icon: icon,
                   badge: badge,
                   color: Color.lerp(cs.onSurfaceVariant, cs.onSurface, tc)!,
@@ -250,12 +261,18 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _Icon extends StatelessWidget {
+/// Значок раздела с точкой «подключено» — общий у нижней панели и рейки.
+class NavIcon extends StatelessWidget {
   final IconData icon;
   final bool badge;
   final Color color;
 
-  const _Icon({required this.icon, required this.badge, required this.color});
+  const NavIcon({
+    super.key,
+    required this.icon,
+    required this.badge,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {

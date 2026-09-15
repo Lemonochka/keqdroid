@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../platform/platform_bootstrap.dart';
+import 'window_breakpoints.dart';
 
 /// боковой отступ скролла на телефоне; на desktop — padding из DesktopPageLayout
 const double mobileTabHorizontalInset = 16;
@@ -8,7 +9,12 @@ const double mobileTabHorizontalInset = 16;
 double tabContentHorizontalInset() =>
     PlatformBootstrap.isDesktop ? 0 : mobileTabHorizontalInset;
 
-/// центрирует контент вкладки на широком desktop с разумной max width
+/// Центрирует контент вкладки с разумной максимальной шириной.
+///
+/// На десктопе — всегда. На телефоне — только шире «expanded»
+/// ([WindowBreakpoints]): строки настроек во всю ширину лежащего телефона
+/// читаются хуже. Боковые поля там уже даёт сама вкладка
+/// ([tabContentHorizontalInset]), второй раз они не добавляются.
 class DesktopPageLayout extends StatelessWidget {
   const DesktopPageLayout({
     super.key,
@@ -23,16 +29,16 @@ class DesktopPageLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!PlatformBootstrap.isDesktop) return child;
+    final isDesktop = PlatformBootstrap.isDesktop;
+    if (!isDesktop && !WindowBreakpoints.isExpandedMobile(context)) {
+      return child;
+    }
 
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
-        child: Padding(
-          padding: padding,
-          child: child,
-        ),
+        child: isDesktop ? Padding(padding: padding, child: child) : child,
       ),
     );
   }

@@ -26,8 +26,10 @@ import 'package:keqdroid/services/update_service.dart';
 import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/bottom_nav.dart';
+import 'package:keqdroid/shared/ui/nav_rail.dart';
 import 'package:keqdroid/shared/ui/update_dialog.dart';
 import 'package:keqdroid/ui/desktop/desktop_home_screen.dart';
+import 'package:keqdroid/ui/responsive/window_breakpoints.dart';
 
 Future<void> main() async {
   await runZonedGuarded(() async {
@@ -214,6 +216,8 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
         (a) => a.value?.status == VpnStatus.connected,
       ),
     );
+    final expanded = WindowBreakpoints.isExpandedMobile(context);
+    final railAtLeft = Directionality.of(context) == TextDirection.ltr;
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
       // Оболочка не ужимается под клавиатуру.
@@ -228,27 +232,54 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
       // в пару строк, кнопка добавления уезжает в середину экрана. Оболочка,
       // которая не ужимается никогда, застрять ужатой не может.
       resizeToAvoidBottomInset: false,
-      body: PageView(
-        controller: _pageCtrl,
-        physics: const ClampingScrollPhysics(),
-        dragStartBehavior: DragStartBehavior.down,
-        // Сосед пребилдится в спокойный кадр после settle, а не в первый кадр
-        // драга при самом первом свайпе.
-        allowImplicitScrolling: true,
-        onPageChanged: _onPageSettled,
-        // const-список обязателен: с ним shouldRebuild делегата = false, и
-        // setState(_navIndex) на середине свайпа не перестраивает сами вкладки.
-        children: const [
-          _HomeTabPage(child: ServersTab()),
-          _HomeTabPage(child: SubscriptionsTab()),
-          _HomeTabPage(child: SettingsTab()),
+      body: Row(
+        children: [
+          // Шире «expanded» (телефон боком, планшет) навигация — рейка у
+          // переднего края: нижняя панель отнимала и без того короткую высоту,
+          // а спека M3 на такой ширине держит только рейку.
+          if (expanded)
+            AppNavRail(
+              index: _navIndex,
+              showConnectedBadge: isConnected,
+              onTap: _selectTab,
+            ),
+          Expanded(
+            // Ключ сохраняет вкладки при повороте: число детей у Row меняется,
+            // и без него PageView пересоздался бы вместе со всем их состоянием.
+            key: const ValueKey('home-pages'),
+            child: MediaQuery.removePadding(
+              context: context,
+              // Врезку со своей стороны рейка забрала себе.
+              removeLeft: expanded && railAtLeft,
+              removeRight: expanded && !railAtLeft,
+              child: PageView(
+                controller: _pageCtrl,
+                physics: const ClampingScrollPhysics(),
+                dragStartBehavior: DragStartBehavior.down,
+                // Сосед пребилдится в спокойный кадр после settle, а не в
+                // первый кадр драга при самом первом свайпе.
+                allowImplicitScrolling: true,
+                onPageChanged: _onPageSettled,
+                // const-список обязателен: с ним shouldRebuild делегата =
+                // false, и setState(_navIndex) на середине свайпа не
+                // перестраивает сами вкладки.
+                children: const [
+                  _HomeTabPage(child: ServersTab()),
+                  _HomeTabPage(child: SubscriptionsTab()),
+                  _HomeTabPage(child: SettingsTab()),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
-      bottomNavigationBar: AppBottomNav(
-        index: _navIndex,
-        showConnectedBadge: isConnected,
-        onTap: _selectTab,
-      ),
+      bottomNavigationBar: expanded
+          ? null
+          : AppBottomNav(
+              index: _navIndex,
+              showConnectedBadge: isConnected,
+              onTap: _selectTab,
+            ),
     );
   }
 }

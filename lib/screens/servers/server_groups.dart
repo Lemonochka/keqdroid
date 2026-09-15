@@ -6,6 +6,7 @@ class _ServersListPanel extends ConsumerWidget {
   final Widget emptyState;
 
   const _ServersListPanel({
+    super.key,
     this.topPadding = 0,
     required this.onSelectServer,
     required this.emptyState,
