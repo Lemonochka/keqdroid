@@ -516,16 +516,22 @@ class ExpressiveListSegment extends StatefulWidget {
   /// шаг списка (`ServerRow.height`) остаётся прежним, и от него по-прежнему
   /// считаются `mainAxisExtent` сетки и смещение якоря активного сервера.
   /// Иначе пришлось бы править обе формулы в трёх местах ради четырёх пикселей.
-  static EdgeInsets segmentMargin({required int index, int columns = 1}) {
-    const half = gap / 2;
+  ///
+  /// [spacing] — сам зазор; у карточек сетки он свой (`ServerRow.cardGap`).
+  static EdgeInsets segmentMargin({
+    required int index,
+    int columns = 1,
+    double spacing = gap,
+  }) {
+    final half = spacing / 2;
     if (columns == 1) {
-      return const EdgeInsets.fromLTRB(gap, half, gap, half);
+      return EdgeInsets.fromLTRB(spacing, half, spacing, half);
     }
     final col = index % columns;
     return EdgeInsets.fromLTRB(
-      col == 0 ? gap : half,
+      col == 0 ? spacing : half,
       half,
-      col == columns - 1 ? gap : half,
+      col == columns - 1 ? spacing : half,
       half,
     );
   }

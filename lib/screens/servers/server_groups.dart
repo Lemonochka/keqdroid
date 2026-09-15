@@ -74,63 +74,79 @@ class _ServersListPanel extends ConsumerWidget {
         (a) => a.value?.serversTwoColumns ?? false,
       ),
     );
+    final textScaler = MediaQuery.textScalerOf(context);
+    final cardHeight = ServerRow.cardHeight(context);
 
-    // CustomScrollView + sliver-группы: тайлы серверов строятся лениво по мере
-    // прокрутки (SliverList.builder в _SubCard), а не все разом Column'ом —
-    // раскрытая группа на сотни серверов иначе джанкает свайп (build +
-    // семантика каждого тайла на каждый кадр).
-    // Отступ прыжка: список накрыт градиентом шапки, и выровненная «в ноль»
-    // группа уехала бы под него. Здесь же живёт слежение за тем, на какой
-    // группе список стоит сейчас, — по нему навигатор ставит подсветку.
-    final list = ServerGroupAnchorScope(
-      leadingInset: topPadding + 12,
-      child: SmoothScroll(
-      builder: (context, controller) => CustomScrollView(
-        controller: controller,
-        physics: const ClampingScrollPhysics(),
-        slivers: [
-          for (var index = 0; index < groups.length; index++)
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                index == 0 ? topPadding : 0,
-                16,
-                index < groups.length - 1 ? 20 : 80,
-              ),
-              sliver: _SubCard(
-                key: groups[index].key,
-                subscription: groups[index].subscription,
-                servers: groups[index].servers,
-                groupKey: groups[index].groupKey,
-                groupTitle: groups[index].groupTitle,
-                twoColumns: twoColumns,
-                onSelectServer: onSelectServer,
-                onRefresh: groups[index].onRefresh,
-                onPingAll: groups[index].onPingAll,
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = _ServerListLayout.resolve(
+          twoColumns: twoColumns,
+          width: constraints.maxWidth,
+          textScaler: textScaler,
+        );
+        final rowExtent =
+            layout == _ServerListLayout.cards ? cardHeight : ServerRow.height;
+
+        // CustomScrollView + sliver-группы: тайлы серверов строятся лениво по
+        // мере прокрутки (SliverList.builder в _SubCard), а не все разом
+        // Column'ом — раскрытая группа на сотни серверов иначе джанкает свайп
+        // (build + семантика каждого тайла на каждый кадр).
+        // Отступ прыжка: список накрыт градиентом шапки, и выровненная «в ноль»
+        // группа уехала бы под него. Здесь же живёт слежение за тем, на какой
+        // группе список стоит сейчас, — по нему навигатор ставит подсветку.
+        final list = ServerGroupAnchorScope(
+          leadingInset: topPadding + 12,
+          child: SmoothScroll(
+            builder: (context, controller) => CustomScrollView(
+              controller: controller,
+              physics: const ClampingScrollPhysics(),
+              slivers: [
+                for (var index = 0; index < groups.length; index++)
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(
+                      _listSideInset,
+                      index == 0 ? topPadding : 0,
+                      _listSideInset,
+                      index < groups.length - 1 ? 20 : 80,
+                    ),
+                    sliver: _SubCard(
+                      key: groups[index].key,
+                      subscription: groups[index].subscription,
+                      servers: groups[index].servers,
+                      groupKey: groups[index].groupKey,
+                      groupTitle: groups[index].groupTitle,
+                      layout: layout,
+                      rowExtent: rowExtent,
+                      onSelectServer: onSelectServer,
+                      onRefresh: groups[index].onRefresh,
+                      onPingAll: groups[index].onPingAll,
+                    ),
+                  ),
+              ],
             ),
-        ],
-      ),
-      ),
-    );
+          ),
+        );
 
-    // Плавная смена раскладки 1↔2 колонки: мягкий фейд с лёгким масштабом
-    // (в стиле остальных AnimatedSwitcher приложения) вместо резкого скачка.
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 350),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: animation,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.98, end: 1.0).animate(animation),
-          child: child,
-        ),
-      ),
-      child: KeyedSubtree(
-        key: ValueKey(twoColumns),
-        child: list,
-      ),
+        // Плавная смена раскладки — от настройки или от поворота экрана: мягкий
+        // фейд с лёгким масштабом (в стиле остальных AnimatedSwitcher
+        // приложения) вместо резкого скачка.
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 350),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.98, end: 1.0).animate(animation),
+              child: child,
+            ),
+          ),
+          child: KeyedSubtree(
+            key: ValueKey(layout),
+            child: list,
+          ),
+        );
+      },
     );
   }
 }
@@ -292,6 +308,41 @@ const _listTopFadeSolidStop =
 
 /// высота строки группы совпадает с высотой [_ServerTile]
 const _subCardRowHeight = ServerRow.height;
+
+/// боковое поле списка серверов; от него же считается ширина ячейки сетки
+const _listSideInset = 16.0;
+
+/// Как лягут серверы в группе.
+///
+/// Две колонки бывают двух видов. Строкой ряд читается, пока ячейке хватает
+/// ширины: телефон боком, планшет, десктоп. На вертикальном телефоне её нет —
+/// строка сжимала имя до «Росс…», — и там те же две колонки встают карточками.
+enum _ServerListLayout {
+  list,
+  grid,
+  cards;
+
+  int get columns => this == list ? 1 : 2;
+
+  double get gap =>
+      this == cards ? ServerRow.cardGap : ExpressiveListSegment.gap;
+
+  ServerRowLayout get rowLayout =>
+      this == cards ? ServerRowLayout.card : ServerRowLayout.inline;
+
+  static _ServerListLayout resolve({
+    required bool twoColumns,
+    required double width,
+    required TextScaler textScaler,
+  }) {
+    if (!twoColumns) return list;
+    // Ширина самого сегмента: минус поля списка и поля сегмента — полный
+    // зазор у края группы и половина у соседа.
+    final segment = (width - _listSideInset * 2) / 2 -
+        ExpressiveListSegment.gap * 1.5;
+    return ServerRow.fitsInline(segment, textScaler) ? grid : cards;
+  }
+}
 
 /// Действия в шапке группы — XSmall-кнопка M3E: контейнер 32dp, глиф 20dp.
 const _subCardHeaderIconSize = 32.0;
@@ -678,9 +729,11 @@ class _SubCard extends ConsumerStatefulWidget {
   /// (цепочки). null — берётся из подписки, как раньше.
   final String? groupKey;
   final String? groupTitle;
-  /// Раскладка списка приходит параметром сверху (см. _ServersListPanel):
-  /// вотч настройки внутри карточки сломал бы кросс-фейд смены колонок.
-  final bool twoColumns;
+  /// Раскладка и шаг строки приходят параметром сверху (см. _ServersListPanel):
+  /// вотч настройки внутри карточки сломал бы кросс-фейд смены колонок, а
+  /// ширину ячейки знает только список.
+  final _ServerListLayout layout;
+  final double rowExtent;
   final void Function(ServerItem) onSelectServer;
   final Future<void> Function()? onRefresh;
   final Future<void> Function() onPingAll;
@@ -691,7 +744,8 @@ class _SubCard extends ConsumerStatefulWidget {
     required this.servers,
     this.groupKey,
     this.groupTitle,
-    required this.twoColumns,
+    required this.layout,
+    required this.rowExtent,
     required this.onSelectServer,
     required this.onRefresh,
     required this.onPingAll,
@@ -804,9 +858,8 @@ class _SubCardState extends ConsumerState<_SubCard> {
         ? -1
         : sortedServers.indexWhere((s) => s.id == activeServerId);
     if (activeIndex >= 0) {
-      // В две колонки строка на индекс вдвое короче; высота строки общая с
-      // `mainAxisExtent` сетки, потому и считается одинаково.
-      final row = widget.twoColumns ? activeIndex ~/ 2 : activeIndex;
+      // Шаг строки общий с `mainAxisExtent` сетки, потому и считается одинаково.
+      final row = activeIndex ~/ widget.layout.columns;
       ServerGroupAnchors.instance.registerActiveServer(
         serverId: activeServerId!,
         groupKey: collapseKey,
@@ -814,8 +867,8 @@ class _SubCardState extends ConsumerState<_SubCard> {
             ? null
             : _GroupHeaderBackground.heightFor(sub, collapsed: false) +
                 // разделитель шапки и списка сегментов
-                ExpressiveListSegment.gap / 2 +
-                row * _subCardRowHeight,
+                widget.layout.gap / 2 +
+                row * widget.rowExtent,
       );
     } else {
       // Активного сервера в этой группе нет — если запись всё же наша, она
@@ -853,7 +906,7 @@ class _SubCardState extends ConsumerState<_SubCard> {
         // Снизу — вторая половина зазора последнего сегмента (первую он
         // отступает сам), чтобы поля группы были одинаковы со всех сторон.
         padding: EdgeInsets.only(
-          bottom: collapsed ? 0 : ExpressiveListSegment.gap / 2,
+          bottom: collapsed ? 0 : widget.layout.gap / 2,
         ),
         sliver: SliverMainAxisGroup(
           slivers: [
@@ -874,11 +927,11 @@ class _SubCardState extends ConsumerState<_SubCard> {
             ),
 
             // Первая половина зазора между шапкой и верхним сегментом: вторую
-            // сегмент отступает сам, и вместе выходит ровно [gap] — столько же,
-            // сколько между сегментами.
+            // сегмент отступает сам, и вместе выходит ровно зазор раскладки —
+            // столько же, сколько между сегментами.
             if (!collapsed)
-              const SliverToBoxAdapter(
-                child: SizedBox(height: ExpressiveListSegment.gap / 2),
+              SliverToBoxAdapter(
+                child: SizedBox(height: widget.layout.gap / 2),
               ),
 
             // Свёрнутая группа — просто без sliver'а тайлов. Никакого
@@ -889,7 +942,6 @@ class _SubCardState extends ConsumerState<_SubCard> {
                 servers: sortedServers,
                 activeServerId: activeServerId,
                 textLightColor: textLightColor,
-                twoColumns: widget.twoColumns,
                 accent: accent,
               ),
           ],
@@ -900,13 +952,11 @@ class _SubCardState extends ConsumerState<_SubCard> {
 
   /// Sliver с тайлами: SliverList.builder строит только видимые в viewport,
   /// чтобы раскрытая группа на сотни серверов не собирала все тайлы разом.
-  /// [twoColumns] — опциональная сетка в две колонки, строится так же лениво
-  /// через SliverGrid.
+  /// В две колонки — SliverGrid, строится так же лениво.
   Widget _buildExpandedServerList({
     required List<ServerItem> servers,
     required String? activeServerId,
     required Color textLightColor,
-    required bool twoColumns,
     required SubscriptionAccent? accent,
   }) {
     if (servers.isEmpty) {
@@ -925,28 +975,39 @@ class _SubCardState extends ConsumerState<_SubCard> {
     // Форму и поля сегмента считает список: только он знает, где у тайла сосед,
     // а где край группы. Нечётный хвост в сетке при этом получается сам собой —
     // у одинокой нижней плитки справа не сосед, а фон группы.
-    final columns = twoColumns ? 2 : 1;
+    final layout = widget.layout;
+    final columns = layout.columns;
     Widget tileAt(int index) {
       final server = servers[index];
       return _ServerTile(
         key: ValueKey(server.id),
         server: server,
         isActive: server.id == activeServerId,
+        layout: layout.rowLayout,
+        height: widget.rowExtent,
         accent: accent,
-        radius: ExpressiveListSegment.segmentRadius(
-          index: index,
-          count: servers.length,
-          columns: columns,
-          // Низ последнего ряда упирается в скруглённый угол карточки группы,
-          // и радиус там обязан быть концентричным её собственному: тот же
-          // центр дуги, поле по 4dp со всех сторон. Со спековыми 16dp поле на
-          // углу схлопывалось, и последний сервер выпирал за край списка.
-          endCorner:
-              ExpressiveShape.extraLarge - ExpressiveListSegment.gap,
-        ),
+        radius: layout == _ServerListLayout.cards
+            // Карточки сетки одинаковы, 12dp по спеке карточек. Форма по месту
+            // — приём вертикального списка: в два ряда 4dp-стыки с соседями
+            // читались случайным набором углов. У угла группы поле с 8dp
+            // сужается до пяти, но карточка остаётся внутри её дуги.
+            ? ExpressiveShape.radius(ExpressiveShape.medium)
+            : ExpressiveListSegment.segmentRadius(
+                index: index,
+                count: servers.length,
+                columns: columns,
+                // Низ последнего ряда упирается в скруглённый угол карточки
+                // группы, и радиус там обязан быть концентричным её
+                // собственному: тот же центр дуги, поле по 4dp со всех сторон.
+                // Со спековыми 16dp поле на углу схлопывалось, и последний
+                // сервер выпирал за край списка.
+                endCorner:
+                    ExpressiveShape.extraLarge - ExpressiveListSegment.gap,
+              ),
         margin: ExpressiveListSegment.segmentMargin(
           index: index,
           columns: columns,
+          spacing: layout.gap,
         ),
         onTap: () => widget.onSelectServer(server),
         onDelete: () => ref.read(serversProvider.notifier).delete(server.id),
@@ -954,11 +1015,11 @@ class _SubCardState extends ConsumerState<_SubCard> {
       );
     }
 
-    if (twoColumns) {
+    if (columns > 1) {
       return SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisExtent: _subCardRowHeight,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          mainAxisExtent: widget.rowExtent,
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) => tileAt(index),

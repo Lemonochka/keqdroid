@@ -15,6 +15,11 @@ class _ServerTile extends ConsumerWidget {
   /// строками (см. [ExpressiveListSegment.segmentMargin]).
   final EdgeInsets margin;
 
+  /// Строкой или карточкой и шаг списка — оба решает список по ширине ячейки;
+  /// тем же шагом он считает `mainAxisExtent` сетки и смещение якоря.
+  final ServerRowLayout layout;
+  final double height;
+
   /// Цвета, выведенные из картинки подписки. null — у подписки нет своей
   /// подложки (или сервер добавлен руками), тогда тайл живёт на ролях темы,
   /// как и раньше.
@@ -29,6 +34,8 @@ class _ServerTile extends ConsumerWidget {
     required this.isActive,
     required this.radius,
     required this.margin,
+    required this.layout,
+    required this.height,
     this.accent,
     required this.onTap,
     required this.onDelete,
@@ -127,15 +134,28 @@ class _ServerTile extends ConsumerWidget {
       // Активный сервер отличается весом, а не размером: у M3E это и есть
       // роль усиленного варианта.
       emphasizeTitle: isActive,
-      trailing: _buildTrailing(
-        context,
-        isConnected,
-        isConnecting,
-        isActive,
-        isPinging,
-        accentColor,
-        textLightColor,
-      ),
+      layout: layout,
+      trailing: layout == ServerRowLayout.inline
+          ? _buildTrailing(
+              context,
+              isConnected,
+              isConnecting,
+              isActive,
+              isPinging,
+              accentColor,
+              textLightColor,
+            )
+          : null,
+      status: layout == ServerRowLayout.card
+          ? _buildInlineStatus(
+              context,
+              isConnected,
+              isConnecting,
+              isActive,
+              isPinging,
+              accentColor,
+            )
+          : null,
     );
 
     // Один семантический узел на тайл (имя + протокол + пинг + tap). Сервис
@@ -143,12 +163,11 @@ class _ServerTile extends ConsumerWidget {
     // пересчитывается на каждом кадре свайпа — чем меньше узлов, тем дешевле.
     //
     // Внешний SizedBox — шаг списка, а не высота сегмента: зазор набирается
-    // полями внутри него. От шага считаются `mainAxisExtent` сетки и смещение
-    // якоря активного сервера, и он обязан остаться прежним.
+    // полями внутри него.
     return RepaintBoundary(
       child: MergeSemantics(
         child: SizedBox(
-          height: _subCardRowHeight,
+          height: height,
           child: Padding(
             padding: margin,
             child: ExpressiveListSegment(
@@ -258,6 +277,52 @@ class _ServerTile extends ConsumerWidget {
           ),
         ),
         child: center,
+      ),
+    );
+  }
+
+  /// Состояние сервера в карточке сетки — в том же порядке, что у кружка в
+  /// строке, но значком перед пингом. null — показывать нечего: карточка
+  /// жмётся целиком, и шеврону в ней не место.
+  Widget? _buildInlineStatus(
+    BuildContext context,
+    bool isConnected,
+    bool isConnecting,
+    bool isActive,
+    bool isPinging,
+    Color accentColor,
+  ) {
+    final Widget glyph;
+    if (isPinging || isConnecting) {
+      glyph = ShapeLoadingIndicator(
+        key: const ValueKey('spinner'),
+        size: ExpressiveIconSize.inline,
+        color: accentColor,
+      );
+    } else if (isConnected) {
+      glyph = Icon(
+        Icons.pause_rounded,
+        key: const ValueKey('pause'),
+        size: ExpressiveIconSize.inline,
+        color: AppTheme.green(context),
+      );
+    } else if (isActive) {
+      glyph = Icon(
+        Icons.play_arrow_outlined,
+        key: const ValueKey('play'),
+        size: ExpressiveIconSize.inline,
+        color: accentColor,
+      );
+    } else {
+      return null;
+    }
+    return SizedBox.square(
+      dimension: ExpressiveIconSize.inline,
+      child: AnimatedSwitcher(
+        duration: ExpressiveMotion.durationFast,
+        switchInCurve: ExpressiveMotion.emphasizedDecelerate,
+        switchOutCurve: ExpressiveMotion.emphasizedAccelerate,
+        child: glyph,
       ),
     );
   }
