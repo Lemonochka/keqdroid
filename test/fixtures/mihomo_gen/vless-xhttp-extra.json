@@ -68,7 +68,8 @@
       "client-fingerprint": "randomized",
       "reality-opts": {
         "public-key": "publickey",
-        "short-id": "aa"
+        "short-id": "aa",
+        "support-x25519mlkem768": true
       },
       "network": "xhttp",
       "xhttp-opts": {

@@ -137,10 +137,42 @@ void main() {
       expect(p['tls'], isTrue);
       expect(p['servername'], 'decoy.example');
       expect(p['flow'], 'xtls-rprx-vision');
-      expect(p['reality-opts'], {'public-key': 'publickey', 'short-id': 'aabb'});
+      expect(p['reality-opts'], {
+        'public-key': 'publickey',
+        'short-id': 'aabb',
+        'support-x25519mlkem768': true,
+      });
       expect(p['network'], 'tcp');
       // Без UDP через SOCKS5 ядро молча отбросит UDP-сессии.
       expect(p['udp'], isTrue);
+    });
+
+    // Отсечка на допуск к серверу, а не на поле в конфиге: xray с 26.9.9
+    // отказывает приветствию TLS без ключа X25519MLKEM768, а mihomo без этого
+    // флага его вырезает. Без флага все REALITY-узлы отвечают «REALITY
+    // authentication failed», и выглядит это как разошедшиеся ключи.
+    test('reality: X25519MLKEM768 разрешён и у vless, и у trojan', () {
+      for (final link in [
+        'vless://uuid@nl.example:443?type=tcp&security=reality'
+            '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome',
+        'trojan://pass@nl.example:443?type=tcp&security=reality'
+            '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome',
+      ]) {
+        final p = _proxy(MihomoConfigGen.build(
+          link,
+          const AppSettings(),
+          socksPort: 2080,
+        ));
+        expect(
+          p['reality-opts'],
+          {
+            'public-key': 'publickey',
+            'short-id': 'aabb',
+            'support-x25519mlkem768': true,
+          },
+          reason: link,
+        );
+      }
     });
 
     // У mihomo пустой client-fingerprint значит «без uTLS», а не chrome, как у
@@ -533,7 +565,11 @@ void main() {
         '&sni=cdn.example&pcs=aabb',
         extra,
       );
-      expect(ds['reality-opts'], {'public-key': 'pk', 'short-id': 'cd'});
+      expect(ds['reality-opts'], {
+        'public-key': 'pk',
+        'short-id': 'cd',
+        'support-x25519mlkem768': true,
+      });
       expect(ds['servername'], 'decoy.example');
       expect(ds['client-fingerprint'], 'safari');
       // Пин основного — к его сертификату, у скачивания сертификат чужой.

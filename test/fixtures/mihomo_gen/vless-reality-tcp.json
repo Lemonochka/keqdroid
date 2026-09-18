@@ -69,7 +69,8 @@
       "client-fingerprint": "chrome",
       "reality-opts": {
         "public-key": "publickey",
-        "short-id": "aabb"
+        "short-id": "aabb",
+        "support-x25519mlkem768": true
       },
       "network": "tcp"
     }

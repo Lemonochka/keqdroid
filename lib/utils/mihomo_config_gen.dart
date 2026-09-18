@@ -821,6 +821,32 @@ class MihomoConfigGen {
     };
   }
 
+  /// Ключи REALITY плюс разрешение оставить в приветствии TLS ключ
+  /// X25519MLKEM768.
+  ///
+  /// Флаг не про постквантовую стойкость, а про допуск на сервер. REALITY в
+  /// xray с 26.9.9 отказывает приветствию, в котором этого ключа нет, и
+  /// отказывает молча: соединение уезжает маскировочному сайту, а клиент
+  /// пишет «REALITY authentication failed», будто не сошлись ключи. mihomo без
+  /// флага ключ из приветствия вырезает, поэтому после обновления сервера
+  /// разом умирают все REALITY-узлы, а те же самые через xray работают.
+  ///
+  /// Одного флага мало: ключ должен быть в профиле uTLS, которым клиент
+  /// представляется. У mihomo свой форк uTLS, и там его несут только профили
+  /// chrome — firefox остановлен на версии 120, где такого ключа ещё не было.
+  /// У xray форк другой и firefox свежий, поэтому один и тот же `fp=firefox`
+  /// на двух ядрах ведёт себя по-разному.
+  static Map<String, dynamic> _realityOpts({
+    required String publicKey,
+    required String shortId,
+  }) {
+    return {
+      'public-key': publicKey,
+      'short-id': shortId,
+      'support-x25519mlkem768': true,
+    };
+  }
+
   static List<String>? _alpn(String raw) {
     final list = raw.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
     return list.isEmpty ? null : list;
@@ -1186,7 +1212,10 @@ class MihomoConfigGen {
       'path': path.isEmpty ? '/' : path,
       // Пустой ключ — единственный способ сказать mihomo «без REALITY».
       'reality-opts': reality
-          ? {'public-key': publicKey, 'short-id': str(tls, 'shortId')}
+          ? _realityOpts(
+              publicKey: publicKey,
+              shortId: str(tls, 'shortId'),
+            )
           : {'public-key': ''},
       // Пин сертификата и имя его проверки — свои: сертификат тут другой.
       'fingerprint': reality ? '' : single(str(tls, 'pinnedPeerCertSha256')),
@@ -1295,10 +1324,10 @@ class MihomoConfigGen {
     // сертификат там подставной и пинить его нечем.
     if (security == 'tls') _applyCertPinning(out, uri);
     if (security == 'reality') {
-      out['reality-opts'] = {
-        'public-key': _param(uri, 'pbk'),
-        'short-id': _param(uri, 'sid'),
-      };
+      out['reality-opts'] = _realityOpts(
+        publicKey: _param(uri, 'pbk'),
+        shortId: _param(uri, 'sid'),
+      );
     }
 
     _applyTransport(out, uri,
@@ -1425,10 +1454,10 @@ class MihomoConfigGen {
     // (`TrojanOption.RealityOpts`). Без него клиент шёл обычным TLS и получал
     // от сервера подставной сертификат маскировочного сайта.
     if (_param(uri, 'security').trim().toLowerCase() == 'reality') {
-      out['reality-opts'] = {
-        'public-key': _param(uri, 'pbk'),
-        'short-id': _param(uri, 'sid'),
-      };
+      out['reality-opts'] = _realityOpts(
+        publicKey: _param(uri, 'pbk'),
+        shortId: _param(uri, 'sid'),
+      );
     } else {
       // Пин сертификата — только для обычного TLS: у REALITY сертификат
       // подставной и пинить его нечем.
