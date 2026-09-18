@@ -33,11 +33,11 @@ index ff6a0a3..16743af 100644
 -		hello.SessionId[1] = 8
 -		hello.SessionId[2] = 2
 +		// keqdroid: REALITY revision we speak, matching the bundled Xray
-+		// (libxray.so 26.7.28). Upstream hardcodes 1.8.2, which servers with
++		// (libxray.so 26.9.9). Upstream hardcodes 1.8.2, which servers with
 +		// `minClient` set reject as an ancient client.
 +		hello.SessionId[0] = 26
-+		hello.SessionId[1] = 7
-+		hello.SessionId[2] = 28
++		hello.SessionId[1] = 9
++		hello.SessionId[2] = 9
  
  		//log.Debugln("REALITY hello.sessionId[:16]: %v", hello.SessionId[:16])
  

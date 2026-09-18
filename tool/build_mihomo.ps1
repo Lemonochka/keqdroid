@@ -36,10 +36,10 @@
 # Examples:
 #   powershell -File tool/build_mihomo.ps1
 #   powershell -File tool/build_mihomo.ps1 -Target windows
-#   powershell -File tool/build_mihomo.ps1 -Version v1.19.31
+#   powershell -File tool/build_mihomo.ps1 -Version v1.19.32
 
 param(
-    [string]$Version = "v1.19.30",
+    [string]$Version = "v1.19.31",
     [ValidateSet("all", "android", "windows", "linux")]
     [string]$Target = "all",
     [string]$BuildDir = (Join-Path $PSScriptRoot "..\..\mihomo-build")
@@ -99,7 +99,13 @@ try {
     if (-not (Test-Path (Join-Path $BuildDir "go.mod"))) {
         & $go.Source mod init keqdroid-mihomo-build | Out-Null
     }
-    & $go.Source mod download -x "github.com/metacubex/mihomo@$Version" 2>&1 | Out-Null
+    # No -x, and no stderr redirection: -x writes its trace to stderr, and
+    # redirecting a native command's stderr in PowerShell 5.1 wraps every line
+    # in a NativeCommandError, which $ErrorActionPreference = "Stop" turns into
+    # an abort. That killed the script on the first line of download progress --
+    # and only ever on a version bump, because a cached module prints nothing.
+    & $go.Source mod download "github.com/metacubex/mihomo@$Version"
+    if ($LASTEXITCODE -ne 0) { Write-Error "go mod download failed for $Version" }
     $modCache = (& $go.Source env GOMODCACHE).Trim()
 }
 finally { Pop-Location }
@@ -140,10 +146,14 @@ $versionFlag = '-X "github.com/metacubex/mihomo/constant.Version={0}"' -f $Versi
 #   with_gvisor  - обязателен, см. шапку файла.
 #   no_tailscale - выкидывает клиент Tailscale.
 #   no_zerotier  - выкидывает клиент ZeroTier.
+#   no_easytier  - выкидывает клиент EasyTier (появился в v1.19.31).
 #
-# Последние два — не экономия на спичках: каждый тянет собственный сетевой стек,
-# и вдвоём они дают 8.4 МБ из 52 у android-бинарника (52 232 545 -> 43 385 185
-# при прочих равных, замерено на v1.19.30). В скачиваемом APK это −2.9 МБ.
+# Последние три — не экономия на спичках: каждый тянет собственный сетевой стек.
+# Tailscale с ZeroTier вдвоём дают 8.4 МБ из 52 у android-бинарника (52 232 545 ->
+# 43 385 185 при прочих равных, замерено на v1.19.30), а один EasyTier — ещё 10.8 МБ
+# (54 722 913 -> 43 909 473 на v1.19.31; на десктопе около 12 МБ). Без его тега
+# патч-релиз 1.19.30 -> 1.19.31 раздул бы бинарь на 11 МБ, и по одному размеру
+# было бы не понять, откуда.
 #
 # Выкинуть их можно потому, что это mesh-VPN, а не прокси: наш генератор их не
 # выпускает, а в подписочных Clash-конфигах их не бывает. Остальные экзотические
@@ -153,7 +163,7 @@ $versionFlag = '-X "github.com/metacubex/mihomo/constant.Version={0}"' -f $Versi
 #
 # Побочный эффект ровно как у gvisor: конфиг с `type: tailscale` не запустится,
 # ядро скажет, что этого в сборке нет.
-$BuildTags = "with_gvisor,no_tailscale,no_zerotier"
+$BuildTags = "with_gvisor,no_tailscale,no_zerotier,no_easytier"
 
 function Build-Mihomo {
     param(
