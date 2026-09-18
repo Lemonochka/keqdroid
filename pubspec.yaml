@@ -1,5 +1,5 @@
 name: keqdroid
-description: "KEQDIS proxy/VPN client for Android and Windows."
+description: "KEQDIS proxy/VPN client for Android, Windows and Linux."
 publish_to: 'none'
 
 version: 0.20.2+50

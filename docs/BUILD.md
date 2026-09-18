@@ -59,13 +59,14 @@ flutter build windows --release
   Android-only and breaks linking). A normal build works out of the box; re-run
   `tool/sync_windows_plugins.ps1` **only after adding or removing plugins** in pubspec.
 - CMake copies the cores from `assets/bin/windows/` next to the exe: `keqrnel.exe`,
-  `wireproxy.exe`, `wintun.dll`, `geoip.dat`, `geosite.dat`
+  `mihomo.exe`, `wintun.dll`, `geoip.dat`, `geosite.dat`
   ([`assets/bin/windows/README.md`](../assets/bin/windows/README.md)). Separate
   `xray.exe` / `sing-box.exe` are not needed — keqrnel carries both engines inside.
-- TUN mode requires running as administrator (keqrnel creates the wintun adapter);
-  Proxy mode works without elevation.
+- TUN mode requires administrator rights (keqrnel and mihomo both create the wintun
+  adapter themselves); the app offers to restart elevated. Proxy mode works without
+  elevation.
 
-### Linux (Debian/Arch, x86_64)
+### Linux (Debian/Fedora/Arch, x86_64)
 
 Native Linux or WSL only. There are two scripts with different jobs:
 
@@ -83,7 +84,7 @@ wsl -e bash /mnt/c/Users/<you>/StudioProjects/keqdroid/tool/package_linux.sh
   `MSYS_NO_PATHCONV=1`).
 - Both scripts work directly in the repository on `/mnt/c` and make no copies on the Linux
   filesystem — so a Linux build cannot run in parallel with a Windows or Android one.
-- The cores live in `assets/bin/linux/`: `keqrnel`, `wireproxy` and the geo databases.
+- The cores live in `assets/bin/linux/`: `keqrnel`, `mihomo` and the geo databases.
   CMake puts them next to the bundle binary, not into `flutter_assets`.
 - Proxy mode works without root; TUN asks for root through `pkexec` on connect.
 
@@ -97,7 +98,8 @@ flutter test test/utils/config_gen_test.dart   # a single file
 
 The tests mirror `lib/`: `test/utils/` — config generators and parsers, `test/services/` —
 storage/subscriptions/updater/ping, plus `test/models/`, `test/tunnel/`, `test/widgets/`,
-`test/providers/`. Fixtures are in `test/helpers/` (`pump_app.dart`, `test_storage.dart`).
+`test/providers/`. Fixtures are in `test/fixtures/`, helpers in `test/helpers/`
+(`pump_app.dart`, `test_storage.dart`).
 
 A clean analyze and green tests are a hard requirement for any PR: both catch real
 regressions rather than ticking a box.
@@ -109,8 +111,7 @@ you bump a core version:
 
 | Script | What it builds |
 |--------|----------------|
-| `tool/build_amneziawg.ps1` | the AmneziaWG cores: `wireproxy` (Windows + Linux) and `libwg-go.so` (Android) |
-| `tool/build_mihomo.ps1` | `libmihomo.so` (the second Android proxy core), with the patches from `tool/patches/` |
+| `tool/build_mihomo.ps1` | mihomo for all three platforms — `libmihomo.so`, `mihomo.exe`, `mihomo` — with the patches from `tool/patches/` |
 | `tool/build_linux_native.sh` | the Linux bundle + cores on native Linux |
 | `tool/fetch_xray_geo.ps1` | fresh `geoip.dat` / `geosite.dat` |
 
@@ -127,8 +128,9 @@ GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -tags with_gvisor -o 
 core has neither `gvisor` nor `mixed` — and with them goes full-cone NAT. A forgotten tag
 shows up in the size: the binary loses roughly 3 MB.
 
-`libxray.so` on Android is the official xray for `android/arm64`, renamed. Rebuilt from the
-same xray-core repository, but with the NDK:
+`libxray.so` on Android is not an official release: it is built from the same xray-core
+revision that keqrnel pins, so every platform runs the same Xray (`go version -m` on both
+binaries shows one commit). With the NDK:
 
 ```bash
 CGO_ENABLED=1 GOOS=android GOARCH=arm64 GOARM64=v8.0 \
@@ -141,12 +143,12 @@ CGO_ENABLED=1 GOOS=android GOARCH=arm64 GOARM64=v8.0 \
 `net.Interfaces()` on Android) reaches into stdlib's `net.zoneCache`, and go1.26 forbids
 such `go:linkname` — without the flag linking fails.
 
-Build `keqrnel.exe`/`wireproxy.exe` for Windows **unstripped** and never run them from
+Build `keqrnel.exe`/`mihomo.exe` for Windows **unstripped** and never run them from
 `%TEMP%` — otherwise Defender treats them as a threat. The Android binary, on the contrary,
 is stripped (`-s -w`), the way upstream does it.
 
-`libmihomo.so` is the second proxy core for Android; the user picks between it and
-`libxray.so` on the "About" screen. It is built by a script, not by hand:
+mihomo is the second core on every platform; for links both cores can run, the user picks
+one in Settings → About. It is built by a script, not by hand:
 
 ```powershell
 powershell -File tool/build_mihomo.ps1
@@ -160,29 +162,15 @@ version `1.8.2` into the ClientHello, and a server with `minClient` set answers 
 real certificate of the masquerade domain instead of its own — the client sees
 `REALITY authentication failed` even though the keys are correct.
 
-AmneziaWG is built by a single script for all three platforms:
+AmneziaWG has no core of its own any more: mihomo carries amneziawg-go and runs a `.conf`
+profile as `type: wireguard` with `amnezia-wg-option`. There is nothing to build for it
+separately.
 
-```powershell
-powershell -File tool/build_amneziawg.ps1                       # wireproxy (win+linux) + libwg-go.so
-powershell -File tool/build_amneziawg.ps1 -WireproxyVersion v1.0.19
-```
+## 6. Localization (en / ru / de / zh / fa)
 
-The wireproxy version is **pinned by tag** inside the script, and both desktop binaries come
-from one checkout: Windows used to be built from source while Linux was downloaded as a
-release, and the two silently drifted a protocol generation apart. The Android half pulls
-`amneziawg-android` (which holds the `go.mod` + `jni.c` that produce `libwg-go.so`) and
-builds `arm64-v8a` only: `abiFilters` in `app/build.gradle.kts` would not let anything else
-through anyway, and an `x86_64` built along the way is just litter in the tree.
-
-Both halves install the same amneziawg-go version, and that is a requirement, not a
-coincidence: a `.conf` is executed by wireproxy on the desktop and by `libwg-go.so` through
-UAPI on Android, and a profile that comes up on one platform must come up on the other.
-
-## 6. Localization (en / ru / de / zh)
-
-The source of truth is ARB: `lib/l10n/app_en.arb` (the base) plus `app_ru/de/zh.arb`. Added
-a string — add it to **all four** files, otherwise the "forgotten" language gets an empty
-key. Generation runs on its own during `flutter pub get` / `flutter run` (or manually via
+The source of truth is ARB: `lib/l10n/app_en.arb` (the base) plus `app_ru/de/zh/fa.arb`.
+Added a string — add it to **all five** files, otherwise the "forgotten" language gets an
+empty key. Generation runs on its own during `flutter pub get` / `flutter run` (or manually via
 `flutter gen-l10n`). `app_localizations*.dart` are never edited by hand.
 
 ## 7. Release
@@ -280,13 +268,13 @@ flutter build windows --release
   линковку). Обычная сборка работает сразу; `tool/sync_windows_plugins.ps1` перезапускай
   **только после добавления/удаления плагинов** в pubspec.
 - Ядра из `assets/bin/windows/` CMake кладёт рядом с exe: `keqrnel.exe`,
-  `wireproxy.exe`, `wintun.dll`, `geoip.dat`, `geosite.dat`
+  `mihomo.exe`, `wintun.dll`, `geoip.dat`, `geosite.dat`
   ([`assets/bin/windows/README.md`](../assets/bin/windows/README.md)). Отдельные
   `xray.exe` / `sing-box.exe` не нужны — keqrnel несёт оба движка внутри.
-- TUN-режим требует запуска от администратора (keqrnel создаёт wintun-адаптер),
-  Proxy работает без прав.
+- TUN-режим требует прав администратора (wintun-адаптер создают сами keqrnel и
+  mihomo); приложение предлагает перезапуститься с ними. Proxy работает без прав.
 
-### Linux (Debian/Arch, x86_64)
+### Linux (Debian/Fedora/Arch, x86_64)
 
 Только на нативном Linux или в WSL. Скриптов два, роли разные:
 
@@ -303,7 +291,7 @@ wsl -e bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/tool/package_linux.sh
   и скрипт не найдётся. Запускай из PowerShell (или ставь `MSYS_NO_PATHCONV=1`).
 - Оба скрипта работают прямо в репозитории на `/mnt/c`, копий на Linux-ФС не делают —
   поэтому Linux-сборку нельзя гонять параллельно с Windows или Android.
-- Ядра — в `assets/bin/linux/`: `keqrnel`, `wireproxy` и geo-базы. CMake кладёт их
+- Ядра — в `assets/bin/linux/`: `keqrnel`, `mihomo` и geo-базы. CMake кладёт их
   рядом с бинарём бандла, не в `flutter_assets`.
 - Proxy работает без root; TUN запрашивает root через `pkexec` при подключении.
 
@@ -317,7 +305,8 @@ flutter test test/utils/config_gen_test.dart   # один файл
 
 Тесты зеркалят `lib/`: `test/utils/` — генераторы конфигов и парсеры, `test/services/` —
 storage/подписки/апдейтер/пинг, `test/models/`, `test/tunnel/`, `test/widgets/`,
-`test/providers/`. Фикстуры — в `test/helpers/` (`pump_app.dart`, `test_storage.dart`).
+`test/providers/`. Фикстуры — в `test/fixtures/`, помощники — в `test/helpers/`
+(`pump_app.dart`, `test_storage.dart`).
 
 Чистый analyze и зелёные тесты — обязательное условие любого PR: и то и другое ловит
 реальные регрессии, а не для галочки.
@@ -329,8 +318,7 @@ storage/подписки/апдейтер/пинг, `test/models/`, `test/tunnel
 
 | Скрипт | Что собирает |
 |--------|--------------|
-| `tool/build_amneziawg.ps1` | AmneziaWG-ядра: `wireproxy` (Windows + Linux) и `libwg-go.so` (Android) |
-| `tool/build_mihomo.ps1` | `libmihomo.so` (второе прокси-ядро Android), с патчами из `tool/patches/` |
+| `tool/build_mihomo.ps1` | mihomo под все три платформы — `libmihomo.so`, `mihomo.exe`, `mihomo` — с патчами из `tool/patches/` |
 | `tool/build_linux_native.sh` | Linux-бандл + ядра на нативном Linux |
 | `tool/fetch_xray_geo.ps1` | свежие `geoip.dat` / `geosite.dat` |
 
@@ -347,8 +335,9 @@ GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -tags with_gvisor -o 
 в ядре нет ни `gvisor`, ни `mixed`, а с ними и full-cone NAT. Забытый тег виден по
 размеру: бинарь худеет примерно на 3 МБ.
 
-`libxray.so` под Android — это официальный xray для `android/arm64`, переименованный.
-Пересобирается из того же репозитория xray-ядра, но уже с NDK:
+`libxray.so` под Android — не официальный релиз: он собран из той же ревизии xray-core,
+что закреплена в keqrnel, и на всех платформах едет один и тот же Xray (`go version -m`
+на обоих бинарях показывает один коммит). Собирается с NDK:
 
 ```bash
 CGO_ENABLED=1 GOOS=android GOARCH=arm64 GOARM64=v8.0 \
@@ -361,12 +350,12 @@ CGO_ENABLED=1 GOOS=android GOARCH=arm64 GOARM64=v8.0 \
 `net.Interfaces()` на Android) лезет в `net.zoneCache` из stdlib, а go1.26 такие
 `go:linkname` запрещает — без флага падает линковка.
 
-`keqrnel.exe`/`wireproxy.exe` под Windows собирай **unstripped** и не запускай из
+`keqrnel.exe`/`mihomo.exe` под Windows собирай **unstripped** и не запускай из
 `%TEMP%` — иначе Defender считает их угрозой.
 Android-бинарь, наоборот, стрипается (`-s -w`), как это делает апстрим.
 
-`libmihomo.so` — второе прокси-ядро под Android, между ним и `libxray.so`
-пользователь выбирает на экране «О приложении». Собирается скриптом, а не руками:
+mihomo — второе ядро на всех платформах; для ссылок, которые берут оба ядра, его
+выбирают в Настройки → О приложении. Собирается скриптом, а не руками:
 
 ```powershell
 powershell -File tool/build_mihomo.ps1
@@ -380,30 +369,13 @@ ClientHello версию REALITY-клиента `1.8.2`, и сервер с по
 отдаёт настоящий сертификат маскировочного домена вместо своего — клиент видит
 `REALITY authentication failed`, хотя ключи верные.
 
-AmneziaWG собирается одним скриптом на все три платформы:
+Своего ядра у AmneziaWG больше нет: amneziawg-go живёт внутри mihomo, и профиль `.conf`
+исполняется как `type: wireguard` с `amnezia-wg-option`. Отдельно собирать нечего.
 
-```powershell
-powershell -File tool/build_amneziawg.ps1                       # wireproxy (win+linux) + libwg-go.so
-powershell -File tool/build_amneziawg.ps1 -WireproxyVersion v1.0.19
-```
+## 6. Локализация (en / ru / de / zh / fa)
 
-Версия wireproxy **закреплена тегом** в самом скрипте, и оба десктопных бинаря идут
-из одного чекаута: раньше Windows собирался из исходников, а Linux качался
-релизом, и они молча разъехались на поколение протокола.
-Android-часть тянет `amneziawg-android` (там лежат
-`go.mod` + `jni.c`, из которых и получается `libwg-go.so`) и строит только
-`arm64-v8a`: `abiFilters` в `app/build.gradle.kts` другого всё равно не пустит,
-а собранный заодно `x86_64` — мусор в дереве.
-
-Обе половины ставят одну и ту же версию amneziawg-go, и это условие, а не
-совпадение: `.conf` на десктопе исполняет wireproxy, на Android — `libwg-go.so`
-через UAPI, и профиль, который поднимется на одной платформе, обязан подняться
-на другой.
-
-## 6. Локализация (en / ru / de / zh)
-
-Источник истины — ARB: `lib/l10n/app_en.arb` (база) и `app_ru/de/zh.arb`. Добавил строку —
-добавь её **во все четыре** файла, иначе на «забытом» языке будет пустой ключ. Генерация
+Источник истины — ARB: `lib/l10n/app_en.arb` (база) и `app_ru/de/zh/fa.arb`. Добавил
+строку — добавь её **во все пять** файлов, иначе на «забытом» языке будет пустой ключ. Генерация
 подтягивается сама при `flutter pub get` / `flutter run` (или вручную `flutter gen-l10n`).
 `app_localizations*.dart` руками не редактируются.
 

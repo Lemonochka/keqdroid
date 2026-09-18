@@ -73,7 +73,10 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 
 **Appearance and data**
 - color presets, dark and light, Material You palette on Android
+- subscription cards with a palette or your own picture, carried over into that subscription's servers
 - interface size, on top of the system text size
+- a phone in landscape or a tablet gets a navigation rail and a two-pane servers screen
+- **About**: core versions, geo databases and the current session, copied as one report
 - backup and restore: settings, servers, subscriptions with their images, split-tunnel lists
 - share the local proxy over LAN
 - hotkeys for connect/disconnect, TUN mode, best-ping server, show/hide window — system-wide on Windows, while the window is focused on Linux
@@ -84,17 +87,19 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 
 ## Cores
 
-Four cores ship inside the app. Which one runs a given server is decided by the server's format, not by preference — a ready-made config only makes sense to the core it was written for:
+Servers run on two cores, on every platform: **Xray** and **mihomo**. On Windows and Linux Xray ships inside `keqrnel` together with **sing-box**, which carries its TUN mode. Which core runs a given server is decided by the server itself, not by preference — a ready-made config only makes sense to the core it was written for, and not every link can be carried by both:
 
-| Server format | Runs on |
-|---------------|---------|
-| Links: `vless://` `vmess://` `trojan://` `ss://` `hy2://` | Xray or mihomo — your pick |
+| Server | Runs on |
+|--------|---------|
+| Links `vless://` `vmess://` `trojan://` `ss://` `hy2://` | Xray or mihomo — your pick |
+| `tuic://` `anytls://` `ssr://` `mierus://`, and links with a transport only mihomo has (for example HTTP/2 or a Shadowsocks plugin) | mihomo |
+| Links with a transport only Xray has (for example mKCP, XHTTP for VMess and Trojan, finalmask) | Xray |
 | Ready-made Xray config (`.json`) | Xray |
 | Ready-made Clash / mihomo config | mihomo |
 | Proxy chain | Xray |
-| AmneziaWG profile (`.conf`) | mihomo |
+| WireGuard / AmneziaWG profile | mihomo |
 
-The choice lives in **Settings → About** and applies to links, where both cores fit. **Automatic** leaves it to the format. When a server cannot run on the core you picked, the app says so on the spot instead of quietly switching — a silent fallback is exactly what makes "I selected mihomo and it says Xray" impossible to debug.
+The choice lives in **Settings → About** and applies to links both cores can run; **Automatic** runs them on Xray. When a server cannot run on the core you picked, the app says so on the spot instead of quietly switching — a silent fallback is exactly what makes "I selected mihomo and it says Xray" impossible to debug.
 
 ---
 
@@ -106,12 +111,18 @@ The choice lives in **Settings → About** and applies to links, where both core
 | VMess | `vmess://` |
 | Trojan | `trojan://` |
 | Shadowsocks | `ss://` |
+| ShadowsocksR | `ssr://` |
 | Hysteria 2 | `hysteria2://`, `hy2://` |
-| AmneziaWG | `.conf` profile |
+| TUIC | `tuic://` |
+| AnyTLS | `anytls://` |
+| Mieru | `mierus://` |
+| WireGuard / AmneziaWG | `.conf` profile; `wg://`, `awg://`, `wireguard://` links |
 | Ready-made Xray config | whole `.json` (paste, file, subscription) |
 | Ready-made Clash config | whole config (paste, file, subscription) |
 
 Hysteria v1 is not supported.
+
+A Clash or sing-box subscription is taken apart into servers, one per node. A Clash config stays whole only when its nodes cannot be taken apart (`proxy-providers`, node types the app does not know) — then mihomo runs it exactly as written.
 
 A ready-made config runs as its author wrote it — routing, DNS and outbound chains included; only the inbounds are replaced with the app's own. The name comes from the config's root `remarks`. The author's rules decide first, and your own direct / proxy / block lists only see what those rules did not already match — if the config ends with a catch-all, and most do, they never come into play at all.
 
@@ -126,14 +137,14 @@ A ready-made config runs as its author wrote it — routing, DNS and outbound ch
 | **VPN** | Everything on the device goes through the tunnel. VPN permission on first connect. |
 | **Proxy** | SOCKS and HTTP on `127.0.0.1`, nothing captured on its own — point an app or the Wi-Fi proxy settings at it. |
 
-Per-app routing and DNS interception belong to VPN mode. Notification shade icon and a Quick Settings tile; subscriptions update in the background.
+Per-app routing and DNS interception belong to VPN mode. Notification shade icon, a Quick Settings tile and launcher shortcuts to connect and disconnect; subscriptions update in the background.
 
 ### Windows
 
 | Mode | What it does |
 |------|--------------|
 | **Proxy** | System proxy — browsers and most apps. No administrator rights. |
-| **TUN** | All traffic through a VPN adapter. Run as administrator. |
+| **TUN** | All traffic through a VPN adapter. Needs administrator rights — the app offers to restart with them. |
 
 The window minimizes to the tray and remembers its size and position. Launch at system startup with optional auto-connect. Global hotkeys are in Settings → Advanced → Hotkeys. Subscriptions refresh while the app is open.
 
@@ -182,7 +193,7 @@ wsl -e bash /mnt/c/.../keqdroid/tool/build_linux_wsl.sh
 # binary: build/linux/x64/release/bundle/keqdroid
 ```
 
-Place the required core binaries in `assets/bin/windows/` before a Windows build — see [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
+The prebuilt cores are already in the repository: `assets/bin/windows/`, `assets/bin/linux/` and `android/app/src/main/jniLibs/`. How to rebuild them is in [`docs/BUILD.md`](docs/BUILD.md).
 
 ### Releases
 
@@ -275,7 +286,10 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, uplo
 
 **Оформление и данные**
 - цветовые пресеты, тёмная и светлая тема, палитра Material You на Android
+- карточки подписок с палитрой или своей картинкой, которая переходит и в список их серверов
 - размер интерфейса, поверх системного размера текста
+- на телефоне боком и на планшете — навигационная рейка и экран серверов в две панели
+- **О приложении**: версии ядер, geo-базы и текущая сессия одним отчётом
 - резервная копия и восстановление: настройки, серверы, подписки вместе с их картинками, списки split tunnel
 - раздача локального прокси в локальную сеть
 - хоткеи на подключение, режим TUN, сервер с лучшим пингом, показать/скрыть окно — глобальные на Windows, в фокусе окна на Linux
@@ -286,17 +300,19 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, uplo
 
 ## Ядра
 
-Внутри приложения четыре ядра. Какое исполняет конкретный сервер, решает формат этого сервера, а не предпочтение: готовый конфиг понятен только тому ядру, для которого он написан.
+Серверы исполняют два ядра, на всех платформах: **Xray** и **mihomo**. На Windows и Linux Xray едет внутри `keqrnel` вместе с **sing-box**, на котором держится его режим TUN. Какое ядро исполняет конкретный сервер, решает сам сервер, а не предпочтение: готовый конфиг понятен только тому ядру, для которого он написан, и не всякую ссылку берут оба.
 
-| Формат сервера | Исполняет |
-|----------------|-----------|
-| Ссылки: `vless://` `vmess://` `trojan://` `ss://` `hy2://` | Xray или mihomo — на выбор |
+| Сервер | Исполняет |
+|--------|-----------|
+| Ссылки `vless://` `vmess://` `trojan://` `ss://` `hy2://` | Xray или mihomo — на выбор |
+| `tuic://` `anytls://` `ssr://` `mierus://` и ссылки с транспортом, который есть только у mihomo (например, HTTP/2 или плагин Shadowsocks) | mihomo |
+| Ссылки с транспортом, который есть только у Xray (например, mKCP, XHTTP у VMess и Trojan, finalmask) | Xray |
 | Готовый конфиг Xray (`.json`) | Xray |
 | Готовый конфиг Clash / mihomo | mihomo |
 | Цепочка прокси | Xray |
-| Профиль AmneziaWG (`.conf`) | mihomo |
+| Профиль WireGuard / AmneziaWG | mihomo |
 
-Выбор живёт в **Настройки → О приложении** и касается ссылок — там подходят оба ядра. **Автоматически** отдаёт решение формату. Если сервер не может поехать на выбранном ядре, приложение скажет об этом сразу, а не переключится молча: именно тихий откат превращает «включила mihomo, а пишет Xray» в неразрешимую загадку.
+Выбор живёт в **Настройки → О приложении** и касается ссылок, которые берут оба ядра; **Автоматически** отдаёт их Xray. Если сервер не может поехать на выбранном ядре, приложение скажет об этом сразу, а не переключится молча: именно тихий откат превращает «включила mihomo, а пишет Xray» в неразрешимую загадку.
 
 ---
 
@@ -308,12 +324,18 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, uplo
 | VMess | `vmess://` |
 | Trojan | `trojan://` |
 | Shadowsocks | `ss://` |
+| ShadowsocksR | `ssr://` |
 | Hysteria 2 | `hysteria2://`, `hy2://` |
-| AmneziaWG | профиль `.conf` |
+| TUIC | `tuic://` |
+| AnyTLS | `anytls://` |
+| Mieru | `mierus://` |
+| WireGuard / AmneziaWG | профиль `.conf`; ссылки `wg://`, `awg://`, `wireguard://` |
 | Готовый конфиг Xray | `.json` целиком (вставка, файл, подписка) |
 | Готовый конфиг Clash | конфиг целиком (вставка, файл, подписка) |
 
 Hysteria v1 не поддерживается.
+
+Подписка Clash или sing-box раскладывается на серверы, по одному на узел. Конфиг Clash остаётся целиком, только если узлы разобрать не вышло (`proxy-providers`, незнакомые приложению типы узлов), — тогда его исполняет mihomo ровно так, как написал автор.
 
 Готовый конфиг исполняется так, как его написал автор: роутинг, DNS и цепочки аутбаундов остаются его, подменяются только инбаунды на собственные. Имя берётся из корневого `remarks`. Первыми решают авторские правила, и до списков обход / прокси / блок доходит только то, что они не поймали, — а если конфиг кончается catch-all-правилом, как бывает почти всегда, не доходит вовсе.
 
@@ -328,16 +350,16 @@ Hysteria v1 не поддерживается.
 | **VPN** | Через туннель идёт всё устройство. При первом подключении — разрешение VPN. |
 | **Proxy** | SOCKS и HTTP на `127.0.0.1`, сам по себе не перехватывает ничего — на него нужно направить программу или настройки прокси в Wi-Fi. |
 
-Маршрутизация по приложениям и перехват DNS живут в режиме VPN. Значок в шторке и плитка в быстрых настройках; подписки обновляются в фоне.
+Маршрутизация по приложениям и перехват DNS живут в режиме VPN. Значок в шторке, плитка в быстрых настройках и ярлыки «подключить» и «отключить» на значке приложения; подписки обновляются в фоне.
 
 ### Windows
 
 | Режим | Что делает |
 |-------|------------|
 | **Proxy** | Системный прокси — браузеры и большинство программ. Без прав администратора. |
-| **TUN** | Весь трафик через VPN-адаптер. Запуск от имени администратора. |
+| **TUN** | Весь трафик через VPN-адаптер. Нужны права администратора — приложение предложит перезапуститься с ними. |
 
-Окно сворачивается в трей и запоминает свой размер и позицию. Автозапуск вместе с системой, при желании с автоподключением. Глобальные хоткеи — в Настройки → Расширенные → Горячие клавиши. Подписки обновляются, пока приложение открыто.
+Окно сворачивается в трей и запоминает свой размер и позицию. Автозапуск вместе с системой, при желании с автоподключением. Глобальные хоткеи — в Настройки → Дополнительно → Горячие клавиши. Подписки обновляются, пока приложение открыто.
 
 **Где лежат настройки:** `%APPDATA%\com.keqdroid\keqdroid\` — не в папке с exe. Перенос на другой ПК: резервная копия и восстановление в настройках.
 
@@ -384,7 +406,7 @@ wsl -e bash /mnt/c/.../keqdroid/tool/build_linux_wsl.sh
 # бинарь: build/linux/x64/release/bundle/keqdroid
 ```
 
-Для Windows перед сборкой нужно положить бинарники ядер в `assets/bin/windows/` — см. [`assets/bin/windows/README.md`](assets/bin/windows/README.md).
+Собранные ядра уже лежат в репозитории: `assets/bin/windows/`, `assets/bin/linux/` и `android/app/src/main/jniLibs/`. Как их пересобрать — в [`docs/BUILD.md`](docs/BUILD.md#русский).
 
 ### Релизы
 
