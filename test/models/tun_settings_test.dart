@@ -98,4 +98,12 @@ void main() {
     expect(restored.tun.mtu, 1500);
     expect(restored, settings);
   });
+
+  test('mips остаётся в настройках: это выбор для mihomo, а не мусор', () {
+    expect(TunSettings.normalizeStack('mips'), TunSettings.stackMips);
+    expect(TunSettings.normalizeStack('MIPS'), TunSettings.stackMips);
+    expect(TunSettings.fromJson({'stack': 'mips'}).stack, TunSettings.stackMips);
+    // Умолчание не сдвинулось: mips выбирают руками.
+    expect(const TunSettings().stack, TunSettings.stackGvisor);
+  });
 }

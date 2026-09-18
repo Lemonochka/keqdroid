@@ -1063,6 +1063,25 @@ void main() {
           mtu: 9000,
         );
 
+    test('mips уезжает в ядро как есть: свой стек у mihomo есть', () {
+      // Обратная сторона подмены в singbox_tun_config: там mips подменяется
+      // на gvisor, а здесь обязан доехать до ядра нетронутым.
+      final tun = MihomoConfigGen.build(
+        link,
+        settings,
+        socksPort: 2080,
+        httpPort: 2081,
+        tun: const MihomoTunOptions(
+          device: 'tun-keqdis',
+          stack: 'mips',
+          mtu: 9000,
+        ),
+        windows: true,
+      )['tun'] as Map<String, dynamic>;
+
+      expect(tun['stack'], 'mips');
+    });
+
     test('десктоп: ядро создаёт устройство само', () {
       final tun = MihomoConfigGen.build(
         link,

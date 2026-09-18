@@ -571,6 +571,13 @@ class SingBoxTunConfigGen {
     ];
 
     final tun = settings.tun;
+    // mips умеет только mihomo, а этот инбаунд исполняет sing-box внутри
+    // keqrnel: чужое имя стека роняет у него весь конфиг, а не одну опцию.
+    // Настройка при этом остаётся на месте: пользователь выбрал её для mihomo, и
+    // переключение ядра не должно её терять.
+    final stack = tun.stack == TunSettings.stackMips
+        ? TunSettings.defaultStack
+        : tun.stack;
     final tunInbound = <String, dynamic>{
       'type': 'tun',
       'tag': tunInboundTag,
@@ -583,9 +590,9 @@ class SingBoxTunConfigGen {
       // auto: on везде, кроме Windows — там strict_route breaks routing when
       // another vpn (e.g. tailscale) is active.
       'strict_route': tun.strictRouteEnabled(windows: isWindows),
-      'stack': tun.stack,
+      'stack': stack,
       // full-cone NAT считает только gvisor-netstack (в mixed он держит UDP)
-      if (tun.endpointIndependentNat && tun.stack != TunSettings.stackSystem)
+      if (tun.endpointIndependentNat && stack != TunSettings.stackSystem)
         'endpoint_independent_nat': true,
       if (tun.udpTimeoutSec != TunSettings.defaultUdpTimeoutSec)
         'udp_timeout': '${tun.udpTimeoutSec}s',

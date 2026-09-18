@@ -663,6 +663,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunStackMixedHint => 'TCP 用 gVisor，UDP 用 system。需要带 gVisor 的内核。';
 
   @override
+  String get settingsTunStackMipsHint => 'mihomo 自带的用户态协议栈，用于替代 gVisor：更轻量，可选 TCP 拥塞控制。仅在 mihomo 内核上可用。';
+
+  @override
   String get settingsTunMtu => 'MTU';
 
   @override

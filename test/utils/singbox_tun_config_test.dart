@@ -533,4 +533,28 @@ void main() {
     );
     expect(cidrRule, isNotNull);
   });
+
+  test('mips в sing-box не уезжает: такого стека у него нет', () {
+    // Выбрать mips можно только на mihomo, но значение хранится одно на оба
+    // ядра, и переключение на xray привело бы сюда чужое имя. sing-box
+    // отвергает неизвестный стек вместе со всем конфигом — то есть туннель
+    // не поднялся бы вовсе, а не потерял одну опцию.
+    final json = SingBoxTunConfigGen.generate(
+      localSocksPort: 10808,
+      socksUsername: 'u',
+      socksPassword: 'p',
+      serverIpToExclude: '1.2.3.4',
+      settings: const AppSettings(
+        tun: TunSettings(
+          stack: TunSettings.stackMips,
+          endpointIndependentNat: true,
+        ),
+      ),
+    );
+    final inbound = ((jsonDecode(json) as Map<String, dynamic>)['inbounds']
+        as List).first as Map<String, dynamic>;
+    expect(inbound['stack'], TunSettings.stackGvisor);
+    // full-cone NAT считается по подставленному стеку, а не по сохранённому.
+    expect(inbound['endpoint_independent_nat'], isTrue);
+  });
 }

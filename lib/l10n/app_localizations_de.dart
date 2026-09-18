@@ -663,6 +663,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTunStackMixedHint => 'gVisor für TCP, system für UDP. Braucht einen Kern mit gVisor.';
 
   @override
+  String get settingsTunStackMipsHint => 'Mihomos eigener Userspace-Stack anstelle von gVisor: leichter, mit wählbarer TCP-Staukontrolle. Nur auf dem mihomo-Kern.';
+
+  @override
   String get settingsTunMtu => 'MTU';
 
   @override

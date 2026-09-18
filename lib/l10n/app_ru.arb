@@ -283,6 +283,7 @@
   "settingsTunStackSystemHint": "Стек ОС: самый быстрый, на Windows требует правило фаервола.",
   "settingsTunStackGvisorHint": "Userspace-стек: ни листенера, ни правил фаервола, чуть медленнее. Нужно ядро с gVisor.",
   "settingsTunStackMixedHint": "gVisor для TCP, system для UDP. Нужно ядро с gVisor.",
+  "settingsTunStackMipsHint": "Свой userspace-стек mihomo вместо gVisor: легче, со своим контролем перегрузки TCP. Только на ядре mihomo.",
   "settingsTunMtu": "MTU",
   "settingsTunMtuHint": "576–65535, по умолчанию 9000",
   "settingsTunUdpTimeout": "UDP-таймаут (сек)",

@@ -283,6 +283,7 @@
   "settingsTunStackSystemHint": "OS-Stack: am schnellsten, braucht unter Windows eine Firewall-Regel.",
   "settingsTunStackGvisorHint": "Userspace-Stack: kein Listener, keine Firewall-Regeln, etwas langsamer. Braucht einen Kern mit gVisor.",
   "settingsTunStackMixedHint": "gVisor für TCP, system für UDP. Braucht einen Kern mit gVisor.",
+  "settingsTunStackMipsHint": "Mihomos eigener Userspace-Stack anstelle von gVisor: leichter, mit wählbarer TCP-Staukontrolle. Nur auf dem mihomo-Kern.",
   "settingsTunMtu": "MTU",
   "settingsTunMtuHint": "576–65535, Standard 9000",
   "settingsTunUdpTimeout": "UDP-Timeout (Sek.)",

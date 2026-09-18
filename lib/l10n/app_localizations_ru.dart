@@ -665,6 +665,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunStackMixedHint => 'gVisor для TCP, system для UDP. Нужно ядро с gVisor.';
 
   @override
+  String get settingsTunStackMipsHint => 'Свой userspace-стек mihomo вместо gVisor: легче, со своим контролем перегрузки TCP. Только на ядре mihomo.';
+
+  @override
   String get settingsTunMtu => 'MTU';
 
   @override

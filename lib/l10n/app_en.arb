@@ -283,6 +283,7 @@
   "settingsTunStackSystemHint": "OS stack: the fastest, needs a firewall rule on Windows.",
   "settingsTunStackGvisorHint": "Userspace stack: no listener, no firewall rules, slightly slower. Needs a core built with gVisor.",
   "settingsTunStackMixedHint": "gVisor for TCP, system for UDP. Needs a core built with gVisor.",
+  "settingsTunStackMipsHint": "Mihomo's own userspace stack instead of gVisor: lighter, with selectable TCP congestion control. Only on the mihomo core.",
   "settingsTunMtu": "MTU",
   "settingsTunMtuHint": "576–65535, default 9000",
   "settingsTunUdpTimeout": "UDP timeout (sec)",

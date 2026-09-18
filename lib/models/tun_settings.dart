@@ -4,7 +4,7 @@ import 'dart:convert';
 /// (Windows/Linux): на Android TUN держит VpnService, а читает его само ядро,
 /// sing-box-инбаунд там не используется.
 class TunSettings {
-  /// Сетевой стек: [stackSystem] | [stackGvisor] | [stackMixed].
+  /// Сетевой стек: [stackSystem] | [stackGvisor] | [stackMixed] | [stackMips].
   final String stack;
   final int mtu;
   /// [strictRouteAuto] | [strictRouteOn] | [strictRouteOff].
@@ -47,7 +47,16 @@ class TunSettings {
   static const stackSystem = 'system';
   static const stackGvisor = 'gvisor';
   static const stackMixed = 'mixed';
-  static const stacks = [stackSystem, stackGvisor, stackMixed];
+
+  /// Mihomo IP Stack — свой пользовательский TCP/IP-стек mihomo вместо netstack
+  /// из gVisor. Есть только у mihomo: в `sagernet/sing-tun`, на котором держится
+  /// TUN-инбаунд sing-box, стеков три, и на этом имени он отвергает
+  /// конфиг целиком (`unknown stack`). Отсюда и гейт в настройках, и подмена
+  /// в `singbox_tun_config.dart`: выбранное значение хранится, но в чужое ядро
+  /// не уезжает.
+  static const stackMips = 'mips';
+
+  static const stacks = [stackSystem, stackGvisor, stackMixed, stackMips];
 
   /// Стек по умолчанию.
   ///

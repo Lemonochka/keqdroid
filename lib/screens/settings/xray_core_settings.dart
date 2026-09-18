@@ -1261,6 +1261,17 @@ class _XrayTunSection extends ConsumerWidget {
                     title: 'mixed',
                     subtitle: l10n.settingsTunStackMixedHint,
                   ),
+                  // mips исполняет только mihomo, поэтому на xray его в списке нет.
+                  // Уже выбранный остаётся видным и там: иначе у группы не осталось
+                  // бы выбранного пункта, а снять его было бы нечем.
+                  if (!xray || tun.stack == TunSettings.stackMips)
+                    _xrayChoiceTile(
+                      context: context,
+                      value: TunSettings.stackMips,
+                      accent: accent,
+                      title: 'Mips',
+                      subtitle: l10n.settingsTunStackMipsHint,
+                    ),
                 ],
               ),
             ),

@@ -207,6 +207,7 @@
   "settingsTunStackSystemHint": "پشتهٔ سیستم‌عامل: سریع‌ترین، در ویندوز به قاعدهٔ فایروال نیاز دارد.",
   "settingsTunStackGvisorHint": "پشتهٔ فضای کاربر: نه شنونده، نه قاعدهٔ فایروال، کمی کندتر. به هستهٔ ساخته‌شده با gVisor نیاز دارد.",
   "settingsTunStackMixedHint": "gVisor برای TCP، system برای UDP. به هستهٔ ساخته‌شده با gVisor نیاز دارد.",
+  "settingsTunStackMipsHint": "پشتهٔ فضای کاربر خود mihomo به‌جای gVisor: سبک‌تر، با کنترل ازدحام TCP قابل انتخاب. فقط روی هستهٔ mihomo.",
   "settingsTunMtu": "MTU",
   "settingsTunMtuHint": "576 تا 65535، پیش‌فرض 9000",
   "settingsTunUdpTimeout": "مهلت UDP (ثانیه)",

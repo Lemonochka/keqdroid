@@ -1343,6 +1343,12 @@ abstract class AppLocalizations {
   /// **'gVisor for TCP, system for UDP. Needs a core built with gVisor.'**
   String get settingsTunStackMixedHint;
 
+  /// No description provided for @settingsTunStackMipsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Mihomo\'s own userspace stack instead of gVisor: lighter, with selectable TCP congestion control. Only on the mihomo core.'**
+  String get settingsTunStackMipsHint;
+
   /// No description provided for @settingsTunMtu.
   ///
   /// In en, this message translates to:

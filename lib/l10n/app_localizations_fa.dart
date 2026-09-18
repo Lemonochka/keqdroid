@@ -663,6 +663,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsTunStackMixedHint => 'gVisor برای TCP، system برای UDP. به هستهٔ ساخته‌شده با gVisor نیاز دارد.';
 
   @override
+  String get settingsTunStackMipsHint => 'پشتهٔ فضای کاربر خود mihomo به‌جای gVisor: سبک‌تر، با کنترل ازدحام TCP قابل انتخاب. فقط روی هستهٔ mihomo.';
+
+  @override
   String get settingsTunMtu => 'MTU';
 
   @override
