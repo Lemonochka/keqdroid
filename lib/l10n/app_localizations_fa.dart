@@ -997,13 +997,16 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversPasteLinks => 'چسباندن لینک';
 
   @override
+  String get serversPasteLinksHint => 'لینک‌های سرور یا کانفیگ کامل';
+
+  @override
   String get serversImportFile => 'وارد کردن از فایل';
 
   @override
   String get serversAddServerTitle => 'افزودن سرور';
 
   @override
-  String get serversPasteVlessHint => 'لینک vless://، vmess://، trojan://، ss://، hysteria2://، hy2:// یا wg:// را بچسبانید (هر کدام در یک خط)، یا یک کانفیگ کامل: JSON برای Xray، YAML برای Clash، ‎.conf برای AmneziaWG';
+  String get serversPasteVlessHint => 'در هر خط یک لینک، یا یک کانفیگ کامل: Xray، Clash، sing-box، AmneziaWG';
 
   @override
   String get serversPasteHint => '…//:vless یا …?hy2://host:port=auth';

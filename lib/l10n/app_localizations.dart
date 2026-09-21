@@ -1967,6 +1967,12 @@ abstract class AppLocalizations {
   /// **'Paste link(s)'**
   String get serversPasteLinks;
 
+  /// No description provided for @serversPasteLinksHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Server links or a whole config'**
+  String get serversPasteLinksHint;
+
   /// No description provided for @serversImportFile.
   ///
   /// In en, this message translates to:
@@ -1982,7 +1988,7 @@ abstract class AppLocalizations {
   /// No description provided for @serversPasteVlessHint.
   ///
   /// In en, this message translates to:
-  /// **'Paste vless://, vmess://, trojan://, ss://, hysteria2://, hy2:// or wg:// (one per line), or a whole config: Xray JSON, Clash YAML, AmneziaWG .conf'**
+  /// **'One link per line, or a whole config: Xray, Clash, sing-box, AmneziaWG'**
   String get serversPasteVlessHint;
 
   /// No description provided for @serversPasteHint.

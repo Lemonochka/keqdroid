@@ -997,13 +997,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serversPasteLinks => 'Link(s) einfügen';
 
   @override
+  String get serversPasteLinksHint => 'Serverlinks oder komplette Konfiguration';
+
+  @override
   String get serversImportFile => 'Datei importieren';
 
   @override
   String get serversAddServerTitle => 'Server hinzufügen';
 
   @override
-  String get serversPasteVlessHint => 'Füge vless://, vmess://, trojan://, ss://, hysteria2://, hy2:// oder wg:// ein (eine pro Zeile) oder eine komplette Konfiguration: Xray-JSON, Clash-YAML, AmneziaWG-.conf';
+  String get serversPasteVlessHint => 'Ein Link pro Zeile oder eine komplette Konfiguration: Xray, Clash, sing-box, AmneziaWG';
 
   @override
   String get serversPasteHint => 'vless://… oder hy2://host:port?auth=…';

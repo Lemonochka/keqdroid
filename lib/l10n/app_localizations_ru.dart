@@ -999,13 +999,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversPasteLinks => 'Вставить ссылку(и)';
 
   @override
+  String get serversPasteLinksHint => 'Ссылки на серверы или конфиг целиком';
+
+  @override
   String get serversImportFile => 'Импорт из файла';
 
   @override
   String get serversAddServerTitle => 'Добавить сервер';
 
   @override
-  String get serversPasteVlessHint => 'Вставьте vless://, vmess://, trojan://, ss://, hysteria2://, hy2:// или wg:// (по одному на строку) либо конфиг целиком: JSON Xray, YAML Clash, .conf AmneziaWG';
+  String get serversPasteVlessHint => 'По одной ссылке на строку либо конфиг целиком: Xray, Clash, sing-box, AmneziaWG';
 
   @override
   String get serversPasteHint => 'vless://… или hy2://host:port?auth=…';

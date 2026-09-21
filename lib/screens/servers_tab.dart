@@ -865,7 +865,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 ExpressiveActionTile(
                   icon: Icons.link_rounded,
                   title: l10n.serversPasteLinks,
-                  subtitle: 'vless, vmess, trojan, ss, hysteria2, hy2',
+                  subtitle: l10n.serversPasteLinksHint,
                   accent: ExpressiveAccent.primary,
                   onTap: () {
                     Navigator.pop(ctx2);
