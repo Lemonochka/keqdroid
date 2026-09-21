@@ -732,6 +732,16 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     final pkexecArgs = usePasswordless
         ? <String>[_polkitHelperPath, ...coreArgs]
         : <String>['sh', '-c', _tunWrapperBody, 'sh', ...coreArgs];
+    // Проверяем до запуска: без polkit `Process.start` бросает
+    // `ProcessException`, а она печатает себя вместе со всей командой — то есть
+    // с телом root-обёртки, где `$1`..`$8` ещё не подставлены. Пользователь
+    // видел несколько экранов шелла вместо одной фразы «поставьте polkit».
+    if (LinuxCorePaths.findPkexec() == null) {
+      throw const VpnStartException(
+        'TUN mode needs root through pkexec, and polkit is not installed. '
+        'Install polkit with an authentication agent, or use Proxy mode.',
+      );
+    }
     final Process process;
     try {
       process = await Process.start(
@@ -741,9 +751,10 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
         mode: ProcessStartMode.normal,
       );
     } on ProcessException catch (e) {
+      // Только message: `$e` затащил бы сюда команду целиком.
       throw VpnStartException(
-        'Could not launch $label with elevated privileges. TUN mode needs '
-        'pkexec (polkit). Install it, or use Proxy mode. ($e)',
+        'Could not launch $label with elevated privileges through pkexec: '
+        '${e.message}',
       );
     }
     onStarted(process);

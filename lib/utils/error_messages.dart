@@ -8,6 +8,8 @@ enum UiErrorKind { permission, network, config, auth, providerConfig, unknown }
 /// message/action в explainErrorLocalized нужен точный вариант.
 enum UiErrorCode {
   tunAdmin,
+  tunPolkitMissing,
+  tunPolkitNoAgent,
   vpnPermission,
   hwidBind,
   deviceLimit,
@@ -54,6 +56,32 @@ UiErrorMessage explainError(Object error) {
           'portal backend nor zenity/kdialog.',
       action: 'Install xdg-desktop-portal-gtk (or zenity), or paste the '
           'config text instead of picking a file.',
+    );
+  }
+
+  // Раньше общей ветки про права: на Linux у TUN два отказа, которые чинятся
+  // установкой пакета, а не разрешением в диалоге, и советы у них разные.
+  if (msg.contains('pkexec') && msg.contains('not installed')) {
+    return const UiErrorMessage(
+      kind: UiErrorKind.permission,
+      code: UiErrorCode.tunPolkitMissing,
+      title: 'Polkit Required',
+      message: 'TUN mode starts the core as root through pkexec, and polkit '
+          'is not installed.',
+      action: 'Install polkit together with an authentication agent, or '
+          'switch to Proxy mode in settings.',
+    );
+  }
+
+  if (msg.contains('polkit agent')) {
+    return const UiErrorMessage(
+      kind: UiErrorKind.permission,
+      code: UiErrorCode.tunPolkitNoAgent,
+      title: 'Polkit Required',
+      message: 'Nothing answered the request for root: no polkit '
+          'authentication agent is running.',
+      action: 'Start a polkit agent for your desktop (polkit-gnome, '
+          'lxqt-policykit and the like), or switch to Proxy mode in settings.',
     );
   }
 
@@ -203,6 +231,8 @@ UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
   // подпись статуса, и общая формулировка уместна.
   final title = switch (base.code) {
     UiErrorCode.tunAdmin => l10n.errorTunAdminTitle,
+    UiErrorCode.tunPolkitMissing => l10n.errorPolkitMissingTitle,
+    UiErrorCode.tunPolkitNoAgent => l10n.errorPolkitNoAgentTitle,
     UiErrorCode.vpnPermission => l10n.errorVpnPermissionTitle,
     UiErrorCode.hwidBind => l10n.errorHwidBindTitle,
     UiErrorCode.deviceLimit => l10n.errorDeviceLimitTitle,
@@ -219,6 +249,14 @@ UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
     UiErrorCode.tunAdmin => (
         l10n.errorTunAdminMessage,
         l10n.errorTunAdminAction,
+      ),
+    UiErrorCode.tunPolkitMissing => (
+        l10n.errorPolkitMissingMessage,
+        l10n.errorPolkitMissingAction,
+      ),
+    UiErrorCode.tunPolkitNoAgent => (
+        l10n.errorPolkitNoAgentMessage,
+        l10n.errorPolkitNoAgentAction,
       ),
     UiErrorCode.vpnPermission => (
         l10n.errorVpnPermissionMessage,

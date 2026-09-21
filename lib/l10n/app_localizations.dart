@@ -2945,6 +2945,42 @@ abstract class AppLocalizations {
   /// **'Run the app as administrator or switch to Proxy mode in settings.'**
   String get errorTunAdminAction;
 
+  /// No description provided for @errorPolkitMissingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Polkit Required'**
+  String get errorPolkitMissingTitle;
+
+  /// No description provided for @errorPolkitMissingMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'TUN mode starts the core as root through pkexec, and polkit is not installed.'**
+  String get errorPolkitMissingMessage;
+
+  /// No description provided for @errorPolkitMissingAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Install polkit together with an authentication agent, or switch to Proxy mode in settings.'**
+  String get errorPolkitMissingAction;
+
+  /// No description provided for @errorPolkitNoAgentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Polkit Required'**
+  String get errorPolkitNoAgentTitle;
+
+  /// No description provided for @errorPolkitNoAgentMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing answered the request for root: no polkit authentication agent is running.'**
+  String get errorPolkitNoAgentMessage;
+
+  /// No description provided for @errorPolkitNoAgentAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a polkit agent for your desktop (polkit-gnome, lxqt-policykit and the like), or switch to Proxy mode in settings.'**
+  String get errorPolkitNoAgentAction;
+
   /// No description provided for @errorVpnPermissionMessage.
   ///
   /// In en, this message translates to:

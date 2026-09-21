@@ -170,7 +170,8 @@ Depends: libgtk-3-0, libglib2.0-0, libstdc++6, zlib1g, libayatana-appindicator3-
 Recommends: polkit-1 | policykit-1, gnome-shell-extension-appindicator, xdg-desktop-portal-gtk | xdg-desktop-portal-kde | xdg-desktop-portal-gnome | zenity
 Description: KEQDIS proxy/VPN client
  Xray, mihomo and sing-box client with proxy and TUN modes.
- TUN mode requests root via pkexec (polkit) at connect time.
+ TUN mode requests root via pkexec (polkit) at connect time, so polkit and a
+ polkit authentication agent have to be installed for it.
 EOF
 DEB="$OUT/${APP}_${VERSION}_${ARCH_DEB}.deb"
 dpkg-deb --root-owner-group --build "$DEBROOT" "$DEB" >/dev/null
@@ -222,7 +223,8 @@ Recommends:     polkit
 
 %description
 Xray, mihomo and sing-box client with proxy and TUN modes.
-TUN mode requests root via pkexec (polkit) at connect time.
+TUN mode requests root via pkexec (polkit) at connect time, so polkit and a
+polkit authentication agent have to be installed for it.
 
 %install
 mkdir -p %{buildroot}/opt/$APP %{buildroot}/usr/bin
@@ -295,7 +297,7 @@ log "PKGBUILD + .SRCINFO"
 TAR_SHA="$(sha256sum "$TARBALL" | cut -d' ' -f1)"
 DEPENDS=(gtk3 glibc libayatana-appindicator)
 OPTDEPENDS=(
-  'polkit: TUN mode (root via pkexec)'
+  'polkit: TUN mode (root via pkexec); an authentication agent must be running'
   'gnome-shell-extension-appindicator: tray icon on GNOME'
   'xdg-desktop-portal-gtk: file dialogs (import/export, any portal backend works)'
   'zenity: file dialogs without an xdg-desktop-portal backend'

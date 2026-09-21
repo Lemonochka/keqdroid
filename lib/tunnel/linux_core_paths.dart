@@ -26,6 +26,24 @@ class LinuxCorePaths {
       '(см. README) и пересоберите приложение, '
       'или поместите их рядом с исполняемым файлом / в \$PATH.';
 
+  /// Путь к `pkexec`, или null, если polkit в системе нет.
+  ///
+  /// polkit у пакетов в необязательных зависимостях: без него прокси работает,
+  /// а TUN — нет. Спрашиваем заранее, потому что иначе отказ приезжает
+  /// `ProcessException`, в текст которой Dart вписывает всю команду целиком —
+  /// вместе с телом root-обёртки на несколько экранов.
+  static String? findPkexec() {
+    final onPath = _which('pkexec');
+    if (onPath != null) return onPath;
+    // PATH у графической сессии бывает урезан до неузнаваемости (.desktop без
+    // оболочки, AppImage из файлового менеджера), а pkexec лежит в одном и том
+    // же месте во всех дистрибутивах, которые мы пакуем.
+    for (final candidate in const ['/usr/bin/pkexec', '/usr/local/bin/pkexec']) {
+      if (File(candidate).existsSync()) return candidate;
+    }
+    return null;
+  }
+
   static Future<Directory> sessionDir() async {
     return Directory.systemTemp.createTemp('keqdis_session_');
   }

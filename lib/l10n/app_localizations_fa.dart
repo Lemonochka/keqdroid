@@ -1510,6 +1510,24 @@ class AppLocalizationsFa extends AppLocalizations {
   String get errorTunAdminAction => 'برنامه را با دسترسی مدیر اجرا کنید یا در تنظیمات به حالت پروکسی بروید.';
 
   @override
+  String get errorPolkitMissingTitle => 'polkit لازم است';
+
+  @override
+  String get errorPolkitMissingMessage => 'حالت TUN هسته را با pkexec به‌صورت root اجرا می‌کند و polkit نصب نیست.';
+
+  @override
+  String get errorPolkitMissingAction => 'polkit را همراه با یک عامل احراز هویت نصب کنید یا در تنظیمات به حالت پراکسی سوئیچ کنید.';
+
+  @override
+  String get errorPolkitNoAgentTitle => 'polkit لازم است';
+
+  @override
+  String get errorPolkitNoAgentMessage => 'درخواست دسترسی root بی‌پاسخ ماند: هیچ عامل احراز هویت polkit در حال اجرا نیست.';
+
+  @override
+  String get errorPolkitNoAgentAction => 'یک عامل polkit برای میزکار خود اجرا کنید (polkit-gnome، lxqt-policykit و مانند آن) یا در تنظیمات به حالت پراکسی سوئیچ کنید.';
+
+  @override
   String get errorVpnPermissionMessage => 'دسترسی VPN داده نشد.';
 
   @override

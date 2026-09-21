@@ -1512,6 +1512,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorTunAdminAction => 'Запустите приложение от имени администратора или переключитесь на режим Proxy в настройках.';
 
   @override
+  String get errorPolkitMissingTitle => 'Нужен polkit';
+
+  @override
+  String get errorPolkitMissingMessage => 'Режим TUN запускает ядро от root через pkexec, а polkit в системе не установлен.';
+
+  @override
+  String get errorPolkitMissingAction => 'Установите polkit вместе с агентом аутентификации или переключитесь на режим прокси в настройках.';
+
+  @override
+  String get errorPolkitNoAgentTitle => 'Нужен polkit';
+
+  @override
+  String get errorPolkitNoAgentMessage => 'Запрос прав root остался без ответа: агент аутентификации polkit не запущен.';
+
+  @override
+  String get errorPolkitNoAgentAction => 'Запустите агент polkit своей среды (polkit-gnome, lxqt-policykit и подобные) или переключитесь на режим прокси в настройках.';
+
+  @override
   String get errorVpnPermissionMessage => 'Разрешение на VPN не было предоставлено.';
 
   @override

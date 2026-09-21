@@ -1510,6 +1510,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorTunAdminAction => '以管理员身份运行应用，或在设置中切换到代理模式。';
 
   @override
+  String get errorPolkitMissingTitle => '需要 polkit';
+
+  @override
+  String get errorPolkitMissingMessage => 'TUN 模式通过 pkexec 以 root 启动内核，而系统未安装 polkit。';
+
+  @override
+  String get errorPolkitMissingAction => '请安装 polkit 及其认证代理，或在设置中切换到代理模式。';
+
+  @override
+  String get errorPolkitNoAgentTitle => '需要 polkit';
+
+  @override
+  String get errorPolkitNoAgentMessage => '请求 root 权限没有得到响应：没有运行 polkit 认证代理。';
+
+  @override
+  String get errorPolkitNoAgentAction => '请启动适合你桌面环境的 polkit 代理（polkit-gnome、lxqt-policykit 等），或在设置中切换到代理模式。';
+
+  @override
   String get errorVpnPermissionMessage => '未授予 VPN 权限。';
 
   @override

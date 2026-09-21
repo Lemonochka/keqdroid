@@ -1510,6 +1510,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get errorTunAdminAction => 'Starte die App als Administrator oder wechsle in den Einstellungen in den Proxy-Modus.';
 
   @override
+  String get errorPolkitMissingTitle => 'Polkit erforderlich';
+
+  @override
+  String get errorPolkitMissingMessage => 'Der TUN-Modus startet den Kern über pkexec als root, und polkit ist nicht installiert.';
+
+  @override
+  String get errorPolkitMissingAction => 'Installiere polkit samt Authentifizierungsagent oder wechsle in den Einstellungen zum Proxy-Modus.';
+
+  @override
+  String get errorPolkitNoAgentTitle => 'Polkit erforderlich';
+
+  @override
+  String get errorPolkitNoAgentMessage => 'Die Anfrage nach root-Rechten blieb unbeantwortet: es läuft kein polkit-Authentifizierungsagent.';
+
+  @override
+  String get errorPolkitNoAgentAction => 'Starte einen polkit-Agenten für deine Arbeitsumgebung (polkit-gnome, lxqt-policykit und ähnliche) oder wechsle in den Einstellungen zum Proxy-Modus.';
+
+  @override
   String get errorVpnPermissionMessage => 'Die VPN-Berechtigung wurde nicht erteilt.';
 
   @override
