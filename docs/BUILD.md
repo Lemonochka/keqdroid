@@ -121,7 +121,8 @@ platform, into `assets/bin/windows/` and `assets/bin/linux/`:
 
 ```bash
 go build -trimpath -buildvcs=false -tags with_gvisor -o keqrnel.exe ./cmd/keqrnel
-GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -tags with_gvisor -o keqrnel ./cmd/keqrnel
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -buildvcs=false -tags with_gvisor \
+  -ldflags="-s -w" -o keqrnel ./cmd/keqrnel
 ```
 
 **`with_gvisor` is mandatory.** The TUN stack is a user setting, and without this tag the
@@ -143,9 +144,11 @@ CGO_ENABLED=1 GOOS=android GOARCH=arm64 GOARM64=v8.0 \
 `net.Interfaces()` on Android) reaches into stdlib's `net.zoneCache`, and go1.26 forbids
 such `go:linkname` — without the flag linking fails.
 
-Build `keqrnel.exe`/`mihomo.exe` for Windows **unstripped** and never run them from
-`%TEMP%` — otherwise Defender treats them as a threat. The Android binary, on the contrary,
-is stripped (`-s -w`), the way upstream does it.
+Build `keqrnel.exe`/`mihomo.exe` for **Windows** unstripped and never run them from
+`%TEMP%` — otherwise Defender treats them as a threat. That is a Windows rule and nothing
+more: the Android and Linux binaries are stripped (`-s -w`), which takes about 20 MB off
+each Linux core and 29 MB off what the user downloads, and costs nothing — Go prints
+stack traces with function names without the symbol table anyway.
 
 mihomo is the second core on every platform; for links both cores can run, the user picks
 one in Settings → About. It is built by a script, not by hand:
@@ -331,7 +334,8 @@ storage/подписки/апдейтер/пинг, `test/models/`, `test/tunnel
 
 ```bash
 go build -trimpath -buildvcs=false -tags with_gvisor -o keqrnel.exe ./cmd/keqrnel
-GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -tags with_gvisor -o keqrnel ./cmd/keqrnel
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -buildvcs=false -tags with_gvisor \
+  -ldflags="-s -w" -o keqrnel ./cmd/keqrnel
 ```
 
 **`with_gvisor` обязателен.** Стек TUN — пользовательская настройка, и без этого тега
@@ -353,9 +357,11 @@ CGO_ENABLED=1 GOOS=android GOARCH=arm64 GOARM64=v8.0 \
 `net.Interfaces()` на Android) лезет в `net.zoneCache` из stdlib, а go1.26 такие
 `go:linkname` запрещает — без флага падает линковка.
 
-`keqrnel.exe`/`mihomo.exe` под Windows собирай **unstripped** и не запускай из
-`%TEMP%` — иначе Defender считает их угрозой.
-Android-бинарь, наоборот, стрипается (`-s -w`), как это делает апстрим.
+`keqrnel.exe`/`mihomo.exe` под **Windows** собирай unstripped и не запускай из
+`%TEMP%` — иначе Defender считает их угрозой. Это правило только про Windows:
+android- и linux-бинари стрипаются (`-s -w`), и это снимает около 20 МБ с каждого
+linux-ядра и 29 МБ с того, что качает пользователь. Платы нет — стек-трейсы Go
+печатает с именами функций и без таблицы символов.
 
 mihomo — второе ядро на всех платформах; для ссылок, которые берут оба ядра, его
 выбирают в Настройки → О приложении. Собирается скриптом, а не руками:

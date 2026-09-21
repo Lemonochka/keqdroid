@@ -35,8 +35,8 @@ Source: [Lemonochka/keqrnel](https://github.com/Lemonochka/keqrnel). From a chec
 of that repository:
 
 ```sh
-GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -tags with_gvisor \
-  -o keqrnel ./cmd/keqrnel
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -buildvcs=false -tags with_gvisor \
+  -ldflags="-s -w" -o keqrnel ./cmd/keqrnel
 ```
 
 `with_gvisor` is required: the TUN stack is a user setting, and `gvisor` / `mixed`

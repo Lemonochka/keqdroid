@@ -23,9 +23,12 @@
 # network stacks the client can never reach - see $BuildTags below for the
 # numbers and the reasoning.
 #
-# Desktop binaries are deliberately NOT stripped: a stripped, unsigned exe next
-# to the app is a Defender heuristic. Android keeps
-# -s -w because there it is APK size and nothing else.
+# The Windows binary is deliberately NOT stripped: a stripped, unsigned exe next
+# to the app is a Defender heuristic, and the core went to quarantine mid-build
+# over it. Nothing of the kind applies elsewhere, so Android and Linux are built
+# with -s -w: it takes 18 MB off this core on Linux, and 13 MB off what the
+# user downloads. Go still prints stack traces with function names without the
+# symbol table, so nothing is lost for debugging.
 #
 # The build is NOT stock upstream: tool/patches/*.patch are applied first and
 # the script fails if any of them does not apply. Read the patch headers before
@@ -222,7 +225,7 @@ if ($wantLinux) {
     Build-Mihomo `
         -Goos "linux" -Goarch "amd64" `
         -OutPath (Join-Path $repoRoot "assets\bin\linux\mihomo") `
-        -Ldflags ("-checklinkname=0 {0}" -f $versionFlag) `
+        -Ldflags ("-s -w -checklinkname=0 {0}" -f $versionFlag) `
         -Label "mihomo for linux/amd64"
 }
 
