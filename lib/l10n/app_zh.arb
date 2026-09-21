@@ -690,7 +690,7 @@
   "errorTunAdminAction": "以管理员身份运行应用，或在设置中切换到代理模式。",
   "errorPolkitMissingTitle": "需要 polkit",
   "errorPolkitMissingMessage": "TUN 模式通过 pkexec 以 root 启动内核，而系统未安装 polkit。",
-  "errorPolkitMissingAction": "请安装 polkit 及其认证代理，或在设置中切换到代理模式。",
+  "errorPolkitMissingAction": "请安装 polkit 及其认证代理，或以 root 身份启动应用（sudo -E keqdroid），也可以在设置中切换到代理模式。",
   "errorPolkitNoAgentTitle": "需要 polkit",
   "errorPolkitNoAgentMessage": "请求 root 权限没有得到响应：没有运行 polkit 认证代理。",
   "errorPolkitNoAgentAction": "请启动适合你桌面环境的 polkit 代理（polkit-gnome、lxqt-policykit 等），或在设置中切换到代理模式。",

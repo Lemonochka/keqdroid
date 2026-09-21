@@ -14,6 +14,7 @@ import 'connection_mode.dart';
 import 'core_capabilities.dart';
 import 'desktop_traffic_stats.dart';
 import 'linux_core_paths.dart';
+import 'linux_elevation.dart';
 import 'local_port_plan.dart';
 import 'socks_credential_generator.dart';
 import 'tun_failure_hints.dart';
@@ -725,36 +726,38 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       authMarker.path,
       kind,
     ];
-    // Если установлено беспарольное правило — pkexec запускает root-owned хелпер
-    // по фиксированному пути (polkit пропускает без пароля). Иначе inline-обёртка
-    // через `sh -c` (polkit покажет запрос пароля, как раньше).
     final usePasswordless = isPasswordlessTunInstalled();
-    final pkexecArgs = usePasswordless
-        ? <String>[_polkitHelperPath, ...coreArgs]
-        : <String>['sh', '-c', _tunWrapperBody, 'sh', ...coreArgs];
+    final launch = planElevation(
+      coreArgs: coreArgs,
+      wrapperBody: _tunWrapperBody,
+      helperPath: _polkitHelperPath,
+      asRoot: runningAsRoot(),
+      passwordless: usePasswordless,
+    );
     // Проверяем до запуска: без polkit `Process.start` бросает
     // `ProcessException`, а она печатает себя вместе со всей командой — то есть
     // с телом root-обёртки, где `$1`..`$8` ещё не подставлены. Пользователь
     // видел несколько экранов шелла вместо одной фразы «поставьте polkit».
-    if (LinuxCorePaths.findPkexec() == null) {
+    if (launch.viaPkexec && LinuxCorePaths.findPkexec() == null) {
       throw const VpnStartException(
         'TUN mode needs root through pkexec, and polkit is not installed. '
-        'Install polkit with an authentication agent, or use Proxy mode.',
+        'Install polkit with an authentication agent, run the app as root '
+        '(sudo), or use Proxy mode.',
       );
     }
     final Process process;
     try {
       process = await Process.start(
-        'pkexec',
-        pkexecArgs,
+        launch.executable,
+        launch.args,
         workingDirectory: _sessionDir!.path,
         mode: ProcessStartMode.normal,
       );
     } on ProcessException catch (e) {
       // Только message: `$e` затащил бы сюда команду целиком.
       throw VpnStartException(
-        'Could not launch $label with elevated privileges through pkexec: '
-        '${e.message}',
+        'Could not launch $label with elevated privileges through '
+        '${launch.executable}: ${e.message}',
       );
     }
     onStarted(process);
@@ -771,8 +774,9 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
 
     // Пользователь только что ввёл пароль в polkit, а беспарольного правила нет —
     // разово за запуск сигналим UI предложить его установить. Дальше — гейт по
-    // настройке linuxTunRememberDismissed на стороне UI.
-    if (!usePasswordless && !_rememberOfferedThisRun) {
+    // настройке linuxTunRememberDismissed на стороне UI. Под root пароля не
+    // было и polkit может быть вовсе не установлен: предлагать там нечего.
+    if (launch.viaPkexec && !usePasswordless && !_rememberOfferedThisRun) {
       _rememberOfferedThisRun = true;
       if (!_linuxTunRememberController.isClosed) {
         _linuxTunRememberController.add(null);

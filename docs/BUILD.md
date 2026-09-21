@@ -87,6 +87,9 @@ wsl -e bash /mnt/c/Users/<you>/StudioProjects/keqdroid/tool/package_linux.sh
 - The cores live in `assets/bin/linux/`: `keqrnel`, `mihomo` and the geo databases.
   CMake puts them next to the bundle binary, not into `flutter_assets`.
 - Proxy mode works without root; TUN asks for root through `pkexec` on connect.
+  polkit is optional for the package, so on a system without it TUN has one way out:
+  run the app itself as root (`sudo -E keqdroid`), and it starts the core directly
+  instead of going through pkexec.
 
 ## 4. Tests and analysis
 
@@ -300,6 +303,8 @@ wsl -e bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/tool/package_linux.sh
 - Ядра — в `assets/bin/linux/`: `keqrnel`, `mihomo` и geo-базы. CMake кладёт их
   рядом с бинарём бандла, не в `flutter_assets`.
 - Proxy работает без root; TUN запрашивает root через `pkexec` при подключении.
+  polkit у пакета необязателен, и без него у TUN остаётся один путь: запустить само
+  приложение от root (`sudo -E keqdroid`) — тогда ядро стартует напрямую, минуя pkexec.
 
 ## 4. Тесты и анализ
 

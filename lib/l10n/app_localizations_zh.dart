@@ -1516,7 +1516,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorPolkitMissingMessage => 'TUN 模式通过 pkexec 以 root 启动内核，而系统未安装 polkit。';
 
   @override
-  String get errorPolkitMissingAction => '请安装 polkit 及其认证代理，或在设置中切换到代理模式。';
+  String get errorPolkitMissingAction => '请安装 polkit 及其认证代理，或以 root 身份启动应用（sudo -E keqdroid），也可以在设置中切换到代理模式。';
 
   @override
   String get errorPolkitNoAgentTitle => '需要 polkit';

@@ -2960,7 +2960,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorPolkitMissingAction.
   ///
   /// In en, this message translates to:
-  /// **'Install polkit together with an authentication agent, or switch to Proxy mode in settings.'**
+  /// **'Install polkit together with an authentication agent, run the app as root (sudo -E keqdroid), or switch to Proxy mode in settings.'**
   String get errorPolkitMissingAction;
 
   /// No description provided for @errorPolkitNoAgentTitle.

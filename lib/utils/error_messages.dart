@@ -68,8 +68,9 @@ UiErrorMessage explainError(Object error) {
       title: 'Polkit Required',
       message: 'TUN mode starts the core as root through pkexec, and polkit '
           'is not installed.',
-      action: 'Install polkit together with an authentication agent, or '
-          'switch to Proxy mode in settings.',
+      action: 'Install polkit together with an authentication agent, run the '
+          'app as root (sudo -E keqdroid), or switch to Proxy mode in '
+          'settings.',
     );
   }
 

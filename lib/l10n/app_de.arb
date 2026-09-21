@@ -690,7 +690,7 @@
   "errorTunAdminAction": "Starte die App als Administrator oder wechsle in den Einstellungen in den Proxy-Modus.",
   "errorPolkitMissingTitle": "Polkit erforderlich",
   "errorPolkitMissingMessage": "Der TUN-Modus startet den Kern über pkexec als root, und polkit ist nicht installiert.",
-  "errorPolkitMissingAction": "Installiere polkit samt Authentifizierungsagent oder wechsle in den Einstellungen zum Proxy-Modus.",
+  "errorPolkitMissingAction": "Installiere polkit samt Authentifizierungsagent, starte die App als root (sudo -E keqdroid) oder wechsle in den Einstellungen zum Proxy-Modus.",
   "errorPolkitNoAgentTitle": "Polkit erforderlich",
   "errorPolkitNoAgentMessage": "Die Anfrage nach root-Rechten blieb unbeantwortet: es läuft kein polkit-Authentifizierungsagent.",
   "errorPolkitNoAgentAction": "Starte einen polkit-Agenten für deine Arbeitsumgebung (polkit-gnome, lxqt-policykit und ähnliche) oder wechsle in den Einstellungen zum Proxy-Modus.",

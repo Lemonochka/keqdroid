@@ -1516,7 +1516,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get errorPolkitMissingMessage => 'حالت TUN هسته را با pkexec به‌صورت root اجرا می‌کند و polkit نصب نیست.';
 
   @override
-  String get errorPolkitMissingAction => 'polkit را همراه با یک عامل احراز هویت نصب کنید یا در تنظیمات به حالت پراکسی سوئیچ کنید.';
+  String get errorPolkitMissingAction => 'polkit را همراه با یک عامل احراز هویت نصب کنید، برنامه را با root اجرا کنید (sudo -E keqdroid) یا در تنظیمات به حالت پراکسی سوئیچ کنید.';
 
   @override
   String get errorPolkitNoAgentTitle => 'polkit لازم است';

@@ -1516,7 +1516,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorPolkitMissingMessage => 'TUN mode starts the core as root through pkexec, and polkit is not installed.';
 
   @override
-  String get errorPolkitMissingAction => 'Install polkit together with an authentication agent, or switch to Proxy mode in settings.';
+  String get errorPolkitMissingAction => 'Install polkit together with an authentication agent, run the app as root (sudo -E keqdroid), or switch to Proxy mode in settings.';
 
   @override
   String get errorPolkitNoAgentTitle => 'Polkit Required';

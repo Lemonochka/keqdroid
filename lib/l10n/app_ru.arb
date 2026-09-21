@@ -690,7 +690,7 @@
   "errorTunAdminAction": "Запустите приложение от имени администратора или переключитесь на режим Proxy в настройках.",
   "errorPolkitMissingTitle": "Нужен polkit",
   "errorPolkitMissingMessage": "Режим TUN запускает ядро от root через pkexec, а polkit в системе не установлен.",
-  "errorPolkitMissingAction": "Установите polkit вместе с агентом аутентификации или переключитесь на режим прокси в настройках.",
+  "errorPolkitMissingAction": "Установите polkit вместе с агентом аутентификации, запустите приложение от root (sudo -E keqdroid) или переключитесь на режим прокси в настройках.",
   "errorPolkitNoAgentTitle": "Нужен polkit",
   "errorPolkitNoAgentMessage": "Запрос прав root остался без ответа: агент аутентификации polkit не запущен.",
   "errorPolkitNoAgentAction": "Запустите агент polkit своей среды (polkit-gnome, lxqt-policykit и подобные) или переключитесь на режим прокси в настройках.",

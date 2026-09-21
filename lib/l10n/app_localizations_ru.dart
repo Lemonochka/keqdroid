@@ -1518,7 +1518,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorPolkitMissingMessage => 'Режим TUN запускает ядро от root через pkexec, а polkit в системе не установлен.';
 
   @override
-  String get errorPolkitMissingAction => 'Установите polkit вместе с агентом аутентификации или переключитесь на режим прокси в настройках.';
+  String get errorPolkitMissingAction => 'Установите polkit вместе с агентом аутентификации, запустите приложение от root (sudo -E keqdroid) или переключитесь на режим прокси в настройках.';
 
   @override
   String get errorPolkitNoAgentTitle => 'Нужен polkit';

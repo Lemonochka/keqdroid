@@ -20,7 +20,8 @@ keqrnel; a plain link is taken by whichever core the user picked. Standalone `xr
 they are gone.
 
 Proxy mode runs the core with a local SOCKS/HTTP inbound and needs no privileges; TUN
-mode asks for root via `pkexec` at connect time — keqrnel because of its sing-box TUN
+mode asks for root via `pkexec` at connect time (or skips pkexec when the app is already
+running as root, which is what a system without polkit is left with) — keqrnel because of its sing-box TUN
 inbound, mihomo because it creates the tun device itself.
 
 ## Building mihomo
