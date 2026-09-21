@@ -1,0 +1,270 @@
+Send the ClientHello of a current Firefox, the one REALITY servers now demand.
+
+xtls/reality of 2026-09-08 -- the revision Xray 26.9.9 ships -- rejects every
+ClientHello that carries no X25519MLKEM768 key share before the optional
+X25519 one (tls.go):
+
+    if peerPub2 == nil {
+        break // reject outdated/strange Client Hello that doesn't have X25519MLKEM768 before optional X25519
+    }
+
+It rejects it the quiet way REALITY always does: the connection is handed to
+the camouflage site, the client gets a genuine certificate for it and reports
+"REALITY authentication failed" although its public key, short id and SNI are
+all correct. So when an operator updates Xray, every REALITY node dies at
+once, while the very same links keep working through the Xray we ship beside
+this core.
+
+mihomo resolves fp=firefox to HelloFirefox_Auto, which in metacubex/utls
+v1.8.7 (still the latest release) is Firefox 120 -- a profile from before that
+key existed. `support-x25519mlkem768: true` does not help: it only stops the
+core from stripping the key out of the hello, and there is nothing to strip.
+Of the profiles in this fork only the chrome ones carry it, and chrome is the
+fingerprint the censor filters where this client is used: 0 connections out of
+30, against 30 out of 30 for firefox. Changing browsers is not a way out.
+
+The spec is therefore brought in from refraction-networking/utls -- the fork
+Xray uses, where HelloFirefox_Auto is already Firefox 148, which is why the
+same server accepts Xray and refuses mihomo. One adjustment for this fork:
+ReuseHybridAndClassicalKeyShares does not exist here, so the hybrid share and
+the standalone X25519 share carry independent keys instead of the same one.
+Nothing in the handshake depends on that repeat: the server reads the
+standalone share, and that is exactly the key GetRealityConn derives auth_key
+from.
+
+Checked against a local REALITY server built on xtls/reality@2026-09-08: with
+this patch fp=firefox completes the handshake, the firefox120 profile is
+handed to the camouflage site and fails certificate verification there, and
+chrome completes it as before.
+
+Drop this patch once metacubex/utls ships a current firefox profile. Until
+then keep the version in step with the uTLS profile of the bundled Xray: two
+cores that answer to the same fp must look the same on the wire.
+
+diff --git a/component/tls/firefox148.go b/component/tls/firefox148.go
+new file mode 100644
+index 0000000..b460493
+--- /dev/null
++++ b/component/tls/firefox148.go
+@@ -0,0 +1,157 @@
++package tls
++
++import (
++	utls "github.com/metacubex/utls"
++	"github.com/metacubex/utls/dicttls"
++)
++
++// keqdroid: the ClientHello of a current Firefox, because REALITY servers now
++// require a key the bundled uTLS fork does not have in any firefox profile.
++//
++// xtls/reality from 2026-09-08 (shipped in Xray 26.9.9) rejects every
++// ClientHello that carries no X25519MLKEM768 key share before the optional
++// X25519 one. It rejects it the quiet way REALITY always does: the connection
++// is handed to the camouflage site, the client gets a genuine certificate for
++// it and reports "REALITY authentication failed" even though its public key,
++// short id and SNI are all correct.
++//
++// mihomo resolves fp=firefox to HelloFirefox_Auto, which in metacubex/utls
++// v1.8.7 is still Firefox 120 - a profile from before that key existed. Only
++// the chrome profiles carry it, and chrome is the fingerprint the censor here
++// filters (0 connections out of 30 against 30 out of 30 for firefox), so
++// changing browsers is not a way out.
++//
++// The spec is Firefox 148's, copied from refraction-networking/utls - the fork
++// Xray uses, which is why the same server accepts Xray and refuses mihomo.
++// One adjustment: ReuseHybridAndClassicalKeyShares does not exist in this fork,
++// so the hybrid share and the standalone X25519 share carry independent keys
++// instead of the same one. A real Firefox repeats the key; nothing in the
++// handshake depends on that. The server reads the standalone share (it comes
++// after the hybrid one, which is the order it insists on), and that is exactly
++// the key GetRealityConn picks up as KeyShareKeys.Ecdhe.
++//
++// Keep the version in step with the uTLS profile the bundled Xray sends:
++// two cores that answer to the same fp must look the same on the wire.
++var HelloFirefox_148 = utls.ClientHelloID{Client: "Firefox", Version: "148"}
++
++func firefox148Spec() utls.ClientHelloSpec {
++	return utls.ClientHelloSpec{
++		TLSVersMin: utls.VersionTLS12,
++		TLSVersMax: utls.VersionTLS13,
++		CipherSuites: []uint16{
++			utls.TLS_AES_128_GCM_SHA256,
++			utls.TLS_CHACHA20_POLY1305_SHA256,
++			utls.TLS_AES_256_GCM_SHA384,
++			utls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
++			utls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
++			utls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
++			utls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
++			utls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
++			utls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
++			utls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
++			utls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
++			utls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
++			utls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
++			utls.TLS_RSA_WITH_AES_128_GCM_SHA256,
++			utls.TLS_RSA_WITH_AES_256_GCM_SHA384,
++			utls.TLS_RSA_WITH_AES_128_CBC_SHA,
++			utls.TLS_RSA_WITH_AES_256_CBC_SHA,
++		},
++		CompressionMethods: []uint8{
++			0x0, // no compression
++		},
++		Extensions: []utls.TLSExtension{
++			&utls.SNIExtension{},
++			&utls.ExtendedMasterSecretExtension{},
++			&utls.RenegotiationInfoExtension{
++				Renegotiation: utls.RenegotiateOnceAsClient,
++			},
++			&utls.SupportedCurvesExtension{
++				Curves: []utls.CurveID{
++					utls.X25519MLKEM768,
++					utls.X25519,
++					utls.CurveP256,
++					utls.CurveP384,
++					utls.CurveP521,
++					0x0100, // ffdhe2048
++					0x0101, // ffdhe3072
++				},
++			},
++			&utls.SupportedPointsExtension{
++				SupportedPoints: []uint8{
++					0x0, // uncompressed
++				},
++			},
++			&utls.ALPNExtension{
++				AlpnProtocols: []string{
++					"h2",
++					"http/1.1",
++				},
++			},
++			&utls.StatusRequestExtension{},
++			&utls.FakeDelegatedCredentialsExtension{
++				SupportedSignatureAlgorithms: []utls.SignatureScheme{
++					utls.ECDSAWithP256AndSHA256,
++					utls.ECDSAWithP384AndSHA384,
++					utls.ECDSAWithP521AndSHA512,
++					utls.ECDSAWithSHA1,
++				},
++			},
++			&utls.SCTExtension{},
++			// The hybrid share first: the REALITY server stops looking at the
++			// first standalone X25519 it meets, so a hello that opens with the
++			// classical share reads to it as an outdated client.
++			&utls.KeyShareExtension{
++				KeyShares: []utls.KeyShare{
++					{Group: utls.X25519MLKEM768},
++					{Group: utls.X25519},
++					{Group: utls.CurveP256},
++				},
++			},
++			&utls.SupportedVersionsExtension{
++				Versions: []uint16{
++					utls.VersionTLS13,
++					utls.VersionTLS12,
++				},
++			},
++			&utls.SignatureAlgorithmsExtension{
++				SupportedSignatureAlgorithms: []utls.SignatureScheme{
++					utls.ECDSAWithP256AndSHA256,
++					utls.ECDSAWithP384AndSHA384,
++					utls.ECDSAWithP521AndSHA512,
++					utls.PSSWithSHA256,
++					utls.PSSWithSHA384,
++					utls.PSSWithSHA512,
++					utls.PKCS1WithSHA256,
++					utls.PKCS1WithSHA384,
++					utls.PKCS1WithSHA512,
++					utls.ECDSAWithSHA1,
++					utls.PKCS1WithSHA1,
++				},
++			},
++			&utls.FakeRecordSizeLimitExtension{
++				Limit: 0x4001,
++			},
++			&utls.UtlsCompressCertExtension{
++				Algorithms: []utls.CertCompressionAlgo{
++					utls.CertCompressionZlib,
++					utls.CertCompressionBrotli,
++					utls.CertCompressionZstd,
++				},
++			},
++			&utls.GREASEEncryptedClientHelloExtension{
++				CandidateCipherSuites: []utls.HPKESymmetricCipherSuite{
++					{
++						KdfId:  dicttls.HKDF_SHA256,
++						AeadId: dicttls.AEAD_AES_128_GCM,
++					},
++					{
++						KdfId:  dicttls.HKDF_SHA256,
++						AeadId: dicttls.AEAD_CHACHA20_POLY1305,
++					},
++				},
++				CandidatePayloadLens: []uint16{223}, // +16: 239
++			},
++		},
++	}
++}
+diff --git a/component/tls/reality.go b/component/tls/reality.go
+index ff6a0a3..a5d73b4 100644
+--- a/component/tls/reality.go
++++ b/component/tls/reality.go
+@@ -48,7 +48,7 @@ func GetRealityConn(ctx context.Context, conn net.Conn, fingerprint UClientHello
+ 			VerifyConnection:       verifier.VerifyConnection,
+ 		}
+ 
+-		uConn := utls.UClient(conn, uConfig, fingerprint)
++		uConn := UClient(conn, uConfig, fingerprint)
+ 		verifier.UConn = uConn
+ 		err := uConn.BuildHandshakeState()
+ 		if err != nil {
+diff --git a/component/tls/utls.go b/component/tls/utls.go
+index d48a1ba..764a128 100644
+--- a/component/tls/utls.go
++++ b/component/tls/utls.go
+@@ -28,6 +28,20 @@ func Client(c net.Conn, config *utls.Config) *Conn {
+ }
+ 
+ func UClient(c net.Conn, config *utls.Config, fingerprint UClientHelloID) *UConn {
++	// keqdroid: HelloFirefox_148 is ours rather than a profile utls knows about,
++	// so it has to be turned into a spec here - see firefox148.go. Every caller
++	// that builds a uTLS connection goes through this function for that reason.
++	if fingerprint == HelloFirefox_148 {
++		uConn := utls.UClient(c, config, utls.HelloCustom)
++		spec := firefox148Spec()
++		if err := uConn.ApplyPreset(&spec); err != nil {
++			// Falling back to a firefox profile without X25519MLKEM768 would
++			// bring back the exact failure this spec exists to fix, and bring
++			// it back silently. Let the handshake fail loudly instead.
++			log.Errorln("apply Firefox 148 ClientHello: %v", err)
++		}
++		return uConn
++	}
+ 	return utls.UClient(c, config, fingerprint)
+ }
+ 
+@@ -76,8 +90,10 @@ var randomFingerprint = once.OnceValue(func() UClientHelloID {
+ })
+ 
+ var fingerprints = map[string]UClientHelloID{
+-	"chrome":  utls.HelloChrome_Auto,
+-	"firefox": utls.HelloFirefox_Auto,
++	"chrome": utls.HelloChrome_Auto,
++	// keqdroid: not HelloFirefox_Auto - it is still Firefox 120 here, and a
++	// REALITY server on current Xray refuses a hello without X25519MLKEM768.
++	"firefox": HelloFirefox_148,
+ 	"safari":  utls.HelloSafari_Auto,
+ 	"ios":     utls.HelloIOS_Auto,
+ 	"android": utls.HelloAndroid_11_OkHttp,
+diff --git a/transport/jls/utls.go b/transport/jls/utls.go
+index 68680fd..78ade21 100644
+--- a/transport/jls/utls.go
++++ b/transport/jls/utls.go
+@@ -52,7 +52,7 @@ func newUTLSClient(ctx context.Context, conn net.Conn, config *ClientConfig) (ne
+ 	// Resumption would require recalculating PSK binders after replacing the
+ 	// ClientHello random. uTLS does not expose a hook for that operation, so this
+ 	// client deliberately disables session tickets and 0-RTT.
+-	uConn := utls.UClient(conn, &utls.Config{
++	uConn := tlsC.UClient(conn, &utls.Config{
+ 		ServerName: config.ServerName,
+ 		NextProtos: append([]string(nil), alpn...),
+ 		// JLS authenticates the server in VerifyConnection. TLS still verifies

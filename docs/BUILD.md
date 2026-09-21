@@ -157,10 +157,13 @@ powershell -File tool/build_mihomo.ps1
 **This is not stock upstream.** The script applies `tool/patches/mihomo-*.patch` and fails
 if a patch does not land — a silently unpatched core looks healthy and only falls apart on
 certain servers. What each patch fixes, and what has to stay in sync when updating, is
-written in the patch header. There is one right now: mihomo hardcodes REALITY client
-version `1.8.2` into the ClientHello, and a server with `minClient` set answers with the
-real certificate of the masquerade domain instead of its own — the client sees
-`REALITY authentication failed` even though the keys are correct.
+written in the patch header. Three of them right now, and two share one symptom: mihomo
+hardcodes REALITY client version `1.8.2` into the ClientHello, and its firefox fingerprint
+stopped at Firefox 120, which sends no X25519MLKEM768 key share. A server with `minClient`
+set, and any server on Xray 26.9.9, answers either hello with the real certificate of the
+masquerade domain instead of its own — the client sees `REALITY authentication failed`
+even though the keys are correct. The third patch is Android-only: mihomo's tun listener
+reads `/data/system/packages.xml`, which SELinux does not hand to an app.
 
 AmneziaWG has no core of its own any more: mihomo carries amneziawg-go and runs a `.conf`
 profile as `type: wireguard` with `amnezia-wg-option`. There is nothing to build for it
@@ -364,10 +367,14 @@ powershell -File tool/build_mihomo.ps1
 **Это не сток апстрима.** Скрипт накатывает `tool/patches/mihomo-*.patch` и падает,
 если патч не лёг, — молча непропатченное ядро выглядит здоровым и отваливается
 только на отдельных серверах. Что чинит каждый патч и что при обновлении держать
-в согласии, написано в шапке самого патча. Сейчас там один: mihomo зашивает в
-ClientHello версию REALITY-клиента `1.8.2`, и сервер с поднятым `minClient`
-отдаёт настоящий сертификат маскировочного домена вместо своего — клиент видит
-`REALITY authentication failed`, хотя ключи верные.
+в согласии, написано в шапке самого патча. Сейчас их три, и у двух один симптом:
+mihomo зашивает в ClientHello версию REALITY-клиента `1.8.2`, а его отпечаток firefox
+остановился на Firefox 120, который не шлёт key share `X25519MLKEM768`. И сервер с
+поднятым `minClient`, и любой сервер на Xray 26.9.9 отдают такому приветствию настоящий
+сертификат маскировочного домена вместо своего — клиент видит
+`REALITY authentication failed`, хотя ключи верные. Третий патч нужен только Android:
+tun-листенер mihomo читает `/data/system/packages.xml`, который SELinux приложению не
+отдаёт.
 
 Своего ядра у AmneziaWG больше нет: amneziawg-go живёт внутри mihomo, и профиль `.conf`
 исполняется как `type: wireguard` с `amnezia-wg-option`. Отдельно собирать нечего.
