@@ -145,4 +145,27 @@ void main() {
       isNull,
     );
   });
+
+  test('в замер идут текущий и лучшие соседи, не вся подписка', () {
+    final servers = [
+      for (var i = 0; i < 15; i++)
+        _server('s$i', sub: 's1', ping: 10 + i, tested: tested),
+      _server('other-sub', sub: 's2', ping: 1, tested: tested),
+    ];
+    final current = servers[7];
+
+    final picked = AutoServerSelect.candidatesToMeasure(
+      servers,
+      subscriptionId: 's1',
+      current: current,
+      limit: 5,
+    );
+
+    // Сам текущий — первым: уйти с него можно только по его же замеру.
+    expect(picked.first.id, 's7');
+    expect(picked.length, 5);
+    expect(picked.map((s) => s.id), isNot(contains('other-sub')));
+    // Соседи — по старым замерам, лучшие первыми.
+    expect(picked.skip(1).map((s) => s.id), ['s0', 's1', 's2', 's3']);
+  });
 }

@@ -68,4 +68,91 @@ abstract final class AutoServerSelect {
     // ответов на нажатую кнопку.
     return pool.first;
   }
+
+  /// Кого мерить, когда текущий сервер под подозрением: он сам и лучшие из
+  /// соседей по подписке — всего не больше [limit].
+  ///
+  /// Сам текущий — обязательно: решение «уходить» принимается по его же
+  /// свежему замеру, а не по тому, что показалось сторожу. Соседей — по
+  /// порядку старых замеров, потому что мерить всю подписку ради одного
+  /// переезда незачем, а десяток на Android — это ровно одно ядро замера.
+  static List<ServerItem> candidatesToMeasure(
+    List<ServerItem> servers, {
+    required String subscriptionId,
+    required ServerItem current,
+    int limit = 10,
+  }) {
+    final others = [
+      for (final server in servers)
+        if (server.subscriptionId == subscriptionId && server.id != current.id)
+          server,
+    ];
+    int rank(ServerItem s) => s.pingMs != null
+        ? 0
+        : s.lastTestedAt == null
+            ? 1
+            : 2;
+    others.sort((a, b) {
+      final byRank = rank(a).compareTo(rank(b));
+      if (byRank != 0) return byRank;
+      return (a.pingMs ?? 0).compareTo(b.pingMs ?? 0);
+    });
+    return [current, ...others.take(limit - 1)];
+  }
+
+  /// Что делать по свежему замеру.
+  ///
+  /// Правила, и все по результатам, а не по догадкам:
+  ///
+  /// текущий ответил — остаёмся, тревога была ложной, что бы её ни вызвало;
+  /// текущий не ответил, а кто-то из соседей ответил — переезжаем на самого
+  /// быстрого из ответивших, то есть на сервер, живой прямо сейчас, а не
+  /// когда-то в прошлом замере;
+  /// не ответил никто — остаёмся: это либо сеть, либо всё мёртвое сразу, и
+  /// переезд ничего бы не дал.
+  ///
+  /// [currentPresumedDead] — три секунды через туннель не пришло ни байта.
+  /// Тогда не ждём, пока замер текущего упрётся в таймаут: если соседи уже
+  /// ответили, а он нет, этого достаточно. Для слабых сигналов ждём вердикта
+  /// по нему самому — [undecided], пока замер не закончен.
+  static AutoSelectVerdict judge({
+    required String currentId,
+    required Iterable<({String id, bool success, int? latencyMs})> results,
+    required bool batchComplete,
+    bool currentPresumedDead = false,
+  }) {
+    ({String id, bool success, int? latencyMs})? current;
+    ({String id, bool success, int? latencyMs})? best;
+    for (final r in results) {
+      if (r.id == currentId) {
+        current = r;
+        continue;
+      }
+      if (!r.success) continue;
+      if (best == null || (r.latencyMs ?? 1 << 30) < (best.latencyMs ?? 1 << 30)) {
+        best = r;
+      }
+    }
+    if (current != null && current.success) return const AutoSelectVerdict.stay();
+
+    final currentFailed = current != null && !current.success;
+    if (currentFailed || currentPresumedDead || batchComplete) {
+      if (best != null) return AutoSelectVerdict.switchTo(best.id);
+      if (batchComplete) return const AutoSelectVerdict.stay();
+    }
+    return const AutoSelectVerdict.undecided();
+  }
+}
+
+/// Итог [AutoServerSelect.judge].
+final class AutoSelectVerdict {
+  const AutoSelectVerdict.stay() : nextId = null, decided = true;
+  const AutoSelectVerdict.switchTo(String this.nextId) : decided = true;
+  const AutoSelectVerdict.undecided() : nextId = null, decided = false;
+
+  /// Куда переезжать; null — оставаться (или ещё не решено).
+  final String? nextId;
+
+  /// false — замер ещё идёт, и по уже пришедшему решать рано.
+  final bool decided;
 }

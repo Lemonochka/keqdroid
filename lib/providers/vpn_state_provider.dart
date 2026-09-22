@@ -59,7 +59,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   int _autoSelectSeenBytes = 0;
   int? _autoSelectSeenFailures;
   int _autoSelectSilentSeconds = 0;
-  Future<bool>? _autoSelectEarlyProbe;
+  _AutoSelectMeasure? _autoSelectEarlyMeasure;
+  final _autoSelectSwitches = <DateTime>[];
   DateTime? _autoSelectQuietUntil;
   bool _autoSelectBusy = false;
   AppLifecycleListener? _androidLifecycle;
@@ -846,7 +847,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     return (server: server, subId: subId);
   }
 
-  /// Адрес пробы — тот же, что у пинга серверов.
+  /// Адрес замера — тот же, что у пинга серверов в списке.
   Future<String> _autoSelectTestUrl() async {
     final settings = await ref.read(storageProvider).getSettings();
     final custom = settings.pingTestUrlCustom.trim();
@@ -855,16 +856,57 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         : kDefaultPingTestUrl;
   }
 
-  /// Проба через живой туннель.
-  Future<bool> _autoSelectProbeTunnel() async {
-    final settings = await ref.read(storageProvider).getSettings();
-    final creds = Socks5Credentials();
-    return AutoSelectWatchdog.tunnelResponds(
-      httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),
-      testUrl: await _autoSelectTestUrl(),
-      username: creds.username,
-      password: creds.password,
+  /// Запускает замер текущего сервера и его соседей — судью автовыбора.
+  ///
+  /// Меряет тем же url-пингом, что и список серверов, только с коротким
+  /// таймаутом: вопрос не «насколько быстр», а «жив ли прямо сейчас». Ядро
+  /// замера идёт мимо туннеля, поэтому ответ не зависит ни от правил
+  /// роутинга, ни от того, что творится в живой сессии. Результаты копятся по
+  /// мере прихода — решать можно, не дожидаясь таймаута мёртвого сервера — и
+  /// в конце ложатся в список: мёртвый сервер краснеет там же, где его видно.
+  _AutoSelectMeasure _autoSelectStartMeasure(ServerItem current, String subId) {
+    final measure = _AutoSelectMeasure(current.id);
+    final servers = AutoServerSelect.candidatesToMeasure(
+      ref.read(serversProvider).servers,
+      subscriptionId: subId,
+      current: current,
+      limit: AutoSelectWatchdog.candidateLimit,
     );
+    ({String id, bool success, int? latencyMs}) entry(PingResult r) =>
+        (id: r.serverId, success: r.success, latencyMs: r.latencyMs);
+    measure.done = () async {
+      try {
+        final settings = await ref.read(storageProvider).getSettings();
+        final results = await PingService.pingUrlBatch(
+          servers,
+          settings,
+          testUrl: await _autoSelectTestUrl(),
+          timeoutSeconds: AutoSelectWatchdog.judgeTimeoutSeconds,
+          onResult: (r) => measure.results[r.serverId] = entry(r),
+        );
+        for (final r in results) {
+          measure.results[r.serverId] = entry(r);
+        }
+        unawaited(
+          ref.read(serversProvider.notifier).updatePingResults({
+            for (final r in results)
+              r.serverId: (
+                pingMs: r.success ? r.latencyMs : null,
+                lastPingType: PingService.pingTypeToStored(r.pingType),
+              ),
+          }),
+        );
+      } catch (e, st) {
+        AppLogger.instance.debug(
+          'Auto select measure failed',
+          error: e,
+          stackTrace: st,
+        );
+      } finally {
+        measure.complete = true;
+      }
+    }();
+    return measure;
   }
 
   /// Тихая прослушка: раз в секунду, без сети.
@@ -872,19 +914,19 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   /// Два сигнала. Главный — «ушло, но ничего не пришло»: скорости за
   /// последнюю секунду сервис считает сам, по трафику процесса ядра, и на
   /// мёртвом сервере приложения продолжают слать, а в ответ не приходит ни
-  /// байта. Второй — отказ дозвона в логе ядра. Сеть появляется только после
-  /// сигнала.
+  /// байта. Второй — отказ дозвона в логе ядра. Сам по себе ни один сигнал
+  /// сервер не меняет: он только зовёт судью ([_autoSelectDecide]).
   ///
-  /// Проба запускается уже на первой тихой секунде, а решение принимается на
-  /// третьей: окно тишины и ожидание пробы идут одновременно, а не одно за
-  /// другим. На живом тесте последовательно это стоило шесть секунд из семи.
+  /// Замер стартует уже на первой тихой секунде, а решение принимается на
+  /// третьей: к этому времени соседи успевают ответить, и решению не нужно
+  /// ждать таймаута мёртвого сервера.
   Future<void> _autoSelectListen() async {
     if (_autoSelectBusy) return;
     final target = _autoSelectTarget();
     if (target == null) {
       _autoSelectSeenFailures = null;
       _autoSelectSilentSeconds = 0;
-      _autoSelectEarlyProbe = null;
+      _autoSelectEarlyMeasure = null;
       return;
     }
     final quietUntil = _autoSelectQuietUntil;
@@ -897,10 +939,14 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     );
     if (silent) {
       _autoSelectSilentSeconds++;
-      _autoSelectEarlyProbe ??= _autoSelectProbeTunnel();
+      final early = _autoSelectEarlyMeasure;
+      if (early == null || early.serverId != target.server.id) {
+        _autoSelectEarlyMeasure =
+            _autoSelectStartMeasure(target.server, target.subId);
+      }
     } else {
       _autoSelectSilentSeconds = 0;
-      _autoSelectEarlyProbe = null;
+      _autoSelectEarlyMeasure = null;
     }
 
     // На Android отказы считает нативный читатель лога ядра, на десктопе —
@@ -917,25 +963,21 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (previous != null) newFailures = failures - previous;
     }
 
-    if (!AutoSelectWatchdog.dialFailuresSuggestDeadServer(newFailures) &&
-        !AutoSelectWatchdog.trafficStalled(_autoSelectSilentSeconds)) {
+    final stalled = AutoSelectWatchdog.trafficStalled(_autoSelectSilentSeconds);
+    if (!stalled && !AutoSelectWatchdog.dialFailuresSuggestDeadServer(newFailures)) {
       return;
     }
-    final early = _autoSelectEarlyProbe;
-    _autoSelectEarlyProbe = null;
-    await _autoSelectVerify(
-      target.server,
-      target.subId,
-      alreadyConfirmed: true,
-      earlyProbe: early,
-    );
+    final measure = _autoSelectEarlyMeasure ??
+        _autoSelectStartMeasure(target.server, target.subId);
+    _autoSelectEarlyMeasure = null;
+    await _autoSelectDecide(target.server, measure, presumedDead: stalled);
   }
 
   /// Страховочный тик: ловит соединения, которые повисли молча.
   ///
   /// Раз в [AutoSelectWatchdog.probeEvery] смотрим, пришёл ли через туннель
-  /// хоть байт, и только если нет — идём проверять сервер. Пришёл, а не
-  /// прошёл: в мёртвый туннель приложения шлют исправно.
+  /// хоть байт, и только если нет — зовём судью. Пришёл, а не прошёл: в
+  /// мёртвый туннель приложения шлют исправно.
   Future<void> _autoSelectTick() async {
     if (_autoSelectBusy) return;
     final target = _autoSelectTarget();
@@ -950,84 +992,89 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     )) {
       return;
     }
-    await _autoSelectVerify(target.server, target.subId);
+    await _autoSelectDecide(
+      target.server,
+      _autoSelectStartMeasure(target.server, target.subId),
+      presumedDead: false,
+    );
   }
 
-  /// Проверка по-настоящему и, если сервер мёртв, переезд.
+  /// Судья: решает по замеру и, если надо, переезжает.
   ///
-  /// [alreadyConfirmed] — проверку позвала прослушка, то есть у приложений
-  /// уже не работало. Тогда хватает одной неудачной пробы; страховочному
-  /// тику, у которого есть только тишина, нужны две. [earlyProbe] — проба,
-  /// запущенная прослушкой ещё на первой тихой секунде. Сеть мимо туннеля
-  /// проверяется параллельно с пробой: не отвечает вообще ничего — виноват
-  /// не сервер, и его не трогают. Переезд идёт тем же путём, которым сервер
-  /// меняет человек.
-  Future<void> _autoSelectVerify(
+  /// Уйти с сервера можно только если он сам не ответил на свежий замер, и
+  /// только на тот, кто ответил. Не ответил никто — остаёмся: это сеть или
+  /// всё сразу, и переезд ничего не даст. [presumedDead] — сигналом была
+  /// тишина в ответ; тогда хватает того, что соседи ответили раньше него.
+  /// Переезд идёт тем же путём, которым сервер меняет человек, и не чаще
+  /// [AutoSelectWatchdog.maxSwitchesPerWindow] раз за окно.
+  Future<void> _autoSelectDecide(
     ServerItem server,
-    String subId, {
-    bool alreadyConfirmed = false,
-    Future<bool>? earlyProbe,
+    _AutoSelectMeasure measure, {
+    required bool presumedDead,
   }) async {
     if (_autoSelectBusy) return;
     _autoSelectBusy = true;
     var switched = false;
     try {
-      final testUrl = await _autoSelectTestUrl();
-      final first = await Future.wait([
-        earlyProbe ?? _autoSelectProbeTunnel(),
-        AutoSelectWatchdog.networkResponds(testUrl: testUrl),
-      ]);
-      if (first[0]) return;
-      var network = first[1];
-      var failures = alreadyConfirmed ? 2 : 1;
-      if (!AutoSelectWatchdog.shouldSwitch(failures)) {
-        await Future<void>.delayed(AutoSelectWatchdog.retryAfterFailure);
-        if (state.value?.status != VpnStatus.connected) return;
-        final second = await Future.wait([
-          _autoSelectProbeTunnel(),
-          AutoSelectWatchdog.networkResponds(testUrl: testUrl),
-        ]);
-        if (second[0]) return;
-        network = second[1];
-        failures++;
+      var verdict = AutoServerSelect.judge(
+        currentId: server.id,
+        results: measure.results.values,
+        batchComplete: measure.complete,
+        currentPresumedDead: presumedDead,
+      );
+      if (!verdict.decided) {
+        await measure.done;
+        verdict = AutoServerSelect.judge(
+          currentId: server.id,
+          results: measure.results.values,
+          batchComplete: true,
+          currentPresumedDead: presumedDead,
+        );
       }
-      if (!AutoSelectWatchdog.shouldSwitch(failures)) return;
+      final nextId = verdict.nextId;
+      if (nextId == null) return;
+      if (state.value?.status != VpnStatus.connected) return;
+      // Пока шёл замер, человек мог выбрать сервер сам — его выбор главнее.
+      if (ref.read(serversProvider).activeServer?.id != server.id) return;
 
-      if (!network) {
-        AppLogger.instance.debug(
-          'Auto select: no network at all, leaving the server alone',
+      final now = DateTime.now();
+      _autoSelectSwitches.removeWhere(
+        (t) => now.difference(t) >= AutoSelectWatchdog.switchWindow,
+      );
+      if (!AutoSelectWatchdog.switchAllowed(_autoSelectSwitches, now)) {
+        AppLogger.instance.warn(
+          'Auto select: ${AutoSelectWatchdog.maxSwitchesPerWindow} switches '
+          'in ${AutoSelectWatchdog.switchWindow.inMinutes} min already, '
+          'leaving ${server.displayName} alone for now',
         );
         return;
       }
-      if (state.value?.status != VpnStatus.connected) return;
-
-      final next = AutoServerSelect.pick(
-        ref.read(serversProvider).servers,
-        subscriptionId: subId,
-        exclude: server.id,
-        excludeHost: server.address,
-      );
-      // Менять не на кого — не долбим переподключением тот же сервер.
-      if (next == null || next.id == server.id) return;
+      final next = ref
+          .read(serversProvider)
+          .servers
+          .where((s) => s.id == nextId)
+          .firstOrNull;
+      if (next == null) return;
       AppLogger.instance.info(
-        'Auto select: ${server.displayName} stopped answering, switching to '
-        '${next.displayName}',
+        'Auto select: ${server.displayName} did not answer, '
+        '${next.displayName} did — switching',
       );
       switched = true;
+      _autoSelectSwitches.add(now);
       await ref.read(serversProvider.notifier).setActive(next);
       await reconnectToActiveServer();
     } catch (e, st) {
       AppLogger.instance.debug(
-        'Auto select check failed',
+        'Auto select decision failed',
         error: e,
         stackTrace: st,
       );
     } finally {
-      // Отсчёт заново: свои пробы и переподключение тоже дают отказы и тихие
-      // секунды, и принять их за новую смерть значило бы пойти по кругу.
+      // Отсчёт заново: переподключение само даёт отказы и тихие секунды, и
+      // принять их за новую смерть значило бы пойти по кругу.
       _autoSelectSeenFailures = null;
       _autoSelectSilentSeconds = 0;
-      _autoSelectEarlyProbe = null;
+      _autoSelectEarlyMeasure = null;
       _autoSelectQuietUntil = DateTime.now().add(
         switched
             ? AutoSelectWatchdog.quietAfterSwitch
@@ -1092,3 +1139,20 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 /// true пока переподключаемся при смене сервера — чтобы не показывать ложные ошибки
 final vpnStateProvider =
     AsyncNotifierProvider<VpnStateNotifier, VpnState>(VpnStateNotifier.new);
+
+/// Замер, начатый сторожем автовыбора.
+///
+/// Результаты копятся в [results] по мере прихода, [complete] — все ответили
+/// или истекли. Отдельный объект, а не голый Future, потому что решать можно
+/// и по неполному замеру: соседи отвечают за доли секунды, а мёртвый сервер
+/// держит замер до таймаута.
+class _AutoSelectMeasure {
+  _AutoSelectMeasure(this.serverId);
+
+  /// Сервер, из-за которого замер начат.
+  final String serverId;
+
+  final results = <String, ({String id, bool success, int? latencyMs})>{};
+  bool complete = false;
+  Future<void> done = Future<void>.value();
+}

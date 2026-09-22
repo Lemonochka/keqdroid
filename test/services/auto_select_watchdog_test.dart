@@ -1,62 +1,98 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/services/auto_select_watchdog.dart';
+import 'package:keqdroid/services/auto_server_select.dart';
 
-/// Правила сторожа: когда он вообще лезет в сеть и когда меняет сервер.
+/// Сторож автовыбора: когда он просыпается и когда меняет сервер.
 ///
-/// Смена сети в этих правилах не участвует вовсе — и это не забывчивость.
-/// Переезд с Wi-Fi на LTE сам по себе не значит, что сервер перестал
-/// работать; значит это только молчащий туннель.
+/// Главное, что здесь сторожится: с рабочего сервера уйти нельзя. Прослушка
+/// может разбудить судью сколько угодно раз, но решает всегда свежий замер —
+/// текущий ответил, значит остаёмся, что бы ни показалось прослушке.
+({String id, bool success, int? latencyMs}) _ok(String id, int ms) =>
+    (id: id, success: true, latencyMs: ms);
+({String id, bool success, int? latencyMs}) _dead(String id) =>
+    (id: id, success: false, latencyMs: null);
+
 void main() {
-  group('когда идти в сеть', () {
-    test('идёт только на молчащем туннеле', () {
-      expect(
-        AutoSelectWatchdog.shouldProbe(
-          connected: true,
-          autoSelectOn: true,
-          trafficMoved: false,
-        ),
-        isTrue,
+  group('судья: с рабочего сервера не уходим', () {
+    test('текущий ответил — остаёмся, даже если соседи быстрее', () {
+      final verdict = AutoServerSelect.judge(
+        currentId: 'cur',
+        results: [_ok('cur', 300), _ok('fast', 20)],
+        batchComplete: true,
       );
+      expect(verdict.decided, isTrue);
+      expect(verdict.nextId, isNull);
     });
 
-    test('прошедший трафик — уже доказательство жизни', () {
-      // Байты прошли — сервер отвечает, и проба была бы тратой батареи на
-      // доказательство доказанного.
-      expect(
-        AutoSelectWatchdog.shouldProbe(
-          connected: true,
-          autoSelectOn: true,
-          trafficMoved: true,
-        ),
-        isFalse,
+    test('ответил хоть на тишине в туннеле — всё равно остаёмся', () {
+      // Тишина могла быть случайной; свежий замер сильнее догадки.
+      final verdict = AutoServerSelect.judge(
+        currentId: 'cur',
+        results: [_ok('cur', 900)],
+        batchComplete: false,
+        currentPresumedDead: true,
       );
+      expect(verdict.nextId, isNull);
+      expect(verdict.decided, isTrue);
     });
 
-    test('без подключения и без автовыбора не просыпается', () {
-      expect(
-        AutoSelectWatchdog.shouldProbe(
-          connected: false,
-          autoSelectOn: true,
-          trafficMoved: false,
-        ),
-        isFalse,
+    test('слабый сигнал и нет ответа от текущего — ждём его вердикта', () {
+      // Одиночный отказ в логе — не повод уходить, пока сам сервер не
+      // провалил замер: сосед ответил раньше, но это ничего не значит.
+      final verdict = AutoServerSelect.judge(
+        currentId: 'cur',
+        results: [_ok('other', 40)],
+        batchComplete: false,
       );
-      expect(
-        AutoSelectWatchdog.shouldProbe(
-          connected: true,
-          autoSelectOn: false,
-          trafficMoved: false,
-        ),
-        isFalse,
-      );
+      expect(verdict.decided, isFalse);
     });
   });
 
-  group('тихая прослушка', () {
-    test('первый же отказ ядра — повод проверить', () {
+  group('судья: уходим только на живой', () {
+    test('текущий не ответил — самый быстрый из ответивших', () {
+      final verdict = AutoServerSelect.judge(
+        currentId: 'cur',
+        results: [_dead('cur'), _ok('slow', 200), _ok('fast', 50), _dead('x')],
+        batchComplete: true,
+      );
+      expect(verdict.nextId, 'fast');
+    });
+
+    test('мёртвые соседи со старым хорошим пингом не выбираются', () {
+      // В замер они попадают, но не отвечают — и выбор их не видит.
+      final verdict = AutoServerSelect.judge(
+        currentId: 'cur',
+        results: [_dead('cur'), _dead('old-best'), _ok('alive', 180)],
+        batchComplete: true,
+      );
+      expect(verdict.nextId, 'alive');
+    });
+
+    test('на тишине не ждём таймаута мёртвого, если сосед уже ответил', () {
+      final verdict = AutoServerSelect.judge(
+        currentId: 'cur',
+        results: [_ok('alive', 80)],
+        batchComplete: false,
+        currentPresumedDead: true,
+      );
+      expect(verdict.nextId, 'alive');
+    });
+
+    test('не ответил никто — остаёмся: это сеть или всё сразу', () {
+      final verdict = AutoServerSelect.judge(
+        currentId: 'cur',
+        results: [_dead('cur'), _dead('a'), _dead('b')],
+        batchComplete: true,
+      );
+      expect(verdict.decided, isTrue);
+      expect(verdict.nextId, isNull);
+    });
+  });
+
+  group('прослушка', () {
+    test('первый же отказ ядра будит судью', () {
       // Живой тест: xray на Hysteria2 роняет отказы по одному раз в 16–50
-      // секунд, каждый ждёт таймаут QUIC. Правило «три за секунду» не
-      // сработало бы никогда. От ложной тревоги защищает проба.
+      // секунд. Будить — не значит менять: решает замер.
       expect(AutoSelectWatchdog.dialFailuresSuggestDeadServer(1), isTrue);
       expect(AutoSelectWatchdog.dialFailuresSuggestDeadServer(0), isFalse);
     });
@@ -72,13 +108,10 @@ void main() {
         AutoSelectWatchdog.isSilentSecond(sent: 50000, received: 60),
         isFalse,
       );
-      // Телефон просто молчит — это не тишина в ответ.
       expect(AutoSelectWatchdog.isSilentSecond(sent: 0, received: 0), isFalse);
     });
 
-    test('одна тихая секунда — ещё не смерть', () {
-      // Спящее радио или переезд сети дают секунду без ответа и у живого
-      // сервера.
+    test('одна тихая секунда — ещё не повод', () {
       expect(AutoSelectWatchdog.trafficStalled(1), isFalse);
       expect(
         AutoSelectWatchdog.trafficStalled(
@@ -86,57 +119,77 @@ void main() {
         ),
         isTrue,
       );
-      expect(AutoSelectWatchdog.silentSecondsBeforeCheck, lessThanOrEqualTo(5));
     });
 
-    test('смотрит часто, потому что это не сеть', () {
-      // Читается число в памяти процесса — радио от этого не просыпается,
-      // поэтому интервал может быть коротким, а весь переезд — быстрым.
-      expect(AutoSelectWatchdog.listenEvery.inSeconds, lessThanOrEqualTo(3));
-    });
-
-    test('после проверки без переезда молчит, но недолго', () {
-      // Без сети вовсе собственные пробы будили бы проверку каждые две
-      // секунды — а каждая проверка это запрос мимо туннеля.
+    test('страховка верит только пришедшему', () {
       expect(
-        AutoSelectWatchdog.quietAfterCheck,
-        greaterThan(AutoSelectWatchdog.listenEvery * 3),
+        AutoSelectWatchdog.shouldProbe(
+          connected: true,
+          autoSelectOn: true,
+          trafficMoved: false,
+        ),
+        isTrue,
       );
-      expect(AutoSelectWatchdog.quietAfterCheck.inSeconds, lessThanOrEqualTo(30));
+      expect(
+        AutoSelectWatchdog.shouldProbe(
+          connected: true,
+          autoSelectOn: true,
+          trafficMoved: true,
+        ),
+        isFalse,
+      );
+      expect(
+        AutoSelectWatchdog.shouldProbe(
+          connected: true,
+          autoSelectOn: false,
+          trafficMoved: false,
+        ),
+        isFalse,
+      );
     });
   });
 
-  group('когда менять сервер', () {
-    test('одного провала мало', () {
-      // Секунда без сети в лифте не стоит разрыва соединения.
-      expect(AutoSelectWatchdog.shouldSwitch(1), isFalse);
+  group('предохранитель от беготни по кругу', () {
+    final t0 = DateTime(2026, 9, 23, 12);
+
+    test('первые переезды разрешены', () {
+      expect(AutoSelectWatchdog.switchAllowed(const [], t0), isTrue);
+      expect(AutoSelectWatchdog.switchAllowed([t0], t0), isTrue);
     });
 
-    test('двух подряд достаточно', () {
-      expect(AutoSelectWatchdog.shouldSwitch(2), isTrue);
+    test('лимит за окно — и сторож отходит в сторону', () {
+      final recent = [
+        for (var i = 0; i < AutoSelectWatchdog.maxSwitchesPerWindow; i++)
+          t0.add(Duration(seconds: 10 * i)),
+      ];
+      expect(
+        AutoSelectWatchdog.switchAllowed(
+          recent,
+          t0.add(const Duration(seconds: 40)),
+        ),
+        isFalse,
+      );
+    });
+
+    test('после окна снова можно', () {
+      final recent = [
+        for (var i = 0; i < AutoSelectWatchdog.maxSwitchesPerWindow; i++) t0,
+      ];
+      expect(
+        AutoSelectWatchdog.switchAllowed(
+          recent,
+          t0.add(AutoSelectWatchdog.switchWindow),
+        ),
+        isTrue,
+      );
     });
   });
 
-  test('подтверждение стоит секунд, а не ещё одного тика', () {
-    // Вторая проба идёт через короткую паузу внутри того же тика: ждать
-    // полный интервал ради подтверждения того, что уже видно, — это те же
-    // двадцать секунд без интернета.
-    expect(
-      AutoSelectWatchdog.retryAfterFailure,
-      lessThan(AutoSelectWatchdog.probeEvery),
-    );
-    // Но и не мгновенно: моргнувшую сеть надо пережить, а не принять за
-    // мёртвый сервер.
-    expect(
-      AutoSelectWatchdog.retryAfterFailure.inSeconds,
-      greaterThanOrEqualTo(3),
-    );
-
-    // Худшее ожидание целиком: тик, две пробы по таймауту и пауза между
-    // ними. Минута — потолок, за которым ожидание уже злит.
-    final worst = AutoSelectWatchdog.probeEvery +
-        AutoSelectWatchdog.probeTimeout * 2 +
-        AutoSelectWatchdog.retryAfterFailure;
-    expect(worst.inSeconds, lessThanOrEqualTo(60));
+  test('замер судьи короче, чем обычный пинг, но не впритык', () {
+    // Мерим «жив ли», а не «насколько быстр»: живой сервер отвечает за доли
+    // секунды, но на загруженном LTE нужен запас, иначе рабочий сервер
+    // выглядел бы мёртвым.
+    expect(AutoSelectWatchdog.judgeTimeoutSeconds, greaterThanOrEqualTo(3));
+    expect(AutoSelectWatchdog.judgeTimeoutSeconds, lessThanOrEqualTo(6));
   });
 }
