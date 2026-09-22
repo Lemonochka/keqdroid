@@ -280,6 +280,31 @@ class EphemeralXrayPing {
     });
   }
 
+  /// Сколько ядру дают на то, чтобы начать обслуживать соединения.
+  ///
+  /// Открытый порт готовности не означает. mihomo поднимает листенеры раньше,
+  /// чем дочитывает конфиг, и до конца загрузки молча закрывает всё, что
+  /// успело подключиться (`tunnel.isHandle`: пока статус не Running,
+  /// соединение закрывается без единой строки в логе). Снаружи это
+  /// неотличимо от мёртвого сервера — проба видит закрытое соединение.
+  ///
+  /// Замерено на Pixel 6a: при живом туннеле ядро замера доходит до Running
+  /// за 1.3-1.8 с, без туннеля — за полсекунды. Поэтому «при включённом VPN
+  /// пинг не работает»: пробы успевали раньше ядра и падали все разом.
+  static const coreWakeupGrace = Duration(seconds: 3);
+
+  /// Повторять ли пробу, которая только что отказала.
+  ///
+  /// Только у mihomo: у xray листенеры поднимаются последними, там открытый
+  /// порт и есть готовность, и лишний повтор стоил бы секунд на каждом
+  /// мёртвом сервере.
+  @visibleForTesting
+  static bool retryProbeWhileCoreWakesUp({
+    required VpnBackend core,
+    required Duration sinceCoreStart,
+  }) =>
+      core == VpnBackend.mihomo && sinceCoreStart < coreWakeupGrace;
+
   static Future<
       ({
         bool success,
@@ -367,12 +392,25 @@ class EphemeralXrayPing {
         port = await _freeLoopbackPort();
       }
 
-      return await _httpProbeViaSocks(
-        testUrl: testUrl,
-        socksPort: port,
-        timeoutMs: timeoutMs,
-        keepAlive: keepAlive,
-      );
+      // Открытый порт — ещё не готовность (см. [coreWakeupGrace]), поэтому
+      // ранний отказ на свежем ядре повторяем, а не записываем серверу.
+      final coreLife = Stopwatch()..start();
+      while (true) {
+        final probe = await _httpProbeViaSocks(
+          testUrl: testUrl,
+          socksPort: port,
+          timeoutMs: timeoutMs,
+          keepAlive: keepAlive,
+        );
+        if (probe.success ||
+            !retryProbeWhileCoreWakesUp(
+              core: core,
+              sinceCoreStart: coreLife.elapsed,
+            )) {
+          return probe;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      }
     } catch (e) {
       AppLogger.instance.debug('EphemeralXrayPing failed: $e');
       return (

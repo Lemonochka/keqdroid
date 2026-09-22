@@ -24,6 +24,8 @@ import java.util.concurrent.Executors
 
 import java.util.concurrent.TimeUnit
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import java.util.concurrent.locks.ReentrantLock
 
 import kotlin.concurrent.withLock
@@ -288,8 +290,13 @@ object EphemeralXrayPing {
 
         val configFile = File(filesDir, "xray_ping_multi_${UUID.randomUUID()}.json")
         var pid = -1
+        var coreStartedAt = System.currentTimeMillis()
+        // Первая удачная проба означает, что ядро дочитало конфиг: остальным
+        // отказам в этом батче верим сразу, они уже про серверы.
+        val coreAwake = AtomicBoolean(false)
         try {
             configFile.writeText(configJson, Charsets.UTF_8)
+            coreStartedAt = System.currentTimeMillis()
             pid = NativeHelper.startCore(binary.absolutePath, configFile.absolutePath, assetDir, "", core)
             if (pid <= 0) {
                 val err = Result(false, null, "failed to start $core for the batch (pid=$pid)", null)
@@ -311,7 +318,15 @@ object EphemeralXrayPing {
             try {
                 val tasks = probes.map { probe ->
                     Callable {
-                        BatchResult(probe.id, httpProbeViaSocks(testUrl, probe.port, timeoutMs, keepAlive))
+                        BatchResult(
+                            probe.id,
+                            probeAwaitingCore(
+                                testUrl, probe.port, timeoutMs, keepAlive,
+                                core = core,
+                                coreStartedAt = coreStartedAt,
+                                coreAwake = coreAwake,
+                            ),
+                        )
                     }
                 }
                 // Один срок на весь батч: пробы идут параллельно, и ждать надо
@@ -493,6 +508,8 @@ object EphemeralXrayPing {
 
 
             // logName="" — ping/спидтест не пишут в файл логов соединения.
+            val coreStartedAt = System.currentTimeMillis()
+
             pid = NativeHelper.startCore(xrayBin.absolutePath, configFile.absolutePath, assetDir, "", core)
 
             when {
@@ -519,7 +536,17 @@ object EphemeralXrayPing {
 
 
 
-            return httpProbeViaSocks(testUrl, socksPort, timeoutMs, keepAlive)
+            return probeAwaitingCore(
+
+                testUrl, socksPort, timeoutMs, keepAlive,
+
+                core = core,
+
+                coreStartedAt = coreStartedAt,
+
+                coreAwake = null,
+
+            )
 
         } finally {
 
@@ -711,6 +738,46 @@ object EphemeralXrayPing {
     }
 
 
+
+    /// Сколько ядру дают на то, чтобы начать обслуживать соединения.
+    ///
+    /// Открытый порт готовности не означает: mihomo поднимает листенеры
+    /// раньше, чем дочитывает конфиг, и до самого конца загрузки молча
+    /// закрывает всё, что успело подключиться (tunnel.isHandle — status !=
+    /// Running, ни строки в лог). Снаружи это неотличимо от мёртвого сервера:
+    /// проба видит закрытое соединение. При живом туннеле ядро замера доходит
+    /// до Running за 1.3-1.8 с (замерено на Pixel 6a; без туннеля — за
+    /// полсекунды), и до этого момента падает ВЕСЬ батч разом — именно это и
+    /// выглядело как «при включённом VPN пинг не работает».
+    private const val CORE_WAKEUP_GRACE_MS = 3_000L
+
+    /// Проба, которая не принимает загружающееся ядро за мёртвый сервер.
+    ///
+    /// Повтор только у mihomo и только в первые секунды жизни процесса: у
+    /// xray листенеры поднимаются последними, там открытый порт и есть
+    /// готовность. [coreAwake] снимает ожидание досрочно — как только кто-то
+    /// в батче ответил, ядро точно работает.
+    private fun probeAwaitingCore(
+        testUrl: String,
+        port: Int,
+        timeoutMs: Int,
+        keepAlive: Boolean,
+        core: String,
+        coreStartedAt: Long,
+        coreAwake: AtomicBoolean?,
+    ): Result {
+        while (true) {
+            val result = httpProbeViaSocks(testUrl, port, timeoutMs, keepAlive)
+            if (result.success) {
+                coreAwake?.set(true)
+                return result
+            }
+            if (core != CORE_MIHOMO) return result
+            if (coreAwake?.get() == true) return result
+            if (System.currentTimeMillis() - coreStartedAt >= CORE_WAKEUP_GRACE_MS) return result
+            Thread.sleep(200)
+        }
+    }
 
     private fun httpProbeViaSocks(
         url: String,
