@@ -45,6 +45,7 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         const val METHOD_CHANNEL         = "keqdis_vpn_channel"
         const val EVENT_CHANNEL          = "keqdis_vpn_status"
+        const val PING_PROGRESS_CHANNEL  = "keqdis_ping_progress"
         const val EXTRA_LAUNCH_ACTION    = "action"
         // Значения EXTRA_LAUNCH_ACTION, которые обрабатывает Dart (servers_tab).
         // Держатся здесь, чтобы ярлыки из res/xml/shortcuts.xml и уведомление
@@ -92,6 +93,12 @@ class MainActivity : FlutterFragmentActivity() {
     private var vpnServiceBinder: KeqdisVpnService.LocalBinder? = null
     private var methodChannel: MethodChannel? = null
     private var eventChannel: EventChannel? = null
+
+    // Результаты общего замера по одному, пока батч ещё идёт (см.
+    // EphemeralXrayPing.urlTestMulti, onEach). Нет слушателя — просто молчим:
+    // итоговый список всё равно приходит ответом на вызов.
+    private var pingProgressChannel: EventChannel? = null
+    private var pingProgressSink: EventChannel.EventSink? = null
 
     // Был ли bindService успешен: unbindService без привязки кидает
     // IllegalArgumentException.
@@ -183,6 +190,19 @@ class MainActivity : FlutterFragmentActivity() {
         ensureVpnServiceBound()
         setupMethodChannel(flutterEngine)
         setupEventChannel(flutterEngine)
+        pingProgressChannel = EventChannel(
+            flutterEngine.dartExecutor.binaryMessenger, PING_PROGRESS_CHANNEL,
+        ).also { ch ->
+            ch.setStreamHandler(object : EventChannel.StreamHandler {
+                override fun onListen(args: Any?, sink: EventChannel.EventSink) {
+                    pingProgressSink = sink
+                }
+
+                override fun onCancel(args: Any?) {
+                    pingProgressSink = null
+                }
+            })
+        }
         registerVpnStatusReceiver()
         // После setupMethodChannel: слушатель шлёт цвета в Dart и без канала
         // ронял бы их в пустоту.
@@ -643,6 +663,7 @@ class MainActivity : FlutterFragmentActivity() {
                                 keepAlive,
                                 concurrency,
                                 core,
+                                call.argument<String>("batchId"),
                                 result,
                             )
                         }
@@ -1031,8 +1052,26 @@ class MainActivity : FlutterFragmentActivity() {
         keepAlive: Boolean,
         concurrency: Int,
         core: String,
+        batchId: String?,
         result: MethodChannel.Result,
     ) {
+        // Синк живёт на главном потоке, а пробы отвечают из пула.
+        val onEach: ((EphemeralXrayPing.BatchResult) -> Unit)? = batchId?.let { id ->
+            { item ->
+                mainScope.launch {
+                    pingProgressSink?.success(
+                        mapOf(
+                            "batch" to id,
+                            "id" to item.id,
+                            "success" to item.result.success,
+                            "latencyMs" to item.result.latencyMs,
+                            "error" to item.result.error,
+                            "httpStatus" to item.result.httpStatus,
+                        ),
+                    )
+                }
+            }
+        }
         mainScope.launch {
             val payload = withContext(Dispatchers.IO) {
                 runCatching {
@@ -1053,6 +1092,7 @@ class MainActivity : FlutterFragmentActivity() {
                         keepAlive = keepAlive,
                         concurrency = concurrency,
                         core = core,
+                        onEach = onEach,
                     )
                 }.getOrElse { e ->
                     emptyList<EphemeralXrayPing.BatchResult>()
@@ -1382,8 +1422,11 @@ class MainActivity : FlutterFragmentActivity() {
 
         methodChannel?.setMethodCallHandler(null)
         eventChannel?.setStreamHandler(null)
+        pingProgressChannel?.setStreamHandler(null)
         methodChannel = null
         eventChannel  = null
+        pingProgressChannel = null
+        pingProgressSink = null
 
         permissionRequestInFlight = false
         pendingPermissionResult?.error(

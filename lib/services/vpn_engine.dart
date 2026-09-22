@@ -124,6 +124,7 @@ class VpnEngine {
     int timeoutMs = 15000,
     bool keepAlive = true,
     int concurrency = 16,
+    UrlTestProgress? onEach,
   }) =>
       _backend.xrayUrlTestMulti(
         config: config,
@@ -133,6 +134,7 @@ class VpnEngine {
         timeoutMs: timeoutMs,
         keepAlive: keepAlive,
         concurrency: concurrency,
+        onEach: onEach,
       );
 
   Future<({bool success, int? latencyMs, String error, int? httpStatus})>

@@ -24,24 +24,22 @@ void main() {
       expect(verdict.nextId, isNull);
     });
 
-    test('ответил хоть на тишине в туннеле — всё равно остаёмся', () {
-      // Тишина могла быть случайной; свежий замер сильнее догадки.
+    test('медленный ответ — всё равно ответ', () {
       final verdict = AutoServerSelect.judge(
         currentId: 'cur',
         results: [_ok('cur', 900)],
         batchComplete: false,
-        currentPresumedDead: true,
       );
       expect(verdict.nextId, isNull);
       expect(verdict.decided, isTrue);
     });
 
-    test('слабый сигнал и нет ответа от текущего — ждём его вердикта', () {
-      // Одиночный отказ в логе — не повод уходить, пока сам сервер не
-      // провалил замер: сосед ответил раньше, но это ничего не значит.
+    test('пока текущий не ответил, соседи ничего не решают', () {
+      // Результаты приходят по мере готовности. Сервер, который просто
+      // дальше соседей, иначе проигрывал бы гонку и покидался живым.
       final verdict = AutoServerSelect.judge(
         currentId: 'cur',
-        results: [_ok('other', 40)],
+        results: [_ok('a', 40), _ok('b', 60), _ok('c', 90)],
         batchComplete: false,
       );
       expect(verdict.decided, isFalse);
@@ -68,14 +66,24 @@ void main() {
       expect(verdict.nextId, 'alive');
     });
 
-    test('на тишине не ждём таймаута мёртвого, если сосед уже ответил', () {
+    test('отказ текущего и первый живой сосед — не ждём конца замера', () {
+      // Живой тест: Vless отказал через 0,7 с, а замер ещё 3,7 с ждал
+      // таймаута сервера, который к решению отношения не имел.
       final verdict = AutoServerSelect.judge(
         currentId: 'cur',
-        results: [_ok('alive', 80)],
+        results: [_dead('cur'), _ok('alive', 80)],
         batchComplete: false,
-        currentPresumedDead: true,
       );
       expect(verdict.nextId, 'alive');
+    });
+
+    test('отказ текущего, соседи ещё молчат — ждём соседей', () {
+      final verdict = AutoServerSelect.judge(
+        currentId: 'cur',
+        results: [_dead('cur'), _dead('x')],
+        batchComplete: false,
+      );
+      expect(verdict.decided, isFalse);
     });
 
     test('не ответил никто — остаёмся: это сеть или всё сразу', () {

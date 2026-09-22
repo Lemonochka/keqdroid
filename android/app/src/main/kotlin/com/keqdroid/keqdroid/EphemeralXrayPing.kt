@@ -279,6 +279,7 @@ object EphemeralXrayPing {
         keepAlive: Boolean = true,
         concurrency: Int = 16,
         core: String = CORE_XRAY,
+        onEach: ((BatchResult) -> Unit)? = null,
     ): List<BatchResult> {
         if (probes.isEmpty()) return emptyList()
 
@@ -318,7 +319,7 @@ object EphemeralXrayPing {
             try {
                 val tasks = probes.map { probe ->
                     Callable {
-                        BatchResult(
+                        val item = BatchResult(
                             probe.id,
                             probeAwaitingCore(
                                 testUrl, probe.port, timeoutMs, keepAlive,
@@ -327,6 +328,11 @@ object EphemeralXrayPing {
                                 coreAwake = coreAwake,
                             ),
                         )
+                        // Сразу, а не с концом батча: автовыбору хватает ответа
+                        // своего сервера и одного живого соседа, а батч держит
+                        // до таймаута самый медленный из десяти.
+                        onEach?.let { runCatching { it(item) } }
+                        item
                     }
                 }
                 // Один срок на весь батч: пробы идут параллельно, и ждать надо

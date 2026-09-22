@@ -236,8 +236,15 @@ class AndroidTunnelBackend implements TunnelBackend {
     int timeoutMs = 15000,
     bool keepAlive = true,
     int concurrency = 16,
+    UrlTestProgress? onEach,
   }) async {
     if (probes.isEmpty) return const [];
+    String? batchId;
+    if (onEach != null) {
+      _listenPingProgress();
+      batchId = 'batch-${_pingBatchSeq++}';
+      _pingProgressListeners[batchId] = (map) => onEach(_urlTestResult(map));
+    }
     try {
       final result = await _method.invokeMethod<List>('xrayUrlTestMulti', {
         'config': config,
@@ -247,23 +254,53 @@ class AndroidTunnelBackend implements TunnelBackend {
         'keepAlive': keepAlive,
         'concurrency': concurrency,
         'probes': probes.map((e) => {'id': e.$1, 'port': e.$2}).toList(),
+        'batchId': ?batchId,
       });
       // Пустой ответ — нативная сторона не смогла поднять батч целиком.
       // Возвращаем null: вызывающий поделит его и попробует снова.
       if (result == null || result.isEmpty) return null;
-      return result.map((raw) {
-        final map = Map<Object?, Object?>.from(raw as Map);
-        return (
-          id: map['id'] as String? ?? '',
-          success: map['success'] as bool? ?? false,
-          latencyMs: (map['latencyMs'] as num?)?.toInt(),
-          error: map['error'] as String? ?? '',
-          httpStatus: (map['httpStatus'] as num?)?.toInt(),
-        );
-      }).toList();
+      return [
+        for (final raw in result)
+          _urlTestResult(Map<Object?, Object?>.from(raw as Map)),
+      ];
     } on PlatformException {
       return null;
+    } finally {
+      if (batchId != null) _pingProgressListeners.remove(batchId);
     }
+  }
+
+  static ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+      _urlTestResult(Map<Object?, Object?> map) => (
+            id: map['id'] as String? ?? '',
+            success: map['success'] as bool? ?? false,
+            latencyMs: (map['latencyMs'] as num?)?.toInt(),
+            error: map['error'] as String? ?? '',
+            httpStatus: (map['httpStatus'] as num?)?.toInt(),
+          );
+
+  /// Результаты общего замера по одному, пока батч ещё идёт.
+  ///
+  /// Подписка одна на всё время жизни и заводится до первого вызова: канал
+  /// шлёт в никуда, пока его не слушают, а итоговый список всё равно
+  /// приходит ответом на вызов — ранние результаты лишь ускоряют, а не
+  /// заменяют его.
+  static const _pingProgress = EventChannel('keqdis_ping_progress');
+  static StreamSubscription<dynamic>? _pingProgressSub;
+  static final _pingProgressListeners =
+      <String, void Function(Map<Object?, Object?>)>{};
+  static var _pingBatchSeq = 0;
+
+  static void _listenPingProgress() {
+    _pingProgressSub ??= _pingProgress.receiveBroadcastStream().listen(
+      (event) {
+        if (event is! Map) return;
+        final batch = event['batch'];
+        if (batch is! String) return;
+        _pingProgressListeners[batch]?.call(Map<Object?, Object?>.from(event));
+      },
+      onError: (_) {},
+    );
   }
 
   @override

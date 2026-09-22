@@ -882,7 +882,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           settings,
           testUrl: await _autoSelectTestUrl(),
           timeoutSeconds: AutoSelectWatchdog.judgeTimeoutSeconds,
-          onResult: (r) => measure.results[r.serverId] = entry(r),
+          onResult: (r) => measure.add(entry(r)),
         );
         for (final r in results) {
           measure.results[r.serverId] = entry(r);
@@ -903,7 +903,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           stackTrace: st,
         );
       } finally {
-        measure.complete = true;
+        measure.finish();
       }
     }();
     return measure;
@@ -961,7 +961,6 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     await _autoSelectDecide(
       target.server,
       _autoSelectStartMeasure(target.server, target.subId),
-      presumedDead: stalled,
     );
   }
 
@@ -999,7 +998,6 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     await _autoSelectDecide(
       target.server,
       _autoSelectStartMeasure(target.server, target.subId),
-      presumedDead: false,
     );
   }
 
@@ -1007,17 +1005,16 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   ///
   /// Уйти с сервера можно только если он сам не ответил на свежий замер, и
   /// только на тот, кто ответил. Не ответил никто — остаёмся: это сеть или
-  /// всё сразу, и переезд ничего не даст. [presumedDead] — сигналом была
-  /// тишина в ответ; тогда хватает того, что соседи ответили раньше него.
-  /// Пока судья решает, прослушка стоит ([_autoSelectBusy]): трафик его
+  /// всё сразу, и переезд ничего не даст. Решение пересматривается с каждым
+  /// пришедшим результатом: отказ текущего и первый живой сосед — и переезд,
+  /// не дожидаясь, пока остальные упрутся в таймаут. Пока судья решает, прослушка стоит ([_autoSelectBusy]): трафик его
   /// замера она приняла бы за ответ сервера.
   /// Переезд идёт тем же путём, которым сервер меняет человек, и не чаще
   /// [AutoSelectWatchdog.maxSwitchesPerWindow] раз за окно.
   Future<void> _autoSelectDecide(
     ServerItem server,
-    _AutoSelectMeasure measure, {
-    required bool presumedDead,
-  }) async {
+    _AutoSelectMeasure measure,
+  ) async {
     if (_autoSelectBusy) return;
     _autoSelectBusy = true;
     var switched = false;
@@ -1026,15 +1023,13 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         currentId: server.id,
         results: measure.results.values,
         batchComplete: measure.complete,
-        currentPresumedDead: presumedDead,
       );
-      if (!verdict.decided) {
-        await measure.done;
+      while (!verdict.decided) {
+        await measure.changed;
         verdict = AutoServerSelect.judge(
           currentId: server.id,
           results: measure.results.values,
-          batchComplete: true,
-          currentPresumedDead: presumedDead,
+          batchComplete: measure.complete,
         );
       }
       final nextId = verdict.nextId;
@@ -1160,4 +1155,24 @@ class _AutoSelectMeasure {
   final results = <String, ({String id, bool success, int? latencyMs})>{};
   bool complete = false;
   Future<void> done = Future<void>.value();
+  var _changed = Completer<void>();
+
+  /// Дождаться следующего результата или конца замера.
+  Future<void> get changed => complete ? Future<void>.value() : _changed.future;
+
+  void add(({String id, bool success, int? latencyMs}) result) {
+    results[result.id] = result;
+    _signal();
+  }
+
+  void finish() {
+    complete = true;
+    _signal();
+  }
+
+  void _signal() {
+    final fired = _changed;
+    _changed = Completer<void>();
+    fired.complete();
+  }
 }

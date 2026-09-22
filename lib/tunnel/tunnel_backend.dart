@@ -2,6 +2,12 @@ import 'tunnel_session_request.dart';
 import 'vpn_backend.dart';
 import 'tunnel_state.dart';
 
+/// Результат одной пробы общего замера, пока остальные ещё идут.
+typedef UrlTestProgress = void Function(
+  ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+      result,
+);
+
 /// бэкенд туннеля: android VpnService, windows процессы + tun
 abstract class TunnelBackend {
   Stream<VpnState> get stateStream;
@@ -77,6 +83,7 @@ abstract class TunnelBackend {
     int timeoutMs = 15000,
     bool keepAlive = true,
     int concurrency = 16,
+    UrlTestProgress? onEach,
   }) async =>
       null;
 

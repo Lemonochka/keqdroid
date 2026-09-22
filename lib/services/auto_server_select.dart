@@ -100,7 +100,7 @@ abstract final class AutoServerSelect {
     return [current, ...others.take(limit - 1)];
   }
 
-  /// Что делать по свежему замеру.
+  /// Что делать по замеру — полному или ещё идущему.
   ///
   /// Правила, и все по результатам, а не по догадкам:
   ///
@@ -111,15 +111,14 @@ abstract final class AutoServerSelect {
   /// не ответил никто — остаёмся: это либо сеть, либо всё мёртвое сразу, и
   /// переезд ничего бы не дал.
   ///
-  /// [currentPresumedDead] — три секунды через туннель не пришло ни байта.
-  /// Тогда не ждём, пока замер текущего упрётся в таймаут: если соседи уже
-  /// ответили, а он нет, этого достаточно. Для слабых сигналов ждём вердикта
-  /// по нему самому — [undecided], пока замер не закончен.
+  /// Пока своего ответа у текущего нет, соседи ничего не решают, сколько бы
+  /// их ни ответило: результаты приходят по мере готовности, и сервер, который
+  /// просто дальше соседей, иначе проигрывал бы гонку и покидался живым.
+  /// Пробы стартуют разом, поэтому первый ответивший и есть самый быстрый.
   static AutoSelectVerdict judge({
     required String currentId,
     required Iterable<({String id, bool success, int? latencyMs})> results,
     required bool batchComplete,
-    bool currentPresumedDead = false,
   }) {
     ({String id, bool success, int? latencyMs})? current;
     ({String id, bool success, int? latencyMs})? best;
@@ -134,13 +133,10 @@ abstract final class AutoServerSelect {
       }
     }
     if (current != null && current.success) return const AutoSelectVerdict.stay();
-
-    final currentFailed = current != null && !current.success;
-    if (currentFailed || currentPresumedDead || batchComplete) {
-      if (best != null) return AutoSelectVerdict.switchTo(best.id);
-      if (batchComplete) return const AutoSelectVerdict.stay();
-    }
-    return const AutoSelectVerdict.undecided();
+    if (current != null && best != null) return AutoSelectVerdict.switchTo(best.id);
+    return batchComplete
+        ? const AutoSelectVerdict.stay()
+        : const AutoSelectVerdict.undecided();
   }
 }
 

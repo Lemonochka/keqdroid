@@ -679,6 +679,19 @@ class PingService {
     }
     if (probes.isEmpty) return failed;
 
+    final byId = {for (final server in measured) server.id: server};
+    PingResult toResult(ServerItem server, bool success, int? latencyMs, String error) =>
+        PingResult(
+          serverId: server.id,
+          serverName: server.displayName,
+          latencyMs: latencyMs,
+          success: success,
+          error: error,
+          pingType: PingType.url,
+        );
+    // Кому результат уже отдан по ходу батча: в итоговом списке он повторится.
+    final reported = <String>{};
+
     List<({String id, bool success, int? latencyMs, String error, int? httpStatus})>?
         raw;
     try {
@@ -691,6 +704,13 @@ class PingService {
         testUrl: testUrl,
         timeoutMs: timeoutMs,
         keepAlive: settings.pingKeepAlive,
+        onEach: onResult == null
+            ? null
+            : (item) {
+                final server = byId[item.id];
+                if (server == null || !reported.add(item.id)) return;
+                onResult(toResult(server, item.success, item.latencyMs, item.error));
+              },
       );
     } catch (_) {
       raw = null;
@@ -721,20 +741,12 @@ class PingService {
       return [...failed, ...left, ...right];
     }
 
-    final byId = {for (final server in measured) server.id: server};
     final results = <PingResult>[];
     for (final item in raw) {
       final server = byId[item.id];
       if (server == null) continue;
-      final result = PingResult(
-        serverId: server.id,
-        serverName: server.displayName,
-        latencyMs: item.latencyMs,
-        success: item.success,
-        error: item.error,
-        pingType: PingType.url,
-      );
-      onResult?.call(result);
+      final result = toResult(server, item.success, item.latencyMs, item.error);
+      if (!reported.contains(item.id)) onResult?.call(result);
       results.add(result);
     }
     return [...failed, ...results];
