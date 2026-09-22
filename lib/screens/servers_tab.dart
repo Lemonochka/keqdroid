@@ -14,6 +14,7 @@ import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
 import 'package:keqdroid/shared/ui/server_group_anchors.dart';
+import 'package:keqdroid/shared/ui/scroll_hidden_fab.dart';
 import 'package:keqdroid/shared/ui/scroll_jump_overlay.dart';
 import 'package:keqdroid/shared/ui/server_row.dart';
 import 'package:keqdroid/shared/ui/shape_morph.dart';
@@ -784,48 +785,48 @@ class _ServersTabState extends ConsumerState<ServersTab>
       // Над нижним градиентом списка и на одной линии с кнопкой добавления.
       bottomInset: 20 + bottomInset,
       child: SizedBox.expand(
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              child,
+          // Отступ кнопки от края — 16 по спеке. Размер, форма, глиф и тень
+          // приходят из темы FAB: здесь их переопределяли по месту, и кнопка
+          // разъезжалась с двумя другими такими же в приложении.
+          child: ScrollHiddenFab(
+            right: 16,
+            bottom: 16 + bottomInset,
+            fab: FloatingActionButton(
+              heroTag: 'servers_add_server_fab',
+              backgroundColor: AppTheme.accentContainer(context),
+              foregroundColor: AppTheme.onAccentContainer(context),
+              onPressed: () => _showAddServerDialog(context),
+              child: const Icon(Icons.add_rounded),
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                child,
 
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: 56 + bottomInset,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppTheme.bg(context).withValues(alpha: 0.0),
-                          AppTheme.bg(context).withValues(alpha: 1.0),
-                          AppTheme.bg(context),
-                        ],
-                        stops: const [0.0, 0.55, 1.0],
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 56 + bottomInset,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppTheme.bg(context).withValues(alpha: 0.0),
+                            AppTheme.bg(context).withValues(alpha: 1.0),
+                            AppTheme.bg(context),
+                          ],
+                          stops: const [0.0, 0.55, 1.0],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              // Отступ от края — 16 по спеке. Размер, форма, глиф и тень
-              // приходят из темы FAB: здесь их переопределяли по месту, и
-              // кнопка разъезжалась с двумя другими такими же в приложении.
-              Positioned(
-                right: 16,
-                bottom: 16 + bottomInset,
-                child: FloatingActionButton(
-                  heroTag: 'servers_add_server_fab',
-                  backgroundColor: AppTheme.accentContainer(context),
-                  foregroundColor: AppTheme.onAccentContainer(context),
-                  onPressed: () => _showAddServerDialog(context),
-                  child: const Icon(Icons.add_rounded),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
     );
