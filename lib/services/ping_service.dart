@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../models/app_settings.dart';
+import '../platform/platform_bootstrap.dart';
 import '../models/ping_test_config.dart';
 import '../models/server_item.dart';
 import '../services/vpn_engine.dart';
@@ -435,15 +436,19 @@ class PingService {
     return results.first;
   }
 
-  /// Сколько url-замеров идёт одновременно.
+  /// Сколько url-замеров идёт одновременно на поштучном пути.
   ///
-  /// Каждый такой замер — отдельный процесс ядра со своим Go-рантаймом, поэтому
-  /// «все разом» на телефоне не вариант. Но и по одному нельзя: замер упирается
-  /// не в процессор, а в ожидание сети, и подписка из двух десятков серверов
-  /// складывалась в полминуты — при том, что мёртвый сервер выкупает весь
-  /// таймаут целиком. Шесть ядер телефон держит спокойно, а время всей подписки
-  /// упирается уже в самый медленный сервер, а не в их сумму.
-  static const urlPingConcurrency = 6;
+  /// Каждый такой замер — отдельный процесс ядра со своим Go-рантаймом, и
+  /// упирается это не во время старта (оно около 70 мс), а в память: замерено —
+  /// 28 МБ на процесс у keqrnel, 19 МБ у mihomo. По одному нельзя тем более:
+  /// замер ждёт сеть, а мёртвый сервер выкупает весь таймаут и держит слот, за
+  /// которым стоят живые.
+  ///
+  /// Отсюда и разные числа. На десктопе шестнадцать замеров — это 450 МБ на
+  /// несколько секунд, и машина этого не замечает. На телефоне столько держать
+  /// негде, поэтому там шесть, а подписку целиком меряет общий конфиг
+  /// ([multiPingSupported]), где процесс один на десяток серверов.
+  static int get urlPingConcurrency => PlatformBootstrap.isDesktop ? 16 : 6;
 
   /// батч url-пинга: dns параллельно, замеры пулом воркеров.
   ///
@@ -457,9 +462,10 @@ class PingService {
     int timeoutSeconds = 15,
     Map<String, String>? resolvedIps,
     void Function(PingResult)? onResult,
-    int concurrency = urlPingConcurrency,
+    int? concurrency,
   }) async {
     if (servers.isEmpty) return [];
+    final workers = concurrency ?? urlPingConcurrency;
 
     final ips = resolvedIps ?? await _resolveServerIps(servers);
     final takenPorts = <int>{};
@@ -502,7 +508,7 @@ class PingService {
             }
           }
         }
-        final rest = await mapPooled(singles, concurrency, (server) async {
+        final rest = await mapPooled(singles, workers, (server) async {
           final result = await _pingUrlSingle(
             server,
             settings,
@@ -533,7 +539,7 @@ class PingService {
       }
     }
 
-    return mapPooled(servers, concurrency, (server) async {
+    return mapPooled(servers, workers, (server) async {
       final result = await _pingUrlSingle(
         server,
         settings,

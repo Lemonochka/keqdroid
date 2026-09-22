@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/services/ping_service.dart';
 
 /// Кого можно измерить общим конфигом, а кого нельзя.
@@ -57,6 +58,18 @@ proxies:
     PingService.debugMultiPingSupported = true;
     addTearDown(() => PingService.debugMultiPingSupported = null);
     expect(PingService.multiPingSupported, isTrue);
+  });
+
+  test('на десктопе замеров идёт больше, чем на телефоне', () {
+    // Цена замера — процесс ядра: 28 МБ у keqrnel, 19 у mihomo (замерено).
+    // На ПК шестнадцать таких стоят 450 МБ на несколько секунд, на телефоне
+    // столько не удержать — там подписку меряет общий конфиг.
+    PlatformBootstrap.debugIsDesktopOverride = true;
+    addTearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
+    expect(PingService.urlPingConcurrency, 16);
+
+    PlatformBootstrap.debugIsDesktopOverride = false;
+    expect(PingService.urlPingConcurrency, 6);
   });
 
   test('размер чанка не «все разом»', () {
