@@ -474,13 +474,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayDnsHosts => '为域名指定地址';
 
   @override
-  String get settingsXrayDnsHostsHint => '每行一条：域名和地址。多个地址用逗号分隔；也可以写另一个域名，内核会改为解析它。《*.example.com》包括该域名及其子域名。';
-
-  @override
   String get settingsXrayDnsPolicy => '为特定域名指定解析器';
-
-  @override
-  String get settingsXrayDnsPolicyHint => '每行一条：域名和负责解析它的服务器。地址格式与上面的列表相同。这类域名不会回退到通用列表。';
 
   @override
   String get settingsXrayDnsQueryStrategy => '查询策略';
@@ -543,7 +537,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayConcurrentDial => '同时连接所有地址';
 
   @override
-  String get settingsXrayConcurrentDialHint => '服务器域名通常解析出多个地址。内核会同时尝试它们并保留最先响应的那个，而不是在被封锁的地址上等待超时。链式代理中不生效。';
+  String get settingsXrayConcurrentDialHint => '当服务器的部分地址被封锁时有用';
 
   @override
   String get settingsXraySniffing => '识别流量中的域名（嗅探）';

@@ -474,13 +474,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayDnsHosts => 'Own addresses for domains';
 
   @override
-  String get settingsXrayDnsHostsHint => 'One entry per line: domain and address. Several addresses go comma-separated, and another domain in place of an address means resolve that one instead. «*.example.com» covers the domain and its subdomains.';
-
-  @override
   String get settingsXrayDnsPolicy => 'Resolver for specific domains';
-
-  @override
-  String get settingsXrayDnsPolicyHint => 'One entry per line: a domain and the resolver to ask about it. Addresses use the same syntax as the server list above. Such a domain never falls back to the general list.';
 
   @override
   String get settingsXrayDnsQueryStrategy => 'Query strategy';
@@ -543,7 +537,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayConcurrentDial => 'Dial every address at once';
 
   @override
-  String get settingsXrayConcurrentDialHint => 'A server domain usually resolves to several addresses. The core races them and keeps the one that answers first, instead of waiting out a timeout on a blocked address. Does not apply inside chains.';
+  String get settingsXrayConcurrentDialHint => 'Helps when some of the server\'s addresses are blocked';
 
   @override
   String get settingsXraySniffing => 'Detect domains in traffic (sniffing)';

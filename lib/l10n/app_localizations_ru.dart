@@ -476,13 +476,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayDnsHosts => 'Свои адреса для доменов';
 
   @override
-  String get settingsXrayDnsHostsHint => 'По записи на строку: домен и адрес. Адресов можно несколько через запятую, а вместо адреса — другой домен: ядро резолвит его. «*.example.com» — домен и его поддомены.';
-
-  @override
   String get settingsXrayDnsPolicy => 'Резолвер для отдельных доменов';
-
-  @override
-  String get settingsXrayDnsPolicyHint => 'По записи на строку: домен и резолвер, у которого его спрашивать. Адреса — в том же виде, что и в списке выше. На общий список такой домен уже не откатывается.';
 
   @override
   String get settingsXrayDnsQueryStrategy => 'Стратегия запросов';
@@ -545,7 +539,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayConcurrentDial => 'Дозвон по всем адресам сразу';
 
   @override
-  String get settingsXrayConcurrentDialHint => 'Домен сервера обычно резолвится в несколько адресов. Ядро пробует их одновременно и оставляет тот, что ответил первым, вместо ожидания таймаута на заблокированном. В цепочках не действует.';
+  String get settingsXrayConcurrentDialHint => 'Помогает, когда часть адресов сервера заблокирована';
 
   @override
   String get settingsXraySniffing => 'Определять домены в трафике (sniffing)';

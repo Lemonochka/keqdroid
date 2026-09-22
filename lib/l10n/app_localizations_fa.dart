@@ -474,13 +474,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayDnsHosts => 'Own addresses for domains';
 
   @override
-  String get settingsXrayDnsHostsHint => 'One entry per line: domain and address. Several addresses go comma-separated. «*.example.com» covers the domain and its subdomains.';
-
-  @override
   String get settingsXrayDnsPolicy => 'Resolver for specific domains';
-
-  @override
-  String get settingsXrayDnsPolicyHint => 'One entry per line: a domain and the resolver to ask about it. Addresses use the same syntax as the server list above.';
 
   @override
   String get settingsXrayDnsQueryStrategy => 'استراتژی پرس‌وجو';
@@ -543,7 +537,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayConcurrentDial => 'Dial every address at once';
 
   @override
-  String get settingsXrayConcurrentDialHint => 'A server domain usually resolves to several addresses. The core races them and keeps the one that answers first. Does not apply inside chains.';
+  String get settingsXrayConcurrentDialHint => 'وقتی بخشی از نشانی‌های سرور مسدود است کمک می‌کند';
 
   @override
   String get settingsXraySniffing => 'شناسایی دامنه در ترافیک (sniffing)';

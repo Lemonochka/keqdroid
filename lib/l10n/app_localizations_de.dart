@@ -474,13 +474,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayDnsHosts => 'Eigene Adressen fur Domains';
 
   @override
-  String get settingsXrayDnsHostsHint => 'Ein Eintrag pro Zeile: Domain und Adresse. Mehrere Adressen durch Komma trennen; statt einer Adresse kann eine andere Domain stehen, die der Kern dann auflost. «*.example.com» umfasst die Domain und ihre Subdomains.';
-
-  @override
   String get settingsXrayDnsPolicy => 'Resolver fur einzelne Domains';
-
-  @override
-  String get settingsXrayDnsPolicyHint => 'Ein Eintrag pro Zeile: eine Domain und der Resolver, der sie beantwortet. Adressen wie in der Liste oben. Auf die allgemeine Liste fallt eine solche Domain nicht zuruck.';
 
   @override
   String get settingsXrayDnsQueryStrategy => 'Abfragestrategie';
@@ -543,7 +537,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayConcurrentDial => 'Alle Adressen gleichzeitig anwahlen';
 
   @override
-  String get settingsXrayConcurrentDialHint => 'Eine Server-Domain lost meist auf mehrere Adressen auf. Der Kern probiert sie gleichzeitig und behalt die erste Antwort, statt bei einer gesperrten Adresse auf den Timeout zu warten. In Ketten ohne Wirkung.';
+  String get settingsXrayConcurrentDialHint => 'Hilft, wenn ein Teil der Serveradressen gesperrt ist';
 
   @override
   String get settingsXraySniffing => 'Domains im Verkehr erkennen (Sniffing)';

@@ -965,23 +965,11 @@ abstract class AppLocalizations {
   /// **'Own addresses for domains'**
   String get settingsXrayDnsHosts;
 
-  /// No description provided for @settingsXrayDnsHostsHint.
-  ///
-  /// In en, this message translates to:
-  /// **'One entry per line: domain and address. Several addresses go comma-separated, and another domain in place of an address means resolve that one instead. «*.example.com» covers the domain and its subdomains.'**
-  String get settingsXrayDnsHostsHint;
-
   /// No description provided for @settingsXrayDnsPolicy.
   ///
   /// In en, this message translates to:
   /// **'Resolver for specific domains'**
   String get settingsXrayDnsPolicy;
-
-  /// No description provided for @settingsXrayDnsPolicyHint.
-  ///
-  /// In en, this message translates to:
-  /// **'One entry per line: a domain and the resolver to ask about it. Addresses use the same syntax as the server list above. Such a domain never falls back to the general list.'**
-  String get settingsXrayDnsPolicyHint;
 
   /// No description provided for @settingsXrayDnsQueryStrategy.
   ///
@@ -1106,7 +1094,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXrayConcurrentDialHint.
   ///
   /// In en, this message translates to:
-  /// **'A server domain usually resolves to several addresses. The core races them and keeps the one that answers first, instead of waiting out a timeout on a blocked address. Does not apply inside chains.'**
+  /// **'Helps when some of the server\'s addresses are blocked'**
   String get settingsXrayConcurrentDialHint;
 
   /// No description provided for @settingsXraySniffing.

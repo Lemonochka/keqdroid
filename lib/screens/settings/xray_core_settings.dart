@@ -287,7 +287,6 @@ class _XrayDnsSection extends ConsumerWidget {
                 initialValue: core.dnsHosts,
                 label: l10n.settingsXrayDnsHosts,
                 hintText: 'example.com 10.0.0.5',
-                helperText: l10n.settingsXrayDnsHostsHint,
                 onSave: (v) =>
                     _saveXrayCore(ref, settings, core.copyWith(dnsHosts: v)),
               ),
@@ -298,7 +297,6 @@ class _XrayDnsSection extends ConsumerWidget {
                 initialValue: core.dnsPolicy,
                 label: l10n.settingsXrayDnsPolicy,
                 hintText: 'home.lan 192.168.1.1',
-                helperText: l10n.settingsXrayDnsPolicyHint,
                 onSave: (v) =>
                     _saveXrayCore(ref, settings, core.copyWith(dnsPolicy: v)),
               ),
@@ -1516,7 +1514,6 @@ class _DnsServersField extends StatefulWidget {
     required this.label,
     required this.onSave,
     this.hintText = 'https+local://1.1.1.1/dns-query',
-    this.helperText,
   });
 
   final String initialValue;
@@ -1525,10 +1522,6 @@ class _DnsServersField extends StatefulWidget {
 
   /// Пример строки внутри поля.
   final String hintText;
-
-  /// Подпись под полем: у списка резолверов синтаксис знаком по другим
-  /// клиентам, а у своих адресов и резолверов по доменам — нет.
-  final String? helperText;
 
   @override
   State<_DnsServersField> createState() => _DnsServersFieldState();
@@ -1593,8 +1586,6 @@ class _DnsServersFieldState extends State<_DnsServersField> {
       decoration: InputDecoration(
         labelText: widget.label,
         hintText: widget.hintText,
-        helperText: widget.helperText,
-        helperMaxLines: 6,
         alignLabelWithHint: true,
         filled: true,
         fillColor: AppTheme.bg(context).withValues(alpha: 0.55),
