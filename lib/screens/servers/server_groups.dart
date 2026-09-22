@@ -193,17 +193,25 @@ class _GroupHeaderBackground extends StatelessWidget {
   ///
   /// Переключатель «Авто» занимает свою строку, а не втискивается в ряд с
   /// иконками: там у каждой кнопки 32dp с зазором в 8, и ещё одна цель рядом
-  /// означала бы промахи пальцем по соседней. Платят за строку только те
-  /// подписки, где плашка включена.
+  /// означала бы промахи пальцем по соседней.
+  ///
+  /// Но и целой строки шапка не получает: у группы с картинкой под заголовком
+  /// уже есть полоса растворения, и кнопка садится на неё. Шапка вырастает на
+  /// разницу, то есть на десяток точек, а не на сорок — иначе включённая
+  /// плашка раздувала бы карточку у каждой подписки.
   static double heightFor(Subscription? subscription, {required bool collapsed}) {
     if (collapsed) return _subCardRowHeight;
-    return _subCardRowHeight +
-        (_showsImage(subscription) ? fadeHeight : 0) +
-        (subscription?.autoSelectVisible == true ? autoRowHeight : 0);
+    final below = [
+      if (_showsImage(subscription)) fadeHeight,
+      if (subscription?.autoSelectVisible == true) autoRowHeight,
+      0.0,
+    ].reduce((a, b) => a > b ? a : b);
+    return _subCardRowHeight + below;
   }
 
-  /// Строка с переключателем «Авто»: сама кнопка 32dp плюс зазоры.
-  static const autoRowHeight = 44.0;
+  /// Полоса под заголовком, когда в ней живёт переключатель «Авто»: сама
+  /// кнопка 30dp плюс по три точки сверху и снизу.
+  static const autoRowHeight = 36.0;
 
   /// Именно `hasImage`, а не «тема выбрана»: у палитровой темы картинки нет
   /// вовсе, и шапка вырастала на [fadeHeight] пустоты — подложку из ролей
@@ -276,8 +284,7 @@ class _GroupHeaderBackground extends StatelessWidget {
             // нажатия до неё не доходили — попадание проверяется по границам
             // родителя, и за ними его нет.
             child: SizedBox(
-              height: _subCardRowHeight +
-                  (!collapsed && sub.autoSelectVisible ? autoRowHeight : 0),
+              height: heightFor(sub, collapsed: collapsed),
               child: child,
             ),
           ),
@@ -805,32 +812,36 @@ class _AutoSelectRow extends ConsumerWidget {
     return SizedBox(
       height: _GroupHeaderBackground.autoRowHeight,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 14, 8),
+        padding: const EdgeInsets.fromLTRB(16, 3, 14, 3),
         child: Align(
           alignment: AlignmentDirectional.centerStart,
           child: Tooltip(
             message: l10n.serversAutoSelectTooltip,
             child: Material(
-              color: on ? scheme.secondaryContainer : Colors.transparent,
+              // Залит в обоих состояниях. Контурный на фотографии читался как
+              // подпись к картинке, а не как кнопка: обводка на пёстром фоне
+              // пропадает, нажимать там визуально нечего.
+              color: on
+                  ? scheme.secondaryContainer
+                  : scheme.surfaceContainerHighest.withValues(alpha: 0.72),
               shape: RoundedRectangleBorder(
+                // Состояние всё равно показывает форма, как просит M3E у
+                // кнопок-переключателей: круглая → квадратная.
                 borderRadius: BorderRadius.circular(
                   on ? ExpressiveShape.small : ExpressiveShape.full,
                 ),
-                side: on
-                    ? BorderSide.none
-                    : BorderSide(color: AppTheme.divider(context)),
               ),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: () => unawaited(_toggle(ref, context)),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
+                    horizontal: 14,
+                    vertical: 5,
                   ),
                   child: Text(
                     l10n.serversAutoSelect,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: on
                               ? scheme.onSecondaryContainer
                               : AppTheme.text(context),
