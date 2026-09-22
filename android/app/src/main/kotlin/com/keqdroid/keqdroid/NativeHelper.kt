@@ -32,6 +32,15 @@ object NativeHelper {
     fun dialFailures(): Long = runCatching { nativeDialFailures() }.getOrDefault(0L)
 
     @JvmStatic
+    private external fun nativeSetCoreLogLevel(level: Int)
+
+    /// С какого уровня строки xray доходят до лога и logcat: 0 — все, дальше
+    /// debug, info, warning, error, none. Счётчик отказов видит все строки.
+    fun setCoreLogLevel(level: Int) {
+        runCatching { nativeSetCoreLogLevel(level) }
+    }
+
+    @JvmStatic
     private external fun nativeStartCore(
         binPath: String,
         configPath: String,

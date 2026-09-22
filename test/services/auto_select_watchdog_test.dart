@@ -91,24 +91,49 @@ void main() {
 
   group('прослушка', () {
     test('первый же отказ ядра будит судью', () {
-      // Живой тест: xray на Hysteria2 роняет отказы по одному раз в 16–50
-      // секунд. Будить — не значит менять: решает замер.
+      // Только отказ и ловит сервер, отвечающий сбросом соединения: сброс —
+      // пришедший байт, тишины нет. Будить — не значит менять: решает замер.
       expect(AutoSelectWatchdog.dialFailuresSuggestDeadServer(1), isTrue);
       expect(AutoSelectWatchdog.dialFailuresSuggestDeadServer(0), isFalse);
     });
 
-    test('ушло, но ничего не пришло — тихая секунда', () {
-      expect(
-        AutoSelectWatchdog.isSilentSecond(sent: 1200, received: 0),
-        isTrue,
-      );
-      // Живой сервер отвечает хоть чем-то, даже на чистую выгрузку —
-      // TCP-подтверждениями.
-      expect(
-        AutoSelectWatchdog.isSilentSecond(sent: 50000, received: 60),
-        isFalse,
-      );
-      expect(AutoSelectWatchdog.isSilentSecond(sent: 0, received: 0), isFalse);
+    test('живой сервер тишины не набирает', () {
+      // Отправленное подтверждается самое позднее в следующую секунду.
+      var s = const SilenceStreak();
+      for (var i = 0; i < 20; i++) {
+        s = s.next(sent: 400, received: 0);
+        expect(AutoSelectWatchdog.trafficStalled(s.silent), isFalse);
+        s = s.next(sent: 0, received: 60);
+      }
+    });
+
+    test('мёртвый сервер набирает тишину и через паузы повторов', () {
+      // Приложения долбят мёртвый сервер не каждую секунду: между повторами
+      // пустые секунды, и они счёт не сбрасывают.
+      var s = const SilenceStreak();
+      s = s.next(sent: 300, received: 0);
+      s = s.next(sent: 0, received: 0);
+      s = s.next(sent: 0, received: 0);
+      expect(AutoSelectWatchdog.trafficStalled(s.silent), isFalse);
+      s = s.next(sent: 300, received: 0);
+      expect(AutoSelectWatchdog.trafficStalled(s.silent), isTrue);
+    });
+
+    test('далёкие тихие секунды в тревогу не складываются', () {
+      var s = const SilenceStreak();
+      s = s.next(sent: 300, received: 0);
+      for (var i = 0; i <= AutoSelectWatchdog.streakGapSeconds; i++) {
+        s = s.next(sent: 0, received: 0);
+      }
+      s = s.next(sent: 300, received: 0);
+      expect(s.silent, 1);
+    });
+
+    test('любой пришедший байт — тишина с нуля', () {
+      var s = const SilenceStreak();
+      s = s.next(sent: 300, received: 0);
+      s = s.next(sent: 300, received: 1);
+      expect(s.silent, 0);
     });
 
     test('одна тихая секунда — ещё не повод', () {
@@ -121,28 +146,50 @@ void main() {
       );
     });
 
-    test('страховка верит только пришедшему', () {
+    test('страховка: ушло и ничего не пришло — зовём судью', () {
       expect(
         AutoSelectWatchdog.shouldProbe(
           connected: true,
           autoSelectOn: true,
           trafficMoved: false,
+          trafficSent: true,
         ),
         isTrue,
       );
+    });
+
+    test('страховка: пришло — сервер отвечает', () {
       expect(
         AutoSelectWatchdog.shouldProbe(
           connected: true,
           autoSelectOn: true,
           trafficMoved: true,
+          trafficSent: true,
         ),
         isFalse,
       );
+    });
+
+    test('страховка: телефон лежит — замер никто не просил', () {
+      // Живой тест: без этого ядро замера поднималось раз в полминуты.
+      expect(
+        AutoSelectWatchdog.shouldProbe(
+          connected: true,
+          autoSelectOn: true,
+          trafficMoved: false,
+          trafficSent: false,
+        ),
+        isFalse,
+      );
+    });
+
+    test('страховка молчит при выключенном автовыборе', () {
       expect(
         AutoSelectWatchdog.shouldProbe(
           connected: true,
           autoSelectOn: false,
           trafficMoved: false,
+          trafficSent: true,
         ),
         isFalse,
       );

@@ -35,11 +35,12 @@ static void *xray_log_reader(void *arg);
  * Счётчик неудачных дозвонов ядра сессии до своего сервера — тихая прослушка
  * для автовыбора.
  *
- * Оба ядра сами пишут о таком на уровне warning, то есть при настройках по
- * умолчанию эти строки и так идут через этот поток: mihomo —
- * «[TCP] dial <прокси> (match ...) ... error: ...», xray — «failed to find an
- * available destination». Считаем здесь, где строка уже в руках, а приложение
- * раз в пару секунд читает число: ни сети, ни радио, ни лишнего разбора.
+ * mihomo пишет о таком на уровне warning: «[TCP] dial <прокси> (match ...)
+ * ... error: ...». xray 26.x — только на info («failed to find an available
+ * destination» внутри «failed to process outbound traffic»), поэтому его
+ * сессия всегда работает не тише info, а лишнее срезает g_log_threshold.
+ * Считаем здесь, где строка уже в руках, а приложение раз в секунду читает
+ * число: ни сети, ни радио, ни лишнего разбора.
  *
  * Прямые соединения (DIRECT, REJECT) не считаются: мёртвый сайт — не мёртвый
  * сервер. Ядра замера сюда не попадают вовсе — у них нет файла лога, а их
@@ -66,6 +67,34 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeDialFailures(JNIEnv *env, jclass c
 }
 
 /*
+ * С какого уровня строки xray идут в лог и logcat: 0 debug, 1 info, 2 warning,
+ * 3 error, 4 none; 0 пропускает всё. Это уровень, выбранный человеком, когда
+ * сессию подняли до info ради счётчика отказов (sessionConfigFor в
+ * KeqdisVpnService): лог остаётся таким, каким он его заказывал.
+ */
+static int g_log_threshold = 0;
+
+JNIEXPORT void JNICALL
+Java_com_keqdroid_keqdroid_NativeHelper_nativeSetCoreLogLevel(
+        JNIEnv *env, jclass clazz, jint level) {
+    (void)env; (void)clazz;
+    __atomic_store_n(&g_log_threshold, (int)level, __ATOMIC_RELAXED);
+}
+
+/* Уровень строки xray по метке после времени: «2026/09/23 02:09:14.123456
+ * [Info] ...». Строка без метки (баннер, access-лог, вывод mihomo, где первая
+ * скобка — «[TCP]») не режется никогда. */
+static int xray_line_level(const char *line) {
+    const char *tag = strchr(line, '[');
+    if (!tag) return 4;
+    if (strncmp(tag, "[Debug]", 7) == 0) return 0;
+    if (strncmp(tag, "[Info]", 6) == 0) return 1;
+    if (strncmp(tag, "[Warning]", 9) == 0) return 2;
+    if (strncmp(tag, "[Error]", 7) == 0) return 3;
+    return 4;
+}
+
+/*
  * Пишет строку ядра в logcat (XTAG) и, если задан logpath, дублирует её в файл.
  * Дублирование в файл нужно потому, что на Android 13+ untrusted_app не может
  * читать logcat (SELinux), поэтому in-app экран логов опирается на этот файл.
@@ -73,10 +102,13 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeDialFailures(JNIEnv *env, jclass c
  */
 static void core_log_line(const char *logpath, const char *line) {
     if (!line || !*line) return;
+    /* Счётчик — до порога: ради него xray сессии и работает на info. */
+    if (logpath && *logpath && is_server_dial_failure(line))
+        __atomic_add_fetch(&g_dial_failures, 1, __ATOMIC_RELAXED);
+    if (xray_line_level(line) < __atomic_load_n(&g_log_threshold, __ATOMIC_RELAXED))
+        return;
     __android_log_print(ANDROID_LOG_DEBUG, XTAG, "%s", line);
     if (!logpath || !*logpath) return;
-    if (is_server_dial_failure(line))
-        __atomic_add_fetch(&g_dial_failures, 1, __ATOMIC_RELAXED);
     int lf = open(logpath, O_WRONLY | O_CREAT | O_APPEND, 0600);
     if (lf < 0) return;
     struct stat st;

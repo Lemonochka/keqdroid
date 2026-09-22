@@ -56,10 +56,10 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   /// ходит вовсе.
   Timer? _autoSelectTimer;
   Timer? _autoSelectListenTimer;
-  int _autoSelectSeenBytes = 0;
+  int _autoSelectSeenReceived = 0;
+  int _autoSelectSeenSent = 0;
   int? _autoSelectSeenFailures;
-  int _autoSelectSilentSeconds = 0;
-  _AutoSelectMeasure? _autoSelectEarlyMeasure;
+  SilenceStreak _autoSelectSilence = const SilenceStreak();
   final _autoSelectSwitches = <DateTime>[];
   DateTime? _autoSelectQuietUntil;
   bool _autoSelectBusy = false;
@@ -911,43 +911,34 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   /// Тихая прослушка: раз в секунду, без сети.
   ///
-  /// Два сигнала. Главный — «ушло, но ничего не пришло»: скорости за
-  /// последнюю секунду сервис считает сам, по трафику процесса ядра, и на
-  /// мёртвом сервере приложения продолжают слать, а в ответ не приходит ни
-  /// байта. Второй — отказ дозвона в логе ядра. Сам по себе ни один сигнал
-  /// сервер не меняет: он только зовёт судью ([_autoSelectDecide]).
+  /// Два сигнала. Первый — «ушло, но ничего не пришло»: скорости за последнюю
+  /// секунду сервис считает сам, и на мёртвом сервере приложения продолжают
+  /// слать, а в ответ не приходит ни байта (см. [SilenceStreak]). Второй —
+  /// отказ дозвона в логе ядра: он ловит сервер, который отвечает сбросом
+  /// соединения, — сброс тоже пришедший байт, и тишины тогда нет. Сам по себе
+  /// ни один сигнал сервер не меняет: он только зовёт судью
+  /// ([_autoSelectDecide]).
   ///
-  /// Замер стартует уже на первой тихой секунде, а решение принимается на
-  /// третьей: к этому времени соседи успевают ответить, и решению не нужно
-  /// ждать таймаута мёртвого сервера.
+  /// Замер начинается, только когда судью уже позвали. Начатый раньше, на
+  /// первой тихой секунде, он сам ломал счёт: трафик сервис считает по всему
+  /// приложению, ответы живых соседей выглядели ответом сервера, и тишина не
+  /// набиралась — на Vless живой тест так и не дождался переезда.
   Future<void> _autoSelectListen() async {
     if (_autoSelectBusy) return;
     final target = _autoSelectTarget();
     if (target == null) {
       _autoSelectSeenFailures = null;
-      _autoSelectSilentSeconds = 0;
-      _autoSelectEarlyMeasure = null;
+      _autoSelectSilence = const SilenceStreak();
       return;
     }
     final quietUntil = _autoSelectQuietUntil;
     if (quietUntil != null && DateTime.now().isBefore(quietUntil)) return;
 
     final now = await ref.read(vpnEngineProvider).getCurrentState();
-    final silent = AutoSelectWatchdog.isSilentSecond(
+    _autoSelectSilence = _autoSelectSilence.next(
       sent: now.uploadSpeed ?? 0,
       received: now.downloadSpeed ?? 0,
     );
-    if (silent) {
-      _autoSelectSilentSeconds++;
-      final early = _autoSelectEarlyMeasure;
-      if (early == null || early.serverId != target.server.id) {
-        _autoSelectEarlyMeasure =
-            _autoSelectStartMeasure(target.server, target.subId);
-      }
-    } else {
-      _autoSelectSilentSeconds = 0;
-      _autoSelectEarlyMeasure = null;
-    }
 
     // На Android отказы считает нативный читатель лога ядра, на десктопе —
     // бэкенд, который читает вывод ядра сам.
@@ -963,32 +954,45 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (previous != null) newFailures = failures - previous;
     }
 
-    final stalled = AutoSelectWatchdog.trafficStalled(_autoSelectSilentSeconds);
+    final stalled = AutoSelectWatchdog.trafficStalled(_autoSelectSilence.silent);
     if (!stalled && !AutoSelectWatchdog.dialFailuresSuggestDeadServer(newFailures)) {
       return;
     }
-    final measure = _autoSelectEarlyMeasure ??
-        _autoSelectStartMeasure(target.server, target.subId);
-    _autoSelectEarlyMeasure = null;
-    await _autoSelectDecide(target.server, measure, presumedDead: stalled);
+    await _autoSelectDecide(
+      target.server,
+      _autoSelectStartMeasure(target.server, target.subId),
+      presumedDead: stalled,
+    );
   }
 
   /// Страховочный тик: ловит соединения, которые повисли молча.
   ///
   /// Раз в [AutoSelectWatchdog.probeEvery] смотрим, пришёл ли через туннель
-  /// хоть байт, и только если нет — зовём судью. Пришёл, а не прошёл: в
-  /// мёртвый туннель приложения шлют исправно.
+  /// хоть байт, и зовём судью, только если за это время что-то уходило, а не
+  /// пришло ничего. Пришёл, а не прошёл: в мёртвый туннель приложения шлют
+  /// исправно.
   Future<void> _autoSelectTick() async {
     if (_autoSelectBusy) return;
     final target = _autoSelectTarget();
     if (target == null) return;
-    final seen = state.value?.totalDownload ?? 0;
-    final moved = seen > _autoSelectSeenBytes;
-    _autoSelectSeenBytes = seen;
+    final received = state.value?.totalDownload ?? 0;
+    final sent = state.value?.totalUpload ?? 0;
+    // Счётчики обнуляются с каждой сессией. Меньше прошлого — значит, это уже
+    // другая сессия, и сравнивать нечего: раньше такой сброс читался как
+    // «ничего не пришло» и будил судью наугад.
+    final newSession =
+        received < _autoSelectSeenReceived || sent < _autoSelectSeenSent;
+    final moved = newSession || received > _autoSelectSeenReceived;
+    final wentOut = !newSession && sent > _autoSelectSeenSent;
+    _autoSelectSeenReceived = received;
+    _autoSelectSeenSent = sent;
+    final quietUntil = _autoSelectQuietUntil;
+    if (quietUntil != null && DateTime.now().isBefore(quietUntil)) return;
     if (!AutoSelectWatchdog.shouldProbe(
       connected: true,
       autoSelectOn: true,
       trafficMoved: moved,
+      trafficSent: wentOut,
     )) {
       return;
     }
@@ -1005,6 +1009,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   /// только на тот, кто ответил. Не ответил никто — остаёмся: это сеть или
   /// всё сразу, и переезд ничего не даст. [presumedDead] — сигналом была
   /// тишина в ответ; тогда хватает того, что соседи ответили раньше него.
+  /// Пока судья решает, прослушка стоит ([_autoSelectBusy]): трафик его
+  /// замера она приняла бы за ответ сервера.
   /// Переезд идёт тем же путём, которым сервер меняет человек, и не чаще
   /// [AutoSelectWatchdog.maxSwitchesPerWindow] раз за окно.
   Future<void> _autoSelectDecide(
@@ -1073,8 +1079,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // Отсчёт заново: переподключение само даёт отказы и тихие секунды, и
       // принять их за новую смерть значило бы пойти по кругу.
       _autoSelectSeenFailures = null;
-      _autoSelectSilentSeconds = 0;
-      _autoSelectEarlyMeasure = null;
+      _autoSelectSilence = const SilenceStreak();
       _autoSelectQuietUntil = DateTime.now().add(
         switched
             ? AutoSelectWatchdog.quietAfterSwitch

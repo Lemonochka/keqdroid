@@ -1285,6 +1285,52 @@ class KeqdisVpnService : VpnService() {
         }
     }
 
+    /**
+     * Конфиг, с которым ядро сессии запускается на самом деле.
+     *
+     * Отказ дозвона до своего сервера xray 26.x пишет только на уровне info
+     * (исходящий обработчик логирует свою ошибку через LogInfo), а по этим
+     * строкам автовыбор узнаёт, что сервер отвечает отказом: тишины в ответ в
+     * этом случае нет, есть сброс соединения. Поэтому xray сессии работает не
+     * тише info, а строки ниже уровня, выбранного человеком, режет читатель
+     * вывода — в лог и logcat они не попадают, их видит только счётчик.
+     *
+     * Копия рядом, а не правка на месте: плитка и оживление ядра стартуют с
+     * того же файла, и поднятый уровень на диске выдал бы себя за выбор
+     * человека.
+     */
+    private fun sessionConfigFor(config: String, coreKind: String): String {
+        val levels = listOf("debug", "info", "warning", "error", "none")
+        val info = levels.indexOf("info")
+        if (coreKind != CORE_KIND_XRAY) {
+            NativeHelper.setCoreLogLevel(0)
+            return config
+        }
+        return try {
+            val source = File(config)
+            val json = org.json.JSONObject(source.readText())
+            val log = json.optJSONObject("log") ?: org.json.JSONObject().also { json.put("log", it) }
+            // Без поля xray пишет с warning — так его и читаем.
+            val chosen = levels.indexOf(log.optString("loglevel", "warning").lowercase())
+                .let { if (it < 0) levels.indexOf("warning") else it }
+            if (chosen <= info) {
+                NativeHelper.setCoreLogLevel(0)
+                return config
+            }
+            log.put("loglevel", "info")
+            val run = File(source.parentFile, "xray_session_run.json")
+            run.writeText(json.toString())
+            NativeHelper.setCoreLogLevel(chosen)
+            run.absolutePath
+        } catch (e: Exception) {
+            // Не разобрали — запускаем как есть: без счётчика отказов, но с
+            // тем уровнем, что заказан.
+            android.util.Log.w("KEQDIS", "session log level left as is: ${e.message}")
+            NativeHelper.setCoreLogLevel(0)
+            config
+        }
+    }
+
     private fun startXray(
         binary: String,
         config: String,
@@ -1301,7 +1347,8 @@ class KeqdisVpnService : VpnService() {
         // объясняют, зачем он понадобился.
         if (freshLog) runCatching { File(filesDir, CORE_LOG_FILE).writeText("") }
         val pid = NativeHelper.startCore(
-            binary, config, filesDir.absolutePath, CORE_LOG_FILE, coreKind, tunFd,
+            binary, sessionConfigFor(config, coreKind), filesDir.absolutePath,
+            CORE_LOG_FILE, coreKind, tunFd,
         )
         when {
             pid == -1 -> throw IllegalStateException("Xray binary not found: $binary")
