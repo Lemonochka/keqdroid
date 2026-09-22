@@ -52,6 +52,58 @@ void main() {
     );
   });
 
+  test('соседей умершего по адресу обходим', () {
+    // Живой тест: погасили VPS, а его же Vless остался в списке со старым
+    // хорошим пингом. Протоколы на одной машине умирают вместе.
+    final servers = [
+      _server('pl-hy2', sub: 's1', ping: 38, tested: tested),
+      _server('pl-vless', sub: 's1', ping: 40, tested: tested),
+      _server('ru-hy2', sub: 's1', ping: 90, tested: tested),
+    ];
+    // У обоих польских один адрес — как у двух протоколов на одном VPS.
+    final samehost = [
+      for (final s in servers)
+        s.id.startsWith('pl')
+            ? ServerItem(
+                id: s.id,
+                config: 'vless://uuid@pl.example.com:443?type=tcp&security=none#${s.id}',
+                type: ServerItemType.subscription,
+                subscriptionId: 's1',
+                addedAt: DateTime(2026),
+                pingMs: s.pingMs,
+                lastTestedAt: tested,
+              )
+            : s,
+    ];
+
+    expect(
+      AutoServerSelect.pick(
+        samehost,
+        subscriptionId: 's1',
+        exclude: 'pl-hy2',
+        excludeHost: 'pl.example.com',
+      )?.id,
+      'ru-hy2',
+    );
+  });
+
+  test('если на других адресах никого, сосед лучше пустоты', () {
+    final servers = [
+      _server('a', sub: 's1', ping: 40, tested: tested),
+      _server('b', sub: 's1', ping: 60, tested: tested),
+    ];
+
+    expect(
+      AutoServerSelect.pick(
+        servers,
+        subscriptionId: 's1',
+        exclude: 'a',
+        excludeHost: 'b.example.com',
+      )?.id,
+      'b',
+    );
+  });
+
   test('единственный сервер берём даже после отказа', () {
     // «Совсем никого» и «один и тот же» — разные вещи: во втором случае
     // честнее попробовать ещё раз, чем не подключаться вовсе.

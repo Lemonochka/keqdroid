@@ -53,20 +53,40 @@ void main() {
   });
 
   group('тихая прослушка', () {
-    test('одиночный отказ дозвона — не повод идти в сеть', () {
-      // Страница открывает десяток соединений, одно может и не пролезть:
-      // это жизнь живого сервера, а не его смерть.
-      expect(AutoSelectWatchdog.dialFailuresSuggestDeadServer(1), isFalse);
+    test('первый же отказ ядра — повод проверить', () {
+      // Живой тест: xray на Hysteria2 роняет отказы по одному раз в 16–50
+      // секунд, каждый ждёт таймаут QUIC. Правило «три за секунду» не
+      // сработало бы никогда. От ложной тревоги защищает проба.
+      expect(AutoSelectWatchdog.dialFailuresSuggestDeadServer(1), isTrue);
       expect(AutoSelectWatchdog.dialFailuresSuggestDeadServer(0), isFalse);
     });
 
-    test('всплеск отказов — идём проверять', () {
+    test('ушло, но ничего не пришло — тихая секунда', () {
       expect(
-        AutoSelectWatchdog.dialFailuresSuggestDeadServer(
-          AutoSelectWatchdog.failureBurst,
+        AutoSelectWatchdog.isSilentSecond(sent: 1200, received: 0),
+        isTrue,
+      );
+      // Живой сервер отвечает хоть чем-то, даже на чистую выгрузку —
+      // TCP-подтверждениями.
+      expect(
+        AutoSelectWatchdog.isSilentSecond(sent: 50000, received: 60),
+        isFalse,
+      );
+      // Телефон просто молчит — это не тишина в ответ.
+      expect(AutoSelectWatchdog.isSilentSecond(sent: 0, received: 0), isFalse);
+    });
+
+    test('одна тихая секунда — ещё не смерть', () {
+      // Спящее радио или переезд сети дают секунду без ответа и у живого
+      // сервера.
+      expect(AutoSelectWatchdog.trafficStalled(1), isFalse);
+      expect(
+        AutoSelectWatchdog.trafficStalled(
+          AutoSelectWatchdog.silentSecondsBeforeCheck,
         ),
         isTrue,
       );
+      expect(AutoSelectWatchdog.silentSecondsBeforeCheck, lessThanOrEqualTo(5));
     });
 
     test('смотрит часто, потому что это не сеть', () {

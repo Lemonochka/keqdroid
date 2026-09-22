@@ -16,10 +16,16 @@ abstract final class AutoServerSelect {
   /// работал, и возвращаться на него в ту же секунду незачем. Когда кроме
   /// него никого нет, возвращаем его же — «совсем ничего» и «единственный
   /// сервер» разные вещи, и во втором случае честнее попробовать ещё раз.
+  ///
+  /// [excludeHost] — адрес умершего сервера. Протоколы на одной машине
+  /// умирают вместе (на живом тесте погасили VPS, и в списке остался его же
+  /// Vless со старым хорошим пингом), так что соседей по адресу обходим
+  /// тоже — пока есть кто-то ещё.
   static ServerItem? pick(
     List<ServerItem> servers, {
     required String subscriptionId,
     String? exclude,
+    String? excludeHost,
   }) {
     final group = [
       for (final server in servers)
@@ -27,10 +33,21 @@ abstract final class AutoServerSelect {
     ];
     if (group.isEmpty) return null;
 
-    final candidates = [
+    final host = excludeHost?.trim().toLowerCase();
+    final elsewhere = [
       for (final server in group)
-        if (server.id != exclude) server,
+        if (server.id != exclude &&
+            (host == null ||
+                host.isEmpty ||
+                server.address.trim().toLowerCase() != host))
+          server,
     ];
+    final candidates = elsewhere.isNotEmpty
+        ? elsewhere
+        : [
+            for (final server in group)
+              if (server.id != exclude) server,
+          ];
     final pool = candidates.isEmpty ? group : candidates;
 
     final measured = [
