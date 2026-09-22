@@ -150,6 +150,24 @@ class Subscription {
   /// Насколько притушена картинка подложки — и на карточке, и в шапке группы.
   final CardVeil cardVeil;
 
+  /// Показывать ли в шапке списка серверов переключатель «Авто».
+  ///
+  /// Настройка вида карточки, а не поведения: выключенный переключатель просто
+  /// не занимает места у тех, кто сервер выбирает руками. Само [autoSelect]
+  /// при этом не трогается — спрятать плашку и выключить автовыбор это разные
+  /// действия, и совмещать их значит терять чужой выбор за компанию.
+  final bool autoSelectVisible;
+
+  /// Выбирает ли сервер в этой подписке приложение, а не человек.
+  ///
+  /// Включённый автовыбор не делает ничего особенного с подключением: сервер
+  /// выбирается тот же и отмечается в списке так же, разница только в том,
+  /// кто его выбрал. Ручной тап по серверу автовыбор гасит — иначе непонятно,
+  /// кто в доме хозяин: человек ткнул в один сервер, а через минуту его увезло
+  /// на другой.
+  final bool autoSelect;
+
+
   const Subscription({
     required this.id,
     required this.name,
@@ -172,6 +190,8 @@ class Subscription {
     this.cardThemeInServers = true,
     this.hiddenCardElements = const {},
     this.cardVeil = CardVeil.medium,
+    this.autoSelectVisible = false,
+    this.autoSelect = false,
   });
 
   factory Subscription.create({
@@ -223,6 +243,8 @@ class Subscription {
     hiddenCardElements:
         SubscriptionCardElement.setFromJson(json['cardHidden']),
     cardVeil: CardVeil.byName(json['cardVeil'] as String?),
+    autoSelectVisible: json['autoSelectVisible'] as bool? ?? false,
+    autoSelect: json['autoSelect'] as bool? ?? false,
     fetchIdentity: json['fetchIdentity'] is Map
         ? SubscriptionFetchIdentity.fromJson(
             (json['fetchIdentity'] as Map).cast<String, dynamic>(),
@@ -256,6 +278,8 @@ class Subscription {
     if (hiddenCardElements.isNotEmpty)
       'cardHidden': [for (final e in hiddenCardElements) e.name],
     if (cardVeil != CardVeil.medium) 'cardVeil': cardVeil.name,
+    if (autoSelectVisible) 'autoSelectVisible': true,
+    if (autoSelect) 'autoSelect': true,
     if (fetchIdentity.enabled || fetchIdentity.hasCustomFields)
       'fetchIdentity': fetchIdentity.toJson(),
   };
@@ -281,6 +305,8 @@ class Subscription {
     bool? cardThemeInServers,
     Set<SubscriptionCardElement>? hiddenCardElements,
     CardVeil? cardVeil,
+    bool? autoSelectVisible,
+    bool? autoSelect,
     SubscriptionFetchIdentity? fetchIdentity,
   }) =>
       Subscription(
@@ -304,6 +330,8 @@ class Subscription {
         cardThemeInServers: cardThemeInServers ?? this.cardThemeInServers,
         hiddenCardElements: hiddenCardElements ?? this.hiddenCardElements,
         cardVeil: cardVeil ?? this.cardVeil,
+        autoSelectVisible: autoSelectVisible ?? this.autoSelectVisible,
+        autoSelect: autoSelect ?? this.autoSelect,
         fetchIdentity: fetchIdentity ?? this.fetchIdentity,
       );
 

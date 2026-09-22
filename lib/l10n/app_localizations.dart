@@ -2759,6 +2759,18 @@ abstract class AppLocalizations {
   /// **'Show in list'**
   String get serversJumpToActive;
 
+  /// No description provided for @serversAutoSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get serversAutoSelect;
+
+  /// No description provided for @serversAutoSelectTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'The app picks the server in this subscription and switches when it stops working'**
+  String get serversAutoSelectTooltip;
+
   /// No description provided for @serversManualGroup.
   ///
   /// In en, this message translates to:
@@ -4756,6 +4768,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Heavy'**
   String get subscriptionCardVeilStrong;
+
+  /// No description provided for @subscriptionCardAutoSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto toggle in the server list'**
+  String get subscriptionCardAutoSelect;
+
+  /// No description provided for @subscriptionCardAutoSelectHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds an «Auto» switch to the group header. With it on, the app picks the server itself and moves to another one when the current stops working.'**
+  String get subscriptionCardAutoSelectHint;
 
   /// No description provided for @subscriptionCardContentTitle.
   ///

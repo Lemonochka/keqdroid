@@ -34,6 +34,7 @@ import '../models/subscription_card_theme.dart';
 import '../models/traffic_split.dart';
 import '../providers/providers.dart';
 import '../providers/traffic_split_provider.dart';
+import '../services/auto_server_select.dart';
 import '../services/file_dialog_service.dart';
 import '../services/ping_service.dart';
 import '../services/subscription_accent_service.dart';
@@ -1297,6 +1298,21 @@ class _ServersTabState extends ConsumerState<ServersTab>
     if (tunnelActive &&
         server.id == ref.read(serversProvider).activeServer?.id) {
       return;
+    }
+    // Ткнули в сервер руками — автовыбор в этой подписке выключается.
+    // Иначе непонятно, кто выбирает: человек ткнул в один сервер, а через
+    // минуту его увезло на другой, и выглядит это как своеволие приложения.
+    final subId = server.subscriptionId;
+    if (subId != null) {
+      final subs = ref.read(subscriptionsProvider).value ?? const [];
+      final owner = subs.where((s) => s.id == subId).firstOrNull;
+      if (owner != null && owner.autoSelect) {
+        unawaited(
+          ref
+              .read(subscriptionsProvider.notifier)
+              .editMeta(subId, autoSelect: false),
+        );
+      }
     }
     await ref.read(serversProvider.notifier).setActive(server);
     if (tunnelActive) {

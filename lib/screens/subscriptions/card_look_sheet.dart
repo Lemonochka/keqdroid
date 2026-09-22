@@ -41,6 +41,7 @@ class _CardLookSheet extends ConsumerWidget {
     WidgetRef ref, {
     String? cardThemeId,
     bool? cardThemeInServers,
+    bool? autoSelectVisible,
     Set<SubscriptionCardElement>? hidden,
     CardVeil? veil,
   }) {
@@ -51,6 +52,7 @@ class _CardLookSheet extends ConsumerWidget {
             subscriptionId,
             cardThemeId: cardThemeId,
             cardThemeInServers: cardThemeInServers,
+            autoSelectVisible: autoSelectVisible,
             hiddenCardElements: hidden,
             cardVeil: veil,
           ),
@@ -166,6 +168,25 @@ class _CardLookSheet extends ConsumerWidget {
                 ),
               const SizedBox(height: 4),
               _SheetHint(l10n.subscriptionCardContentHint),
+              const SizedBox(height: 16),
+              // Не элемент карточки, а элемент списка серверов — поэтому ниже
+              // пресетов и со своей подписью: пресет «минимальная карточка»
+              // про эту плашку ничего не знает и знать не должен.
+              SwitchListTile(
+                contentPadding: const EdgeInsets.only(left: 4, right: 0),
+                dense: true,
+                value: sub.autoSelectVisible,
+                title: Text(
+                  l10n.subscriptionCardAutoSelect,
+                  style: theme.textTheme.bodyMedium,
+                ),
+                subtitle: Text(
+                  l10n.subscriptionCardAutoSelectHint,
+                  style: theme.textTheme.bodySmall,
+                ),
+                isThreeLine: true,
+                onChanged: (v) => _apply(ref, autoSelectVisible: v),
+              ),
                   ],
                 ),
               ),

@@ -1411,6 +1411,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversJumpToActive => 'نمایش در فهرست';
 
   @override
+  String get serversAutoSelect => 'Auto';
+
+  @override
+  String get serversAutoSelectTooltip => 'The app picks the server in this subscription and switches when it stops working';
+
+  @override
   String get serversManualGroup => 'سرورهای دستی';
 
   @override
@@ -2446,6 +2452,12 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get subscriptionCardVeilStrong => 'زیاد';
+
+  @override
+  String get subscriptionCardAutoSelect => 'Auto toggle in the server list';
+
+  @override
+  String get subscriptionCardAutoSelectHint => 'Adds an «Auto» switch to the group header. With it on, the app picks the server itself.';
 
   @override
   String get subscriptionCardContentTitle => 'چه چیزی نمایش داده شود';

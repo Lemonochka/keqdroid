@@ -1411,6 +1411,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serversJumpToActive => 'In der Liste zeigen';
 
   @override
+  String get serversAutoSelect => 'Auto';
+
+  @override
+  String get serversAutoSelectTooltip => 'Die App wahlt den Server dieses Abos und wechselt, wenn er nicht mehr funktioniert';
+
+  @override
   String get serversManualGroup => 'Manuelle Server';
 
   @override
@@ -2446,6 +2452,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get subscriptionCardVeilStrong => 'Stark';
+
+  @override
+  String get subscriptionCardAutoSelect => 'Auto-Schalter in der Serverliste';
+
+  @override
+  String get subscriptionCardAutoSelectHint => 'Fugt der Gruppenkopfzeile einen Schalter hinzu. Eingeschaltet wahlt die App den Server selbst und wechselt, sobald der aktuelle nicht mehr funktioniert.';
 
   @override
   String get subscriptionCardContentTitle => 'Was angezeigt wird';

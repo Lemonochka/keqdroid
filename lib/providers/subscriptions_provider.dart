@@ -333,6 +333,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     bool? cardThemeInServers,
     Set<SubscriptionCardElement>? hiddenCardElements,
     CardVeil? cardVeil,
+    bool? autoSelectVisible,
+    bool? autoSelect,
   }) async {
     final subs = state.value ?? [];
     final idx = subs.indexWhere((s) => s.id == id);
@@ -369,6 +371,11 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       cardThemeInServers: cardThemeInServers,
       hiddenCardElements: hiddenCardElements,
       cardVeil: cardVeil,
+      autoSelectVisible: autoSelectVisible,
+      // Спрятанная плашка не должна тихо оставлять автовыбор включённым:
+      // человек убрал переключатель с глаз и вправе считать, что сервер
+      // снова выбирает он.
+      autoSelect: autoSelectVisible == false ? false : autoSelect,
     );
     await ref.read(storageProvider).upsertSubscription(updated);
     final newList = [...subs]..[idx] = updated;

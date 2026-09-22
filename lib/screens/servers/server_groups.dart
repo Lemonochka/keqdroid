@@ -190,10 +190,20 @@ class _GroupHeaderBackground extends StatelessWidget {
   /// Высота шапки с учётом полосы растворения — её же занимает
   /// SliverToBoxAdapter. Группы без картинки остаются прежней высоты: лишняя
   /// полоса пустоты в каждой из них дороже, чем польза от единообразия.
-  static double heightFor(Subscription? subscription, {required bool collapsed}) =>
-      _showsImage(subscription) && !collapsed
-          ? _subCardRowHeight + fadeHeight
-          : _subCardRowHeight;
+  ///
+  /// Переключатель «Авто» занимает свою строку, а не втискивается в ряд с
+  /// иконками: там у каждой кнопки 32dp с зазором в 8, и ещё одна цель рядом
+  /// означала бы промахи пальцем по соседней. Платят за строку только те
+  /// подписки, где плашка включена.
+  static double heightFor(Subscription? subscription, {required bool collapsed}) {
+    if (collapsed) return _subCardRowHeight;
+    return _subCardRowHeight +
+        (_showsImage(subscription) ? fadeHeight : 0) +
+        (subscription?.autoSelectVisible == true ? autoRowHeight : 0);
+  }
+
+  /// Строка с переключателем «Авто»: сама кнопка 32dp плюс зазоры.
+  static const autoRowHeight = 44.0;
 
   /// Именно `hasImage`, а не «тема выбрана»: у палитровой темы картинки нет
   /// вовсе, и шапка вырастала на [fadeHeight] пустоты — подложку из ролей
@@ -507,7 +517,12 @@ class _ServerGroupHeader extends ConsumerWidget {
             // край карточки: не скругли мы его, картинка вылезла бы
             // прямыми углами из-под скруглённой рамки.
             collapsed: collapsed,
-            child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: _subCardRowHeight,
+                  child: Center(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
             child: Row(
@@ -716,10 +731,109 @@ class _ServerGroupHeader extends ConsumerWidget {
             ),
           ),
         ),
+                ),
+                if (sub != null && sub.autoSelectVisible && !collapsed)
+                  _AutoSelectRow(subscription: sub),
+              ],
+            ),
         ),
         ),
       ),
       );
+  }
+}
+
+/// Строка с переключателем «Авто» под заголовком группы.
+///
+/// Кнопка-переключатель, а не чип: у M3 Expressive бинарный выбор показывается
+/// формой и цветом (круглая контурная → квадратная с заливкой), а галочка
+/// осталась приёмом фильтров, которые ходят наборами. Подпись не меняется
+/// между состояниями — спека прямо просит держать её одинаковой длины, да и
+/// имя выбранного сервера всё равно не влезло бы: оно живёт в плашке под
+/// главной кнопкой и подсветкой строки в списке.
+class _AutoSelectRow extends ConsumerWidget {
+  const _AutoSelectRow({required this.subscription});
+
+  final Subscription subscription;
+
+  /// Включение — это сразу выбор сервера, а не обещание выбрать потом.
+  ///
+  /// Иначе переключатель горит, а подключение осталось на прежнем сервере:
+  /// снаружи это «нажала, ничего не произошло». Выбранный отмечается в списке
+  /// как обычно — разница с ручным выбором только в том, кто его сделал.
+  Future<void> _toggle(WidgetRef ref, BuildContext context) async {
+    final on = subscription.autoSelect;
+    await ref
+        .read(subscriptionsProvider.notifier)
+        .editMeta(subscription.id, autoSelect: !on);
+    if (on) return;
+
+    final servers = ref.read(serversProvider).servers;
+    final pick = AutoServerSelect.pick(
+      servers,
+      subscriptionId: subscription.id,
+    );
+    if (pick == null) return;
+    final active = ref.read(serversProvider).activeServer;
+    if (pick.id == active?.id) return;
+    await ref.read(serversProvider.notifier).setActive(pick);
+
+    final status = ref.read(vpnStateProvider).value?.status;
+    if (status != VpnStatus.connected && status != VpnStatus.connecting) return;
+    try {
+      await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
+    } catch (_) {
+      // Ошибку показывать нечем — шапка группы не знает про снек-бар экрана,
+      // а состояние подключения и так покраснеет под главной кнопкой.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final on = subscription.autoSelect;
+    return SizedBox(
+      height: _GroupHeaderBackground.autoRowHeight,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 14, 8),
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Tooltip(
+            message: l10n.serversAutoSelectTooltip,
+            child: Material(
+              color: on ? scheme.secondaryContainer : Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                  on ? ExpressiveShape.small : ExpressiveShape.full,
+                ),
+                side: on
+                    ? BorderSide.none
+                    : BorderSide(color: AppTheme.divider(context)),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => unawaited(_toggle(ref, context)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  child: Text(
+                    l10n.serversAutoSelect,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: on
+                              ? scheme.onSecondaryContainer
+                              : AppTheme.text(context),
+                        ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

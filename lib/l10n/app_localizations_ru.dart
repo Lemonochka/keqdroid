@@ -1413,6 +1413,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversJumpToActive => 'Показать в списке';
 
   @override
+  String get serversAutoSelect => 'Авто';
+
+  @override
+  String get serversAutoSelectTooltip => 'Сервер в этой подписке выбирает приложение и меняет его, когда текущий перестаёт работать';
+
+  @override
   String get serversManualGroup => 'Ручные серверы';
 
   @override
@@ -2451,6 +2457,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get subscriptionCardVeilStrong => 'Плотное';
+
+  @override
+  String get subscriptionCardAutoSelect => 'Переключатель «Авто» в списке серверов';
+
+  @override
+  String get subscriptionCardAutoSelectHint => 'Добавляет в шапку группы переключатель. Включённый — сервер выбирает приложение и само переезжает на другой, когда текущий перестаёт работать.';
 
   @override
   String get subscriptionCardContentTitle => 'Что показывать';

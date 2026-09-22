@@ -1411,6 +1411,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversJumpToActive => '在列表中显示';
 
   @override
+  String get serversAutoSelect => '自动';
+
+  @override
+  String get serversAutoSelectTooltip => '由应用选择该订阅中的服务器，并在其不可用时切换';
+
+  @override
   String get serversManualGroup => '手动添加的服务器';
 
   @override
@@ -2444,6 +2450,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get subscriptionCardVeilStrong => '重';
+
+  @override
+  String get subscriptionCardAutoSelect => '服务器列表中的「自动」开关';
+
+  @override
+  String get subscriptionCardAutoSelectHint => '在分组标题中加入开关。开启后由应用选择服务器，并在当前服务器不可用时自动切换。';
 
   @override
   String get subscriptionCardContentTitle => '显示内容';
