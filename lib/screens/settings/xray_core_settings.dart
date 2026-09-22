@@ -293,6 +293,17 @@ class _XrayDnsSection extends ConsumerWidget {
               ),
             ),
             Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: _DnsServersField(
+                initialValue: core.dnsPolicy,
+                label: l10n.settingsXrayDnsPolicy,
+                hintText: 'home.lan 192.168.1.1',
+                helperText: l10n.settingsXrayDnsPolicyHint,
+                onSave: (v) =>
+                    _saveXrayCore(ref, settings, core.copyWith(dnsPolicy: v)),
+              ),
+            ),
+            Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 l10n.settingsXrayDnsQueryStrategy,

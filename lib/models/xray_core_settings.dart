@@ -135,6 +135,16 @@ class XrayCoreSettings {
   /// Маска `*.example.com` значит «домен и его поддомены».
   final String dnsHosts;
 
+  /// Резолвер для отдельных доменов: «кого спрашивать про вот эти имена».
+  ///
+  /// Строка на запись: маска домена, затем один или несколько адресов
+  /// резолвера в том же синтаксисе, что и в поле «свои DNS-серверы».
+  /// Домашний суффикс — на роутер, рабочий — на корпоративный DNS, остальное
+  /// идёт обычным путём. Откат на общий список ядро при этом не делает: в
+  /// этом и смысл — адрес выбран явно.
+  final String dnsPolicy;
+
+
 
   const XrayCoreSettings({
     this.logLevel = 'warning',
@@ -170,6 +180,7 @@ class XrayCoreSettings {
     this.sniffingRouteOnly = false,
     this.concurrentDial = false,
     this.dnsHosts = '',
+    this.dnsPolicy = '',
   });
 
   static const logLevels = ['none', 'error', 'warning', 'info', 'debug'];
@@ -276,6 +287,7 @@ class XrayCoreSettings {
         'sniffingRouteOnly': sniffingRouteOnly,
         'concurrentDial': concurrentDial,
         'dnsHosts': dnsHosts,
+        'dnsPolicy': dnsPolicy,
       };
 
   factory XrayCoreSettings.fromJson(Map<String, dynamic>? json) {
@@ -345,6 +357,7 @@ class XrayCoreSettings {
       sniffingRouteOnly: b('sniffingRouteOnly', false),
       concurrentDial: b('concurrentDial', false),
       dnsHosts: json['dnsHosts'] as String? ?? '',
+      dnsPolicy: json['dnsPolicy'] as String? ?? '',
     );
   }
 
@@ -382,6 +395,7 @@ class XrayCoreSettings {
     bool? sniffingRouteOnly,
     bool? concurrentDial,
     String? dnsHosts,
+    String? dnsPolicy,
   }) =>
       XrayCoreSettings(
         logLevel: logLevel ?? this.logLevel,
@@ -422,6 +436,7 @@ class XrayCoreSettings {
         sniffingRouteOnly: sniffingRouteOnly ?? this.sniffingRouteOnly,
         concurrentDial: concurrentDial ?? this.concurrentDial,
         dnsHosts: dnsHosts ?? this.dnsHosts,
+        dnsPolicy: dnsPolicy ?? this.dnsPolicy,
       );
 
   /// Разбор поля [dnsHosts]: «маска домена → чем её подменить».
@@ -475,6 +490,51 @@ class XrayCoreSettings {
         continue;
       }
       entries[domainKey] = values;
+    }
+    return (entries: entries, dropped: dropped);
+  }
+
+  /// Разбор поля [dnsPolicy]: «маска домена → чем его резолвить».
+  ///
+  /// Ключ остаётся в синтаксисе приложения, адреса — в синтаксисе поля «свои
+  /// DNS-серверы» и проверяются тем же [xrayDnsEntry]: адрес, который ядро не
+  /// поднимет, тут так же бесполезен, как и в общем списке. Строки без пары
+  /// или с негодными адресами уезжают в [dropped] — вызывающий пишет их в лог.
+  static ({Map<String, List<String>> entries, List<String> dropped})
+      parseDnsPolicy(String raw) {
+    final entries = <String, List<String>>{};
+    final dropped = <String>[];
+    for (final line in raw.split(RegExp(r'[\n;]+'))) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
+      // По пробелу и знаку равенства, но НЕ по двоеточию: оно живёт внутри
+      // адресов (`https://`, `:53`). Двоеточие после домена — привычная
+      // запись, поэтому просто срезаем его с ключа.
+      final parts = trimmed
+          .split(RegExp(r'[\s=]+'))
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      if (parts.length < 2) {
+        dropped.add(trimmed);
+        continue;
+      }
+      var key = parts.first.toLowerCase();
+      if (key.endsWith(':')) key = key.substring(0, key.length - 1);
+      final servers = <String>[];
+      for (final chunk in parts.skip(1)) {
+        for (final value in chunk.split(',')) {
+          final address = value.trim();
+          if (address.isEmpty) continue;
+          if (xrayDnsEntry(address) == null) continue;
+          servers.add(address);
+        }
+      }
+      if (!_isHostMask(key) || servers.isEmpty) {
+        dropped.add(trimmed);
+        continue;
+      }
+      entries[key] = servers;
     }
     return (entries: entries, dropped: dropped);
   }
@@ -608,6 +668,16 @@ class XrayCoreSettings {
   /// все запросы схлопываются в одно постоянное соединение до 1.1.1.1 вместо
   /// отдельного TCP на каждый. В режимах «остальное direct/block» оставляем
   /// прямой — там `final` увёл бы запрос мимо прокси или вовсе в blackhole.
+  /// Маска домена из полей приложения в правило xray.
+  ///
+  /// Голый домен в списке `domains` у сервера ядро понимает как ПОДСТРОКУ
+  /// (ParseDomainRules с Domain_Substr), то есть `example.com` поймал бы и
+  /// `notexample.community`. Поэтому пишем явно: точное имя — `full:`, маска —
+  /// `domain:` (домен и поддомены).
+  static String xrayDomainRule(String mask) => mask.startsWith('*.')
+      ? 'domain:${mask.substring(2)}'
+      : 'full:$mask';
+
   /// Свои адреса для доменов в синтаксисе xray.
   ///
   /// Голый ключ ядро разбирает как ПОЛНОЕ совпадение (ParseDomainRule с
@@ -653,6 +723,25 @@ class XrayCoreSettings {
         'skipFallback': true,
         'finalQuery': true,
       });
+    }
+
+    // Резолвер для отдельных доменов — раньше общего списка: ядро идёт по
+    // серверам сверху вниз, и «этот домен спрашивать только тут» работает,
+    // только пока запись не перехватил кто-то выше. `skipFallback` держит
+    // обещание до конца: отказ выбранного резолвера не уводит запрос в общий
+    // список, иначе выбор был бы не выбором, а подсказкой.
+    for (final policy in parseDnsPolicy(dnsPolicy).entries.entries) {
+      final domains = [xrayDomainRule(policy.key)];
+      for (final address in policy.value) {
+        final entry = xrayDnsEntry(address);
+        if (entry == null) continue;
+        servers.add({
+          'address': entry.address,
+          if (entry.port != null) 'port': entry.port,
+          'domains': domains,
+          'skipFallback': true,
+        });
+      }
     }
 
     if (custom.isNotEmpty) {
@@ -962,7 +1051,8 @@ class XrayCoreSettings {
           sniffingEnabled == other.sniffingEnabled &&
           sniffingRouteOnly == other.sniffingRouteOnly &&
           concurrentDial == other.concurrentDial &&
-          dnsHosts == other.dnsHosts;
+          dnsHosts == other.dnsHosts &&
+          dnsPolicy == other.dnsPolicy;
 
   @override
   // hashAll, а не hash: у последнего потолок в двадцать аргументов, а полей
@@ -1001,6 +1091,7 @@ class XrayCoreSettings {
         sniffingRouteOnly,
         concurrentDial,
         dnsHosts,
+        dnsPolicy,
       ]);
 
   String toJsonString() => jsonEncode(toJson());

@@ -556,11 +556,26 @@ class SingBoxTunConfigGen {
     // получалось вовсе.
     final directDnsParts = classifyDomains(directDomains);
     final hosts = hostsServerEntries(settings);
+    final dnsPolicies = policyDnsServers(settings);
     final dnsRules = <Map<String, dynamic>>[
       // Свои адреса для доменов — первым правилом: их ядро обязано отдать
       // раньше любого резолвера, иначе это не hosts, а подсказка.
       if (hosts.isNotEmpty)
         {'domain': hosts.keys.toList(), 'server': hostsServerTag},
+      // Резолвер для отдельных доменов — раньше раздельного резолва ниже:
+      // явный выбор человека важнее общего правила про direct-домены.
+      for (final policy in dnsPolicies)
+        if (policy.mask.startsWith('*.'))
+          {
+            'domain': [policy.mask.substring(2)],
+            'domain_suffix': [policy.mask.substring(1)],
+            'server': policy.tag,
+          }
+        else
+          {
+            'domain': [policy.mask],
+            'server': policy.tag,
+          },
       if (settings.xrayCore.dnsSplitDirectDomains &&
           (directDnsParts.domain.isNotEmpty ||
               directDnsParts.domainSuffix.isNotEmpty ||
@@ -627,6 +642,7 @@ class SingBoxTunConfigGen {
               'type': 'hosts',
               'predefined': hosts,
             },
+          for (final policy in dnsPolicies) policy.server,
           buildProxyDnsServer(),
         ],
         if (dnsRules.isNotEmpty) 'rules': dnsRules,
@@ -664,6 +680,29 @@ class SingBoxTunConfigGen {
 
   /// Тег резолвера, который отдаёт свои адреса для доменов.
   static const hostsServerTag = 'keq-hosts';
+
+  /// Резолверы для отдельных доменов: свой сервер на каждую запись.
+  ///
+  /// Правило sing-box уводит запрос ровно в один тег, поэтому из строки берём
+  /// первый адрес, который ядро умеет поднять, а остальные в этом режиме не
+  /// участвуют — как и в общем списке резолверов, где работает только первый.
+  static List<({String tag, Map<String, dynamic> server, String mask})>
+      policyDnsServers(AppSettings settings) {
+    final parsed = XrayCoreSettings.parseDnsPolicy(settings.xrayCore.dnsPolicy);
+    final out = <({String tag, Map<String, dynamic> server, String mask})>[];
+    var index = 0;
+    for (final entry in parsed.entries.entries) {
+      for (final address in entry.value) {
+        final tag = 'keq-policy-$index';
+        final server = _singBoxDnsServerFromXray(address, tag: tag);
+        if (server == null) continue;
+        out.add((tag: tag, server: server, mask: entry.key));
+        index++;
+        break;
+      }
+    }
+    return out;
+  }
 
   /// Свои адреса для доменов в том виде, в каком их принимает sing-box.
   ///
@@ -743,7 +782,10 @@ class SingBoxTunConfigGen {
   /// TUN системный DNS исполняет sing-box, и он гнал в туннель всё подряд.
   /// Голый адрес без схемы остаётся проксированным: у xray это обычный UDP-
   /// резолвер, который тоже идёт через роутинг.
-  static Map<String, dynamic>? _singBoxDnsServerFromXray(String raw) {
+  static Map<String, dynamic>? _singBoxDnsServerFromXray(
+    String raw, {
+    String tag = 'proxy-dns',
+  }) {
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return null;
     final lower = trimmed.toLowerCase();
@@ -758,7 +800,7 @@ class SingBoxTunConfigGen {
     Map<String, dynamic> server(String type, String host, int? port,
             {String? path, bool local = false}) =>
         {
-          'tag': 'proxy-dns',
+          'tag': tag,
           'type': type,
           'server': host,
           'server_port': ?port,

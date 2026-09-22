@@ -221,6 +221,8 @@
   "settingsXrayDnsSplitDirectHint": "Первый сервер отвечает за домены из списка direct",
   "settingsXrayDnsHosts": "Свои адреса для доменов",
   "settingsXrayDnsHostsHint": "По записи на строку: домен и адрес. Адресов можно несколько через запятую, а вместо адреса — другой домен: ядро резолвит его. «*.example.com» — домен и его поддомены.",
+  "settingsXrayDnsPolicy": "Резолвер для отдельных доменов",
+  "settingsXrayDnsPolicyHint": "По записи на строку: домен и резолвер, у которого его спрашивать. Адреса — в том же виде, что и в списке выше. На общий список такой домен уже не откатывается.",
   "settingsXrayDnsQueryStrategy": "Стратегия запросов",
   "settingsXrayDnsDisableCache": "Отключить кэш DNS",
   "settingsXrayXmuxSection": "XMUX (XHTTP)",

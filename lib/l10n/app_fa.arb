@@ -145,6 +145,8 @@
   "settingsXrayDnsSplitDirectHint": "برای دامنه‌های فهرست مستقیم از سرور اول استفاده می‌کند",
   "settingsXrayDnsHosts": "Own addresses for domains",
   "settingsXrayDnsHostsHint": "One entry per line: domain and address. Several addresses go comma-separated. «*.example.com» covers the domain and its subdomains.",
+  "settingsXrayDnsPolicy": "Resolver for specific domains",
+  "settingsXrayDnsPolicyHint": "One entry per line: a domain and the resolver to ask about it. Addresses use the same syntax as the server list above.",
   "settingsXrayDnsQueryStrategy": "استراتژی پرس‌وجو",
   "settingsXrayDnsDisableCache": "غیرفعال کردن کش DNS",
   "settingsXrayXmuxSection": "XMUX (XHTTP)",

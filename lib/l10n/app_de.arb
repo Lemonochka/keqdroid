@@ -221,6 +221,8 @@
   "settingsXrayDnsSplitDirectHint": "Verwendet den ersten Server für Domains aus der Direct-Liste",
   "settingsXrayDnsHosts": "Eigene Adressen fur Domains",
   "settingsXrayDnsHostsHint": "Ein Eintrag pro Zeile: Domain und Adresse. Mehrere Adressen durch Komma trennen; statt einer Adresse kann eine andere Domain stehen, die der Kern dann auflost. «*.example.com» umfasst die Domain und ihre Subdomains.",
+  "settingsXrayDnsPolicy": "Resolver fur einzelne Domains",
+  "settingsXrayDnsPolicyHint": "Ein Eintrag pro Zeile: eine Domain und der Resolver, der sie beantwortet. Adressen wie in der Liste oben. Auf die allgemeine Liste fallt eine solche Domain nicht zuruck.",
   "settingsXrayDnsQueryStrategy": "Abfragestrategie",
   "settingsXrayDnsDisableCache": "DNS-Cache deaktivieren",
   "settingsXrayXmuxSection": "XMUX (XHTTP)",

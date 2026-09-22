@@ -477,6 +477,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayDnsHostsHint => 'One entry per line: domain and address. Several addresses go comma-separated, and another domain in place of an address means resolve that one instead. «*.example.com» covers the domain and its subdomains.';
 
   @override
+  String get settingsXrayDnsPolicy => 'Resolver for specific domains';
+
+  @override
+  String get settingsXrayDnsPolicyHint => 'One entry per line: a domain and the resolver to ask about it. Addresses use the same syntax as the server list above. Such a domain never falls back to the general list.';
+
+  @override
   String get settingsXrayDnsQueryStrategy => 'Query strategy';
 
   @override

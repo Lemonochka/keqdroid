@@ -425,6 +425,31 @@ class MihomoConfigGen {
   /// Маска `*.example.com` переводится в `+.example.com` — «домен и все его
   /// поддомены». Звёздочка у mihomo значит ровно один уровень, то есть не то
   /// же самое, что у нас в поле, и молча оставить её было бы подменой смысла.
+  /// Резолвер для отдельных доменов в синтаксисе mihomo.
+  ///
+  /// Маска переводится так же, как у hosts: `*.` → `+.`. Адреса — тем же
+  /// переводчиком, что и общий список, поэтому `+local` и тут значит «мимо
+  /// туннеля», а не что-то своё.
+  static Map<String, dynamic> buildNameserverPolicy(XrayCoreSettings core) {
+    final parsed = XrayCoreSettings.parseDnsPolicy(core.dnsPolicy).entries;
+    final out = <String, dynamic>{};
+    for (final entry in parsed.entries) {
+      final servers = <String>[];
+      for (final address in entry.value) {
+        final converted = _dnsAddress(address);
+        if (converted != null && !servers.contains(converted)) {
+          servers.add(converted);
+        }
+      }
+      if (servers.isEmpty) continue;
+      final key = entry.key.startsWith('*.')
+          ? '+.${entry.key.substring(2)}'
+          : entry.key;
+      out[key] = servers;
+    }
+    return out;
+  }
+
   static Map<String, dynamic> buildHosts(XrayCoreSettings core) {
     final parsed = XrayCoreSettings.parseDnsHosts(core.dnsHosts).entries;
     return {
@@ -643,6 +668,8 @@ class MihomoConfigGen {
         // туннеле.
         'fake-ip-filter': fakeIpFilter,
       },
+      if (buildNameserverPolicy(core).isNotEmpty)
+        'nameserver-policy': buildNameserverPolicy(core),
       'default-nameserver': bootstrapNameservers(core),
       // Адрес прокси-сервера — отдельной записью и всегда мимо туннеля (у xray
       // это `bootstrapDomains` со `skipFallback`): запрос по нему через прокси

@@ -477,6 +477,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayDnsHostsHint => 'One entry per line: domain and address. Several addresses go comma-separated. «*.example.com» covers the domain and its subdomains.';
 
   @override
+  String get settingsXrayDnsPolicy => 'Resolver for specific domains';
+
+  @override
+  String get settingsXrayDnsPolicyHint => 'One entry per line: a domain and the resolver to ask about it. Addresses use the same syntax as the server list above.';
+
+  @override
   String get settingsXrayDnsQueryStrategy => 'استراتژی پرس‌وجو';
 
   @override

@@ -971,6 +971,18 @@ abstract class AppLocalizations {
   /// **'One entry per line: domain and address. Several addresses go comma-separated, and another domain in place of an address means resolve that one instead. «*.example.com» covers the domain and its subdomains.'**
   String get settingsXrayDnsHostsHint;
 
+  /// No description provided for @settingsXrayDnsPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolver for specific domains'**
+  String get settingsXrayDnsPolicy;
+
+  /// No description provided for @settingsXrayDnsPolicyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'One entry per line: a domain and the resolver to ask about it. Addresses use the same syntax as the server list above. Such a domain never falls back to the general list.'**
+  String get settingsXrayDnsPolicyHint;
+
   /// No description provided for @settingsXrayDnsQueryStrategy.
   ///
   /// In en, this message translates to:
