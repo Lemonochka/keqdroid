@@ -197,8 +197,8 @@ class _GroupHeaderBackground extends StatelessWidget {
   ///
   /// Но и целой строки шапка не получает: у группы с картинкой под заголовком
   /// уже есть полоса растворения, и кнопка садится на неё. Шапка вырастает на
-  /// разницу, то есть на десяток точек, а не на сорок — иначе включённая
-  /// плашка раздувала бы карточку у каждой подписки.
+  /// разницу, то есть на полтора десятка точек, а не на сорок — иначе
+  /// включённая плашка раздувала бы карточку у каждой подписки.
   static double heightFor(Subscription? subscription, {required bool collapsed}) {
     if (collapsed) return _subCardRowHeight;
     final below = [
@@ -209,9 +209,9 @@ class _GroupHeaderBackground extends StatelessWidget {
     return _subCardRowHeight + below;
   }
 
-  /// Полоса под заголовком, когда в ней живёт переключатель «Авто»: сама
-  /// кнопка 30dp плюс по три точки сверху и снизу.
-  static const autoRowHeight = 36.0;
+  /// Полоса под заголовком, когда в ней живёт переключатель «Авто»: кнопка
+  /// размера XS (32dp) плюс по четыре точки, которые тоже ловят палец.
+  static const autoRowHeight = 40.0;
 
   /// Именно `hasImage`, а не «тема выбрана»: у палитровой темы картинки нет
   /// вовсе, и шапка вырастала на [fadeHeight] пустоты — подложку из ролей
@@ -761,12 +761,9 @@ class _ServerGroupHeader extends ConsumerWidget {
 
 /// Строка с переключателем «Авто» под заголовком группы.
 ///
-/// Кнопка-переключатель, а не чип: у M3 Expressive бинарный выбор показывается
-/// формой и цветом (круглая контурная → квадратная с заливкой), а галочка
-/// осталась приёмом фильтров, которые ходят наборами. Подпись не меняется
-/// между состояниями — спека прямо просит держать её одинаковой длины, да и
-/// имя выбранного сервера всё равно не влезло бы: оно живёт в плашке под
-/// главной кнопкой и подсветкой строки в списке.
+/// Кнопка-переключатель, а не чип: галочка у M3 Expressive осталась приёмом
+/// фильтров, которые ходят наборами. Имя выбранного сервера здесь не пишется —
+/// оно живёт в плашке под главной кнопкой и подсветкой строки в списке.
 class _AutoSelectRow extends ConsumerWidget {
   const _AutoSelectRow({required this.subscription});
 
@@ -807,48 +804,20 @@ class _AutoSelectRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final scheme = Theme.of(context).colorScheme;
-    final on = subscription.autoSelect;
     return SizedBox(
       height: _GroupHeaderBackground.autoRowHeight,
+      // Без вертикальных отступов: вся высота строки — зона нажатия кнопки,
+      // сама она рисуется по центру своими 32dp.
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 3, 14, 3),
+        padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
         child: Align(
           alignment: AlignmentDirectional.centerStart,
           child: Tooltip(
             message: l10n.serversAutoSelectTooltip,
-            child: Material(
-              // Залит в обоих состояниях. Контурный на фотографии читался как
-              // подпись к картинке, а не как кнопка: обводка на пёстром фоне
-              // пропадает, нажимать там визуально нечего.
-              color: on
-                  ? scheme.secondaryContainer
-                  : scheme.surfaceContainerHighest.withValues(alpha: 0.72),
-              shape: RoundedRectangleBorder(
-                // Состояние всё равно показывает форма, как просит M3E у
-                // кнопок-переключателей: круглая → квадратная.
-                borderRadius: BorderRadius.circular(
-                  on ? ExpressiveShape.small : ExpressiveShape.full,
-                ),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: () => unawaited(_toggle(ref, context)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 5,
-                  ),
-                  child: Text(
-                    l10n.serversAutoSelect,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: on
-                              ? scheme.onSecondaryContainer
-                              : AppTheme.text(context),
-                        ),
-                  ),
-                ),
-              ),
+            child: ExpressiveToggleButton(
+              selected: subscription.autoSelect,
+              label: l10n.serversAutoSelect,
+              onPressed: () => unawaited(_toggle(ref, context)),
             ),
           ),
         ),
