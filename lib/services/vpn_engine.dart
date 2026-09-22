@@ -109,6 +109,32 @@ class VpnEngine {
         keepAlive: keepAlive,
       );
 
+  /// Замер батча одним ядром; `null` — платформа так не умеет.
+  Future<List<({
+        String id,
+        bool success,
+        int? latencyMs,
+        String error,
+        int? httpStatus,
+      })>?> xrayUrlTestMulti({
+    required String config,
+    required List<(String id, int port)> probes,
+    VpnBackend core = VpnBackend.xray,
+    String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
+    int timeoutMs = 15000,
+    bool keepAlive = true,
+    int concurrency = 16,
+  }) =>
+      _backend.xrayUrlTestMulti(
+        config: config,
+        probes: probes,
+        core: core,
+        testUrl: testUrl,
+        timeoutMs: timeoutMs,
+        keepAlive: keepAlive,
+        concurrency: concurrency,
+      );
+
   Future<({bool success, int? latencyMs, String error, int? httpStatus})>
       xrayUrlTest({
     required String xrayConfig,

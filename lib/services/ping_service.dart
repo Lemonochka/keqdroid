@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 
 import '../models/app_settings.dart';
 import '../models/ping_test_config.dart';
@@ -11,6 +11,7 @@ import '../tunnel/vpn_backend.dart';
 import '../utils/config_gen.dart';
 import '../utils/hysteria_uri.dart';
 import '../utils/mihomo_config_gen.dart';
+import '../utils/multi_ping_config.dart';
 import '../utils/pooled.dart';
 import '../utils/vpn_core_support.dart';
 
@@ -463,6 +464,75 @@ class PingService {
     final ips = resolvedIps ?? await _resolveServerIps(servers);
     final takenPorts = <int>{};
 
+    // Один процесс ядра на весь батч там, где это умеет платформа. Остальные
+    // серверы (готовый конфиг ядра, цепочка, AmneziaWG) в общий конфиг не
+    // складываются — они несут собственные инбаунды и роутинг — и остаются на
+    // поштучном пути.
+    if (multiPingSupported) {
+      final byCore = <VpnBackend, List<ServerItem>>{};
+      final singles = <ServerItem>[];
+      for (final server in servers) {
+        if (mergeableForMultiPing(server.config)) {
+          byCore.putIfAbsent(pingCoreFor(server.config, settings), () => []).add(server);
+        } else {
+          singles.add(server);
+        }
+      }
+      if (byCore.values.any((group) => group.length > 1)) {
+        final results = <String, PingResult>{};
+        for (final entry in byCore.entries) {
+          final group = entry.value;
+          if (group.length == 1) {
+            singles.addAll(group);
+            continue;
+          }
+          for (final chunk in _chunked(group, multiPingChunk)) {
+            final measured = await _pingUrlMulti(
+              chunk,
+              settings,
+              core: entry.key,
+              testUrl: testUrl,
+              timeoutMs: timeoutSeconds * 1000,
+              ips: ips,
+              takenPorts: takenPorts,
+              onResult: onResult,
+            );
+            for (final result in measured) {
+              results[result.serverId] = result;
+            }
+          }
+        }
+        final rest = await mapPooled(singles, concurrency, (server) async {
+          final result = await _pingUrlSingle(
+            server,
+            settings,
+            testUrl: testUrl,
+            timeoutMs: timeoutSeconds * 1000,
+            resolvedIp: ips[server.id],
+            takenPorts: takenPorts,
+          );
+          onResult?.call(result);
+          return result;
+        });
+        for (final result in rest) {
+          results[result.serverId] = result;
+        }
+        // Порядок входного списка: вызывающий раскладывает результаты по
+        // серверам и ждёт их именно в нём.
+        return [
+          for (final server in servers)
+            results[server.id] ??
+                PingResult(
+                  serverId: server.id,
+                  serverName: server.displayName,
+                  success: false,
+                  error: 'no result',
+                  pingType: PingType.url,
+                ),
+        ];
+      }
+    }
+
     return mapPooled(servers, concurrency, (server) async {
       final result = await _pingUrlSingle(
         server,
@@ -475,6 +545,171 @@ class PingService {
       onResult?.call(result);
       return result;
     });
+  }
+
+  /// Умеет ли платформа мерить батч одним ядром.
+  ///
+  /// Пока только Android, и там это не про скорость старта (она копеечная), а
+  /// про память: полсотни процессов с Go-рантаймом телефон не держит, поэтому
+  /// поштучный путь упирается в пул из шести, и живые серверы стоят в очереди
+  /// за мёртвыми. На десктопе процессов не жалко, и общий конфиг там пришлось
+  /// бы ещё и заворачивать в keqrnel, чьи инбаунды принадлежат sing-box.
+  /// Тесты гоняются на Windows, где группового пути нет; без подмены его
+  /// разбор серверов по ядрам не проверить.
+  @visibleForTesting
+  static bool? debugMultiPingSupported;
+
+  static bool get multiPingSupported =>
+      debugMultiPingSupported ?? Platform.isAndroid;
+
+  /// По сколько серверов класть в один конфиг.
+  ///
+  /// Не «все разом», и дело не только в отказе (батч падает целиком из-за
+  /// одного негодного сервера, и чем он больше, тем дороже деление пополам).
+  /// Результаты батча приезжают разом, а список показывает крутилку на каждом
+  /// тайле: один конфиг на всю подписку означал бы неподвижный экран до самого
+  /// конца замера. Десяток — это и порция результатов раз в пару секунд, и
+  /// один старт ядра вместо десяти.
+  static const multiPingChunk = 10;
+
+  /// Складывается ли сервер в общий конфиг.
+  ///
+  /// Только обычная ссылка: готовый конфиг ядра (Clash/Xray), цепочка и
+  /// AmneziaWG несут собственные инбаунды, роутинг и DNS — в чужой конфиг их
+  /// не вложить, они сами себе конфиг.
+  static bool mergeableForMultiPing(String serverConfig) =>
+      detectServerFormat(serverConfig) == ServerFormat.link;
+
+  static Iterable<List<T>> _chunked<T>(List<T> items, int size) sync* {
+    for (var i = 0; i < items.length; i += size) {
+      yield items.sublist(i, (i + size).clamp(0, items.length));
+    }
+  }
+
+  /// Меряет группу серверов одним ядром; при отказе делит её пополам.
+  ///
+  /// Делением, а не разбором ошибки: ядро не говорит, какой из аутбаундов ему
+  /// не понравился, а сказать «не работают все двадцать» из-за одной кривой
+  /// ссылки — худшее, что можно показать. В пределе группа распадается до
+  /// одиночных замеров, то есть до прежнего поведения.
+  static Future<List<PingResult>> _pingUrlMulti(
+    List<ServerItem> servers,
+    AppSettings settings, {
+    required VpnBackend core,
+    required String testUrl,
+    required int timeoutMs,
+    required Map<String, String> ips,
+    required Set<int> takenPorts,
+    void Function(PingResult)? onResult,
+  }) async {
+    if (servers.isEmpty) return [];
+    if (servers.length == 1) {
+      final result = await _pingUrlSingle(
+        servers.first,
+        settings,
+        testUrl: testUrl,
+        timeoutMs: timeoutMs,
+        resolvedIp: ips[servers.first.id],
+        takenPorts: takenPorts,
+      );
+      onResult?.call(result);
+      return [result];
+    }
+
+    final probes = <PingProbe>[];
+    final measured = <ServerItem>[];
+    final failed = <PingResult>[];
+    for (final server in servers) {
+      final port = await _freePort(avoid: takenPorts);
+      takenPorts.add(port);
+      try {
+        probes.add((
+          id: server.id,
+          configJson: _pingConfigFor(
+            core,
+            server.config,
+            settings,
+            socksPort: port,
+            resolvedServerIp: ips[server.id],
+          ),
+          port: port,
+        ));
+        measured.add(server);
+      } catch (e) {
+        // Ссылку, которую не берёт генератор, в общий конфиг класть нечего:
+        // она краснеет сама по себе и батч за собой не тянет.
+        final result = PingResult(
+          serverId: server.id,
+          serverName: server.displayName,
+          success: false,
+          error: e.toString(),
+          pingType: PingType.url,
+        );
+        onResult?.call(result);
+        failed.add(result);
+      }
+    }
+    if (probes.isEmpty) return failed;
+
+    List<({String id, bool success, int? latencyMs, String error, int? httpStatus})>?
+        raw;
+    try {
+      raw = await VpnEngine().xrayUrlTestMulti(
+        config: core == VpnBackend.mihomo
+            ? MultiPingConfig.mergeMihomo(probes, httpListeners: !Platform.isAndroid)
+            : MultiPingConfig.mergeXray(probes),
+        probes: [for (final probe in probes) (probe.id, probe.port)],
+        core: core,
+        testUrl: testUrl,
+        timeoutMs: timeoutMs,
+        keepAlive: settings.pingKeepAlive,
+      );
+    } catch (_) {
+      raw = null;
+    }
+
+    if (raw == null || raw.length != probes.length) {
+      final half = measured.length ~/ 2;
+      final left = await _pingUrlMulti(
+        measured.sublist(0, half),
+        settings,
+        core: core,
+        testUrl: testUrl,
+        timeoutMs: timeoutMs,
+        ips: ips,
+        takenPorts: takenPorts,
+        onResult: onResult,
+      );
+      final right = await _pingUrlMulti(
+        measured.sublist(half),
+        settings,
+        core: core,
+        testUrl: testUrl,
+        timeoutMs: timeoutMs,
+        ips: ips,
+        takenPorts: takenPorts,
+        onResult: onResult,
+      );
+      return [...failed, ...left, ...right];
+    }
+
+    final byId = {for (final server in measured) server.id: server};
+    final results = <PingResult>[];
+    for (final item in raw) {
+      final server = byId[item.id];
+      if (server == null) continue;
+      final result = PingResult(
+        serverId: server.id,
+        serverName: server.displayName,
+        latencyMs: item.latencyMs,
+        success: item.success,
+        error: item.error,
+        pingType: PingType.url,
+      );
+      onResult?.call(result);
+      results.add(result);
+    }
+    return [...failed, ...results];
   }
 
   /// Каким ядром мерить этот сервер.

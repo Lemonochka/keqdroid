@@ -57,6 +57,29 @@ abstract class TunnelBackend {
     bool keepAlive = true,
   });
 
+  /// Замер всего батча ОДНИМ ядром: конфиг несёт инбаунд на каждый сервер, а
+  /// проба ходит на свой порт. `null` — платформа так не умеет, и вызывающий
+  /// остаётся на поштучном пути.
+  ///
+  /// Батч падает целиком: негодный сервер уносит с собой весь конфиг, и
+  /// выяснять, какой именно, дешевле делением батча, чем догадками.
+  Future<List<({
+        String id,
+        bool success,
+        int? latencyMs,
+        String error,
+        int? httpStatus,
+      })>?> xrayUrlTestMulti({
+    required String config,
+    required List<(String id, int port)> probes,
+    VpnBackend core = VpnBackend.xray,
+    String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
+    int timeoutMs = 15000,
+    bool keepAlive = true,
+    int concurrency = 16,
+  }) async =>
+      null;
+
   /// downloads a fixed payload through the core and reports kbps per server.
   /// implemented on windows (dart) and android (native); elsewhere returns success=false.
   Future<

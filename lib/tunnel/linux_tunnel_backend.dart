@@ -1235,6 +1235,26 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
   Future<
     List<
       ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+    >?
+  >
+  xrayUrlTestMulti({
+    required String config,
+    required List<(String id, int port)> probes,
+    VpnBackend core = VpnBackend.xray,
+    String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
+    int timeoutMs = 15000,
+    bool keepAlive = true,
+    int concurrency = 16,
+  }) async =>
+      // Десктоп меряет поштучно: процессов тут не жалко, а общий конфиг xray
+      // пришлось бы ещё и заворачивать в keqrnel, чьи инбаунды принадлежат
+      // sing-box и про xray-роутинг ничего не знают.
+      null;
+
+  @override
+  Future<
+    List<
+      ({String id, bool success, int? latencyMs, String error, int? httpStatus})
     >
   >
   xrayUrlTestBatch({

@@ -18,9 +18,17 @@ import java.net.URL
 
 import java.util.UUID
 
+import java.util.concurrent.Callable
+
+import java.util.concurrent.Executors
+
+import java.util.concurrent.TimeUnit
+
 import java.util.concurrent.locks.ReentrantLock
 
 import kotlin.concurrent.withLock
+
+import kotlin.math.max
 
 import kotlin.math.min
 
@@ -240,6 +248,99 @@ object EphemeralXrayPing {
     }
 
 
+
+    data class MultiProbe(
+        val id: String,
+        val port: Int,
+    )
+
+    /**
+     * Measures a whole batch with ONE core process.
+     *
+     * The config carries an inbound per server (MultiPingConfig on the Dart
+     * side), so each probe reaches its own server through its own port. That is
+     * what makes fifty servers possible on a phone: the limit was never startup
+     * time, it was holding fifty Go runtimes at once.
+     *
+     * A batch fails as a whole on purpose. One unusable server takes the config
+     * down with it, and rather than guess which one, the caller splits the batch
+     * and retries — down to a single server, which is the old path.
+     */
+    fun urlTestMulti(
+        nativeLibraryDir: String,
+        filesDir: File,
+        assetDir: String,
+        configJson: String,
+        probes: List<MultiProbe>,
+        testUrl: String,
+        timeoutMs: Int,
+        keepAlive: Boolean = true,
+        concurrency: Int = 16,
+        core: String = CORE_XRAY,
+    ): List<BatchResult> {
+        if (probes.isEmpty()) return emptyList()
+
+        val binary = coreBinary(nativeLibraryDir, core)
+        if (!binary.exists()) {
+            val err = Result(false, null, "${binary.name} not found", null)
+            return probes.map { BatchResult(it.id, err) }
+        }
+
+        val configFile = File(filesDir, "xray_ping_multi_${UUID.randomUUID()}.json")
+        var pid = -1
+        try {
+            configFile.writeText(configJson, Charsets.UTF_8)
+            pid = NativeHelper.startCore(binary.absolutePath, configFile.absolutePath, assetDir, "", core)
+            if (pid <= 0) {
+                val err = Result(false, null, "failed to start $core for the batch (pid=$pid)", null)
+                return probes.map { BatchResult(it.id, err) }
+            }
+
+            // Порты поднимаются разом, поэтому бюджет общий: первый ждёт старта
+            // ядра, остальные к этому моменту уже слушают.
+            val portWaitMs = min(timeoutMs, 8_000)
+            for (probe in probes) {
+                if (!waitForPort("127.0.0.1", probe.port, portWaitMs)) {
+                    val err = Result(false, null, "port ${probe.port} not ready in the batch", null)
+                    return probes.map { BatchResult(it.id, err) }
+                }
+            }
+
+            val workers = min(max(1, concurrency), probes.size)
+            val pool = Executors.newFixedThreadPool(workers)
+            try {
+                val tasks = probes.map { probe ->
+                    Callable {
+                        BatchResult(probe.id, httpProbeViaSocks(testUrl, probe.port, timeoutMs, keepAlive))
+                    }
+                }
+                // Один срок на весь батч: пробы идут параллельно, и ждать надо
+                // самую медленную, а не сумму их таймаутов.
+                val futures = pool.invokeAll(tasks, (timeoutMs + 5_000).toLong(), TimeUnit.MILLISECONDS)
+                return probes.mapIndexed { index, probe ->
+                    runCatching { futures[index].get() }.getOrElse {
+                        BatchResult(probe.id, Result(false, null, "probe cancelled: ${it.message}", null))
+                    }
+                }
+            } finally {
+                pool.shutdownNow()
+            }
+        } catch (e: Exception) {
+            Log.e("KEQDIS", "urlTestMulti failed: ${e.message}")
+            val err = Result(false, null, e.message ?: "batch failed", null)
+            return probes.map { BatchResult(it.id, err) }
+        } finally {
+            if (pid > 0) {
+                runCatching { android.os.Process.killProcess(pid) }
+                var i = 0
+                while (i < 4 && File("/proc/$pid").exists()) {
+                    Thread.sleep(40)
+                    i++
+                }
+            }
+            runCatching { configFile.delete() }
+        }
+    }
 
     fun speedTest(
 

@@ -616,6 +616,30 @@ class MainActivity : FlutterFragmentActivity() {
                                 result,
                             )
                         }
+                        "xrayUrlTestMulti" -> {
+                            val config = call.argument<String>("config")
+                            val core = call.argument<String>("core")
+                                ?: EphemeralXrayPing.CORE_XRAY
+                            val testUrl = call.argument<String>("testUrl")
+                            val timeoutMs = call.argument<Int>("timeoutMs") ?: 15_000
+                            val keepAlive = call.argument<Boolean>("keepAlive") ?: true
+                            val concurrency = call.argument<Int>("concurrency") ?: 16
+                            val rawProbes = call.argument<List<Map<String, Any?>>>("probes")
+                            if (config.isNullOrBlank() || rawProbes.isNullOrEmpty()) {
+                                result.error("INVALID_ARGS", "Missing config or probes", null)
+                                return@setMethodCallHandler
+                            }
+                            xrayUrlTestMulti(
+                                config,
+                                rawProbes,
+                                testUrl ?: "https://connectivitycheck.gstatic.com/generate_204",
+                                timeoutMs,
+                                keepAlive,
+                                concurrency,
+                                core,
+                                result,
+                            )
+                        }
                         "xraySpeedTest" -> {
                             val xrayConfig = call.argument<String>("xrayConfig")
                             val socksPort = call.argument<Int>("socksPort")
@@ -964,6 +988,56 @@ class MainActivity : FlutterFragmentActivity() {
                 }.getOrElse { e ->
                     emptyList<EphemeralXrayPing.BatchResult>()
                         .also { android.util.Log.e("KEQDIS", "xrayUrlTestBatch failed: ${e.message}") }
+                }
+            }
+            result.success(
+                payload.map { item ->
+                    mapOf(
+                        "id" to item.id,
+                        "success" to item.result.success,
+                        "latencyMs" to item.result.latencyMs,
+                        "error" to item.result.error,
+                        "httpStatus" to item.result.httpStatus,
+                    )
+                },
+            )
+        }
+    }
+
+    private fun xrayUrlTestMulti(
+        config: String,
+        rawProbes: List<Map<String, Any?>>,
+        testUrl: String,
+        timeoutMs: Int,
+        keepAlive: Boolean,
+        concurrency: Int,
+        core: String,
+        result: MethodChannel.Result,
+    ) {
+        mainScope.launch {
+            val payload = withContext(Dispatchers.IO) {
+                runCatching {
+                    val probes = rawProbes.mapNotNull { map ->
+                        val id = map["id"] as? String ?: return@mapNotNull null
+                        val port = (map["port"] as? Number)?.toInt() ?: return@mapNotNull null
+                        if (port <= 0) return@mapNotNull null
+                        EphemeralXrayPing.MultiProbe(id, port)
+                    }
+                    EphemeralXrayPing.urlTestMulti(
+                        nativeLibraryDir = applicationInfo.nativeLibraryDir,
+                        filesDir = filesDir,
+                        assetDir = filesDir.absolutePath,
+                        configJson = config,
+                        probes = probes,
+                        testUrl = testUrl,
+                        timeoutMs = timeoutMs,
+                        keepAlive = keepAlive,
+                        concurrency = concurrency,
+                        core = core,
+                    )
+                }.getOrElse { e ->
+                    emptyList<EphemeralXrayPing.BatchResult>()
+                        .also { android.util.Log.e("KEQDIS", "xrayUrlTestMulti failed: ${e.message}") }
                 }
             }
             result.success(

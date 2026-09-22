@@ -222,6 +222,51 @@ class AndroidTunnelBackend implements TunnelBackend {
   Future<String?> getAppIcon(String path) async => null;
 
   @override
+  Future<List<({
+        String id,
+        bool success,
+        int? latencyMs,
+        String error,
+        int? httpStatus,
+      })>?> xrayUrlTestMulti({
+    required String config,
+    required List<(String id, int port)> probes,
+    VpnBackend core = VpnBackend.xray,
+    String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
+    int timeoutMs = 15000,
+    bool keepAlive = true,
+    int concurrency = 16,
+  }) async {
+    if (probes.isEmpty) return const [];
+    try {
+      final result = await _method.invokeMethod<List>('xrayUrlTestMulti', {
+        'config': config,
+        'core': core.wireValue,
+        'testUrl': testUrl,
+        'timeoutMs': timeoutMs,
+        'keepAlive': keepAlive,
+        'concurrency': concurrency,
+        'probes': probes.map((e) => {'id': e.$1, 'port': e.$2}).toList(),
+      });
+      // Пустой ответ — нативная сторона не смогла поднять батч целиком.
+      // Возвращаем null: вызывающий поделит его и попробует снова.
+      if (result == null || result.isEmpty) return null;
+      return result.map((raw) {
+        final map = Map<Object?, Object?>.from(raw as Map);
+        return (
+          id: map['id'] as String? ?? '',
+          success: map['success'] as bool? ?? false,
+          latencyMs: (map['latencyMs'] as num?)?.toInt(),
+          error: map['error'] as String? ?? '',
+          httpStatus: (map['httpStatus'] as num?)?.toInt(),
+        );
+      }).toList();
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  @override
   Future<
       List<({
         String id,
