@@ -471,6 +471,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayDnsSplitDirectHint => 'Uses first server for domains from direct list';
 
   @override
+  String get settingsXrayDnsHosts => 'Own addresses for domains';
+
+  @override
+  String get settingsXrayDnsHostsHint => 'One entry per line: domain and address. Several addresses go comma-separated, and another domain in place of an address means resolve that one instead. «*.example.com» covers the domain and its subdomains.';
+
+  @override
   String get settingsXrayDnsQueryStrategy => 'Query strategy';
 
   @override

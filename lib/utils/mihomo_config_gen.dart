@@ -237,6 +237,8 @@ class MihomoConfigGen {
       // без него не работают наши же правила.
       'find-process-mode': processRules ? 'strict' : 'off',
       'sniffer': buildSniffer(settings.xrayCore),
+      if (buildHosts(settings.xrayCore).isNotEmpty)
+        'hosts': buildHosts(settings.xrayCore),
       'dns': buildDns(settings, fakeIp: fakeIp),
       if (tun != null) 'tun': buildTun(tun),
       if (settings.lanSharing) ...{
@@ -345,6 +347,11 @@ class MihomoConfigGen {
         fakeIp: fakeIp,
       ),
       extra: {
+        // Свои адреса для доменов — только когда автор конфига своих не
+        // написал: его карта важнее нашей настройки, как и dns-блок.
+        if (!clash.map.containsKey('hosts') &&
+            buildHosts(settings.xrayCore).isNotEmpty)
+          'hosts': buildHosts(settings.xrayCore),
         if (processRules) 'find-process-mode': 'strict',
         if (tun != null) 'tun': buildTun(tun),
         if (settings.lanSharing) ...{
@@ -413,6 +420,22 @@ class MihomoConfigGen {
   ///
   /// Порты только строками, включая одиночные: у ядра это список строк, и число
   /// `80` роняет конфиг целиком с «cannot unmarshal !!int into string».
+  /// Свои адреса для доменов в синтаксисе mihomo.
+  ///
+  /// Маска `*.example.com` переводится в `+.example.com` — «домен и все его
+  /// поддомены». Звёздочка у mihomo значит ровно один уровень, то есть не то
+  /// же самое, что у нас в поле, и молча оставить её было бы подменой смысла.
+  static Map<String, dynamic> buildHosts(XrayCoreSettings core) {
+    final parsed = XrayCoreSettings.parseDnsHosts(core.dnsHosts).entries;
+    return {
+      for (final entry in parsed.entries)
+        (entry.key.startsWith('*.')
+                ? '+.${entry.key.substring(2)}'
+                : entry.key):
+            entry.value.length == 1 ? entry.value.single : entry.value,
+    };
+  }
+
   static Map<String, dynamic> buildSniffer(XrayCoreSettings core) => {
         'enable': core.sniffingEnabled,
         'parse-pure-ip': true,

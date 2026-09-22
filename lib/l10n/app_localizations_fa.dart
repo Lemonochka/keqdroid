@@ -471,6 +471,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayDnsSplitDirectHint => 'برای دامنه‌های فهرست مستقیم از سرور اول استفاده می‌کند';
 
   @override
+  String get settingsXrayDnsHosts => 'Own addresses for domains';
+
+  @override
+  String get settingsXrayDnsHostsHint => 'One entry per line: domain and address. Several addresses go comma-separated. «*.example.com» covers the domain and its subdomains.';
+
+  @override
   String get settingsXrayDnsQueryStrategy => 'استراتژی پرس‌وجو';
 
   @override

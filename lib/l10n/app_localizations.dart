@@ -959,6 +959,18 @@ abstract class AppLocalizations {
   /// **'Uses first server for domains from direct list'**
   String get settingsXrayDnsSplitDirectHint;
 
+  /// No description provided for @settingsXrayDnsHosts.
+  ///
+  /// In en, this message translates to:
+  /// **'Own addresses for domains'**
+  String get settingsXrayDnsHosts;
+
+  /// No description provided for @settingsXrayDnsHostsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'One entry per line: domain and address. Several addresses go comma-separated, and another domain in place of an address means resolve that one instead. «*.example.com» covers the domain and its subdomains.'**
+  String get settingsXrayDnsHostsHint;
+
   /// No description provided for @settingsXrayDnsQueryStrategy.
   ///
   /// In en, this message translates to:

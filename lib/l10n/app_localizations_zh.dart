@@ -471,6 +471,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayDnsSplitDirectHint => '对直连列表中的域名使用第一个服务器';
 
   @override
+  String get settingsXrayDnsHosts => '为域名指定地址';
+
+  @override
+  String get settingsXrayDnsHostsHint => '每行一条：域名和地址。多个地址用逗号分隔；也可以写另一个域名，内核会改为解析它。《*.example.com》包括该域名及其子域名。';
+
+  @override
   String get settingsXrayDnsQueryStrategy => '查询策略';
 
   @override

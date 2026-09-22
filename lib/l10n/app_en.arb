@@ -219,6 +219,8 @@
   "settingsXrayDnsServers": "DNS servers",
   "settingsXrayDnsSplitDirect": "Split resolver for direct domains",
   "settingsXrayDnsSplitDirectHint": "Uses first server for domains from direct list",
+  "settingsXrayDnsHosts": "Own addresses for domains",
+  "settingsXrayDnsHostsHint": "One entry per line: domain and address. Several addresses go comma-separated, and another domain in place of an address means resolve that one instead. «*.example.com» covers the domain and its subdomains.",
   "settingsXrayDnsQueryStrategy": "Query strategy",
   "settingsXrayDnsDisableCache": "Disable DNS cache",
   "settingsXrayXmuxSection": "XMUX (XHTTP)",

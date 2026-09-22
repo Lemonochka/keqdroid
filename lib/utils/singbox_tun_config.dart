@@ -3,6 +3,7 @@ import 'dart:io';
 
 import '../models/app_settings.dart';
 import '../models/tun_settings.dart';
+import '../models/xray_core_settings.dart';
 import '../tunnel/app_routing_mode.dart';
 import 'process_name_utils.dart';
 import 'routing_entry.dart';
@@ -554,7 +555,12 @@ class SingBoxTunConfigGen {
     // на оба ядра, а раньше здесь сплит стоял всегда — выключить его в TUN не
     // получалось вовсе.
     final directDnsParts = classifyDomains(directDomains);
+    final hosts = hostsServerEntries(settings);
     final dnsRules = <Map<String, dynamic>>[
+      // Свои адреса для доменов — первым правилом: их ядро обязано отдать
+      // раньше любого резолвера, иначе это не hosts, а подсказка.
+      if (hosts.isNotEmpty)
+        {'domain': hosts.keys.toList(), 'server': hostsServerTag},
       if (settings.xrayCore.dnsSplitDirectDomains &&
           (directDnsParts.domain.isNotEmpty ||
               directDnsParts.domainSuffix.isNotEmpty ||
@@ -615,6 +621,12 @@ class SingBoxTunConfigGen {
       'dns': {
         'servers': [
           {'tag': 'local-dns', 'type': 'local'},
+          if (hosts.isNotEmpty)
+            {
+              'tag': hostsServerTag,
+              'type': 'hosts',
+              'predefined': hosts,
+            },
           buildProxyDnsServer(),
         ],
         if (dnsRules.isNotEmpty) 'rules': dnsRules,
@@ -649,6 +661,41 @@ class SingBoxTunConfigGen {
 
     return const JsonEncoder.withIndent('  ').convert(map);
   }
+
+  /// Тег резолвера, который отдаёт свои адреса для доменов.
+  static const hostsServerTag = 'keq-hosts';
+
+  /// Свои адреса для доменов в том виде, в каком их принимает sing-box.
+  ///
+  /// Берём только точные имена с адресами: у сервера типа `hosts` карта
+  /// «имя → адреса» и лукап по ней точный, масок он не знает вовсе, а
+  /// псевдоним (домен вместо адреса) там негде исполнить. Что не влезло,
+  /// называет [ignoredHostsEntries] — вызывающий пишет это в лог, потому что
+  /// молчаливо съеденная строка выглядит как «настройка не работает».
+  static Map<String, List<String>> hostsServerEntries(AppSettings settings) {
+    final out = <String, List<String>>{};
+    final parsed = XrayCoreSettings.parseDnsHosts(settings.xrayCore.dnsHosts);
+    for (final entry in parsed.entries.entries) {
+      if (entry.key.startsWith('*.')) continue;
+      if (!entry.value.every(_isIpLiteral)) continue;
+      out[entry.key] = entry.value;
+    }
+    return out;
+  }
+
+  /// Строки поля «свои адреса для доменов», которые в этом режиме не
+  /// исполнятся: маски и псевдонимы.
+  static List<String> ignoredHostsEntries(AppSettings settings) {
+    final parsed = XrayCoreSettings.parseDnsHosts(settings.xrayCore.dnsHosts);
+    return [
+      for (final entry in parsed.entries.entries)
+        if (entry.key.startsWith('*.') || !entry.value.every(_isIpLiteral))
+          '${entry.key} ${entry.value.join(', ')}',
+    ];
+  }
+
+  static bool _isIpLiteral(String value) =>
+      InternetAddress.tryParse(value) != null;
 
   /// Адреса из поля «свои DNS-серверы», как их ввела пользовательница. Пусто,
   /// когда переключатель выключен: список тогда не участвует вовсе.

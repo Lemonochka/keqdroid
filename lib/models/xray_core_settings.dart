@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 /// клиентские опции xray (dns, routing, xhttp/xmux, sniffing)
 class XrayCoreSettings {
@@ -125,6 +126,16 @@ class XrayCoreSettings {
   /// нашего участия.
   final bool concurrentDial;
 
+  /// Свои адреса для доменов — то же, что файл hosts, только внутри ядра.
+  ///
+  /// Строка на запись: `домен адрес`. Порядок слов свободный (адрес слева
+  /// тоже понимаем — так выглядит системный hosts), разделителем годится
+  /// пробел, двоеточие или знак равенства. Адресов можно несколько через
+  /// запятую, а вместо адреса — другой домен: ядро тогда резолвит его.
+  /// Маска `*.example.com` значит «домен и его поддомены».
+  final String dnsHosts;
+
+
   const XrayCoreSettings({
     this.logLevel = 'warning',
     this.routingDomainStrategy = 'AsIs',
@@ -158,6 +169,7 @@ class XrayCoreSettings {
     this.sniffingEnabled = true,
     this.sniffingRouteOnly = false,
     this.concurrentDial = false,
+    this.dnsHosts = '',
   });
 
   static const logLevels = ['none', 'error', 'warning', 'info', 'debug'];
@@ -263,6 +275,7 @@ class XrayCoreSettings {
         'sniffingEnabled': sniffingEnabled,
         'sniffingRouteOnly': sniffingRouteOnly,
         'concurrentDial': concurrentDial,
+        'dnsHosts': dnsHosts,
       };
 
   factory XrayCoreSettings.fromJson(Map<String, dynamic>? json) {
@@ -331,6 +344,7 @@ class XrayCoreSettings {
       sniffingEnabled: b('sniffingEnabled', true),
       sniffingRouteOnly: b('sniffingRouteOnly', false),
       concurrentDial: b('concurrentDial', false),
+      dnsHosts: json['dnsHosts'] as String? ?? '',
     );
   }
 
@@ -367,6 +381,7 @@ class XrayCoreSettings {
     bool? sniffingEnabled,
     bool? sniffingRouteOnly,
     bool? concurrentDial,
+    String? dnsHosts,
   }) =>
       XrayCoreSettings(
         logLevel: logLevel ?? this.logLevel,
@@ -406,7 +421,78 @@ class XrayCoreSettings {
         sniffingEnabled: sniffingEnabled ?? this.sniffingEnabled,
         sniffingRouteOnly: sniffingRouteOnly ?? this.sniffingRouteOnly,
         concurrentDial: concurrentDial ?? this.concurrentDial,
+        dnsHosts: dnsHosts ?? this.dnsHosts,
       );
+
+  /// Разбор поля [dnsHosts]: «маска домена → чем её подменить».
+  ///
+  /// Ключ остаётся в синтаксисе приложения (`example.com`, `*.example.com`),
+  /// переводит его каждый генератор сам: у ядер маски пишутся по-разному.
+  /// [dropped] — строки, в которых нет пары «домен и адрес» или значение не
+  /// годится ни в адрес, ни в имя. Их вызывающий пишет в лог: молча съеденная
+  /// строка выглядит как «настройка не работает».
+  static ({Map<String, List<String>> entries, List<String> dropped})
+      parseDnsHosts(String raw) {
+    final entries = <String, List<String>>{};
+    final dropped = <String>[];
+    for (final line in raw.split(RegExp(r'[\n;]+'))) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
+      final parts = trimmed
+          .split(RegExp(r'[\s:=]+'))
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      if (parts.length < 2) {
+        dropped.add(trimmed);
+        continue;
+      }
+      // Системный hosts пишется наоборот — «адрес домен», и человек, который
+      // его знает, напишет так же. Определяем по тому, что слева: адрес там
+      // может быть только в этой раскладке.
+      final reversed = _isIpAddress(parts.first) && !_isIpAddress(parts[1]);
+      final key = reversed ? parts[1] : parts.first;
+      final rest = reversed
+          ? [parts.first, ...parts.skip(2)]
+          : parts.skip(1).toList();
+      final values = <String>[];
+      for (final chunk in rest) {
+        values.addAll(
+          chunk.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty),
+        );
+      }
+      final domainKey = key.toLowerCase();
+      if (values.isEmpty || !_isHostMask(domainKey)) {
+        dropped.add(trimmed);
+        continue;
+      }
+      // Либо адреса, либо один чужой домен: ядра берут «список IP» или
+      // «имя, которое резолвить вместо этого», но не смесь.
+      final allIps = values.every(_isIpAddress);
+      final alias = values.length == 1 && _isHostMask(values.single);
+      if (!allIps && !alias) {
+        dropped.add(trimmed);
+        continue;
+      }
+      entries[domainKey] = values;
+    }
+    return (entries: entries, dropped: dropped);
+  }
+
+  static bool _isIpAddress(String value) {
+    final bare = value.startsWith('[') && value.endsWith(']')
+        ? value.substring(1, value.length - 1)
+        : value;
+    return InternetAddress.tryParse(bare) != null;
+  }
+
+  /// Домен или маска `*.домен`: всё, что годится в ключ hosts.
+  static bool _isHostMask(String value) {
+    final bare = value.startsWith('*.') ? value.substring(2) : value;
+    if (bare.isEmpty || bare.contains('/') || bare.contains(' ')) return false;
+    return RegExp(r'^[a-z0-9_-]+(\.[a-z0-9_-]+)*$', caseSensitive: false)
+        .hasMatch(bare);
+  }
 
   static List<String> _parseServerLines(String raw) => raw
       .split(RegExp(r'[\n,;]+'))
@@ -522,6 +608,22 @@ class XrayCoreSettings {
   /// все запросы схлопываются в одно постоянное соединение до 1.1.1.1 вместо
   /// отдельного TCP на каждый. В режимах «остальное direct/block» оставляем
   /// прямой — там `final` увёл бы запрос мимо прокси или вовсе в blackhole.
+  /// Свои адреса для доменов в синтаксисе xray.
+  ///
+  /// Голый ключ ядро разбирает как ПОЛНОЕ совпадение (ParseDomainRule с
+  /// Domain_Full), поэтому маска `*.example.com` переводится в `domain:`, а не
+  /// остаётся звёздочкой: звёздочку ядро сочло бы частью имени.
+  Map<String, dynamic> buildHostsMap() {
+    final parsed = parseDnsHosts(dnsHosts).entries;
+    return {
+      for (final entry in parsed.entries)
+        (entry.key.startsWith('*.')
+                ? 'domain:${entry.key.substring(2)}'
+                : entry.key):
+            entry.value.length == 1 ? entry.value.single : entry.value,
+    };
+  }
+
   Map<String, dynamic> buildDnsBlock({
     required List<String> directDomains,
     List<String> bootstrapDomains = const [],
@@ -616,7 +718,11 @@ class XrayCoreSettings {
       servers.add({'address': 'https+local://1.1.1.1/dns-query'});
     }
 
+    final hosts = buildHostsMap();
     return {
+      // Раньше серверов: ядро смотрит hosts до опроса резолверов, и порядок
+      // ключей тут только для читающего человека.
+      if (hosts.isNotEmpty) 'hosts': hosts,
       'servers': [for (final server in servers) _withDnsLimits(server)],
       'queryStrategy': dnsQueryStrategy,
       if (dnsDisableCache) 'disableCache': true,
@@ -855,7 +961,8 @@ class XrayCoreSettings {
           noiseReset == other.noiseReset &&
           sniffingEnabled == other.sniffingEnabled &&
           sniffingRouteOnly == other.sniffingRouteOnly &&
-          concurrentDial == other.concurrentDial;
+          concurrentDial == other.concurrentDial &&
+          dnsHosts == other.dnsHosts;
 
   @override
   // hashAll, а не hash: у последнего потолок в двадцать аргументов, а полей
@@ -893,6 +1000,7 @@ class XrayCoreSettings {
         sniffingEnabled,
         sniffingRouteOnly,
         concurrentDial,
+        dnsHosts,
       ]);
 
   String toJsonString() => jsonEncode(toJson());

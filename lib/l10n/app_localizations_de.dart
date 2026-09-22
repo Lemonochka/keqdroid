@@ -471,6 +471,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayDnsSplitDirectHint => 'Verwendet den ersten Server für Domains aus der Direct-Liste';
 
   @override
+  String get settingsXrayDnsHosts => 'Eigene Adressen fur Domains';
+
+  @override
+  String get settingsXrayDnsHostsHint => 'Ein Eintrag pro Zeile: Domain und Adresse. Mehrere Adressen durch Komma trennen; statt einer Adresse kann eine andere Domain stehen, die der Kern dann auflost. «*.example.com» umfasst die Domain und ihre Subdomains.';
+
+  @override
   String get settingsXrayDnsQueryStrategy => 'Abfragestrategie';
 
   @override

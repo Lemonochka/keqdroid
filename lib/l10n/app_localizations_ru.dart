@@ -473,6 +473,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayDnsSplitDirectHint => 'Первый сервер отвечает за домены из списка direct';
 
   @override
+  String get settingsXrayDnsHosts => 'Свои адреса для доменов';
+
+  @override
+  String get settingsXrayDnsHostsHint => 'По записи на строку: домен и адрес. Адресов можно несколько через запятую, а вместо адреса — другой домен: ядро резолвит его. «*.example.com» — домен и его поддомены.';
+
+  @override
   String get settingsXrayDnsQueryStrategy => 'Стратегия запросов';
 
   @override
