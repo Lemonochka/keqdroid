@@ -21,6 +21,8 @@ import '../models/subscription_card_layout.dart';
 import '../models/subscription_card_theme.dart';
 import '../models/xray_core_settings.dart';
 import '../services/app_icon_cache.dart';
+import '../services/auto_select_watchdog.dart';
+import '../services/auto_server_select.dart';
 import '../services/card_image_service.dart';
 import '../services/geo_asset_service.dart';
 import '../services/notification_service.dart';

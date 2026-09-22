@@ -50,6 +50,14 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   // вместо опроса state с фиксированными задержками.
   Completer<void>? _disconnectWaiter;
   Timer? _androidPollTimer;
+
+  /// Сторож автовыбора: сколько проб подряд не ответили и сколько байт туннель
+  /// пропустил к прошлому тику. Байты и есть главное доказательство жизни —
+  /// пока они идут, в сеть сторож не ходит.
+  Timer? _autoSelectTimer;
+  int _autoSelectFailures = 0;
+  int _autoSelectSeenBytes = 0;
+  bool _autoSelectBusy = false;
   AppLifecycleListener? _androidLifecycle;
 
   void _applyNativeState(VpnState s) {
@@ -221,7 +229,13 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       }
       _applyNativeState(s);
     });
+    _autoSelectTimer?.cancel();
+    _autoSelectTimer = Timer.periodic(
+      AutoSelectWatchdog.probeEvery,
+      (_) => unawaited(_autoSelectTick()),
+    );
     ref.onDispose(() {
+      _autoSelectTimer?.cancel();
       _sub?.cancel();
       _stopAndroidPolling();
       _androidLifecycle?.dispose();
@@ -811,6 +825,94 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   }
 
   /// переподключение к текущему activeServer (смена сервера на активном VPN)
+  /// Тик сторожа автовыбора.
+  ///
+  /// Молчит во всех случаях, кроме одного: включён автовыбор у подписки
+  /// активного сервера, туннель считается подключённым, трафик не идёт, и
+  /// две пробы подряд не дошли. Тогда сервер меняется так же, как его меняет
+  /// человек, — через тот же переподключающий путь, с той же отметкой в
+  /// списке и той же ошибкой, если не получилось.
+  Future<void> _autoSelectTick() async {
+    if (_autoSelectBusy) return;
+    final current = state.value;
+    if (current?.status != VpnStatus.connected) {
+      _autoSelectFailures = 0;
+      return;
+    }
+
+    final server = ref.read(serversProvider).activeServer;
+    final subId = server?.subscriptionId;
+    if (server == null || subId == null) return;
+    final subs = ref.read(subscriptionsProvider).value ?? const <Subscription>[];
+    final owner = subs.where((s) => s.id == subId).firstOrNull;
+    if (owner == null || !owner.autoSelect) {
+      _autoSelectFailures = 0;
+      return;
+    }
+
+    final seen = (current?.totalDownload ?? 0) + (current?.totalUpload ?? 0);
+    final moved = seen > _autoSelectSeenBytes;
+    _autoSelectSeenBytes = seen;
+    if (!AutoSelectWatchdog.shouldProbe(
+      connected: true,
+      autoSelectOn: true,
+      trafficMoved: moved,
+    )) {
+      _autoSelectFailures = 0;
+      return;
+    }
+
+    _autoSelectBusy = true;
+    try {
+      final settings = await ref.read(storageProvider).getSettings();
+      final creds = Socks5Credentials();
+      final alive = await AutoSelectWatchdog.tunnelResponds(
+        httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),
+        testUrl: settings.pingTestTarget == 'custom' &&
+                settings.pingTestUrlCustom.trim().isNotEmpty
+            ? settings.pingTestUrlCustom.trim()
+            : kDefaultPingTestUrl,
+        username: creds.username,
+        password: creds.password,
+      );
+      if (alive) {
+        _autoSelectFailures = 0;
+        return;
+      }
+      _autoSelectFailures++;
+      if (!AutoSelectWatchdog.shouldSwitch(_autoSelectFailures)) return;
+      // Состояние могло измениться, пока ходила проба.
+      if (state.value?.status != VpnStatus.connected) return;
+
+      final next = AutoServerSelect.pick(
+        ref.read(serversProvider).servers,
+        subscriptionId: subId,
+        exclude: server.id,
+      );
+      if (next == null || next.id == server.id) {
+        // Менять не на кого: считаем заново, а не долбим переподключением
+        // один и тот же сервер каждые двадцать секунд.
+        _autoSelectFailures = 0;
+        return;
+      }
+      AppLogger.instance.info(
+        'Auto select: ${server.displayName} stopped answering, switching to '
+        '${next.displayName}',
+      );
+      _autoSelectFailures = 0;
+      await ref.read(serversProvider.notifier).setActive(next);
+      await reconnectToActiveServer();
+    } catch (e, st) {
+      AppLogger.instance.debug(
+        'Auto select tick failed',
+        error: e,
+        stackTrace: st,
+      );
+    } finally {
+      _autoSelectBusy = false;
+    }
+  }
+
   Future<void> reconnectToActiveServer() async {
     if (_serverSwitchInProgress || _connectInFlight) return;
 
