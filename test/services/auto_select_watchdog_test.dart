@@ -63,12 +63,26 @@ void main() {
     });
   });
 
-  test('цена ожидания измерима и невелика', () {
-    // Минута на мёртвом сервере злит, поэтому порог держим около сорока
-    // секунд: два тика по двадцать.
-    final worstCase = AutoSelectWatchdog.probeEvery.inSeconds *
-        AutoSelectWatchdog.failuresBeforeSwitch;
-    expect(worstCase, lessThanOrEqualTo(60));
-    expect(worstCase, greaterThanOrEqualTo(20));
+  test('подтверждение стоит секунд, а не ещё одного тика', () {
+    // Вторая проба идёт через короткую паузу внутри того же тика: ждать
+    // полный интервал ради подтверждения того, что уже видно, — это те же
+    // двадцать секунд без интернета.
+    expect(
+      AutoSelectWatchdog.retryAfterFailure,
+      lessThan(AutoSelectWatchdog.probeEvery),
+    );
+    // Но и не мгновенно: моргнувшую сеть надо пережить, а не принять за
+    // мёртвый сервер.
+    expect(
+      AutoSelectWatchdog.retryAfterFailure.inSeconds,
+      greaterThanOrEqualTo(3),
+    );
+
+    // Худшее ожидание целиком: тик, две пробы по таймауту и пауза между
+    // ними. Минута — потолок, за которым ожидание уже злит.
+    final worst = AutoSelectWatchdog.probeEvery +
+        AutoSelectWatchdog.probeTimeout * 2 +
+        AutoSelectWatchdog.retryAfterFailure;
+    expect(worst.inSeconds, lessThanOrEqualTo(60));
   });
 }

@@ -51,11 +51,10 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   Completer<void>? _disconnectWaiter;
   Timer? _androidPollTimer;
 
-  /// Сторож автовыбора: сколько проб подряд не ответили и сколько байт туннель
-  /// пропустил к прошлому тику. Байты и есть главное доказательство жизни —
-  /// пока они идут, в сеть сторож не ходит.
+  /// Сторож автовыбора: сколько байт туннель пропустил к прошлому тику. Байты
+  /// и есть главное доказательство жизни — пока они идут, в сеть сторож не
+  /// ходит вовсе.
   Timer? _autoSelectTimer;
-  int _autoSelectFailures = 0;
   int _autoSelectSeenBytes = 0;
   bool _autoSelectBusy = false;
   AppLifecycleListener? _androidLifecycle;
@@ -835,20 +834,14 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   Future<void> _autoSelectTick() async {
     if (_autoSelectBusy) return;
     final current = state.value;
-    if (current?.status != VpnStatus.connected) {
-      _autoSelectFailures = 0;
-      return;
-    }
+    if (current?.status != VpnStatus.connected) return;
 
     final server = ref.read(serversProvider).activeServer;
     final subId = server?.subscriptionId;
     if (server == null || subId == null) return;
     final subs = ref.read(subscriptionsProvider).value ?? const <Subscription>[];
     final owner = subs.where((s) => s.id == subId).firstOrNull;
-    if (owner == null || !owner.autoSelect) {
-      _autoSelectFailures = 0;
-      return;
-    }
+    if (owner == null || !owner.autoSelect) return;
 
     final seen = (current?.totalDownload ?? 0) + (current?.totalUpload ?? 0);
     final moved = seen > _autoSelectSeenBytes;
@@ -858,7 +851,6 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       autoSelectOn: true,
       trafficMoved: moved,
     )) {
-      _autoSelectFailures = 0;
       return;
     }
 
@@ -866,22 +858,36 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     try {
       final settings = await ref.read(storageProvider).getSettings();
       final creds = Socks5Credentials();
-      final alive = await AutoSelectWatchdog.tunnelResponds(
-        httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),
-        testUrl: settings.pingTestTarget == 'custom' &&
-                settings.pingTestUrlCustom.trim().isNotEmpty
-            ? settings.pingTestUrlCustom.trim()
-            : kDefaultPingTestUrl,
-        username: creds.username,
-        password: creds.password,
-      );
-      if (alive) {
-        _autoSelectFailures = 0;
+      final testUrl = settings.pingTestTarget == 'custom' &&
+              settings.pingTestUrlCustom.trim().isNotEmpty
+          ? settings.pingTestUrlCustom.trim()
+          : kDefaultPingTestUrl;
+      Future<bool> probe() => AutoSelectWatchdog.tunnelResponds(
+            httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),
+            testUrl: testUrl,
+            username: creds.username,
+            password: creds.password,
+          );
+
+      if (await probe()) return;
+      // Вторая проба сразу, а не следующим тиком: подтверждение того, что уже
+      // видно, не стоит ещё двадцати секунд без интернета.
+      var failures = 1;
+      await Future<void>.delayed(AutoSelectWatchdog.retryAfterFailure);
+      if (state.value?.status != VpnStatus.connected) return;
+      if (await probe()) return;
+      failures++;
+      if (!AutoSelectWatchdog.shouldSwitch(failures)) return;
+
+      // Сети может не быть вовсе — в метро, в самолёте, на нулевом сигнале.
+      // Тогда не отвечает ни один сервер, и перебор их означал бы разрыв за
+      // разрывом на ровном месте. Проверяем мимо туннеля.
+      if (!await AutoSelectWatchdog.networkResponds(testUrl: testUrl)) {
+        AppLogger.instance.debug(
+          'Auto select: no network at all, leaving the server alone',
+        );
         return;
       }
-      _autoSelectFailures++;
-      if (!AutoSelectWatchdog.shouldSwitch(_autoSelectFailures)) return;
-      // Состояние могло измениться, пока ходила проба.
       if (state.value?.status != VpnStatus.connected) return;
 
       final next = AutoServerSelect.pick(
@@ -890,16 +896,14 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         exclude: server.id,
       );
       if (next == null || next.id == server.id) {
-        // Менять не на кого: считаем заново, а не долбим переподключением
-        // один и тот же сервер каждые двадцать секунд.
-        _autoSelectFailures = 0;
+        // Менять не на кого: следующий тик начнёт счёт заново, а долбить
+        // переподключением один и тот же сервер незачем.
         return;
       }
       AppLogger.instance.info(
         'Auto select: ${server.displayName} stopped answering, switching to '
         '${next.displayName}',
       );
-      _autoSelectFailures = 0;
       await ref.read(serversProvider.notifier).setActive(next);
       await reconnectToActiveServer();
     } catch (e, st) {

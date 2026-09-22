@@ -27,6 +27,14 @@ abstract final class AutoSelectWatchdog {
   /// разрыв соединения, и платить им за каждую случайность нельзя.
   static const failuresBeforeSwitch = 2;
 
+  /// Пауза между первой неудачной пробой и второй.
+  ///
+  /// Не целый тик: ждать двадцать секунд ради подтверждения того, что уже
+  /// видно, — это те же двадцать секунд без интернета у человека. Пяти
+  /// достаточно, чтобы пережить моргнувшую сеть, и вдвое сокращает всё
+  /// ожидание.
+  static const retryAfterFailure = Duration(seconds: 5);
+
   /// Сколько ждём ответа от пробы.
   static const probeTimeout = Duration(seconds: 6);
 
@@ -45,6 +53,32 @@ abstract final class AutoSelectWatchdog {
   /// Пора ли съезжать на другой сервер.
   static bool shouldSwitch(int consecutiveFailures) =>
       consecutiveFailures >= failuresBeforeSwitch;
+
+  /// Есть ли у устройства сеть вообще, мимо туннеля.
+  ///
+  /// Нужно, чтобы не винить сервер в том, чего он не делал: в метро, в
+  /// самолёте и на нулевом сигнале не отвечает никто, и перебор серверов там
+  /// означал бы разрыв за разрывом на ровном месте. Запрос идёт напрямую —
+  /// пакет приложения и так исключён из туннеля.
+  static Future<bool> networkResponds({
+    required String testUrl,
+    Duration timeout = probeTimeout,
+  }) async {
+    final client = HttpClient()..connectionTimeout = timeout;
+    // Явный отказ от прокси: findProxy по умолчанию читает переменные
+    // окружения, и на десктопе системный прокси увёл бы пробу не туда.
+    client.findProxy = (_) => 'DIRECT';
+    try {
+      final request = await client.getUrl(Uri.parse(testUrl)).timeout(timeout);
+      final response = await request.close().timeout(timeout);
+      await response.drain<void>();
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      client.close(force: true);
+    }
+  }
 
   /// Отвечает ли что-нибудь через локальный инбаунд туннеля.
   ///
