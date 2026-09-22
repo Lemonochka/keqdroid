@@ -1594,7 +1594,7 @@ class _DnsServersFieldState extends State<_DnsServersField> {
         labelText: widget.label,
         hintText: widget.hintText,
         helperText: widget.helperText,
-        helperMaxLines: 4,
+        helperMaxLines: 6,
         alignLabelWithHint: true,
         filled: true,
         fillColor: AppTheme.bg(context).withValues(alpha: 0.55),

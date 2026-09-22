@@ -270,7 +270,16 @@ class _GroupHeaderBackground extends StatelessWidget {
           // совпадать по высоте с обычными группами.
           Align(
             alignment: Alignment.topCenter,
-            child: SizedBox(height: _subCardRowHeight, child: child),
+            // Высота ровно по содержимому шапки, включая строку «Авто».
+            // Фиксированная высота строки заголовка обрезала бы её по нижней
+            // границе: нарисована кнопка была видна (Stack не обрезает), а
+            // нажатия до неё не доходили — попадание проверяется по границам
+            // родителя, и за ними его нет.
+            child: SizedBox(
+              height: _subCardRowHeight +
+                  (!collapsed && sub.autoSelectVisible ? autoRowHeight : 0),
+              child: child,
+            ),
           ),
         ],
       ),
