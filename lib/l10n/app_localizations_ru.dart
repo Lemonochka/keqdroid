@@ -530,6 +530,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayDomainStrategy => 'Стратегия доменов в правилах';
 
   @override
+  String get settingsXrayConcurrentDial => 'Дозвон по всем адресам сразу';
+
+  @override
+  String get settingsXrayConcurrentDialHint => 'Домен сервера обычно резолвится в несколько адресов. Ядро пробует их одновременно и оставляет тот, что ответил первым, вместо ожидания таймаута на заблокированном. В цепочках не действует.';
+
+  @override
   String get settingsXraySniffing => 'Определять домены в трафике (sniffing)';
 
   @override

@@ -238,6 +238,8 @@
   "settingsXrayGeneralSection": "常规",
   "settingsXrayLogLevel": "日志级别",
   "settingsXrayDomainStrategy": "路由域名策略",
+  "settingsXrayConcurrentDial": "同时连接所有地址",
+  "settingsXrayConcurrentDialHint": "服务器域名通常解析出多个地址。内核会同时尝试它们并保留最先响应的那个，而不是在被封锁的地址上等待超时。链式代理中不生效。",
   "settingsXraySniffing": "识别流量中的域名（嗅探）",
   "settingsXraySniffingRouteOnly": "嗅探到的域名仅用于路由",
   "settingsXrayDnsDefaultNote": "默认：Cloudflare 和 Google DoH",

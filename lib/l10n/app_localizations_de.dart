@@ -528,6 +528,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayDomainStrategy => 'Routing-Domainstrategie';
 
   @override
+  String get settingsXrayConcurrentDial => 'Alle Adressen gleichzeitig anwahlen';
+
+  @override
+  String get settingsXrayConcurrentDialHint => 'Eine Server-Domain lost meist auf mehrere Adressen auf. Der Kern probiert sie gleichzeitig und behalt die erste Antwort, statt bei einer gesperrten Adresse auf den Timeout zu warten. In Ketten ohne Wirkung.';
+
+  @override
   String get settingsXraySniffing => 'Domains im Verkehr erkennen (Sniffing)';
 
   @override

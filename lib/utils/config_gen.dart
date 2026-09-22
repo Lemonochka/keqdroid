@@ -391,6 +391,37 @@ class ConfigGeneratorV2 {
   /// Семейство адресов берём от queryStrategy: просить A+AAAA, когда DNS
   /// настроен отдавать только A, значит впустую ждать вторую половину ответа.
   /// Адрес-IP не трогаем — резолвить там нечего.
+  /// Гонка адресов при дозвоне (`sockopt.happyEyeballs`), или `null`, когда
+  /// настройка выключена.
+  ///
+  /// Оба числа обязаны быть больше нуля — иначе ядро молча возвращается к
+  /// перебору по очереди (см. dialer.go: гонка включается только при
+  /// `tryDelayMs > 0 && maxConcurrentTry > 0` и минимум двух адресах).
+  /// 250 мс — задержка из RFC 8305, четыре попытки — умолчание самого ядра.
+  static Map<String, dynamic>? _happyEyeballs(XrayCoreSettings core) =>
+      core.concurrentDial
+          ? const <String, dynamic>{'tryDelayMs': 250, 'maxConcurrentTry': 4}
+          : null;
+
+  /// Записывает гонку адресов в `sockopt` уже собранного аутбаунда.
+  static void _applyHappyEyeballs(
+    Map<String, dynamic> outbound,
+    XrayCoreSettings core,
+  ) {
+    final happy = _happyEyeballs(core);
+    if (happy == null) return;
+    final stream = Map<String, dynamic>.from(
+      (outbound['streamSettings'] as Map<String, dynamic>?) ??
+          const <String, dynamic>{},
+    );
+    final sockopt = Map<String, dynamic>.from(
+      (stream['sockopt'] as Map<String, dynamic>?) ?? const <String, dynamic>{},
+    );
+    sockopt['happyEyeballs'] = happy;
+    stream['sockopt'] = sockopt;
+    outbound['streamSettings'] = stream;
+  }
+
   static void _applyServerDomainStrategy(
     Map<String, dynamic> outbound,
     String address,
@@ -409,6 +440,8 @@ class ConfigGeneratorV2 {
       'UseIPv6' => 'UseIPv6',
       _ => 'UseIP',
     };
+    final happy = _happyEyeballs(core);
+    if (happy != null) sockopt['happyEyeballs'] = happy;
     stream['sockopt'] = sockopt;
     outbound['streamSettings'] = stream;
   }
@@ -497,8 +530,11 @@ class ConfigGeneratorV2 {
     sockopt['dialerProxy'] = tag;
     // Адрес этого узла резолвит предыдущий: соединение до него идёт уже
     // внутри чужого туннеля, и локальный резолв тут ничего не решает —
-    // только заставляет ядро ждать ответа, который не нужен.
+    // только заставляет ядро ждать ответа, который не нужен. Гонку адресов
+    // ядро за `dialerProxy` игнорирует само, но держать в конфиге поле,
+    // которое заведомо не исполнится, — значит врать тому, кто его прочтёт.
     sockopt.remove('domainStrategy');
+    sockopt.remove('happyEyeballs');
     stream['sockopt'] = sockopt;
 
     // Перебор портов hysteria оставляем только внешнему узлу. Отказа «udphop
@@ -555,13 +591,16 @@ class ConfigGeneratorV2 {
         sockopt ?? const <String, dynamic>{},
       );
       newSockopt['dialerProxy'] = _fragmentTag;
+      // Дозвон уходит на freedom ниже, и гонку адресов ядро тут уже не
+      // исполнит — она переезжает туда же (см. ниже).
+      newSockopt.remove('happyEyeballs');
       // `domainStrategy` отсюда не убираем, в отличие от цепочки: там адрес
       // резолвит предыдущий узел удалённо, а тут дозвон остаётся локальным,
       // просто уходит на аутбаунд ниже. Он же и резолвит — своей настройкой.
       newStream['sockopt'] = newSockopt;
       outbound['streamSettings'] = newStream;
 
-      return {
+      final fragmentOutbound = <String, dynamic>{
         'protocol': 'freedom',
         'tag': _fragmentTag,
         'settings': {
@@ -573,6 +612,11 @@ class ConfigGeneratorV2 {
           'fragment': fragment,
         },
       };
+      // Наружу звонит этот аутбаунд, а не прокси над ним (у того стоит
+      // `dialerProxy`), поэтому гонка адресов нужна здесь — иначе с
+      // фрагментацией она не работала бы вовсе.
+      _applyHappyEyeballs(fragmentOutbound, core);
+      return fragmentOutbound;
     }
     return null;
   }
@@ -2124,7 +2168,16 @@ class ConfigGeneratorV2 {
       'inbounds': inbounds,
       'outbounds': [
         ...proxyOutbounds,
-        {'protocol': 'freedom', 'tag': 'direct'},
+        {
+          'protocol': 'freedom',
+          'tag': 'direct',
+          // Прямой маршрут гоняет адреса на тех же условиях, что и туннель:
+          // у mihomo это один глобальный флаг, и расходиться ядрам тут незачем.
+          if (core.concurrentDial)
+            'streamSettings': {
+              'sockopt': {'happyEyeballs': _happyEyeballs(core)},
+            },
+        },
         {'protocol': 'blackhole', 'tag': 'block'},
         // Не раньше прокси-аутбаунда: первый в списке у xray считается
         // основным, и всё, что не попало в правила, ушло бы в обход туннеля.

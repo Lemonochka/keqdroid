@@ -1149,6 +1149,14 @@ class _XrayGeneralSection extends ConsumerWidget {
               ),
             ],
             SwitchListTile(
+              value: core.concurrentDial,
+              onChanged: (v) =>
+                  _saveXrayCore(ref, settings, core.copyWith(concurrentDial: v)),
+              activeThumbColor: accent,
+              title: Text(l10n.settingsXrayConcurrentDial),
+              subtitle: Text(l10n.settingsXrayConcurrentDialHint),
+            ),
+            SwitchListTile(
               value: core.sniffingEnabled,
               onChanged: (v) {
                 _saveXrayCore(ref, 

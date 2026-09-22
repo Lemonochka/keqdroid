@@ -108,6 +108,23 @@ class XrayCoreSettings {
   /// получает локальный IP, проксируемый — резолв на стороне сервера.
   final bool sniffingRouteOnly;
 
+  /// Дозваниваться до адресов домена одновременно, а не по очереди.
+  ///
+  /// Домен сервера обычно резолвится в несколько адресов, и по очереди это
+  /// значит «мёртвый адрес стоит целого таймаута»: у заблокированного IP
+  /// соединение висит, пока ядро не сдастся и не возьмёт следующий. С гонкой
+  /// выживает тот, кто ответил первым.
+  ///
+  /// У ядер это разные ручки. mihomo включает гонку глобально
+  /// (`tcp-concurrent`), xray — на конкретном аутбаунде
+  /// (`sockopt.happyEyeballs`), причём за `dialerProxy` ядро её игнорирует:
+  /// дозвон там делает не этот аутбаунд, а предыдущее звено. Поэтому в
+  /// цепочке гонки не будет, а с фрагментацией будет — там настоящий дозвон
+  /// делает freedom-аутбаунд, ему настройка и достаётся. В десктопном TUN
+  /// дозвон исполняет sing-box, и он гоняет адреса параллельно всегда, без
+  /// нашего участия.
+  final bool concurrentDial;
+
   const XrayCoreSettings({
     this.logLevel = 'warning',
     this.routingDomainStrategy = 'AsIs',
@@ -140,6 +157,7 @@ class XrayCoreSettings {
     this.noiseReset = '',
     this.sniffingEnabled = true,
     this.sniffingRouteOnly = false,
+    this.concurrentDial = false,
   });
 
   static const logLevels = ['none', 'error', 'warning', 'info', 'debug'];
@@ -244,6 +262,7 @@ class XrayCoreSettings {
         'noiseReset': noiseReset,
         'sniffingEnabled': sniffingEnabled,
         'sniffingRouteOnly': sniffingRouteOnly,
+        'concurrentDial': concurrentDial,
       };
 
   factory XrayCoreSettings.fromJson(Map<String, dynamic>? json) {
@@ -311,6 +330,7 @@ class XrayCoreSettings {
       noiseReset: json['noiseReset'] as String? ?? '',
       sniffingEnabled: b('sniffingEnabled', true),
       sniffingRouteOnly: b('sniffingRouteOnly', false),
+      concurrentDial: b('concurrentDial', false),
     );
   }
 
@@ -346,6 +366,7 @@ class XrayCoreSettings {
     String? noiseReset,
     bool? sniffingEnabled,
     bool? sniffingRouteOnly,
+    bool? concurrentDial,
   }) =>
       XrayCoreSettings(
         logLevel: logLevel ?? this.logLevel,
@@ -384,6 +405,7 @@ class XrayCoreSettings {
         noiseReset: noiseReset ?? this.noiseReset,
         sniffingEnabled: sniffingEnabled ?? this.sniffingEnabled,
         sniffingRouteOnly: sniffingRouteOnly ?? this.sniffingRouteOnly,
+        concurrentDial: concurrentDial ?? this.concurrentDial,
       );
 
   static List<String> _parseServerLines(String raw) => raw
@@ -832,7 +854,8 @@ class XrayCoreSettings {
           noiseDelay == other.noiseDelay &&
           noiseReset == other.noiseReset &&
           sniffingEnabled == other.sniffingEnabled &&
-          sniffingRouteOnly == other.sniffingRouteOnly;
+          sniffingRouteOnly == other.sniffingRouteOnly &&
+          concurrentDial == other.concurrentDial;
 
   @override
   // hashAll, а не hash: у последнего потолок в двадцать аргументов, а полей
@@ -869,6 +892,7 @@ class XrayCoreSettings {
         noiseReset,
         sniffingEnabled,
         sniffingRouteOnly,
+        concurrentDial,
       ]);
 
   String toJsonString() => jsonEncode(toJson());

@@ -238,6 +238,8 @@
   "settingsXrayGeneralSection": "Allgemein",
   "settingsXrayLogLevel": "Log-Level",
   "settingsXrayDomainStrategy": "Routing-Domainstrategie",
+  "settingsXrayConcurrentDial": "Alle Adressen gleichzeitig anwahlen",
+  "settingsXrayConcurrentDialHint": "Eine Server-Domain lost meist auf mehrere Adressen auf. Der Kern probiert sie gleichzeitig und behalt die erste Antwort, statt bei einer gesperrten Adresse auf den Timeout zu warten. In Ketten ohne Wirkung.",
   "settingsXraySniffing": "Domains im Verkehr erkennen (Sniffing)",
   "settingsXraySniffingRouteOnly": "Erkannte Domain nur fürs Routing",
   "settingsXrayDnsDefaultNote": "Standard: Cloudflare und Google DoH",

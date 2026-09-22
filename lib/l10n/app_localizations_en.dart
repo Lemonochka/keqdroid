@@ -528,6 +528,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsXrayDomainStrategy => 'Routing domain strategy';
 
   @override
+  String get settingsXrayConcurrentDial => 'Dial every address at once';
+
+  @override
+  String get settingsXrayConcurrentDialHint => 'A server domain usually resolves to several addresses. The core races them and keeps the one that answers first, instead of waiting out a timeout on a blocked address. Does not apply inside chains.';
+
+  @override
   String get settingsXraySniffing => 'Detect domains in traffic (sniffing)';
 
   @override

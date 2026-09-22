@@ -238,6 +238,8 @@
   "settingsXrayGeneralSection": "General",
   "settingsXrayLogLevel": "Log level",
   "settingsXrayDomainStrategy": "Routing domain strategy",
+  "settingsXrayConcurrentDial": "Dial every address at once",
+  "settingsXrayConcurrentDialHint": "A server domain usually resolves to several addresses. The core races them and keeps the one that answers first, instead of waiting out a timeout on a blocked address. Does not apply inside chains.",
   "settingsXraySniffing": "Detect domains in traffic (sniffing)",
   "settingsXraySniffingRouteOnly": "Sniffed domain for routing only",
   "settingsXrayDnsDefaultNote": "Default: Cloudflare and Google DoH",

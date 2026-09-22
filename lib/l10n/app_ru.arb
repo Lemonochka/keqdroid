@@ -238,6 +238,8 @@
   "settingsXrayGeneralSection": "Общие",
   "settingsXrayLogLevel": "Уровень логов",
   "settingsXrayDomainStrategy": "Стратегия доменов в правилах",
+  "settingsXrayConcurrentDial": "Дозвон по всем адресам сразу",
+  "settingsXrayConcurrentDialHint": "Домен сервера обычно резолвится в несколько адресов. Ядро пробует их одновременно и оставляет тот, что ответил первым, вместо ожидания таймаута на заблокированном. В цепочках не действует.",
   "settingsXraySniffing": "Определять домены в трафике (sniffing)",
   "settingsXraySniffingRouteOnly": "Использовать домен только для правил",
   "settingsXrayDnsDefaultNote": "По умолчанию: DoH Cloudflare и Google",

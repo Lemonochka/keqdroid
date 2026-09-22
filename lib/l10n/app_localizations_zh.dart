@@ -528,6 +528,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayDomainStrategy => '路由域名策略';
 
   @override
+  String get settingsXrayConcurrentDial => '同时连接所有地址';
+
+  @override
+  String get settingsXrayConcurrentDialHint => '服务器域名通常解析出多个地址。内核会同时尝试它们并保留最先响应的那个，而不是在被封锁的地址上等待超时。链式代理中不生效。';
+
+  @override
   String get settingsXraySniffing => '识别流量中的域名（嗅探）';
 
   @override

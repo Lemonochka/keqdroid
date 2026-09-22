@@ -1073,6 +1073,18 @@ abstract class AppLocalizations {
   /// **'Routing domain strategy'**
   String get settingsXrayDomainStrategy;
 
+  /// No description provided for @settingsXrayConcurrentDial.
+  ///
+  /// In en, this message translates to:
+  /// **'Dial every address at once'**
+  String get settingsXrayConcurrentDial;
+
+  /// No description provided for @settingsXrayConcurrentDialHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A server domain usually resolves to several addresses. The core races them and keeps the one that answers first, instead of waiting out a timeout on a blocked address. Does not apply inside chains.'**
+  String get settingsXrayConcurrentDialHint;
+
   /// No description provided for @settingsXraySniffing.
   ///
   /// In en, this message translates to:
