@@ -459,6 +459,7 @@ class MainActivity : FlutterFragmentActivity() {
                             result.success(mapOf("username" to user, "password" to pass))
                         }
                         "getMihomoApi" -> getMihomoApi(result)
+                        "getDialFailures" -> result.success(NativeHelper.dialFailures())
                         "getPing" -> {
                             val addr    = call.argument<String>("address") ?: ""
                             val port    = call.argument<Int>("port") ?: 0

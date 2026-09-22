@@ -52,6 +52,40 @@ void main() {
     });
   });
 
+  group('тихая прослушка', () {
+    test('одиночный отказ дозвона — не повод идти в сеть', () {
+      // Страница открывает десяток соединений, одно может и не пролезть:
+      // это жизнь живого сервера, а не его смерть.
+      expect(AutoSelectWatchdog.dialFailuresSuggestDeadServer(1), isFalse);
+      expect(AutoSelectWatchdog.dialFailuresSuggestDeadServer(0), isFalse);
+    });
+
+    test('всплеск отказов — идём проверять', () {
+      expect(
+        AutoSelectWatchdog.dialFailuresSuggestDeadServer(
+          AutoSelectWatchdog.failureBurst,
+        ),
+        isTrue,
+      );
+    });
+
+    test('смотрит часто, потому что это не сеть', () {
+      // Читается число в памяти процесса — радио от этого не просыпается,
+      // поэтому интервал может быть коротким, а весь переезд — быстрым.
+      expect(AutoSelectWatchdog.listenEvery.inSeconds, lessThanOrEqualTo(3));
+    });
+
+    test('после проверки без переезда молчит, но недолго', () {
+      // Без сети вовсе собственные пробы будили бы проверку каждые две
+      // секунды — а каждая проверка это запрос мимо туннеля.
+      expect(
+        AutoSelectWatchdog.quietAfterCheck,
+        greaterThan(AutoSelectWatchdog.listenEvery * 3),
+      );
+      expect(AutoSelectWatchdog.quietAfterCheck.inSeconds, lessThanOrEqualTo(30));
+    });
+  });
+
   group('когда менять сервер', () {
     test('одного провала мало', () {
       // Секунда без сети в лифте не стоит разрыва соединения.

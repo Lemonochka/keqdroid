@@ -121,6 +121,20 @@ class VpnNativeBridge {
     }
   }
 
+  /// Сколько раз ядро сессии не дозвонилось до своего сервера (монотонно).
+  ///
+  /// Число из читателя лога ядра, без сети: приложение сравнивает два чтения
+  /// и только по всплеску отказов идёт проверять сервер по-настоящему.
+  /// null — платформа так не умеет (десктоп) или канал не ответил.
+  static Future<int?> dialFailures() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      return await channel.invokeMethod<int>('getDialFailures');
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Имена приложений-владельцев соединений, по одному на каждый элемент
   /// [connections] (`protocol`, `srcIp`, `srcPort`, `dstIp`, `dstPort`).
   ///

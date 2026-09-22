@@ -32,6 +32,40 @@ typedef struct { int fd; char logpath[1024]; } xray_log_arg;
 static void *xray_log_reader(void *arg);
 
 /*
+ * Счётчик неудачных дозвонов ядра сессии до своего сервера — тихая прослушка
+ * для автовыбора.
+ *
+ * Оба ядра сами пишут о таком на уровне warning, то есть при настройках по
+ * умолчанию эти строки и так идут через этот поток: mihomo —
+ * «[TCP] dial <прокси> (match ...) ... error: ...», xray — «failed to find an
+ * available destination». Считаем здесь, где строка уже в руках, а приложение
+ * раз в пару секунд читает число: ни сети, ни радио, ни лишнего разбора.
+ *
+ * Прямые соединения (DIRECT, REJECT) не считаются: мёртвый сайт — не мёртвый
+ * сервер. Ядра замера сюда не попадают вовсе — у них нет файла лога, а их
+ * отказы про чужие серверы.
+ */
+static long g_dial_failures = 0;
+
+static int is_server_dial_failure(const char *line) {
+    if (strstr(line, "failed to find an available destination")) return 1;
+    /* Только TCP: сервер без UDP на каждый QUIC-запрос отвечает отказом, и
+     * живой сервер сыпал бы «отказами» от одного открытого ютуба. Проба,
+     * которой потом проверяют сервер, всё равно идёт по TCP. */
+    const char *dial = strstr(line, "[TCP] dial ");
+    if (!dial || !strstr(line, " error: ")) return 0;
+    dial += 11;
+    if (strncmp(dial, "DIRECT", 6) == 0 || strncmp(dial, "REJECT", 6) == 0) return 0;
+    return 1;
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_keqdroid_keqdroid_NativeHelper_nativeDialFailures(JNIEnv *env, jclass clazz) {
+    (void)env; (void)clazz;
+    return (jlong)__atomic_load_n(&g_dial_failures, __ATOMIC_RELAXED);
+}
+
+/*
  * Пишет строку ядра в logcat (XTAG) и, если задан logpath, дублирует её в файл.
  * Дублирование в файл нужно потому, что на Android 13+ untrusted_app не может
  * читать logcat (SELinux), поэтому in-app экран логов опирается на этот файл.
@@ -41,6 +75,8 @@ static void core_log_line(const char *logpath, const char *line) {
     if (!line || !*line) return;
     __android_log_print(ANDROID_LOG_DEBUG, XTAG, "%s", line);
     if (!logpath || !*logpath) return;
+    if (is_server_dial_failure(line))
+        __atomic_add_fetch(&g_dial_failures, 1, __ATOMIC_RELAXED);
     int lf = open(logpath, O_WRONLY | O_CREAT | O_APPEND, 0600);
     if (lf < 0) return;
     struct stat st;

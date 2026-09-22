@@ -24,6 +24,14 @@ object NativeHelper {
     private val livePids = Collections.synchronizedSet(mutableSetOf<Int>())
 
     @JvmStatic
+    private external fun nativeDialFailures(): Long
+
+    /// Сколько раз ядро сессии не дозвонилось до своего сервера — с запуска
+    /// процесса, монотонно. Считает читатель лога в forkexec.c; вызывающему
+    /// важна только разница между двумя чтениями.
+    fun dialFailures(): Long = runCatching { nativeDialFailures() }.getOrDefault(0L)
+
+    @JvmStatic
     private external fun nativeStartCore(
         binPath: String,
         configPath: String,
