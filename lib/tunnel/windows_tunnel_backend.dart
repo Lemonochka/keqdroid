@@ -9,6 +9,7 @@ import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../models/tun_settings.dart';
 import '../services/core_dial_failures.dart';
+import '../utils/xray_session_log.dart';
 import '../services/debug_log_service.dart';
 import '../services/ephemeral_xray_ping.dart';
 import '../services/windows_desktop_service.dart';
@@ -48,6 +49,12 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   // Порт clash_api keqrnel — из него читаем кумулятивный трафик (proxy-режим)
   // и список соединений для дебаг-экрана (оба режима).
   int? _keqrnelClashPort;
+
+  /// С какого уровня строки xray доходят до лога сессии; 0 — все. Поднятый
+  /// до info xray пишет больше, чем заказано, ради счётчика отказов (см.
+  /// XraySessionLog). Строки mihomo и sing-box меток xray не несут, и порог
+  /// их не трогает.
+  int _xrayLogThreshold = 0;
 
   // mihomo: одно ядро на оба режима. В proxy-режиме держит локальные socks/http,
   // в TUN — ещё и сам wintun-адаптер (keqrnel в этой схеме не участвует вовсе).
@@ -229,8 +236,10 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     // sing-box owns the local SOCKS/HTTP listeners and forwards through the
     // xray bridge, so it counts traffic and exposes it via clash_api.
     final clashPort = await _freePort();
+    final xrayLog = XraySessionLog.raise(request.xrayConfig);
+    _xrayLogThreshold = xrayLog.threshold;
     final merged = KeqrnelConfig.proxyWithStats(
-      xrayConfig: request.xrayConfig,
+      xrayConfig: xrayLog.config,
       socksPort: request.socksPort,
       httpPort: request.httpPort,
       clashPort: clashPort,
@@ -310,9 +319,11 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     await _ensureTunPrerequisites(bin, request);
 
     final clashPort = await _freePort();
+    final xrayLog = XraySessionLog.raise(request.xrayConfig);
+    _xrayLogThreshold = xrayLog.threshold;
     final merged = KeqrnelConfig.fromChain(
       singboxConfig: await _tunStackForCore(singConfig, bin),
-      xrayConfig: request.xrayConfig,
+      xrayConfig: xrayLog.config,
       windows: true,
       clashApiPort: clashPort,
     );
@@ -802,6 +813,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     int timeoutMs = 15000,
     bool keepAlive = true,
     int concurrency = 16,
+    UrlTestProgress? onEach,
   }) async =>
       // Десктоп меряет поштучно: процессов тут не жалко, а общий конфиг xray
       // пришлось бы ещё и заворачивать в keqrnel, чьи инбаунды принадлежат
@@ -886,6 +898,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       // Тихая прослушка автовыбора: отказы дозвона до сервера считаются прямо
       // здесь, где строка уже в руках (см. CoreDialFailures).
       CoreDialFailures.observe(line);
+      if (!XraySessionLog.keep(line, _xrayLogThreshold)) return;
       buffer.writeln(line);
       // keep only the tail so the buffer doesn't grow unbounded
       if (buffer.length > 64 * 1024) {

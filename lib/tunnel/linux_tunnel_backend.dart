@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../services/core_dial_failures.dart';
+import '../utils/xray_session_log.dart';
 import '../services/ephemeral_xray_ping.dart';
 import '../utils/keqrnel_config.dart';
 import '../utils/mihomo_api_session.dart';
@@ -79,6 +80,12 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   // Порт clash_api keqrnel — из него читаем кумулятивный трафик (proxy-режим)
   // и список соединений для дебаг-экрана (оба режима).
   int? _keqrnelClashPort;
+
+  /// С какого уровня строки xray доходят до лога сессии; 0 — все. Поднятый
+  /// до info xray пишет больше, чем заказано, ради счётчика отказов (см.
+  /// XraySessionLog). Строки mihomo и sing-box меток xray не несут, и порог
+  /// их не трогает.
+  int _xrayLogThreshold = 0;
 
   // mihomo: одно ядро на оба режима. В proxy-режиме обычный процесс, в TUN —
   // тот же root-путь через pkexec, что и у keqrnel (tun-устройство и маршруты
@@ -233,8 +240,10 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     _xrayBinPath = bin;
 
     final clashPort = await _freePort();
+    final xrayLog = XraySessionLog.raise(request.xrayConfig);
+    _xrayLogThreshold = xrayLog.threshold;
     final merged = KeqrnelConfig.proxyWithStats(
-      xrayConfig: request.xrayConfig,
+      xrayConfig: xrayLog.config,
       socksPort: request.socksPort,
       httpPort: request.httpPort,
       clashPort: clashPort,
@@ -301,9 +310,11 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     await _ensurePortsAvailable(request, needsHttp: true);
 
     final clashPort = await _freePort();
+    final xrayLog = XraySessionLog.raise(request.xrayConfig);
+    _xrayLogThreshold = xrayLog.threshold;
     final merged = KeqrnelConfig.fromChain(
       singboxConfig: singConfig,
-      xrayConfig: request.xrayConfig,
+      xrayConfig: xrayLog.config,
       windows: false,
       clashApiPort: clashPort,
     );
@@ -1246,6 +1257,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     int timeoutMs = 15000,
     bool keepAlive = true,
     int concurrency = 16,
+    UrlTestProgress? onEach,
   }) async =>
       // Десктоп меряет поштучно: процессов тут не жалко, а общий конфиг xray
       // пришлось бы ещё и заворачивать в keqrnel, чьи инбаунды принадлежат
@@ -1320,6 +1332,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     void append(String line) {
       // Тихая прослушка автовыбора — см. CoreDialFailures.
       CoreDialFailures.observe(line);
+      if (!XraySessionLog.keep(line, _xrayLogThreshold)) return;
       buffer.writeln(line);
       if (buffer.length > 64 * 1024) {
         final trimmed = _tail(buffer, maxLines: 200);
