@@ -50,6 +50,17 @@ static long g_dial_failures = 0;
 
 static int is_server_dial_failure(const char *line) {
     if (strstr(line, "failed to find an available destination")) return 1;
+    /* XHTTP дозванивается лениво: ядро сразу отдаёт соединение и пишет
+     * «tunneling request», а отказ сервера приходит отдельной строкой
+     * транспорта — «splithttp: failed to POST ... connection refused» или
+     * «unexpected status 502» от фронта, за которым сервер умер. */
+    const char *xhttp = strstr(line, "splithttp: ");
+    if (xhttp) {
+        xhttp += 11;
+        if (strncmp(xhttp, "failed to create", 16) == 0) return 0;
+        return strncmp(xhttp, "failed to ", 10) == 0 ||
+               strncmp(xhttp, "unexpected status ", 18) == 0;
+    }
     /* Только TCP: сервер без UDP на каждый QUIC-запрос отвечает отказом, и
      * живой сервер сыпал бы «отказами» от одного открытого ютуба. Проба,
      * которой потом проверяют сервер, всё равно идёт по TCP. */

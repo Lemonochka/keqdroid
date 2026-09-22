@@ -22,12 +22,36 @@ void main() {
     });
 
     test('xray', () {
+      // Уровень info: исходящий обработчик xray 26.x логирует свою ошибку
+      // через LogInfo, какой бы важной она ни была.
       expect(
         CoreDialFailures.isServerDialFailure(
-          '2026/09/23 10:00:00.123456 [Warning] [1234567] app/proxyman/'
-          'outbound: failed to process outbound traffic > proxy/vless/'
-          'outbound: failed to find an available destination > common/'
-          'retry: all retry attempts failed',
+          '2026/09/23 10:00:00.123456 [Info] [1234567] app/proxyman/'
+          'outbound: app/proxyman/outbound: failed to process outbound '
+          'traffic > proxy/vless/outbound: failed to find an available '
+          'destination > common/retry: all retry attempts failed',
+        ),
+        isTrue,
+      );
+    });
+
+    test('xray с XHTTP: отказ приходит строкой транспорта', () {
+      // Живой тест: погашенный Vless на XHTTP, строка как есть из лога.
+      // «failed to find an available destination» у XHTTP не бывает — он
+      // отдаёт соединение сразу, а дозванивается потом.
+      expect(
+        CoreDialFailures.isServerDialFailure(
+          '2026/09/22 22:33:40.007 [Info] [3321485634] transport/internet/'
+          'splithttp: failed to POST https://onet.pl/ > Post '
+          '"https://onet.pl/": dial tcp 144.31.2.167:443: connect: '
+          'connection refused',
+        ),
+        isTrue,
+      );
+      expect(
+        CoreDialFailures.isServerDialFailure(
+          '2026/09/22 22:33:40.007 [Info] [42] transport/internet/'
+          'splithttp: unexpected status 502',
         ),
         isTrue,
       );
@@ -46,6 +70,23 @@ void main() {
   });
 
   group('не отказ сервера — не считается', () {
+    test('XHTTP просто дозванивается или не собрал запрос', () {
+      expect(
+        CoreDialFailures.isServerDialFailure(
+          '[Info] [1] transport/internet/splithttp: XHTTP is dialing to '
+          'tcp:sub.example.com:443, mode stream-one, HTTP version 2',
+        ),
+        isFalse,
+      );
+      expect(
+        CoreDialFailures.isServerDialFailure(
+          '[Info] [1] transport/internet/splithttp: failed to create HTTP '
+          'request for https://x/ > net/url: invalid control character',
+        ),
+        isFalse,
+      );
+    });
+
     test('мёртвый сайт на прямом маршруте', () {
       // Мёртвый сайт — не мёртвый сервер.
       expect(

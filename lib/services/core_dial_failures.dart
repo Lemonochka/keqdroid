@@ -1,11 +1,13 @@
 /// Отказы дозвона ядра сессии до своего сервера — тихая прослушка автовыбора.
 ///
-/// Каждое ядро само пишет в лог, что не дозвонилось до сервера, и пишет на
-/// уровне warning или выше, то есть при обычных настройках эти строки уже
-/// идут через поток вывода ядра:
+/// Каждое ядро само пишет в лог, что не дозвонилось до сервера:
 ///
-/// mihomo — `[TCP] dial <прокси> (match …) … error: …`;
-/// xray — `failed to find an available destination`;
+/// mihomo — `[TCP] dial <прокси> (match …) … error: …`, уровень warning;
+/// xray — `failed to find an available destination`, а у XHTTP, который
+/// дозванивается лениво, — строки самого транспорта `splithttp: failed to …`
+/// и `splithttp: unexpected status …`; всё это только на уровне info, поэтому
+/// на Android сессию xray поднимают до info (sessionConfigFor в
+/// KeqdisVpnService);
 /// sing-box (десктопный TUN в keqrnel) — `open connection to … using
 /// outbound/<тип>[<тег>]: …`.
 ///
@@ -32,6 +34,14 @@ abstract final class CoreDialFailures {
   /// которой потом проверяют сервер, всё равно идёт по TCP.
   static bool isServerDialFailure(String line) {
     if (line.contains('failed to find an available destination')) return true;
+
+    final xhttp = line.indexOf('splithttp: ');
+    if (xhttp >= 0) {
+      final what = line.substring(xhttp + 'splithttp: '.length);
+      if (what.startsWith('failed to create')) return false;
+      return what.startsWith('failed to ') ||
+          what.startsWith('unexpected status ');
+    }
 
     final dial = line.indexOf('[TCP] dial ');
     if (dial >= 0) {
