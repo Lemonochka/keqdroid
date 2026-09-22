@@ -486,6 +486,10 @@ class PingService {
       }
       if (byCore.values.any((group) => group.length > 1)) {
         final results = <String, PingResult>{};
+        // Чанки всех ядер складываются в одну очередь, чтобы несколько общих
+        // конфигов шли одновременно: ядро с десятком проб стоит ровно столько
+        // же, сколько с одной, и держать их по очереди незачем.
+        final batches = <({VpnBackend core, List<ServerItem> chunk})>[];
         for (final entry in byCore.entries) {
           final group = entry.value;
           if (group.length == 1) {
@@ -493,19 +497,26 @@ class PingService {
             continue;
           }
           for (final chunk in _chunked(group, multiPingChunk)) {
-            final measured = await _pingUrlMulti(
-              chunk,
-              settings,
-              core: entry.key,
-              testUrl: testUrl,
-              timeoutMs: timeoutSeconds * 1000,
-              ips: ips,
-              takenPorts: takenPorts,
-              onResult: onResult,
-            );
-            for (final result in measured) {
-              results[result.serverId] = result;
-            }
+            batches.add((core: entry.key, chunk: chunk));
+          }
+        }
+        final measured = await mapPooled(
+          batches,
+          multiPingBatches,
+          (batch) => _pingUrlMulti(
+            batch.chunk,
+            settings,
+            core: batch.core,
+            testUrl: testUrl,
+            timeoutMs: timeoutSeconds * 1000,
+            ips: ips,
+            takenPorts: takenPorts,
+            onResult: onResult,
+          ),
+        );
+        for (final list in measured) {
+          for (final result in list) {
+            results[result.serverId] = result;
           }
         }
         final rest = await mapPooled(singles, workers, (server) async {
@@ -577,6 +588,17 @@ class PingService {
   /// конца замера. Десяток — это и порция результатов раз в пару секунд, и
   /// один старт ядра вместо десяти.
   static const multiPingChunk = 10;
+
+  /// Сколько общих конфигов мерить одновременно.
+  ///
+  /// Ядро с десятком проб стоит 20 МБ против 19 у ядра с одним сервером
+  /// (замерено на mihomo): почти вся цена — сам Go-рантайм, а не содержимое
+  /// конфига. Поэтому дешевле поставить рядом несколько ядер, чем гонять их по
+  /// очереди: три штуки меряют тридцать серверов за 60 МБ — вдвое меньше, чем
+  /// стоили прежние шесть поштучных замеров. Выше не идём не из-за памяти, а
+  /// из-за экрана: результаты батча приезжают разом, и чем больше их в полёте,
+  /// тем реже обновляется список.
+  static const multiPingBatches = 3;
 
   /// Складывается ли сервер в общий конфиг.
   ///
