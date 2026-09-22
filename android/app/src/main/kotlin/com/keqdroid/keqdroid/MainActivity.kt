@@ -222,6 +222,11 @@ class MainActivity : FlutterFragmentActivity() {
             ?.lowercase()
             ?: "disconnected"
 
+    /** Причина ошибки оттуда же: сервис кладёт её в prefs тем же setStatus. */
+    private fun readQsVpnError(): String? =
+        getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
+            .getString(KeqdisVpnService.KEY_QS_ERROR, null)
+
     /**
      * ARGB системного акцента (Material You `system_accent1_500`) на Android 12+.
      *
@@ -738,40 +743,53 @@ class MainActivity : FlutterFragmentActivity() {
         telemetryJob = null
     }
 
+    /**
+     * Состояние VPN для Dart — одним куском и в одном месте.
+     *
+     * Снимок уезжает двумя путями: сам, событием, и в ответ на опрос (Dart
+     * спрашивает раз в полторы секунды). Пути были собраны порознь, и опрос
+     * не клал в ответ ошибку — после неудачного подключения строка под
+     * кнопкой каждые полторы секунды перескакивала с настоящей причины на
+     * общее «не удалось подключиться» и обратно. Высота шапки при этом
+     * менялась, и список под ней прыгал так, что в сервер было не попасть.
+     * Поэтому карта одна на оба пути: поле, забытое в одном из них, — это
+     * мигание на экране, а не мелочь.
+     */
+    private fun vpnSnapshot(
+        statusOverride: String? = null,
+        errorOverride: String? = null,
+    ): Map<String, Any?> {
+        val b = vpnServiceBinder
+        if (b == null) {
+            // Сервис ещё не привязан: статус и ошибка лежат в prefs парой, их
+            // и отдаём — иначе статус был бы «ошибка», а причина пустая.
+            return mapOf(
+                "status" to (statusOverride ?: readQsVpnStatus()),
+                "error" to (errorOverride ?: lastStatusError ?: readQsVpnError()),
+                "uploadSpeed" to 0L,
+                "downloadSpeed" to 0L,
+                "totalUpload" to 0L,
+                "totalDownload" to 0L,
+                "durationSeconds" to 0L,
+            )
+        }
+        return mapOf(
+            "status" to (statusOverride ?: b.getStatus().name.lowercase()),
+            "error" to (errorOverride ?: lastStatusError),
+            "uploadSpeed" to b.getUploadSpeed(),
+            "downloadSpeed" to b.getDownloadSpeed(),
+            "totalUpload" to b.getTotalUpload(),
+            "totalDownload" to b.getTotalDownload(),
+            "durationSeconds" to b.getDurationSeconds(),
+        )
+    }
+
     private fun emitVpnSnapshot(
         statusOverride: String? = null,
         errorOverride: String? = null,
     ) {
         val sink = eventSink ?: return
-        val b = vpnServiceBinder
-        if (b == null) {
-            val prefsStatus = statusOverride ?: readQsVpnStatus()
-            sink.success(
-                mapOf(
-                    "status" to prefsStatus,
-                    "error" to errorOverride,
-                    "uploadSpeed" to 0L,
-                    "downloadSpeed" to 0L,
-                    "totalUpload" to 0L,
-                    "totalDownload" to 0L,
-                    "durationSeconds" to 0L,
-                ),
-            )
-            return
-        }
-        val error = errorOverride ?: lastStatusError
-        val rawStatus = statusOverride ?: b.getStatus().name.lowercase()
-        sink.success(
-            mapOf(
-                "status" to rawStatus,
-                "error" to error,
-                "uploadSpeed" to b.getUploadSpeed(),
-                "downloadSpeed" to b.getDownloadSpeed(),
-                "totalUpload" to b.getTotalUpload(),
-                "totalDownload" to b.getTotalDownload(),
-                "durationSeconds" to b.getDurationSeconds(),
-            ),
-        )
+        sink.success(vpnSnapshot(statusOverride, errorOverride))
     }
 
     private fun startVpnWithXray(
@@ -1189,26 +1207,14 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun getStatus(result: MethodChannel.Result) {
-        val b = vpnServiceBinder
-        if (b == null) {
+        if (vpnServiceBinder == null) {
             // Binder ещё/уже не привязан — пробуем восстановить привязку, чтобы
             // следующий опрос отдал живой статус, а не снапшот из prefs.
             // BIND_AUTO_CREATE заодно создаёт сервис, чей onCreate() чинит
             // фантомные connecting/connected, пережившие убийство процесса.
             ensureVpnServiceBound()
-            result.success(mapOf("status" to readQsVpnStatus()))
-            return
         }
-        result.success(
-            mapOf(
-                "status"          to b.getStatus().name.lowercase(),
-                "uploadSpeed"     to b.getUploadSpeed(),
-                "downloadSpeed"   to b.getDownloadSpeed(),
-                "totalUpload"     to b.getTotalUpload(),
-                "totalDownload"   to b.getTotalDownload(),
-                "durationSeconds" to b.getDurationSeconds(),
-            )
-        )
+        result.success(vpnSnapshot())
     }
 
     private fun getXrayLogs(maxLines: Int, result: MethodChannel.Result) {
