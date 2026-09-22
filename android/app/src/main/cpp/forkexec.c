@@ -248,9 +248,31 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
         fcntl(pipefd[0], F_SETFL, fcntl(pipefd[0], F_GETFL, 0) | O_NONBLOCK);
 
         char buf[4096], line[512];
-        int linepos = 0, elapsed = 0;
+        int linepos = 0, died = 0;
 
-        while (elapsed < 3000) {
+        /*
+         * Короткое окно перед тем, как отдать pid: ловим ядро, умершее сразу
+         * (нет бинаря под эту архитектуру, конфиг не разобрался). Признак —
+         * закрытая труба: оба её конца висят на stdout/stderr ядра и уходят
+         * вместе с процессом. waitpid тут не годится — после двойного fork
+         * ядро нам не ребёнок, а внук, усыновлённый init, и звать его некому.
+         *
+         * Окно короткое намеренно, и это не осторожность, а цена. Здоровое
+         * ядро трубу держит и всё время в неё пишет, поэтому сколько тут
+         * стоим, столько платит КАЖДОЕ подключение: прежние три секунды были
+         * ровно тем зазором, когда туннель уже поднят и трафик идёт, а
+         * приложение всё ещё крутит кружок. Негодный конфиг роняет ядро за
+         * 60-100 мс (замерено на mihomo), так что четверти секунды хватает, а
+         * смерть позже подберёт ожидание SOCKS-порта в KeqdisVpnService — оно
+         * смотрит /proc и покажет ту же жалобу ядра из лога.
+         *
+         * Убрать окно совсем всё же нельзя: у временных ядер замера проверки
+         * по /proc нет, и для них это единственный признак «не взлетело» —
+         * без него батч ждал бы порт все восемь секунд таймаута.
+         */
+        struct timespec t0, now;
+        clock_gettime(CLOCK_MONOTONIC, &t0);
+        for (;;) {
             ssize_t n = read(pipefd[0], buf, sizeof(buf));
             if (n > 0) {
                 for (ssize_t i = 0; i < n; i++) {
@@ -265,25 +287,23 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeStartCore(
                     }
                 }
             } else if (n == 0) {
+                died = 1;
                 break;
             } else {
-                usleep(50000);
-                elapsed += 50;
+                usleep(10000);
             }
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            long waited_ms = (now.tv_sec - t0.tv_sec) * 1000 +
+                             (now.tv_nsec - t0.tv_nsec) / 1000000;
+            if (waited_ms >= 250) break;
         }
         if (linepos > 0) {
             line[linepos] = '\0';
             core_log_line(logpath, line);
         }
 
-        int wstatus = 0;
-        if (waitpid(pid2, &wstatus, WNOHANG) == pid2) {
-            if (WIFEXITED(wstatus))
-                __android_log_print(ANDROID_LOG_ERROR, TAG,
-                                    "startCore: crashed immediately exit_code=%d", WEXITSTATUS(wstatus));
-            else if (WIFSIGNALED(wstatus))
-                __android_log_print(ANDROID_LOG_ERROR, TAG,
-                                    "startCore: killed signal=%d", WTERMSIG(wstatus));
+        if (died) {
+            __android_log_print(ANDROID_LOG_ERROR, TAG, "startCore: core exited on startup");
             close(pipefd[0]);
             return -4;
         }

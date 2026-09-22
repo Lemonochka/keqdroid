@@ -551,13 +551,25 @@ class KeqdisVpnService : VpnService() {
             // Признак годится и для mihomo с собственным туннелем: локальные
             // инбаунды у него в том же конфиге и поднимаются тем же стартом, а
             // отдельного «tun готов» ядро наружу не сообщает.
+            val coreName = if (isMihomo) "mihomo" else "Xray"
             var waited = 0
             while (!isPortOpen("127.0.0.1", socksPort) && waited < 10000) {
-                delay(300); waited += 300
+                // Ядро, умершее уже после старта, раньше стоило десяти секунд
+                // ожидания и жалобы на порт — при том, что причину оно само
+                // написало в лог и ушло. Смерть видна по /proc: процесс наш
+                // только по pid (после двойного fork он внук), и ждать его
+                // через waitpid некому.
+                val pid = xrayPid
+                if (pid > 0 && !File("/proc/$pid").exists())
+                    throw IllegalStateException("$coreName exited on startup${coreLogTail()}")
+                // Шаг мелкий: порт на 127.0.0.1 либо отвечает отказом сразу,
+                // либо принимает, так что вся цена проверки — сама пауза, а
+                // она целиком уходит в ожидание пользователя.
+                delay(100); waited += 100
             }
             if (!isPortOpen("127.0.0.1", socksPort))
                 throw IllegalStateException(
-                    "${if (isMihomo) "mihomo" else "Xray"} SOCKS5 port $socksPort not ready${coreLogTail()}"
+                    "$coreName SOCKS5 port $socksPort not ready${coreLogTail()}"
                 )
 
             // Открытый SOCKS-порт у mihomo НЕ означает, что туннель взлетел:
@@ -1294,7 +1306,12 @@ class KeqdisVpnService : VpnService() {
         when {
             pid == -1 -> throw IllegalStateException("Xray binary not found: $binary")
             pid == -2 -> throw IllegalStateException("Xray config not found: $config")
-            pid == -4 -> throw IllegalStateException("Xray crashed on startup — see logcat KEQDIS/xray")
+            // Логом, а не отсылкой к logcat: untrusted_app его на Android 13+
+            // не читает, и «смотрите logcat» для пользователя пустой звук.
+            pid == -4 -> throw IllegalStateException(
+                "${if (coreKind == CORE_KIND_MIHOMO) "mihomo" else "Xray"} " +
+                    "exited on startup${coreLogTail()}"
+            )
             pid <= 0  -> throw IllegalStateException("fork() for Xray failed (pid=$pid)")
             else -> {} // valid pid
         }
