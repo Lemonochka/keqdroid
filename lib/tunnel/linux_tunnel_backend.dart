@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
+import '../services/core_dial_failures.dart';
 import '../services/ephemeral_xray_ping.dart';
 import '../utils/keqrnel_config.dart';
 import '../utils/mihomo_api_session.dart';
@@ -1317,6 +1318,8 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
 
   void _pipeProcessOutput(Process process, StringBuffer buffer) {
     void append(String line) {
+      // Тихая прослушка автовыбора — см. CoreDialFailures.
+      CoreDialFailures.observe(line);
       buffer.writeln(line);
       if (buffer.length > 64 * 1024) {
         final trimmed = _tail(buffer, maxLines: 200);

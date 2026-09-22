@@ -861,7 +861,11 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     final quietUntil = _autoSelectQuietUntil;
     if (quietUntil != null && DateTime.now().isBefore(quietUntil)) return;
 
-    final failures = await VpnNativeBridge.dialFailures();
+    // На Android отказы считает нативный читатель лога ядра, на десктопе —
+    // бэкенд, который читает вывод ядра сам.
+    final failures = Platform.isAndroid
+        ? await VpnNativeBridge.dialFailures()
+        : CoreDialFailures.count;
     if (failures == null) return;
     final previous = _autoSelectSeenFailures;
     _autoSelectSeenFailures = failures;
@@ -871,7 +875,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     if (!AutoSelectWatchdog.dialFailuresSuggestDeadServer(failures - previous)) {
       return;
     }
-    await _autoSelectVerify(target.server, target.subId);
+    await _autoSelectVerify(target.server, target.subId, alreadyConfirmed: true);
   }
 
   /// Страховочный тик: ловит соединения, которые повисли молча.
@@ -900,13 +904,18 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   /// Проверка по-настоящему и, если сервер мёртв, переезд.
   ///
-  /// Две пробы через туннель с паузой в [AutoSelectWatchdog.retryAfterFailure]
-  /// между ними: одной мало, моргнувшая сеть — не мёртвый сервер. Потом
-  /// проверка сети мимо туннеля: не отвечает вообще ничего — виноват не
-  /// сервер, и его не трогают. Переезд идёт тем же путём, которым сервер
-  /// меняет человек, с той же отметкой в списке и той же ошибкой, если не
-  /// вышло.
-  Future<void> _autoSelectVerify(ServerItem server, String subId) async {
+  /// [alreadyConfirmed] — проверку позвала прослушка, то есть приложения уже
+  /// не смогли открыть несколько соединений подряд. Тогда хватает одной
+  /// неудачной пробы; страховочному тику, у которого есть только тишина в
+  /// туннеле, нужны две. Сеть мимо туннеля проверяется параллельно с пробой:
+  /// нужна она только при провале, но ждать их по очереди значит платить обе
+  /// задержки. Не отвечает вообще ничего — виноват не сервер, и его не
+  /// трогают. Переезд идёт тем же путём, которым сервер меняет человек.
+  Future<void> _autoSelectVerify(
+    ServerItem server,
+    String subId, {
+    bool alreadyConfirmed = false,
+  }) async {
     if (_autoSelectBusy) return;
     _autoSelectBusy = true;
     try {
@@ -923,15 +932,27 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             password: creds.password,
           );
 
-      if (await probe()) return;
-      var failures = 1;
-      await Future<void>.delayed(AutoSelectWatchdog.retryAfterFailure);
-      if (state.value?.status != VpnStatus.connected) return;
-      if (await probe()) return;
-      failures++;
+      final first = await Future.wait([
+        probe(),
+        AutoSelectWatchdog.networkResponds(testUrl: testUrl),
+      ]);
+      if (first[0]) return;
+      var network = first[1];
+      var failures = alreadyConfirmed ? 2 : 1;
+      if (!AutoSelectWatchdog.shouldSwitch(failures)) {
+        await Future<void>.delayed(AutoSelectWatchdog.retryAfterFailure);
+        if (state.value?.status != VpnStatus.connected) return;
+        final second = await Future.wait([
+          probe(),
+          AutoSelectWatchdog.networkResponds(testUrl: testUrl),
+        ]);
+        if (second[0]) return;
+        network = second[1];
+        failures++;
+      }
       if (!AutoSelectWatchdog.shouldSwitch(failures)) return;
 
-      if (!await AutoSelectWatchdog.networkResponds(testUrl: testUrl)) {
+      if (!network) {
         AppLogger.instance.debug(
           'Auto select: no network at all, leaving the server alone',
         );

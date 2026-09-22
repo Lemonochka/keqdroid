@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../models/tun_settings.dart';
+import '../services/core_dial_failures.dart';
 import '../services/debug_log_service.dart';
 import '../services/ephemeral_xray_ping.dart';
 import '../services/windows_desktop_service.dart';
@@ -882,6 +883,9 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     // just buffer for the debug log screen. logging per line here janks the ui
     // on connect, since xray/sing-box spam lines and developer.log runs on the ui isolate.
     void append(String line) {
+      // Тихая прослушка автовыбора: отказы дозвона до сервера считаются прямо
+      // здесь, где строка уже в руках (см. CoreDialFailures).
+      CoreDialFailures.observe(line);
       buffer.writeln(line);
       // keep only the tail so the buffer doesn't grow unbounded
       if (buffer.length > 64 * 1024) {
