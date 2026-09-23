@@ -420,8 +420,26 @@ class ServersNotifier extends Notifier<ServersState> {
     // все раскрытые тайлы). Копим результаты и применяем пачкой ~5 раз/сек —
     // прогресс в UI живой, но ребилдов на порядок меньше на больших списках.
     final buffered = <PingResult>[];
+
+    // Крутилка на каждом тайле, а не только на кнопке группы. Раньше её ставил
+    // один pingSingle, поэтому «пинг всех» выглядел так, будто ничего не
+    // происходит: список стоял неподвижно, пока не приедет первый результат.
+    // Гасим по мере готовности — видно, как замер идёт по списку.
+    final pingingIds = servers.map((s) => s.id).toSet();
+    void stopPinging(Iterable<String> ids) {
+      if (ids.isEmpty) return;
+      ref
+          .read(pingingServerIdsProvider.notifier)
+          .update((set) => {...set}..removeAll(ids));
+    }
+
+    // Крутилка снимается здесь, вместе с цифрой, а не когда пришёл результат.
+    // Снятая раньше открывала до следующего флаша старую цифру от прошлого
+    // замера, и строка в сортировке по пингу дёргалась дважды. Флаш идёт раз в
+    // 200 мс — столько крутилка над готовым результатом на глаз не висит.
     void flushBufferedToState() {
       if (buffered.isEmpty) return;
+      final done = [for (final r in buffered) r.serverId];
       final newList = [...state.servers];
       final indexById = <String, int>{
         for (var i = 0; i < newList.length; i++) newList[i].id: i,
@@ -438,6 +456,8 @@ class ServersNotifier extends Notifier<ServersState> {
       }
       buffered.clear();
       state = state.copyWith(servers: newList);
+      pingingIds.removeAll(done);
+      stopPinging(done);
     }
     final settings = await ref.read(storageProvider).getSettings();
     final vpnState = await _vpnStateForPing();
@@ -466,20 +486,9 @@ class ServersNotifier extends Notifier<ServersState> {
       (_) => flushBufferedToState(),
     );
 
-    // Крутилка на каждом тайле, а не только на кнопке группы. Раньше её ставил
-    // один pingSingle, поэтому «пинг всех» выглядел так, будто ничего не
-    // происходит: список стоял неподвижно, пока не приедет первый результат.
-    // Гасим по одному, по мере готовности, — видно, как замер идёт по списку.
-    final pingingIds = servers.map((s) => s.id).toSet();
     ref
         .read(pingingServerIdsProvider.notifier)
         .update((set) => {...set, ...pingingIds});
-    void stopPinging(Iterable<String> ids) {
-      if (ids.isEmpty) return;
-      ref
-          .read(pingingServerIdsProvider.notifier)
-          .update((set) => {...set}..removeAll(ids));
-    }
 
     try {
       await PingService.pingBatch(
@@ -499,10 +508,6 @@ class ServersNotifier extends Notifier<ServersState> {
             lastPingType: PingService.pingTypeToStored(result.pingType),
           );
           buffered.add(result);
-          // Не через buffered: цифра может подождать общий флаш, а крутилка,
-          // висящая над уже готовым результатом, читается как «завис».
-          pingingIds.remove(result.serverId);
-          stopPinging([result.serverId]);
         },
       );
     } finally {
