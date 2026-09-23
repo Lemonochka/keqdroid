@@ -159,6 +159,11 @@ class AndroidTunnelBackend implements TunnelBackend {
     }
   }
 
+  /// Скорости за секунду сервис считает сам (getCurrentState), отдельные
+  /// счётчики сторожу здесь не нужны.
+  @override
+  Future<({int down, int up})?> sessionTrafficCounters() async => null;
+
   @override
   Future<VpnState> getCurrentState() async {
     try {

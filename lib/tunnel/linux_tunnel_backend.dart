@@ -1521,8 +1521,18 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
 
 
 
+  /// Счётчики API ядра, а не tun-интерфейса: рукопожатия TCP там отвечает
+  /// локальный стек, и «пришло» было бы и от мёртвого сервера.
   @override
-
+  Future<({int down, int up})?> sessionTrafficCounters() async {
+    if (_mihomoProcess != null) {
+      final api = MihomoApiSession();
+      final port = api.port;
+      return port == null ? null : queryClashTraffic(port, secret: api.secret);
+    }
+    final port = _keqrnelClashPort;
+    return port == null ? null : queryClashTraffic(port);
+  }
 
   @override
   Future<void> pollTrafficStats(ConnectionMode mode, {bool force = false}) async {

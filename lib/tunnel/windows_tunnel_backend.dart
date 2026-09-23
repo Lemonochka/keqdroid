@@ -732,6 +732,20 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     }
   }
 
+  /// Счётчики API ядра, а не адаптера: в TUN-режиме рукопожатия TCP
+  /// отвечает локальный стек, и «пришло» там было бы и от мёртвого сервера.
+  @override
+  Future<({int down, int up})?> sessionTrafficCounters() async {
+    if (_mihomoProcess != null) {
+      final api = MihomoApiSession();
+      final port = api.port;
+      return port == null ? null : queryClashTraffic(port, secret: api.secret);
+    }
+    final port = _keqrnelClashPort;
+    if (_keqrnelProcess == null || port == null) return null;
+    return queryClashTraffic(port);
+  }
+
   @override
   Future<VpnState> getCurrentState() async {
     if (_xrayProcess != null ||

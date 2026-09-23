@@ -109,6 +109,10 @@ class VpnEngine {
         keepAlive: keepAlive,
       );
 
+  /// Кумулятивные счётчики сессии для сторожа автовыбора; null на Android.
+  Future<({int down, int up})?> sessionTrafficCounters() =>
+      _backend.sessionTrafficCounters();
+
   /// Замер батча одним ядром; `null` — платформа так не умеет.
   Future<List<({
         String id,

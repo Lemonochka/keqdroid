@@ -60,6 +60,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   int _autoSelectSeenSent = 0;
   int? _autoSelectSeenFailures;
   SilenceStreak _autoSelectSilence = const SilenceStreak();
+  ({int down, int up})? _autoSelectCounters;
   final _autoSelectSwitches = <DateTime>[];
   DateTime? _autoSelectQuietUntil;
   bool _autoSelectBusy = false;
@@ -929,16 +930,19 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     if (target == null) {
       _autoSelectSeenFailures = null;
       _autoSelectSilence = const SilenceStreak();
+      _autoSelectCounters = null;
       return;
     }
     final quietUntil = _autoSelectQuietUntil;
     if (quietUntil != null && DateTime.now().isBefore(quietUntil)) return;
 
-    final now = await ref.read(vpnEngineProvider).getCurrentState();
-    _autoSelectSilence = _autoSelectSilence.next(
-      sent: now.uploadSpeed ?? 0,
-      received: now.downloadSpeed ?? 0,
-    );
+    final second = await _autoSelectSecond();
+    if (second != null) {
+      _autoSelectSilence = _autoSelectSilence.next(
+        sent: second.sent,
+        received: second.received,
+      );
+    }
 
     // На Android отказы считает нативный читатель лога ядра, на десктопе —
     // бэкенд, который читает вывод ядра сам.
@@ -961,7 +965,30 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     await _autoSelectDecide(
       target.server,
       _autoSelectStartMeasure(target.server, target.subId),
+      reason: stalled
+          ? 'nothing came back for ${_autoSelectSilence.silent} s'
+          : '$newFailures failed dial(s) in the core log',
     );
+  }
+
+  /// Сколько ушло и пришло за последнюю секунду; null — пока не знаем.
+  ///
+  /// На Android скорости считает сервис. На десктопе состояние сессии их не
+  /// несёт вовсе, а экранный опрос счётчиков стоит, пока окно в трее, —
+  /// поэтому сторож читает кумулятивные счётчики ядра сам и вычитает прошлое
+  /// показание. Первое чтение и переподключение — только точка отсчёта.
+  Future<({int sent, int received})?> _autoSelectSecond() async {
+    final engine = ref.read(vpnEngineProvider);
+    if (Platform.isAndroid) {
+      final now = await engine.getCurrentState();
+      return (sent: now.uploadSpeed ?? 0, received: now.downloadSpeed ?? 0);
+    }
+    final counters = await engine.sessionTrafficCounters();
+    final previous = _autoSelectCounters;
+    _autoSelectCounters = counters;
+    if (counters == null || previous == null) return null;
+    if (counters.up < previous.up || counters.down < previous.down) return null;
+    return (sent: counters.up - previous.up, received: counters.down - previous.down);
   }
 
   /// Страховочный тик: ловит соединения, которые повисли молча.
@@ -998,6 +1025,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     await _autoSelectDecide(
       target.server,
       _autoSelectStartMeasure(target.server, target.subId),
+      reason: 'nothing received for ${AutoSelectWatchdog.probeEvery.inSeconds} s',
     );
   }
 
@@ -1013,11 +1041,15 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   /// [AutoSelectWatchdog.maxSwitchesPerWindow] раз за окно.
   Future<void> _autoSelectDecide(
     ServerItem server,
-    _AutoSelectMeasure measure,
-  ) async {
+    _AutoSelectMeasure measure, {
+    required String reason,
+  }) async {
     if (_autoSelectBusy) return;
     _autoSelectBusy = true;
     var switched = false;
+    // Причина и вердикт — в лог: на десктопе он пишется в файл, и живой тест
+    // без них превращается в гадание, звался ли судья вообще.
+    AppLogger.instance.info('Auto select: checking ${server.displayName} — $reason');
     try {
       var verdict = AutoServerSelect.judge(
         currentId: server.id,
@@ -1033,7 +1065,15 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         );
       }
       final nextId = verdict.nextId;
-      if (nextId == null) return;
+      if (nextId == null) {
+        final answered = measure.results[server.id]?.success == true;
+        AppLogger.instance.info(
+          answered
+              ? 'Auto select: ${server.displayName} answered, staying'
+              : 'Auto select: nobody answered, staying on ${server.displayName}',
+        );
+        return;
+      }
       if (state.value?.status != VpnStatus.connected) return;
       // Пока шёл замер, человек мог выбрать сервер сам — его выбор главнее.
       if (ref.read(serversProvider).activeServer?.id != server.id) return;
@@ -1075,6 +1115,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       // принять их за новую смерть значило бы пойти по кругу.
       _autoSelectSeenFailures = null;
       _autoSelectSilence = const SilenceStreak();
+      _autoSelectCounters = null;
       _autoSelectQuietUntil = DateTime.now().add(
         switched
             ? AutoSelectWatchdog.quietAfterSwitch
