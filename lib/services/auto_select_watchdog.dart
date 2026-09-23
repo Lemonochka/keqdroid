@@ -36,8 +36,18 @@ abstract final class AutoSelectWatchdog {
   /// Живой сервер отвечает на отправленное за время пути туда и обратно —
   /// данными или хотя бы TCP-подтверждением, — то есть самое позднее в
   /// следующую секунду. Две секунды с отправкой без ответа между ними у живого
-  /// сервера не складываются, у мёртвого — на втором же повторе.
+  /// сервера не складываются, у мёртвого — на втором же повторе. Это Android:
+  /// там сервис считает байты сокетов, подтверждения в том числе.
   static const silentSecondsBeforeCheck = 2;
+
+  /// То же на десктопе, где порог выше.
+  ///
+  /// Счётчики там — данные приложений из API ядра, а не пакеты сокетов:
+  /// подтверждений TCP они не видят, и «ушло, в ответ пока ничего» бывает и у
+  /// живого сервера. С порогом в две секунды живой тест дал две ложные
+  /// проверки за сорок секунд, а каждая поднимает до десятка ядер замера.
+  /// Отказ соединения ловит лог ядра и без тишины.
+  static const desktopSilentSecondsBeforeCheck = 5;
 
   /// Через сколько пустых секунд тишина перестаёт копиться.
   ///
@@ -110,8 +120,9 @@ abstract final class AutoSelectWatchdog {
       newFailures >= failureBurst;
 
   /// Похожа ли набранная тишина на мёртвый сервер.
-  static bool trafficStalled(int silentSeconds) =>
-      silentSeconds >= silentSecondsBeforeCheck;
+  static bool trafficStalled(int silentSeconds, {bool desktop = false}) =>
+      silentSeconds >=
+      (desktop ? desktopSilentSecondsBeforeCheck : silentSecondsBeforeCheck);
 
   /// Можно ли ещё один переезд, учитывая уже сделанные ([recent]).
   static bool switchAllowed(List<DateTime> recent, DateTime now) {

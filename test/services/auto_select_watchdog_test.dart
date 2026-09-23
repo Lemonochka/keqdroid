@@ -144,6 +144,25 @@ void main() {
       expect(s.silent, 0);
     });
 
+    test('на десктопе тишины нужно больше', () {
+      // Там счётчики не видят подтверждений TCP, и пара тихих секунд бывает
+      // и у живого сервера.
+      expect(
+        AutoSelectWatchdog.trafficStalled(
+          AutoSelectWatchdog.silentSecondsBeforeCheck,
+          desktop: true,
+        ),
+        isFalse,
+      );
+      expect(
+        AutoSelectWatchdog.trafficStalled(
+          AutoSelectWatchdog.desktopSilentSecondsBeforeCheck,
+          desktop: true,
+        ),
+        isTrue,
+      );
+    });
+
     test('одна тихая секунда — ещё не повод', () {
       expect(AutoSelectWatchdog.trafficStalled(1), isFalse);
       expect(

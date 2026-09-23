@@ -958,7 +958,10 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (previous != null) newFailures = failures - previous;
     }
 
-    final stalled = AutoSelectWatchdog.trafficStalled(_autoSelectSilence.silent);
+    final stalled = AutoSelectWatchdog.trafficStalled(
+      _autoSelectSilence.silent,
+      desktop: !Platform.isAndroid,
+    );
     if (!stalled && !AutoSelectWatchdog.dialFailuresSuggestDeadServer(newFailures)) {
       return;
     }
