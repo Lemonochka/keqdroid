@@ -319,6 +319,28 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     await ref.read(storageProvider).saveSubscriptions(subs);
   }
 
+  /// Отдаёт выбор сервера подписке [ownerId]; null — никому.
+  ///
+  /// Подключение одно, и выбирать для него сервер может только одна подписка.
+  /// «Авто», включённое в двух сразу, значило бы, что одна из кнопок горит, а
+  /// сервером уже не управляет: сторож слушает только подписку активного
+  /// сервера.
+  Future<void> handAutoSelectTo(String? ownerId) async {
+    final subs = state.value ?? [];
+    bool owns(Subscription s) => s.id == ownerId && s.autoSelectVisible;
+    final next = [
+      for (final s in subs)
+        s.autoSelect == owns(s) ? s : s.copyWith(autoSelect: owns(s)),
+    ];
+    state = AsyncData(next);
+    final storage = ref.read(storageProvider);
+    for (var i = 0; i < next.length; i++) {
+      if (!identical(next[i], subs[i])) {
+        await storage.upsertSubscription(next[i]);
+      }
+    }
+  }
+
   /// меняет имя/URL подписки, серверы не трогаем
   /// [resetName] — поле имени очистили: это не «не менять», а «вернуть
   /// автоматическое». Отдельный флаг нужен потому, что `name: null` уже занято

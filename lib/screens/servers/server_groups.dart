@@ -773,13 +773,16 @@ class _AutoSelectRow extends ConsumerWidget {
   ///
   /// Иначе переключатель горит, а подключение осталось на прежнем сервере:
   /// снаружи это «нажала, ничего не произошло». Выбранный отмечается в списке
-  /// как обычно — разница с ручным выбором только в том, кто его сделал.
+  /// как обычно — разница с ручным выбором только в том, кто его сделал. «Авто»
+  /// в других подписках при этом гаснет: сервер теперь выбирает эта.
   Future<void> _toggle(WidgetRef ref, BuildContext context) async {
     final on = subscription.autoSelect;
-    await ref
-        .read(subscriptionsProvider.notifier)
-        .editMeta(subscription.id, autoSelect: !on);
-    if (on) return;
+    final subs = ref.read(subscriptionsProvider.notifier);
+    if (on) {
+      await subs.editMeta(subscription.id, autoSelect: false);
+      return;
+    }
+    await subs.handAutoSelectTo(subscription.id);
 
     final servers = ref.read(serversProvider).servers;
     final pick = AutoServerSelect.pick(

@@ -1300,20 +1300,13 @@ class _ServersTabState extends ConsumerState<ServersTab>
         server.id == ref.read(serversProvider).activeServer?.id) {
       return;
     }
-    // Ткнули в сервер руками — автовыбор в этой подписке выключается.
-    // Иначе непонятно, кто выбирает: человек ткнул в один сервер, а через
-    // минуту его увезло на другой, и выглядит это как своеволие приложения.
-    final subId = server.subscriptionId;
-    if (subId != null) {
-      final subs = ref.read(subscriptionsProvider).value ?? const [];
-      final owner = subs.where((s) => s.id == subId).firstOrNull;
-      if (owner != null && owner.autoSelect) {
-        unawaited(
-          ref
-              .read(subscriptionsProvider.notifier)
-              .editMeta(subId, autoSelect: false),
-        );
-      }
+    // Ткнули в сервер руками — автовыбор выключается, и не только в его
+    // подписке. Иначе непонятно, кто выбирает: человек ткнул в один сервер, а
+    // через минуту его увезло на другой. А «Авто» в чужой подписке горело бы,
+    // хотя сервером больше не управляет.
+    final subs = ref.read(subscriptionsProvider).value ?? const [];
+    if (subs.any((s) => s.autoSelect)) {
+      unawaited(ref.read(subscriptionsProvider.notifier).handAutoSelectTo(null));
     }
     await ref.read(serversProvider.notifier).setActive(server);
     if (tunnelActive) {
