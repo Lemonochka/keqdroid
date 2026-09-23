@@ -909,18 +909,21 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       }
     }
 
-    void handle(String chunk) {
-      for (final line in const LineSplitter().convert(chunk)) {
-        append(line);
-      }
-    }
-
     // allowMalformed: a core line in the system ANSI codepage (RU Windows) or
     // a stray binary byte must not throw FormatException and silently kill the
     // log pipe — that's exactly when the log matters most.
     const decoder = Utf8Decoder(allowMalformed: true);
-    process.stderr.transform(decoder).listen(handle);
-    process.stdout.transform(decoder).listen(handle);
+    // Строки режутся по всему потоку, а не по кускам пайпа: кусок обрывается
+    // где попало, и строка на границе распадалась на две половинки, которых
+    // не узнал бы ни счётчик отказов, ни человек в логе.
+    process.stderr
+        .transform(decoder)
+        .transform(const LineSplitter())
+        .listen(append);
+    process.stdout
+        .transform(decoder)
+        .transform(const LineSplitter())
+        .listen(append);
   }
 
   /// Non-blocking peek at a process's exit status. `null` means still running;
