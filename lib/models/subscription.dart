@@ -346,8 +346,8 @@ class Subscription {
   /// Конструктор вызывается вручную, поэтому новое поле модели надо добавить и
   /// сюда. Забытое поле сборку не ломает: оно берёт значение по умолчанию, и
   /// настройка молча слетает на каждом обновлении подписки — так уже терялись
-  /// [hiddenCardElements] и [cardVeil]. Сторожит это тест, сравнивающий
-  /// `toJson()` целиком, а не перечисленные поля.
+  /// [hiddenCardElements], [cardVeil] и «Авто». Сторожит это тест, сравнивающий
+  /// `toJson()` целиком, — если новое поле задано в нём не по умолчанию.
   Subscription withProfileHeaders({
     required String? title,
     required String? announce,
@@ -380,6 +380,8 @@ class Subscription {
       cardThemeInServers: cardThemeInServers,
       hiddenCardElements: hiddenCardElements,
       cardVeil: cardVeil,
+      autoSelectVisible: autoSelectVisible,
+      autoSelect: autoSelect,
     );
   }
 

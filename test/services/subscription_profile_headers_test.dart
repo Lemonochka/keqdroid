@@ -164,8 +164,10 @@ void main() {
     // забытое там поле не ломает сборку — оно просто берёт значение по
     // умолчанию, и настройка молча слетает на КАЖДОМ обновлении. Так уже
     // терялись состав карточки и затемнение подложки. Сверяем поэтому весь
-    // `toJson()`, а не список полей: новое поле модели попадает под проверку
-    // само, без правки теста.
+    // `toJson()`, а не список полей. Но попадает под неё только то, что задано
+    // здесь не по умолчанию: toJson значений по умолчанию не пишет, и поле,
+    // забытое и там и тут, совпадёт само с собой. Так проскочил «Авто» — новое
+    // поле модели добавлять сюда же, со значением не по умолчанию.
     final everything = Subscription(
       id: 's1',
       name: 'Моя подписка',
@@ -193,6 +195,8 @@ void main() {
         SubscriptionCardElement.meta,
       },
       cardVeil: CardVeil.strong,
+      autoSelectVisible: true,
+      autoSelect: true,
     );
 
     test('заголовки пришли те же — не изменилось ни одно поле', () {
@@ -221,6 +225,18 @@ void main() {
       expect(updated.cardThemeId, everything.cardThemeId);
       expect(updated.cardThemeInServers, everything.cardThemeInServers);
       expect(updated.cardPreset, everything.cardPreset);
+    });
+
+    test('«Авто» переживает обновление', () {
+      final updated = everything.withProfileHeaders(
+        title: 'Другое название',
+        announce: null,
+        supportUrl: null,
+        webPageUrl: null,
+      );
+
+      expect(updated.autoSelectVisible, isTrue);
+      expect(updated.autoSelect, isTrue);
     });
   });
 
