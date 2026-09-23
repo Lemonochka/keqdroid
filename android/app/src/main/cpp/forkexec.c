@@ -37,8 +37,8 @@ static void *xray_log_reader(void *arg);
  *
  * mihomo пишет о таком на уровне warning: «[TCP] dial <прокси> (match ...)
  * ... error: ...». xray 26.x — только на info («failed to find an available
- * destination» внутри «failed to process outbound traffic»), поэтому его
- * сессия всегда работает не тише info, а лишнее срезает g_log_threshold.
+ * destination» внутри «failed to process outbound traffic»). Поэтому сессия
+ * обоих ядер работает не тише info, а лишнее срезает g_log_threshold.
  * Считаем здесь, где строка уже в руках, а приложение раз в секунду читает
  * число: ни сети, ни радио, ни лишнего разбора.
  *
@@ -78,9 +78,9 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeDialFailures(JNIEnv *env, jclass c
 }
 
 /*
- * С какого уровня строки xray идут в лог и logcat: 0 debug, 1 info, 2 warning,
- * 3 error, 4 none; 0 пропускает всё. Это уровень, выбранный человеком, когда
- * сессию подняли до info ради счётчика отказов (sessionConfigFor в
+ * С какого уровня строки ядра идут в лог и logcat: 0 debug, 1 info, 2 warning,
+ * 3 error, 4 none/silent; 0 пропускает всё. Это уровень, выбранный человеком,
+ * когда сессию подняли до info ради счётчиков (sessionConfigFor в
  * KeqdisVpnService): лог остаётся таким, каким он его заказывал.
  */
 static int g_log_threshold = 0;
@@ -92,10 +92,34 @@ Java_com_keqdroid_keqdroid_NativeHelper_nativeSetCoreLogLevel(
     __atomic_store_n(&g_log_threshold, (int)level, __ATOMIC_RELAXED);
 }
 
-/* Уровень строки xray по метке после времени: «2026/09/23 02:09:14.123456
- * [Info] ...». Строка без метки (баннер, access-лог, вывод mihomo, где первая
- * скобка — «[TCP]») не режется никогда. */
-static int xray_line_level(const char *line) {
+/*
+ * «[TUN] Tun adapter listening at:» — mihomo взял дескриптор туннеля. Пишет он
+ * это уровнем info, и при выбранном warning строка в лог не попадает, поэтому
+ * сервис ждёт её здесь, до порога (awaitMihomoTun). Без этого каждое
+ * подключение стояло четыре секунды до таймаута.
+ */
+static long g_tun_ready = 0;
+
+JNIEXPORT jlong JNICALL
+Java_com_keqdroid_keqdroid_NativeHelper_nativeTunReadyCount(JNIEnv *env, jclass clazz) {
+    (void)env; (void)clazz;
+    return (jlong)__atomic_load_n(&g_tun_ready, __ATOMIC_RELAXED);
+}
+
+/* Уровень строки ядра. mihomo: «time="..." level=info msg="..."». xray — по
+ * метке после времени: «2026/09/23 02:09:14.123456 [Info] ...». Строка без
+ * уровня (баннер, access-лог) не режется никогда. */
+static int core_line_level(const char *line) {
+    if (strncmp(line, "time=\"", 6) == 0) {
+        const char *lv = strstr(line, " level=");
+        if (!lv) return 4;
+        lv += 7;
+        if (strncmp(lv, "debug", 5) == 0) return 0;
+        if (strncmp(lv, "info", 4) == 0) return 1;
+        if (strncmp(lv, "warn", 4) == 0) return 2;
+        if (strncmp(lv, "error", 5) == 0) return 3;
+        return 4;
+    }
     const char *tag = strchr(line, '[');
     if (!tag) return 4;
     if (strncmp(tag, "[Debug]", 7) == 0) return 0;
@@ -113,10 +137,14 @@ static int xray_line_level(const char *line) {
  */
 static void core_log_line(const char *logpath, const char *line) {
     if (!line || !*line) return;
-    /* Счётчик — до порога: ради него xray сессии и работает на info. */
-    if (logpath && *logpath && is_server_dial_failure(line))
-        __atomic_add_fetch(&g_dial_failures, 1, __ATOMIC_RELAXED);
-    if (xray_line_level(line) < __atomic_load_n(&g_log_threshold, __ATOMIC_RELAXED))
+    /* Счётчики — до порога: ради них сессия и работает на info. */
+    if (logpath && *logpath) {
+        if (is_server_dial_failure(line))
+            __atomic_add_fetch(&g_dial_failures, 1, __ATOMIC_RELAXED);
+        if (strstr(line, "[TUN] Tun adapter listening at:"))
+            __atomic_add_fetch(&g_tun_ready, 1, __ATOMIC_RELAXED);
+    }
+    if (core_line_level(line) < __atomic_load_n(&g_log_threshold, __ATOMIC_RELAXED))
         return;
     __android_log_print(ANDROID_LOG_DEBUG, XTAG, "%s", line);
     if (!logpath || !*logpath) return;

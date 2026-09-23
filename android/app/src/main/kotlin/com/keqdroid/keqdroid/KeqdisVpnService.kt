@@ -1113,10 +1113,11 @@ class KeqdisVpnService : VpnService() {
      * причина в ней уже названа, и пользователю уезжает она, а не «не
      * работает».
      *
-     * Молчание не считаем отказом: успех ядро пишет уровнем info, а уровень
-     * лога выбирает пользователь, и на `warning` строки просто не будет. Ошибка
-     * же видна на всех уровнях, кроме `silent`, — поэтому вышедшее время
-     * означает «доказательств отказа нет», и это не повод рвать подключение.
+     * Успех — строка уровня info, и в файл лога при выбранном warning она не
+     * попадает. Поэтому её считает читатель вывода до порога
+     * (NativeHelper.tunReadyCount), а сессия всегда пишет не тише info
+     * (raiseMihomoLogLevel). Вышедшее время по-прежнему не отказ: значит,
+     * ядро пишет лог мимо нас, и доказательств отказа нет.
      *
      * [from] — с какого байта лога смотреть: перезапуск на живой сессии лог
      * не обнуляет (см. relaunchCore).
@@ -1133,7 +1134,7 @@ class KeqdisVpnService : VpnService() {
                         failure.substringAfter(MIHOMO_TUN_FAILED).trim().take(300)
                 )
             }
-            if (log.contains(MIHOMO_TUN_READY)) {
+            if (NativeHelper.tunReadyCount() > tunReadyFrom || log.contains(MIHOMO_TUN_READY)) {
                 android.util.Log.i("KEQDIS", "mihomo tun adapter is up")
                 return
             }
@@ -1300,6 +1301,7 @@ class KeqdisVpnService : VpnService() {
      * человека.
      */
     private fun sessionConfigFor(config: String, coreKind: String): String {
+        if (coreKind == CORE_KIND_MIHOMO) return raiseMihomoLogLevel(config)
         val levels = listOf("debug", "info", "warning", "error", "none")
         val info = levels.indexOf("info")
         if (coreKind != CORE_KIND_XRAY) {
@@ -1331,6 +1333,43 @@ class KeqdisVpnService : VpnService() {
         }
     }
 
+    /**
+     * То же для mihomo, со своей причиной: строку «TUN поднялся» он пишет
+     * уровнем info, и при выбранном warning каждое подключение ждало её до
+     * таймаута — четыре лишние секунды (awaitMihomoTun). Заодно его отказы
+     * дозвона видны и тем, кто выбрал error.
+     *
+     * Наш конфиг — JSON, готовый Clash от провайдера — YAML. Без поля mihomo
+     * и так пишет с info.
+     */
+    private fun raiseMihomoLogLevel(config: String): String {
+        val levels = listOf("debug", "info", "warning", "error", "silent")
+        return try {
+            val source = File(config)
+            val text = source.readText()
+            val value = (Regex(""""log-level"\s*:\s*"(\w+)"""").find(text)
+                ?: Regex("""(?m)^log-level:\s*['"]?(\w+)""").find(text))
+                ?.groups?.get(1)
+            val chosen = levels.indexOf(value?.value?.lowercase())
+            if (value == null || chosen <= levels.indexOf("info")) {
+                NativeHelper.setCoreLogLevel(0)
+                return config
+            }
+            val run = File(source.parentFile, "mihomo_session_run.yaml")
+            run.writeText(text.replaceRange(value.range, "info"))
+            NativeHelper.setCoreLogLevel(chosen)
+            run.absolutePath
+        } catch (e: Exception) {
+            android.util.Log.w("KEQDIS", "session log level left as is: ${e.message}")
+            NativeHelper.setCoreLogLevel(0)
+            config
+        }
+    }
+
+    /// Показания NativeHelper.tunReadyCount на старте текущего ядра: вердикт
+    /// «TUN поднялся» ищется только среди того, что написало оно.
+    private var tunReadyFrom = 0L
+
     private fun startXray(
         binary: String,
         config: String,
@@ -1346,6 +1385,7 @@ class KeqdisVpnService : VpnService() {
         // Перезапуск внутри сессии его не трогает: строки перед перезапуском и
         // объясняют, зачем он понадобился.
         if (freshLog) runCatching { File(filesDir, CORE_LOG_FILE).writeText("") }
+        tunReadyFrom = NativeHelper.tunReadyCount()
         val pid = NativeHelper.startCore(
             binary, sessionConfigFor(config, coreKind), filesDir.absolutePath,
             CORE_LOG_FILE, coreKind, tunFd,

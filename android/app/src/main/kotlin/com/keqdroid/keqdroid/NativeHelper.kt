@@ -41,6 +41,14 @@ object NativeHelper {
     }
 
     @JvmStatic
+    private external fun nativeTunReadyCount(): Long
+
+    /// Сколько раз mihomo сессии сообщил, что взял туннель — с запуска
+    /// процесса, монотонно. Строка уровня info, в лог при warning не попадает,
+    /// поэтому считается до порога.
+    fun tunReadyCount(): Long = runCatching { nativeTunReadyCount() }.getOrDefault(0L)
+
+    @JvmStatic
     private external fun nativeStartCore(
         binPath: String,
         configPath: String,
