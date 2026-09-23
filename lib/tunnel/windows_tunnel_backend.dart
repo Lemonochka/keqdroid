@@ -56,6 +56,15 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   /// их не трогает.
   int _xrayLogThreshold = 0;
 
+  /// Включала ли системный прокси эта сессия.
+  ///
+  /// Выключать его есть смысл только тогда. Каждое переключение рассылает
+  /// всем окнам WM_SETTINGCHANGE, и одно занятое окно держит рассылку до пяти
+  /// секунд: первое подключение после запуска так стояло четыре секунды,
+  /// выключая прокси, который и так был выключен. Оставшийся после падения
+  /// прокси чинит нативная уборка ещё до старта Dart (CleanupStaleSystemProxy).
+  bool _systemProxyApplied = false;
+
   // mihomo: одно ядро на оба режима. В proxy-режиме держит локальные socks/http,
   // в TUN — ещё и сам wintun-адаптер (keqrnel в этой схеме не участвует вовсе).
   Process? _mihomoProcess;
@@ -556,6 +565,8 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     AppLogger.instance.info(
       'setSystemProxy: socks=${request.socksPort} http=${request.httpPort}',
     );
+    // До вызова: и наполовину применённый прокси при остановке надо снять.
+    _systemProxyApplied = true;
     try {
       final proxyResult = await _method.invokeMethod<Map<Object?, Object?>>(
         'setSystemProxy',
@@ -676,9 +687,12 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     }
     if (emitStates) emit(const VpnState(status: VpnStatus.disconnecting));
 
-    try {
-      await _method.invokeMethod<void>('setSystemProxy', {'enabled': false});
-    } catch (_) {}
+    if (_systemProxyApplied) {
+      try {
+        await _method.invokeMethod<void>('setSystemProxy', {'enabled': false});
+      } catch (_) {}
+      _systemProxyApplied = false;
+    }
 
     // TUN owners first (gracefully, so the embedded sing-box reverts the TUN
     // adapter / routes / DNS), then the upstream socks providers.
