@@ -6,6 +6,7 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/server_avatar.dart';
 
+import '../../models/server_flag.dart';
 import '../../services/exit_ip_service.dart';
 
 // адрес постоянно не показываем: скриншоты главного экрана уходят в чаты и issue
@@ -17,6 +18,14 @@ class ConnectedStatusChip extends StatefulWidget {
     required this.onJumpToActive,
     required this.textStyle,
     required this.verticalPadding,
+    this.borderRadius,
+    this.color,
+    this.foregroundColor,
+    this.fallbackFlag,
+    this.fallbackProtocol = '',
+    this.maxLines = 2,
+    this.minHeight = 0,
+    this.textAlign = TextAlign.center,
   });
 
   final String label;
@@ -26,6 +35,17 @@ class ConnectedStatusChip extends StatefulWidget {
   final VoidCallback onJumpToActive;
   final TextStyle? textStyle;
   final double verticalPadding;
+
+  final BorderRadius? borderRadius;
+  final Color? color;
+  final Color? foregroundColor;
+
+  // флаг сервера, пока выход не известен; он не нажимается
+  final ServerFlag? fallbackFlag;
+  final String fallbackProtocol;
+  final int maxLines;
+  final double minHeight;
+  final TextAlign textAlign;
 
   static const revealFor = Duration(seconds: 5);
 
@@ -82,18 +102,30 @@ class _ConnectedStatusChipState extends State<ConnectedStatusChip> {
     final flag = exit?.flag;
     final revealed = _revealed && flag != null;
     final shape = RoundedRectangleBorder(
-      borderRadius: ExpressiveShape.radius(ExpressiveShape.full),
+      borderRadius: widget.borderRadius ??
+          ExpressiveShape.radius(ExpressiveShape.full),
     );
+    final fallback = flag == null &&
+            (widget.fallbackFlag != null || widget.fallbackProtocol.isNotEmpty)
+        ? Padding(
+            padding: const EdgeInsets.all(3),
+            child: ServerAvatar(
+              flag: widget.fallbackFlag,
+              protocol: widget.fallbackProtocol,
+              size: ConnectedStatusChip.flagSize,
+            ),
+          )
+        : null;
 
     final text = Text(
       revealed ? exit!.ip : widget.label,
       key: ValueKey(revealed),
-      textAlign: TextAlign.center,
+      textAlign: widget.textAlign,
       textDirection: revealed ? TextDirection.ltr : null,
-      maxLines: 2,
+      maxLines: widget.maxLines,
       overflow: TextOverflow.ellipsis,
       style: widget.textStyle?.copyWith(
-        color: scheme.onSecondaryContainer,
+        color: widget.foregroundColor ?? scheme.onSecondaryContainer,
         fontFeatures:
             revealed ? const [FontFeature.tabularFigures()] : null,
       ),
@@ -126,13 +158,32 @@ class _ConnectedStatusChipState extends State<ConnectedStatusChip> {
       child: text,
     );
 
-    final inset = flag != null ? 4.0 : 0.0;
+    final leading = flag != null
+        ? Semantics(
+            button: true,
+            label: l10n.exitIpLabel,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => _setRevealed(!_revealed),
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: ServerAvatar(
+                  flag: flag,
+                  protocol: '',
+                  size: ConnectedStatusChip.flagSize,
+                ),
+              ),
+            ),
+          )
+        : fallback;
+    final inset = leading != null ? 4.0 : 0.0;
     return Tooltip(
       message: revealed ? l10n.exitIpLabel : l10n.serversJumpToActive,
       waitDuration: const Duration(milliseconds: 600),
       child: Material(
-        color: scheme.secondaryContainer,
+        color: widget.color ?? scheme.secondaryContainer,
         shape: shape,
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: _onChipTap,
           customBorder: shape,
@@ -141,38 +192,31 @@ class _ConnectedStatusChipState extends State<ConnectedStatusChip> {
             child: AnimatedSize(
               duration: ExpressiveMotion.durationFast,
               curve: ExpressiveMotion.emphasized,
-              child: Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(
-                  flag != null ? 6 : 16,
-                  widget.verticalPadding - inset,
-                  16,
-                  widget.verticalPadding - inset,
-                ),
-                child: flag == null
-                    ? swapped
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Semantics(
-                            button: true,
-                            label: l10n.exitIpLabel,
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: () => _setRevealed(!_revealed),
-                              child: Padding(
-                                padding: const EdgeInsets.all(3),
-                                child: ServerAvatar(
-                                  flag: flag,
-                                  protocol: '',
-                                  size: ConnectedStatusChip.flagSize,
-                                ),
-                              ),
-                            ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: widget.minHeight),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: Padding(
+                    padding: EdgeInsetsDirectional.fromSTEB(
+                      leading != null ? 6 : 16,
+                      widget.verticalPadding - inset,
+                      16,
+                      widget.verticalPadding - inset,
+                    ),
+                    child: leading == null
+                        ? swapped
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              leading,
+                              const SizedBox(width: 6),
+                              Flexible(child: swapped),
+                            ],
                           ),
-                          const SizedBox(width: 6),
-                          Flexible(child: swapped),
-                        ],
-                      ),
+                  ),
+                ),
               ),
             ),
           ),

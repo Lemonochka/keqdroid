@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:androidx_graphics_shapes/material_shapes.dart';
-import 'package:androidx_graphics_shapes/shapes.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,12 +18,13 @@ import 'package:keqdroid/shared/ui/halloween/halloween_icons.dart';
 import 'package:keqdroid/shared/ui/halloween/halloween_sky.dart';
 import 'package:keqdroid/shared/ui/halloween/pumpkin_button.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
+import 'package:keqdroid/shared/ui/liquid_wave.dart';
 import 'package:keqdroid/shared/ui/server_group_anchors.dart';
 import 'package:keqdroid/shared/ui/scroll_hidden_fab.dart';
 import 'package:keqdroid/shared/ui/scroll_jump_overlay.dart';
-import 'package:keqdroid/shared/ui/server_avatar.dart';
 import 'package:keqdroid/shared/ui/server_row.dart';
 import 'package:keqdroid/shared/ui/shape_morph.dart';
+import 'package:keqdroid/shared/ui/smooth_fade.dart';
 import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 import 'package:keqdroid/shared/ui/stat_strip.dart';
@@ -67,82 +66,64 @@ import 'tv_receive_screen.dart';
 import 'tv_send_dialog.dart';
 import 'servers/chain_editor.dart';
 import 'servers/server_config_editor.dart';
-import 'servers/wave_window.dart';
 
 part 'servers/server_groups.dart';
 part 'servers/server_tile.dart';
 part 'servers/connection_stats.dart';
 part 'servers/connect_button.dart';
 part 'servers/connect_panel.dart';
-part 'servers/wave_header.dart';
+part 'servers/server_plaque.dart';
 
+// с выбранным сервером состояние показывает плашка, сюда доходят ошибка и «нет сервера»
 Widget _serversStatusText(
   BuildContext context,
-  VoidCallback onJumpToActive,
   VpnStatus status,
   String? errorMessage,
   ServerItem? activeServer,
-  ExitIp? exit,
 ) {
   final l10n = AppLocalizations.of(context)!;
   final textTheme = Theme.of(context).textTheme;
-  if (status == VpnStatus.connected && activeServer != null) {
-    final cleanName = ServerNameUtils.formatForDisplay(
-      ServerNameUtils.cleanDisplayName(activeServer.displayName),
-    );
-    return ConnectedStatusChip(
-      key: const ValueKey('connected'),
-      label: l10n.vpnConnectedTo(cleanName),
-      exit: exit,
-      onJumpToActive: onJumpToActive,
-      textStyle: _ServersTabState._statusChipTextStyle(textTheme),
-      verticalPadding: _ServersTabState._statusChipVerticalPadding,
-    );
-  } else {
-    final statusKey = switch (status) {
-      VpnStatus.connected => 'connected',
-      VpnStatus.connecting => 'connecting',
-      VpnStatus.disconnecting => 'disconnecting',
-      VpnStatus.error => 'error',
-      _ => activeServer != null ? 'ready' : 'no-server',
-    };
-    final label = switch (status) {
-      VpnStatus.connecting => l10n.vpnConnecting,
-      VpnStatus.disconnecting => l10n.vpnDisconnecting,
-      VpnStatus.error => _vpnErrorStatusLabel(errorMessage, context),
-      VpnStatus.connected => l10n.vpnConnectedGeneric,
-      _ =>
-        activeServer != null
-            ? l10n.vpnTapToConnect(
-                ServerNameUtils.formatForDisplay(
-                  ServerNameUtils.cleanDisplayName(activeServer.displayName),
-                ),
-              )
-            : l10n.vpnSelectServer,
-    };
-    return Text(
-      label,
-      key: ValueKey(statusKey),
-      textAlign: TextAlign.center,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: textTheme.bodyMedium?.copyWith(
-        color: AppTheme.textLight(context),
-      ),
-    );
-  }
+  final statusKey = switch (status) {
+    VpnStatus.connected => 'connected',
+    VpnStatus.connecting => 'connecting',
+    VpnStatus.disconnecting => 'disconnecting',
+    VpnStatus.error => 'error',
+    _ => activeServer != null ? 'ready' : 'no-server',
+  };
+  final label = switch (status) {
+    VpnStatus.connecting => l10n.vpnConnecting,
+    VpnStatus.disconnecting => l10n.vpnDisconnecting,
+    VpnStatus.error => _vpnErrorStatusLabel(errorMessage, context),
+    VpnStatus.connected => l10n.vpnConnectedGeneric,
+    _ =>
+      activeServer != null
+          ? l10n.vpnTapToConnect(
+              ServerNameUtils.formatForDisplay(
+                ServerNameUtils.cleanDisplayName(activeServer.displayName),
+              ),
+            )
+          : l10n.vpnSelectServer,
+  };
+  return Text(
+    label,
+    key: ValueKey(statusKey),
+    textAlign: TextAlign.center,
+    maxLines: 2,
+    overflow: TextOverflow.ellipsis,
+    style: textTheme.bodyMedium?.copyWith(
+      color: AppTheme.textLight(context),
+    ),
+  );
 }
 
 class _ConnectHeader extends ConsumerWidget {
   const _ConnectHeader({
     super.key,
-    required this.stateCtrl,
     required this.waveCtrl,
     required this.onToggle,
     required this.onJumpToActive,
   });
 
-  final AnimationController stateCtrl;
   final AnimationController waveCtrl;
 
   final void Function(VpnStatus) onToggle;
@@ -157,7 +138,6 @@ class _ConnectHeader extends ConsumerWidget {
     );
     if (modern) {
       return _ModernConnectPanel(
-        stateCtrl: stateCtrl,
         waveCtrl: waveCtrl,
         onToggle: onToggle,
         onJumpToActive: onJumpToActive,
@@ -186,9 +166,30 @@ class _ConnectHeader extends ConsumerWidget {
     final halloween = ref.watch(halloweenActiveProvider);
 
     final isDesktop = PlatformBootstrap.isDesktop;
-    final waveHeight = isDesktop ? 40.0 : 36.0;
     final topPad = isDesktop ? 20.0 : MediaQuery.of(context).padding.top + 24;
-    return Padding(
+    final shownStatus =
+        serverSwitchInProgress ? VpnStatus.connecting : vpnStatus;
+    // вода догасает ниже шапки: под плашкой места мало, и она обрывалась. снизу пустой
+    // отступ списка или ничего, а непрозрачные карточки ложатся поверх
+    const overhang = 44.0;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned(
+          left: 0,
+          top: 0,
+          right: 0,
+          bottom: -overhang,
+          child: IgnorePointer(
+            child: _HeaderLiquid(
+              clock: waveCtrl,
+              panel: false,
+              shapesTop: topPad,
+              overhang: overhang,
+            ),
+          ),
+        ),
+        Padding(
       padding: EdgeInsets.fromLTRB(24, topPad, 24, 8),
       child: Column(
         children: [
@@ -216,14 +217,23 @@ class _ConnectHeader extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: AnimatedSwitcher(
                     duration: ExpressiveMotion.durationFast,
-                    child: _serversStatusText(context, onJumpToActive, 
-                      serverSwitchInProgress && vpnStatus == VpnStatus.error
-                          ? VpnStatus.connecting
-                          : vpnStatus,
-                      serverSwitchInProgress ? null : vpnErrorMessage,
-                      activeServer,
-                      exit,
-                    ),
+                    child: activeServer != null &&
+                            shownStatus != VpnStatus.error
+                        ? Center(
+                            key: const ValueKey('plaque'),
+                            child: _StatusServerPlaque(
+                              server: activeServer,
+                              status: shownStatus,
+                              exit: exit,
+                              onJumpToActive: onJumpToActive,
+                            ),
+                          )
+                        : _serversStatusText(
+                            context,
+                            shownStatus,
+                            serverSwitchInProgress ? null : vpnErrorMessage,
+                            activeServer,
+                          ),
                   ),
                 ),
               ),
@@ -266,14 +276,12 @@ class _ConnectHeader extends ConsumerWidget {
                         ),
                 ),
               ),
-          const SizedBox(height: 20),
-          _WavePaintWidget(
-            waveCtrl: waveCtrl,
-            stateCtrl: stateCtrl,
-            height: waveHeight,
-          ),
+          // место под воду у дна шапки
+          const SizedBox(height: 24),
         ],
       ),
+    ),
+      ],
     );
   }
 }
@@ -617,7 +625,6 @@ class _ServersTabState extends ConsumerState<ServersTab>
     // ключи переносят шапку и список между раскладками при повороте вместе с состоянием
     final header = _ConnectHeader(
       key: _headerKey,
-      stateCtrl: _stateCtrl,
       waveCtrl: _waveCtrl,
       onToggle: _toggleVpn,
       onJumpToActive: _jumpToActiveServer,
@@ -635,7 +642,12 @@ class _ServersTabState extends ConsumerState<ServersTab>
         children: [
           SizedBox(
             width: _headerPaneWidth,
-            child: Center(child: SingleChildScrollView(child: header)),
+            child: Center(
+              child: SingleChildScrollView(
+                clipBehavior: Clip.none,
+                child: header,
+              ),
+            ),
           ),
           Expanded(
             child: SafeArea(

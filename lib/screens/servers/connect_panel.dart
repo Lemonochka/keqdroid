@@ -3,19 +3,19 @@ part of '../servers_tab.dart';
 // режим «Модерн»: всё из шапки над списком собрано в одну панель, кнопка справа
 class _ModernConnectPanel extends ConsumerWidget {
   const _ModernConnectPanel({
-    required this.stateCtrl,
     required this.waveCtrl,
     required this.onToggle,
     required this.onJumpToActive,
   });
 
-  final AnimationController stateCtrl;
   final AnimationController waveCtrl;
 
   final void Function(VpnStatus) onToggle;
   final VoidCallback onJumpToActive;
 
   static const double _buttonSize = 120;
+  static const double _margin = 16;
+  static const double _gapBelow = 8;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,6 +32,16 @@ class _ModernConnectPanel extends ConsumerWidget {
     final exitLookup = ref.watch(exitIpProvider);
     final exit = exitLookup.isLoading ? null : exitLookup.value;
     final halloween = ref.watch(halloweenActiveProvider);
+    final (showTraffic, showSplit) = ref.watch(
+      settingsNotifierProvider.select((async) {
+        final s = async.value ?? const AppSettings();
+        return (s.showTrafficStats, s.showTrafficSplit);
+      }),
+    );
+    // боком три показателя трафика встают сеткой 2 на 2: время занимает пустую четвёртую ячейку
+    final timeInStats = WindowBreakpoints.isExpandedMobile(context) &&
+        showTraffic &&
+        !showSplit;
 
     final isConnected =
         vpnStatus == VpnStatus.connected && !serverSwitchInProgress;
@@ -71,7 +81,7 @@ class _ModernConnectPanel extends ConsumerWidget {
           );
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, topPad, 16, 8),
+      padding: EdgeInsets.fromLTRB(_margin, topPad, _margin, _gapBelow),
       child: DecoratedBox(
         decoration: ShapeDecoration(
           color: scheme.surfaceContainerLow,
@@ -83,18 +93,7 @@ class _ModernConnectPanel extends ConsumerWidget {
             children: [
               Positioned.fill(
                 child: IgnorePointer(
-                  child: TweenAnimationBuilder<Color?>(
-                    tween: ColorTween(
-                      end: isConnected || isConnecting
-                          ? scheme.primary
-                          : AppTheme.textLight(context),
-                    ),
-                    duration: ExpressiveMotion.durationDefault,
-                    // своим слоем: волна рядом перерисовывает панель каждый кадр
-                    builder: (context, color, _) => RepaintBoundary(
-                      child: _PanelShapes(color: color!),
-                    ),
-                  ),
+                  child: _HeaderLiquid(clock: waveCtrl, panel: true),
                 ),
               ),
               Padding(
@@ -110,22 +109,22 @@ class _ModernConnectPanel extends ConsumerWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            AnimatedSwitcher(
-                              duration: ExpressiveMotion.durationFast,
-                              layoutBuilder: (current, previous) => Stack(
-                                alignment: AlignmentDirectional.centerStart,
-                                children: [...previous, ?current],
-                              ),
-                              child: _serverLine(
-                                context,
-                                isConnected ? activeServer : null,
-                                activeServer,
-                                exit,
-                              ),
-                            ),
                             if (activeServer != null)
-                              _ServerTags(server: activeServer),
-                            if (isConnected) const _UptimeLine(),
+                              _ServerPingPlaque(
+                                server: activeServer,
+                                connected: isConnected,
+                                exit: exit,
+                                onJumpToActive: onJumpToActive,
+                              )
+                            else
+                              Text(
+                                context.l10n.vpnSelectServer,
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: AppTheme.textLight(context),
+                                ),
+                              ),
+                            if (isConnected && !timeInStats)
+                              const _UptimeLine(),
                           ],
                         ),
                       ),
@@ -155,93 +154,23 @@ class _ModernConnectPanel extends ConsumerWidget {
                     curve: Curves.easeOutCubic,
                     alignment: Alignment.topCenter,
                     child: isConnected
-                        ? const _ConnectionStats(
-                            key: ValueKey('stats'),
+                        ? _ConnectionStats(
+                            key: const ValueKey('stats'),
                             fill: true,
-                            withTime: false,
+                            withTime: timeInStats,
                           )
                         : const SizedBox(
                             key: ValueKey('stats-hidden'),
                             width: double.infinity,
                           ),
                   ),
-                  const SizedBox(height: ExpressiveSpacing.large),
-                  _WavePaintWidget(
-                    waveCtrl: waveCtrl,
-                    stateCtrl: stateCtrl,
-                    height: 24,
-                  ),
+                  // место под воду у дна панели
+                  const SizedBox(height: 36),
                 ],
               ),
             ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _serverLine(
-    BuildContext context,
-    ServerItem? connectedServer,
-    ServerItem? activeServer,
-    ExitIp? exit,
-  ) {
-    final l10n = context.l10n;
-    final textTheme = Theme.of(context).textTheme;
-    if (activeServer == null) {
-      return Text(
-        l10n.vpnSelectServer,
-        key: const ValueKey('no-server'),
-        style: textTheme.bodyMedium?.copyWith(
-          color: AppTheme.textLight(context),
-        ),
-      );
-    }
-    final name = ServerNameUtils.formatForDisplay(
-      ServerNameUtils.cleanDisplayName(activeServer.displayName),
-    );
-    // тот же чип, что в легаси: по флагу раскрывает IP выхода, по остальному ведёт к серверу в списке
-    if (connectedServer != null) {
-      return ConnectedStatusChip(
-        key: const ValueKey('connected'),
-        label: name,
-        exit: exit,
-        onJumpToActive: onJumpToActive,
-        textStyle: _ServersTabState._statusChipTextStyle(textTheme),
-        verticalPadding: _ServersTabState._statusChipVerticalPadding,
-      );
-    }
-    return InkWell(
-      key: const ValueKey('ready'),
-      onTap: onJumpToActive,
-      borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: ExpressiveSpacing.extraSmall),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ServerAvatar(
-              flag: activeServer.flag,
-              protocol: activeServer.protocol,
-              size: 28,
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textDirection: contentDirection(
-                  name,
-                  fallback: Directionality.of(context),
-                ),
-                style: textTheme
-                    .emphasized(textTheme.titleMedium)
-                    ?.copyWith(color: AppTheme.text(context)),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -290,210 +219,4 @@ class _UptimeLine extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _ServerTags extends ConsumerWidget {
-  const _ServerTags({required this.server});
-
-  final ServerItem server;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(
-      settingsNotifierProvider.select(
-        (async) => async.value ?? const AppSettings(),
-      ),
-    );
-    final pingMs = server.pingMs;
-    final protocolColor = serverProtocolColor(context, server.protocol);
-    final pingType = PingService.pingColorTypeForServer(server, settings);
-    final pingColor = pingMs != null
-        ? pingQualityColor(context, pingMs, pingType)
-        : AppTheme.textLight(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: ExpressiveSpacing.small),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: [
-          if (pingMs != null || server.lastTestedAt != null)
-            _tag(
-              context,
-              ltrIsolate(
-                pingMs != null
-                    ? PingService.formatPingValue(pingMs, pingType)
-                    : 'N/A',
-              ),
-              pingColor,
-            ),
-          _tag(context, server.protocol.toUpperCase(), protocolColor),
-        ],
-      ),
-    );
-  }
-
-  Widget _tag(BuildContext context, String text, Color color) {
-    final textTheme = Theme.of(context).textTheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: ExpressiveShape.radius(ExpressiveShape.full),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 10,
-          vertical: ExpressiveSpacing.extraSmall,
-        ),
-        child: Text(
-          text,
-          style: textTheme.emphasized(textTheme.labelMedium)?.copyWith(
-            color: color,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// бледные фигуры M3 по краям карточки, выбраны по макету 22.10. наборов три, раз в полминуты
-// один гаснет, следующий проявляется. места заданы долей ширины: на ПК карточка шире макета
-class _ShapeSpot {
-  const _ShapeSpot(
-    this.polygon,
-    this.size,
-    this.alpha,
-    this.degrees,
-    this.alignment,
-    this.nudge,
-  );
-
-  final RoundedPolygon polygon;
-  final double size;
-  final double alpha;
-  final double degrees;
-  final AlignmentDirectional alignment;
-  final Offset nudge;
-}
-
-final _shapePresets = [
-  [
-    _ShapeSpot(MaterialShapes.sunny, 46, 0.10, 17,
-        AlignmentDirectional(-0.1, -1), Offset(0, -14)),
-    _ShapeSpot(MaterialShapes.pill, 30, 0.10, 46,
-        AlignmentDirectional(0.1, 1), Offset(0, -6)),
-    _ShapeSpot(MaterialShapes.flower, 52, 0.08, -11,
-        AlignmentDirectional(-1, 1), Offset(-10, -34)),
-    _ShapeSpot(MaterialShapes.clover4Leaf, 38, 0.12, 29,
-        AlignmentDirectional(1, 1), Offset(-6, -44)),
-  ],
-  [
-    _ShapeSpot(MaterialShapes.cookie9Sided, 50, 0.10, 10,
-        AlignmentDirectional(0.45, -1), Offset(0, -18)),
-    _ShapeSpot(MaterialShapes.softBurst, 34, 0.10, 0,
-        AlignmentDirectional(-0.35, 1), Offset(0, -4)),
-    _ShapeSpot(MaterialShapes.puffy, 56, 0.08, -15,
-        AlignmentDirectional(-1, -1), Offset(-14, -12)),
-    _ShapeSpot(MaterialShapes.gem, 30, 0.12, 20,
-        AlignmentDirectional(1, 0.2), Offset(-4, 0)),
-  ],
-  [
-    _ShapeSpot(MaterialShapes.flower, 48, 0.09, 0,
-        AlignmentDirectional(-1, -1), Offset(-12, -10)),
-    _ShapeSpot(MaterialShapes.sunny, 54, 0.09, -10,
-        AlignmentDirectional(0.35, 1), Offset(0, 14)),
-    _ShapeSpot(MaterialShapes.clover4Leaf, 32, 0.12, 35,
-        AlignmentDirectional(-0.2, -1), Offset(0, -6)),
-    _ShapeSpot(MaterialShapes.cookie7Sided, 40, 0.10, 15,
-        AlignmentDirectional(1, -1), Offset(-10, -8)),
-  ],
-];
-
-class _PanelShapes extends StatefulWidget {
-  const _PanelShapes({required this.color});
-
-  final Color color;
-
-  static const every = Duration(seconds: 30);
-
-  @override
-  State<_PanelShapes> createState() => _PanelShapesState();
-}
-
-class _PanelShapesState extends State<_PanelShapes>
-    with SingleTickerProviderStateMixin {
-  late final _change = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1400),
-  );
-  Timer? _timer;
-  var _from = 0;
-  var _to = 1;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(_PanelShapes.every, (_) => _next());
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _change.dispose();
-    super.dispose();
-  }
-
-  void _next() {
-    // за другой вкладкой не листаем: вернёшься, а наборы прокручены
-    if (!mounted || !TickerMode.valuesOf(context).enabled) return;
-    if (_change.isAnimating) return;
-    if (_change.isCompleted) {
-      setState(() {
-        _from = _to;
-        _to = (_to + 1) % _shapePresets.length;
-      });
-    }
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _change.value = 1;
-    } else {
-      _change.forward(from: 0);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    return AnimatedBuilder(
-      animation: _change,
-      builder: (context, _) {
-        final t = Curves.easeInOut.transform(_change.value);
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            for (final (preset, fade) in [(_from, 1 - t), (_to, t)])
-              if (fade > 0)
-                for (final spot in _shapePresets[preset])
-                  _spot(spot, fade, rtl),
-          ],
-        );
-      },
-    );
-  }
-
-  // прозрачность в цвете, а не Opacity: без лишнего слоя на время смены
-  Widget _spot(_ShapeSpot spot, double fade, bool rtl) => Align(
-        alignment: spot.alignment,
-        child: Transform.translate(
-          offset: Offset(rtl ? -spot.nudge.dx : spot.nudge.dx, spot.nudge.dy),
-          child: Transform.rotate(
-            angle: spot.degrees * pi / 180,
-            child: DecoratedBox(
-              decoration: ShapeDecoration(
-                color: widget.color.withValues(alpha: spot.alpha * fade),
-                shape: RoundedPolygonBorder(polygon: spot.polygon),
-              ),
-              child: SizedBox.square(dimension: spot.size),
-            ),
-          ),
-        ),
-      );
 }
