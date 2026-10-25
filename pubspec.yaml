@@ -127,6 +127,9 @@ flutter:
     # trade that for half a megabyte.
     - assets/geo/geoip-lite.dat
     - assets/bin/windows/geosite.dat
+  shaders:
+    - shaders/edge_fade.frag
+    - shaders/smooth_fade.frag
   # NOTE: core binaries (assets/bin/windows, assets/bin/linux) are deliberately
   # NOT Flutter assets. Flutter bundles assets into every platform, which dragged
   # the Windows .exe + Linux ELF + geo data into the Android APK (~150 MB of dead

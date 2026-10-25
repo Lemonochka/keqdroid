@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../shared/ui/smooth_fade.dart';
+
 enum CardVeil {
   none,
   light,
@@ -37,16 +39,11 @@ class CardVeilOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (veil == CardVeil.none) return const SizedBox.shrink();
-    final alphas = veil.alphas;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: AlignmentDirectional.centerStart,
-          end: AlignmentDirectional.centerEnd,
-          stops: const [0, 0.45, 1],
-          colors: [for (final alpha in alphas) color.withValues(alpha: alpha)],
-        ),
-      ),
+    return SmoothFadeBox(
+      begin: AlignmentDirectional.centerStart,
+      end: AlignmentDirectional.centerEnd,
+      color: color,
+      curve: FadeCurve.through(veil.alphas, 0.45),
     );
   }
 }

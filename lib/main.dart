@@ -30,6 +30,7 @@ import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/bottom_nav.dart';
 import 'package:keqdroid/shared/ui/halloween/halloween_icons.dart';
 import 'package:keqdroid/shared/ui/nav_rail.dart';
+import 'package:keqdroid/shared/ui/smooth_fade.dart';
 import 'package:keqdroid/shared/ui/update_dialog.dart';
 import 'package:keqdroid/ui/desktop/desktop_home_screen.dart';
 import 'package:keqdroid/ui/responsive/window_breakpoints.dart';
@@ -100,6 +101,7 @@ Future<void> main() async {
     final storage = await StorageService.init();
     // до первого кадра, иначе выбранная картинка карточки не покажется
     await CardImageService.warmUp();
+    await SmoothFade.load();
 
     final home = Platform.isWindows || Platform.isLinux
         ? const DesktopHomeScreen()
