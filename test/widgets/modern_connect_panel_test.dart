@@ -12,6 +12,7 @@ import 'package:keqdroid/screens/servers_tab.dart';
 import 'package:keqdroid/services/exit_ip_service.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
 import 'package:keqdroid/shared/ui/liquid_wave.dart';
+import 'package:keqdroid/shared/ui/smooth_fade.dart';
 import 'package:keqdroid/shared/ui/stat_strip.dart';
 
 import '../helpers/fake_tunnel_backend.dart';
@@ -180,6 +181,31 @@ void main() {
           find.descendant(of: find.byType(StatStrip), matching: time),
           landscape ? findsOneWidget : findsNothing,
         );
+      },
+    );
+  }
+
+  for (final (modern, size, outlined) in [
+    (true, const Size(412, 900), true),
+    (false, const Size(412, 900), false),
+    (true, const Size(1000, 450), false),
+  ]) {
+    testWidgets(
+      'верх списка тает по контуру панели: '
+      '${modern ? 'модерн' : 'легаси'} ${size.width > size.height ? 'боком' : 'вертикально'}',
+      (tester) async {
+        PlatformBootstrap.debugIsDesktopOverride = false;
+        addTearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
+        await _pump(
+          tester,
+          modern: modern,
+          size: size,
+          servers: _FakeServersNoPing.new,
+        );
+        final mask = tester.widget<EdgeFadeMask>(
+          find.byType(EdgeFadeMask).first,
+        );
+        expect(mask.topOutline != null, outlined);
       },
     );
   }

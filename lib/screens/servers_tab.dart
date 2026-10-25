@@ -630,11 +630,19 @@ class _ServersTabState extends ConsumerState<ServersTab>
       onJumpToActive: _jumpToActiveServer,
     );
 
-    final listArea = _ServersListPanel(
-      key: _listKey,
-      topPadding: _listTopPadding,
-      onSelectServer: _selectServer,
-      emptyState: _emptyState(),
+    final modern = ref.watch(
+      settingsNotifierProvider.select(
+        (a) => a.value?.modernConnectPanel ?? false,
+      ),
+    );
+    final listArea = _ListEdgeFade(
+      underPanel: modern && !twoPane,
+      child: _ServersListPanel(
+        key: _listKey,
+        topPadding: _listTopPadding,
+        onSelectServer: _selectServer,
+        emptyState: _emptyState(),
+      ),
     );
 
     if (twoPane) {
@@ -701,35 +709,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 child: const SeasonalIcon(Icons.add_rounded),
               ),
             ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                child,
-
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: 56 + bottomInset,
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppTheme.bg(context).withValues(alpha: 0.0),
-                            AppTheme.bg(context).withValues(alpha: 1.0),
-                            AppTheme.bg(context),
-                          ],
-                          stops: const [0.0, 0.55, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: child,
           ),
         ),
     );

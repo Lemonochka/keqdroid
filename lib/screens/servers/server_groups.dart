@@ -178,6 +178,7 @@ class _GroupHeaderBackground extends StatelessWidget {
     final headerFraction = collapsed
         ? 1.0
         : _subCardRowHeight / (_subCardRowHeight + fadeHeight);
+    final fadeStart = headerFraction * 0.72;
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(
@@ -190,19 +191,12 @@ class _GroupHeaderBackground extends StatelessWidget {
           theme.background(context, veil: CardVeil.none),
           CardVeilOverlay(color: surface, veil: sub.cardVeil),
           if (!collapsed)
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: [0, headerFraction * 0.72, 1],
-                  colors: [
-                    surface.withValues(alpha: 0),
-                    surface.withValues(alpha: 0),
-                    surface,
-                  ],
-                ),
-              ),
+            // плавный вход и выход: на изломе линейного градиента глаз видел светлую полосу
+            SmoothFadeBox(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              color: surface,
+              curve: FadeCurve.eased(0, 1, start: fadeStart),
             ),
           Align(
             alignment: Alignment.topCenter,
@@ -241,6 +235,54 @@ class _ServerGroupEntry {
 }
 
 const _listTopPadding = 22.0;
+
+class _ListEdgeFade extends StatefulWidget {
+  const _ListEdgeFade({this.underPanel = false, required this.child});
+
+  // над списком панель «Модерна»: верх тает по её контуру со скруглёнными углами
+  final bool underPanel;
+  final Widget child;
+
+  @override
+  State<_ListEdgeFade> createState() => _ListEdgeFadeState();
+}
+
+class _ListEdgeFadeState extends State<_ListEdgeFade> {
+  double _progress = 0;
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
+    final next = (n.metrics.extentBefore / 32).clamp(0.0, 1.0);
+    if ((next - _progress).abs() > 0.01 || (next == 0) != (_progress == 0)) {
+      setState(() => _progress = next);
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScroll,
+      child: EdgeFadeMask(
+        // сверху в покое под краем пусто, затухание растёт с прокруткой
+        top: _progress == 0
+            ? 0
+            : _listTopPadding + (35 - _listTopPadding) * _progress,
+        // без излома хватает короткого: полностью скрыт только системный отступ
+        bottom: 28,
+        bottomHidden: MediaQuery.paddingOf(context).bottom,
+        topOutline: widget.underPanel
+            ? const EdgeFadeOutline(
+                inset: _ModernConnectPanel._margin,
+                radius: ExpressiveShape.extraLarge,
+                gap: _ModernConnectPanel._gapBelow,
+              )
+            : null,
+        child: widget.child,
+      ),
+    );
+  }
+}
 
 const _subCardRowHeight = ServerRow.height;
 
