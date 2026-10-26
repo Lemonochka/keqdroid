@@ -536,13 +536,20 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
           ),
           VerticalDivider(width: 1, color: AppTheme.divider(context)),
           Expanded(
+            // скрытые вкладки IndexedStack продолжали бы крутить гифки подписок
             child: IndexedStack(
               index: _index,
               sizing: StackFit.expand,
-              children: const [
-                _DesktopTabHost(child: ServersTab()),
-                _DesktopTabHost(child: SubscriptionsTab()),
-                _DesktopTabHost(child: SettingsTab()),
+              children: [
+                for (final (i, tab) in const [
+                  ServersTab(),
+                  SubscriptionsTab(),
+                  SettingsTab(),
+                ].indexed)
+                  TickerMode(
+                    enabled: i == _index,
+                    child: _DesktopTabHost(child: tab),
+                  ),
               ],
             ),
           ),

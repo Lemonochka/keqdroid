@@ -136,6 +136,10 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
 
   int _navIndex = 0;
   bool _lastServersVisible = true;
+
+  // вкладки живут в PageView с keepAlive: без этого гифки подписок крутились и на
+  // настройках, около 50% ядра на одном потоке io (Pixel 6a, 26.10.2026)
+  int _onScreen = 1;
   late final PageController _pageCtrl;
 
   @override
@@ -168,8 +172,15 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
     }
 
     final rounded = page.round().clamp(0, _tabCount - 1);
-    if (rounded != _navIndex) {
-      setState(() => _navIndex = rounded);
+    var onScreen = 0;
+    for (var i = 0; i < _tabCount; i++) {
+      if ((page - i).abs() < 0.999) onScreen |= 1 << i;
+    }
+    if (rounded != _navIndex || onScreen != _onScreen) {
+      setState(() {
+        _navIndex = rounded;
+        _onScreen = onScreen;
+      });
     }
   }
 
@@ -248,10 +259,17 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
                 dragStartBehavior: DragStartBehavior.down,
                 allowImplicitScrolling: true,
                 onPageChanged: _onPageSettled,
-                children: const [
-                  _HomeTabPage(index: 0, child: ServersTab()),
-                  _HomeTabPage(index: 1, child: SubscriptionsTab()),
-                  _HomeTabPage(index: 2, child: SettingsTab()),
+                children: [
+                  for (final (i, tab) in const [
+                    ServersTab(),
+                    SubscriptionsTab(),
+                    SettingsTab(),
+                  ].indexed)
+                    _HomeTabPage(
+                      index: i,
+                      onScreen: _onScreen & (1 << i) != 0,
+                      child: tab,
+                    ),
                 ],
               ),
             ),
@@ -273,8 +291,13 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
 
 class _HomeTabPage extends ConsumerStatefulWidget {
   final int index;
+  final bool onScreen;
   final Widget child;
-  const _HomeTabPage({required this.index, required this.child});
+  const _HomeTabPage({
+    required this.index,
+    required this.onScreen,
+    required this.child,
+  });
 
   @override
   ConsumerState<_HomeTabPage> createState() => _HomeTabPageState();
@@ -290,9 +313,12 @@ class _HomeTabPageState extends ConsumerState<_HomeTabPage>
     super.build(context);
     // иначе стрелка пульта уводит фокус на соседнюю вкладку за краем экрана
     final current = ref.watch(homeTabIndexProvider) == widget.index;
-    return ExcludeFocus(
-      excluding: !current,
-      child: RepaintBoundary(child: widget.child),
+    return TickerMode(
+      enabled: widget.onScreen,
+      child: ExcludeFocus(
+        excluding: !current,
+        child: RepaintBoundary(child: widget.child),
+      ),
     );
   }
 }
