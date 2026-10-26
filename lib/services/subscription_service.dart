@@ -2478,7 +2478,7 @@ class SubscriptionService {
 
       // близкие конфиги могут сойтись на одном stable-ключе, второму новый id
       final usedOldIds = <String>{};
-      final servers = uniqueConfigs.map((config) {
+      final matched = uniqueConfigs.map((config) {
         final exactMatch = oldServers.cast<ServerItem?>().firstWhere(
               (s) => s?.config == config,
           orElse: () => null,
@@ -2494,9 +2494,44 @@ class SubscriptionService {
           if (stableMatch.configOverridden) return stableMatch;
           return stableMatch.copyWith(config: config);
         }
-
-        return ServerItem.fromRaw(config, subscriptionId: sub.id);
+        return null;
       }).toList();
+
+      // провайдер сменил адрес, uuid или первый выход json-сервера: узнаём по имени и протоколу,
+      // иначе сервер приходил новым, без пинга и выбранным сервером переставал быть
+      String nameKey(String config) {
+        final probe = ServerItem.fromRaw(config);
+        return '${probe.protocol}|${probe.derivedName}';
+      }
+      final unmatchedOld = <String, List<ServerItem>>{};
+      for (final s in oldServers) {
+        if (usedOldIds.contains(s.id) || s.configOverridden) continue;
+        unmatchedOld.putIfAbsent(nameKey(s.config), () => []).add(s);
+      }
+      final unmatchedNew = <String, int>{};
+      for (var i = 0; i < matched.length; i++) {
+        if (matched[i] != null) continue;
+        final key = nameKey(uniqueConfigs[i]);
+        unmatchedNew[key] = (unmatchedNew[key] ?? 0) + 1;
+      }
+
+      ServerItem byName(String config) {
+        final key = nameKey(config);
+        final same = unmatchedOld[key];
+        // два сервера с одним именем по имени не различить
+        if (same != null &&
+            same.length == 1 &&
+            unmatchedNew[key] == 1 &&
+            usedOldIds.add(same.single.id)) {
+          return same.single.copyWith(config: config);
+        }
+        return ServerItem.fromRaw(config, subscriptionId: sub.id);
+      }
+
+      final servers = [
+        for (var i = 0; i < matched.length; i++)
+          matched[i] ?? byName(uniqueConfigs[i]),
+      ];
 
       // правленные руками серверы, разошедшиеся по ключу, рефреш не стирает
       servers.addAll(

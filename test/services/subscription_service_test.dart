@@ -994,6 +994,146 @@ proxies:
       expect(server.address, 'nl1.example.com');
     });
   });
+
+  group('обновление подписки узнаёт свои серверы и не теряет их пинг', () {
+    const uuid = '11111111-1111-1111-1111-111111111111';
+    String vless(String host, String name, {String id = uuid, int port = 443}) =>
+        'vless://$id@$host:$port?security=reality&type=tcp#$name';
+    String auto(String host) => '{"remarks": "Auto", "outbounds": ['
+        '{"tag": "proxy", "protocol": "vless", "settings": {"vnext": '
+        '[{"address": "$host", "port": 443}]}}]}';
+
+    ServerItem was(String config, String id, {bool overridden = false}) =>
+        ServerItem(
+          id: id,
+          config: config,
+          type: ServerItemType.subscription,
+          subscriptionId: 's1',
+          configOverridden: overridden,
+          pingMs: 50,
+          lastTestedAt: DateTime(2026, 10, 26),
+        );
+
+    Future<List<ServerItem>> update(
+      List<ServerItem> old,
+      List<String> body,
+    ) async {
+      var saved = <ServerItem>[];
+      when(() => storage.getSettings())
+          .thenAnswer((_) async => const AppSettings());
+      when(() => storage.getHwid()).thenReturn(null);
+      when(() => storage.setHwid(any())).thenAnswer((_) async {});
+      when(() => storage.getServers()).thenAnswer((_) async => old);
+      when(() => storage.getActiveServerId()).thenReturn(null);
+      when(() => storage.replaceServersBySubscription(any(), any()))
+          .thenAnswer((inv) async {
+        saved = inv.positionalArguments[1] as List<ServerItem>;
+      });
+      when(() => storage.upsertSubscription(any())).thenAnswer((_) async {});
+      final dio = Dio()..httpClientAdapter = _BodyAdapter(body.join('\n'));
+      final result = await SubscriptionService(storage, dio: dio)
+          .updateSubscription(
+        const Subscription(id: 's1', name: 'S', url: 'https://example.com/sub'),
+      );
+      expect(result.error, isNull);
+      return saved;
+    }
+
+    test('та же выдача: те же серверы с пингом', () async {
+      final config = vless('1.1.1.1', 'Alpha');
+      final saved = await update([was(config, 'a')], [config]);
+      expect(saved.single.id, 'a');
+      expect(saved.single.pingMs, 50);
+    });
+
+    test('переименованный на том же адресе: тот же сервер, новое имя', () async {
+      final saved = await update(
+        [was(vless('1.1.1.1', 'Alpha'), 'a')],
+        [vless('1.1.1.1', 'Alpha%20new')],
+      );
+      expect(saved.single.id, 'a');
+      expect(saved.single.pingMs, 50);
+      expect(saved.single.displayName, 'Alpha new');
+    });
+
+    test('новый сервер приходит без пинга, пропавший уходит', () async {
+      final saved = await update(
+        [was(vless('1.1.1.1', 'Alpha'), 'a')],
+        [vless('3.3.3.3', 'Gamma')],
+      );
+      expect(saved.single.id, isNot('a'));
+      expect(saved.single.pingMs, isNull);
+    });
+
+    test('правленный руками конфиг не затирается, пока адрес тот же', () async {
+      final mine = was(vless('1.1.1.1', 'Mine'), 'a', overridden: true);
+      final saved = await update([mine], [vless('1.1.1.1', 'Alpha')]);
+      expect(saved.single.id, 'a');
+      expect(saved.single.config, mine.config);
+    });
+
+    test('сервер с новым адресом и тем же именем остаётся собой', () async {
+      final saved = await update(
+        [was(vless('1.1.1.1', 'Alpha'), 'a'), was(vless('2.2.2.2', 'Beta'), 'b')],
+        [
+          vless('1.1.1.9', 'Alpha', id: '22222222-2222-2222-2222-222222222222', port: 8443),
+          vless('2.2.2.2', 'Beta'),
+        ],
+      );
+      expect([for (final s in saved) s.id], ['a', 'b']);
+      expect(saved.first.pingMs, 50);
+      expect(saved.first.address, '1.1.1.9');
+    });
+
+    test('json-сервер, у которого провайдер сменил выход, остаётся собой', () async {
+      final saved = await update(
+        [was(auto('nl1.example.com'), 'a')],
+        [auto('de2.example.com')],
+      );
+      expect(saved.single.id, 'a');
+      expect(saved.single.pingMs, 50);
+      expect(saved.single.address, 'de2.example.com');
+    });
+
+    test('одинаковые имена по имени не сводятся: не угадать, кто есть кто', () async {
+      final saved = await update(
+        [was(vless('5.5.5.1', 'Dup'), 'a'), was(vless('5.5.5.2', 'Dup'), 'b')],
+        [vless('5.5.5.3', 'Dup'), vless('5.5.5.4', 'Dup')],
+      );
+      expect(saved.map((s) => s.id), everyElement(isNot(anyOf('a', 'b'))));
+    });
+
+    test('другой протокол под тем же именем это другой сервер', () async {
+      final saved = await update(
+        [was(vless('1.1.1.1', 'Alpha'), 'a')],
+        ['hysteria2://pass@1.1.1.9:443?sni=example.com#Alpha'],
+      );
+      expect(saved.single.id, isNot('a'));
+    });
+  });
+}
+
+class _BodyAdapter implements HttpClientAdapter {
+  _BodyAdapter(this.body);
+
+  final String body;
+
+  @override
+  void close({bool force = false}) {}
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<List<int>>? requestStream,
+    Future<void>? cancelFuture,
+  ) async =>
+      ResponseBody.fromString(
+        body,
+        200,
+        headers: {
+          'content-type': ['text/plain; charset=utf-8'],
+        },
+      );
 }
 
 /// payload — только UA, прошедшим [isAllowed]; остальным 502 (nginx-заглушка).
