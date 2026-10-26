@@ -20,6 +20,9 @@ class AppSettings {
   final String pingTestUrlCustom;
 
   final bool pingKeepAlive;
+
+  // при запуске и после обновления подписки, без кнопки
+  final bool autoPing;
   final bool darkTheme;
   final bool followSystemTheme;
   final String themePresetId;
@@ -104,6 +107,7 @@ class AppSettings {
     this.pingTestTarget = PingTestConfig.targetGstatic,
     this.pingTestUrlCustom = '',
     this.pingKeepAlive = true,
+    this.autoPing = false,
     this.darkTheme = false,
     this.followSystemTheme = true,
     this.themePresetId = 'ocean',
@@ -166,6 +170,7 @@ class AppSettings {
     'pingTestTarget': pingTestTarget,
     'pingTestUrlCustom': pingTestUrlCustom,
     'pingKeepAlive': pingKeepAlive,
+    'autoPing': autoPing,
     'darkTheme': darkTheme,
     'followSystemTheme': followSystemTheme,
     'themePresetId': themePresetId,
@@ -250,6 +255,7 @@ class AppSettings {
       ),
       pingTestUrlCustom: json['pingTestUrlCustom'] as String? ?? '',
       pingKeepAlive: json['pingKeepAlive'] as bool? ?? true,
+      autoPing: json['autoPing'] as bool? ?? false,
       darkTheme: json['darkTheme'] as bool? ?? false,
       followSystemTheme: json['followSystemTheme'] as bool? ?? true,
       themePresetId: json['themePresetId'] as String? ?? 'ocean',
@@ -420,6 +426,7 @@ class AppSettings {
     String? pingTestTarget,
     String? pingTestUrlCustom,
     bool? pingKeepAlive,
+    bool? autoPing,
     bool? darkTheme,
     bool? followSystemTheme,
     String? themePresetId,
@@ -481,6 +488,7 @@ class AppSettings {
         pingTestTarget: pingTestTarget ?? this.pingTestTarget,
         pingTestUrlCustom: pingTestUrlCustom ?? this.pingTestUrlCustom,
         pingKeepAlive: pingKeepAlive ?? this.pingKeepAlive,
+        autoPing: autoPing ?? this.autoPing,
         darkTheme: darkTheme ?? this.darkTheme,
         followSystemTheme: followSystemTheme ?? this.followSystemTheme,
         themePresetId: themePresetId ?? this.themePresetId,
@@ -564,6 +572,7 @@ class AppSettings {
               pingTestTarget == other.pingTestTarget &&
               pingTestUrlCustom == other.pingTestUrlCustom &&
               pingKeepAlive == other.pingKeepAlive &&
+              autoPing == other.autoPing &&
               darkTheme == other.darkTheme &&
               followSystemTheme == other.followSystemTheme &&
               themePresetId == other.themePresetId &&
@@ -635,6 +644,7 @@ class AppSettings {
     pingTestTarget,
     pingTestUrlCustom,
     pingKeepAlive,
+    autoPing,
     darkTheme,
     followSystemTheme,
     themePresetId,

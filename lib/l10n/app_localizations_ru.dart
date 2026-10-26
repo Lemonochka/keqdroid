@@ -953,6 +953,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsPingKeepAliveHint => 'Запрос уходит дважды, в счёт идёт второй, уже без рукопожатия. Выключено: один запрос со всем прогревом, как при первом открытии сайта.';
 
   @override
+  String get settingsPingAutoTitle => 'Когда пинговать';
+
+  @override
+  String get settingsPingAuto => 'Пинговать автоматически';
+
+  @override
+  String get settingsPingAutoHint => 'При открытии приложения и сразу после обновления подписки';
+
+  @override
   String get settingsPingMethodSpeed => 'Тест скорости';
 
   @override

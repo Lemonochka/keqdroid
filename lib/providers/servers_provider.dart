@@ -36,10 +36,39 @@ class ServersState {
 }
 
 class ServersNotifier extends Notifier<ServersState> {
+  Future<void>? _initialLoad;
+  DateTime? _lastAutoPing;
+
   @override
   ServersState build() {
-    _load();
+    _initialLoad = _load();
     return ServersState(isLoading: true);
+  }
+
+  // на возврат в приложение не чаще раза в 15 минут, иначе каждое переключение окон гоняло бы пинг
+  Future<void> autoPingAll() async {
+    final last = _lastAutoPing;
+    if (last != null &&
+        DateTime.now().difference(last) < const Duration(minutes: 15)) {
+      return;
+    }
+    if (!(await ref.read(storageProvider).getSettings()).autoPing) return;
+    await _initialLoad;
+    if (state.servers.isEmpty || ref.read(pingingServerIdsProvider).isNotEmpty) {
+      return;
+    }
+    _lastAutoPing = DateTime.now();
+    await pingAll();
+  }
+
+  Future<void> autoPingSubscription(String subscriptionId) async {
+    if (!(await ref.read(storageProvider).getSettings()).autoPing) return;
+    if (ref.read(pingingScopesProvider).contains(subscriptionId)) return;
+    try {
+      await pingSubscription(subscriptionId);
+    } catch (_) {
+      // все замеры упали: на ручном пинге это сообщение, тут его показать некому
+    }
   }
 
   Future<void> _load() async {

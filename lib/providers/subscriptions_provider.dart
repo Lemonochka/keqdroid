@@ -54,6 +54,13 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     if (_hasSubscriptionsChanged(current, latest)) {
       state = AsyncData(latest);
       await ref.read(serversProvider.notifier).reloadPreservingActive();
+      // обновил фоновый воркер: пингуем то, что он принёс
+      final before = {for (final s in current) s.id: s.lastUpdatedAt};
+      for (final s in latest) {
+        if (s.lastUpdatedAt != null && s.lastUpdatedAt != before[s.id]) {
+          _autoPing(s.id);
+        }
+      }
     }
     await notifyExpired(latest);
   }
@@ -136,11 +143,18 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       final latest = await ref.read(storageProvider).getSubscriptions();
       state = AsyncData(latest);
       await ref.read(serversProvider.notifier).reloadPreservingActive();
+      for (final r in results) {
+        if (r.success) _autoPing(r.subscription.id);
+      }
       await notifyExpired(latest);
     } finally {
       _autoUpdateRunning = false;
     }
   }
+
+  void _autoPing(String subscriptionId) => unawaited(
+        ref.read(serversProvider.notifier).autoPingSubscription(subscriptionId),
+      );
 
   bool _hasSubscriptionsChanged(List<Subscription> a, List<Subscription> b) =>
       subscriptionsDiffer(a, b);
@@ -190,6 +204,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
           .toList();
       state = AsyncData(subs);
       await ref.read(serversProvider.notifier).reloadPreservingActive();
+      _autoPing(sub.id);
       await notifyExpired(subs);
     } else {
       throw SubscriptionFetchException(

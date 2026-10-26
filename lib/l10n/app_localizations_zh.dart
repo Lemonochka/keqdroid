@@ -939,6 +939,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPingKeepAliveHint => '请求发送两次，只计第二次，不含握手时间。关闭时只发一次，连同预热一起计算，就像第一次打开网页。';
 
   @override
+  String get settingsPingAutoTitle => '何时测速';
+
+  @override
+  String get settingsPingAuto => '自动测速';
+
+  @override
+  String get settingsPingAutoHint => '打开应用时以及订阅更新后立即测速';
+
+  @override
   String get settingsPingMethodSpeed => '测速';
 
   @override

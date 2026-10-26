@@ -338,6 +338,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(ref.read(serversProvider.notifier).autoPingAll());
       if (Platform.isAndroid) {
         unawaited(_checkLaunchAction());
       }
@@ -371,6 +372,9 @@ class _ServersTabState extends ConsumerState<ServersTab>
     } else {
       _appInForeground = true;
       _syncHeaderAnimations();
+      if (state == AppLifecycleState.resumed) {
+        unawaited(ref.read(serversProvider.notifier).autoPingAll());
+      }
       if (Platform.isAndroid && state == AppLifecycleState.resumed) {
         unawaited(_syncVpnStateFromNative());
         unawaited(_checkLaunchAction());

@@ -102,6 +102,18 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
               ),
             ],
           ),
+          ExpressiveSectionHeader(l10n.settingsPingAutoTitle),
+          card(
+            children: [
+              SwitchListTile(
+                value: settings.autoPing,
+                activeThumbColor: accent,
+                title: Text(l10n.settingsPingAuto),
+                subtitle: Text(l10n.settingsPingAutoHint),
+                onChanged: (v) => _save(settings.copyWith(autoPing: v)),
+              ),
+            ],
+          ),
           if (isUrl) ...[
             ExpressiveSectionHeader(l10n.settingsPingKeepAliveTitle),
             card(

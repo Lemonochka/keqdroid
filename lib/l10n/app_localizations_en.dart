@@ -943,6 +943,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPingKeepAliveHint => 'The request goes out twice and the second one counts, so the handshake stays out of the number. Off: a single request with the warm-up, like opening a site for the first time.';
 
   @override
+  String get settingsPingAutoTitle => 'When to ping';
+
+  @override
+  String get settingsPingAuto => 'Ping automatically';
+
+  @override
+  String get settingsPingAutoHint => 'When the app opens and right after a subscription updates';
+
+  @override
   String get settingsPingMethodSpeed => 'Speed test';
 
   @override

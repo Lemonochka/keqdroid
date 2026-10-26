@@ -943,6 +943,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsPingKeepAliveHint => 'Die Anfrage geht zweimal hinaus und gezählt wird die zweite, also ohne Handshake. Aus: eine einzige Anfrage samt Aufwärmen, wie beim ersten Öffnen einer Website.';
 
   @override
+  String get settingsPingAutoTitle => 'Wann messen';
+
+  @override
+  String get settingsPingAuto => 'Automatisch messen';
+
+  @override
+  String get settingsPingAutoHint => 'Beim Öffnen der App und direkt nach dem Aktualisieren eines Abonnements';
+
+  @override
   String get settingsPingMethodSpeed => 'Geschwindigkeitstest';
 
   @override

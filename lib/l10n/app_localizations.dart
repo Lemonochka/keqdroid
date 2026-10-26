@@ -1763,6 +1763,24 @@ abstract class AppLocalizations {
   /// **'The request goes out twice and the second one counts, so the handshake stays out of the number. Off: a single request with the warm-up, like opening a site for the first time.'**
   String get settingsPingKeepAliveHint;
 
+  /// No description provided for @settingsPingAutoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When to ping'**
+  String get settingsPingAutoTitle;
+
+  /// No description provided for @settingsPingAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Ping automatically'**
+  String get settingsPingAuto;
+
+  /// No description provided for @settingsPingAutoHint.
+  ///
+  /// In en, this message translates to:
+  /// **'When the app opens and right after a subscription updates'**
+  String get settingsPingAutoHint;
+
   /// No description provided for @settingsPingMethodSpeed.
   ///
   /// In en, this message translates to:

@@ -939,6 +939,15 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsPingKeepAliveHint => 'درخواست دو بار می‌رود و دومی شمرده می‌شود — بدون دست‌دادن. خاموش: یک درخواست همراه گرم‌شدن، مثل اولین باز کردن یک سایت.';
 
   @override
+  String get settingsPingAutoTitle => 'زمان پینگ';
+
+  @override
+  String get settingsPingAuto => 'پینگ خودکار';
+
+  @override
+  String get settingsPingAutoHint => 'هنگام باز شدن برنامه و درست پس از به‌روزرسانی اشتراک';
+
+  @override
   String get settingsPingMethodSpeed => 'تست سرعت';
 
   @override

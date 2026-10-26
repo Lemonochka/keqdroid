@@ -141,6 +141,7 @@ class SettingsBackupService {
     'pingTestTarget',
     'pingTestUrlCustom',
     'pingKeepAlive',
+    'autoPing',
     'darkTheme',
     'followSystemTheme',
     'themePresetId',
