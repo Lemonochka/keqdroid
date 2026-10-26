@@ -195,6 +195,7 @@ class MainActivity : FlutterFragmentActivity() {
         ensureVpnServiceBound()
         setupMethodChannel(flutterEngine)
         setupEventChannel(flutterEngine)
+        CardMedia(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
         pingProgressChannel = EventChannel(
             flutterEngine.dartExecutor.binaryMessenger, PING_PROGRESS_CHANNEL,
         ).also { ch ->

@@ -34,7 +34,19 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
 
     final subs = await ref.read(storageProvider).getSubscriptions();
     unawaited(notifyExpired(subs));
+    if (Platform.isAndroid) unawaited(Future(_migrateCardGifs));
     return subs;
+  }
+
+  // гифки шапок, выбранные до перехода на видео, перекодируются один раз в фоне
+  Future<void> _migrateCardGifs() async {
+    for (final sub in [...?state.value]) {
+      if (!sub.cardThemeId.toLowerCase().endsWith('.gif')) continue;
+      try {
+        final id = await CardImageService.migrateGif(sub.cardThemeId, sub.id);
+        if (id != null) await editMeta(sub.id, cardThemeId: id);
+      } catch (_) {}
+    }
   }
 
   Future<void> _syncSubscriptionsFromStorage() async {

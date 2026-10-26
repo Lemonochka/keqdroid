@@ -87,7 +87,7 @@ class SubscriptionAccentService {
     final palette = theme.palette;
     if (palette != null) return palette.colors(scheme).first;
 
-    final asset = theme.asset;
+    final asset = theme.still;
     if (asset == null) return null;
 
     try {

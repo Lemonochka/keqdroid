@@ -95,4 +95,32 @@ void main() {
     // Встроенная тема — не своя картинка.
     expect(await CardImageService.resolvePath('aurora'), isNull);
   });
+
+  test('видео живёт вместе со своим постером, прошлое уходит целиком', () async {
+    touch('sub1-100.mp4');
+    touch('sub1-100.mp4.png');
+    touch('sub1-200.mp4');
+    touch('sub1-200.mp4.png');
+
+    await CardImageService.prune('sub1', 'file:sub1-200.mp4');
+
+    expect(names(), ['sub1-200.mp4', 'sub1-200.mp4.png']);
+  });
+
+  test('в бэкап видео уезжает вместе с постером', () async {
+    touch('sub1-200.mp4');
+    touch('sub1-200.mp4.png');
+
+    final files = await CardImageService.exportForThemes(['file:sub1-200.mp4']);
+
+    expect(files.keys, unorderedEquals(['sub1-200.mp4', 'sub1-200.mp4.png']));
+  });
+
+  test('цвет акцента и превью у видео берутся с постера', () {
+    final video = SubscriptionCardTheme.file('sub1-200.mp4', dir.path);
+    final image = SubscriptionCardTheme.file('sub1-200.png', dir.path);
+
+    expect(video.still, '${dir.path}/sub1-200.mp4.png');
+    expect(image.still, image.asset);
+  });
 }

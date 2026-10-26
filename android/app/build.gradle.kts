@@ -140,4 +140,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     implementation("androidx.activity:activity-ktx:1.9.3")
+    // та же версия media3, что у video_player_android 2.12.2: две версии в одном APK не уживаются
+    implementation("androidx.media3:media3-transformer:1.9.2")
+    implementation("androidx.media3:media3-effect:1.9.2")
 }

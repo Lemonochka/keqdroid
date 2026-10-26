@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../shared/ui/card_video_view.dart';
 import '../shared/ui/smooth_fade.dart';
 
 enum CardVeil {
@@ -77,11 +78,33 @@ class SubscriptionCardTheme {
 
   bool get hasImage => asset != null;
 
-  Widget background(BuildContext context, {required CardVeil veil}) {
+  static bool isVideoFile(String path) => path.toLowerCase().endsWith('.mp4');
+
+  // первый кадр видео рядом с ним: по нему цвет акцента и превью, и его видно, пока видео грузится
+  static String posterFor(String videoPath) => '$videoPath.png';
+
+  String? get still {
+    final asset = this.asset;
+    if (asset == null) return null;
+    return isVideoFile(asset) ? posterFor(asset) : asset;
+  }
+
+  // overlay: затемнения поверх картинки. Над видео они обязаны лежать в одном с ним Stack:
+  // из внешних обёрток на Pixel 6a их не было видно поверх кадров (26.10.2026)
+  Widget background(
+    BuildContext context, {
+    required CardVeil veil,
+    Widget? overlay,
+  }) {
     final scheme = Theme.of(context).colorScheme;
     final asset = this.asset;
     if (asset != null) {
-      return _ImageBackground(asset: asset, scheme: scheme, veil: veil);
+      return _ImageBackground(
+        asset: asset,
+        scheme: scheme,
+        veil: veil,
+        overlay: overlay,
+      );
     }
     final palette = this.palette;
     if (palette == null) return const SizedBox.shrink();
@@ -158,14 +181,30 @@ class _ImageBackground extends StatelessWidget {
     required this.asset,
     required this.scheme,
     required this.veil,
+    this.overlay,
   });
 
   final String asset;
   final ColorScheme scheme;
   final CardVeil veil;
+  final Widget? overlay;
 
   @override
   Widget build(BuildContext context) {
+    final over = Stack(
+      fit: StackFit.expand,
+      children: [
+        CardVeilOverlay(color: scheme.surfaceContainerHigh, veil: veil),
+        ?overlay,
+      ],
+    );
+    if (SubscriptionCardTheme.isVideoFile(asset)) {
+      return CardVideoView(
+        path: asset,
+        poster: SubscriptionCardTheme.posterFor(asset),
+        overlay: over,
+      );
+    }
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -174,7 +213,7 @@ class _ImageBackground extends StatelessWidget {
           fit: BoxFit.cover,
           errorBuilder: (_, _, _) => const SizedBox.shrink(),
         ),
-        CardVeilOverlay(color: scheme.surfaceContainerHigh, veil: veil),
+        over,
       ],
     );
   }

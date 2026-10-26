@@ -1675,6 +1675,9 @@ class _CardThemePicker extends StatefulWidget {
 class _CardThemePickerState extends State<_CardThemePicker> {
   String? _error;
 
+  // гифка или видео перекодируются несколько секунд
+  var _busy = false;
+
   final CarouselController _carousel = CarouselController();
 
   @override
@@ -1686,11 +1689,14 @@ class _CardThemePickerState extends State<_CardThemePicker> {
   Future<void> _pick() async {
     final l10n = AppLocalizations.of(context)!;
     final CardImageResult result;
+    setState(() => _busy = true);
     try {
       result = await CardImageService.pick(subscriptionId: widget.subscriptionId);
     } catch (e) {
       if (mounted) setState(() => _error = friendlyErrorDetailed(e, context));
       return;
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
     if (result.cancelled || !mounted) return;
 
@@ -1742,14 +1748,14 @@ class _CardThemePickerState extends State<_CardThemePicker> {
             backgroundColor: AppTheme.card(context),
             onTap: (index) {
               if (index == 0) {
-                unawaited(_pick());
+                if (!_busy) unawaited(_pick());
                 return;
               }
               final theme = kSubscriptionCardThemes[index - 1];
               widget.onSelect(theme.id == currentId ? '' : theme.id);
             },
             children: [
-              _CustomImageSlot(themeId: currentId),
+              _CustomImageSlot(themeId: currentId, busy: _busy),
               for (final theme in kSubscriptionCardThemes)
                 _CardThemeSlot(
                   theme: theme,
@@ -1863,8 +1869,9 @@ class _CardThemeSlot extends StatelessWidget {
 
 class _CustomImageSlot extends StatelessWidget {
   final String themeId;
+  final bool busy;
 
-  const _CustomImageSlot({required this.themeId});
+  const _CustomImageSlot({required this.themeId, required this.busy});
 
   @override
   Widget build(BuildContext context) {
@@ -1912,7 +1919,11 @@ class _CustomImageSlot extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   Image(
-                    image: FileImage(File(path)),
+                    image: FileImage(File(
+                      SubscriptionCardTheme.isVideoFile(path)
+                          ? SubscriptionCardTheme.posterFor(path)
+                          : path,
+                    )),
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
@@ -1934,6 +1945,8 @@ class _CustomImageSlot extends StatelessWidget {
             },
           ),
         if (selected) const _CardThemeRing(),
+        if (busy)
+          const Center(child: ShapeLoadingIndicator(size: 40)),
       ],
     );
   }

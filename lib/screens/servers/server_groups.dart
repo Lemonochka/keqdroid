@@ -188,16 +188,24 @@ class _GroupHeaderBackground extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          theme.background(context, veil: CardVeil.none),
-          CardVeilOverlay(color: surface, veil: sub.cardVeil),
-          if (!collapsed)
-            // плавный вход и выход: на изломе линейного градиента глаз видел светлую полосу
-            SmoothFadeBox(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              color: surface,
-              curve: FadeCurve.eased(0, 1, start: fadeStart),
+          theme.background(
+            context,
+            veil: CardVeil.none,
+            overlay: Stack(
+              fit: StackFit.expand,
+              children: [
+                CardVeilOverlay(color: surface, veil: sub.cardVeil),
+                if (!collapsed)
+                  // плавный вход и выход: на изломе линейного градиента глаз видел светлую полосу
+                  SmoothFadeBox(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    color: surface,
+                    curve: FadeCurve.eased(0, 1, start: fadeStart),
+                  ),
+              ],
             ),
+          ),
           Align(
             alignment: Alignment.topCenter,
             // высота вместе со строкой Авто: иначе кнопку видно, но нажатия до неё не доходят
