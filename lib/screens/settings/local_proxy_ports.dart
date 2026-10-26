@@ -83,13 +83,13 @@ class _LocalPortsSectionState extends ConsumerState<_LocalPortsSection> {
     if (!valid(socks) || !valid(http)) {
       _socksCtrl.text = settings.localPort.toString();
       _httpCtrl.text = settings.httpPort.toString();
-      ScaffoldMessenger.of(context).showSnackBar(
+      AppSnack.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsPortInvalid)),
       );
       return;
     }
     if (socks == http) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      AppSnack.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsPortsMustDiffer)),
       );
       return;

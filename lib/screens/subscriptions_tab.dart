@@ -8,8 +8,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
-import 'package:keqdroid/shared/ui/reorder_zoom_fix.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/floating_bar.dart';
+import 'package:keqdroid/shared/ui/reorder_zoom_fix.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
 import 'package:keqdroid/shared/ui/expressive_button_group.dart';
@@ -43,6 +44,7 @@ import '../utils/external_link.dart';
 import '../utils/identity_presets.dart';
 import '../utils/routing_profiles.dart';
 import '../utils/time_ago.dart';
+import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
 part 'subscriptions/card_look_sheet.dart';
 part 'subscriptions/identity_sheet.dart';
@@ -58,9 +60,12 @@ class SubscriptionsTab extends ConsumerWidget {
     final bgColor = AppTheme.bg(context);
     final textColor = AppTheme.text(context);
 
-    return Scaffold(
+    // кнопка действия стоит на линии пилюли, а её отступ панель сообщает после кадра
+    return ValueListenableBuilder<double>(
+      valueListenable: FloatingBar.bottomInset,
+      builder: (context, _, _) => Scaffold(
           backgroundColor: bgColor,
-          body: SafeArea(
+          body: _withFloatingAction(context, ref, SafeArea(
             child: DesktopPageLayout(
               maxWidth: 920,
               child: Column(
@@ -93,16 +98,19 @@ class SubscriptionsTab extends ConsumerWidget {
                       data: (subs) => subs.isEmpty
                           ? _emptySubsState(context)
                           : SmoothScroll(
-                              builder: (context, controller) => ReorderZoomFix(
+                              builder: (context, controller) => FloatingBarFade(
+                                child: ReorderZoomFix(
                                 builder: (context, fix) =>
                                   ReorderableListView.builder(
                                     scrollController: controller,
                                     physics: const ClampingScrollPhysics(),
-                                    padding: const EdgeInsets.fromLTRB(
+                                    padding: EdgeInsets.fromLTRB(
                                       16,
                                       8,
                                       16,
-                                      100,
+                                      FloatingBar.shown(context)
+                                          ? 24 + FloatingBar.clearance(context)
+                                          : 100,
                                     ),
                                     buildDefaultDragHandles: false,
                                     onReorderStart: (_) {
@@ -194,14 +202,17 @@ class SubscriptionsTab extends ConsumerWidget {
                                     },
                                   ),
                               ),
+                              ),
                             ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          floatingActionButton: TvFocus.fab(
+          )),
+          floatingActionButton: FloatingBar.shown(context)
+              ? null
+              : TvFocus.fab(
             (fabContext) => FloatingActionButton.extended(
               heroTag: 'subscriptions_add_fab',
               backgroundColor: AppTheme.accentContainer(fabContext),
@@ -211,7 +222,15 @@ class SubscriptionsTab extends ConsumerWidget {
               onPressed: () => _showAddSubDialog(context, ref),
             ),
           ),
+      ),
     );
+  }
+
+  // кнопка живёт в панели, страница только отдаёт ей действие
+  Widget _withFloatingAction(BuildContext context, WidgetRef ref, Widget body) {
+    if (!FloatingBar.shown(context)) return body;
+    FloatingBar.actions[1] = () => _showAddSubDialog(context, ref);
+    return FloatingBarHideOnScroll(child: body);
   }
 
   Widget _emptySubsState(BuildContext context) {
@@ -639,7 +658,7 @@ bool _subIsInsecureHttp(Subscription sub) =>
     sub.url.trim().toLowerCase().startsWith('http://');
 
 Future<void> _subOpenProviderLink(BuildContext context, String url) async {
-  final messenger = ScaffoldMessenger.of(context);
+  final messenger = AppSnack.of(context);
   final l10n = AppLocalizations.of(context)!;
   final ok = await openExternalLink(url);
   if (ok) return;
@@ -1044,7 +1063,7 @@ class _SubCardHeader extends ConsumerWidget {
                         await onRefresh();
                       } catch (e) {
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        AppSnack.of(context).showSnackBar(
                           SnackBar(
                             content: Text(friendlyError(e, context)),
                             backgroundColor: redColor,
@@ -1109,7 +1128,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
       await widget.onRefresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      AppSnack.of(context).showSnackBar(
         SnackBar(
           content: Text(friendlyError(e, context)),
           backgroundColor: AppTheme.red(context),
@@ -1275,7 +1294,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                     color: textLightColor,
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: urlCtrl.text));
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      AppSnack.of(context).showSnackBar(
                         SnackBar(
                           content: Text(l10n.subscriptionsUrlCopied),
                           backgroundColor: textColor,
@@ -1559,7 +1578,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
     }
     if (ctx.mounted) Navigator.of(ctx).pop();
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
+    AppSnack.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
@@ -1577,7 +1596,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
       );
     } catch (e) {
       if (ctx.mounted) {
-        ScaffoldMessenger.of(ctx).showSnackBar(
+        AppSnack.of(ctx).showSnackBar(
           SnackBar(
             content: Text(
               l10n.subscriptionsShareFailed(friendlyError(e, ctx)),

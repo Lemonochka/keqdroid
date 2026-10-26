@@ -2845,13 +2845,28 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appearanceSectionUnderButton => 'Unter der Verbinden-Schaltfläche';
 
   @override
-  String get appearanceSectionConnectPanel => 'Oberer Bereich der Serverliste';
+  String get appearanceSectionConnectPanel => 'Hauptbildschirm';
 
   @override
   String get appearanceConnectPanelLegacy => 'Klassisch';
 
   @override
   String get appearanceConnectPanelModern => 'Modern';
+
+  @override
+  String get appearanceBarStrip => 'Leiste';
+
+  @override
+  String get appearanceBarBrightPlus => 'Helles Plus';
+
+  @override
+  String get appearanceBarIslands => 'Inseln';
+
+  @override
+  String get appearancePartTop => 'Oberer Bereich';
+
+  @override
+  String get appearancePartBottom => 'Untere Leiste';
 
   @override
   String get appearanceSectionFeel => 'Touch-Feedback';

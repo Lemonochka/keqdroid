@@ -23,6 +23,7 @@ import '../tunnel/tunnel_state.dart';
 import '../utils/process_name_utils.dart';
 import '../utils/russian_apps.dart';
 import '../utils/split_tunneling_entries.dart';
+import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
 enum TunnelMode { all, includeOnly, excludeOnly }
 
@@ -141,7 +142,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     if (raw == null || !mounted) return;
     final name = normalizeProcessName(raw);
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      AppSnack.of(context).showSnackBar(
         SnackBar(
           content: Text(
             Platform.isLinux
@@ -163,7 +164,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
       _allApps = _mergeCustomApps(_allApps);
       _onSearch();
     });
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(content: Text(l10n.splitAddAppAdded(name))),
     );
   }
@@ -172,7 +173,7 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     if (_isDesktop) return;
 
     final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
+    final messenger = AppSnack.of(context);
     final notifier = ref.read(splitTunnelingProvider.notifier);
 
     if (_mode != TunnelMode.excludeOnly) {

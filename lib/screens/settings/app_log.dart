@@ -34,7 +34,7 @@ class _AppLogScreenState extends State<_AppLogScreen> {
     final text = await AppLogService.bundle();
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(content: Text(l10n.serversCopiedToClipboard)),
     );
   }
@@ -193,7 +193,7 @@ class _AppLogSourceScreenState extends State<_AppLogSourceScreen> {
   Future<void> _copy(AppLocalizations l10n, String text) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(content: Text(l10n.serversCopiedToClipboard)),
     );
   }
@@ -322,7 +322,7 @@ class _ProcessExitsScreen extends StatelessWidget {
               ClipboardData(text: AppInternalsService.exitLines(exits)),
             );
             if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
+            AppSnack.of(context).showSnackBar(
               SnackBar(content: Text(l10n.serversCopiedToClipboard)),
             );
           },

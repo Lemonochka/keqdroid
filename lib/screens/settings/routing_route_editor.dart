@@ -339,7 +339,7 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
     if (_finalOutboundFor(ref, widget.profileId) == value) return;
     await _saveFinalOutbound(ref, widget.profileId, value);
     if (!mounted || unmatched != RoutingField.direct) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(content: Text(l10n.routeRefilterUnmatched)),
     );
   }

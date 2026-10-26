@@ -44,7 +44,9 @@ import 'package:keqdroid/screens/settings/connection_tile.dart';
 import 'package:keqdroid/shared/ui/add_process_dialog.dart';
 import 'package:keqdroid/shared/ui/app_list_tile.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/liquid_nav.dart';
 import 'package:keqdroid/shared/ui/commit_on_blur.dart';
+import 'package:keqdroid/shared/ui/floating_bar.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
 import 'package:keqdroid/shared/ui/expressive_button_group.dart';
@@ -87,6 +89,7 @@ import 'package:keqdroid/tunnel/vpn_backend.dart';
 import 'package:keqdroid/tunnel/local_port_plan.dart';
 import 'package:keqdroid/ui/responsive/desktop_page_layout.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
 part 'settings/advanced_settings.dart';
 part 'settings/app_internals.dart';
@@ -221,15 +224,7 @@ class SettingsTab extends ConsumerWidget {
                   ),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  tabContentHorizontalInset(),
-                  0,
-                  tabContentHorizontalInset(),
-                  24,
-                ),
-                child: const _AppVersionSection(),
-              ),
+              const _AppVersionSection(),
             ],
           ),
         ),
@@ -534,18 +529,50 @@ class _AppVersionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Divider(color: AppTheme.divider(context), thickness: 1),
-        const SizedBox(height: 16),
-        const _UpdateVersionInfo(),
-      ],
+    final style = FloatingBar.shown(context) ? FloatingBar.styleOf(context) : null;
+    final floating = style != null;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // лента здесь стоит по центру, и версия встаёт по бокам от неё, если влезает
+        final half = style == null
+            ? 0.0
+            : (constraints.maxWidth -
+                    2 * (FloatingBar.margin + LiquidBottomNav.sideGap(style)) -
+                    LiquidBottomNav.restWidth(
+                      context,
+                      AppLocalizations.of(context)!.navSettings,
+                    )) /
+                2;
+        if (style != null && half >= 72) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: FloatingBar.bottomMargin),
+            child: const _UpdateVersionInfo(split: true),
+          );
+        }
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            tabContentHorizontalInset(),
+            0,
+            tabContentHorizontalInset(),
+            24 + (floating ? FloatingBar.bottomMargin + FloatingBar.height : 0),
+          ),
+          child: Column(
+            children: [
+              Divider(color: AppTheme.divider(context), thickness: 1),
+              const SizedBox(height: 16),
+              const _UpdateVersionInfo(),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
 class _UpdateVersionInfo extends ConsumerStatefulWidget {
-  const _UpdateVersionInfo();
+  const _UpdateVersionInfo({this.split = false});
+
+  final bool split;
 
   @override
   ConsumerState<_UpdateVersionInfo> createState() => _UpdateVersionInfoState();
@@ -559,6 +586,22 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
   void initState() {
     super.initState();
     _loadVersion();
+  }
+
+  @override
+  void dispose() {
+    if (FloatingBar.side.value?.owner == this) FloatingBar.side.value = null;
+    super.dispose();
+  }
+
+  // панель живёт в другом поддереве: менять её посреди нашей сборки нельзя
+  void _publishSide(FloatingSide? side) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (side != null || FloatingBar.side.value?.owner == this) {
+        FloatingBar.side.value = side;
+      }
+    });
   }
 
   Future<void> _loadVersion() async {
@@ -588,7 +631,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
         await showUpdateDialog(context, info);
         ref.invalidate(updateInfoProvider);
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        AppSnack.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -612,7 +655,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      AppSnack.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
@@ -678,6 +721,109 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
         : l10n.settingsUpToDate;
     final textTheme = Theme.of(context).textTheme;
 
+    final Widget statusIndicator = checking
+        ? ShapeLoadingIndicator(
+            size: ExpressiveIconSize.inline,
+            color: statusColor,
+          )
+        : Icon(
+            statusIcon,
+            size: ExpressiveIconSize.inline,
+            color: statusColor,
+          );
+    final checkButton = IconButton.filledTonal(
+      onPressed: checking ? null : _forceCheck,
+      icon: checking
+          ? ShapeLoadingIndicator(
+              size: ExpressiveIconSize.large,
+              color: accent,
+            )
+          : const Icon(Icons.refresh_rounded),
+      tooltip: l10n.settingsCheckForUpdates,
+    );
+    final updateCard = updateInfo == null
+        ? null
+        : Container(
+            padding: const EdgeInsets.all(ExpressiveSpacing.large),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              borderRadius: ExpressiveShape.radius(ExpressiveShape.large),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.settingsNewVersionAvailable,
+                        style: textTheme.titleSmall?.copyWith(
+                          color: onContainer,
+                        ),
+                      ),
+                      const SizedBox(height: ExpressiveSpacing.hairline),
+                      Text(
+                        'v${updateInfo.displayLatestVersion} (${updateInfo.formattedSize})',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: onContainer.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: ExpressiveSpacing.medium),
+                FilledButton.icon(
+                  onPressed: () => showUpdateDialog(context, updateInfo),
+                  icon: const Icon(Icons.download_rounded),
+                  label: Text(l10n.updateActionNow),
+                ),
+              ],
+            ),
+          );
+
+    if (widget.split) {
+      // рядом с лентой места на подписи статуса нет: он в цвете плитки и в подсказке.
+      // сами плитки рисует нижняя панель, здесь только место под них
+      final scheme = Theme.of(context).colorScheme;
+      final (Color? tile, Color ink) = error
+          ? (scheme.errorContainer, scheme.onErrorContainer)
+          : updateAvailable
+          ? (scheme.tertiary, scheme.onTertiary)
+          : (null, textColor);
+      _publishSide(FloatingSide(
+        owner: this,
+        start: Text(
+          ltrIsolate('v$_version'),
+          style: textTheme.emphasized(textTheme.titleSmall)?.copyWith(color: ink),
+        ),
+        end: checkButton,
+        startColor: tile,
+        startTooltip: statusLabel,
+        onStartTap: checking
+            ? null
+            : updateInfo != null
+            ? () => showUpdateDialog(context, updateInfo)
+            : _forceCheck,
+      ));
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (updateCard != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                FloatingBar.margin,
+                0,
+                FloatingBar.margin,
+                ExpressiveSpacing.medium,
+              ),
+              child: updateCard,
+            ),
+          const SizedBox(height: FloatingBar.height),
+        ],
+      );
+    }
+
+    _publishSide(null);
     return ExpressiveCard(
       child: Column(
         children: [
@@ -708,17 +854,7 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (checking)
-                              ShapeLoadingIndicator(
-                                size: ExpressiveIconSize.inline,
-                                color: statusColor,
-                              )
-                            else
-                              Icon(
-                                statusIcon,
-                                size: ExpressiveIconSize.inline,
-                                color: statusColor,
-                              ),
+                            statusIndicator,
                             const SizedBox(width: ExpressiveSpacing.extraSmall),
                             Text(
                               statusLabel,
@@ -734,57 +870,12 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                 ),
               ),
               const SizedBox(width: ExpressiveSpacing.small),
-              IconButton.filledTonal(
-                onPressed: checking ? null : _forceCheck,
-                icon: checking
-                    ? ShapeLoadingIndicator(
-                        size: ExpressiveIconSize.large,
-                        color: accent,
-                      )
-                    : const Icon(Icons.refresh_rounded),
-                tooltip: l10n.settingsCheckForUpdates,
-              ),
+              checkButton,
             ],
           ),
-          if (updateInfo != null) ...[
+          if (updateCard != null) ...[
             const SizedBox(height: ExpressiveSpacing.large),
-            Container(
-              padding: const EdgeInsets.all(ExpressiveSpacing.large),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondaryContainer,
-                borderRadius: ExpressiveShape.radius(ExpressiveShape.large),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.settingsNewVersionAvailable,
-                          style: textTheme.titleSmall?.copyWith(
-                            color: onContainer,
-                          ),
-                        ),
-                        const SizedBox(height: ExpressiveSpacing.hairline),
-                        Text(
-                          'v${updateInfo.displayLatestVersion} (${updateInfo.formattedSize})',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: onContainer.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: ExpressiveSpacing.medium),
-                  FilledButton.icon(
-                    onPressed: () => showUpdateDialog(context, updateInfo),
-                    icon: const Icon(Icons.download_rounded),
-                    label: Text(l10n.updateActionNow),
-                  ),
-                ],
-              ),
-            ),
+            updateCard,
           ],
         ],
       ),

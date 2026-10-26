@@ -15,6 +15,7 @@ import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/connected_status_chip.dart';
 import 'package:keqdroid/shared/ui/expressive_toggle_button.dart';
+import 'package:keqdroid/shared/ui/floating_bar.dart';
 import 'package:keqdroid/shared/ui/halloween/halloween_icons.dart';
 import 'package:keqdroid/shared/ui/halloween/halloween_sky.dart';
 import 'package:keqdroid/shared/ui/halloween/pumpkin_button.dart';
@@ -69,6 +70,7 @@ import 'tv_receive_screen.dart';
 import 'tv_send_dialog.dart';
 import 'servers/chain_editor.dart';
 import 'servers/server_config_editor.dart';
+import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
 part 'servers/server_groups.dart';
 part 'servers/server_tile.dart';
@@ -700,27 +702,38 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
   Widget _withListChrome(BuildContext context, Widget child, double bottomInset) {
     final isDesktop = PlatformBootstrap.isDesktop;
-    return ScrollJumpOverlay(
+    final floating = FloatingBar.shown(context);
+    if (floating) {
+      FloatingBar.actions[0] = () => _showAddServerDialog(context);
+    }
+    return ValueListenableBuilder<double>(
+      valueListenable: FloatingBar.bottomInset,
+      builder: (context, barInset, child) => ScrollJumpOverlay(
       enabled: !isDesktop,
       endLabel: context.l10n.serversScrollToEnd,
       topLabel: context.l10n.serversScrollToTop,
-      bottomInset: 20 + bottomInset,
+      bottomInset: floating
+          ? FloatingBar.clearance(context) + 12
+          : 20 + bottomInset,
       child: SizedBox.expand(
-          child: ScrollHiddenFab(
-            right: 16,
-            bottom: 16 + bottomInset,
-            fab: TvFocus.fab(
-              (fabContext) => FloatingActionButton(
-                heroTag: 'servers_add_server_fab',
-                backgroundColor: AppTheme.accentContainer(fabContext),
-                foregroundColor: AppTheme.onAccentContainer(fabContext),
-                onPressed: () => _showAddServerDialog(context),
-                child: const SeasonalIcon(Icons.add_rounded),
-              ),
-            ),
-            child: child,
-          ),
+          child: floating
+              ? FloatingBarHideOnScroll(child: child!)
+              : ScrollHiddenFab(
+                  bottom: 16 + bottomInset,
+                  fab: TvFocus.fab(
+                    (fabContext) => FloatingActionButton(
+                      heroTag: 'servers_add_server_fab',
+                      backgroundColor: AppTheme.accentContainer(fabContext),
+                      foregroundColor: AppTheme.onAccentContainer(fabContext),
+                      onPressed: () => _showAddServerDialog(context),
+                      child: const SeasonalIcon(Icons.add_rounded),
+                    ),
+                  ),
+                  child: child!,
+                ),
         ),
+      ),
+      child: child,
     );
   }
 
@@ -933,7 +946,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
     bool detailed = false,
     SnackBarAction? action,
   }) {
-    ScaffoldMessenger.of(ctx).showSnackBar(
+    AppSnack.of(ctx).showSnackBar(
       SnackBar(
         content: Text(
           detailed ? friendlyErrorDetailed(e, ctx) : _shortError(e, ctx),
@@ -953,7 +966,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
     required bool anyAdded,
     required Object error,
   }) {
-    ScaffoldMessenger.of(ctx).showSnackBar(
+    AppSnack.of(ctx).showSnackBar(
       SnackBar(
         content: Text('$summary\n${_shortError(error, ctx)}'),
         backgroundColor: anyAdded ? AppTheme.orange(ctx) : AppTheme.red(ctx),
@@ -1239,7 +1252,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
   void _showSnack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
         backgroundColor: AppTheme.text(context),

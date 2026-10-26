@@ -93,7 +93,9 @@ class _ServersListPanel extends ConsumerWidget {
                       _listSideInset,
                       index == 0 ? topPadding : 0,
                       _listSideInset,
-                      index < groups.length - 1 ? 20 : 80,
+                      index < groups.length - 1
+                          ? 20
+                          : 80 + FloatingBar.clearance(context),
                     ),
                     sliver: _SubCard(
                       key: groups[index].key,
@@ -274,7 +276,10 @@ class _ListEdgeFadeState extends State<_ListEdgeFade> {
 
   @override
   Widget build(BuildContext context) {
-    return NotificationListener<ScrollNotification>(
+    final floating = FloatingBar.shown(context);
+    return ValueListenableBuilder<double>(
+      valueListenable: FloatingBar.bottomInset,
+      builder: (context, barInset, _) => NotificationListener<ScrollNotification>(
       onNotification: _onScroll,
       child: EdgeFadeMask(
         // сверху в покое под краем пусто, затухание растёт с прокруткой
@@ -283,7 +288,8 @@ class _ListEdgeFadeState extends State<_ListEdgeFade> {
             : _listTopPadding + (35 - _listTopPadding) * _progress,
         // без излома хватает короткого: полностью скрыт только системный отступ
         bottom: 28,
-        bottomHidden: MediaQuery.paddingOf(context).bottom,
+        // под плавающей полосой отступ тела включает её саму, а гасить надо только системный
+        bottomHidden: floating ? barInset : MediaQuery.paddingOf(context).bottom,
         topOutline: widget.underPanel
             ? const EdgeFadeOutline(
                 inset: _ModernConnectPanel._margin,
@@ -292,6 +298,7 @@ class _ListEdgeFadeState extends State<_ListEdgeFade> {
               )
             : null,
         child: widget.child,
+      ),
       ),
     );
   }
@@ -675,7 +682,7 @@ class _ServerGroupHeader extends ConsumerWidget {
                                     await onRefresh!.call();
                                   } catch (e) {
                                     if (!context.mounted) return;
-                                    ScaffoldMessenger.of(
+                                    AppSnack.of(
                                       context,
                                     ).showSnackBar(
                                       SnackBar(
@@ -714,7 +721,7 @@ class _ServerGroupHeader extends ConsumerWidget {
                                   await onPingAll();
                                 } catch (e) {
                                   if (!context.mounted) return;
-                                  ScaffoldMessenger.of(
+                                  AppSnack.of(
                                     context,
                                   ).showSnackBar(
                                     SnackBar(

@@ -22,6 +22,7 @@ import '../../utils/bidi.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/raw_share_uri.dart';
 import '../../utils/server_field_rules.dart';
+import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
 class ServerConfigEditorScreen extends ConsumerStatefulWidget {
   final String serverId;
@@ -528,7 +529,7 @@ class _ServerConfigEditorScreenState
       );
     }
 
-    final messenger = ScaffoldMessenger.of(context);
+    final messenger = AppSnack.of(context);
     final msg =
         reconnect ? l10n.serverEditorReconnecting : l10n.serverEditorSaved;
     Navigator.of(context).pop();
@@ -1287,7 +1288,7 @@ class _ServerConfigEditorScreenState
               icon: Icon(Icons.copy_rounded, size: 16, color: AppTheme.textLight(context)),
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: preview));
-                ScaffoldMessenger.of(context).showSnackBar(
+                AppSnack.of(context).showSnackBar(
                   SnackBar(
                     content: Text(l10n.serversConfigCopied),
                     behavior: SnackBarBehavior.floating,

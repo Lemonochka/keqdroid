@@ -5372,7 +5372,7 @@ abstract class AppLocalizations {
   /// No description provided for @appearanceSectionConnectPanel.
   ///
   /// In en, this message translates to:
-  /// **'Top of the servers screen'**
+  /// **'Main screen'**
   String get appearanceSectionConnectPanel;
 
   /// No description provided for @appearanceConnectPanelLegacy.
@@ -5386,6 +5386,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Modern'**
   String get appearanceConnectPanelModern;
+
+  /// No description provided for @appearanceBarStrip.
+  ///
+  /// In en, this message translates to:
+  /// **'Strip'**
+  String get appearanceBarStrip;
+
+  /// No description provided for @appearanceBarBrightPlus.
+  ///
+  /// In en, this message translates to:
+  /// **'Bright plus'**
+  String get appearanceBarBrightPlus;
+
+  /// No description provided for @appearanceBarIslands.
+  ///
+  /// In en, this message translates to:
+  /// **'Islands'**
+  String get appearanceBarIslands;
+
+  /// No description provided for @appearancePartTop.
+  ///
+  /// In en, this message translates to:
+  /// **'Top of the screen'**
+  String get appearancePartTop;
+
+  /// No description provided for @appearancePartBottom.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom bar'**
+  String get appearancePartBottom;
 
   /// No description provided for @appearanceSectionFeel.
   ///

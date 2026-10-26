@@ -33,7 +33,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       if (_exportSettings) sections.add(BackupSection.appSettings);
         if (sections.isEmpty) {
           if (mounted) setState(() => _busy = false);
-          ScaffoldMessenger.of(context).showSnackBar(
+          AppSnack.of(context).showSnackBar(
             SnackBar(content: Text(l10n.settingsSelectAtLeastOne)),
           );
           return;
@@ -58,7 +58,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      AppSnack.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.settingsBackupSaved),
           backgroundColor: AppTheme.green(context),
@@ -68,7 +68,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      AppSnack.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsExportFailed(_failureReason(e))), backgroundColor: AppTheme.red(context)),
       );
     } finally {
@@ -112,12 +112,12 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       ref.invalidate(routingProfilesProvider);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      AppSnack.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsImportedSections(selected.length))),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      AppSnack.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsImportFailed(_failureReason(e))), backgroundColor: AppTheme.red(context)),
       );
     } finally {

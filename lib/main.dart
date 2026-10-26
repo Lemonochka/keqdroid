@@ -16,6 +16,7 @@ import 'package:keqdroid/services/card_image_service.dart';
 import 'package:keqdroid/services/desktop_background_service.dart';
 import 'package:keqdroid/services/notification_service.dart';
 import 'package:keqdroid/services/prefs_recovery.dart';
+import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/servers_tab.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
@@ -28,8 +29,11 @@ import 'package:keqdroid/services/update_service.dart';
 import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/bottom_nav.dart';
+import 'package:keqdroid/shared/ui/floating_bar.dart';
 import 'package:keqdroid/shared/ui/halloween/halloween_icons.dart';
 import 'package:keqdroid/shared/ui/liquid_bud.dart';
+import 'package:keqdroid/shared/ui/liquid_nav.dart';
+import 'package:keqdroid/shared/ui/liquid_toast.dart';
 import 'package:keqdroid/shared/ui/liquid_wave.dart';
 import 'package:keqdroid/shared/ui/nav_rail.dart';
 import 'package:keqdroid/shared/ui/smooth_fade.dart';
@@ -104,6 +108,7 @@ Future<void> main() async {
     // до первого кадра, иначе выбранная картинка карточки не покажется
     await CardImageService.warmUp();
     await SmoothFade.load();
+    await FloatingBar.load();
     await LiquidWave.loadShaders();
     await LiquidBud.load();
 
@@ -189,6 +194,8 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
   }
 
   void _onPageSettled(int index) {
+    FloatingBar.hidden.value = false;
+    FloatingBar.jump.value = null;
     ref.read(homeTabIndexProvider.notifier).set(index);
     _lastServersVisible = index == 0;
     ref.read(homeTabPageProvider.notifier).set(_lastServersVisible ? 0.0 : 1.0);
@@ -235,7 +242,15 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
     );
     final expanded = WindowBreakpoints.isExpandedMobile(context);
     final railAtLeft = Directionality.of(context) == TextDirection.ltr;
-    return Scaffold(
+    final style = LiquidBarStyle.tryParse(ref.watch(settingsNotifierProvider.select(
+      (a) => a.value?.bottomBarStyle ?? AppSettings.bottomBarModern,
+    )));
+    LiquidToast.enabled = style != null;
+    return FloatingBarScope(
+      style: style,
+      child: Scaffold(
+      // островок висит над краем, список уходит под него
+      extendBody: style != null,
       backgroundColor: AppTheme.bg(context),
       // шторки и маршруты отступают от клавиатуры сами, а ужатая оболочка
       // иногда так и оставалась ужатой после возврата
@@ -283,12 +298,21 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
       bottomNavigationBar: expanded
           ? null
           : HalloweenIconScope(
-              child: AppBottomNav(
-                index: _navIndex,
-                showConnectedBadge: isConnected,
-                onTap: _selectTab,
-              ),
+              child: style == null
+                  ? AppBottomNav(
+                      index: _navIndex,
+                      showConnectedBadge: isConnected,
+                      onTap: _selectTab,
+                    )
+                  : LiquidBottomNav(
+                      index: _navIndex,
+                      showConnectedBadge: isConnected,
+                      onTap: _selectTab,
+                      style: style,
+                      pages: _pageCtrl,
+                    ),
             ),
+      ),
     );
   }
 }

@@ -130,7 +130,9 @@ flutter:
     - assets/bin/windows/geosite.dat
   shaders:
     - shaders/edge_fade.frag
+    - shaders/liquid_bar.frag
     - shaders/liquid_bud.frag
+    - shaders/liquid_drop.frag
     - shaders/reflection.frag
     - shaders/smooth_fade.frag
   # NOTE: core binaries (assets/bin/windows, assets/bin/linux) are deliberately

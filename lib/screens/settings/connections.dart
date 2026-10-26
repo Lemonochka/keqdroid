@@ -77,7 +77,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
         );
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(content: Text(l10n.connectionsRuleHintApplied)),
     );
   }

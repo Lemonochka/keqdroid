@@ -11,6 +11,7 @@ import '../../services/resume_after_update.dart';
 import '../../services/update_service.dart';
 import '../../tunnel/local_port_plan.dart';
 import '../../tunnel/tunnel_state.dart';
+import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
 class UpdatePrompt {
   UpdatePrompt._();
@@ -268,7 +269,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
           _downloading = false;
           _applying = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
+        AppSnack.of(context).showSnackBar(
           SnackBar(content: Text(context.l10n.settingsDownloadFailed('$e'))),
         );
       }

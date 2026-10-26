@@ -109,7 +109,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
           ),
         );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context)!.settingsXrayResetDone)),
     );
   }

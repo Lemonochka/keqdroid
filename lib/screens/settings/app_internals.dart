@@ -238,7 +238,7 @@ class _AppInternalsScreen extends ConsumerWidget {
       ClipboardData(text: AppInternalsService.report(data)),
     );
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(content: Text(l10n.settingsInternalsCopied)),
     );
   }

@@ -8,6 +8,7 @@ import '../models/subscription.dart';
 import '../providers/providers.dart';
 import 'error_messages.dart';
 import 'import_payload.dart';
+import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
 Future<void> pasteSubscriptionFromClipboard(
   BuildContext context,
@@ -125,7 +126,7 @@ String? pastedLinksSummary(AppLocalizations l10n, PastedLinksResult result) {
 }
 
 void _toast(BuildContext context, String msg) {
-  ScaffoldMessenger.of(context).showSnackBar(
+  AppSnack.of(context).showSnackBar(
     SnackBar(
       content: Text(msg),
       behavior: SnackBarBehavior.floating,

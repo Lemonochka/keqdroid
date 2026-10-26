@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'expressive.dart';
+import 'floating_bar.dart';
 
 class ScrollJumpOverlay extends StatefulWidget {
   final Widget child;
@@ -40,9 +41,19 @@ class _ScrollJumpOverlayState extends State<ScrollJumpOverlay> {
 
   bool _up = false;
 
+  // в Модерне стрелку рисует нижняя панель, список только говорит, когда и куда
+  bool _external = false;
+
+  void _sync() {
+    if (!_external) return;
+    FloatingBar.jump.value =
+        _visible ? FloatingJump(up: _up, onTap: _jump) : null;
+  }
+
   @override
   void dispose() {
     _hideTimer?.cancel();
+    if (FloatingBar.jump.value?.onTap == _jump) FloatingBar.jump.value = null;
     super.dispose();
   }
 
@@ -69,19 +80,26 @@ class _ScrollJumpOverlayState extends State<ScrollJumpOverlay> {
 
     if (!worth) {
       _hideTimer?.cancel();
-      if (_visible) setState(() => _visible = false);
+      if (_visible) {
+        setState(() => _visible = false);
+        _sync();
+      }
       return false;
     }
 
     _hideTimer?.cancel();
     _hideTimer = Timer(widget.idleTimeout, () {
-      if (mounted && _visible) setState(() => _visible = false);
+      if (mounted && _visible) {
+        setState(() => _visible = false);
+        _sync();
+      }
     });
     if (!_visible || _up != up) {
       setState(() {
         _visible = true;
         _up = up;
       });
+      _sync();
     }
     return false;
   }
@@ -90,7 +108,10 @@ class _ScrollJumpOverlayState extends State<ScrollJumpOverlay> {
     final position = _position;
     if (position == null || !position.hasContentDimensions) return;
     _hideTimer?.cancel();
-    if (_visible) setState(() => _visible = false);
+    if (_visible) {
+      setState(() => _visible = false);
+      _sync();
+    }
     try {
       await position.animateTo(
         _up ? position.minScrollExtent : position.maxScrollExtent,
@@ -103,6 +124,13 @@ class _ScrollJumpOverlayState extends State<ScrollJumpOverlay> {
   @override
   Widget build(BuildContext context) {
     if (!widget.enabled) return widget.child;
+    _external = FloatingBar.shown(context);
+    if (_external) {
+      return NotificationListener<ScrollNotification>(
+        onNotification: _onScroll,
+        child: widget.child,
+      );
+    }
 
     return NotificationListener<ScrollNotification>(
       onNotification: _onScroll,

@@ -71,6 +71,7 @@ class AppSettings {
   final bool serversTwoColumns;
   final int serversColumns;
   final bool modernConnectPanel;
+  final String bottomBarStyle;
   final bool amoledBlack;
   final bool seasonalDecor;
   final bool hapticFeedback;
@@ -143,6 +144,7 @@ class AppSettings {
     this.serversTwoColumns = false,
     this.serversColumns = 2,
     this.modernConnectPanel = false,
+    this.bottomBarStyle = bottomBarModern,
     this.amoledBlack = false,
     this.seasonalDecor = true,
     this.hapticFeedback = true,
@@ -206,6 +208,7 @@ class AppSettings {
     'serversTwoColumns': serversTwoColumns,
     'serversColumns': serversColumns,
     'modernConnectPanel': modernConnectPanel,
+    'bottomBarStyle': bottomBarStyle,
     'amoledBlack': amoledBlack,
     'seasonalDecor': seasonalDecor,
     'hapticFeedback': hapticFeedback,
@@ -300,6 +303,7 @@ class AppSettings {
       serversTwoColumns: json['serversTwoColumns'] as bool? ?? false,
       serversColumns: normalizeServersColumns(json['serversColumns']),
       modernConnectPanel: json['modernConnectPanel'] as bool? ?? false,
+      bottomBarStyle: json['bottomBarStyle'] as String? ?? bottomBarModern,
       amoledBlack: json['amoledBlack'] as bool? ?? false,
       seasonalDecor: json['seasonalDecor'] as bool? ?? true,
       hapticFeedback: json['hapticFeedback'] as bool? ?? true,
@@ -349,6 +353,10 @@ class AppSettings {
   static const vpnCoreXray = 'xray';
   static const vpnCoreMihomo = 'mihomo';
   static const vpnCores = [vpnCoreXray, vpnCoreMihomo];
+
+  // нижняя панель: legacy или стиль Модерна strip, brightPlus, islands
+  static const bottomBarLegacy = 'legacy';
+  static const bottomBarModern = 'strip';
 
   // прежнее auto выбирало то же, что xray, и в сохранённых настройках становится им
   static String normalizeVpnCore(String? raw) {
@@ -462,6 +470,7 @@ class AppSettings {
     bool? serversTwoColumns,
     int? serversColumns,
     bool? modernConnectPanel,
+    String? bottomBarStyle,
     bool? amoledBlack,
     bool? seasonalDecor,
     bool? hapticFeedback,
@@ -527,6 +536,7 @@ class AppSettings {
         serversColumns:
             normalizeServersColumns(serversColumns ?? this.serversColumns),
         modernConnectPanel: modernConnectPanel ?? this.modernConnectPanel,
+        bottomBarStyle: bottomBarStyle ?? this.bottomBarStyle,
         amoledBlack: amoledBlack ?? this.amoledBlack,
         seasonalDecor: seasonalDecor ?? this.seasonalDecor,
         hapticFeedback: hapticFeedback ?? this.hapticFeedback,
@@ -607,6 +617,7 @@ class AppSettings {
               serversTwoColumns == other.serversTwoColumns &&
               serversColumns == other.serversColumns &&
               modernConnectPanel == other.modernConnectPanel &&
+              bottomBarStyle == other.bottomBarStyle &&
               amoledBlack == other.amoledBlack &&
               seasonalDecor == other.seasonalDecor &&
               hapticFeedback == other.hapticFeedback &&
@@ -679,6 +690,7 @@ class AppSettings {
     serversTwoColumns,
     serversColumns,
     modernConnectPanel,
+    bottomBarStyle,
     amoledBlack,
     seasonalDecor,
     hapticFeedback,

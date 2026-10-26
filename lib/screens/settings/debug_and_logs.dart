@@ -131,7 +131,7 @@ class _XrayLogsScreenState extends ConsumerState<_XrayLogsScreen> {
   Future<void> _copyLogs(AppLocalizations l10n) async {
     await Clipboard.setData(ClipboardData(text: _logs));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(content: Text(l10n.serversCopiedToClipboard)),
     );
   }

@@ -154,6 +154,7 @@ class SettingsBackupService {
     'serversTwoColumns',
     'serversColumns',
     'modernConnectPanel',
+    'bottomBarStyle',
     'serverIconThemeColors',
     'uiScale',
     'hapticFeedback',

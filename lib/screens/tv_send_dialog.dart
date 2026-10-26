@@ -7,6 +7,7 @@ import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import '../models/subscription.dart';
 import '../providers/providers.dart';
 import '../services/tv_handoff.dart';
+import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
 Future<void> sendSubscriptionToTv(
   BuildContext context,
@@ -14,7 +15,7 @@ Future<void> sendSubscriptionToTv(
   TvPairing tv,
 ) async {
   final l10n = AppLocalizations.of(context)!;
-  final messenger = ScaffoldMessenger.of(context);
+  final messenger = AppSnack.of(context);
   final subscriptions = ref.read(subscriptionsProvider).value ??
       await ref.read(storageProvider).getSubscriptions();
   if (!context.mounted) return;

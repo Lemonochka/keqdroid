@@ -167,7 +167,7 @@ class _PingSettingsScreenState extends ConsumerState<_PingSettingsScreen> {
                       onCommit: (v) {
                         final err = PingTestConfig.validateCustomUrl(v);
                         if (err != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          AppSnack.of(context).showSnackBar(
                             SnackBar(content: Text(l10n.settingsPingCustomUrlInvalid)),
                           );
                           return;

@@ -8,6 +8,7 @@ import 'package:keqdroid/shared/ui/server_avatar.dart';
 
 import '../../models/server_flag.dart';
 import '../../services/exit_ip_service.dart';
+import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
 // адрес постоянно не показываем: скриншоты главного экрана уходят в чаты и issue
 class ConnectedStatusChip extends StatefulWidget {
@@ -89,7 +90,7 @@ class _ConnectedStatusChipState extends State<ConnectedStatusChip> {
     }
     unawaited(Clipboard.setData(ClipboardData(text: exit.ip)));
     _setRevealed(false);
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context)!.settingsIpCopied)),
     );
   }

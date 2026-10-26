@@ -329,7 +329,7 @@ class _ServerTile extends ConsumerWidget {
                           await onPing();
                         } catch (e) {
                           if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          AppSnack.of(context).showSnackBar(
                             SnackBar(
                               content: Text(_shortError(e)),
                               backgroundColor: AppTheme.red(context),
@@ -411,7 +411,7 @@ class _ServerTile extends ConsumerWidget {
                       onTap: () {
                         Clipboard.setData(ClipboardData(text: server.config));
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        AppSnack.of(context).showSnackBar(
                           SnackBar(content: Text(l10n.serversConfigCopied)),
                         );
                       },
@@ -657,7 +657,7 @@ class _CopyableAddress extends StatelessWidget {
       child: InkWell(
         onTap: () {
           Clipboard.setData(ClipboardData(text: text));
-          final messenger = ScaffoldMessenger.of(context);
+          final messenger = AppSnack.of(context);
           onCopied();
           messenger.showSnackBar(
             SnackBar(content: Text(l10n.serversCopiedToClipboard)),

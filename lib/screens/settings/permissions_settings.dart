@@ -297,7 +297,7 @@ class _LinuxTunPasswordlessTileState
       _installed = LinuxTunnelBackend.isPasswordlessTunInstalled();
       _busy = false;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(
         content: Text(
           ok

@@ -179,8 +179,9 @@ class _AppearanceGeneralTab extends ConsumerWidget {
           ExpressiveSectionHeader(l10n.appearanceSectionConnectPanel),
           ExpressiveGroup(
             children: [
-              ExpressiveGroupTile(
-                padding: const EdgeInsets.all(12),
+              _ScreenPartTile(
+                icon: Icons.vertical_align_top_rounded,
+                label: l10n.appearancePartTop,
                 child: ExpressiveConnectedButtons<bool>(
                   segments: [
                     ExpressiveSegment(
@@ -198,6 +199,55 @@ class _AppearanceGeneralTab extends ConsumerWidget {
                   height: 48,
                 ),
               ),
+              // нижняя панель на ПК своя
+              if (!PlatformBootstrap.isDesktop) ...[
+                _ScreenPartTile(
+                  icon: Icons.vertical_align_bottom_rounded,
+                  label: l10n.appearancePartBottom,
+                  child: ExpressiveConnectedButtons<bool>(
+                    segments: [
+                      ExpressiveSegment(
+                        value: false,
+                        label: l10n.appearanceConnectPanelLegacy,
+                      ),
+                      ExpressiveSegment(
+                        value: true,
+                        label: l10n.appearanceConnectPanelModern,
+                      ),
+                    ],
+                    selected: LiquidBarStyle.tryParse(current.bottomBarStyle) != null,
+                    onChanged: (v) => onSave(current.copyWith(
+                      bottomBarStyle: v
+                          ? LiquidBarStyle.strip.name
+                          : AppSettings.bottomBarLegacy,
+                    )),
+                    height: 48,
+                  ),
+                ),
+                if (LiquidBarStyle.tryParse(current.bottomBarStyle) != null)
+                  _ScreenPartTile(
+                    child: ExpressiveConnectedButtons<String>(
+                      segments: [
+                        ExpressiveSegment(
+                          value: LiquidBarStyle.strip.name,
+                          label: l10n.appearanceBarStrip,
+                        ),
+                        ExpressiveSegment(
+                          value: LiquidBarStyle.brightPlus.name,
+                          label: l10n.appearanceBarBrightPlus,
+                        ),
+                        ExpressiveSegment(
+                          value: LiquidBarStyle.islands.name,
+                          label: l10n.appearanceBarIslands,
+                        ),
+                      ],
+                      selected: LiquidBarStyle.fromId(current.bottomBarStyle).name,
+                      onChanged: (v) =>
+                          onSave(current.copyWith(bottomBarStyle: v)),
+                      height: 48,
+                    ),
+                  ),
+              ],
             ],
           ),
           ExpressiveSectionHeader(l10n.appearanceSectionUnderButton),
@@ -1204,4 +1254,38 @@ class _MockWavePainter extends CustomPainter {
   @override
   bool shouldRepaint(_MockWavePainter old) =>
       old.color != color || old.track != track;
+}
+
+// ряд выбора одной части главного экрана: значок слева говорит, верх это или низ
+class _ScreenPartTile extends StatelessWidget {
+  const _ScreenPartTile({this.icon, this.label, required this.child});
+
+  final IconData? icon;
+  final String? label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = this.icon;
+    return ExpressiveGroupTile(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            child: icon == null
+                ? null
+                : Icon(
+                    icon,
+                    size: 22,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    semanticLabel: label,
+                  ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
 }

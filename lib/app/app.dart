@@ -19,6 +19,7 @@ import '../shared/ui/expressive.dart';
 import '../shared/ui/expressive_elements.dart';
 import '../shared/ui/haptics.dart';
 import '../shared/ui/kawaii_decorations.dart';
+import '../shared/ui/liquid_toast.dart';
 import '../shared/ui/server_avatar.dart';
 import '../shared/ui/tv_focus.dart';
 import '../utils/app_locale.dart';
@@ -470,7 +471,7 @@ class _ThemedApp extends ConsumerWidget {
               );
         return _UiZoom(
           scale: settings.uiScale * _baseUiScale,
-          child: _VisibilityTickerGate(child: content),
+          child: _VisibilityTickerGate(child: LiquidToastHost(child: content)),
         );
       },
       locale: locale,

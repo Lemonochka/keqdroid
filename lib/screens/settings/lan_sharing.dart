@@ -168,7 +168,7 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
                       InkWell(
                         onTap: () {
                           Clipboard.setData(ClipboardData(text: ip));
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          AppSnack.of(context).showSnackBar(
                             SnackBar(content: Text(l10n.settingsIpCopied), duration: const Duration(seconds: 1)),
                           );
                         },
@@ -292,7 +292,7 @@ class _LanSharingCardState extends ConsumerState<_LanSharingCard> {
         InkWell(
           onTap: () {
             Clipboard.setData(ClipboardData(text: text));
-            ScaffoldMessenger.of(context).showSnackBar(
+            AppSnack.of(context).showSnackBar(
               SnackBar(content: Text(l10n.settingsProxyCopied(label, text)), duration: const Duration(seconds: 1)),
             );
           },
