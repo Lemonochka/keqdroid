@@ -138,26 +138,30 @@ class _GroupHeaderBackground extends StatelessWidget {
   const _GroupHeaderBackground({
     required this.subscription,
     required this.surface,
-    required this.collapsed,
+    required this.open,
     required this.child,
   });
 
   final Subscription? subscription;
 
   final Color surface;
-  final bool collapsed;
+
+  // 0 свёрнута, 1 раскрыта: шапка идёт по той же пружине, что и список под ней
+  final double open;
   final Widget child;
 
   static const fadeHeight = 26.0;
 
-  static double heightFor(Subscription? subscription, {required bool collapsed}) {
-    if (collapsed) return _subCardRowHeight;
+  static double heightFor(Subscription? subscription, {required bool collapsed}) =>
+      heightAt(subscription, collapsed ? 0 : 1);
+
+  static double heightAt(Subscription? subscription, double open) {
     final below = [
       if (_showsImage(subscription)) fadeHeight,
       if (subscription?.autoSelectVisible == true) autoRowHeight,
       0.0,
     ].reduce((a, b) => a > b ? a : b);
-    return _subCardRowHeight + below;
+    return _subCardRowHeight + below * open;
   }
 
   static const autoRowHeight = 40.0;
@@ -175,15 +179,16 @@ class _GroupHeaderBackground extends StatelessWidget {
     final theme = resolveCardTheme(sub!.cardThemeId);
 
     const outer = ExpressiveShape.extraLarge;
-    final headerFraction = collapsed
-        ? 1.0
-        : _subCardRowHeight / (_subCardRowHeight + fadeHeight);
+    final headerFraction =
+        _subCardRowHeight / (_subCardRowHeight + fadeHeight * open);
     final fadeStart = headerFraction * 0.72;
+    // в полную силу, когда шапка подросла на 1 dp: на возврате из перелёта оно вспыхивало целиком
+    final fadeStrength = (fadeHeight * open).clamp(0.0, 1.0);
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(
         top: const Radius.circular(outer),
-        bottom: Radius.circular(collapsed ? outer : 0),
+        bottom: Radius.circular(outer * (1 - open)),
       ),
       child: Stack(
         fit: StackFit.expand,
@@ -195,13 +200,13 @@ class _GroupHeaderBackground extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 CardVeilOverlay(color: surface, veil: sub.cardVeil),
-                if (!collapsed)
+                if (open > 0)
                   // плавный вход и выход: на изломе линейного градиента глаз видел светлую полосу
                   SmoothFadeBox(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     color: surface,
-                    curve: FadeCurve.eased(0, 1, start: fadeStart),
+                    curve: FadeCurve.eased(0, fadeStrength, start: fadeStart),
                   ),
               ],
             ),
@@ -210,7 +215,7 @@ class _GroupHeaderBackground extends StatelessWidget {
             alignment: Alignment.topCenter,
             // высота вместе со строкой Авто: иначе кнопку видно, но нажатия до неё не доходят
             child: SizedBox(
-              height: heightFor(sub, collapsed: collapsed),
+              height: heightAt(sub, open),
               child: child,
             ),
           ),
@@ -429,6 +434,7 @@ class _ServerGroupHeader extends ConsumerWidget {
     required this.onRefresh,
     required this.onPingAll,
     required this.accent,
+    required this.openness,
   });
 
   final Subscription? subscription;
@@ -439,6 +445,8 @@ class _ServerGroupHeader extends ConsumerWidget {
   final Future<void> Function() onPingAll;
 
   final SubscriptionAccent? accent;
+
+  final Animation<double> openness;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -482,19 +490,36 @@ class _ServerGroupHeader extends ConsumerWidget {
     return ServerGroupAnchor(
         groupKey: collapseKey,
         child: RepaintBoundary(
-        child: SizedBox(
-          height: _GroupHeaderBackground.heightFor(
-            sub,
-            collapsed: collapsed,
-          ),
-          child: _GroupHeaderBackground(
-            subscription: sub,
-            surface: groupColor,
-            collapsed: collapsed,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
+        child: AnimatedBuilder(
+          animation: openness,
+          builder: (context, row) {
+            final open = openness.value.clamp(0.0, 1.0);
+            return SizedBox(
+              height: _GroupHeaderBackground.heightAt(sub, open),
+              child: _GroupHeaderBackground(
+                subscription: sub,
+                surface: groupColor,
+                open: open,
+                // строка Авто уезжает под край вместе со сворачиванием
+                child: ClipRect(
+                  child: OverflowBox(
+                    alignment: Alignment.topCenter,
+                    minHeight: 0,
+                    maxHeight: double.infinity,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        row!,
+                        if (sub != null && sub.autoSelectVisible && open > 0)
+                          _AutoSelectRow(subscription: sub),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+          child: SizedBox(
                   height: _subCardRowHeight,
                   child: Center(
           child: Padding(
@@ -719,11 +744,6 @@ class _ServerGroupHeader extends ConsumerWidget {
           ),
         ),
                 ),
-                if (sub != null && sub.autoSelectVisible && !collapsed)
-                  _AutoSelectRow(subscription: sub),
-              ],
-            ),
-        ),
         ),
       ),
       );
@@ -812,7 +832,26 @@ class _SubCard extends ConsumerStatefulWidget {
   ConsumerState<_SubCard> createState() => _SubCardState();
 }
 
-class _SubCardState extends ConsumerState<_SubCard> {
+class _SubCardState extends ConsumerState<_SubCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _open = AnimationController.unbounded(
+    vsync: this,
+    value: (ref.read(collapsedServerGroupsProvider)[_collapseKey] ?? false)
+        ? 0
+        : 1,
+  );
+
+  String get _collapseKey =>
+      widget.groupKey ??
+      widget.subscription?.id ??
+      ServersNotifier.manualGroupKey;
+
+  @override
+  void dispose() {
+    _open.dispose();
+    super.dispose();
+  }
+
   List<ServerItem>? _sortedCache;
   List<ServerItem>? _sortedSource;
   ServerSortMode? _sortedMode;
@@ -874,10 +913,21 @@ class _SubCardState extends ConsumerState<_SubCard> {
   @override
   Widget build(BuildContext context) {
     final sub = widget.subscription;
-    final collapseKey =
-        widget.groupKey ?? sub?.id ?? ServersNotifier.manualGroupKey;
+    final collapseKey = _collapseKey;
     final collapsed = ref.watch(
       collapsedServerGroupsProvider.select((m) => m[collapseKey] ?? false),
+    );
+    ref.listen(
+      collapsedServerGroupsProvider.select((m) => m[collapseKey] ?? false),
+      (_, next) {
+        final target = next ? 0.0 : 1.0;
+        if (MediaQuery.disableAnimationsOf(context)) {
+          _open.value = target;
+        } else {
+          // сама пружина после перелёта встаёт на 0,0002, и шапка считала группу приоткрытой
+          ExpressiveMotion.springTo(_open, target, snapToEnd: true);
+        }
+      },
     );
     final sortMode = ServerSortMode.fromName(
       ref.watch(serverSortModesProvider.select((m) => m[collapseKey])),
@@ -916,40 +966,49 @@ class _SubCardState extends ConsumerState<_SubCard> {
         color: groupColor,
         borderRadius: ExpressiveShape.radius(ExpressiveShape.extraLarge),
       ),
-      sliver: SliverPadding(
-        padding: EdgeInsets.only(
-          bottom: collapsed ? 0 : widget.layout.gap / 2,
-        ),
-        sliver: SliverMainAxisGroup(
-          slivers: [
-            SliverToBoxAdapter(
-              // якорь на шапке: SliverToBoxAdapter раскладывает её всегда, даже за экраном
-              child: _ServerGroupHeader(
-                subscription: widget.subscription,
-                servers: widget.servers,
-                groupKey: widget.groupKey,
-                groupTitle: widget.groupTitle,
-                onRefresh: widget.onRefresh,
-                onPingAll: widget.onPingAll,
-                accent: _accent,
-              ),
+      sliver: SliverMainAxisGroup(
+        slivers: [
+          SliverToBoxAdapter(
+            // якорь на шапке: SliverToBoxAdapter раскладывает её всегда, даже за экраном
+            child: _ServerGroupHeader(
+              subscription: widget.subscription,
+              servers: widget.servers,
+              groupKey: widget.groupKey,
+              groupTitle: widget.groupTitle,
+              onRefresh: widget.onRefresh,
+              onPingAll: widget.onPingAll,
+              accent: _accent,
+              openness: _open,
             ),
-
-            if (!collapsed)
-              SliverToBoxAdapter(
-                child: SizedBox(height: widget.layout.gap / 2),
-              ),
-
-            // без AnimatedSize: он строит все тайлы разом и ломает ленивый sliver
-            if (!collapsed)
-              _buildExpandedServerList(
-                servers: sortedServers,
-                activeServerId: activeServerId,
-                textLightColor: textLightColor,
-                accent: accent,
-              ),
-          ],
-        ),
+          ),
+          AnimatedBuilder(
+            animation: _open,
+            // список собирается один раз за обычную сборку, кадры пружины его не пересобирают
+            child: SliverMainAxisGroup(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: SizedBox(height: widget.layout.gap / 2),
+                ),
+                _buildExpandedServerList(
+                  servers: sortedServers,
+                  activeServerId: activeServerId,
+                  textLightColor: textLightColor,
+                  accent: accent,
+                ),
+                SliverToBoxAdapter(
+                  child: SizedBox(height: widget.layout.gap / 2),
+                ),
+              ],
+            ),
+            builder: (context, list) {
+              // свёрнутая и успокоившаяся группа плиток не строит вовсе
+              if (collapsed && !_open.isAnimating) {
+                return const SliverToBoxAdapter();
+              }
+              return SliverReveal(factor: _open.value, sliver: list!);
+            },
+          ),
+        ],
       ),
     );
   }

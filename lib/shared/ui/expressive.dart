@@ -145,9 +145,16 @@ abstract final class ExpressiveMotion {
     AnimationController controller,
     double target, {
     SpringDescription spring = spatialDefault,
+    bool snapToEnd = false,
   }) =>
       controller.animateWith(
-        SpringSimulation(spring, controller.value, target, 0),
+        SpringSimulation(
+          spring,
+          controller.value,
+          target,
+          0,
+          snapToEnd: snapToEnd,
+        ),
       );
 }
 
