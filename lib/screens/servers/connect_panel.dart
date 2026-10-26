@@ -6,12 +6,14 @@ class _ModernConnectPanel extends ConsumerWidget {
     required this.waveCtrl,
     required this.onToggle,
     required this.onJumpToActive,
+    required this.buttonKey,
   });
 
   final AnimationController waveCtrl;
 
   final void Function(VpnStatus) onToggle;
   final VoidCallback onJumpToActive;
+  final GlobalKey buttonKey;
 
   static const double _buttonSize = 120;
   static const double _margin = 16;
@@ -32,16 +34,17 @@ class _ModernConnectPanel extends ConsumerWidget {
     final exitLookup = ref.watch(exitIpProvider);
     final exit = exitLookup.isLoading ? null : exitLookup.value;
     final halloween = ref.watch(halloweenActiveProvider);
-    final (showTraffic, showSplit) = ref.watch(
+    final (showTraffic, showSplit, showTime) = ref.watch(
       settingsNotifierProvider.select((async) {
         final s = async.value ?? const AppSettings();
-        return (s.showTrafficStats, s.showTrafficSplit);
+        return (s.showTrafficStats, s.showTrafficSplit, s.showConnectionTime);
       }),
     );
     // боком три показателя трафика встают сеткой 2 на 2: время занимает пустую четвёртую ячейку
     final timeInStats = WindowBreakpoints.isExpandedMobile(context) &&
         showTraffic &&
         !showSplit;
+    final hasStats = showTraffic || showSplit || (timeInStats && showTime);
 
     final isConnected =
         vpnStatus == VpnStatus.connected && !serverSwitchInProgress;
@@ -123,8 +126,11 @@ class _ModernConnectPanel extends ConsumerWidget {
                                   color: AppTheme.textLight(context),
                                 ),
                               ),
-                            if (isConnected && !timeInStats)
-                              const _UptimeLine(),
+                            _StatsReveal(
+                              shown: isConnected && !timeInStats && showTime,
+                              alignment: AlignmentDirectional.bottomStart,
+                              child: const _UptimeLine(),
+                            ),
                           ],
                         ),
                       ),
@@ -133,7 +139,10 @@ class _ModernConnectPanel extends ConsumerWidget {
                         padding: const EdgeInsetsDirectional.only(
                           end: ExpressiveSpacing.medium,
                         ),
-                        child: RepaintBoundary(child: button),
+                        child: KeyedSubtree(
+                          key: buttonKey,
+                          child: RepaintBoundary(child: button),
+                        ),
                       ),
                     ],
                   ),
@@ -149,20 +158,18 @@ class _ModernConnectPanel extends ConsumerWidget {
                         ),
                       ),
                     ),
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 380),
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.topCenter,
-                    child: isConnected
-                        ? _ConnectionStats(
-                            key: const ValueKey('stats'),
-                            fill: true,
-                            withTime: timeInStats,
-                          )
-                        : const SizedBox(
-                            key: ValueKey('stats-hidden'),
-                            width: double.infinity,
-                          ),
+                  _StatsBud(
+                    shown: isConnected && hasStats,
+                    source: halloween ? null : buttonKey,
+                    // по вписанному кругу: кнопка в этот момент ещё перетекает из круга в квадрат
+                    sourceRadius: _buttonSize / 2,
+                    bead: 48,
+                    neck: 30,
+                    goo: 12,
+                    sourceColor: isConnected
+                        ? scheme.primary
+                        : scheme.surfaceContainerHighest,
+                    child: _ConnectionStats(fill: true, withTime: timeInStats),
                   ),
                   // место под воду у дна панели
                   const SizedBox(height: 36),

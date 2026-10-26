@@ -69,6 +69,8 @@ class _FakeVpn extends VpnStateNotifier {
   final VpnState _state;
   @override
   Future<VpnState> build() async => _state;
+
+  void put(VpnState next) => state = AsyncData(next);
 }
 
 class _NoHalloween extends HalloweenActiveNotifier {
@@ -265,6 +267,47 @@ void main() {
         await tester.tap(find.bySemanticsLabel(_l10n.exitIpLabel));
         await tester.pump(const Duration(milliseconds: 400));
         expect(find.text('144.31.3.189'), findsOneWidget);
+      },
+    );
+  }
+
+  for (final modern in [false, true]) {
+    testWidgets(
+      'строка трафика вытекает каплей и втекает обратно, '
+      '${modern ? 'модерн' : 'легаси'}',
+      (tester) async {
+        const connected = VpnState(status: VpnStatus.connected);
+        await _pump(tester, modern: modern, vpn: connected);
+        final strip = find.byType(StatStrip);
+        // цифры проявляются, только когда капля уже растеклась
+        final fading = find.ancestor(
+          of: strip,
+          matching: find.byWidgetPredicate((w) => w is Opacity && w.opacity < 1),
+        );
+        final rest = tester.getTopLeft(strip).dy;
+        expect(fading, findsNothing);
+        final vpn = ProviderScope.containerOf(
+          tester.element(find.byType(ServersTab)),
+        ).read(vpnStateProvider.notifier) as _FakeVpn;
+
+        vpn.put(const VpnState(status: VpnStatus.disconnected));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+        expect(fading, findsOneWidget);
+        for (var i = 0; i < 15; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(strip, findsNothing);
+
+        vpn.put(connected);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 120));
+        expect(fading, findsOneWidget);
+        for (var i = 0; i < 15; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(fading, findsNothing);
+        expect(tester.getTopLeft(strip).dy, closeTo(rest, 0.5));
       },
     );
   }

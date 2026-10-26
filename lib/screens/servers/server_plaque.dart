@@ -1,6 +1,9 @@
 part of '../servers_tab.dart';
 
 const double _plaqueHeight = 44;
+const _plaqueSpringDuration = Duration(milliseconds: 450);
+const _plaqueSpring =
+    SpringCurve(ExpressiveMotion.spatialFast, _plaqueSpringDuration);
 const Radius _plaqueOuter = Radius.circular(_plaqueHeight / 2);
 const Radius _plaqueInner = Radius.circular(ExpressiveShape.small);
 
@@ -155,12 +158,15 @@ class _StatusServerPlaque extends StatelessWidget {
     required this.status,
     required this.exit,
     required this.onJumpToActive,
+    this.serverKey,
   });
 
   final ServerItem server;
   final VpnStatus status;
   final ExitIp? exit;
   final VoidCallback onJumpToActive;
+  // из этой половины вытекает строка трафика: середина всей плашки приходится на щель
+  final GlobalKey? serverKey;
 
   @override
   Widget build(BuildContext context) {
@@ -191,28 +197,45 @@ class _StatusServerPlaque extends StatelessWidget {
                 end: _plaqueInner,
               ).resolve(direction),
               padding: const EdgeInsetsDirectional.only(start: 16, end: 12),
-              child: Text(
-                label,
-                style: textTheme.emphasized(textTheme.labelLarge)?.copyWith(
-                  color: connected
-                      ? scheme.onSecondaryContainer
-                      : AppTheme.textLight(context),
+              // ширина под новую подпись подпружинивает, а не прыгает, и ряд за ней не дёргается
+              child: AnimatedSize(
+                duration: _plaqueSpringDuration,
+                curve: _plaqueSpring,
+                alignment: AlignmentDirectional.centerStart,
+                child: AnimatedSwitcher(
+                  duration: ExpressiveMotion.durationFast,
+                  layoutBuilder: (current, previous) => Stack(
+                    alignment: AlignmentDirectional.centerStart,
+                    children: [...previous, ?current],
+                  ),
+                  child: Text(
+                    label,
+                    key: ValueKey(label),
+                    style: textTheme.emphasized(textTheme.labelLarge)?.copyWith(
+                      color: connected
+                          ? scheme.onSecondaryContainer
+                          : AppTheme.textLight(context),
+                    ),
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: ExpressiveSpacing.hairline),
             Flexible(
-              child: _plaqueServerSegment(
-                context,
-                server: server,
-                connected: connected,
-                exit: exit,
-                onJumpToActive: onJumpToActive,
-                radius: const BorderRadiusDirectional.horizontal(
-                  start: _plaqueInner,
-                  end: _plaqueOuter,
-                ).resolve(direction),
-                maxLines: 1,
+              child: KeyedSubtree(
+                key: serverKey,
+                child: _plaqueServerSegment(
+                  context,
+                  server: server,
+                  connected: connected,
+                  exit: exit,
+                  onJumpToActive: onJumpToActive,
+                  radius: const BorderRadiusDirectional.horizontal(
+                    start: _plaqueInner,
+                    end: _plaqueOuter,
+                  ).resolve(direction),
+                  maxLines: 1,
+                ),
               ),
             ),
           ],

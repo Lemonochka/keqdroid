@@ -158,6 +158,19 @@ abstract final class ExpressiveMotion {
       );
 }
 
+// пружина как кривая для неявных анимаций вроде AnimatedSize: им нужна длительность и кривая.
+// длительность берётся с запасом на успокоение, иначе в конце будет скачок
+class SpringCurve extends Curve {
+  const SpringCurve(this.spring, this.duration);
+
+  final SpringDescription spring;
+  final Duration duration;
+
+  @override
+  double transformInternal(double t) =>
+      SpringSimulation(spring, 0, 1, 0).x(t * duration.inMicroseconds / 1e6);
+}
+
 extension ExpressiveText on TextTheme {
   TextStyle? emphasized(TextStyle? style) => style?.copyWith(
         fontWeight: switch (style.fontWeight) {

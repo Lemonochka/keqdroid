@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,7 @@ import 'package:keqdroid/shared/ui/halloween/halloween_icons.dart';
 import 'package:keqdroid/shared/ui/halloween/halloween_sky.dart';
 import 'package:keqdroid/shared/ui/halloween/pumpkin_button.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
+import 'package:keqdroid/shared/ui/liquid_bud.dart';
 import 'package:keqdroid/shared/ui/liquid_wave.dart';
 import 'package:keqdroid/shared/ui/server_group_anchors.dart';
 import 'package:keqdroid/shared/ui/scroll_hidden_fab.dart';
@@ -123,12 +125,18 @@ class _ConnectHeader extends ConsumerWidget {
     required this.waveCtrl,
     required this.onToggle,
     required this.onJumpToActive,
+    required this.plaqueKey,
+    required this.buttonKey,
   });
 
   final AnimationController waveCtrl;
 
   final void Function(VpnStatus) onToggle;
   final VoidCallback onJumpToActive;
+
+  // из плашки (легаси) или кнопки (модерн) вытекает строка трафика
+  final GlobalKey plaqueKey;
+  final GlobalKey buttonKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -142,6 +150,7 @@ class _ConnectHeader extends ConsumerWidget {
         waveCtrl: waveCtrl,
         onToggle: onToggle,
         onJumpToActive: onJumpToActive,
+        buttonKey: buttonKey,
       );
     }
     final vpnStatus = ref.watch(
@@ -160,6 +169,13 @@ class _ConnectHeader extends ConsumerWidget {
         vpnStatus == VpnStatus.connected && !serverSwitchInProgress;
     final isConnecting =
         serverSwitchInProgress || vpnStatus == VpnStatus.connecting;
+    // по нему, а не по пустой строке внутри: включённая в настройках статистика тоже выплывает
+    final hasStats = ref.watch(
+      settingsNotifierProvider.select((async) {
+        final s = async.value ?? const AppSettings();
+        return s.showTrafficStats || s.showTrafficSplit || s.showConnectionTime;
+      }),
+    );
 
     // connecting тапабелен: это отмена попытки
     final VoidCallback? onTap =
@@ -227,6 +243,7 @@ class _ConnectHeader extends ConsumerWidget {
                               status: shownStatus,
                               exit: exit,
                               onJumpToActive: onJumpToActive,
+                              serverKey: plaqueKey,
                             ),
                           )
                         : _serversStatusText(
@@ -251,31 +268,14 @@ class _ConnectHeader extends ConsumerWidget {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.red(context)),
                   ),
                 ),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 380),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topCenter,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 420),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0, 0.45),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  ),
-                  child: isConnected
-                      ? const _ConnectionStats(key: ValueKey('stats'))
-                      : const SizedBox(
-                          key: ValueKey('stats-hidden'),
-                          width: double.infinity,
-                        ),
-                ),
+              _StatsBud(
+                shown: isConnected && hasStats,
+                source: plaqueKey,
+                sourceRadius: _plaqueHeight / 2,
+                sourceColor: isConnected
+                    ? Theme.of(context).colorScheme.secondaryContainer
+                    : Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: const _ConnectionStats(),
               ),
           // место под воду у дна шапки
           const SizedBox(height: 24),
@@ -306,6 +306,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
   bool _appInForeground = true;
 
   final _headerKey = GlobalKey();
+  final _plaqueKey = GlobalKey();
+  final _buttonKey = GlobalKey();
   final _listKey = GlobalKey();
 
   static const double _headerPaneWidth = 360;
@@ -633,6 +635,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
       waveCtrl: _waveCtrl,
       onToggle: _toggleVpn,
       onJumpToActive: _jumpToActiveServer,
+      plaqueKey: _plaqueKey,
+      buttonKey: _buttonKey,
     );
 
     final modern = ref.watch(

@@ -190,8 +190,12 @@ class _ConnectedStatusChipState extends State<ConnectedStatusChip> {
           child: Semantics(
             button: true,
             child: AnimatedSize(
-              duration: ExpressiveMotion.durationFast,
-              curve: ExpressiveMotion.emphasized,
+              // на пружине, как подпись статуса рядом: при смене состояния не прыгает
+              duration: const Duration(milliseconds: 450),
+              curve: const SpringCurve(
+                ExpressiveMotion.spatialFast,
+                Duration(milliseconds: 450),
+              ),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: widget.minHeight),
                 child: Align(
