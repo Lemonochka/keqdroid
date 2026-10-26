@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
+import 'package:keqdroid/shared/ui/reorder_zoom_fix.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
@@ -92,7 +93,8 @@ class SubscriptionsTab extends ConsumerWidget {
                       data: (subs) => subs.isEmpty
                           ? _emptySubsState(context)
                           : SmoothScroll(
-                              builder: (context, controller) =>
+                              builder: (context, controller) => ReorderZoomFix(
+                                builder: (context, fix) =>
                                   ReorderableListView.builder(
                                     scrollController: controller,
                                     physics: const ClampingScrollPhysics(),
@@ -130,7 +132,7 @@ class SubscriptionsTab extends ConsumerWidget {
                                           );
                                     },
                                     proxyDecorator: (child, index, animation) {
-                                      return AnimatedBuilder(
+                                      return fix(AnimatedBuilder(
                                         animation: animation,
                                         builder: (context, child) {
                                           final scale =
@@ -156,7 +158,7 @@ class SubscriptionsTab extends ConsumerWidget {
                                           );
                                         },
                                         child: child,
-                                      );
+                                      ), animation);
                                     },
                                     itemCount: subs.length,
                                     itemBuilder: (_, i) {
@@ -191,6 +193,7 @@ class SubscriptionsTab extends ConsumerWidget {
                                       );
                                     },
                                   ),
+                              ),
                             ),
                     ),
                   ),

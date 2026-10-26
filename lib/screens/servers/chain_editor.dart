@@ -6,6 +6,7 @@ import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
+import 'package:keqdroid/shared/ui/reorder_zoom_fix.dart';
 import 'package:keqdroid/shared/ui/server_avatar.dart';
 import 'package:keqdroid/shared/ui/scrolled_under.dart';
 import 'package:keqdroid/shared/ui/server_picker_sheet.dart';
@@ -201,7 +202,8 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
       ),
       body: SafeArea(
         child: SmoothScroll(
-          builder: (context, controller) => CustomScrollView(
+          builder: (context, controller) => ReorderZoomFix(
+            builder: (context, fix) => CustomScrollView(
             controller: controller,
             slivers: [
               SliverPadding(
@@ -216,13 +218,14 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                sliver: _routeCard(l10n),
+                sliver: _routeCard(l10n, fix),
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 sliver: SliverToBoxAdapter(child: _footnotes(l10n)),
               ),
             ],
+            ),
           ),
         ),
       ),
@@ -262,7 +265,7 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
     );
   }
 
-  Widget _routeCard(AppLocalizations l10n) {
+  Widget _routeCard(AppLocalizations l10n, ReorderProxyFix proxyFix) {
     return DecoratedSliver(
       decoration: BoxDecoration(
         color: AppTheme.card(context),
@@ -291,13 +294,16 @@ class _ChainEditorScreenState extends ConsumerState<ChainEditorScreen> {
             SliverReorderableList(
               itemCount: _hops.length,
               onReorderItem: _reorder,
-              proxyDecorator: (child, index, animation) => Material(
-                color: AppTheme.card(context),
-                elevation: 6,
-                borderRadius:
-                    ExpressiveShape.radius(ExpressiveShape.largeIncreased),
-                shadowColor: AppTheme.accent(context).withValues(alpha: 0.4),
-                child: child,
+              proxyDecorator: (child, index, animation) => proxyFix(
+                Material(
+                  color: AppTheme.card(context),
+                  elevation: 6,
+                  borderRadius:
+                      ExpressiveShape.radius(ExpressiveShape.largeIncreased),
+                  shadowColor: AppTheme.accent(context).withValues(alpha: 0.4),
+                  child: child,
+                ),
+                animation,
               ),
               itemBuilder: (context, index) => _HopRow(
                 // один сервер может стоять в цепочке дважды, поэтому в ключе и место
