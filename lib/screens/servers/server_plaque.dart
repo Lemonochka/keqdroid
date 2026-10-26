@@ -275,33 +275,50 @@ class _HeaderLiquid extends ConsumerWidget {
     // у тыквы в легаси своё небо вокруг
     final halloween = ref.watch(halloweenActiveProvider);
     final scheme = Theme.of(context).colorScheme;
-    final wave = TweenAnimationBuilder<Color?>(
-      tween: ColorTween(
-        end: active ? scheme.primary : AppTheme.textLight(context),
-      ),
+    final connected = status == VpnStatus.connected && !switching;
+    const button = _ConnectButtonState._size;
+    // цвет и углы отражения идут за кнопкой с её же кривой
+    final wave = TweenAnimationBuilder<double>(
+      tween: Tween(end: connected ? 1 : 0),
       duration: ExpressiveMotion.durationDefault,
-      builder: (context, shapeColor, _) => LiquidWave(
-        clock: clock,
-        phase: phase,
-        levels: panel ? _panelLevels : _legacyLevels,
-        load: LiquidWaveSim.loadFor(bytesPerSec),
-        color: _latencyColor(context, server, settings),
-        fade: !panel,
-        shapePresets: panel
-            ? panelLiquidShapes
-            : halloween
-                ? const []
-                : legacyLiquidShapes,
-        shapeColor: shapeColor!,
-        // строка метрик стоит прямо над водой
-        lowZoneFree: !(phase == LiquidPhase.active && showTraffic),
-        shapesTop: shapesTop,
-        overhang: overhang,
-        splashFromEnd: panel
-            ? 20 +
-                ExpressiveSpacing.medium +
-                _ModernConnectPanel._buttonSize / 2
-            : null,
+      curve: ExpressiveMotion.emphasized,
+      builder: (context, lit, _) => TweenAnimationBuilder<Color?>(
+        tween: ColorTween(
+          end: active ? scheme.primary : AppTheme.textLight(context),
+        ),
+        duration: ExpressiveMotion.durationDefault,
+        builder: (context, shapeColor, _) => LiquidWave(
+          clock: clock,
+          phase: phase,
+          levels: panel ? _panelLevels : _legacyLevels,
+          load: LiquidWaveSim.loadFor(bytesPerSec),
+          color: _latencyColor(context, server, settings),
+          fade: !panel,
+          shapePresets: panel ? panelLiquidShapes : const [],
+          liveShapes: panel || halloween ? const [] : legacyLiquidShapes,
+          shapeColor: shapeColor!,
+          // строка метрик стоит прямо над водой
+          lowZoneFree: !(phase == LiquidPhase.active && showTraffic),
+          shapesTop: shapesTop,
+          overhang: overhang,
+          splashFromEnd: panel
+              ? 20 +
+                  ExpressiveSpacing.medium +
+                  _ModernConnectPanel._buttonSize / 2
+              : null,
+          mirror: panel || halloween
+              ? null
+              : LiquidMirror(
+                  color: Color.lerp(
+                    scheme.surfaceContainer,
+                    scheme.primary,
+                    lit,
+                  )!,
+                  size: button,
+                  corner: button / 2 +
+                      (_ConnectButtonState._selectedCorner - button / 2) * lit,
+                ),
+        ),
       ),
     );
     if (panel) return wave;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -207,7 +208,7 @@ void main() {
 
   test('фигурок в наборе нечётное число, и когда у воды их прячут метрики',
       () {
-    for (final preset in [...panelLiquidShapes, ...legacyLiquidShapes]) {
+    for (final preset in [...panelLiquidShapes, legacyLiquidShapes]) {
       expect(preset.length.isOdd, isTrue);
       final aboveMetrics =
           preset.where((s) => s.anchor != LiquidShapeAnchor.low).length;
@@ -275,6 +276,121 @@ void main() {
     expect((surface(hanging) - surface(plain)).abs(), lessThanOrEqualTo(2));
     expect(hanging[199], greaterThan(4));
     expect(hanging.last, lessThan(2));
+  });
+
+  testWidgets('кнопка отражается только под водой и только под собой', (
+    tester,
+  ) async {
+    await tester.runAsync(LiquidWave.loadShaders);
+    final clock = AnimationController(
+      vsync: const TestVSync(),
+      duration: const Duration(seconds: 2),
+    );
+    addTearDown(clock.dispose);
+    const legacy = LiquidLevels(idle: 0.08, busy: 0.36, quiet: 0.3, loud: 0.36);
+    final key = GlobalKey();
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: RepaintBoundary(
+            key: key,
+            child: SizedBox(
+              width: 300,
+              height: 300,
+              child: ColoredBox(
+                color: Colors.black,
+                child: LiquidWave(
+                  clock: clock,
+                  phase: LiquidPhase.active,
+                  levels: legacy,
+                  load: 0,
+                  color: Colors.black,
+                  shapesTop: 100,
+                  mirror: const LiquidMirror(
+                    color: Colors.white,
+                    size: 100,
+                    corner: 30,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final boundary =
+        key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final data = await tester.runAsync(() async {
+      final image = await boundary.toImage();
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      image.dispose();
+      return bytes!;
+    });
+    int at(int x, int y) => data!.getUint8((y * 300 + x) * 4);
+    // кнопка 100..200, вода на 210
+    expect(at(150, 235), greaterThan(40));
+    expect(at(20, 235), lessThan(4));
+    expect(at(150, 195), lessThan(4));
+  });
+
+  test('живая фигурка держит форму, а перетекает недолго', () {
+    var whole = 0;
+    const samples = 1000;
+    for (var k = 0; k < samples; k++) {
+      final p = LiquidWaveState.morphAt(k * 0.01, 0);
+      if (p == 0 || p == 1) whole++;
+    }
+    expect(whole / samples, greaterThan(0.75));
+  });
+
+  testWidgets(
+      'после отключения фигурки сбавляют ход до остановки часов, '
+      'у воды тонут под метриками и всплывают', (tester) async {
+    final clock = AnimationController(
+      vsync: const TestVSync(),
+      duration: const Duration(seconds: 2),
+    );
+    addTearDown(clock.dispose);
+    Widget wave(LiquidPhase phase, {bool lowZoneFree = true}) => MaterialApp(
+          home: SizedBox(
+            width: 300,
+            height: 160,
+            child: LiquidWave(
+              clock: clock,
+              phase: phase,
+              levels: _panel,
+              load: 0,
+              color: Colors.pink,
+              liveShapes: legacyLiquidShapes,
+              shapeColor: Colors.pink,
+              lowZoneFree: lowZoneFree,
+            ),
+          ),
+        );
+    Future<void> run(int ms) async {
+      for (var i = 0; i < ms ~/ 100; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    await tester.pumpWidget(wave(LiquidPhase.active));
+    final state = tester.state<LiquidWaveState>(find.byType(LiquidWave));
+    expect(state.shapeLife, 1);
+    unawaited(clock.repeat());
+    await tester.pumpWidget(wave(LiquidPhase.active, lowZoneFree: false));
+    await run(1000);
+    expect(state.lowShown, lessThan(0.05));
+
+    await tester.pumpWidget(wave(LiquidPhase.idle));
+    await run(300);
+    expect(state.shapeLife, inExclusiveRange(0.2, 1));
+    // часы шапки встают через 2 с после отключения
+    await run(1700);
+    expect(state.shapeLife, lessThan(0.01));
+    expect(state.lowShown, greaterThan(0.95));
+    clock.stop();
   });
 
   testWidgets('наборы фигур сменяются раз в полминуты', (tester) async {

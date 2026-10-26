@@ -219,18 +219,25 @@ void main() {
     expect(find.text(_l10n.vpnTapToConnect('Poland')), findsNothing);
   });
 
-  for (final (modern, presets) in [
-    (true, panelLiquidShapes),
-    (false, legacyLiquidShapes),
-  ]) {
-    testWidgets('фигурки в фоне, ${modern ? 'модерн' : 'легаси'}', (
-      tester,
-    ) async {
-      await _pump(tester, modern: modern);
-      final wave = tester.widget<LiquidWave>(find.byType(LiquidWave));
-      expect(wave.shapePresets, same(presets));
-    });
-  }
+  testWidgets('фигурки в фоне, модерн: наборы сменяются, отражения нет', (
+    tester,
+  ) async {
+    await _pump(tester, modern: true);
+    final wave = tester.widget<LiquidWave>(find.byType(LiquidWave));
+    expect(wave.shapePresets, same(panelLiquidShapes));
+    expect(wave.liveShapes, isEmpty);
+    expect(wave.mirror, isNull);
+  });
+
+  testWidgets('фигурки в фоне, легаси: живые, и кнопка отражается в воде', (
+    tester,
+  ) async {
+    await _pump(tester, modern: false);
+    final wave = tester.widget<LiquidWave>(find.byType(LiquidWave));
+    expect(wave.shapePresets, isEmpty);
+    expect(wave.liveShapes, same(legacyLiquidShapes));
+    expect(wave.mirror, isNotNull);
+  });
 
   testWidgets('«Легаси»: состояние в плашке идёт за подключением', (
     tester,

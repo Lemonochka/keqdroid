@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:androidx_graphics_shapes/material_shapes.dart';
 import 'package:androidx_graphics_shapes/shapes.dart';
@@ -213,6 +214,29 @@ class LiquidShapeSpot {
   final double alpha;
 }
 
+// кнопка над водой: по центру шапки, верхом на shapesTop
+class LiquidMirror {
+  const LiquidMirror({
+    required this.color,
+    required this.size,
+    required this.corner,
+  });
+
+  final Color color;
+  final double size;
+  final double corner;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LiquidMirror &&
+      other.color == color &&
+      other.size == size &&
+      other.corner == corner;
+
+  @override
+  int get hashCode => Object.hash(color, size, corner);
+}
+
 class LiquidWave extends StatefulWidget {
   const LiquidWave({
     super.key,
@@ -223,11 +247,13 @@ class LiquidWave extends StatefulWidget {
     required this.color,
     this.fade = false,
     this.shapePresets = const [],
+    this.liveShapes = const [],
     this.shapeColor = Colors.transparent,
     this.lowZoneFree = true,
     this.shapesTop = 0,
     this.splashFromEnd,
     this.overhang = 0,
+    this.mirror,
   });
 
   // тикает, пока шапка анимируется: волна стоит вместе с ней
@@ -241,6 +267,9 @@ class LiquidWave extends StatefulWidget {
   final bool fade;
 
   final List<List<LiquidShapeSpot>> shapePresets;
+
+  // стоят на своих местах, но плавают и перетекают каждая в форму соседки
+  final List<LiquidShapeSpot> liveShapes;
   final Color shapeColor;
 
   // фигуры у воды прячутся, когда над ней строка метрик
@@ -255,6 +284,20 @@ class LiquidWave extends StatefulWidget {
   // сколько слоя свисает ниже шапки: уровни считаются от её низа, а вода гаснет до конца слоя
   final double overhang;
 
+  final LiquidMirror? mirror;
+
+  static ui.FragmentProgram? _reflection;
+  static Future<void>? _loading;
+
+  static Future<void> loadShaders() => _loading ??= _load();
+
+  static Future<void> _load() async {
+    try {
+      _reflection =
+          await ui.FragmentProgram.fromAsset('shaders/reflection.frag');
+    } catch (_) {}
+  }
+
   static const presetEvery = Duration(seconds: 30);
   static const presetChange = Duration(milliseconds: 1400);
 
@@ -266,6 +309,9 @@ class LiquidWaveState extends State<LiquidWave>
     with SingleTickerProviderStateMixin {
   final sim = LiquidWaveSim();
   final _tick = ValueNotifier<int>(0);
+  final _morphs = <LiquidShapeSpot, Morph>{};
+  final _wholeShapes = <(LiquidShapeSpot, bool), Path>{};
+  final ui.FragmentShader? _mirror = LiquidWave._reflection?.fragmentShader();
   final _paths = <LiquidShapeSpot, Path>{};
   // свой на каждый слой: значения шейдера меняются перед каждым рисованием
   final _fades = [SmoothFade.newFadeShader(), SmoothFade.newFadeShader()];
@@ -274,6 +320,14 @@ class LiquidWaveState extends State<LiquidWave>
   var _from = 0;
   var _to = 1;
 
+  // часы шапки встают через 2 с после отключения: фигурки к этому времени уже замедлились,
+  // а не обрываются на полном ходу
+  double _shapeTime = 0;
+  late double _life = widget.phase == LiquidPhase.idle ? 0 : 1;
+
+  // фигуры у воды тонут под строкой метрик и всплывают, а не пропадают
+  late double _low = widget.lowZoneFree ? 1 : 0;
+
   late final AnimationController _change = AnimationController(
     vsync: this,
     duration: LiquidWave.presetChange,
@@ -281,6 +335,12 @@ class LiquidWaveState extends State<LiquidWave>
 
   @visibleForTesting
   int get shownPreset => _change.value >= 0.5 ? _to : _from;
+
+  @visibleForTesting
+  double get shapeLife => _life;
+
+  @visibleForTesting
+  double get lowShown => _low;
 
   @override
   void initState() {
@@ -316,6 +376,7 @@ class LiquidWaveState extends State<LiquidWave>
     for (final fade in _fades) {
       fade?.dispose();
     }
+    _mirror?.dispose();
     super.dispose();
   }
 
@@ -352,7 +413,29 @@ class LiquidWaveState extends State<LiquidWave>
         ? (elapsed - last).inMicroseconds / Duration.microsecondsPerSecond
         : 1 / 60;
     sim.step(dt, widget.phase, widget.levels, widget.load);
+    final d = dt.clamp(0.0, 0.1);
+    _life = LiquidWaveSim._ease(
+      _life,
+      widget.phase == LiquidPhase.idle ? 0 : 1,
+      d,
+      0.4,
+    );
+    _shapeTime += d * _life;
+    _low = LiquidWaveSim._ease(_low, widget.lowZoneFree ? 1 : 0, d, 0.15);
     _tick.value++;
+  }
+
+  // форма держится и перетекает в соседнюю за секунду: непрерывное перетекание выглядело кашей
+  @visibleForTesting
+  static double morphAt(double time, int i) {
+    const hold = 4.0;
+    const morph = 1.0;
+    final x = (time + i * 2.3) % (2 * (hold + morph));
+    double ease(double v) => Curves.easeInOutCubic.transform(v.clamp(0.0, 1.0));
+    if (x < morph) return ease(x / morph);
+    if (x < morph + hold) return 1;
+    if (x < 2 * morph + hold) return 1 - ease((x - morph - hold) / morph);
+    return 0;
   }
 
   Path _pathFor(LiquidShapeSpot spot) => _paths.putIfAbsent(
@@ -384,8 +467,8 @@ class LiquidWaveState extends State<LiquidWave>
               repaint: Listenable.merge([_tick, _change]),
               color: widget.color,
               shapeColor: widget.shapeColor,
+              mirror: widget.mirror,
               fade: widget.fade,
-              lowZoneFree: widget.lowZoneFree,
               shapesTop: widget.shapesTop,
               rtl: rtl,
               devicePixelRatio:
@@ -404,8 +487,8 @@ class _LiquidPainter extends CustomPainter {
     required Listenable repaint,
     required this.color,
     required this.shapeColor,
+    required this.mirror,
     required this.fade,
-    required this.lowZoneFree,
     required this.shapesTop,
     required this.rtl,
     required this.devicePixelRatio,
@@ -414,8 +497,8 @@ class _LiquidPainter extends CustomPainter {
   final LiquidWaveState state;
   final Color color;
   final Color shapeColor;
+  final LiquidMirror? mirror;
   final bool fade;
-  final bool lowZoneFree;
   final double shapesTop;
   final bool rtl;
   final double devicePixelRatio;
@@ -428,6 +511,7 @@ class _LiquidPainter extends CustomPainter {
     final levels = state.widget.levels;
     final base = h - (levels.inDp ? sim.level : sim.level * h);
 
+    _liveShapes(canvas, size);
     final presets = state.widget.shapePresets;
     if (presets.isNotEmpty) {
       final t = Curves.easeInOut.transform(state._change.value);
@@ -441,6 +525,110 @@ class _LiquidPainter extends CustomPainter {
 
     _wave(canvas, size, base, back: true, alpha: sim.alpha * 0.55, lift: 7);
     _wave(canvas, size, base, back: false, alpha: sim.alpha, lift: 0);
+    _reflection(canvas, size, base);
+  }
+
+  void _liveShapes(Canvas canvas, Size size) {
+    final spots = state.widget.liveShapes;
+    final t = state._shapeTime;
+    final w = size.width;
+    final h = size.height - state.widget.overhang;
+    for (var i = 0; i < spots.length; i++) {
+      final spot = spots[i];
+      final next = spots[(i + 1) % spots.length];
+      final morph = state._morphs
+          .putIfAbsent(spot, () => Morph(spot.polygon, next.polygon));
+      // на остановке доходит до целой формы, а не замирает на полпути
+      final p = LiquidWaveState.morphAt(t, i);
+      final whole = p.roundToDouble();
+      final progress = whole + (p - whole) * state._life;
+      final (double dx, double dy) = switch (spot.anchor) {
+        LiquidShapeAnchor.top => (w * spot.x, shapesTop + spot.y),
+        LiquidShapeAnchor.side => (w - spot.x, shapesTop + spot.y),
+        LiquidShapeAnchor.low => (w * spot.x, h - spot.y),
+      };
+      final sunk = _sunk(spot);
+      if (sunk > 0.99) continue;
+      final x = (rtl ? w - dx : dx) + sin(t * 0.25 + i * 1.7) * 10;
+      final y = dy + cos(t * 0.21 + i) * 7 + sunk * _sinkDepth;
+      final s = spot.size * 1.15;
+      Path shape() => morph.toPath(progress: progress).transform(
+            (Matrix4.identity()
+                  ..translateByDouble(-s / 2, -s / 2, 0, 1)
+                  ..scaleByDouble(s, s, 1, 1))
+                .storage,
+          );
+      // целую форму фигурка держит 4 с из 5: контур на каждый кадр стоил ~9% ядра Pixel 6a
+      final path = progress == 0 || progress == 1
+          ? state._wholeShapes.putIfAbsent((spot, progress == 1), shape)
+          : shape();
+      canvas
+        ..save()
+        ..translate(x, y)
+        ..rotate((spot.degrees + t * 9 * (i.isEven ? 1 : -1)) * pi / 180)
+        ..drawPath(
+          path,
+          Paint()
+            ..color = shapeColor.withValues(
+              alpha: spot.alpha * 1.3 * (1 - sunk),
+            ),
+        )
+        ..restore();
+    }
+  }
+
+  static const _sinkDepth = 18.0;
+
+  double _sunk(LiquidShapeSpot spot) =>
+      spot.anchor == LiquidShapeAnchor.low ? 1 - state._low : 0;
+
+  void _reflection(Canvas canvas, Size size, double base) {
+    final mirror = this.mirror;
+    final shader = state._mirror;
+    if (mirror == null || shader == null) return;
+    final w = size.width;
+    final h = size.height;
+    final sim = state.sim;
+    final headerBottom = h - state.widget.overhang;
+    final inDp = state.widget.levels.inDp;
+    double surface(double x) {
+      final level = sim.levelAt(x / w);
+      return headerBottom -
+          (inDp ? level : level * headerBottom) -
+          sim.displacement(x);
+    }
+    final water = Path()..moveTo(0, h);
+    for (double x = 0; x < w; x += 4) {
+      water.lineTo(x, surface(x));
+    }
+    water
+      ..lineTo(w, surface(w))
+      ..lineTo(w, h)
+      ..close();
+    var i = 0;
+    for (final v in [
+      w,
+      h,
+      sim.time,
+      w / 2,
+      shapesTop,
+      mirror.size / 2,
+      mirror.corner,
+      base,
+      mirror.size * 0.85,
+      0.8 + 0.5 * sim.amplitude,
+      mirror.color.r,
+      mirror.color.g,
+      mirror.color.b,
+      0.55 * mirror.color.a,
+    ]) {
+      shader.setFloat(i++, v);
+    }
+    canvas
+      ..save()
+      ..clipPath(water)
+      ..drawRect(Offset.zero & size, Paint()..shader = shader)
+      ..restore();
   }
 
   void _drawSpot(
@@ -455,15 +643,19 @@ class _LiquidPainter extends CustomPainter {
       LiquidShapeAnchor.side => (w - spot.x, shapesTop + spot.y),
       LiquidShapeAnchor.low => (w * spot.x, h - spot.y),
     };
-    if (spot.anchor == LiquidShapeAnchor.low && !lowZoneFree) return;
+    final sunk = _sunk(spot);
+    if (sunk > 0.99) return;
     final x = rtl ? w - dx : dx;
     canvas
       ..save()
-      ..translate(x, dy)
+      ..translate(x, dy + sunk * _sinkDepth)
       ..rotate(spot.degrees * pi / 180);
     canvas.drawPath(
       state._pathFor(spot),
-      Paint()..color = shapeColor.withValues(alpha: spot.alpha * fadeIn),
+      Paint()
+        ..color = shapeColor.withValues(
+          alpha: spot.alpha * fadeIn * (1 - sunk),
+        ),
     );
     canvas.restore();
   }
@@ -518,8 +710,8 @@ class _LiquidPainter extends CustomPainter {
   bool shouldRepaint(_LiquidPainter old) =>
       old.color != color ||
       old.shapeColor != shapeColor ||
+      old.mirror != mirror ||
       old.fade != fade ||
-      old.lowZoneFree != lowZoneFree ||
       old.shapesTop != shapesTop ||
       old.rtl != rtl ||
       old.devicePixelRatio != devicePixelRatio ||
@@ -567,42 +759,16 @@ final panelLiquidShapes = [
   ],
 ];
 
-// легаси: по бокам от кнопки в центре, три с одной стороны и две с другой, стороны чередуются
+// легаси: по бокам от кнопки в центре, три с одной стороны и две с другой
 final legacyLiquidShapes = [
-  [
-    LiquidShapeSpot(MaterialShapes.sunny,
-        anchor: LiquidShapeAnchor.top, x: 0.14, y: 8, size: 26, degrees: 17),
-    LiquidShapeSpot(MaterialShapes.clover4Leaf,
-        anchor: LiquidShapeAnchor.top, x: 0.27, y: 66, size: 16, degrees: 29),
-    LiquidShapeSpot(MaterialShapes.puffy,
-        anchor: LiquidShapeAnchor.top, x: 0.10, y: 116, size: 22, degrees: -15),
-    LiquidShapeSpot(MaterialShapes.flower,
-        anchor: LiquidShapeAnchor.top, x: 0.84, y: 28, size: 24, degrees: -11),
-    LiquidShapeSpot(MaterialShapes.cookie7Sided,
-        anchor: LiquidShapeAnchor.top, x: 0.76, y: 106, size: 18, degrees: 15),
-  ],
-  [
-    LiquidShapeSpot(MaterialShapes.cookie9Sided,
-        anchor: LiquidShapeAnchor.top, x: 0.16, y: 34, size: 24, degrees: 10),
-    LiquidShapeSpot(MaterialShapes.gem,
-        anchor: LiquidShapeAnchor.top, x: 0.26, y: 112, size: 16, degrees: 20),
-    LiquidShapeSpot(MaterialShapes.softBurst,
-        anchor: LiquidShapeAnchor.top, x: 0.78, y: 6, size: 20),
-    LiquidShapeSpot(MaterialShapes.pill,
-        anchor: LiquidShapeAnchor.top, x: 0.90, y: 64, size: 18, degrees: 46),
-    LiquidShapeSpot(MaterialShapes.sunny,
-        anchor: LiquidShapeAnchor.top, x: 0.75, y: 120, size: 22, degrees: -10),
-  ],
-  [
-    LiquidShapeSpot(MaterialShapes.flower,
-        anchor: LiquidShapeAnchor.top, x: 0.10, y: 52, size: 24),
-    LiquidShapeSpot(MaterialShapes.clover4Leaf,
-        anchor: LiquidShapeAnchor.top, x: 0.25, y: 10, size: 18, degrees: 35),
-    LiquidShapeSpot(MaterialShapes.cookie7Sided,
-        anchor: LiquidShapeAnchor.top, x: 0.22, y: 124, size: 18, degrees: 15),
-    LiquidShapeSpot(MaterialShapes.puffy,
-        anchor: LiquidShapeAnchor.top, x: 0.86, y: 22, size: 24),
-    LiquidShapeSpot(MaterialShapes.gem,
-        anchor: LiquidShapeAnchor.top, x: 0.80, y: 96, size: 16, degrees: 20),
-  ],
+  LiquidShapeSpot(MaterialShapes.sunny,
+      anchor: LiquidShapeAnchor.top, x: 0.14, y: 8, size: 26, degrees: 17),
+  LiquidShapeSpot(MaterialShapes.clover4Leaf,
+      anchor: LiquidShapeAnchor.top, x: 0.27, y: 66, size: 16, degrees: 29),
+  LiquidShapeSpot(MaterialShapes.puffy,
+      anchor: LiquidShapeAnchor.top, x: 0.10, y: 116, size: 22, degrees: -15),
+  LiquidShapeSpot(MaterialShapes.flower,
+      anchor: LiquidShapeAnchor.top, x: 0.84, y: 28, size: 24, degrees: -11),
+  LiquidShapeSpot(MaterialShapes.cookie7Sided,
+      anchor: LiquidShapeAnchor.top, x: 0.76, y: 106, size: 18, degrees: 15),
 ];

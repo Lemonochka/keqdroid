@@ -130,6 +130,7 @@ flutter:
     - assets/bin/windows/geosite.dat
   shaders:
     - shaders/edge_fade.frag
+    - shaders/reflection.frag
     - shaders/smooth_fade.frag
   # NOTE: core binaries (assets/bin/windows, assets/bin/linux) are deliberately
   # NOT Flutter assets. Flutter bundles assets into every platform, which dragged
