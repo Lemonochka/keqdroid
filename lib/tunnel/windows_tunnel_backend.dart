@@ -205,6 +205,11 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       mode: ProcessStartMode.normal,
     );
     _pipeProcessOutput(_xrayProcess!, _xrayLog, 'xray');
+    // в job сразу: адаптер ядро ждёт десятки секунд, и закрытое в это время приложение оставляло его сиротой
+    await WindowsDesktopService.registerSessionCoreProcesses(
+      xrayPid: _xrayProcess!.pid,
+      singboxPid: 0,
+    );
 
     if (isTun) {
       final ready = await _waitForXrayTun(_xrayProcess!);
@@ -239,11 +244,6 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         await _applySystemProxy(request);
       }
     }
-
-    await WindowsDesktopService.registerSessionCoreProcesses(
-      xrayPid: _xrayProcess?.pid ?? 0,
-      singboxPid: 0,
-    );
   }
 
   Future<void> _startMihomoSession(TunnelSessionRequest request) async {
@@ -279,6 +279,10 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       mode: ProcessStartMode.normal,
     );
     _pipeProcessOutput(_mihomoProcess!, _xrayLog, 'mihomo');
+    await WindowsDesktopService.registerSessionCoreProcesses(
+      xrayPid: _mihomoProcess!.pid,
+      singboxPid: 0,
+    );
 
     if (isTun) {
       final ready = await _waitForMihomoTun(
@@ -319,11 +323,6 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         await _applySystemProxy(request);
       }
     }
-
-    await WindowsDesktopService.registerSessionCoreProcesses(
-      xrayPid: _mihomoProcess?.pid ?? 0,
-      singboxPid: 0,
-    );
   }
 
   // по адресу нельзя: его mihomo считает из fake-ip-range, а имя задаём сами
