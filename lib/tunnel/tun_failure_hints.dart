@@ -8,6 +8,15 @@ class TunFailureHint {
   const TunFailureHint(this.id, this.message);
 }
 
+// Windows отказывает в AddDevice за 0,15 с (код 31, STATUS_OBJECTID_NOT_FOUND), а wintun.dll ждёт 15 с,
+// у mihomo тот же отказ печатается как Start Tun interface timeout
+bool isWintunAdapterRefused(String coreOutput) {
+  final text = coreOutput.toLowerCase();
+  return text.contains('failed to setup adapter') ||
+      text.contains('timed out waiting for device query') ||
+      text.contains('start tun interface timeout');
+}
+
 TunFailureHint? tunFailureHint(String coreOutput, {required bool windows}) {
   final text = coreOutput.toLowerCase();
   if (text.trim().isEmpty) return null;

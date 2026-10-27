@@ -26,6 +26,7 @@ import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
 import 'vpn_backend.dart';
 import 'windows_core_paths.dart';
+import 'wintun_retry.dart';
 import 'xray_desktop_config.dart';
 
 class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
@@ -68,6 +69,12 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   // пока идёт штатный стоп, вотчдог не должен принять наш kill за смерть ядра
   bool _stoppingSession = false;
+
+  // отмена во время паузы между попытками: без счётчика повтор поднял бы ядро после нажатого Отключить
+  int _stopEpoch = 0;
+
+  // exitCode приходит раньше хвоста вывода, а признак отказа wintun как раз в последних строках
+  Future<void>? _coreOutputDone;
 
   @override
   Stream<VpnState> get stateStream => _stateCtrl.stream;
@@ -139,10 +146,22 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       _sessionDir = await WindowsCorePaths.sessionDir();
 
       switch (request.vpnBackend) {
+        // mihomo повторяет сам
         case VpnBackend.mihomo:
           await _startMihomoSession(request);
         case VpnBackend.xray:
-          await _startXraySession(request);
+          final epoch = _stopEpoch;
+          await retryWhileWintunRefused(
+            attempt: () => _startXraySession(request),
+            coreOutput: () => _xrayLog.toString(),
+            resetAttempt: _resetXrayAttempt,
+            cancelled: () => _stopEpoch != epoch,
+            onRetry: (n) => AppLogger.instance.warn(
+              'Windows refused the TUN adapter (attempt $n of '
+              '$kWintunAttempts), trying again in '
+              '${kWintunRetryPause.inSeconds} s\n${_sessionLogTail(maxLines: 4)}',
+            ),
+          );
       }
 
       startStatsLoop(request.mode);
@@ -204,7 +223,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       ),
       mode: ProcessStartMode.normal,
     );
-    _pipeProcessOutput(_xrayProcess!, _xrayLog, 'xray');
+    _coreOutputDone = _pipeProcessOutput(_xrayProcess!, _xrayLog, 'xray');
     // в job сразу: адаптер ядро ждёт десятки секунд, и закрытое в это время приложение оставляло его сиротой
     await WindowsDesktopService.registerSessionCoreProcesses(
       xrayPid: _xrayProcess!.pid,
@@ -246,6 +265,15 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     }
   }
 
+  Future<void> _resetXrayAttempt() async {
+    await _killProcess(_xrayProcess, graceful: true);
+    _xrayProcess = null;
+    _xrayMetricsPort = null;
+    await WindowsDesktopService.clearSessionCoreProcesses();
+    _xrayLog.clear();
+    _xrayStarted = false;
+  }
+
   Future<void> _startMihomoSession(TunnelSessionRequest request) async {
     final bin = await WindowsCorePaths.mihomoExecutable();
     if (bin == null) {
@@ -278,7 +306,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       workingDirectory: p.dirname(bin),
       mode: ProcessStartMode.normal,
     );
-    _pipeProcessOutput(_mihomoProcess!, _xrayLog, 'mihomo');
+    _coreOutputDone = _pipeProcessOutput(_mihomoProcess!, _xrayLog, 'mihomo');
     await WindowsDesktopService.registerSessionCoreProcesses(
       xrayPid: _mihomoProcess!.pid,
       singboxPid: 0,
@@ -331,15 +359,19 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     required StringBuffer log,
   }) async {
     var waited = 0;
-    while (waited < _tunReadyBudgetMs) {
+    while (waited < _mihomoTunBudgetMs) {
       final code = await _exitCodeOrNull(process);
       if (code != null) {
+        await _coreOutputDrained();
         throw VpnStartException(
           'mihomo exited with code $code before the tunnel came up.\n'
           '${_tunStartError(log, core: 'mihomo.exe')}',
         );
       }
-      if (log.toString().contains('Tun adapter listening at')) return true;
+      final text = log.toString();
+      if (text.contains('Tun adapter listening at')) return true;
+      // попытки кончились, wintun за собой убрал: убивать уже можно, ждать нечего
+      if (text.contains('Start TUN listening error')) return false;
       if (await _tunAdapterUp(extraAddress: _mihomoTunAddress)) return true;
       await Future<void>.delayed(const Duration(milliseconds: 300));
       waited += 300;
@@ -482,6 +514,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   @override
   Future<void> stopSession() async {
+    _stopEpoch++;
     _stoppingSession = true;
     try {
       await _stopSessionInner();
@@ -720,7 +753,11 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         kXrayStopOnStdinEof: '1',
       };
 
-  void _pipeProcessOutput(Process process, StringBuffer buffer, String tag) {
+  Future<void> _pipeProcessOutput(
+    Process process,
+    StringBuffer buffer,
+    String tag,
+  ) {
     // только буфер: лог на каждую строку ядра подтормаживал UI при подключении
     void append(String line) {
       if (!_xrayStarted && _xrayStartedLine.hasMatch(line)) {
@@ -741,14 +778,13 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     // allowMalformed: строка ядра в ANSI-кодировке русской Windows иначе роняет весь пайп лога
     const decoder = Utf8Decoder(allowMalformed: true);
     // строки режем по всему потоку: кусок пайпа обрывается где попало
-    process.stderr
+    Future<void> pipe(Stream<List<int>> stream) => stream
         .transform(decoder)
         .transform(const LineSplitter())
-        .listen(append);
-    process.stdout
-        .transform(decoder)
-        .transform(const LineSplitter())
-        .listen(append);
+        .listen(append)
+        .asFuture<void>()
+        .catchError((Object _) {});
+    return Future.wait([pipe(process.stderr), pipe(process.stdout)]);
   }
 
   static Future<int?> _exitCodeOrNull(Process process) => process.exitCode
@@ -786,9 +822,10 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   // core.Start пишет started после всех входов, у TUN к этому времени есть адрес и маршруты
   Future<bool> _waitForXrayTun(Process process) async {
     var waited = 0;
-    while (waited < _tunReadyBudgetMs) {
+    while (waited < _xrayTunBudgetMs) {
       final code = await _exitCodeOrNull(process);
       if (code != null) {
+        await _coreOutputDrained();
         throw VpnStartException(
           'xray exited with code $code before the tunnel came up.\n'
           '${_tunStartError(_xrayLog)}',
@@ -801,8 +838,17 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     return false;
   }
 
-  // 30 с: сюда входит разбор geo-баз и создание адаптера
-  static const _tunReadyBudgetMs = 30000;
+  // xray сперва открывает адаптер по имени, потом создаёт, mihomo создаёт трижды; 10 с на geo-базы.
+  // убитое раньше ядро бросило бы адаптер с ошибкой
+  static const _xrayTunBudgetMs = 2 * kWintunWaitMs + 10000;
+  static const _mihomoTunBudgetMs = kWintunAttempts * kWintunWaitMs + 10000;
+
+  Future<void> _coreOutputDrained() async {
+    await _coreOutputDone?.timeout(
+      const Duration(seconds: 2),
+      onTimeout: () {},
+    );
+  }
 
   String _tunStartError(StringBuffer log, {String core = 'xray.exe'}) {
     final text = log.toString();
