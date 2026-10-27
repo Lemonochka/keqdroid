@@ -1,11 +1,19 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/core/exceptions.dart';
+import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/tunnel/tun_failure_hints.dart';
 import 'package:keqdroid/tunnel/wintun_retry.dart';
+import 'package:keqdroid/utils/error_messages.dart';
 
 /// 27.10.2026 Windows раз за разом отказывала в TUN-адаптере (код 31 в
-/// диспетчере устройств) обоим ядрам, а со следующей попытки пускала. Строки
-/// ниже взяты из её журнала как есть.
+/// диспетчере устройств) обоим ядрам, а со следующей попытки пускала. Человек
+/// видел «Ошибка сети: сервер недоступен» у xray (в выводе ядра есть Timed out)
+/// и «запустите от администратора, проверьте wintun.dll» у mihomo, хотя права
+/// были и dll загрузилась. Строки ниже взяты из её журнала как есть.
 const _xrayLog = '''
 Xray 26.10.10 (Xray, Penetrates Everything.) Custom (go1.27.0 windows/amd64)
 2026/10/27 23:58:36.631609 Failed to find matching adapter name: Элемент не найден. (Code 0x00000490)
@@ -22,11 +30,49 @@ time="2026-10-28T00:20:05.704784000+04:00" level=warning msg="[TUN] default inte
 time="2026-10-28T00:20:20.795632200+04:00" level=warning msg="Start Tun interface timeout: The system cannot find the file specified. [retrying 1/3]"
 ''';
 
+const _fallback = 'The TUN tunnel did not start. Run the app as '
+    'Administrator and make sure wintun.dll sits next to xray.exe.';
+
+// так сообщение собирает WindowsTunnelBackend, когда xray вышел до подъёма TUN
+VpnStartException _xrayFailure() => VpnStartException(
+      'xray exited with code -1 before the tunnel came up.\n'
+      '${tunStartFailureMessage(
+        fallback: _fallback,
+        coreOutput: _xrayLog,
+        windows: true,
+        tail: _xrayLog.trim().split('\n').skip(3).join('\n'),
+      )}',
+    );
+
+Future<String> _renderFor(
+  WidgetTester tester,
+  String locale,
+  Object error,
+) async {
+  late String rendered;
+  await tester.pumpWidget(
+    MaterialApp(
+      locale: Locale(locale),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Builder(
+        builder: (context) {
+          rendered = friendlyError(error, context);
+          return const SizedBox();
+        },
+      ),
+    ),
+  );
+  return rendered;
+}
+
 void main() {
   group('признак отказа', () {
     test('xray и mihomo опознаются по своему выводу', () {
       expect(isWintunAdapterRefused(_xrayLog), isTrue);
       expect(isWintunAdapterRefused(_mihomoLog), isTrue);
+      expect(tunFailureHint(_xrayLog, windows: true)?.id, 'wintun-refused');
+      expect(tunFailureHint(_mihomoLog, windows: true)?.id, 'wintun-refused');
     });
 
     test('чужие отказы TUN сюда не попадают', () {
@@ -44,6 +90,70 @@ void main() {
         isFalse,
       );
       expect(isWintunAdapterRefused('dial tcp: i/o timeout'), isFalse);
+    });
+
+    test('совет про администратора и wintun.dll из сообщения уходит', () {
+      final message = _xrayFailure().message;
+      expect(message, contains('Windows refused to set up the TUN network'));
+      expect(message, isNot(contains('Run the app as Administrator')));
+      expect(message, contains('ntstatus: 0xC00002F0'),
+          reason: 'хвост лога остаётся для разбора');
+    });
+  });
+
+  group('текст на экране', () {
+    test('отказ Windows больше не выдаёт себя за ошибку сети', () {
+      expect(explainError(_xrayFailure()).code, UiErrorCode.tunAdapterRefused);
+    });
+
+    test('обычный таймаут по-прежнему ошибка сети', () {
+      expect(explainError('Connection timed out').code, UiErrorCode.network);
+    });
+
+    testWidgets('на en текст тот же, что в коде', (tester) async {
+      expect(
+        await _renderFor(tester, 'en', _xrayFailure()),
+        explainError(_xrayFailure()).full,
+      );
+    });
+
+    testWidgets('по-русски и три строки на каждом языке', (tester) async {
+      final ru = await _renderFor(tester, 'ru', _xrayFailure());
+      expect(ru.split('\n').first, 'Windows не создала адаптер');
+      expect(ru, contains('трижды'));
+      expect(kWintunAttempts, 3, reason: 'текст обещает три попытки');
+
+      for (final locale in ['en', 'ru', 'de', 'zh', 'fa']) {
+        final rendered = await _renderFor(tester, locale, _xrayFailure());
+        expect(rendered.split('\n').length, 3, reason: 'локаль $locale');
+      }
+    });
+
+    // под кнопкой подключения текст режется на пятой строке, а окно ПК сужается до 480 точек:
+    // минус боковая панель и поля остаётся около 320. фарси и китайского в этих шрифтах нет,
+    // в тесте их буквы рисует заглушка, мерить нечего
+    testWidgets('влезает под кнопку в узком окне', (tester) async {
+      for (final family in ['Rubik', 'Montserrat']) {
+        final bytes = File('assets/fonts/$family-Variable.ttf').readAsBytesSync();
+        await (FontLoader(family)
+              ..addFont(Future.value(ByteData.sublistView(bytes))))
+            .load();
+      }
+      for (final locale in ['en', 'ru', 'de']) {
+        final text = await _renderFor(tester, locale, _xrayFailure());
+        for (final family in ['Rubik', 'Montserrat']) {
+          final painter = TextPainter(
+            text: TextSpan(
+              text: text,
+              style: TextStyle(fontFamily: family, fontSize: 12, height: 16 / 12),
+            ),
+            textDirection: TextDirection.ltr,
+            maxLines: 5,
+          )..layout(maxWidth: 300);
+          expect(painter.didExceedMaxLines, isFalse,
+              reason: '$locale, $family: конец совета обрезан многоточием');
+        }
+      }
     });
   });
 

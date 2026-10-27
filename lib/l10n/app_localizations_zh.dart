@@ -1793,6 +1793,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorTunAdminAction => '以管理员身份运行应用，或在设置中切换到代理模式。';
 
   @override
+  String get errorTunAdapterRefusedTitle => 'Windows 未能创建网络适配器';
+
+  @override
+  String get errorTunAdapterRefusedMessage => 'Windows 连续三次未能为 TUN 模式创建网络适配器。这是系统故障，与服务器无关。';
+
+  @override
+  String get errorTunAdapterRefusedAction => '请一分钟后重新连接，或重启电脑；在此期间可以使用代理模式。';
+
+  @override
   String get errorPolkitMissingTitle => '需要 polkit';
 
   @override

@@ -3359,6 +3359,24 @@ abstract class AppLocalizations {
   /// **'Run the app as administrator or switch to Proxy mode in settings.'**
   String get errorTunAdminAction;
 
+  /// No description provided for @errorTunAdapterRefusedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Windows Refused the Adapter'**
+  String get errorTunAdapterRefusedTitle;
+
+  /// No description provided for @errorTunAdapterRefusedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Windows refused the TUN adapter three times in a row. The server is fine.'**
+  String get errorTunAdapterRefusedMessage;
+
+  /// No description provided for @errorTunAdapterRefusedAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect again in a minute or restart the computer. Proxy mode still works.'**
+  String get errorTunAdapterRefusedAction;
+
   /// No description provided for @errorPolkitMissingTitle.
   ///
   /// In en, this message translates to:

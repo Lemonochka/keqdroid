@@ -1797,6 +1797,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorTunAdminAction => 'Run the app as administrator or switch to Proxy mode in settings.';
 
   @override
+  String get errorTunAdapterRefusedTitle => 'Windows Refused the Adapter';
+
+  @override
+  String get errorTunAdapterRefusedMessage => 'Windows refused the TUN adapter three times in a row. The server is fine.';
+
+  @override
+  String get errorTunAdapterRefusedAction => 'Connect again in a minute or restart the computer. Proxy mode still works.';
+
+  @override
   String get errorPolkitMissingTitle => 'Polkit Required';
 
   @override

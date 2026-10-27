@@ -1793,6 +1793,15 @@ class AppLocalizationsFa extends AppLocalizations {
   String get errorTunAdminAction => 'برنامه را با دسترسی مدیر اجرا کنید یا در تنظیمات به حالت پروکسی بروید.';
 
   @override
+  String get errorTunAdapterRefusedTitle => 'ویندوز آداپتور را نساخت';
+
+  @override
+  String get errorTunAdapterRefusedMessage => 'ویندوز سه بار پشت سر هم آداپتور TUN را نپذیرفت. مشکل از سرور نیست.';
+
+  @override
+  String get errorTunAdapterRefusedAction => 'یک دقیقه بعد دوباره وصل شوید یا کامپیوتر را دوباره راه‌اندازی کنید. حالت پروکسی کار می‌کند.';
+
+  @override
   String get errorPolkitMissingTitle => 'polkit لازم است';
 
   @override

@@ -6,6 +6,7 @@ enum UiErrorKind { permission, network, config, auth, providerConfig, unknown }
 
 enum UiErrorCode {
   tunAdmin,
+  tunAdapterRefused,
   tunPolkitMissing,
   tunPolkitNoAgent,
   vpnPermission,
@@ -80,6 +81,19 @@ UiErrorMessage explainError(Object error) {
           'authentication agent is running.',
       action: 'Start a polkit agent for your desktop (polkit-gnome, '
           'lxqt-policykit and the like), or switch to Proxy mode in settings.',
+    );
+  }
+
+  // раньше сетевой ветки: в выводе ядра стоит Timed out waiting for device query
+  if (msg.contains('windows refused to set up the tun network adapter')) {
+    return const UiErrorMessage(
+      kind: UiErrorKind.unknown,
+      code: UiErrorCode.tunAdapterRefused,
+      title: 'Windows Refused the Adapter',
+      message: 'Windows refused the TUN adapter three times in a row. The '
+          'server is fine.',
+      action: 'Connect again in a minute or restart the computer. Proxy mode '
+          'still works.',
     );
   }
 
@@ -224,6 +238,7 @@ UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
   // заголовок по коду, а не по виду: видов шесть на одиннадцать кодов
   final title = switch (base.code) {
     UiErrorCode.tunAdmin => l10n.errorTunAdminTitle,
+    UiErrorCode.tunAdapterRefused => l10n.errorTunAdapterRefusedTitle,
     UiErrorCode.tunPolkitMissing => l10n.errorPolkitMissingTitle,
     UiErrorCode.tunPolkitNoAgent => l10n.errorPolkitNoAgentTitle,
     UiErrorCode.vpnPermission => l10n.errorVpnPermissionTitle,
@@ -242,6 +257,10 @@ UiErrorMessage explainErrorLocalized(Object error, AppLocalizations l10n) {
     UiErrorCode.tunAdmin => (
         l10n.errorTunAdminMessage,
         l10n.errorTunAdminAction,
+      ),
+    UiErrorCode.tunAdapterRefused => (
+        l10n.errorTunAdapterRefusedMessage,
+        l10n.errorTunAdapterRefusedAction,
       ),
     UiErrorCode.tunPolkitMissing => (
         l10n.errorPolkitMissingMessage,

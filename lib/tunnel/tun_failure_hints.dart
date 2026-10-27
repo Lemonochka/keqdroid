@@ -34,6 +34,18 @@ TunFailureHint? tunFailureHint(String coreOutput, {required bool windows}) {
     );
   }
 
+  // начало фразы ловит explainError (UiErrorCode.tunAdapterRefused)
+  if (windows && isWintunAdapterRefused(text)) {
+    return const TunFailureHint(
+      'wintun-refused',
+      'Windows refused to set up the TUN network adapter (code 31 in Device '
+          'Manager), three tries in a row. wintun.dll loaded fine, the refusal '
+          'comes from the system and usually clears up within a minute. '
+          'Connect again; if it keeps failing, restart the computer. Proxy '
+          'mode works meanwhile.',
+    );
+  }
+
   if (windows &&
       (has('wintun') || has('tun.dll')) &&
       hasAny([
@@ -218,7 +230,12 @@ String tunStartFailureMessage({
   String? tail,
 }) {
   final hint = tunFailureHint(coreOutput, windows: windows);
-  final body = hint == null ? fallback : '${hint.message}\n\n$fallback';
+  // запасной совет про администратора и wintun.dll тут ложный: dll загрузилась, отказала Windows
+  final body = hint == null
+      ? fallback
+      : hint.id == 'wintun-refused'
+          ? hint.message
+          : '${hint.message}\n\n$fallback';
   final logTail = (tail ?? '').trim();
   return logTail.isEmpty ? body : '$body\n$logTail';
 }

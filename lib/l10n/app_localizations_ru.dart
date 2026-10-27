@@ -1807,6 +1807,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorTunAdminAction => 'Запустите приложение от имени администратора или переключитесь на режим Proxy в настройках.';
 
   @override
+  String get errorTunAdapterRefusedTitle => 'Windows не создала адаптер';
+
+  @override
+  String get errorTunAdapterRefusedMessage => 'Windows трижды не дала поднять адаптер TUN, сервер ни при чём.';
+
+  @override
+  String get errorTunAdapterRefusedAction => 'Подключитесь через минуту или перезагрузите компьютер. Прокси работает.';
+
+  @override
   String get errorPolkitMissingTitle => 'Нужен polkit';
 
   @override
