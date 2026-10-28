@@ -102,6 +102,40 @@ final class SubscriptionOutage {
   }
 }
 
+// сервер соседней подписки на крайний случай: свой меряем каждую минуту, а не в плановую раз в 5,
+// но не всю поездку в метро подряд
+final class NeighbourHomePace {
+  const NeighbourHomePace({this.misses = 0, this.pausedUntil});
+
+  static const every = Duration(minutes: 1);
+
+  // текущий и свой
+  static const measureLimit = 2;
+
+  static const missesBeforePause = 5;
+
+  static const pause = Duration(minutes: 15);
+
+  final int misses;
+
+  final DateTime? pausedUntil;
+
+  bool due(DateTime now) {
+    final until = pausedUntil;
+    return until == null || !now.isBefore(until);
+  }
+
+  NeighbourHomePace afterCheck({
+    required bool homeAnswered,
+    required DateTime now,
+  }) {
+    if (homeAnswered) return const NeighbourHomePace();
+    final missed = misses + 1;
+    if (missed < missesBeforePause) return NeighbourHomePace(misses: missed);
+    return NeighbourHomePace(pausedUntil: now.add(pause));
+  }
+}
+
 final class SilenceStreak {
   const SilenceStreak({this.silent = 0, this.idle = 0});
 

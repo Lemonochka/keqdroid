@@ -48,6 +48,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   bool _autoSelectListening = false;
 
   Timer? _autoSelectRecheckTimer;
+  DateTime? _autoSelectRecheckAt;
+  NeighbourHomePace _autoSelectHomePace = const NeighbourHomePace();
   int? _autoSelectRecheckSeenBytes;
   SubscriptionOutage _autoSelectOutage = const SubscriptionOutage();
   int _autoSelectDeadRounds = 0;
@@ -213,8 +215,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     );
     _autoSelectRecheckTimer?.cancel();
     _autoSelectRecheckTimer = Timer.periodic(
-      AutoSelectWatchdog.recheckEvery,
-      (_) => unawaited(_autoSelectRecheck()),
+      NeighbourHomePace.every,
+      (_) => unawaited(_autoSelectRecheckTick()),
     );
     ref.onDispose(() {
       _autoSelectTimer?.cancel();
@@ -1293,7 +1295,17 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     return (nextId: verdict.nextId, answered: true);
   }
 
-  Future<void> _autoSelectRecheck() async {
+  // один таймер на обе: два одновременных накладывали бы замеры каждые 5 минут
+  Future<void> _autoSelectRecheckTick() {
+    final now = DateTime.now();
+    final last = _autoSelectRecheckAt ??= now;
+    final scheduled = now.difference(last) >=
+        AutoSelectWatchdog.recheckEvery - NeighbourHomePace.every ~/ 2;
+    if (scheduled) _autoSelectRecheckAt = now;
+    return _autoSelectRecheck(homeOnly: !scheduled);
+  }
+
+  Future<void> _autoSelectRecheck({bool homeOnly = false}) async {
     if (_autoSelectBusy) return;
     final target = await _autoSelectTarget();
     var home = await AutoSelectHomeStore.load();
@@ -1304,6 +1316,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         await AutoSelectHomeStore.save(null);
       }
       _autoSelectRecheckSeenBytes = null;
+      _autoSelectHomePace = const NeighbourHomePace();
       return;
     }
     if (home != null) {
@@ -1318,6 +1331,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (waiting == null) await AutoSelectHomeStore.save(null);
       home = waiting;
     }
+    final away = home != null && target.subId != target.ownerId;
+    if (!away) _autoSelectHomePace = const NeighbourHomePace();
+    if (homeOnly && (!away || !_autoSelectHomePace.due(DateTime.now()))) return;
 
     final bytes = await _autoSelectTotalBytes();
     final seen = _autoSelectRecheckSeenBytes;
@@ -1331,10 +1347,16 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     final measure = _autoSelectStartMeasure(
       target.server,
       target.subId,
-      limit: AutoSelectWatchdog.recheckLimit,
+      limit: homeOnly
+          ? NeighbourHomePace.measureLimit
+          : AutoSelectWatchdog.recheckLimit,
       include: {?homeId},
     );
-    await _autoSelectDecide(target, measure, reason: 'scheduled check');
+    await _autoSelectDecide(
+      target,
+      measure,
+      reason: homeOnly ? 'checking the own subscription' : 'scheduled check',
+    );
     if (home == null) return;
 
     _autoSelectBusy = true;
@@ -1342,9 +1364,21 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       await measure.done;
       if (state.value?.status != VpnStatus.connected) return;
       if (ref.read(serversProvider).activeServer?.id != target.server.id) return;
-      home = home.afterCheck(
-        homeAnswered: measure.results[home.homeId]?.success == true,
-      );
+      final homeAnswered = measure.results[home.homeId]?.success == true;
+      if (homeOnly) {
+        _autoSelectHomePace = _autoSelectHomePace.afterCheck(
+          homeAnswered: homeAnswered,
+          now: DateTime.now(),
+        );
+        if (_autoSelectHomePace.pausedUntil != null) {
+          AppLogger.instance.info(
+            'Auto select: the own subscription did not answer '
+            '${NeighbourHomePace.missesBeforePause} checks in a row, '
+            'next tries in ${NeighbourHomePace.pause.inMinutes} min',
+          );
+        }
+      }
+      home = home.afterCheck(homeAnswered: homeAnswered);
       if (!home.shouldReturn) {
         await AutoSelectHomeStore.save(home);
         return;

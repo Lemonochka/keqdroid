@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/ping_sample.dart';
 import 'package:keqdroid/models/server_item.dart';
+import 'package:keqdroid/services/auto_select_watchdog.dart';
 import 'package:keqdroid/services/auto_server_select.dart';
 
 /// Кого выбирает «Авто».
@@ -282,6 +283,24 @@ void main() {
     );
 
     expect(picked.map((s) => s.id), ['b1', 'home', 'b2']);
+  });
+
+  test('ежеминутная проверка из соседней подписки меряет только текущий и свой', () {
+    final servers = [
+      _server('b1', sub: 'neighbour', ping: 50, tested: tested),
+      _server('b2', sub: 'neighbour', ping: 10, tested: tested),
+      _server('home', sub: 'own', ping: 40, tested: tested),
+    ];
+
+    final picked = AutoServerSelect.candidatesToMeasure(
+      servers,
+      subscriptionId: 'neighbour',
+      current: servers[0],
+      limit: NeighbourHomePace.measureLimit,
+      include: {'home'},
+    );
+
+    expect(picked.map((s) => s.id), ['b1', 'home']);
   });
 
   group('записывать ли замер', () {

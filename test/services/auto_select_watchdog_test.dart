@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keqdroid/services/auto_select_home.dart';
 import 'package:keqdroid/services/auto_select_watchdog.dart';
 import 'package:keqdroid/services/auto_server_select.dart';
 
@@ -386,6 +387,55 @@ void main() {
       expect(outage.rounds, 1);
       expect(outage.suspects('own'), isFalse);
       expect(outage.suspects('neighbour'), isTrue);
+    });
+  });
+
+  group('свой сервер, пока сидим в соседней подписке', () {
+    final t0 = DateTime(2026, 10, 28, 9);
+    DateTime minute(int n) => t0.add(NeighbourHomePace.every * n);
+
+    test('после лифта назад через две минуты, а не через 10-15', () {
+      var pace = const NeighbourHomePace();
+      var home = const AutoSelectHome(
+        subscriptionId: 'own',
+        homeId: 'home',
+        pickedId: 'neighbour',
+      );
+      final answers = [false, false, false, true, true];
+      for (var i = 0; i < answers.length; i++) {
+        expect(pace.due(minute(i)), isTrue, reason: 'минута $i');
+        pace = pace.afterCheck(homeAnswered: answers[i], now: minute(i));
+        home = home.afterCheck(homeAnswered: answers[i]);
+      }
+      expect(home.shouldReturn, isTrue);
+      expect(NeighbourHomePace.every * AutoSelectHome.returnAfter,
+          lessThanOrEqualTo(const Duration(minutes: 2)));
+    });
+
+    test('после пяти промахов подряд пауза 15 минут, потом снова пять попыток', () {
+      var pace = const NeighbourHomePace();
+      for (var i = 0; i < NeighbourHomePace.missesBeforePause; i++) {
+        expect(pace.due(minute(i)), isTrue);
+        pace = pace.afterCheck(homeAnswered: false, now: minute(i));
+      }
+      final last = minute(NeighbourHomePace.missesBeforePause - 1);
+      expect(pace.due(last.add(const Duration(minutes: 14))), isFalse);
+      final resumed = last.add(const Duration(minutes: 15));
+      expect(pace.due(resumed), isTrue);
+
+      pace = pace.afterCheck(homeAnswered: false, now: resumed);
+      expect(pace.misses, 1);
+      expect(pace.due(resumed.add(NeighbourHomePace.every)), isTrue);
+    });
+
+    test('ответ своего сбрасывает счёт промахов', () {
+      var pace = const NeighbourHomePace();
+      for (var i = 0; i < NeighbourHomePace.missesBeforePause - 1; i++) {
+        pace = pace.afterCheck(homeAnswered: false, now: minute(i));
+      }
+      pace = pace.afterCheck(homeAnswered: true, now: minute(4));
+      expect(pace.misses, 0);
+      expect(pace.pausedUntil, isNull);
     });
   });
 
