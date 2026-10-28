@@ -1,6 +1,69 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/services/ping_service.dart';
+import 'package:keqdroid/services/vpn_engine.dart';
+import 'package:keqdroid/tunnel/tunnel_backend.dart';
+import 'package:keqdroid/tunnel/vpn_backend.dart';
+
+import '../helpers/fake_tunnel_backend.dart';
+
+typedef _Probe = ({
+  String id,
+  bool success,
+  int? latencyMs,
+  String error,
+  int? httpStatus,
+});
+
+const _badIp = '192.0.2.66';
+
+bool _isBad(String config) =>
+    config.contains('bad.example.com') || config.contains(_badIp);
+
+// ядро с плохим сервером в пачке не поднимается: натив отдаёт пустой список, бэкенд null
+class _OneBadServerBackend extends FakeTunnelBackend {
+  final multiSizes = <int>[];
+
+  static _Probe _answer(String id, {required bool alive}) => (
+        id: id,
+        success: alive,
+        latencyMs: alive ? 120 : null,
+        error: alive ? '' : 'dead',
+        httpStatus: alive ? 204 : null,
+      );
+
+  @override
+  Future<List<_Probe>?> xrayUrlTestMulti({
+    required String config,
+    required List<(String id, int port)> probes,
+    VpnBackend core = VpnBackend.xray,
+    String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
+    int timeoutMs = 15000,
+    bool keepAlive = true,
+    int concurrency = 16,
+    UrlTestProgress? onEach,
+  }) async {
+    multiSizes.add(probes.length);
+    if (probes.any((p) => p.$1 == 'bad')) return null;
+    return [for (final p in probes) _answer(p.$1, alive: true)];
+  }
+
+  @override
+  Future<List<_Probe>> xrayUrlTestBatch({
+    required List<(String id, String xrayConfig)> items,
+    required int socksPort,
+    VpnBackend core = VpnBackend.xray,
+    String testUrl = 'https://connectivitycheck.gstatic.com/generate_204',
+    int timeoutMs = 15000,
+    bool keepAlive = true,
+  }) async =>
+      [
+        for (final item in items)
+          _answer(item.$1, alive: !_isBad(item.$2)),
+      ];
+}
 
 /// Кого можно измерить общим конфигом, а кого нельзя.
 ///
@@ -82,6 +145,42 @@ proxies:
       PingService.multiPingBatches * PingService.multiPingChunk,
       lessThanOrEqualTo(40),
     );
+  });
+
+  test('ядро не поднялось — пачку делим, живые соседи плохого сервера живы', () async {
+    // Раньше натив отдавал на такой случай список отказов той же длины,
+    // и все десять серверов пачки уходили в красные из-за одного.
+    final backend = _OneBadServerBackend();
+    PingService.debugMultiPingSupported = true;
+    PingService.debugEngine = VpnEngine.withBackend(backend);
+    addTearDown(() {
+      PingService.debugMultiPingSupported = null;
+      PingService.debugEngine = null;
+    });
+    ServerItem server(String id) => ServerItem(
+          id: id,
+          config: vless.replaceFirst('a.example.com', '$id.example.com'),
+          type: ServerItemType.subscription,
+          subscriptionId: 's1',
+        );
+    final servers = [for (final id in ['a', 'b', 'bad', 'c']) server(id)];
+
+    final results = await PingService.pingUrlBatch(
+      servers,
+      const AppSettings(),
+      resolvedIps: {
+        'a': '192.0.2.1',
+        'b': '192.0.2.2',
+        'bad': _badIp,
+        'c': '192.0.2.3',
+      },
+    );
+
+    expect(
+      {for (final r in results) r.serverId: r.success},
+      {'a': true, 'b': true, 'bad': false, 'c': true},
+    );
+    expect(backend.multiSizes.first, 4, reason: 'сначала пачкой, а не поштучно');
   });
 
   test('размер чанка не «все разом»', () {

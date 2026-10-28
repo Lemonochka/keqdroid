@@ -237,7 +237,8 @@ object EphemeralXrayPing {
     )
 
     // один процесс ядра на весь батч: телефон упирался не во время старта, а в пятьдесят рантаймов Go разом.
-    // батч падает целиком намеренно: вызывающий делит его и повторяет, вплоть до одного сервера
+    // не поднялось ядро, значит пустой список: по нему Dart делит батч вплоть до одного сервера.
+    // список отказов он принял бы за ответ, и десяток живых серверов уходил в красные из-за одного
     fun urlTestMulti(
         nativeLibraryDir: String,
         filesDir: File,
@@ -269,16 +270,16 @@ object EphemeralXrayPing {
             coreStartedAt = System.currentTimeMillis()
             pid = NativeHelper.startCore(binary.absolutePath, configFile.absolutePath, assetDir, "", core)
             if (pid <= 0) {
-                val err = Result(false, null, "failed to start $core for the batch (pid=$pid)", null)
-                return probes.map { BatchResult(it.id, err) }
+                NativeLog.w("KEQDIS", "urlTestMulti: $core did not start for ${probes.size} probes (pid=$pid), splitting")
+                return emptyList()
             }
 
             // порты поднимаются разом, бюджет общий: первый ждёт старта ядра
             val portWaitMs = min(timeoutMs, 8_000)
             for (probe in probes) {
                 if (!waitForPort("127.0.0.1", probe.port, portWaitMs)) {
-                    val err = Result(false, null, "port ${probe.port} not ready in the batch", null)
-                    return probes.map { BatchResult(it.id, err) }
+                    NativeLog.w("KEQDIS", "urlTestMulti: port ${probe.port} not ready for ${probes.size} probes, splitting")
+                    return emptyList()
                 }
             }
 
@@ -313,8 +314,7 @@ object EphemeralXrayPing {
             }
         } catch (e: Exception) {
             NativeLog.e("KEQDIS", "urlTestMulti failed: ${e.message}")
-            val err = Result(false, null, e.message ?: "batch failed", null)
-            return probes.map { BatchResult(it.id, err) }
+            return emptyList()
         } finally {
             if (pid > 0) {
                 runCatching { android.os.Process.killProcess(pid) }

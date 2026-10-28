@@ -525,6 +525,11 @@ class PingService {
   @visibleForTesting
   static bool? debugMultiPingSupported;
 
+  @visibleForTesting
+  static VpnEngine? debugEngine;
+
+  static VpnEngine get _engine => debugEngine ?? VpnEngine();
+
   static bool get multiPingSupported =>
       debugMultiPingSupported ?? Platform.isAndroid;
 
@@ -617,7 +622,7 @@ class PingService {
     List<({String id, bool success, int? latencyMs, String error, int? httpStatus})>?
         raw;
     try {
-      raw = await VpnEngine().xrayUrlTestMulti(
+      raw = await _engine.xrayUrlTestMulti(
         config: core == VpnBackend.mihomo
             ? MultiPingConfig.mergeMihomo(probes, httpListeners: !Platform.isAndroid)
             : MultiPingConfig.mergeXray(probes),
@@ -759,7 +764,7 @@ class PingService {
         resolvedServerIp: resolvedIp,
         outboundInterface: outboundInterface,
       );
-      final raw = await VpnEngine().xrayUrlTest(
+      final raw = await _engine.xrayUrlTest(
         xrayConfig: config,
         socksPort: socksPort,
         core: core,
@@ -813,7 +818,7 @@ class PingService {
           resolvedServerIp: ips[s.id],
           outboundInterface: outboundInterface,
         );
-        final raw = await VpnEngine().xraySpeedTest(
+        final raw = await _engine.xraySpeedTest(
           xrayConfig: config,
           socksPort: socksPort,
           core: core,
