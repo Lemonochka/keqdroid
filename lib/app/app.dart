@@ -4,6 +4,7 @@ import 'dart:ui' as ui show DisplayFeature;
 
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
@@ -469,9 +470,24 @@ class _ThemedApp extends ConsumerWidget {
                 flavor: preset.kawaii ?? KawaiiFlavor.sakura,
                 child: child,
               );
-        return _UiZoom(
-          scale: settings.uiScale * _baseUiScale,
-          child: _VisibilityTickerGate(child: LiquidToastHost(child: content)),
+        final theme = Theme.of(context);
+        final icons =
+            theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark;
+        // панель навигации по теме приложения: без этого её красит прошивка по теме системы,
+        // и на HyperOS после обновления под кнопками оставалась белая полоса до перезагрузки.
+        // строку состояния тоже: стоит задать одну панель, и Pixel 6a в тёмной теме
+        // перекрасил значки сверху в тёмные (apr=LIGHT_STATUS_BARS)
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            statusBarIconBrightness: icons,
+            statusBarBrightness: theme.brightness,
+            systemNavigationBarColor: theme.colorScheme.surface,
+            systemNavigationBarIconBrightness: icons,
+          ),
+          child: _UiZoom(
+            scale: settings.uiScale * _baseUiScale,
+            child: _VisibilityTickerGate(child: LiquidToastHost(child: content)),
+          ),
         );
       },
       locale: locale,
