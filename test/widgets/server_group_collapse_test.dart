@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +11,8 @@ import 'package:keqdroid/providers/halloween_provider.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/servers_tab.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
+import 'package:keqdroid/shared/ui/expressive_toggle_button.dart';
+import 'package:keqdroid/shared/ui/server_group_anchors.dart';
 import 'package:keqdroid/shared/ui/smooth_fade.dart';
 
 import '../helpers/fake_tunnel_backend.dart';
@@ -53,6 +57,20 @@ class _PictureSubs extends SubscriptionsNotifier {
           url: 'https://example.com/s1',
           serverCount: _count,
           cardThemeId: '${SubscriptionCardTheme.filePrefix}pic.png',
+        ),
+      ];
+}
+
+class _PictureAutoSubs extends SubscriptionsNotifier {
+  @override
+  Future<List<Subscription>> build() async => const [
+        Subscription(
+          id: 's1',
+          name: 'Group',
+          url: 'https://example.com/s1',
+          serverCount: _count,
+          cardThemeId: '${SubscriptionCardTheme.filePrefix}pic.png',
+          autoSelectVisible: true,
         ),
       ];
 }
@@ -178,5 +196,69 @@ void main() {
     expect(_headerFade(), 1);
     // цвет акцента ждёт несуществующую картинку 5 с
     await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets(
+      'при сворачивании затемнение гаснет по ходу, Авто тает раньше, '
+      'а в конце шапка пружинит, как при разворачивании', (tester) async {
+    SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
+    addTearDown(() => SubscriptionCardTheme.customDirectory = null);
+    await _pumpServers(tester, _PictureAutoSubs.new);
+    for (var i = 0; i < 75; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    final header = find.byType(ServerGroupAnchor).first;
+    final auto = find.ancestor(
+      of: find.byType(ExpressiveToggleButton),
+      matching: find.byType(Opacity),
+    );
+    ProviderScope.containerOf(tester.element(find.byType(ServersTab)))
+        .read(collapsedServerGroupsProvider.notifier)
+        .update((m) => {...m, 's1': true});
+    await tester.pump();
+    final fades = <double>[];
+    final heights = <double>[];
+    final autos = <double>[];
+    for (var i = 0; i < 90; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      fades.add(_headerFade());
+      heights.add(tester.getSize(header).height);
+      autos.add(
+        auto.evaluate().isEmpty ? 0 : tester.widget<Opacity>(auto.first).opacity,
+      );
+    }
+
+    expect(fades.any((f) => f > 0.2 && f < 0.8), isTrue);
+    for (var i = 1; i < fades.length; i++) {
+      expect(fades[i - 1] - fades[i], lessThan(0.5), reason: 'кадр ${i * 16} мс');
+    }
+    final folded = heights.last;
+    final autoGone = autos.indexWhere((a) => a == 0);
+    expect(autoGone, greaterThan(0));
+    expect(heights[autoGone], greaterThan(folded + 4));
+    expect(heights.reduce(min), lessThan(folded - 1));
+    await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('на отдаче свёрнутый список не выглядывает обратно', (tester) async {
+    await _pumpServers(tester, _FakeSubs.new);
+    for (var i = 0; i < 75; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    ProviderScope.containerOf(tester.element(find.byType(ServersTab)))
+        .read(collapsedServerGroupsProvider.notifier)
+        .update((m) => {...m, 's1': true});
+    await tester.pump();
+    var shut = false;
+    for (var i = 0; i < 90; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      final tiles = _builtTiles();
+      if (shut) {
+        expect(tiles, 0, reason: 'кадр ${i * 16} мс');
+      } else if (tiles == 0) {
+        shut = true;
+      }
+    }
+    expect(shut, isTrue);
   });
 }

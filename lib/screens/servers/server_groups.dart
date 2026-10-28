@@ -184,8 +184,9 @@ class _GroupHeaderBackground extends StatelessWidget {
     final headerFraction =
         _subCardRowHeight / (_subCardRowHeight + fadeHeight * open);
     final fadeStart = headerFraction * 0.72;
-    // в полную силу, когда шапка подросла на 1 dp: на возврате из перелёта оно вспыхивало целиком
-    final fadeStrength = (fadeHeight * open).clamp(0.0, 1.0);
+    // гаснет по ходу всего сворачивания, а не за последний 1 dp. ниже 5% его нет: на отдаче
+    // пружины группа снова приоткрывается на доли процента, и затемнение вспыхивало
+    final fadeStrength = ((open - 0.05) / 0.95).clamp(0.0, 1.0);
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(
@@ -501,13 +502,16 @@ class _ServerGroupHeader extends ConsumerWidget {
           animation: openness,
           builder: (context, row) {
             final open = openness.value.clamp(0.0, 1.0);
+            // перелёт пружины за ноль: свёрнутая шапка чуть проседает и выпрямляется
+            final squash = min(0.0, openness.value) * 60;
+            // Авто тает в первой половине сворачивания, а не уезжает за край
+            final auto = ((open - 0.4) / 0.6).clamp(0.0, 1.0);
             return SizedBox(
-              height: _GroupHeaderBackground.heightAt(sub, open),
+              height: _GroupHeaderBackground.heightAt(sub, open) + squash,
               child: _GroupHeaderBackground(
                 subscription: sub,
                 surface: groupColor,
                 open: open,
-                // строка Авто уезжает под край вместе со сворачиванием
                 child: ClipRect(
                   child: OverflowBox(
                     alignment: Alignment.topCenter,
@@ -517,8 +521,15 @@ class _ServerGroupHeader extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         row!,
-                        if (sub != null && sub.autoSelectVisible && open > 0)
-                          _AutoSelectRow(subscription: sub),
+                        if (sub != null && sub.autoSelectVisible && auto > 0)
+                          Opacity(
+                            opacity: auto,
+                            child: Transform.scale(
+                              scale: 0.85 + 0.15 * auto,
+                              alignment: AlignmentDirectional.centerStart,
+                              child: _AutoSelectRow(subscription: sub),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -841,6 +852,13 @@ class _SubCard extends ConsumerStatefulWidget {
 
 class _SubCardState extends ConsumerState<_SubCard>
     with SingleTickerProviderStateMixin {
+  static const _foldSpring = SpringDescription(
+    mass: 1,
+    stiffness: 380,
+    damping: 0.55 * 2 * 19.49,
+  );
+
+  var _shut = false;
   late final AnimationController _open = AnimationController.unbounded(
     vsync: this,
     value: (ref.read(collapsedServerGroupsProvider)[_collapseKey] ?? false)
@@ -928,11 +946,18 @@ class _SubCardState extends ConsumerState<_SubCard>
       collapsedServerGroupsProvider.select((m) => m[collapseKey] ?? false),
       (_, next) {
         final target = next ? 0.0 : 1.0;
+        _shut = false;
         if (MediaQuery.disableAnimationsOf(context)) {
           _open.value = target;
         } else {
-          // сама пружина после перелёта встаёт на 0,0002, и шапка считала группу приоткрытой
-          ExpressiveMotion.springTo(_open, target, snapToEnd: true);
+          // сама пружина после перелёта встаёт на 0,0002, и шапка считала группу приоткрытой.
+          // сворачивание упруже: перелёт за ноль даёт отдачу, как у разворачивания перелёт за 1
+          ExpressiveMotion.springTo(
+            _open,
+            target,
+            snapToEnd: true,
+            spring: next ? _foldSpring : ExpressiveMotion.spatialDefault,
+          );
         }
       },
     );
@@ -1008,8 +1033,10 @@ class _SubCardState extends ConsumerState<_SubCard>
               ],
             ),
             builder: (context, list) {
-              // свёрнутая и успокоившаяся группа плиток не строит вовсе
-              if (collapsed && !_open.isAnimating) {
+              // отдача пружины снова приоткрывала уже закрытый список серым краем:
+              // дошёл до нуля, дальше пружинит одна шапка
+              if (collapsed && _open.value <= 0) _shut = true;
+              if (collapsed && (_shut || !_open.isAnimating)) {
                 return const SliverToBoxAdapter();
               }
               return SliverReveal(factor: _open.value, sliver: list!);
