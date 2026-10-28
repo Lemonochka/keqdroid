@@ -5417,17 +5417,11 @@ abstract class AppLocalizations {
   /// **'Modern'**
   String get appearanceConnectPanelModern;
 
-  /// No description provided for @appearanceBarStrip.
+  /// No description provided for @appearanceBarMainland.
   ///
   /// In en, this message translates to:
-  /// **'Strip'**
-  String get appearanceBarStrip;
-
-  /// No description provided for @appearanceBarBrightPlus.
-  ///
-  /// In en, this message translates to:
-  /// **'Bright plus'**
-  String get appearanceBarBrightPlus;
+  /// **'Mainland'**
+  String get appearanceBarMainland;
 
   /// No description provided for @appearanceBarIslands.
   ///

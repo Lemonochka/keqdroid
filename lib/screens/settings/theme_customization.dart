@@ -218,7 +218,7 @@ class _AppearanceGeneralTab extends ConsumerWidget {
                     selected: LiquidBarStyle.tryParse(current.bottomBarStyle) != null,
                     onChanged: (v) => onSave(current.copyWith(
                       bottomBarStyle: v
-                          ? LiquidBarStyle.strip.name
+                          ? LiquidBarStyle.mainland.name
                           : AppSettings.bottomBarLegacy,
                     )),
                     height: 48,
@@ -229,12 +229,8 @@ class _AppearanceGeneralTab extends ConsumerWidget {
                     child: ExpressiveConnectedButtons<String>(
                       segments: [
                         ExpressiveSegment(
-                          value: LiquidBarStyle.strip.name,
-                          label: l10n.appearanceBarStrip,
-                        ),
-                        ExpressiveSegment(
-                          value: LiquidBarStyle.brightPlus.name,
-                          label: l10n.appearanceBarBrightPlus,
+                          value: LiquidBarStyle.mainland.name,
+                          label: l10n.appearanceBarMainland,
                         ),
                         ExpressiveSegment(
                           value: LiquidBarStyle.islands.name,

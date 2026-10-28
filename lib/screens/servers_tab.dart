@@ -703,7 +703,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
   Widget _withListChrome(BuildContext context, Widget child, double bottomInset) {
     final isDesktop = PlatformBootstrap.isDesktop;
     final floating = FloatingBar.shown(context);
-    if (floating) {
+    final owned = FloatingBar.owns(context);
+    if (owned) {
       FloatingBar.actions[0] = () => _showAddServerDialog(context);
     }
     return ValueListenableBuilder<double>(
@@ -718,6 +719,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
       child: SizedBox.expand(
           child: floating
               ? FloatingBarHideOnScroll(child: child!)
+              : owned
+              ? child!
               : ScrollHiddenFab(
                   bottom: 16 + bottomInset,
                   fab: TvFocus.fab(

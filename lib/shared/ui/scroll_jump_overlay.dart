@@ -41,7 +41,7 @@ class _ScrollJumpOverlayState extends State<ScrollJumpOverlay> {
 
   bool _up = false;
 
-  // в Модерне стрелку рисует нижняя панель, список только говорит, когда и куда
+  // в Модерне стрелку рисует лента, снизу или сбоку, список только говорит, когда и куда
   bool _external = false;
 
   void _sync() {
@@ -124,7 +124,7 @@ class _ScrollJumpOverlayState extends State<ScrollJumpOverlay> {
   @override
   Widget build(BuildContext context) {
     if (!widget.enabled) return widget.child;
-    _external = FloatingBar.shown(context);
+    _external = FloatingBar.owns(context);
     if (_external) {
       return NotificationListener<ScrollNotification>(
         onNotification: _onScroll,

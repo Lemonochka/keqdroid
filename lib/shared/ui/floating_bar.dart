@@ -5,17 +5,17 @@ import 'package:flutter/rendering.dart';
 
 import '../../platform/platform_bootstrap.dart';
 import '../../ui/responsive/window_breakpoints.dart';
-import 'smooth_fade.dart';
 
 enum LiquidBarStyle {
-  strip,
-  brightPlus,
+  mainland,
   islands;
 
-  static LiquidBarStyle fromId(String id) => tryParse(id) ?? strip;
+  static LiquidBarStyle fromId(String id) => tryParse(id) ?? mainland;
 
   // legacy и незнакомое: прежняя нижняя панель
   static LiquidBarStyle? tryParse(String id) {
+    // до 0.31 были лента и яркий плюс, сохранённые настройки ведут на материк
+    if (id == 'strip' || id == 'brightPlus') return mainland;
     for (final style in values) {
       if (style.name == id) return style;
     }
@@ -76,6 +76,16 @@ abstract final class FloatingBar {
       !WindowBreakpoints.isExpandedMobile(context) &&
       styleOf(context) != null;
 
+  // боком лента стоит у края: кнопку и стрелку берёт она, но места снизу не занимает
+  // и от прокрутки не прячется. на телевизоре прежняя панель, её водят пультом
+  static bool onRail(BuildContext context) =>
+      WindowBreakpoints.isExpandedMobile(context) &&
+      !PlatformBootstrap.isTelevision &&
+      styleOf(context) != null;
+
+  // кнопка действия и стрелка прокрутки живут в ленте, снизу или сбоку
+  static bool owns(BuildContext context) => shown(context) || onRail(context);
+
   // стрелка в конец и наверх: список кладёт сюда, панель рисует её у себя
   static final jump = ValueNotifier<FloatingJump?>(null);
 
@@ -120,26 +130,43 @@ abstract final class FloatingBar {
 }
 
 // как у кнопки раньше: вниз прячет, вверх и у самого верха возвращает
-class FloatingBarHideOnScroll extends StatelessWidget {
+class FloatingBarHideOnScroll extends StatefulWidget {
   const FloatingBarHideOnScroll({super.key, required this.child});
 
   final Widget child;
 
+  @override
+  State<FloatingBarHideOnScroll> createState() => _FloatingBarHideOnScrollState();
+}
+
+class _FloatingBarHideOnScrollState extends State<FloatingBarHideOnScroll> {
+  // по направлению пальца лента прыгала от каждого сдвига на пиксель туда-обратно:
+  // уезжает и возвращается, только когда прокрутка в одну сторону набрала 40 dp
+  static const _travel = 40.0;
+  var _run = 0.0;
+  // прыжок к активному серверу в счёт не идёт, только палец и его докатывание
+  var _user = false;
+
   bool _onScroll(ScrollNotification n) {
     if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
-    if (n is UserScrollNotification) {
-      switch (n.direction) {
-        case ScrollDirection.reverse:
-          FloatingBar.hidden.value = true;
-        case ScrollDirection.forward:
-          FloatingBar.hidden.value = false;
-        case ScrollDirection.idle:
-          break;
-      }
-    } else if ((n is ScrollUpdateNotification || n is ScrollEndNotification) &&
-        (!n.metrics.hasContentDimensions ||
-            n.metrics.pixels <= n.metrics.minScrollExtent)) {
+    if (!n.metrics.hasContentDimensions ||
+        n.metrics.pixels <= n.metrics.minScrollExtent) {
+      _run = 0;
       FloatingBar.hidden.value = false;
+      return false;
+    }
+    if (n is UserScrollNotification) {
+      _user = n.direction != ScrollDirection.idle;
+      return false;
+    }
+    if (n is ScrollUpdateNotification && _user) {
+      final delta = n.scrollDelta ?? 0;
+      _run = (_run >= 0) == (delta >= 0) ? _run + delta : delta;
+      if (_run > _travel) {
+        FloatingBar.hidden.value = true;
+      } else if (_run < -_travel) {
+        FloatingBar.hidden.value = false;
+      }
     }
     return false;
   }
@@ -148,21 +175,7 @@ class FloatingBarHideOnScroll extends StatelessWidget {
   Widget build(BuildContext context) {
     return NotificationListener<ScrollNotification>(
       onNotification: _onScroll,
-      child: child,
+      child: widget.child,
     );
-  }
-}
-
-// список под плавающей лентой гаснет у низа, как список серверов. системный отступ
-// здесь уже снял SafeArea: прятать его второй раз значило гасить на 24 dp выше серверов
-class FloatingBarFade extends StatelessWidget {
-  const FloatingBarFade({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!FloatingBar.shown(context)) return child;
-    return EdgeFadeMask(bottom: 28, child: child);
   }
 }

@@ -1,12 +1,15 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/bottom_nav.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/floating_bar.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
+
+part 'liquid_rail.dart';
 
 // навигация Модерна: лента вкладок, кнопка действия, стрелка прокрутки и нижний край
 // рисуются одной жидкостью. кнопка и стрелка отпочковываются от концов ленты, при прокрутке
@@ -67,12 +70,11 @@ double _labelWidth(BuildContext context, String label) {
   return width;
 }
 
-// лента: стрелка и кнопка стоят вплотную к вкладкам через тонкий шов;
+// материк: стрелка и кнопка стоят вплотную к вкладкам через тонкий шов;
 // острова: стрелка, лента и кнопка отдельно с одинаковыми зазорами
 class _Look {
   const _Look({
     required this.strip,
-    required this.brightPlus,
     required this.sideGap,
     required this.jumpWidth,
     required this.plusWidth,
@@ -80,42 +82,38 @@ class _Look {
 
   static const islandRadius = 22.0;
 
-  static const _strip = _Look(
+  static const _mainland = _Look(
     strip: true,
-    brightPlus: false,
-    sideGap: _seam,
-    jumpWidth: 60,
-    plusWidth: 72,
-  );
-  static const _brightPlus = _Look(
-    strip: true,
-    brightPlus: true,
     sideGap: _seam,
     jumpWidth: 60,
     plusWidth: 72,
   );
   static const _islands = _Look(
     strip: false,
-    brightPlus: true,
     sideGap: 10,
     jumpWidth: 64,
     plusWidth: 64,
   );
 
   static _Look of(LiquidBarStyle style) => switch (style) {
-        LiquidBarStyle.strip => _strip,
-        LiquidBarStyle.brightPlus => _brightPlus,
+        LiquidBarStyle.mainland => _mainland,
         LiquidBarStyle.islands => _islands,
       };
 
   final bool strip;
-  final bool brightPlus;
   final double sideGap;
   final double jumpWidth;
   final double plusWidth;
 }
 
 double _lerp(double a, double b, double t) => a + (b - a) * t;
+
+double _pageOf(PageController? pages, int index) {
+  if (pages != null && pages.hasClients && pages.position.hasContentDimensions) {
+    return pages.page ?? index.toDouble();
+  }
+  return index.toDouble();
+}
 
 class _LiquidBottomNavState extends State<LiquidBottomNav>
     with TickerProviderStateMixin {
@@ -128,6 +126,10 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
   // обратно чуть мягче spatialSlow: на нём лента выпрыгивала из края резче, чем уходила
   static const _riseSpring =
       SpringDescription(mass: 1, stiffness: 100, damping: 0.85 * 2 * 10);
+  // выбор вкладки с заметной отдачей: на spatialFast при листании экранов казалось,
+  // что анимации нет вовсе
+  static const _switchSpring =
+      SpringDescription(mass: 1, stiffness: 500, damping: 0.6 * 2 * 22.36);
 
   // unbounded: пружина должна перелетать за цель
   late final List<AnimationController> _ctrls = List.generate(
@@ -156,6 +158,20 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
   );
 
   final ui.FragmentShader? _shader = FloatingBar.newBarShader();
+
+  // палец, задержанный на ленте: вкладки тянутся к нему, выбирается та, где отпустили
+  late final AnimationController _grab = AnimationController.unbounded(vsync: this);
+  final _finger = ValueNotifier<double>(0);
+  int? _hover;
+  var _grabbing = false;
+  List<Rect> _tabRects = const [];
+
+  // по отпусканию от пальца к краям бежит волна
+  late final AnimationController _wave = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  );
+  double _waveX = 0;
 
   @override
   void didChangeDependencies() {
@@ -214,7 +230,7 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
       ExpressiveMotion.springTo(
         _ctrls[i],
         widget.index == i ? 1 : 0,
-        spring: ExpressiveMotion.spatialFast,
+        spring: _switchSpring,
       );
     }
   }
@@ -232,19 +248,59 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
     _hide.dispose();
     _jumpIn.dispose();
     _sideIn.dispose();
+    _grab.dispose();
+    _wave.dispose();
+    _finger.dispose();
     _shader?.dispose();
     super.dispose();
   }
 
-  double _page() {
-    final pages = widget.pages;
-    if (pages != null && pages.hasClients && pages.position.hasContentDimensions) {
-      return pages.page ?? widget.index.toDouble();
+  int? _tabAt(double x) {
+    int? best;
+    var bestGap = double.infinity;
+    for (var i = 0; i < _tabRects.length; i++) {
+      final r = _tabRects[i];
+      final gap = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0.0);
+      if (gap < bestGap) {
+        bestGap = gap;
+        best = i;
+      }
     }
-    return widget.index.toDouble();
+    return best;
   }
 
-  double _absorbedByPage(double page) {
+  double _localX(Offset global) =>
+      (context.findRenderObject()! as RenderBox).globalToLocal(global).dx;
+
+  void _grabStart(LongPressStartDetails details) {
+    _grabbing = true;
+    _finger.value = _localX(details.globalPosition);
+    _hover = _tabAt(_finger.value);
+    AppHaptics.impact();
+    ExpressiveMotion.springTo(_grab, 1);
+  }
+
+  void _grabMove(LongPressMoveUpdateDetails details) {
+    _finger.value = _localX(details.globalPosition);
+    final hover = _tabAt(_finger.value);
+    if (hover == _hover) return;
+    _hover = hover;
+    AppHaptics.selection();
+  }
+
+  // отмена приходит и на каждое короткое касание: волна только после удержания
+  void _grabEnd() {
+    if (!_grabbing) return;
+    _grabbing = false;
+    final hover = _hover;
+    _hover = null;
+    if (hover != null && hover != widget.index) widget.onTap(hover);
+    _waveX = _finger.value;
+    _wave.forward(from: 0);
+    ExpressiveMotion.springTo(_grab, 0, spring: _sinkSpring);
+  }
+
+  static double _absorbedByPage(double page) {
     double without(int i) => i == _settings ? 1 : 0;
     final lo = page.floor().clamp(0, _count - 1);
     final hi = page.ceil().clamp(0, _count - 1);
@@ -276,13 +332,23 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
       child: LayoutBuilder(
         builder: (context, box) => AnimatedBuilder(
           animation: Listenable.merge(
-            [..._ctrls, _hide, _jumpIn, _sideIn, FloatingBar.side, ?pages],
+            [
+              ..._ctrls,
+              _hide,
+              _jumpIn,
+              _sideIn,
+              FloatingBar.side,
+              _grab,
+              _wave,
+              _finger,
+              ?pages,
+            ],
           ),
           builder: (context, _) {
             final width = box.maxWidth;
             final ts = [for (final c in _ctrls) c.value.clamp(0.0, 1.0)];
             final hide = _hide.value;
-            final page = _page();
+            final page = _pageOf(widget.pages, widget.index);
             final absorbed = math.max(
               _absorbedByPage(page),
               (hide / _absorbShare).clamp(0.0, 1.0),
@@ -304,9 +370,12 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                   rightSide -
                   _seam * (_count - 1),
             );
+            // ширина берёт и перелёт пружины: выбранная чуть шире нужного, бывшая чуть уже
             final widths = [
               for (var i = 0; i < _count; i++)
-                _tabWidth + ts[i] * (_grow + math.min(labels[i], budgets[i])),
+                _tabWidth +
+                    _ctrls[i].value.clamp(-0.25, 1.25) *
+                        (_grow + math.min(labels[i], budgets[i])),
             ];
             final stripWidth =
                 widths.fold(0.0, (a, b) => a + b) + _seam * (_count - 1);
@@ -359,6 +428,49 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
               x += widths[i] + _seam;
             }
             final stripRight = left + stripWidth;
+            _tabRects = List.of(tabs);
+            final strip = tabs.reduce((a, b) => a.expandToInclude(b));
+
+            final grab = _grab.value.clamp(0.0, 1.0);
+            final finger = _finger.value.clamp(strip.left + 24, strip.right - 24);
+            // увеличение не скачком по границе вкладки: за её краем гаснет на ~30 dp
+            final hovers = [
+              for (final r in tabs)
+                grab *
+                    math.exp(
+                      -math.pow(
+                            math.max(0, math.max(r.left - finger, finger - r.right)),
+                            2,
+                          ) /
+                          (2 * 18 * 18),
+                    ),
+            ];
+            for (var i = 0; i < _count; i++) {
+              final c = tabs[i].center.dx;
+              var dx = 0.0;
+              var dy = 0.0;
+              if (grab > 0) {
+                // ближние к пальцу сильнее: сдвиг к нему и чуть вверх
+                final d = finger - c;
+                final pull = math.exp(-(d * d) / (2 * 70 * 70));
+                dx += grab * pull * d * 0.12;
+                dy -= grab * pull * 5;
+              }
+              if (_wave.isAnimating) {
+                final tau = _wave.value * 1.1 - (c - _waveX).abs() / 700;
+                if (tau > 0) dy -= 7 * math.exp(-tau * 6) * math.sin(tau * 18);
+              }
+              tabs[i] = tabs[i].translate(dx, dy);
+            }
+            // низ бугорка на середине ленты: у края ленты слияние раздуло бы его книзу
+            final bump = grab > 0.01
+                ? Rect.fromLTRB(
+                    finger - 32 * grab,
+                    top - 14 * grab,
+                    finger + 32 * grab,
+                    centerY,
+                  )
+                : Rect.zero;
 
             final out = Rect.fromLTWH(
               stripRight + look.sideGap,
@@ -447,7 +559,6 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
             final sideOpacity = ((sideT - 0.4) / 0.6).clamp(0.0, 1.0);
 
             (double, double) side((double, double) r) => rtl ? (r.$2, r.$1) : r;
-            final plusOnBright = look.brightPlus;
             return Stack(
               clipBehavior: Clip.none,
               children: [
@@ -464,7 +575,7 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                       absorbed: absorbed,
                       jumpT: jumpT,
                       baseColor: FloatingBar.tileColor(cs),
-                      budColor: plusOnBright ? cs.tertiary : FloatingBar.tileColor(cs),
+                      budColor: cs.tertiary,
                       jumpColor: cs.secondaryContainer,
                       sideL: sideT > 0.01 ? sideL : Rect.zero,
                       sideLRadii: side(sideLRadii),
@@ -472,6 +583,8 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                       sideRRadii: side(sideRRadii),
                       sideT: sideT,
                       sideLColor: sideContent?.startColor ?? FloatingBar.tileColor(cs),
+                      finger: bump,
+                      fingerGoo: 24 * grab,
                       dpr: dpr,
                     ),
                   ),
@@ -487,6 +600,7 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                         badge: items[i].badge,
                         selected: widget.index == i,
                         t: ts[i],
+                        hover: hovers[i],
                         labelMax: budgets[i],
                         onTap: () {
                           if (i != widget.index) AppHaptics.selection();
@@ -504,7 +618,7 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                         icon: Icons.add_rounded,
                         size: 28 * budScale,
                         opacity: (1 - 2 * absorbed).clamp(0.0, 1.0),
-                        color: plusOnBright ? cs.onTertiary : cs.primary,
+                        color: cs.onTertiary,
                         radius: budRadii.$2,
                         onTap: () => FloatingBar.actions[widget.index]?.call(),
                       ),
@@ -546,6 +660,34 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                     ),
                   ),
                 ],
+                // поверх вкладок, но прозрачный: короткое касание по-прежнему достаётся им
+                Positioned.fromRect(
+                  rect: strip,
+                  child: IgnorePointer(
+                    ignoring: sink > 0,
+                    child: RawGestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      gestures: {
+                        LongPressGestureRecognizer:
+                            GestureRecognizerFactoryWithHandlers<
+                                LongPressGestureRecognizer>(
+                          () => LongPressGestureRecognizer(
+                            duration: const Duration(milliseconds: 300),
+                            debugOwner: this,
+                          ),
+                          (r) {
+                            r
+                              ..onLongPressStart = _grabStart
+                              ..onLongPressMoveUpdate = _grabMove
+                              ..onLongPressEnd = ((_) => _grabEnd())
+                              ..onLongPressCancel = _grabEnd;
+                          },
+                        ),
+                      },
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
                 if (jumpT > 0.01)
                   Positioned.fromRect(
                     rect: jump,
@@ -596,6 +738,7 @@ class _Tab extends StatelessWidget {
     required this.t,
     required this.labelMax,
     required this.onTap,
+    this.hover = 0,
   });
 
   final IconData icon;
@@ -606,11 +749,16 @@ class _Tab extends StatelessWidget {
   final double labelMax;
   final VoidCallback onTap;
 
+  // под задержанным пальцем значок крупнее, выбор только по отпусканию
+  final double hover;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     const shape = StadiumBorder();
+    // на отдаче пружины t проседает на пару процентов, и без запаса подрезалась последняя буква
+    final reveal = (t / 0.9).clamp(0.0, 1.0);
     return Semantics(
       selected: selected,
       button: true,
@@ -625,7 +773,9 @@ class _Tab extends StatelessWidget {
           onTap: onTap,
           customBorder: shape,
           child: Center(
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
+            child: Transform.scale(
+              scale: 1 + 0.12 * hover,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
               NavIcon(
                 icon: icon,
                 badge: badge,
@@ -636,7 +786,7 @@ class _Tab extends StatelessWidget {
                 child: ClipRect(
                   child: Align(
                     alignment: AlignmentDirectional.centerStart,
-                    widthFactor: t,
+                    widthFactor: reveal,
                     // без heightFactor Align растёт до высоты экрана
                     heightFactor: 1,
                     child: Opacity(
@@ -657,6 +807,7 @@ class _Tab extends StatelessWidget {
                 ),
               ),
             ]),
+            ),
           ),
         ),
       ),
@@ -769,7 +920,10 @@ class _LiquidBarPainter extends CustomPainter {
     required this.sideRRadii,
     required this.sideT,
     required this.sideLColor,
+    required this.finger,
+    required this.fingerGoo,
     required this.dpr,
+    this.vertical = false,
   });
 
   static const _goo = 40.0;
@@ -793,19 +947,24 @@ class _LiquidBarPainter extends CustomPainter {
   final (double, double) sideRRadii;
   final double sideT;
   final Color sideLColor;
+  final Rect finger;
+  final double fingerGoo;
   final double dpr;
+  // боковая лента: радиусы концов сверху и снизу, края экрана под ней нет
+  final bool vertical;
 
   // перемычка есть, только пока капля втекает или вытекает: в покое шов виден,
   // а втёкшая не должна выпирать из конца ленты
   static double _gooFor(double t) =>
       _goo * (t / 0.25).clamp(0.0, 1.0) * ((1 - t) / 0.15).clamp(0.0, 1.0);
 
-  static RRect _rrect(Rect r, (double, double) radii) {
-    final h = r.height / 2;
-    final l = Radius.circular(math.min(radii.$1, h));
-    final rr = Radius.circular(math.min(radii.$2, h));
-    return RRect.fromRectAndCorners(r,
-        topLeft: l, bottomLeft: l, topRight: rr, bottomRight: rr);
+  RRect _rrect(Rect r, (double, double) radii) {
+    final h = (vertical ? r.width : r.height) / 2;
+    final a = Radius.circular(math.min(radii.$1, h));
+    final b = Radius.circular(math.min(radii.$2, h));
+    return vertical
+        ? RRect.fromRectAndCorners(r, topLeft: a, topRight: a, bottomLeft: b, bottomRight: b)
+        : RRect.fromRectAndCorners(r, topLeft: a, bottomLeft: a, topRight: b, bottomRight: b);
   }
 
   @override
@@ -867,7 +1026,7 @@ class _LiquidBarPainter extends CustomPainter {
       _gooFor(absorbed),
       _gooFor(1 - jumpT),
       _gooFor(1 - sideT),
-      size.height,
+      vertical ? 1e5 : size.height,
       poolGoo,
       baseColor.r,
       baseColor.g,
@@ -885,10 +1044,21 @@ class _LiquidBarPainter extends CustomPainter {
       sideLColor.g,
       sideLColor.b,
       sideLColor.a,
+      ...r(finger),
+      22.0,
+      22.0,
+      fingerGoo,
+      vertical ? 1.0 : 0.0,
     ]) {
       shader.setFloat(i++, v);
     }
-    canvas.drawRect(Offset.zero & size, Paint()..shader = shader);
+    // холст начинается по верху ленты, а бугорок под пальцем и приподнятые вкладки выше него
+    canvas.drawRect(
+      vertical
+          ? (Offset.zero & size).inflate(40)
+          : Rect.fromLTRB(0, -40, size.width, size.height),
+      Paint()..shader = shader,
+    );
   }
 
   @override

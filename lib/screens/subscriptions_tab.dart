@@ -214,7 +214,7 @@ class SubscriptionsTab extends ConsumerWidget {
               ),
             ),
           )),
-          floatingActionButton: FloatingBar.shown(context)
+          floatingActionButton: FloatingBar.owns(context)
               ? null
               : TvFocus.fab(
             (fabContext) => FloatingActionButton.extended(
@@ -232,9 +232,9 @@ class SubscriptionsTab extends ConsumerWidget {
 
   // кнопка живёт в панели, страница только отдаёт ей действие
   Widget _withFloatingAction(BuildContext context, WidgetRef ref, Widget body) {
-    if (!FloatingBar.shown(context)) return body;
+    if (!FloatingBar.owns(context)) return body;
     FloatingBar.actions[1] = () => _showAddSubDialog(context, ref);
-    return FloatingBarHideOnScroll(child: body);
+    return FloatingBar.shown(context) ? FloatingBarHideOnScroll(child: body) : body;
   }
 
   Widget _emptySubsState(BuildContext context) {

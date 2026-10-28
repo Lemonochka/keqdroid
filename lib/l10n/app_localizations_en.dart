@@ -2869,10 +2869,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceConnectPanelModern => 'Modern';
 
   @override
-  String get appearanceBarStrip => 'Strip';
-
-  @override
-  String get appearanceBarBrightPlus => 'Bright plus';
+  String get appearanceBarMainland => 'Mainland';
 
   @override
   String get appearanceBarIslands => 'Islands';

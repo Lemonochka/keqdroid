@@ -27,17 +27,22 @@ uniform vec4 uBaseColor;
 uniform vec4 uBudColor;
 uniform vec4 uJumpColor;
 uniform vec4 uSideColor;
+uniform vec4 uFinger;
+uniform vec2 uFingerR;
+uniform float uFingerK;
+uniform float uVertical;
 
 out vec4 fragColor;
 
-// rad: corner radius on the left and on the right side
+// rad: corner radius on the left and on the right side, on the side rail on the top and bottom
 float box(vec2 p, vec4 r, vec2 rad) {
   if (r.z - r.x < 0.5 || r.w - r.y < 0.5) {
     return 1e4;
   }
   vec2 c = (r.xy + r.zw) * 0.5;
   vec2 h = (r.zw - r.xy) * 0.5;
-  float k = min(p.x < c.x ? rad.x : rad.y, min(h.x, h.y));
+  bool first = uVertical > 0.5 ? p.y < c.y : p.x < c.x;
+  float k = min(first ? rad.x : rad.y, min(h.x, h.y));
   vec2 q = abs(p - c) - h + k;
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - k;
 }
@@ -55,6 +60,8 @@ void main() {
   vec2 p = FlutterFragCoord().xy;
   // tabs join without smoothing so the seams between them stay
   float base = min(min(box(p, uA, uAR), box(p, uB, uBR)), box(p, uC, uCR));
+  // a held finger pulls a bump out of the strip
+  base = blend(base, box(p, uFinger, uFingerR), uFingerK).x;
   vec2 u = blend(base, box(p, uBud, uBudR), uBudK);
   vec2 w = blend(u.x, box(p, uJump, uJumpR), uJumpK);
   // tiles beside the strip bud out of its ends on the settings tab

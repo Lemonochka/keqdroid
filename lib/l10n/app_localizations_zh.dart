@@ -2862,10 +2862,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceConnectPanelModern => '现代';
 
   @override
-  String get appearanceBarStrip => '条带';
-
-  @override
-  String get appearanceBarBrightPlus => '亮色加号';
+  String get appearanceBarMainland => '大陆';
 
   @override
   String get appearanceBarIslands => '岛屿';

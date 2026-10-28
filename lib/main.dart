@@ -259,11 +259,20 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
         children: [
           if (expanded)
             HalloweenIconScope(
-              child: AppNavRail(
-                index: _navIndex,
-                showConnectedBadge: isConnected,
-                onTap: _selectTab,
-              ),
+              // телевизор водят пультом, жидкой ленте фокус не нужен
+              child: style == null || PlatformBootstrap.isTelevision
+                  ? AppNavRail(
+                      index: _navIndex,
+                      showConnectedBadge: isConnected,
+                      onTap: _selectTab,
+                    )
+                  : LiquidSideNav(
+                      index: _navIndex,
+                      showConnectedBadge: isConnected,
+                      onTap: _selectTab,
+                      style: style,
+                      pages: _pageCtrl,
+                    ),
             ),
           Expanded(
             // без ключа PageView пересоздаётся при повороте вместе с состоянием вкладок

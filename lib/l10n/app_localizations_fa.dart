@@ -2864,10 +2864,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceConnectPanelModern => 'مدرن';
 
   @override
-  String get appearanceBarStrip => 'نوار';
-
-  @override
-  String get appearanceBarBrightPlus => 'بعلاوهٔ روشن';
+  String get appearanceBarMainland => 'سرزمین اصلی';
 
   @override
   String get appearanceBarIslands => 'جزیره‌ها';

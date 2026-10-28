@@ -2885,10 +2885,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceConnectPanelModern => 'Модерн';
 
   @override
-  String get appearanceBarStrip => 'Лента';
-
-  @override
-  String get appearanceBarBrightPlus => 'Яркий плюс';
+  String get appearanceBarMainland => 'Материк';
 
   @override
   String get appearanceBarIslands => 'Острова';

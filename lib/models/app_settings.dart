@@ -358,9 +358,9 @@ class AppSettings {
   static const vpnCoreMihomo = 'mihomo';
   static const vpnCores = [vpnCoreXray, vpnCoreMihomo];
 
-  // нижняя панель: legacy или стиль Модерна strip, brightPlus, islands
+  // нижняя панель: legacy или стиль Модерна mainland, islands
   static const bottomBarLegacy = 'legacy';
-  static const bottomBarModern = 'strip';
+  static const bottomBarModern = 'mainland';
 
   // прежнее auto выбирало то же, что xray, и в сохранённых настройках становится им
   static String normalizeVpnCore(String? raw) {
