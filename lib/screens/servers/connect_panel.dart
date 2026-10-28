@@ -18,6 +18,9 @@ class _ModernConnectPanel extends ConsumerWidget {
   static const double _buttonSize = 120;
   static const double _margin = 16;
   static const double _gapBelow = 8;
+  // в узкой панели рядом с кнопкой от имени оставалась одна буква: боком на планшете
+  // колонка шапки 360 dp, то же на телефонах до 384 dp. Pixel 6a (411 dp) остаётся рядом
+  static const double _minPlaqueWidth = 180;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -105,46 +108,68 @@ class _ModernConnectPanel extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (activeServer != null)
-                              _ServerPingPlaque(
-                                server: activeServer,
-                                connected: isConnected,
-                                exit: exit,
-                                onJumpToActive: onJumpToActive,
-                              )
-                            else
-                              Text(
-                                context.l10n.vpnSelectServer,
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: AppTheme.textLight(context),
-                                ),
+                  LayoutBuilder(
+                    builder: (context, box) {
+                      final server = activeServer != null
+                          ? _ServerPingPlaque(
+                              server: activeServer,
+                              connected: isConnected,
+                              exit: exit,
+                              onJumpToActive: onJumpToActive,
+                            )
+                          : Text(
+                              context.l10n.vpnSelectServer,
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: AppTheme.textLight(context),
                               ),
-                            _StatsReveal(
-                              shown: isConnected && !timeInStats && showTime,
-                              alignment: AlignmentDirectional.bottomStart,
-                              child: const _UptimeLine(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: ExpressiveSpacing.large),
-                      Padding(
+                            );
+                      final uptime = _StatsReveal(
+                        shown: isConnected && !timeInStats && showTime,
+                        alignment: AlignmentDirectional.bottomStart,
+                        child: const _UptimeLine(),
+                      );
+                      final buttonBox = Padding(
                         padding: const EdgeInsetsDirectional.only(
+                          start: ExpressiveSpacing.large,
                           end: ExpressiveSpacing.medium,
                         ),
                         child: KeyedSubtree(
                           key: buttonKey,
                           child: RepaintBoundary(child: button),
                         ),
-                      ),
-                    ],
+                      );
+                      final beside = box.maxWidth -
+                          _buttonSize -
+                          ExpressiveSpacing.large -
+                          ExpressiveSpacing.medium;
+                      if (beside < _minPlaqueWidth) {
+                        // плашка над кнопкой, а не между кнопкой и трафиком: капля течёт из кнопки вниз
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            server,
+                            const SizedBox(height: ExpressiveSpacing.small),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [Expanded(child: uptime), buttonBox],
+                            ),
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [server, uptime],
+                            ),
+                          ),
+                          buttonBox,
+                        ],
+                      );
+                    },
                   ),
                   if (isError && vpnErrorMessage != null)
                     Padding(

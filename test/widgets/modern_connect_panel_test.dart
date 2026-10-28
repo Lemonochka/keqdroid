@@ -329,4 +329,42 @@ void main() {
     expect(AppSettings.fromJsonString(saved).modernConnectPanel, isTrue);
     expect(const AppSettings().modernConnectPanel, isFalse);
   });
+
+  for (final (size, beside) in [
+    (const Size(412, 900), true),
+    (const Size(384, 800), false),
+    (const Size(360, 800), false),
+    (const Size(1000, 450), false),
+  ]) {
+    testWidgets(
+      'плашка в панели на ${size.width.toInt()} dp '
+      '${beside ? 'рядом с кнопкой' : 'над кнопкой, и имя сервера видно целиком'}',
+      (tester) async {
+        PlatformBootstrap.debugIsDesktopOverride = false;
+        addTearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
+        await _pump(
+          tester,
+          modern: true,
+          size: size,
+          vpn: const VpnState(status: VpnStatus.connected),
+        );
+        final name = find.text('Poland').first;
+        // в тестовом шрифте буквы квадратные, рядом с кнопкой имя не влезает и на 412 dp
+        if (!beside) {
+          final intrinsic = (tester.renderObject(name) as RenderBox)
+              .getMaxIntrinsicWidth(double.infinity);
+          expect(tester.getSize(name).width, greaterThanOrEqualTo(intrinsic - 0.5));
+        }
+        final button = tester.getRect(find.byWidgetPredicate(
+          (w) => w.runtimeType.toString() == '_ConnectButton',
+        ));
+        final plaque = tester.getRect(name);
+        if (beside) {
+          expect(plaque.center.dy, inInclusiveRange(button.top, button.bottom));
+        } else {
+          expect(plaque.bottom, lessThanOrEqualTo(button.top));
+        }
+      },
+    );
+  }
 }
