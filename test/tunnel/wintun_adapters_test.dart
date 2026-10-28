@@ -16,6 +16,17 @@ void main() {
     );
   });
 
+  test('уборка знает только свои три устройства', () {
+    final ids = ourWintunInstanceIds();
+    expect(ids.toSet(), hasLength(3));
+    expect(ids, contains(xrayWintunInstanceId(kTunFallbackInterfaceName)));
+    // адаптер Tailscale с того же ПК, чужой и живой
+    expect(
+      ids,
+      isNot(contains(r'SWD\Wintun\{37217669-42DA-4657-A55B-0D995D328250}')),
+    );
+  });
+
   test('первая попытка под обычным именем, дальше запасное', () {
     expect(xrayTunNameForAttempt(1), kTunInterfaceName);
     expect(xrayTunNameForAttempt(2), kTunFallbackInterfaceName);

@@ -9,6 +9,7 @@
 #include "windows_process_memory.h"
 #include "windows_traffic_stats.h"
 #include "windows_tray.h"
+#include "windows_tun_adapters.h"
 
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
@@ -1397,6 +1398,36 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
         if (call.method_name() == "clearSessionCoreProcesses") {
           KeqdisClearSessionCoreProcesses();
           result->Success();
+          return;
+        }
+
+        if (call.method_name() == "removeStaleTunAdapters") {
+          std::vector<std::wstring> ids;
+          const auto* args = std::get_if<flutter::EncodableMap>(call.arguments());
+          if (args) {
+            auto it = args->find(flutter::EncodableValue("instanceIds"));
+            if (it != args->end()) {
+              if (const auto* list =
+                      std::get_if<flutter::EncodableList>(&it->second)) {
+                for (const auto& value : *list) {
+                  if (const auto* id = std::get_if<std::string>(&value)) {
+                    ids.push_back(Utf8ToWide(*id));
+                  }
+                }
+              }
+            }
+          }
+          std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>
+              shared_result = std::move(result);
+          std::thread([ids, shared_result]() {
+            flutter::EncodableList removed;
+            for (const auto& id : KeqdroidRemoveStaleWintunAdapters(ids)) {
+              removed.emplace_back(WideToUtf8(id));
+            }
+            PostToPlatformThread([shared_result, removed]() {
+              shared_result->Success(flutter::EncodableValue(removed));
+            });
+          }).detach();
           return;
         }
 

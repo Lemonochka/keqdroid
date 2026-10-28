@@ -114,6 +114,21 @@ class WindowsDesktopService {
     }
   }
 
+  static Future<List<String>> removeStaleTunAdapters(
+    List<String> instanceIds,
+  ) async {
+    if (!Platform.isWindows) return const [];
+    try {
+      final removed = await _channel.invokeListMethod<String>(
+        'removeStaleTunAdapters',
+        {'instanceIds': instanceIds},
+      );
+      return removed ?? const [];
+    } on PlatformException {
+      return const [];
+    }
+  }
+
   static Future<void> clearSessionCoreProcesses() async {
     if (!Platform.isWindows) return;
     try {

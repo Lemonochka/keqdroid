@@ -406,6 +406,12 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         'Reinstall the app or use Proxy mode.',
       );
     }
+    // остаток ядра, убитого посреди ожидания: пока такой висел, 27.10.2026 Windows отказала и mihomo четыре раза подряд
+    final removed =
+        await WindowsDesktopService.removeStaleTunAdapters(ourWintunInstanceIds());
+    if (removed.isNotEmpty) {
+      AppLogger.instance.info('Removed stale TUN adapters: ${removed.join(', ')}');
+    }
     await _ensurePortsAvailable(request);
   }
 

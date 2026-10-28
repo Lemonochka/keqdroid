@@ -17,6 +17,12 @@ String xrayWintunInstanceId(String name) =>
 String mihomoWintunInstanceId(String name) =>
     _instanceId(md5.convert(utf8.encode('wintun$name')).bytes);
 
+List<String> ourWintunInstanceIds() => [
+  xrayWintunInstanceId(kTunInterfaceName),
+  xrayWintunInstanceId(kTunFallbackInterfaceName),
+  mihomoWintunInstanceId(kTunInterfaceName),
+];
+
 // ядра кладут windows.GUID прямо на байты MD5, и первые три поля читаются little-endian
 String _instanceId(List<int> b) {
   String hex(Iterable<int> bytes) => bytes
