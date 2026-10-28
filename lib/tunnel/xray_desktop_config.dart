@@ -11,8 +11,18 @@ String withXrayDesktopSession(
   String config, {
   required int metricsPort,
   bool processLog = false,
+  String? tunName,
 }) {
   final map = jsonDecode(config) as Map<String, dynamic>;
+  if (tunName != null) {
+    for (final inbound in (map['inbounds'] as List?) ?? const []) {
+      if (inbound is Map &&
+          inbound['protocol'] == 'tun' &&
+          inbound['settings'] is Map) {
+        (inbound['settings'] as Map)['name'] = tunName;
+      }
+    }
+  }
   map['stats'] = <String, dynamic>{};
   map['metrics'] = {'listen': '127.0.0.1:$metricsPort'};
   final policy = {...?(map['policy'] as Map?)?.cast<String, dynamic>()};

@@ -6,7 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/core/exceptions.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/tunnel/tun_failure_hints.dart';
+import 'package:keqdroid/tunnel/wintun_adapters.dart';
 import 'package:keqdroid/tunnel/wintun_retry.dart';
+import 'package:keqdroid/utils/desktop_tun.dart';
 import 'package:keqdroid/utils/error_messages.dart';
 
 /// 27.10.2026 Windows раз за разом отказывала в TUN-адаптере (код 31 в
@@ -164,11 +166,13 @@ void main() {
       required List<Object?> outcomes,
       bool Function()? cancelled,
       List<int>? retries,
+      List<int>? attempts,
       void Function()? onReset,
     }) {
       var i = 0;
       return retryWhileWintunRefused(
-        attempt: () async {
+        attempt: (n) async {
+          attempts?.add(n);
           final outcome = outcomes[i++];
           if (outcome is String) {
             output = outcome;
@@ -206,6 +210,23 @@ void main() {
         throwsA(isA<VpnStartException>()),
       );
       expect(retries, [1, 2]);
+    });
+
+    // 27.10.2026 в 21:15 и 21:15:51 по журналу Windows GUID xray отказ получил дважды подряд,
+    // а GUID mihomo в 21:16:25 прошёл. повтор с тем же именем дал бы тот же GUID
+    test('со второй попытки xray создаёт адаптер с другим GUID', () async {
+      final attempts = <int>[];
+      await expectLater(
+        run(outcomes: [_xrayLog, _xrayLog, _xrayLog], attempts: attempts),
+        throwsA(isA<VpnStartException>()),
+      );
+      expect(attempts, [1, 2, 3]);
+      final ids = attempts
+          .map((n) => xrayWintunInstanceId(xrayTunNameForAttempt(n)))
+          .toList();
+      expect(ids[0], xrayWintunInstanceId(kTunInterfaceName));
+      expect(ids[1], isNot(ids[0]));
+      expect(ids[2], ids[1], reason: 'запасной GUID один, лишних сетей в Windows не плодим');
     });
 
     test('другую ошибку не повторяем', () async {

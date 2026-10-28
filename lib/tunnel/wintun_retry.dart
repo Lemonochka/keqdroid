@@ -12,7 +12,7 @@ const kWintunRetryPause = Duration(seconds: 5);
 
 // отказ Windows проходит со следующей попытки: 27.10.2026 TUN так и поднимали руками, переключая ядро
 Future<void> retryWhileWintunRefused({
-  required Future<void> Function() attempt,
+  required Future<void> Function(int attempt) attempt,
   required String Function() coreOutput,
   required Future<void> Function() resetAttempt,
   required bool Function() cancelled,
@@ -21,7 +21,7 @@ Future<void> retryWhileWintunRefused({
 }) async {
   for (var n = 1; ; n++) {
     try {
-      return await attempt();
+      return await attempt(n);
     } on VpnStartException {
       if (n >= kWintunAttempts ||
           cancelled() ||

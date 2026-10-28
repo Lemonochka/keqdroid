@@ -26,6 +26,7 @@ import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
 import 'vpn_backend.dart';
 import 'windows_core_paths.dart';
+import 'wintun_adapters.dart';
 import 'wintun_retry.dart';
 import 'xray_desktop_config.dart';
 
@@ -152,7 +153,8 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         case VpnBackend.xray:
           final epoch = _stopEpoch;
           await retryWhileWintunRefused(
-            attempt: () => _startXraySession(request),
+            attempt: (n) =>
+                _startXraySession(request, tunName: xrayTunNameForAttempt(n)),
             coreOutput: () => _xrayLog.toString(),
             resetAttempt: _resetXrayAttempt,
             cancelled: () => _stopEpoch != epoch,
@@ -187,7 +189,10 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     }
   }
 
-  Future<void> _startXraySession(TunnelSessionRequest request) async {
+  Future<void> _startXraySession(
+    TunnelSessionRequest request, {
+    String tunName = kTunInterfaceName,
+  }) async {
     final bin = await WindowsCorePaths.xrayExecutable();
     if (bin == null) {
       throw VpnStartException(
@@ -209,6 +214,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       xrayLog.config,
       metricsPort: metricsPort,
       processLog: !isTun && request.debugMode,
+      tunName: isTun ? tunName : null,
     ));
     _xrayMetricsPort = metricsPort;
     _xrayStarted = false;

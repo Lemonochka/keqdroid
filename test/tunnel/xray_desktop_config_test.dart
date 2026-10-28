@@ -70,6 +70,36 @@ void main() {
     );
   });
 
+  test('запасное имя адаптера меняет только вход TUN', () {
+    final source = {
+      'inbounds': [
+        {
+          'tag': 'tun-in',
+          'protocol': 'tun',
+          'settings': {'name': 'tun-keqdis', 'mtu': 1500},
+        },
+        {
+          'tag': 'socks-in',
+          'protocol': 'socks',
+          'settings': {'auth': 'noauth'},
+        },
+      ],
+    };
+    final inbounds = jsonDecode(withXrayDesktopSession(
+      jsonEncode(source),
+      metricsPort: 41234,
+      tunName: 'tun-keqdis2',
+    ))['inbounds'] as List;
+    expect(inbounds[0]['settings'], {'name': 'tun-keqdis2', 'mtu': 1500});
+    expect(inbounds[1]['settings'], {'auth': 'noauth'});
+
+    final untouched = jsonDecode(withXrayDesktopSession(
+      jsonEncode(source),
+      metricsPort: 41234,
+    ))['inbounds'] as List;
+    expect(untouched[0]['settings']['name'], 'tun-keqdis');
+  });
+
   test('трафик это сумма по всем входам', () {
     expect(
       xrayInboundTotals({
