@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -145,5 +147,50 @@ void main() {
     await _pumpRail(tester, window: const Size(820, 600));
     expect(tester.getSize(find.byType(DesktopRail)).width, DesktopRail.collapsedWidth);
     expect(find.byTooltip('Expand panel'), findsNothing);
+  });
+
+  testWidgets('в узком окне место кнопки меню не пустует, в широком она возвращается', (
+    tester,
+  ) async {
+    await _pumpRail(
+      tester,
+      window: const Size(820, 600),
+      settings: const AppSettings().copyWith(desktopRailExpanded: false),
+    );
+    final narrow = tester.getRect(find.text('Servers')).top;
+    tester.view.physicalSize = const Size(1200, 760);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Expand panel'), findsOneWidget);
+    // кнопка 48 и зазор до кнопки режима, если она есть
+    expect(tester.getRect(find.text('Servers')).top - narrow, inInclusiveRange(47.5, 60.5));
+  });
+
+  // перелёт пружины сужал список на 1 dp, и на пограничной ширине окна плитки мигали компактными
+  testWidgets('панель не перелетает за свою ширину ни при сворачивании, ни при разворачивании', (
+    tester,
+  ) async {
+    await _pumpRail(tester);
+    final widths = <double>[];
+    Future<void> watch(String tooltip) async {
+      await tester.tap(find.byTooltip(tooltip));
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        widths.add(tester.getSize(find.byType(DesktopRail)).width);
+      }
+    }
+
+    await watch('Collapse panel');
+    expect(widths.reduce(math.min), greaterThanOrEqualTo(DesktopRail.collapsedWidth));
+    widths.clear();
+    await watch('Expand panel');
+    expect(widths.reduce(math.max), lessThanOrEqualTo(DesktopRail.expandedWidth));
+  });
+
+  testWidgets('в свёрнутой панели между разделами 4 dp, как в M3E', (tester) async {
+    await _pumpRail(tester, settings: const AppSettings().copyWith(desktopRailExpanded: false));
+    final servers = tester.getRect(find.text('Servers')).top;
+    final subscriptions = tester.getRect(find.text('Subscriptions')).top;
+    // высота раздела 64 и зазор 4
+    expect(subscriptions - servers, moreOrLessEquals(68, epsilon: 0.5));
   });
 }

@@ -51,7 +51,9 @@ class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderSt
   late final _press = [for (var i = 0; i < _count; i++) AnimationController.unbounded(vsync: this)];
   late final _hover = [for (var i = 0; i < _count; i++) AnimationController.unbounded(vsync: this)];
   late final _expand = AnimationController.unbounded(vsync: this);
+  late final _menu = AnimationController.unbounded(vsync: this);
   bool? _expanded;
+  bool? _roomy;
 
   @override
   void didUpdateWidget(DesktopRail old) {
@@ -67,23 +69,21 @@ class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderSt
 
   @override
   void dispose() {
-    for (final c in [..._indicator, ..._square, ..._press, ..._hover, _expand]) {
+    for (final c in [..._indicator, ..._square, ..._press, ..._hover, _expand, _menu]) {
       c.dispose();
     }
     super.dispose();
   }
 
-  void _syncExpanded(bool expanded) {
-    if (_expanded == expanded) return;
-    final first = _expanded == null;
-    _expanded = expanded;
-    if (first) {
-      _expand.value = expanded ? 1 : 0;
+  void _sync(AnimationController controller, bool? was, bool now) {
+    if (was == now) return;
+    if (was == null) {
+      controller.value = now ? 1 : 0;
       return;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ExpressiveMotion.springTo(_expand, expanded ? 1 : 0, spring: _soft, snapToEnd: true);
+        ExpressiveMotion.springTo(controller, now ? 1 : 0, spring: _soft, snapToEnd: true);
       }
     });
   }
@@ -112,7 +112,11 @@ class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderSt
     final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final roomy = MediaQuery.sizeOf(context).width >= DesktopRail.expandFrom;
-    _syncExpanded(roomy && settings.desktopRailExpanded);
+    final expanded = roomy && settings.desktopRailExpanded;
+    _sync(_expand, _expanded, expanded);
+    _sync(_menu, _roomy, roomy);
+    _expanded = expanded;
+    _roomy = roomy;
     final hasMode = Platform.isWindows || Platform.isLinux;
     final destinations = [
       (Icons.dns_outlined, Icons.dns_rounded, l10n.navServers),
@@ -121,11 +125,13 @@ class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderSt
     ];
 
     return AnimatedBuilder(
-      animation: Listenable.merge([..._indicator, ..._square, ..._press, ..._hover, _expand]),
+      animation: Listenable.merge([..._indicator, ..._square, ..._press, ..._hover, _expand, _menu]),
       builder: (context, _) {
-        final e = _expand.value;
-        final ec = e.clamp(0.0, 1.0);
-        final width = _lerp(DesktopRail.collapsedWidth, DesktopRail.expandedWidth, e);
+        final ec = _expand.value.clamp(0.0, 1.0);
+        final menu = _menu.value.clamp(0.0, 1.0);
+        // без перелёта пружины: он на 1 dp сужал список, и на пограничной ширине окна плитки
+        // серверов мигали компактными
+        final width = _lerp(DesktopRail.collapsedWidth, DesktopRail.expandedWidth, ec);
         final menuTooltip = ec > 0.5 ? l10n.desktopRailCollapse : l10n.desktopRailExpand;
         return ClipRect(
           child: SizedBox(
@@ -134,24 +140,39 @@ class _DesktopRailState extends ConsumerState<DesktopRail> with TickerProviderSt
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 16),
-                SizedBox(
-                  height: 48,
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.only(start: 24),
-                      child: roomy
-                          ? IconButton(
-                              tooltip: menuTooltip,
-                              onPressed: () => _toggle(settings),
-                              icon: Icon(ec > 0.5 ? Icons.menu_open_rounded : Icons.menu_rounded),
-                            )
-                          : null,
+                if (menu > 0)
+                  ClipRect(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: menu,
+                      child: Opacity(
+                        opacity: menu,
+                        child: IgnorePointer(
+                          ignoring: !roomy,
+                          child: Padding(
+                            padding: EdgeInsets.only(bottom: hasMode ? _lerp(12, 16, ec) : 0),
+                            child: SizedBox(
+                              height: 48,
+                              child: Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: Padding(
+                                  padding: const EdgeInsetsDirectional.only(start: 24),
+                                  child: IconButton(
+                                    tooltip: menuTooltip,
+                                    onPressed: () => _toggle(settings),
+                                    icon: Icon(
+                                      ec > 0.5 ? Icons.menu_open_rounded : Icons.menu_rounded,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
                 if (hasMode) ...[
-                  SizedBox(height: _lerp(12, 16, ec)),
                   SizedBox(
                     height: _lerp(48, 68, ec),
                     child: Stack(
@@ -248,7 +269,7 @@ class _Destinations extends StatelessWidget {
     final tt = Theme.of(context).textTheme;
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final ec = expand;
-    final step = _lerp(72, 60, ec);
+    final step = _lerp(68, 60, ec);
     final baseHeight = _lerp(64, 56, ec);
     final gap = step - baseHeight;
     double heightOf(int i) {
