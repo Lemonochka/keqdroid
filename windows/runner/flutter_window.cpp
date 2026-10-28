@@ -47,7 +47,9 @@ void ApplyMinWindowSize(HWND hwnd, MINMAXINFO* info) {
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
 
-FlutterWindow::~FlutterWindow() {}
+// деструктор unique_ptr удаляет, не обнулив указатель, и WM_PARENTNOTIFY от гибнущего вида Flutter
+// ушёл бы в HandleTopLevelWindowProc уже без вида. так выходит window_manager destroy()
+FlutterWindow::~FlutterWindow() { flutter_controller_ = nullptr; }
 
 bool FlutterWindow::OnCreate() {
   if (!Win32Window::OnCreate()) {

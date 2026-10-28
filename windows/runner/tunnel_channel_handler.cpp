@@ -1348,7 +1348,9 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
             return;
           }
           result->Success();
-          PostToPlatformThread([]() { ::PostQuitMessage(0); });
+          // как Выход из трея: один PostQuitMessage оставлял движок до деструктора окна, и он падал в flutter_windows.dll +0x1d7b0
+          PostToPlatformThread(
+              []() { WindowsTrayExitApplication(WindowsTrayGetMainHwnd()); });
           return;
         }
 
