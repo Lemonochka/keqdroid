@@ -377,4 +377,36 @@ void main() {
     }
     expect(opened, isTrue);
   });
+
+  group('лужа у края в покое', () {
+    // blend из shaders/liquid_bar.frag: кнопка и лужа сливаются, где значение не выше нуля
+    double blend(double a, double b, double k) {
+      final h = (0.5 + 0.5 * (b - a) / k).clamp(0.0, 1.0);
+      return b + (a - b) * h - k * h * (1 - h);
+    }
+
+    bool bridged(double gap) {
+      final k = liquidPoolGoo(restGap: gap, sink: 0);
+      for (var y = 0.5; y < gap; y += 0.5) {
+        if (blend(y, gap - y, k) <= 0) return true;
+      }
+      return false;
+    }
+
+    // планшет с панелью задач: окно кончается над ней, отступа нет, до края 24 dp
+    test('без системного отступа кнопки не стекают к краю', () {
+      expect(bridged(FloatingBar.bottomMargin), isFalse);
+    });
+
+    test('на телефоне с жестами всё как было', () {
+      const gap = FloatingBar.bottomMargin + 24;
+      expect(bridged(gap), isFalse);
+      expect(liquidPoolGoo(restGap: gap, sink: 0), 48);
+      expect(liquidPoolGoo(restGap: gap, sink: 0.5), 48);
+    });
+
+    test('уходя в край, лента сливается с ним в полную силу', () {
+      expect(liquidPoolGoo(restGap: FloatingBar.bottomMargin, sink: 1), 48);
+    });
+  });
 }

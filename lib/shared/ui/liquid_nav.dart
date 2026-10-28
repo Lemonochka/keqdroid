@@ -108,6 +108,15 @@ class _Look {
 
 double _lerp(double a, double b, double t) => a + (b - a) * t;
 
+// лужа у края сливается с лентой ближе poolGoo, а в покое лента стоит на restGap от края. без
+// системного отступа (окно кончается над панелью задач планшета) кнопки стекали в лужу
+@visibleForTesting
+double liquidPoolGoo({required double restGap, required double sink}) => _lerp(
+      math.min(_LiquidBarPainter.poolGoo, restGap),
+      _LiquidBarPainter.poolGoo,
+      sink,
+    );
+
 double _pageOf(PageController? pages, int index) {
   if (pages != null && pages.hasClients && pages.position.hasContentDimensions) {
     return pages.page ?? index.toDouble();
@@ -586,6 +595,10 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                       finger: bump,
                       fingerGoo: 24 * grab,
                       dpr: dpr,
+                      poolK: liquidPoolGoo(
+                        restGap: FloatingBar.bottomMargin + inset,
+                        sink: sink,
+                      ),
                     ),
                   ),
                 ),
@@ -924,10 +937,13 @@ class _LiquidBarPainter extends CustomPainter {
     required this.fingerGoo,
     required this.dpr,
     this.vertical = false,
+    this.poolK = poolGoo,
   });
 
   static const _goo = 40.0;
   static const poolGoo = 48.0;
+
+  final double poolK;
 
   final ui.FragmentShader? shader;
   final List<Rect> tabs;
@@ -1027,7 +1043,7 @@ class _LiquidBarPainter extends CustomPainter {
       _gooFor(1 - jumpT),
       _gooFor(1 - sideT),
       vertical ? 1e5 : size.height,
-      poolGoo,
+      poolK,
       baseColor.r,
       baseColor.g,
       baseColor.b,
