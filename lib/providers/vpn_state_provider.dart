@@ -884,15 +884,17 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         for (final r in results) {
           measure.results[r.serverId] = entry(r);
         }
-        unawaited(
-          ref.read(serversProvider.notifier).updatePingResults({
-            for (final r in results)
-              r.serverId: (
-                pingMs: r.success ? r.latencyMs : null,
-                lastPingType: PingService.pingTypeToStored(r.pingType),
-              ),
-          }),
-        );
+        if (AutoServerSelect.worthRecording(measure.results.values)) {
+          unawaited(
+            ref.read(serversProvider.notifier).updatePingResults({
+              for (final r in results)
+                r.serverId: (
+                  pingMs: r.success ? r.latencyMs : null,
+                  lastPingType: PingService.pingTypeToStored(r.pingType),
+                ),
+            }),
+          );
+        }
       } catch (e, st) {
         AppLogger.instance.debug(
           'Auto select measure failed',

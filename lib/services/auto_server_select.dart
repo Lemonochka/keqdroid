@@ -111,6 +111,13 @@ abstract final class AutoServerSelect {
     return [current, ...forced, ...others].take(limit).toList();
   }
 
+  // не ответил никто: это сеть (лифт, метро, переезд с Wi-Fi), а не серверы.
+  // такой провал сутки штрафовал бы лучших и уводил их в конец очереди замеров
+  static bool worthRecording(
+    Iterable<({String id, bool success, int? latencyMs})> results,
+  ) =>
+      results.any((r) => r.success);
+
   // пока текущий не ответил, соседи ничего не решают: дальний сервер иначе проигрывал бы гонку живым
   static AutoSelectVerdict judge({
     required String currentId,

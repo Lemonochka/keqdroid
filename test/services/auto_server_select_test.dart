@@ -264,4 +264,28 @@ void main() {
 
     expect(picked.map((s) => s.id), ['s3', 'home', 's0', 's1']);
   });
+
+  group('записывать ли замер', () {
+    ({String id, bool success, int? latencyMs}) ok(String id) =>
+        (id: id, success: true, latencyMs: 100);
+    ({String id, bool success, int? latencyMs}) dead(String id) =>
+        (id: id, success: false, latencyMs: null);
+
+    test('не ответил никто — не пишем: это сеть, а не серверы', () {
+      // Лифт или метро: иначе лучшие серверы сутки висели бы красными
+      // и уходили в конец очереди замеров.
+      expect(
+        AutoServerSelect.worthRecording([dead('a'), dead('b'), dead('c')]),
+        isFalse,
+      );
+      expect(AutoServerSelect.worthRecording(const []), isFalse);
+    });
+
+    test('ответил хоть один — сеть жива, отказы остальных правда', () {
+      expect(
+        AutoServerSelect.worthRecording([dead('a'), ok('b'), dead('c')]),
+        isTrue,
+      );
+    });
+  });
 }
