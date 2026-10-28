@@ -352,3 +352,45 @@ class EdgeFadeInset extends CustomClipper<Rect> {
   @override
   bool shouldReclip(EdgeFadeInset oldClipper) => oldClipper.inset != inset;
 }
+
+// верх списка гаснет, только когда под край что-то уехало: в покое первая строка видна целиком
+class ScrollEdgeFade extends StatefulWidget {
+  const ScrollEdgeFade({
+    super.key,
+    this.top = 32,
+    this.bottom = 0,
+    required this.child,
+  });
+
+  final double top;
+  final double bottom;
+  final Widget child;
+
+  @override
+  State<ScrollEdgeFade> createState() => _ScrollEdgeFadeState();
+}
+
+class _ScrollEdgeFadeState extends State<ScrollEdgeFade> {
+  double _progress = 0;
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
+    final next = (n.metrics.extentBefore / 32).clamp(0.0, 1.0);
+    if ((next - _progress).abs() > 0.01 || (next == 0) != (_progress == 0)) {
+      setState(() => _progress = next);
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onScroll,
+      child: EdgeFadeMask(
+        top: widget.top * _progress,
+        bottom: widget.bottom,
+        child: widget.child,
+      ),
+    );
+  }
+}

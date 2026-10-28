@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/floating_bar.dart';
+import 'package:keqdroid/shared/ui/smooth_fade.dart';
 import 'package:keqdroid/shared/ui/reorder_zoom_fix.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
@@ -98,7 +99,10 @@ class SubscriptionsTab extends ConsumerWidget {
                       data: (subs) => subs.isEmpty
                           ? _emptySubsState(context)
                           : SmoothScroll(
-                              builder: (context, controller) => FloatingBarFade(
+                              // низ гаснет под плавающей лентой; системный отступ уже снял SafeArea,
+                              // прятать его второй раз значило гасить на 24 dp выше, чем у серверов
+                              builder: (context, controller) => ScrollEdgeFade(
+                                bottom: FloatingBar.shown(context) ? 28 : 0,
                                 child: ReorderZoomFix(
                                 builder: (context, fix) =>
                                   ReorderableListView.builder(
