@@ -485,6 +485,8 @@
   "vpnConnectedGeneric": "VPN متصل شد",
   "serversImportedSummary": "{added} سرور از {total} اضافه شد",
   "sidebarJumpTitle": "پرش سریع",
+  "desktopRailCollapse": "جمع کردن نوار",
+  "desktopRailExpand": "باز کردن نوار",
   "serversScrollToEnd": "به انتهای فهرست",
   "serversScrollToTop": "به ابتدای فهرست",
   "serversJumpToActive": "نمایش در فهرست",

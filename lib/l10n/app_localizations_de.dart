@@ -1611,6 +1611,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get sidebarJumpTitle => 'Schnellzugriff';
 
   @override
+  String get desktopRailCollapse => 'Leiste einklappen';
+
+  @override
+  String get desktopRailExpand => 'Leiste ausklappen';
+
+  @override
   String get serversScrollToEnd => 'Zum Ende springen';
 
   @override

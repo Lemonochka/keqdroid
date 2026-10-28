@@ -868,6 +868,8 @@
     }
   },
   "sidebarJumpTitle": "Schnellzugriff",
+  "desktopRailCollapse": "Leiste einklappen",
+  "desktopRailExpand": "Leiste ausklappen",
   "serversScrollToEnd": "Zum Ende springen",
   "serversScrollToTop": "Zum Anfang springen",
   "serversJumpToActive": "In der Liste zeigen",

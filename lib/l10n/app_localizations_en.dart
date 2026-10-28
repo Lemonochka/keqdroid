@@ -1611,6 +1611,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sidebarJumpTitle => 'Jump to';
 
   @override
+  String get desktopRailCollapse => 'Collapse panel';
+
+  @override
+  String get desktopRailExpand => 'Expand panel';
+
+  @override
   String get serversScrollToEnd => 'Jump to end';
 
   @override

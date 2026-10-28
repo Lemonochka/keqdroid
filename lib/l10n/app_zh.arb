@@ -868,6 +868,8 @@
     }
   },
   "sidebarJumpTitle": "快速跳转",
+  "desktopRailCollapse": "收起侧栏",
+  "desktopRailExpand": "展开侧栏",
   "serversScrollToEnd": "跳到列表底部",
   "serversScrollToTop": "跳到列表顶部",
   "serversJumpToActive": "在列表中显示",

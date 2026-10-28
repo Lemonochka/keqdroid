@@ -29,12 +29,11 @@ import '../../services/windows_desktop_service.dart';
 import '../../services/windows_tray_menu.dart';
 import '../../tunnel/linux_tunnel_backend.dart';
 import '../../shared/ui/app_theme.dart';
-import '../../shared/ui/expressive_button_group.dart';
 import '../../shared/ui/halloween/halloween_icons.dart';
 import '../../shared/ui/update_dialog.dart';
 import '../../utils/clipboard_import.dart';
 import 'desktop_connection_mode.dart';
-import 'sidebar_group_nav.dart';
+import 'desktop_rail.dart';
 
 // свой сайдбар: NavigationRail на Windows ломал раскладку
 class DesktopHomeScreen extends ConsumerStatefulWidget {
@@ -475,7 +474,6 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
 
     ref.watch(windowsTrayMenuProvider);
 
-    final l10n = AppLocalizations.of(context)!;
     ref.listen<AsyncValue<UpdateInfo?>>(updateInfoProvider, (prev, next) {
       if (!shouldAutoPromptForUpdate(prev, next)) return;
       final info = next.value;
@@ -486,12 +484,6 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       });
     });
 
-    final destinations = [
-      (icon: Icons.dns_rounded, label: l10n.navServers),
-      (icon: Icons.subscriptions_rounded, label: l10n.navSubscriptions),
-      (icon: Icons.settings_rounded, label: l10n.navSettings),
-    ];
-
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
       body: Row(
@@ -500,38 +492,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
           HalloweenIconScope(
             child: Material(
               color: Theme.of(context).colorScheme.surfaceContainerLow,
-              child: SizedBox(
-                width: MediaQuery.sizeOf(context).width >= 900 ? 220.0 : 76.0,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 16),
-                    if (Platform.isWindows || Platform.isLinux) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: MediaQuery.sizeOf(context).width >= 900
-                            ? const _ConnectionModeChip()
-                            : const Center(child: _ConnectionModeMenuButton()),
-                      ),
-                      const SizedBox(height: 12),
-                      Divider(height: 1, color: AppTheme.divider(context)),
-                      const SizedBox(height: 8),
-                    ],
-                    for (var i = 0; i < destinations.length; i++)
-                      _SidebarTile(
-                        icon: destinations[i].icon,
-                        label: destinations[i].label,
-                        selected: _index == i,
-                        compact: MediaQuery.sizeOf(context).width < 900,
-                        onTap: () => _selectTab(i),
-                      ),
-                    SidebarGroupNav(
-                      compact: MediaQuery.sizeOf(context).width < 900,
-                      onOpenServers: () => _selectTab(0),
-                    ),
-                  ],
-                ),
-              ),
+              child: DesktopRail(index: _index, onSelect: _selectTab),
             ),
           ),
           VerticalDivider(width: 1, color: AppTheme.divider(context)),
@@ -606,197 +567,6 @@ class _DesktopTabHost extends StatelessWidget {
     return ColoredBox(
       color: AppTheme.bg(context),
       child: SizedBox.expand(child: child),
-    );
-  }
-}
-
-class _SidebarTile extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final bool compact;
-  final VoidCallback onTap;
-
-  const _SidebarTile({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.compact,
-    required this.onTap,
-  });
-
-  @override
-  State<_SidebarTile> createState() => _SidebarTileState();
-}
-
-class _SidebarTileState extends State<_SidebarTile>
-    with SingleTickerProviderStateMixin {
-  // unbounded: пружина должна перелетать за цель
-  late final AnimationController _ctrl = AnimationController.unbounded(
-    vsync: this,
-    value: widget.selected ? 1 : 0,
-  );
-
-  @override
-  void didUpdateWidget(_SidebarTile old) {
-    super.didUpdateWidget(old);
-    if (old.selected == widget.selected) return;
-    ExpressiveMotion.springTo(
-      _ctrl,
-      widget.selected ? 1 : 0,
-      spring: ExpressiveMotion.spatialFast,
-    );
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final shape = BorderRadius.circular(ExpressiveShape.full);
-
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (context, _) {
-        final t = _ctrl.value;
-        final tc = t.clamp(0.0, 1.0);
-
-        final bg = Color.lerp(Colors.transparent, scheme.secondaryContainer, tc)!;
-        final fg = Color.lerp(
-          scheme.onSurfaceVariant,
-          scheme.onSecondaryContainer,
-          tc,
-        )!;
-        final outerInset = 10.0 - 4.0 * tc;
-
-        final pill = Material(
-          color: bg,
-          borderRadius: shape,
-          // цвет ведём пружиной покадрово, неявная анимация Material отставала бы
-          animationDuration: Duration.zero,
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: shape,
-            child: widget.compact
-                ? SizedBox(
-                    height: 48,
-                    child: SeasonalIcon(widget.icon, color: fg),
-                  )
-                : Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 12 + 2 * tc,
-                    ),
-                    child: Row(
-                      children: [
-                        SeasonalIcon(widget.icon, color: fg, size: 22),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            widget.label,
-                            style:
-                                (widget.selected
-                                        ? textTheme.emphasized(
-                                            textTheme.labelLarge)
-                                        : textTheme.labelLarge)
-                                    ?.copyWith(color: fg),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-          ),
-        );
-
-        return Padding(
-          padding: EdgeInsets.symmetric(horizontal: outerInset, vertical: 4),
-          child: widget.compact
-              ? Tooltip(message: widget.label, child: pill)
-              : pill,
-        );
-      },
-    );
-  }
-}
-
-class _ConnectionModeMenuButton extends ConsumerWidget {
-  const _ConnectionModeMenuButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings =
-        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
-    final mode = settings.connectionModeEnum;
-
-    return PopupMenuButton<ConnectionMode>(
-      tooltip: AppLocalizations.of(context)!.desktopConnectionMode,
-      icon: SeasonalIcon(
-        mode == ConnectionMode.tun ? Icons.vpn_lock_rounded : Icons.lan_rounded,
-        size: 22,
-      ),
-      onSelected: (next) =>
-          applyDesktopConnectionMode(context, DesktopModeDeps.of(ref), settings, next),
-      itemBuilder: (context) => [
-        CheckedPopupMenuItem(
-          value: ConnectionMode.proxy,
-          checked: mode == ConnectionMode.proxy,
-          child: Text(AppLocalizations.of(context)!.trayModeProxy),
-        ),
-        CheckedPopupMenuItem(
-          value: ConnectionMode.tun,
-          checked: mode == ConnectionMode.tun,
-          child: const Text('TUN'),
-        ),
-      ],
-    );
-  }
-}
-
-class _ConnectionModeChip extends ConsumerWidget {
-  const _ConnectionModeChip();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings =
-        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
-    final mode = settings.connectionModeEnum;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            AppLocalizations.of(context)!.desktopModeShort,
-            style: Theme.of(context).textTheme
-                .emphasized(Theme.of(context).textTheme.labelLarge)
-                ?.copyWith(color: Theme.of(context).colorScheme.primary),
-          ),
-        ),
-        ExpressiveConnectedButtons<ConnectionMode>(
-          segments: [
-            ExpressiveSegment(
-              value: ConnectionMode.proxy,
-              label: AppLocalizations.of(context)!.trayModeProxy,
-              icon: Icons.lan_rounded,
-            ),
-            const ExpressiveSegment(
-              value: ConnectionMode.tun,
-              label: 'TUN',
-              icon: Icons.vpn_lock_rounded,
-            ),
-          ],
-          selected: mode,
-          onChanged: (next) =>
-              applyDesktopConnectionMode(context, DesktopModeDeps.of(ref), settings, next),
-        ),
-      ],
     );
   }
 }

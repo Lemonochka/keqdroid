@@ -72,6 +72,7 @@ class AppSettings {
   final int serversColumns;
   final bool modernConnectPanel;
   final String bottomBarStyle;
+  final bool desktopRailExpanded;
   final bool amoledBlack;
   final bool seasonalDecor;
   final bool hapticFeedback;
@@ -145,6 +146,7 @@ class AppSettings {
     this.serversColumns = 2,
     this.modernConnectPanel = false,
     this.bottomBarStyle = bottomBarModern,
+    this.desktopRailExpanded = true,
     this.amoledBlack = false,
     this.seasonalDecor = true,
     this.hapticFeedback = true,
@@ -209,6 +211,7 @@ class AppSettings {
     'serversColumns': serversColumns,
     'modernConnectPanel': modernConnectPanel,
     'bottomBarStyle': bottomBarStyle,
+    'desktopRailExpanded': desktopRailExpanded,
     'amoledBlack': amoledBlack,
     'seasonalDecor': seasonalDecor,
     'hapticFeedback': hapticFeedback,
@@ -304,6 +307,7 @@ class AppSettings {
       serversColumns: normalizeServersColumns(json['serversColumns']),
       modernConnectPanel: json['modernConnectPanel'] as bool? ?? false,
       bottomBarStyle: json['bottomBarStyle'] as String? ?? bottomBarModern,
+      desktopRailExpanded: json['desktopRailExpanded'] as bool? ?? true,
       amoledBlack: json['amoledBlack'] as bool? ?? false,
       seasonalDecor: json['seasonalDecor'] as bool? ?? true,
       hapticFeedback: json['hapticFeedback'] as bool? ?? true,
@@ -471,6 +475,7 @@ class AppSettings {
     int? serversColumns,
     bool? modernConnectPanel,
     String? bottomBarStyle,
+    bool? desktopRailExpanded,
     bool? amoledBlack,
     bool? seasonalDecor,
     bool? hapticFeedback,
@@ -537,6 +542,7 @@ class AppSettings {
             normalizeServersColumns(serversColumns ?? this.serversColumns),
         modernConnectPanel: modernConnectPanel ?? this.modernConnectPanel,
         bottomBarStyle: bottomBarStyle ?? this.bottomBarStyle,
+        desktopRailExpanded: desktopRailExpanded ?? this.desktopRailExpanded,
         amoledBlack: amoledBlack ?? this.amoledBlack,
         seasonalDecor: seasonalDecor ?? this.seasonalDecor,
         hapticFeedback: hapticFeedback ?? this.hapticFeedback,
@@ -618,6 +624,7 @@ class AppSettings {
               serversColumns == other.serversColumns &&
               modernConnectPanel == other.modernConnectPanel &&
               bottomBarStyle == other.bottomBarStyle &&
+              desktopRailExpanded == other.desktopRailExpanded &&
               amoledBlack == other.amoledBlack &&
               seasonalDecor == other.seasonalDecor &&
               hapticFeedback == other.hapticFeedback &&
@@ -691,6 +698,7 @@ class AppSettings {
     serversColumns,
     modernConnectPanel,
     bottomBarStyle,
+    desktopRailExpanded,
     amoledBlack,
     seasonalDecor,
     hapticFeedback,

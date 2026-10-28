@@ -1607,6 +1607,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sidebarJumpTitle => '快速跳转';
 
   @override
+  String get desktopRailCollapse => '收起侧栏';
+
+  @override
+  String get desktopRailExpand => '展开侧栏';
+
+  @override
   String get serversScrollToEnd => '跳到列表底部';
 
   @override

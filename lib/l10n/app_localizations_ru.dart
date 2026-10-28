@@ -1621,6 +1621,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sidebarJumpTitle => 'Быстрый переход';
 
   @override
+  String get desktopRailCollapse => 'Свернуть панель';
+
+  @override
+  String get desktopRailExpand => 'Развернуть панель';
+
+  @override
   String get serversScrollToEnd => 'К концу списка';
 
   @override

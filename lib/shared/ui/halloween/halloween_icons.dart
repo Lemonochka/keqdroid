@@ -64,9 +64,12 @@ _Glyph? _glyphFor(IconData d) {
   if (d == Icons.schedule_rounded) return _Glyph.hourglass;
   // на телефоне это раздел Серверы, на ПК режим Proxy
   if (d == Icons.lan_rounded) return PlatformBootstrap.isDesktop ? _Glyph.amulet : _Glyph.crystalBall;
-  if (d == Icons.dns_rounded) return _Glyph.crystalBall;
+  if (d == Icons.dns_rounded || d == Icons.dns_outlined) return _Glyph.crystalBall;
   if (d == Icons.vpn_lock_rounded) return _Glyph.ward;
-  if (d == Icons.language_rounded || d == Icons.subscriptions_rounded || d == Icons.cloud_rounded) {
+  if (d == Icons.language_rounded ||
+      d == Icons.subscriptions_rounded ||
+      d == Icons.subscriptions_outlined ||
+      d == Icons.cloud_rounded) {
     return _Glyph.scroll;
   }
   if (d == Icons.refresh_rounded) return _Glyph.ouroboros;

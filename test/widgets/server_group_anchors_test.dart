@@ -327,5 +327,36 @@ void main() {
 
       expect(ServerGroupAnchors.instance.currentGroup.value, 'g5');
     });
+
+    testWidgets('в самом низу последняя, даже если она короткая и до верха не доезжает', (
+      tester,
+    ) async {
+      // иначе переход к ней из карусели тут же откатывался на предыдущую группу
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      await _pump(
+        tester,
+        CustomScrollView(
+          controller: controller,
+          slivers: [
+            for (var i = 0; i < 4; i++)
+              SliverToBoxAdapter(
+                child: ServerGroupAnchor(
+                  groupKey: 'g$i',
+                  child: SizedBox(height: i == 3 ? 80 : 400, child: Text('group $i')),
+                ),
+              ),
+          ],
+        ),
+      );
+
+      controller.jumpTo(controller.position.maxScrollExtent - 40);
+      await tester.pumpAndSettle();
+      expect(ServerGroupAnchors.instance.currentGroup.value, 'g2', reason: 'ещё не у конца');
+
+      controller.jumpTo(controller.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      expect(ServerGroupAnchors.instance.currentGroup.value, 'g3');
+    });
   });
 }

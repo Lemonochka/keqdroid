@@ -3011,6 +3011,18 @@ abstract class AppLocalizations {
   /// **'Jump to'**
   String get sidebarJumpTitle;
 
+  /// No description provided for @desktopRailCollapse.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse panel'**
+  String get desktopRailCollapse;
+
+  /// No description provided for @desktopRailExpand.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand panel'**
+  String get desktopRailExpand;
+
   /// No description provided for @serversScrollToEnd.
   ///
   /// In en, this message translates to:

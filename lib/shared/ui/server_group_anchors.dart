@@ -31,6 +31,9 @@ class ServerGroupAnchors {
     double? passedDy;
     String? nearest;
     double? nearestDy;
+    String? lowest;
+    double? lowestDy;
+    var atEnd = false;
 
     // с запасом: после прыжка группа стоит ровно на leadingInset
     final threshold = leadingInset + 8;
@@ -43,6 +46,19 @@ class ServerGroupAnchors {
       final viewport = RenderAbstractViewport.maybeOf(box);
       if (viewport == null) continue;
       final dy = box.localToGlobal(Offset.zero, ancestor: viewport).dy;
+      if (viewport is RenderViewportBase) {
+        final offset = viewport.offset;
+        if (offset is ScrollPosition &&
+            offset.hasContentDimensions &&
+            offset.maxScrollExtent > 0 &&
+            offset.pixels >= offset.maxScrollExtent - 1) {
+          atEnd = true;
+        }
+        if (dy < viewport.size.height && (lowestDy == null || dy > lowestDy)) {
+          lowestDy = dy;
+          lowest = entry.key;
+        }
+      }
 
       if (dy <= threshold) {
         if (passedDy == null || dy > passedDy) {
@@ -55,7 +71,9 @@ class ServerGroupAnchors {
       }
     }
 
-    final next = passed ?? nearest;
+    // у конца списка короткая последняя группа до верха не доезжает: переход к ней из карусели
+    // иначе тут же откатывался на предыдущую
+    final next = atEnd && lowest != null ? lowest : passed ?? nearest;
     if (next != currentGroup.value) currentGroup.value = next;
   }
 

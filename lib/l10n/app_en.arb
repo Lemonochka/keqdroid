@@ -923,6 +923,8 @@
     }
   },
   "sidebarJumpTitle": "Jump to",
+  "desktopRailCollapse": "Collapse panel",
+  "desktopRailExpand": "Expand panel",
   "serversScrollToEnd": "Jump to end",
   "serversScrollToTop": "Jump to top",
   "serversJumpToActive": "Show in list",

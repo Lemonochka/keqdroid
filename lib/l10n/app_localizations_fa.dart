@@ -1607,6 +1607,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get sidebarJumpTitle => 'پرش سریع';
 
   @override
+  String get desktopRailCollapse => 'جمع کردن نوار';
+
+  @override
+  String get desktopRailExpand => 'باز کردن نوار';
+
+  @override
   String get serversScrollToEnd => 'به انتهای فهرست';
 
   @override

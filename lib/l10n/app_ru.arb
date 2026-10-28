@@ -870,6 +870,8 @@
     }
   },
   "sidebarJumpTitle": "Быстрый переход",
+  "desktopRailCollapse": "Свернуть панель",
+  "desktopRailExpand": "Развернуть панель",
   "serversScrollToEnd": "К концу списка",
   "serversScrollToTop": "К началу списка",
   "serversJumpToActive": "Показать в списке",
