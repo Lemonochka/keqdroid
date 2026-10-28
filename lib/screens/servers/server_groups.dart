@@ -193,25 +193,36 @@ class _GroupHeaderBackground extends StatelessWidget {
         top: const Radius.circular(outer),
         bottom: Radius.circular(outer * (1 - open)),
       ),
+      // картинка и затемнение сглаживались по краю каждое само, и под картинкой светилась полоска
+      // до серверов (ПК). сперва слой, потом скругление; картинка шире шапки на 1 dp
+      clipBehavior:
+          PlatformBootstrap.isDesktop ? Clip.antiAliasWithSaveLayer : Clip.antiAlias,
       child: Stack(
         fit: StackFit.expand,
+        clipBehavior: Clip.none,
         children: [
-          theme.background(
-            context,
-            veil: CardVeil.none,
-            overlay: Stack(
-              fit: StackFit.expand,
-              children: [
-                CardVeilOverlay(color: surface, veil: sub.cardVeil),
-                if (open > 0)
-                  // плавный вход и выход: на изломе линейного градиента глаз видел светлую полосу
-                  SmoothFadeBox(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    color: surface,
-                    curve: FadeCurve.eased(0, fadeStrength, start: fadeStart),
-                  ),
-              ],
+          Positioned.fill(
+            left: -1,
+            top: -1,
+            right: -1,
+            bottom: -1,
+            child: theme.background(
+              context,
+              veil: CardVeil.none,
+              overlay: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CardVeilOverlay(color: surface, veil: sub.cardVeil),
+                  if (open > 0)
+                    // плавный вход и выход: на изломе линейного градиента глаз видел светлую полосу
+                    SmoothFadeBox(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      color: surface,
+                      curve: FadeCurve.eased(0, fadeStrength, start: fadeStart),
+                    ),
+                ],
+              ),
             ),
           ),
           Align(

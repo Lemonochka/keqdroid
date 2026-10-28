@@ -6,6 +6,7 @@ import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/models/subscription_card_layout.dart';
 import 'package:keqdroid/models/subscription_card_theme.dart';
+import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/subscriptions_tab.dart';
 import 'package:keqdroid/shared/ui/expressive_button_group.dart';
@@ -492,6 +493,21 @@ void main() {
       // Свёрнутый образец прятал бы ровно то, что в этой шторке переключают,
       // поэтому у него своя ProviderScope.
       expect(expandedCards(), 1, reason: 'образец развёрнут');
+    });
+
+    // картинка и затемнение сглаживались по краю каждое само, и край светился полоской
+    testWidgets('подложка карточки шире неё на 1 dp и на ПК скругляется одним слоем', (
+      tester,
+    ) async {
+      PlatformBootstrap.debugIsDesktopOverride = true;
+      addTearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
+      await _pumpTab(tester, _sub(cardThemeId: 'aurora'));
+      final art = find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.painter.runtimeType.toString() == '_PaletteArtPainter',
+      );
+      final clip = find.ancestor(of: art, matching: find.byType(ClipRRect)).first;
+      expect(tester.widget<ClipRRect>(clip).clipBehavior, Clip.antiAliasWithSaveLayer);
+      expect(tester.getRect(art), rectMoreOrLessEquals(tester.getRect(clip).inflate(1)));
     });
 
     testWidgets('редактор показывает состав и текущий пресет', (tester) async {

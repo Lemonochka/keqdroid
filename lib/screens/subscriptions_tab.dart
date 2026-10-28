@@ -1168,8 +1168,25 @@ class _SubItemState extends ConsumerState<_SubItem> {
               Positioned.fill(
                 child: ClipRRect(
                   borderRadius: cardRadius,
-                  child: IgnorePointer(
-                    child: cardTheme.background(context, veil: sub.cardVeil),
+                  // как у шапки группы серверов: на ПК без слоя край картинки светился полоской,
+                  // заметнее всего пока карточка сворачивается
+                  clipBehavior: PlatformBootstrap.isDesktop
+                      ? Clip.antiAliasWithSaveLayer
+                      : Clip.antiAlias,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned.fill(
+                        left: -1,
+                        top: -1,
+                        right: -1,
+                        bottom: -1,
+                        child: IgnorePointer(
+                          child: cardTheme.background(context, veil: sub.cardVeil),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

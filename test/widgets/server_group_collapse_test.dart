@@ -7,6 +7,7 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/models/subscription_card_theme.dart';
+import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/providers/halloween_provider.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/servers_tab.dart';
@@ -238,6 +239,31 @@ void main() {
     expect(heights[autoGone], greaterThan(folded + 4));
     expect(heights.reduce(min), lessThan(folded - 1));
     await tester.pump(const Duration(seconds: 5));
+  });
+
+  // картинка и затемнение сглаживались по краю каждое само, и под картинкой светилась полоска
+  testWidgets(
+      'картинка шапки шире шапки на 1 dp, на ПК скругляется одним слоем, '
+      'на телефоне по-прежнему', (tester) async {
+    SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
+    addTearDown(() => SubscriptionCardTheme.customDirectory = null);
+    addTearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
+    for (final desktop in [true, false]) {
+      PlatformBootstrap.debugIsDesktopOverride = desktop;
+      await _pumpServers(tester, _PictureSubs.new);
+      for (var i = 0; i < 75; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      final fade = _fadeIntoList.first;
+      final clip = find.ancestor(of: fade, matching: find.byType(ClipRRect)).first;
+      expect(
+        tester.widget<ClipRRect>(clip).clipBehavior,
+        desktop ? Clip.antiAliasWithSaveLayer : Clip.antiAlias,
+      );
+      expect(tester.getRect(fade), rectMoreOrLessEquals(tester.getRect(clip).inflate(1)));
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpWidget(const SizedBox());
+    }
   });
 
   testWidgets('на отдаче свёрнутый список не выглядывает обратно', (tester) async {
