@@ -118,12 +118,36 @@ abstract final class AutoServerSelect {
   ) =>
       results.any((r) => r.success);
 
+  // на переезде решает не один удачный ответ: ровный сервер обходит того, кто сегодня скакал и падал
+  static int switchScore(ServerItem? server, int latencyMs, DateTime now) {
+    if (server == null) return latencyMs;
+    final recent = [
+      for (final s in server.pingSamples)
+        if (s.type == 'url' && now.difference(s.at).abs() <= historyWindow) s,
+    ];
+    final answered = [
+      latencyMs,
+      for (final s in recent)
+        if (s.ms != null) s.ms!,
+    ]..sort();
+    final failures = recent.length - (answered.length - 1);
+    return latencyMs +
+        (answered.last - answered.first) +
+        failures * failurePenalty;
+  }
+
   // пока текущий не ответил, соседи ничего не решают: дальний сервер иначе проигрывал бы гонку живым
   static AutoSelectVerdict judge({
     required String currentId,
     required Iterable<({String id, bool success, int? latencyMs})> results,
     required bool batchComplete,
+    int Function(String id, int latencyMs)? score,
   }) {
+    int rank(({String id, bool success, int? latencyMs}) r) {
+      final ms = r.latencyMs ?? 1 << 30;
+      return score == null ? ms : score(r.id, ms);
+    }
+
     ({String id, bool success, int? latencyMs})? current;
     ({String id, bool success, int? latencyMs})? best;
     for (final r in results) {
@@ -132,7 +156,7 @@ abstract final class AutoServerSelect {
         continue;
       }
       if (!r.success) continue;
-      if (best == null || (r.latencyMs ?? 1 << 30) < (best.latencyMs ?? 1 << 30)) {
+      if (best == null || rank(r) < rank(best)) {
         best = r;
       }
     }

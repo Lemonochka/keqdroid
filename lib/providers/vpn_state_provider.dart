@@ -847,6 +847,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     return (server: server, subId: subId);
   }
 
+  int _autoSelectScore(String id, int latencyMs) => AutoServerSelect.switchScore(
+        ref.read(serversProvider).servers.where((s) => s.id == id).firstOrNull,
+        latencyMs,
+        DateTime.now(),
+      );
+
   Future<String> _autoSelectTestUrl() async {
     final settings = await ref.read(storageProvider).getSettings();
     final custom = settings.pingTestUrlCustom.trim();
@@ -1024,6 +1030,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         currentId: server.id,
         results: measure.results.values,
         batchComplete: measure.complete,
+        score: _autoSelectScore,
       );
       while (!verdict.decided) {
         await measure.changed;
@@ -1031,6 +1038,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           currentId: server.id,
           results: measure.results.values,
           batchComplete: measure.complete,
+          score: _autoSelectScore,
         );
       }
       final nextId = verdict.nextId;

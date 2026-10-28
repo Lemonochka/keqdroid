@@ -288,4 +288,56 @@ void main() {
       );
     });
   });
+
+  group('на кого переезжать', () {
+    final now = DateTime(2026, 10, 28, 12);
+    List<PingSample> history(List<int?> values) => [
+          for (var i = 0; i < values.length; i++)
+            PingSample(
+              at: now.subtract(Duration(minutes: 5 * (values.length - i))),
+              ms: values[i],
+              type: 'url',
+            ),
+        ];
+
+    test('ровный обходит того, кто сегодня скакал и падал', () {
+      final jumpy = _server('jumpy', sub: 's1',
+          samples: history([80, null, 400]));
+      final steady = _server('steady', sub: 's1',
+          samples: history([150, 160]));
+
+      expect(
+        AutoServerSelect.switchScore(jumpy, 70, now),
+        greaterThan(AutoServerSelect.switchScore(steady, 155, now)),
+      );
+    });
+
+    test('без истории решает сам ответ', () {
+      expect(
+        AutoServerSelect.switchScore(_server('a', sub: 's1'), 120, now),
+        120,
+      );
+      expect(AutoServerSelect.switchScore(null, 120, now), 120);
+    });
+
+    test('судья берёт ровного, даже если тот ответил медленнее', () {
+      final servers = {
+        'jumpy': _server('jumpy', sub: 's1', samples: history([80, null, 400])),
+        'steady': _server('steady', sub: 's1', samples: history([150, 160])),
+      };
+      final verdict = AutoServerSelect.judge(
+        currentId: 'cur',
+        results: [
+          (id: 'cur', success: false, latencyMs: null),
+          (id: 'jumpy', success: true, latencyMs: 70),
+          (id: 'steady', success: true, latencyMs: 155),
+        ],
+        batchComplete: true,
+        score: (id, ms) =>
+            AutoServerSelect.switchScore(servers[id], ms, now),
+      );
+
+      expect(verdict.nextId, 'steady');
+    });
+  });
 }
