@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -74,6 +76,9 @@ Future<(StorageService, List<MethodCall>)> _openWindowsSettings(
 }
 
 void main() {
+  // раздел «Windows» в настройках строится по настоящей ОС, на раннере CI с Linux его нет
+  final skip = !Platform.isWindows;
+
   testWidgets('стоит между правами администратора и подключением', (tester) async {
     await _openWindowsSettings(tester, autostart: true);
 
@@ -82,7 +87,7 @@ void main() {
     final connect = tester.getRect(find.text('Connect on autostart'));
     expect(tray.top, greaterThan(admin.top));
     expect(tray.top, lessThan(connect.top));
-  });
+  }, skip: skip);
 
   testWidgets('без автозапуска нажатие ничего не меняет', (tester) async {
     final (storage, calls) = await _openWindowsSettings(tester, autostart: false);
@@ -98,7 +103,7 @@ void main() {
       calls.where((c) => c.method == 'setAutostartInTray' && c.arguments['enabled'] == true),
       isEmpty,
     );
-  });
+  }, skip: skip);
 
   testWidgets('с автозапуском включается и сразу уходит в раннер', (tester) async {
     final (storage, calls) = await _openWindowsSettings(tester, autostart: true);
@@ -114,5 +119,5 @@ void main() {
       calls.where((c) => c.method == 'setAutostartInTray').last.arguments,
       {'enabled': true},
     );
-  });
+  }, skip: skip);
 }
