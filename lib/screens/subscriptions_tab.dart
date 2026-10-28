@@ -680,7 +680,7 @@ String _subFormatExpiry(BuildContext context, DateTime dt) {
   return l10n.subscriptionsSoon;
 }
 
-class _SubCardDetails extends ConsumerWidget {
+class _SubCardDetails extends ConsumerStatefulWidget {
   const _SubCardDetails({required this.sub, required this.onSwitchToHttps});
 
   final Subscription sub;
@@ -688,10 +688,46 @@ class _SubCardDetails extends ConsumerWidget {
   final VoidCallback onSwitchToHttps;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SubCardDetails> createState() => _SubCardDetailsState();
+}
+
+class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
+    with SingleTickerProviderStateMixin {
+  var _shut = false;
+  late final AnimationController _open = AnimationController.unbounded(
+    vsync: this,
+    value: (ref.read(collapsedSubscriptionCardsProvider)[widget.sub.id] ?? false) ? 0 : 1,
+  );
+
+  @override
+  void dispose() {
+    _open.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = widget.sub;
+    final onSwitchToHttps = widget.onSwitchToHttps;
     final l10n = AppLocalizations.of(context)!;
     final collapsed = ref.watch(
       collapsedSubscriptionCardsProvider.select((m) => m[sub.id] ?? false),
+    );
+    ref.listen(
+      collapsedSubscriptionCardsProvider.select((m) => m[sub.id] ?? false),
+      (_, next) {
+        _shut = false;
+        if (MediaQuery.disableAnimationsOf(context)) {
+          _open.value = next ? 0 : 1;
+        } else {
+          ExpressiveMotion.springTo(
+            _open,
+            next ? 0 : 1,
+            snapToEnd: true,
+            spring: next ? ExpressiveMotion.fold : ExpressiveMotion.spatialDefault,
+          );
+        }
+      },
     );
     final refreshError = ref.watch(
       subscriptionRefreshErrorsProvider.select((m) => m[sub.id]),
@@ -708,12 +744,31 @@ class _SubCardDetails extends ConsumerWidget {
     final accentColor = AppTheme.accent(context);
     final redColor = AppTheme.red(context);
     final orangeColor = AppTheme.orange(context);
-    return AnimatedCrossFade(
-        duration: const Duration(milliseconds: 220),
-        crossFadeState: collapsed
-            ? CrossFadeState.showSecond
-            : CrossFadeState.showFirst,
-        firstChild: Padding(
+    return AnimatedBuilder(
+      animation: _open,
+      builder: (context, details) {
+        final v = _open.value;
+        // отдача пружины снова приоткрывала бы свёрнутое: дошли до нуля, дальше пружинит один край
+        if (collapsed && v <= 0) _shut = true;
+        final open = collapsed && (_shut || !_open.isAnimating) ? 0.0 : math.max(0.0, v);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (open > 0)
+              ClipRect(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  heightFactor: open,
+                  child: details,
+                ),
+              ),
+            SizedBox(
+              height: math.max(0.0, 10 * (1 - math.min(open, 1.0)) + math.min(0.0, v) * 60),
+            ),
+          ],
+        );
+      },
+      child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -923,7 +978,6 @@ class _SubCardDetails extends ConsumerWidget {
             ],
           ),
         ),
-        secondChild: const SizedBox(height: 10),
       );
   }
 }
@@ -1004,7 +1058,8 @@ class _SubCardHeader extends ConsumerWidget {
                         .update((m) => {...m, sub.id: !collapsed}),
                     child: AnimatedRotation(
                       turns: collapsed ? -0.25 : 0,
-                      duration: const Duration(milliseconds: 200),
+                      duration: ExpressiveMotion.durationFast,
+                      curve: ExpressiveMotion.emphasized,
                       child: Icon(
                         Icons.expand_more_rounded,
                         size: 20,

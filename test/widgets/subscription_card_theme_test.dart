@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +28,10 @@ class _FakeSettings extends SettingsNotifier {
   @override
   Future<AppSettings> build() async => const AppSettings();
 }
+
+final _details = find.byWidgetPredicate(
+  (w) => w.runtimeType.toString() == '_SubCardDetails',
+);
 
 Future<void> _pumpTab(WidgetTester tester, Subscription sub) async {
   final storage = await buildStorageService();
@@ -472,12 +478,10 @@ void main() {
     testWidgets('свёрнутая карточка в образце всё равно раскрыта', (
       tester,
     ) async {
-      // Сворачиваемая часть живёт в AnimatedCrossFade, а он держит в дереве
-      // ОБА состояния — по тексту свёрнутость не проверить, только по нему
-      // самому.
-      int expandedCards() => tester
-          .widgetList<AnimatedCrossFade>(find.byType(AnimatedCrossFade))
-          .where((w) => w.crossFadeState == CrossFadeState.showFirst)
+      // от свёрнутой части остаётся полоска в 10 dp
+      int expandedCards() => _details
+          .evaluate()
+          .where((e) => e.size!.height > 10.5)
           .length;
 
       await _pumpTab(tester, _sub());
@@ -508,6 +512,29 @@ void main() {
       final clip = find.ancestor(of: art, matching: find.byType(ClipRRect)).first;
       expect(tester.widget<ClipRRect>(clip).clipBehavior, Clip.antiAliasWithSaveLayer);
       expect(tester.getRect(art), rectMoreOrLessEquals(tester.getRect(clip).inflate(1)));
+    });
+
+    testWidgets(
+        'карточка сворачивается пружиной, как группа серверов: край пружинит, '
+        'а свёрнутое обратно не выглядывает', (tester) async {
+      await _pumpTab(tester, _sub());
+      final open = tester.getSize(_details).height;
+      await tester.tap(find.byIcon(Icons.expand_more_rounded));
+      await tester.pump();
+      final heights = <double>[];
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        heights.add(tester.getSize(_details).height);
+      }
+      expect(heights.first, inExclusiveRange(10, open), reason: 'не разом');
+      expect(heights.reduce(math.min), lessThan(9), reason: 'край пружинит');
+      final shut = heights.indexWhere((h) => h <= 10);
+      expect(heights.skip(shut).every((h) => h <= 10.01), isTrue);
+      expect(heights.last, 10);
+
+      await tester.tap(find.byIcon(Icons.expand_more_rounded));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(_details).height, moreOrLessEquals(open, epsilon: 0.01));
     });
 
     testWidgets('редактор показывает состав и текущий пресет', (tester) async {

@@ -863,12 +863,6 @@ class _SubCard extends ConsumerStatefulWidget {
 
 class _SubCardState extends ConsumerState<_SubCard>
     with SingleTickerProviderStateMixin {
-  static const _foldSpring = SpringDescription(
-    mass: 1,
-    stiffness: 380,
-    damping: 0.55 * 2 * 19.49,
-  );
-
   var _shut = false;
   late final AnimationController _open = AnimationController.unbounded(
     vsync: this,
@@ -967,7 +961,7 @@ class _SubCardState extends ConsumerState<_SubCard>
             _open,
             target,
             snapToEnd: true,
-            spring: next ? _foldSpring : ExpressiveMotion.spatialDefault,
+            spring: next ? ExpressiveMotion.fold : ExpressiveMotion.spatialDefault,
           );
         }
       },

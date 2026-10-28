@@ -116,6 +116,11 @@ abstract final class ExpressiveMotion {
     stiffness: 200,
     damping: 0.8 * 2 * 14.14,
   );
+  static const fold = SpringDescription(
+    mass: 1,
+    stiffness: 380,
+    damping: 0.55 * 2 * 19.49,
+  );
 
   static const effectsFast = SpringDescription(
     mass: 1,
