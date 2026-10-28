@@ -47,6 +47,7 @@ import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/liquid_nav.dart';
 import 'package:keqdroid/shared/ui/commit_on_blur.dart';
 import 'package:keqdroid/shared/ui/floating_bar.dart';
+import 'package:keqdroid/shared/ui/smooth_fade.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
 import 'package:keqdroid/shared/ui/expressive_button_group.dart';
@@ -129,7 +130,9 @@ class SettingsTab extends ConsumerWidget {
           child: Column(
             children: [
               Expanded(
-                child: SmoothScroll(
+                child: EdgeFadeMask(
+                  bottom: 32,
+                  child: SmoothScroll(
                   builder: (context, controller) => ListView(
                     controller: controller,
                     physics: const ClampingScrollPhysics(),
@@ -222,6 +225,7 @@ class SettingsTab extends ConsumerWidget {
                       const SizedBox(height: 24),
                     ],
                   ),
+                ),
                 ),
               ),
               const _AppVersionSection(),
@@ -558,8 +562,7 @@ class _AppVersionSection extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Divider(color: AppTheme.divider(context), thickness: 1),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               const _UpdateVersionInfo(),
             ],
           ),
