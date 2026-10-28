@@ -16,7 +16,15 @@ abstract final class AutoSelectWatchdog {
 
   static const quietAfterCheck = Duration(seconds: 15);
 
+  // без связи замер раз в 20 с поднимал ядро на десяток серверов всю поездку в метро
+  static const deadZoneQuietMax = Duration(minutes: 2);
+
   static const quietAfterSwitch = Duration(seconds: 5);
+
+  // подписку, которую подозреваем, меряем почти целиком: тридцать это три пачки ядра на телефоне
+  static const suspectLimit = 30;
+
+  static const controlsPerSubscription = 2;
 
   static const probeEvery = Duration(seconds: 30);
 
@@ -45,6 +53,52 @@ abstract final class AutoSelectWatchdog {
   static bool switchAllowed(List<DateTime> recent, DateTime now) {
     final inWindow = recent.where((t) => now.difference(t) < switchWindow);
     return inWindow.length < maxSwitchesPerWindow;
+  }
+
+  static Duration quietAfterRound({required int deadRounds}) {
+    if (deadRounds <= 0) return quietAfterCheck;
+    final grown = quietAfterCheck * (1 << (deadRounds - 1).clamp(0, 6));
+    return grown > deadZoneQuietMax ? deadZoneQuietMax : grown;
+  }
+}
+
+// своя подписка молчит, а соседняя в те же секунды отвечает: сеть жива, умерла подписка.
+// молчат все разом, значит лифт или метро, и такой раунд не считается
+final class SubscriptionOutage {
+  const SubscriptionOutage({this.subscriptionId, this.rounds = 0, this.lastAt});
+
+  static const roundsBeforeJump = 2;
+
+  static const forgetAfter = Duration(minutes: 5);
+
+  final String? subscriptionId;
+
+  final int rounds;
+
+  final DateTime? lastAt;
+
+  bool suspects(String subscriptionId) =>
+      rounds > 0 && this.subscriptionId == subscriptionId;
+
+  bool get shouldJump => rounds >= roundsBeforeJump;
+
+  SubscriptionOutage afterRound({
+    required String subscriptionId,
+    required bool ownAnswered,
+    required bool othersAnswered,
+    required DateTime now,
+  }) {
+    if (ownAnswered) return const SubscriptionOutage();
+    final last = lastAt;
+    final fresh = this.subscriptionId != subscriptionId ||
+        last == null ||
+        now.difference(last) > forgetAfter;
+    if (!othersAnswered) return fresh ? const SubscriptionOutage() : this;
+    return SubscriptionOutage(
+      subscriptionId: subscriptionId,
+      rounds: fresh ? 1 : rounds + 1,
+      lastAt: now,
+    );
   }
 }
 

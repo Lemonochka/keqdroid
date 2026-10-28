@@ -265,6 +265,25 @@ void main() {
     expect(picked.map((s) => s.id), ['s3', 'home', 's0', 's1']);
   });
 
+  test('свой сервер из соседней подписки тоже попадает в замер', () {
+    // Автовыбор уехал в соседнюю подписку и ждёт свой сервер в родной.
+    final servers = [
+      _server('b1', sub: 'neighbour', ping: 50, tested: tested),
+      _server('b2', sub: 'neighbour', ping: 60, tested: tested),
+      _server('home', sub: 'own', ping: 40, tested: tested),
+    ];
+
+    final picked = AutoServerSelect.candidatesToMeasure(
+      servers,
+      subscriptionId: 'neighbour',
+      current: servers[0],
+      limit: 4,
+      include: {'home'},
+    );
+
+    expect(picked.map((s) => s.id), ['b1', 'home', 'b2']);
+  });
+
   group('записывать ли замер', () {
     ({String id, bool success, int? latencyMs}) ok(String id) =>
         (id: id, success: true, latencyMs: 100);
@@ -286,6 +305,64 @@ void main() {
         AutoServerSelect.worthRecording([dead('a'), ok('b'), dead('c')]),
         isTrue,
       );
+    });
+  });
+
+  group('соседние подписки', () {
+    const order = ['top', 'empty', 'own', 'below', 'bottom'];
+    const withServers = {'top', 'own', 'below', 'bottom'};
+
+    test('ближайшая выше и ближайшая ниже, пустую пропускаем', () {
+      // Пустую подписку на экране не видно, соседом она не считается.
+      expect(
+        AutoServerSelect.neighbourSubscriptions(
+          order,
+          ownerId: 'own',
+          withServers: withServers,
+        ),
+        ['top', 'below'],
+      );
+    });
+
+    test('у верхней подписки сосед только снизу', () {
+      expect(
+        AutoServerSelect.neighbourSubscriptions(
+          order,
+          ownerId: 'top',
+          withServers: withServers,
+        ),
+        ['own'],
+      );
+    });
+
+    test('единственная подписка соседей не имеет', () {
+      expect(
+        AutoServerSelect.neighbourSubscriptions(
+          const ['own'],
+          ownerId: 'own',
+          withServers: const {'own'},
+        ),
+        isEmpty,
+      );
+    });
+
+    test('контроль — по два лучших из каждой соседней', () {
+      final servers = [
+        _server('t1', sub: 'top', ping: 300, tested: tested),
+        _server('t2', sub: 'top', ping: 100, tested: tested),
+        _server('t3', sub: 'top', ping: 200, tested: tested),
+        _server('b1', sub: 'below', ping: 90, tested: tested),
+        _server('o1', sub: 'own', ping: 10, tested: tested),
+      ];
+
+      final picked = AutoServerSelect.controls(
+        servers,
+        subscriptionIds: const ['top', 'below'],
+        perSubscription: 2,
+        skip: const {'t2'},
+      );
+
+      expect(picked.map((s) => s.id), ['t3', 't1', 'b1']);
     });
   });
 

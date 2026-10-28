@@ -72,6 +72,59 @@ void main() {
     expect(home.shouldReturn, isTrue);
   });
 
+  group('переезды внутри соседней подписки', () {
+    const away = AutoSelectHome(
+      subscriptionId: 'own',
+      homeId: 'home',
+      pickedId: 'b1',
+    );
+
+    test('ждём по-прежнему свой сервер, а не соседний', () {
+      final next = AutoSelectHome.afterNeighbourFailover(
+        away,
+        subscriptionId: 'own',
+        fromId: 'b1',
+        toId: 'b2',
+      );
+
+      expect(next?.homeId, 'home');
+      expect(next?.pickedId, 'b2');
+    });
+
+    test('уехали прямо на свой — ждать нечего', () {
+      expect(
+        AutoSelectHome.afterNeighbourFailover(
+          away,
+          subscriptionId: 'own',
+          fromId: 'b1',
+          toId: 'home',
+        ),
+        isNull,
+      );
+    });
+
+    test('сервер сменил не автовыбор — соседний своим не становится', () {
+      expect(
+        AutoSelectHome.afterNeighbourFailover(
+          away,
+          subscriptionId: 'own',
+          fromId: 'b9',
+          toId: 'b2',
+        ),
+        isNull,
+      );
+      expect(
+        AutoSelectHome.afterNeighbourFailover(
+          null,
+          subscriptionId: 'own',
+          fromId: 'b1',
+          toId: 'b2',
+        ),
+        isNull,
+      );
+    });
+  });
+
   group('когда ждать больше нечего', () {
     const home = AutoSelectHome(
       subscriptionId: 's1',

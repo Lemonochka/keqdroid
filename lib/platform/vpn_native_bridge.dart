@@ -114,6 +114,21 @@ class VpnNativeBridge {
     }
   }
 
+  static Future<({int count, int changes})?> physicalNetworks() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      final map = await channel.invokeMapMethod<String, Object?>(
+        'getPhysicalNetworks',
+      );
+      final count = map?['count'];
+      final changes = map?['changes'];
+      if (count is! int || changes is! int || count < 0) return null;
+      return (count: count, changes: changes);
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<List<String>> resolveConnectionOwners(
     List<Map<String, Object?>> connections,
   ) async {

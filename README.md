@@ -64,7 +64,7 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 - subscription URLs with scheduled auto-update; `keqdroid://` and `keqdis://` deep links from provider panels
 - manual entry, config import, QR code scan (Android)
 - proxy chains: traffic passes through several servers in the order you set
-- **Auto** for a subscription: picks a steady server, moves on when it stops answering and goes back once it answers again
+- **Auto** for a subscription: picks a steady server, moves on when it stops answering and goes back once it answers again; if the whole subscription goes silent while the one above or below it answers, moves there until its own answers again
 - per-subscription device identity sent to the provider's panel
 - checks: TCP, HTTP, ICMP, speed test; sorting by ping, name or speed
 
@@ -291,7 +291,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 - подписки по URL с автообновлением по расписанию; deep-ссылки `keqdroid://` и `keqdis://` из панелей провайдеров
 - ручное добавление, импорт конфигов, сканирование QR-кодов (Android)
 - цепочки прокси: трафик проходит через несколько серверов в заданном порядке
-- **Auto** у подписки: выбирает стабильный сервер, уходит с него, когда он перестаёт отвечать, и возвращается, когда он снова отвечает
+- **Auto** у подписки: выбирает стабильный сервер, уходит с него, когда он перестаёт отвечать, и возвращается, когда он снова отвечает; если молчит вся подписка, а соседняя выше или ниже отвечает, переходит туда, пока своя снова не ответит
 - отдельные данные устройства для каждой подписки (их видит панель провайдера)
 - проверки: TCP, HTTP, ICMP, тест скорости; сортировка по пингу, имени или скорости
 

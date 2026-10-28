@@ -439,6 +439,12 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                         "getMihomoApi" -> getMihomoApi(result)
                         "getDialFailures" -> result.success(NativeHelper.dialFailures())
+                        "getPhysicalNetworks" -> result.success(
+                            mapOf(
+                                "count" to KeqdisVpnService.physicalNetworks,
+                                "changes" to KeqdisVpnService.networkChanges,
+                            ),
+                        )
                         "getPing" -> {
                             val addr    = call.argument<String>("address") ?: ""
                             val port    = call.argument<Int>("port") ?: 0

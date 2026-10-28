@@ -100,15 +100,49 @@ abstract final class AutoServerSelect {
         if (server.subscriptionId == subscriptionId && server.id != current.id)
           server,
     ];
+    // свой сервер может ждать в соседней подписке, поэтому из всех
     final forced = [
-      for (final server in group)
-        if (include.contains(server.id)) server,
+      for (final server in servers)
+        if (include.contains(server.id) && server.id != current.id) server,
     ];
     final others = _ranked(
       group.where((s) => !include.contains(s.id)),
       now ?? DateTime.now(),
     );
     return [current, ...forced, ...others].take(limit).toList();
+  }
+
+  static List<ServerItem> controls(
+    List<ServerItem> servers, {
+    required Iterable<String> subscriptionIds,
+    required int perSubscription,
+    Set<String> skip = const {},
+    DateTime? now,
+  }) {
+    final at = now ?? DateTime.now();
+    return [
+      for (final id in subscriptionIds)
+        ..._ranked(
+          servers.where((s) => s.subscriptionId == id && !skip.contains(s.id)),
+          at,
+        ).take(perSubscription),
+    ];
+  }
+
+  // ближайшие выше и ниже по экрану; пустые подписки на экране не видны, их пропускаем
+  static List<String> neighbourSubscriptions(
+    List<String> order, {
+    required String ownerId,
+    required Set<String> withServers,
+  }) {
+    final at = order.indexOf(ownerId);
+    if (at < 0) return const [];
+    String? nearest(Iterable<String> ids) =>
+        ids.where(withServers.contains).firstOrNull;
+    return [
+      ?nearest(order.sublist(0, at).reversed),
+      ?nearest(order.sublist(at + 1)),
+    ];
   }
 
   // не ответил никто: это сеть (лифт, метро, переезд с Wi-Fi), а не серверы.

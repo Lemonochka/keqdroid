@@ -259,6 +259,136 @@ void main() {
     });
   });
 
+  group('мёртвая зона', () {
+    test('после обычной проверки пауза прежняя', () {
+      expect(
+        AutoSelectWatchdog.quietAfterRound(deadRounds: 0),
+        AutoSelectWatchdog.quietAfterCheck,
+      );
+    });
+
+    test('пока не отвечает никто, пауза растёт до потолка', () {
+      final pauses = [
+        for (var n = 1; n <= 8; n++)
+          AutoSelectWatchdog.quietAfterRound(deadRounds: n).inSeconds,
+      ];
+      expect(pauses, [15, 30, 60, 120, 120, 120, 120, 120]);
+    });
+  });
+
+  group('прыжок в соседнюю подписку', () {
+    final t0 = DateTime(2026, 10, 28, 9);
+    DateTime at(int seconds) => t0.add(Duration(seconds: seconds));
+
+    test('в лифте молчат все — раунды не считаются вовсе', () {
+      var outage = const SubscriptionOutage();
+      for (var i = 0; i < 10; i++) {
+        outage = outage.afterRound(
+          subscriptionId: 'own',
+          ownAnswered: false,
+          othersAnswered: false,
+          now: at(25 * i),
+        );
+      }
+      expect(outage.rounds, 0);
+      expect(outage.shouldJump, isFalse);
+    });
+
+    test('своя молчит, соседняя отвечает два раунда — прыгаем', () {
+      var outage = const SubscriptionOutage().afterRound(
+        subscriptionId: 'own',
+        ownAnswered: false,
+        othersAnswered: true,
+        now: at(0),
+      );
+      expect(outage.shouldJump, isFalse);
+      expect(outage.suspects('own'), isTrue);
+
+      outage = outage.afterRound(
+        subscriptionId: 'own',
+        ownAnswered: false,
+        othersAnswered: true,
+        now: at(25),
+      );
+      expect(outage.shouldJump, isTrue);
+    });
+
+    test('раунд без связи между ними счёт не сбрасывает и не двигает', () {
+      var outage = const SubscriptionOutage().afterRound(
+        subscriptionId: 'own',
+        ownAnswered: false,
+        othersAnswered: true,
+        now: at(0),
+      );
+      outage = outage.afterRound(
+        subscriptionId: 'own',
+        ownAnswered: false,
+        othersAnswered: false,
+        now: at(25),
+      );
+      expect(outage.rounds, 1);
+      outage = outage.afterRound(
+        subscriptionId: 'own',
+        ownAnswered: false,
+        othersAnswered: true,
+        now: at(50),
+      );
+      expect(outage.shouldJump, isTrue);
+    });
+
+    test('свой ответил — подозрение снято', () {
+      var outage = const SubscriptionOutage().afterRound(
+        subscriptionId: 'own',
+        ownAnswered: false,
+        othersAnswered: true,
+        now: at(0),
+      );
+      outage = outage.afterRound(
+        subscriptionId: 'own',
+        ownAnswered: true,
+        othersAnswered: true,
+        now: at(25),
+      );
+      expect(outage.rounds, 0);
+      expect(outage.suspects('own'), isFalse);
+    });
+
+    test('давний раунд с новым в пару не складывается', () {
+      var outage = const SubscriptionOutage().afterRound(
+        subscriptionId: 'own',
+        ownAnswered: false,
+        othersAnswered: true,
+        now: at(0),
+      );
+      outage = outage.afterRound(
+        subscriptionId: 'own',
+        ownAnswered: false,
+        othersAnswered: true,
+        now: t0.add(SubscriptionOutage.forgetAfter + const Duration(seconds: 1)),
+      );
+      expect(outage.rounds, 1);
+      expect(outage.shouldJump, isFalse);
+    });
+
+    test('другая подписка начинает счёт заново', () {
+      var outage = const SubscriptionOutage().afterRound(
+        subscriptionId: 'own',
+        ownAnswered: false,
+        othersAnswered: true,
+        now: at(0),
+      );
+      outage = outage.afterRound(
+        subscriptionId: 'neighbour',
+        ownAnswered: false,
+        othersAnswered: true,
+        now: at(25),
+      );
+      expect(outage.rounds, 1);
+      expect(outage.suspects('own'), isFalse);
+      expect(outage.suspects('neighbour'), isTrue);
+    });
+  });
+
   test('замер судьи короче, чем обычный пинг, но не впритык', () {
     // Мерим «жив ли», а не «насколько быстр»: живой сервер отвечает за доли
     // секунды, но на загруженном LTE нужен запас, иначе рабочий сервер

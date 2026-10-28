@@ -49,6 +49,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   Timer? _autoSelectRecheckTimer;
   int? _autoSelectRecheckSeenBytes;
+  SubscriptionOutage _autoSelectOutage = const SubscriptionOutage();
+  int _autoSelectDeadRounds = 0;
+  int? _autoSelectNetworkMark;
   AppLifecycleListener? _androidLifecycle;
 
   void _applyNativeState(VpnState s) {
@@ -836,22 +839,85 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
   }
 
-  ({ServerItem server, String subId})? _autoSelectTarget() {
+  Future<_AutoTarget?> _autoSelectTarget() async {
     if (state.value?.status != VpnStatus.connected) return null;
     final server = ref.read(serversProvider).activeServer;
     final subId = server?.subscriptionId;
     if (server == null || subId == null) return null;
     final subs = ref.read(subscriptionsProvider).value ?? const <Subscription>[];
-    final owner = subs.where((s) => s.id == subId).firstOrNull;
-    if (owner == null || !owner.autoSelect) return null;
-    return (server: server, subId: subId);
+    final own = subs.where((s) => s.id == subId).firstOrNull;
+    if (own != null && own.autoSelect) {
+      return (server: server, subId: subId, ownerId: subId);
+    }
+    final owner = subs.where((s) => s.autoSelect).firstOrNull;
+    if (owner == null) return null;
+    // в соседней подписке ведём только сервер, куда увёз сам автовыбор: выбранный из трея или горячей клавишей не наш
+    final home = await AutoSelectHomeStore.load();
+    if (home == null ||
+        home.subscriptionId != owner.id ||
+        home.pickedId != server.id ||
+        !_autoSelectFamily(owner.id).contains(subId)) {
+      return null;
+    }
+    return (server: server, subId: subId, ownerId: owner.id);
   }
+
+  List<String> _autoSelectFamily(String ownerId) {
+    final subs = ref.read(subscriptionsProvider).value ?? const <Subscription>[];
+    return [
+      ownerId,
+      ...AutoServerSelect.neighbourSubscriptions(
+        [for (final s in subs) s.id],
+        ownerId: ownerId,
+        withServers: {
+          for (final s in ref.read(serversProvider).servers) ?s.subscriptionId,
+        },
+      ),
+    ];
+  }
+
+  int _autoSelectLimit(_AutoTarget target) =>
+      _autoSelectOutage.suspects(target.subId)
+          ? AutoSelectWatchdog.suspectLimit
+          : AutoSelectWatchdog.candidateLimit;
 
   int _autoSelectScore(String id, int latencyMs) => AutoServerSelect.switchScore(
         ref.read(serversProvider).servers.where((s) => s.id == id).firstOrNull,
         latencyMs,
         DateTime.now(),
       );
+
+  // Android знает, есть ли под туннелем сеть вообще: без неё замер только жжёт батарею
+  Future<bool> _autoSelectOffline() async {
+    final net = await VpnNativeBridge.physicalNetworks();
+    if (net == null || net.count > 0) return false;
+    AppLogger.instance.info('Auto select: no network under the tunnel, not measuring');
+    _autoSelectRest(net.changes);
+    return true;
+  }
+
+  void _autoSelectRest(int? networkMark) {
+    _autoSelectDeadRounds++;
+    _autoSelectNetworkMark = networkMark;
+    _autoSelectQuietUntil = DateTime.now().add(
+      AutoSelectWatchdog.quietAfterRound(deadRounds: _autoSelectDeadRounds),
+    );
+  }
+
+  // паузу мёртвой зоны кончает и новая сеть, а не только таймер
+  Future<bool> _autoSelectQuiet() async {
+    final until = _autoSelectQuietUntil;
+    if (until == null || !DateTime.now().isBefore(until)) return false;
+    final mark = _autoSelectNetworkMark;
+    if (_autoSelectDeadRounds == 0 || mark == null) return true;
+    final net = await VpnNativeBridge.physicalNetworks();
+    if (net == null || net.count == 0 || net.changes == mark) return true;
+    AppLogger.instance.info('Auto select: the network changed, checking right away');
+    _autoSelectQuietUntil = null;
+    _autoSelectDeadRounds = 0;
+    _autoSelectNetworkMark = null;
+    return false;
+  }
 
   Future<String> _autoSelectTestUrl() async {
     final settings = await ref.read(storageProvider).getSettings();
@@ -866,15 +932,32 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     String subId, {
     int limit = AutoSelectWatchdog.candidateLimit,
     Set<String> include = const {},
-  }) {
-    final measure = _AutoSelectMeasure(current.id);
-    final servers = AutoServerSelect.candidatesToMeasure(
-      ref.read(serversProvider).servers,
-      subscriptionId: subId,
-      current: current,
-      limit: limit,
-      include: include,
-    );
+  }) =>
+      _autoSelectMeasure(
+        current.id,
+        AutoServerSelect.candidatesToMeasure(
+          ref.read(serversProvider).servers,
+          subscriptionId: subId,
+          current: current,
+          limit: limit,
+          include: include,
+        ),
+      );
+
+  Future<void> _autoSelectRecord(List<PingResult> results) =>
+      ref.read(serversProvider.notifier).updatePingResults({
+        for (final r in results)
+          r.serverId: (
+            pingMs: r.success ? r.latencyMs : null,
+            lastPingType: PingService.pingTypeToStored(r.pingType),
+          ),
+      });
+
+  _AutoSelectMeasure _autoSelectMeasure(
+    String currentId,
+    List<ServerItem> servers,
+  ) {
+    final measure = _AutoSelectMeasure(currentId);
     ({String id, bool success, int? latencyMs}) entry(PingResult r) =>
         (id: r.serverId, success: r.success, latencyMs: r.latencyMs);
     measure.done = () async {
@@ -890,16 +973,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         for (final r in results) {
           measure.results[r.serverId] = entry(r);
         }
+        measure.pings = results;
         if (AutoServerSelect.worthRecording(measure.results.values)) {
-          unawaited(
-            ref.read(serversProvider.notifier).updatePingResults({
-              for (final r in results)
-                r.serverId: (
-                  pingMs: r.success ? r.latencyMs : null,
-                  lastPingType: PingService.pingTypeToStored(r.pingType),
-                ),
-            }),
-          );
+          unawaited(_autoSelectRecord(results));
         }
       } catch (e, st) {
         AppLogger.instance.debug(
@@ -927,17 +1003,29 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   Future<void> _autoSelectListen() async {
     if (_autoSelectBusy) return;
-    final target = _autoSelectTarget();
+    final target = await _autoSelectTarget();
     if (target == null) {
       _autoSelectSeenFailures = null;
       _autoSelectSilence = const SilenceStreak();
       _autoSelectCounters = null;
+      _autoSelectOutage = const SubscriptionOutage();
+      _autoSelectDeadRounds = 0;
       return;
     }
     final quietUntil = _autoSelectQuietUntil;
-    if (quietUntil != null && DateTime.now().isBefore(quietUntil)) return;
+    final deadZone = _autoSelectDeadRounds > 0;
+    if (!deadZone && quietUntil != null && DateTime.now().isBefore(quietUntil)) {
+      return;
+    }
 
     final second = await _autoSelectSecond();
+    // трафик пошёл сам: из мёртвой зоны вышли, и следующую тишину проверяем сразу, а не через две минуты
+    if (deadZone && (second?.received ?? 0) > 0) {
+      _autoSelectDeadRounds = 0;
+      _autoSelectNetworkMark = null;
+      _autoSelectQuietUntil = null;
+    }
+    if (await _autoSelectQuiet()) return;
     if (second != null) {
       _autoSelectSilence = _autoSelectSilence.next(
         sent: second.sent,
@@ -963,9 +1051,14 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     if (!stalled && !AutoSelectWatchdog.dialFailuresSuggestDeadServer(newFailures)) {
       return;
     }
+    if (await _autoSelectOffline()) return;
     await _autoSelectDecide(
-      target.server,
-      _autoSelectStartMeasure(target.server, target.subId),
+      target,
+      _autoSelectStartMeasure(
+        target.server,
+        target.subId,
+        limit: _autoSelectLimit(target),
+      ),
       reason: stalled
           ? 'nothing came back for ${_autoSelectSilence.silent} s'
           : '$newFailures failed dial(s) in the core log',
@@ -988,7 +1081,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   Future<void> _autoSelectTick() async {
     if (_autoSelectBusy) return;
-    final target = _autoSelectTarget();
+    final target = await _autoSelectTarget();
     if (target == null) return;
     final received = state.value?.totalDownload ?? 0;
     final sent = state.value?.totalUpload ?? 0;
@@ -999,8 +1092,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     final wentOut = !newSession && sent > _autoSelectSeenSent;
     _autoSelectSeenReceived = received;
     _autoSelectSeenSent = sent;
-    final quietUntil = _autoSelectQuietUntil;
-    if (quietUntil != null && DateTime.now().isBefore(quietUntil)) return;
+    if (await _autoSelectQuiet()) return;
     if (!AutoSelectWatchdog.shouldProbe(
       connected: true,
       autoSelectOn: true,
@@ -1009,21 +1101,28 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     )) {
       return;
     }
+    if (await _autoSelectOffline()) return;
     await _autoSelectDecide(
-      target.server,
-      _autoSelectStartMeasure(target.server, target.subId),
+      target,
+      _autoSelectStartMeasure(
+        target.server,
+        target.subId,
+        limit: _autoSelectLimit(target),
+      ),
       reason: 'nothing received for ${AutoSelectWatchdog.probeEvery.inSeconds} s',
     );
   }
 
   Future<void> _autoSelectDecide(
-    ServerItem server,
+    _AutoTarget target,
     _AutoSelectMeasure measure, {
     required String reason,
   }) async {
     if (_autoSelectBusy) return;
     _autoSelectBusy = true;
+    final server = target.server;
     var switched = false;
+    var dead = false;
     AppLogger.instance.info('Auto select: checking ${server.displayName} — $reason');
     try {
       var verdict = AutoServerSelect.judge(
@@ -1041,15 +1140,19 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           score: _autoSelectScore,
         );
       }
-      final nextId = verdict.nextId;
+      var nextId = verdict.nextId;
       if (nextId == null) {
-        final answered = measure.results[server.id]?.success == true;
-        AppLogger.instance.info(
-          answered
-              ? 'Auto select: ${server.displayName} answered, staying'
-              : 'Auto select: nobody answered, staying on ${server.displayName}',
-        );
-        return;
+        if (measure.results[server.id]?.success == true) {
+          _autoSelectOutage = const SubscriptionOutage();
+          AppLogger.instance.info('Auto select: ${server.displayName} answered, staying');
+          return;
+        }
+        final across = await _autoSelectAcross(target, measure);
+        dead = !across.answered;
+        nextId = across.nextId;
+        if (nextId == null) return;
+      } else {
+        _autoSelectOutage = const SubscriptionOutage();
       }
       if (state.value?.status != VpnStatus.connected) return;
       if (ref.read(serversProvider).activeServer?.id != server.id) return;
@@ -1076,17 +1179,22 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         'Auto select: ${server.displayName} did not answer, '
         '${next.displayName} did — switching',
       );
-      final subId = server.subscriptionId;
-      if (subId != null) {
-        await AutoSelectHomeStore.save(
-          AutoSelectHome.afterFailover(
-            await AutoSelectHomeStore.load(),
-            subscriptionId: subId,
-            fromId: server.id,
-            toId: next.id,
-          ),
-        );
-      }
+      final previous = await AutoSelectHomeStore.load();
+      await AutoSelectHomeStore.save(
+        target.subId == target.ownerId
+            ? AutoSelectHome.afterFailover(
+                previous,
+                subscriptionId: target.ownerId,
+                fromId: server.id,
+                toId: next.id,
+              )
+            : AutoSelectHome.afterNeighbourFailover(
+                previous,
+                subscriptionId: target.ownerId,
+                fromId: server.id,
+                toId: next.id,
+              ),
+      );
       switched = true;
       _autoSelectSwitches.add(now);
       await ref.read(serversProvider.notifier).setActive(next);
@@ -1102,18 +1210,92 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       _autoSelectSeenFailures = null;
       _autoSelectSilence = const SilenceStreak();
       _autoSelectCounters = null;
-      _autoSelectQuietUntil = DateTime.now().add(
-        switched
-            ? AutoSelectWatchdog.quietAfterSwitch
-            : AutoSelectWatchdog.quietAfterCheck,
-      );
+      if (switched) _autoSelectOutage = const SubscriptionOutage();
+      if (dead) {
+        _autoSelectRest((await VpnNativeBridge.physicalNetworks())?.changes);
+      } else {
+        _autoSelectDeadRounds = 0;
+        // подписка под подозрением, а сеть жива: второй раунд нужен скоро, человек сидит без связи
+        final soon = switched || _autoSelectOutage.suspects(target.subId);
+        _autoSelectQuietUntil = DateTime.now().add(
+          soon ? AutoSelectWatchdog.quietAfterSwitch : AutoSelectWatchdog.quietAfterCheck,
+        );
+      }
       _autoSelectBusy = false;
     }
   }
 
+  // вся своя подписка молчит: соседние по экрану служат контролем. молчат и они, значит сеть, а не серверы
+  Future<({String? nextId, bool answered})> _autoSelectAcross(
+    _AutoTarget target,
+    _AutoSelectMeasure own,
+  ) async {
+    final server = target.server;
+    if (!own.results.containsKey(server.id)) return (nextId: null, answered: true);
+    final controls = AutoServerSelect.controls(
+      ref.read(serversProvider).servers,
+      subscriptionIds: [
+        for (final id in _autoSelectFamily(target.ownerId))
+          if (id != target.subId) id,
+      ],
+      perSubscription: AutoSelectWatchdog.controlsPerSubscription,
+      skip: own.results.keys.toSet(),
+    );
+    if (controls.isEmpty) {
+      AppLogger.instance.info(
+        'Auto select: nobody answered, staying on ${server.displayName}',
+      );
+      return (nextId: null, answered: false);
+    }
+    AppLogger.instance.info(
+      'Auto select: nobody in the subscription answered, '
+      'asking ${controls.length} servers of the neighbouring ones',
+    );
+    final control = _autoSelectMeasure(server.id, controls);
+    await control.done;
+    final answered = AutoServerSelect.worthRecording(control.results.values);
+    _autoSelectOutage = _autoSelectOutage.afterRound(
+      subscriptionId: target.subId,
+      ownAnswered: false,
+      othersAnswered: answered,
+      now: DateTime.now(),
+    );
+    if (!answered) {
+      AppLogger.instance.info(
+        'Auto select: the neighbours are silent too, it is the network; '
+        'staying on ${server.displayName}',
+      );
+      return (nextId: null, answered: false);
+    }
+    // сеть жива, значит отказы своей подписки настоящие
+    unawaited(_autoSelectRecord(own.pings));
+    if (!_autoSelectOutage.shouldJump) {
+      AppLogger.instance.info(
+        'Auto select: the subscription is silent while a neighbour answers '
+        '(${_autoSelectOutage.rounds} of ${SubscriptionOutage.roundsBeforeJump}), '
+        'staying on ${server.displayName} for now',
+      );
+      return (nextId: null, answered: true);
+    }
+    final verdict = AutoServerSelect.judge(
+      currentId: server.id,
+      results: [
+        (id: server.id, success: false, latencyMs: null),
+        ...control.results.values,
+      ],
+      batchComplete: true,
+      score: _autoSelectScore,
+    );
+    AppLogger.instance.info(
+      'Auto select: the subscription stayed silent '
+      '${_autoSelectOutage.rounds} rounds while a neighbour answered, moving there',
+    );
+    return (nextId: verdict.nextId, answered: true);
+  }
+
   Future<void> _autoSelectRecheck() async {
     if (_autoSelectBusy) return;
-    final target = _autoSelectTarget();
+    final target = await _autoSelectTarget();
     var home = await AutoSelectHomeStore.load();
     if (target == null) {
       final subs = ref.read(subscriptionsProvider).value ?? const <Subscription>[];
@@ -1127,7 +1309,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     if (home != null) {
       final waiting = home.stillWaiting(
         activeId: target.server.id,
-        autoSubscriptionId: target.subId,
+        autoSubscriptionId: target.ownerId,
         homeExists: ref
             .read(serversProvider)
             .servers
@@ -1152,7 +1334,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       limit: AutoSelectWatchdog.recheckLimit,
       include: {?homeId},
     );
-    await _autoSelectDecide(target.server, measure, reason: 'scheduled check');
+    await _autoSelectDecide(target, measure, reason: 'scheduled check');
     if (home == null) return;
 
     _autoSelectBusy = true;
@@ -1289,12 +1471,15 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 final vpnStateProvider =
     AsyncNotifierProvider<VpnStateNotifier, VpnState>(VpnStateNotifier.new);
 
+typedef _AutoTarget = ({ServerItem server, String subId, String ownerId});
+
 class _AutoSelectMeasure {
   _AutoSelectMeasure(this.serverId);
 
   final String serverId;
 
   final results = <String, ({String id, bool success, int? latencyMs})>{};
+  List<PingResult> pings = const [];
   bool complete = false;
   Future<void> done = Future<void>.value();
   var _changed = Completer<void>();

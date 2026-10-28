@@ -92,6 +92,16 @@ class KeqdisVpnService : VpnService() {
         @Volatile
         var liveStatus: String = "disconnected"
             private set
+
+        // для сторожа автовыбора: -1 пока сеть не слушаем. по счётчику смен он узнаёт новую сеть и кончает паузу
+        @JvmStatic
+        @Volatile
+        var physicalNetworks: Int = -1
+            private set
+        @JvmStatic
+        @Volatile
+        var networkChanges: Int = 0
+            private set
         const val KEY_QS_ERROR = "qs_error"
         const val KEY_QS_LAST_XRAY_CONFIG = "qs_last_xray_config"
         const val KEY_QS_LAST_SOCKS_USERNAME = "qs_last_socks_username"
@@ -696,7 +706,10 @@ class KeqdisVpnService : VpnService() {
             }
         }
         networkCallback = null
-        synchronized(liveNetworks) { liveNetworks.clear() }
+        synchronized(liveNetworks) {
+            liveNetworks.clear()
+            physicalNetworks = -1
+        }
         watchStartedAt = 0L
         stopHyperOsUnderlyingWatch()
     }
@@ -706,6 +719,8 @@ class KeqdisVpnService : VpnService() {
         val hadOther = synchronized(liveNetworks) {
             val other = liveNetworks.any { it != network }
             liveNetworks.add(network)
+            physicalNetworks = liveNetworks.size
+            networkChanges++
             other
         }
         applyHuaweiUnderlying(network)
@@ -725,6 +740,8 @@ class KeqdisVpnService : VpnService() {
     private fun onPhysicalNetworkDown(network: Network) {
         val remaining = synchronized(liveNetworks) {
             liveNetworks.remove(network)
+            physicalNetworks = liveNetworks.size
+            networkChanges++
             liveNetworks.lastOrNull()
         }
         remaining?.let { applyHuaweiUnderlying(it) }

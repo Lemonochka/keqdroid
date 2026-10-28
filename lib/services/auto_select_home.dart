@@ -39,6 +39,26 @@ class AutoSelectHome {
     );
   }
 
+  // уезжаем с сервера соседней подписки: своим он не становится, ждём по-прежнему сервер своей
+  static AutoSelectHome? afterNeighbourFailover(
+    AutoSelectHome? previous, {
+    required String subscriptionId,
+    required String fromId,
+    required String toId,
+  }) {
+    if (previous == null ||
+        previous.subscriptionId != subscriptionId ||
+        previous.pickedId != fromId ||
+        previous.homeId == toId) {
+      return null;
+    }
+    return AutoSelectHome(
+      subscriptionId: subscriptionId,
+      homeId: previous.homeId,
+      pickedId: toId,
+    );
+  }
+
   AutoSelectHome? stillWaiting({
     required String activeId,
     required String? autoSubscriptionId,
