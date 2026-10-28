@@ -10,6 +10,11 @@ const kWintunAttempts = 3;
 
 const kWintunRetryPause = Duration(seconds: 5);
 
+// признак отказа в хвосте вывода, поэтому его дочитывают с таймаутом. timeout проверяет onTimeout по
+// настоящему типу future, и на голом Future.wait (List<void>) пустой onTimeout падал TypeError мимо повтора
+Future<void> coreOutputDone(List<Future<void>> pipes) =>
+    Future.wait(pipes).then<void>((_) {});
+
 // отказ Windows проходит со следующей попытки: 27.10.2026 TUN так и поднимали руками, переключая ядро
 Future<void> retryWhileWintunRefused({
   required Future<void> Function(int attempt) attempt,

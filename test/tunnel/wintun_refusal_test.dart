@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -249,6 +250,13 @@ void main() {
         ),
         throwsA(isA<VpnStartException>()),
       );
+    });
+
+    // 0.31.0, 28.10.2026: xray вышел после отказа Windows, дочитывание его вывода упало TypeError,
+    // и повтор под запасным именем не запустился
+    test('вывод ядра дочитывается с таймаутом без ошибки типа', () async {
+      await coreOutputDone([Completer<void>().future, Future<void>.value()])
+          .timeout(const Duration(milliseconds: 10), onTimeout: () {});
     });
   });
 }

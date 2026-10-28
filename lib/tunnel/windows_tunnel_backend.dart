@@ -796,7 +796,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         .listen(append)
         .asFuture<void>()
         .catchError((Object _) {});
-    return Future.wait([pipe(process.stderr), pipe(process.stdout)]);
+    return coreOutputDone([pipe(process.stderr), pipe(process.stdout)]);
   }
 
   static Future<int?> _exitCodeOrNull(Process process) => process.exitCode
