@@ -10,6 +10,7 @@ import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_group.dart';
 import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/models/subscription.dart';
+import 'package:keqdroid/models/subscription_card_theme.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/shared/ui/server_group_anchors.dart';
 import 'package:keqdroid/tunnel/tunnel_state.dart';
@@ -144,13 +145,21 @@ ScrollPosition _carouselPosition(WidgetTester tester) => tester
     )
     .position;
 
-double _coverTop(WidgetTester tester, String groupKey) => tester
-    .getRect(
-      find.byWidgetPredicate(
-        (w) => w.runtimeType.toString() == '_GroupCover' && (w as dynamic).group.key == groupKey,
-      ),
-    )
-    .top;
+final _covers = find.byWidgetPredicate((w) => w.runtimeType.toString() == '_GroupCover');
+
+Finder _cover(String groupKey) => find.byWidgetPredicate(
+      (w) => w.runtimeType.toString() == '_GroupCover' && (w as dynamic).group.key == groupKey,
+    );
+
+double _coverTop(WidgetTester tester, String groupKey) => tester.getRect(_cover(groupKey)).top;
+
+// по подписи большую обложку не узнать: названия на всех
+String _big(WidgetTester tester) {
+  final tallest = _covers
+      .evaluate()
+      .reduce((a, b) => a.size!.height >= b.size!.height ? a : b);
+  return (tallest.widget as dynamic).group.key as String;
+}
 
 // панель пересобирается на каждом кадре, как от анимации вкладок
 Future<void> _expectNoRollback(WidgetTester tester, ScrollPosition position) async {
@@ -171,21 +180,50 @@ void main() {
     tester,
   ) async {
     await _pumpNav(tester);
-    // по спеке подпись только на большой обложке
-    expect(find.text('Alpha'), findsOneWidget);
-    expect(find.text('Bravo'), findsNothing);
+    expect(_big(tester), 'sub-a');
 
     ServerGroupAnchors.instance.currentGroup.value = 'sub-b';
     await tester.pumpAndSettle();
-    expect(find.text('Bravo'), findsOneWidget);
-    expect(find.text('Alpha'), findsNothing);
+    expect(_big(tester), 'sub-b');
     // число серверов группы рядом с названием
     expect(find.text('2'), findsOneWidget);
 
     ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;
     await tester.pumpAndSettle();
+    expect(_big(tester), kManualServerGroupKey);
     // ручная группа берёт название из локализации
     expect(find.text('Manual servers'), findsOneWidget);
+  });
+
+  testWidgets('названия и на маленьких обложках: там посередине, на большой у нижнего края', (
+    tester,
+  ) async {
+    await _pumpNav(tester);
+    final small = tester.getRect(_cover('sub-b'));
+    final smallTitle = tester.getRect(find.text('Bravo'));
+    expect((smallTitle.center.dy - small.center.dy).abs(), lessThan(3));
+    final big = tester.getRect(_cover('sub-a'));
+    final bigTitle = tester.getRect(find.text('Alpha'));
+    expect(big.bottom - bigTitle.bottom, moreOrLessEquals(14, epsilon: 0.5));
+  });
+
+  // картинка, затемнение и фон сглаживались по краю каждое само, и по краю светилась полоска
+  testWidgets('обложка скругляется одним слоем, а её фон шире её на 1 dp', (tester) async {
+    await _pumpNav(tester);
+    expect(
+      tester.widget<CarouselView>(find.byType(CarouselView)).itemClipBehavior,
+      Clip.antiAliasWithSaveLayer,
+    );
+    final background = find.descendant(
+      of: _cover('sub-a'),
+      matching: find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.painter.runtimeType.toString() == '_DefaultCoverPainter',
+      ),
+    );
+    expect(
+      tester.getRect(background),
+      rectMoreOrLessEquals(tester.getRect(_cover('sub-a')).inflate(1)),
+    );
   });
 
   testWidgets('надпись над первой обложкой с запуска и после пересборки панели', (tester) async {
@@ -216,7 +254,7 @@ void main() {
       last = position.pixels;
     }
     await tester.pumpAndSettle();
-    expect(find.text('Alpha'), findsOneWidget);
+    expect(_big(tester), 'sub-a');
   });
 
   testWidgets('каждый щелчок колеса сразу шаг, список догоняет один раз, когда колесо встало', (
@@ -234,13 +272,13 @@ void main() {
     await notch(100);
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
-    expect(find.text('Manual servers'), findsOneWidget);
+    expect(_big(tester), kManualServerGroupKey);
     expect(opened, [1]);
 
     await notch(-100);
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
-    expect(find.text('Bravo'), findsOneWidget);
+    expect(_big(tester), 'sub-b');
     expect(opened, [1, 1]);
   });
 
@@ -257,7 +295,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 40));
     await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
     await _expectNoRollback(tester, position);
-    expect(find.text('Manual servers'), findsOneWidget);
+    expect(_big(tester), kManualServerGroupKey);
     expect(ServerGroupAnchors.instance.currentGroup.value, kManualServerGroupKey);
   });
 
@@ -278,7 +316,7 @@ void main() {
     tester.element(find.byType(SidebarGroupNav)).markNeedsBuild();
     await gesture.up();
     await _expectNoRollback(tester, position);
-    expect(find.text('Manual servers'), findsOneWidget);
+    expect(_big(tester), kManualServerGroupKey);
     expect(ServerGroupAnchors.instance.currentGroup.value, kManualServerGroupKey);
   });
 
@@ -302,7 +340,7 @@ void main() {
     expect(ServerGroupAnchors.instance.currentGroup.value, 'sub-b');
     list.jumpTo(600);
     await tester.pumpAndSettle();
-    expect(find.text('Bravo'), findsOneWidget);
+    expect(_big(tester), 'sub-b');
   });
 
   testWidgets('на ПК у карусели нет полосы прокрутки сбоку', (tester) async {
@@ -360,7 +398,7 @@ void main() {
         peak = math.max(peak, position.pixels);
       }
       await tester.pumpAndSettle();
-      expect(find.text('Bravo'), findsOneWidget, reason: 'шаг $step');
+      expect(_big(tester), 'sub-b', reason: 'шаг $step');
       // пиксель-другой перелетает сама пружина доводки Flutter, и без мыши тоже
       expect(peak, lessThanOrEqualTo(position.pixels + 3), reason: 'шаг $step');
       await tester.pumpWidget(const SizedBox());
@@ -386,10 +424,10 @@ void main() {
 
     final opened = await _pumpNav(tester);
     await slowDrag(-60);
-    expect(find.text('Alpha'), findsOneWidget);
+    expect(_big(tester), 'sub-a');
     expect(opened, isEmpty);
     await slowDrag(-300);
-    expect(find.text('Bravo'), findsOneWidget);
+    expect(_big(tester), 'sub-b');
     expect(opened, [1]);
   });
 
@@ -406,7 +444,7 @@ void main() {
     }
     await gesture.up();
     await tester.pumpAndSettle();
-    expect(find.text('Bravo'), findsOneWidget);
+    expect(_big(tester), 'sub-b');
     expect(opened, [1]);
   });
 
@@ -428,13 +466,13 @@ void main() {
 
     // у последней группы вниз листать некуда: первая под ней не выглядывает
     await wheel(100, 1000);
-    expect(find.text('Manual servers'), findsOneWidget);
+    expect(_big(tester), kManualServerGroupKey);
     await wheel(-100, 2000);
-    expect(find.text('Bravo'), findsOneWidget);
+    expect(_big(tester), 'sub-b');
     await wheel(-100, 3000);
-    expect(find.text('Alpha'), findsOneWidget);
+    expect(_big(tester), 'sub-a');
     await wheel(-100, 4000);
-    expect(find.text('Alpha'), findsOneWidget);
+    expect(_big(tester), 'sub-a');
   });
 
   testWidgets('клик по краю следующей обложки открывает вкладку серверов', (tester) async {
@@ -459,6 +497,27 @@ void main() {
     );
     expect(find.byIcon(Icons.edit_rounded), findsNothing);
     expect(find.byIcon(Icons.cloud_rounded), findsNothing);
+  });
+
+  testWidgets('большая обложка с картинкой выше 320 dp раскладывается без ошибок', (tester) async {
+    SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
+    addTearDown(() => SubscriptionCardTheme.customDirectory = null);
+    await _pumpNav(
+      tester,
+      subs: [
+        Subscription(
+          id: 'sub-a',
+          name: 'Alpha',
+          url: 'https://example.com/sub-a',
+          cardThemeId: '${SubscriptionCardTheme.filePrefix}pic.png',
+        ),
+        _sub('sub-b', 'Bravo'),
+      ],
+    );
+    expect(tester.getSize(_cover('sub-a')).height, greaterThan(320));
+    expect(tester.takeException(), isNull);
+    final picture = find.descendant(of: _cover('sub-a'), matching: find.byType(OverflowBox));
+    expect(tester.getSize(picture).width, tester.getSize(_cover('sub-a')).width + 2);
   });
 
   testWidgets('одна группа: переходить некуда, карусели нет', (tester) async {

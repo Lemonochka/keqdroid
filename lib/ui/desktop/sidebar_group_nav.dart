@@ -270,6 +270,9 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
                         itemSnapping: true,
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         backgroundColor: scheme.surfaceContainerHigh,
+                        // картинка и затемнение сглаживались по краю каждое само, и край светился
+                        // полоской. сперва слой, потом скругление; фон обложки шире её на 1 dp
+                        itemClipBehavior: Clip.antiAliasWithSaveLayer,
                         onTap: _open,
                         children: [
                           for (final group in _groups)
@@ -334,45 +337,61 @@ class _GroupCover extends StatelessWidget {
     final colors = _coverColors(scheme, group);
     final onCover = picture ? Colors.white : colors.on;
     final count = group.servers.length;
+    final titleStyle = textTheme.emphasized(textTheme.titleSmall)?.copyWith(color: onCover);
+    final line = MediaQuery.textScalerOf(context).scale(titleStyle?.fontSize ?? 14) *
+        (titleStyle?.height ?? 20 / 14);
 
     return Semantics(
       label: '$title, $count',
       child: LayoutBuilder(
         builder: (context, box) {
-          // по спеке карусели текст есть только на большом элементе
-          final text = labels * ((box.maxHeight - 120) / 40).clamp(0.0, 1.0);
+          // на узкой обложке подпись посередине, на большой у нижнего края
+          final bottom = math.min(14.0, (box.maxHeight - line) / 2);
+          final text = labels * ((box.maxHeight - line) / 12).clamp(0.0, 1.0);
           return Stack(
             fit: StackFit.expand,
+            clipBehavior: Clip.none,
             children: [
-              if (picture)
-                // обложка не сжимается вместе с элементом, а обрезается: так в спеке
-                OverflowBox(
-                  maxHeight: math.max(box.maxHeight, 320),
-                  child: theme.background(context, veil: CardVeil.medium),
-                )
-              else
-                CustomPaint(
-                  painter: _DefaultCoverPainter(
-                    seed: _stableHash(group.key),
-                    kind: group.kind,
-                    colors: colors,
-                  ),
+              Positioned.fill(
+                left: -1,
+                top: -1,
+                right: -1,
+                bottom: -1,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (picture)
+                      // обложка не сжимается вместе с элементом, а обрезается: так в спеке
+                      OverflowBox(
+                        maxHeight: math.max(box.maxHeight + 2, 320),
+                        child: theme.background(context, veil: CardVeil.medium),
+                      )
+                    else
+                      CustomPaint(
+                        painter: _DefaultCoverPainter(
+                          seed: _stableHash(group.key),
+                          kind: group.kind,
+                          colors: colors,
+                        ),
+                      ),
+                    if (picture)
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.center,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0x00000000), Color(0x8C000000)],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              if (picture)
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.center,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0x00000000), Color(0x8C000000)],
-                    ),
-                  ),
-                ),
+              ),
               if (text > 0.01)
                 PositionedDirectional(
                   start: 16,
                   end: 14,
-                  bottom: 14,
+                  bottom: bottom,
                   child: Opacity(
                     opacity: text,
                     child: Row(
@@ -394,9 +413,7 @@ class _GroupCover extends StatelessWidget {
                             maxLines: 1,
                             softWrap: false,
                             overflow: TextOverflow.fade,
-                            style: textTheme
-                                .emphasized(textTheme.titleSmall)
-                                ?.copyWith(color: onCover),
+                            style: titleStyle,
                           ),
                         ),
                         const SizedBox(width: 8),
