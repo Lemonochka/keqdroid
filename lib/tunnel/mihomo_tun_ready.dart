@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-// mihomo открывает API только после попытки TUN (hub.ApplyConfig), и tun.enable там true лишь у адаптера,
-// который он поднял сам. адаптер по имени мог остаться от прошлой сессии: так «подключено» висело без туннеля
+// API mihomo открывает раньше TUN (hub.ApplyConfig: applyRoute, потом executor), и пока адаптер создаётся,
+// tun в /configs пустой: enable false без device. замер в ВМ 29.10.2026: 135 мс пусто, 499 мс enable true
 enum MihomoTunState { pending, up, failed }
 
 MihomoTunState mihomoTunState({required String coreOutput, Object? configs}) {
@@ -11,10 +11,12 @@ MihomoTunState mihomoTunState({required String coreOutput, Object? configs}) {
     return MihomoTunState.failed;
   }
   if (coreOutput.contains('Tun adapter listening at')) return MihomoTunState.up;
-  if (configs is! Map) return MihomoTunState.pending;
-  final tun = configs['tun'];
-  return tun is Map && tun['enable'] == true
-      ? MihomoTunState.up
+  final tun = configs is Map ? configs['tun'] : null;
+  if (tun is! Map) return MihomoTunState.pending;
+  if (tun['enable'] == true) return MihomoTunState.up;
+  // device появляется, только когда попытка закончилась (LastTunConf пишется на выходе из ReCreateTun)
+  return (tun['device']?.toString() ?? '').isEmpty
+      ? MihomoTunState.pending
       : MihomoTunState.failed;
 }
 

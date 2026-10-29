@@ -22,16 +22,26 @@ void main() {
       );
     });
 
-    // так mihomo отвечает, когда туннель не поднялся, а сам он остался жить
-    test('API отвечает tun.enable: false — туннеля нет', () {
+    // API открывается раньше TUN: первый ответ в ВМ пришёл на 135 мс, адаптер на 499 мс
+    test('пока адаптер создаётся, enable false без device — ждём', () {
       expect(
         mihomoTunState(coreOutput: '', configs: {
-          'tun': {'enable': false},
+          'tun': {'enable': false, 'device': '', 'stack': 'gVisor'},
         }),
-        MihomoTunState.failed,
+        MihomoTunState.pending,
       );
       expect(
         mihomoTunState(coreOutput: '', configs: const {'mode': 'rule'}),
+        MihomoTunState.pending,
+      );
+    });
+
+    // так mihomo ответил на ПК без прав: туннель не поднялся, а сам он остался жить
+    test('enable false с именем устройства — туннеля нет', () {
+      expect(
+        mihomoTunState(coreOutput: '', configs: {
+          'tun': {'enable': false, 'device': 'tun-keqdis', 'stack': 'gVisor'},
+        }),
         MihomoTunState.failed,
       );
     });
