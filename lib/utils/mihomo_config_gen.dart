@@ -856,10 +856,11 @@ class MihomoConfigGen {
     }
   }
 
-  // NewVless включает xudp сам, если packet-addr не задан, пустая карта ничего не выключает
-  static Map<String, dynamic> _packetEncoding(String raw) =>
+  // NewVless включает xudp сам, если packet-addr не задан, пустая карта ничего не выключает.
+  // NewVmess сам не включает, а xray шлёт UDP vmess через XUDP по умолчанию (cone в proxy/vmess/outbound)
+  static Map<String, dynamic> _packetEncoding(String raw, {bool vmess = false}) =>
       switch (raw.trim().toLowerCase()) {
-        '' => const {},
+        '' => vmess ? const {'xudp': true} : const {},
         'none' => const {},
         'packet' => const {'packet-addr': true},
         _ => const {'xudp': true},
@@ -1122,7 +1123,7 @@ class MihomoConfigGen {
       'port': uri.port,
       'uuid': uuid,
       'udp': true,
-      ..._packetEncoding(_param(uri, 'packetEncoding')),
+      ..._packetEncoding(_param(uri, 'packetEncoding'), vmess: type == 'vmess'),
       ...protocolFields,
     };
 
@@ -1190,6 +1191,7 @@ class MihomoConfigGen {
       'alterId': int.tryParse(s('aid', '0')) ?? 0,
       'cipher': s('scy', s('security', 'auto')),
       'udp': true,
+      ..._packetEncoding('', vmess: true),
     };
     if (s('tls') == 'tls') {
       out['tls'] = true;

@@ -71,6 +71,7 @@
       "alterId": 0,
       "cipher": "auto",
       "udp": true,
+      "xudp": true,
       "tls": true,
       "servername": "vmess.example",
       "client-fingerprint": "firefox",

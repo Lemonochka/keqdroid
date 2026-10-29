@@ -93,4 +93,32 @@ void main() {
       });
     });
   });
+
+  group('xudp у VMess на mihomo', () {
+    const uuid = '00000000-0000-4000-8000-000000000000';
+
+    test('включён по умолчанию, как у xray (cone в proxy/vmess/outbound)', () {
+      final aead = 'vmess://$uuid@vm.example:443?type=tcp&security=none';
+      final json = 'vmess://${base64.encode(utf8.encode(jsonEncode({
+            'v': '2',
+            'add': 'vm.example',
+            'port': '443',
+            'id': uuid,
+            'aid': '0',
+            'net': 'tcp',
+          })))}';
+      expect(_mihomo(aead)['xudp'], isTrue);
+      expect(_mihomo(json)['xudp'], isTrue);
+    });
+
+    test('packetEncoding из ссылки сильнее умолчания, у VLESS ключа нет: ядро включает само', () {
+      final packet = _mihomo(
+          'vmess://$uuid@vm.example:443?type=tcp&security=none&packetEncoding=packet');
+      expect(packet['packet-addr'], isTrue);
+      expect(packet.containsKey('xudp'), isFalse);
+      expect(
+          _mihomo('vless://$uuid@vl.example:443?type=tcp&security=none').containsKey('xudp'),
+          isFalse);
+    });
+  });
 }

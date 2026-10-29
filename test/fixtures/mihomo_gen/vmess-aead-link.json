@@ -69,6 +69,7 @@
       "port": 443,
       "uuid": "00000000-0000-4000-8000-000000000000",
       "udp": true,
+      "xudp": true,
       "alterId": 0,
       "cipher": "zero",
       "tls": true,
