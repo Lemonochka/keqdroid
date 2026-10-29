@@ -1222,11 +1222,13 @@ class MihomoConfigGen {
   }
 
   // пароль в ссылке закодирован (p%40ss), без декода в ядро уезжал бы как есть
-  static String _decodedUserInfo(Uri uri) {
+  static String _decodedUserInfo(Uri uri) => _unescaped(uri.userInfo);
+
+  static String _unescaped(String raw) {
     try {
-      return Uri.decodeComponent(uri.userInfo);
+      return Uri.decodeComponent(raw);
     } catch (_) {
-      return uri.userInfo;
+      return raw;
     }
   }
 
@@ -1303,14 +1305,16 @@ class MihomoConfigGen {
     if (atIdx < 0) throw ArgumentError('Shadowsocks requires method:password');
 
     final userInfo = core.substring(0, atIdx);
-    final hostPort = core.substring(atIdx + 1);
+    // перед ? по SIP002 стоит /, с плагином он обязателен
+    final hostPort = core.substring(atIdx + 1).split('/').first;
 
     String method;
     String password;
+    // без base64 метод и пароль по SIP002 обязаны быть в percent-кодировке, у ключей 2022 там + / =
     if (userInfo.contains(':')) {
       final i = userInfo.indexOf(':');
-      method = userInfo.substring(0, i);
-      password = userInfo.substring(i + 1);
+      method = _unescaped(userInfo.substring(0, i));
+      password = _unescaped(userInfo.substring(i + 1));
     } else {
       var n = userInfo.replaceAll('-', '+').replaceAll('_', '/');
       while (n.length % 4 != 0) {
@@ -1410,7 +1414,7 @@ class MihomoConfigGen {
       'name': proxyName,
       'type': 'hysteria2',
       'server': uri.host,
-      'port': uri.port,
+      'port': HysteriaLinkParams.port(link),
       'password': password,
       if (sni.isNotEmpty) 'sni': sni,
       if (obfs.isNotEmpty) 'obfs': obfs,

@@ -338,7 +338,9 @@ class ConfigGeneratorV2 {
         vmessConfig != null ? (vmessConfig['add']?.toString() ?? '') : uri.host;
     final port = vmessConfig != null
         ? int.tryParse(vmessConfig['port']?.toString() ?? '') ?? 0
-        : uri.port;
+        : isHysteria
+            ? HysteriaLinkParams.port(trimmed)
+            : uri.port;
 
     String getParam(String key, [String def = '']) {
       if (vmessConfig != null) {
@@ -1485,11 +1487,13 @@ class ConfigGeneratorV2 {
   }
 
   // пароль в ссылке закодирован (p%40ss), без декода в ядро уехал бы как есть
-  static String _decodedUserInfo(Uri uri) {
+  static String _decodedUserInfo(Uri uri) => _unescaped(uri.userInfo);
+
+  static String _unescaped(String raw) {
     try {
-      return Uri.decodeComponent(uri.userInfo);
+      return Uri.decodeComponent(raw);
     } catch (_) {
-      return uri.userInfo;
+      return raw;
     }
   }
 
@@ -1553,10 +1557,11 @@ class ConfigGeneratorV2 {
 
     final userInfo = beforeHash.substring(0, atIdx);
 
+    // без base64 метод и пароль по SIP002 обязаны быть в percent-кодировке, у ключей 2022 там + / =
     if (userInfo.contains(':')) {
       final splitIdx = userInfo.indexOf(':');
-      method = userInfo.substring(0, splitIdx);
-      password = userInfo.substring(splitIdx + 1);
+      method = _unescaped(userInfo.substring(0, splitIdx));
+      password = _unescaped(userInfo.substring(splitIdx + 1));
     } else {
       final decoded = _decodeBase64UrlCompat(userInfo);
       final splitIdx = decoded.indexOf(':');

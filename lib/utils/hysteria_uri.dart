@@ -1,3 +1,5 @@
+import 'raw_share_uri.dart';
+
 class HysteriaLinkParams {
   final String obfsType;
   final String obfsPassword;
@@ -35,6 +37,13 @@ class HysteriaLinkParams {
     if (params['version']?.trim() == '1') return true;
     return const ['upmbps', 'downmbps', 'peer', 'obfsParam', 'protocol', 'auth_str']
         .any((key) => (params[key] ?? '').trim().isNotEmpty);
+  }
+
+  // без порта 443 (Hysteria 2 URI Scheme). явный :0 оставляем, как v2rayN: Uri его от пропуска не отличает
+  static int port(String config) {
+    final raw = RawShareUri.parse(splitPorts(config).$1);
+    if (raw == null || raw.port.isEmpty) return 443;
+    return int.tryParse(raw.port) ?? 0;
   }
 
   // как splitHysteria2Ports ядра (common/convert/v.go), IPv6 в скобках не трогаем
