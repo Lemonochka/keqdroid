@@ -19,6 +19,7 @@ import 'connection_mode.dart';
 import 'desktop_traffic_stats.dart';
 import 'local_port_plan.dart';
 import 'local_proxy_probe.dart';
+import 'mihomo_tun_ready.dart';
 import 'socks_credential_generator.dart';
 import 'tun_failure_hints.dart';
 import 'tunnel_backend.dart';
@@ -359,13 +360,13 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     }
   }
 
-  // по адресу нельзя: его mihomo считает из fake-ip-range, а имя задаём сами
   Future<bool> _waitForMihomoTun({
     required Process process,
     required StringBuffer log,
   }) async {
-    var waited = 0;
-    while (waited < _mihomoTunBudgetMs) {
+    final api = MihomoApiSession();
+    final clock = Stopwatch()..start();
+    while (clock.elapsedMilliseconds < _mihomoTunBudgetMs) {
       final code = await _exitCodeOrNull(process);
       if (code != null) {
         await _coreOutputDrained();
@@ -374,13 +375,13 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
           '${_tunStartError(log, core: 'mihomo.exe')}',
         );
       }
-      final text = log.toString();
-      if (text.contains('Tun adapter listening at')) return true;
-      // попытки кончились, wintun за собой убрал: убивать уже можно, ждать нечего
-      if (text.contains('Start TUN listening error')) return false;
-      if (await _tunAdapterUp(extraAddress: _mihomoTunAddress)) return true;
+      final port = api.port;
+      final state = mihomoTunState(
+        coreOutput: log.toString(),
+        configs: port == null ? null : await fetchMihomoConfigs(port, api.secret),
+      );
+      if (state != MihomoTunState.pending) return state == MihomoTunState.up;
       await Future<void>.delayed(const Duration(milliseconds: 300));
-      waited += 300;
     }
     return false;
   }
@@ -889,7 +890,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   }
 
   // ищем по адресу: его задаём мы, а имя интерфейса на Windows зависит от системы
-  Future<bool> _tunAdapterUp({String? extraAddress}) async {
+  Future<bool> _tunAdapterUp() async {
     try {
       final interfaces = await NetworkInterface.list(
         includeLoopback: false,
@@ -899,15 +900,11 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         if (iface.name == kTunInterfaceName) return true;
         for (final addr in iface.addresses) {
           if (addr.address == kTunInterfaceAddress) return true;
-          if (extraAddress != null && addr.address == extraAddress) return true;
         }
       }
     } catch (_) {}
     return false;
   }
-
-  // первый адрес fake-ip-range
-  static const _mihomoTunAddress = '198.18.0.1';
 
   Future<bool> _waitForPort(
     String host,
