@@ -524,7 +524,6 @@ proxies:
     cipher: auto
     network: http
     http-opts:
-      method: POST
       path:
         - /masq
       headers:

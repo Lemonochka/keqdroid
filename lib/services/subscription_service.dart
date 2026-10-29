@@ -18,6 +18,7 @@ import '../utils/custom_xray_config.dart';
 import '../utils/hysteria_uri.dart';
 import '../utils/identity_presets.dart';
 import '../utils/mieru_uri.dart';
+import '../utils/mihomo_config_gen.dart';
 import '../utils/singbox_outbounds.dart';
 import '../utils/socks_uri.dart';
 import '../utils/ssr_uri.dart';
@@ -1336,14 +1337,93 @@ class SubscriptionService {
       }
     }
 
-    for (final proxy in _extractYamlLikeProxies(content)) {
+    final proxies = _extractYamlLikeProxies(content);
+    for (final proxy in proxies) {
       final uri = _proxyMapToUri(proxy);
       if (uri != null && !_isMetadataConfig(uri)) {
-        found.add(uri);
+        found.add(_linkKeepsNode(proxy, uri)
+            ? uri
+            : _singleNodeClash(proxy, proxies) ?? uri);
       }
     }
 
     return found.toList();
+  }
+
+  // skip-cert-verify ссылка не несёт намеренно (_applyTransport), name и udp генератор пишет свои
+  static const _nodeKeysLinkMayDrop = {'name', 'skip-cert-verify', 'udp'};
+
+  // ссылка обязана довезти до ядра всё, что нёс узел: пин, token tuic, ss-opts, dialer-proxy терялись молча.
+  // сверяем обратным ходом через генератор mihomo
+  static bool _linkKeepsNode(Map<String, dynamic> node, String link) =>
+      _keysLinkLoses(node, link).isEmpty;
+
+  @visibleForTesting
+  static List<String> keysLinkLoses(Map<String, dynamic> node) {
+    final link = _proxyMapToUri(node);
+    return link == null ? const ['<no link>'] : _keysLinkLoses(node, link);
+  }
+
+  static List<String> _keysLinkLoses(Map<String, dynamic> node, String link) {
+    final Map<String, dynamic> back;
+    try {
+      back = MihomoConfigGen.buildProxies(link).first;
+    } on Object {
+      return const ['<link refused>'];
+    }
+    return [
+      for (final MapEntry(:key, :value) in node.entries)
+        if (!_nodeKeysLinkMayDrop.contains(key) && !_carried(value, back[key]))
+          key,
+    ];
+  }
+
+  // всё заданное в узле есть и в результате, добавленное генератором не потеря (флаг постквантового ключа).
+  // пусто, false и 0 у mihomo значат не задано, числа в YAML бывают строками
+  static bool _carried(Object? want, Object? got) {
+    bool unset(Object? v) =>
+        v == null || v == false || v == '' || v == 0 || v == '0' ||
+        (v is Iterable && v.isEmpty) || (v is Map && v.isEmpty);
+    if (unset(want)) return true;
+    if (want is Map) {
+      if (got is! Map) return false;
+      return want.entries.every((e) => _carried(e.value, got[e.key]));
+    }
+    if (want is List) {
+      if (got is! List || got.length != want.length) return false;
+      for (var i = 0; i < want.length; i++) {
+        if (!_carried(want[i], got[i])) return false;
+      }
+      return true;
+    }
+    return want.toString() == got?.toString();
+  }
+
+  // так узел исполняет mihomo целиком, как v2rayN, FlClash и Clash Verge исполняют Clash.
+  // звенья dialer-proxy едут с ним, без них ядро не соберёт узел
+  static String? _singleNodeClash(
+    Map<String, dynamic> node,
+    List<Map<String, dynamic>> all,
+  ) {
+    final name = node['name']?.toString().trim() ?? '';
+    if (name.isEmpty) return null;
+    final byName = {
+      for (final p in all)
+        if ((p['name']?.toString() ?? '').isNotEmpty) p['name'].toString(): p,
+    };
+    final picked = [node];
+    for (var i = 0; i < picked.length; i++) {
+      final hop = picked[i]['dialer-proxy']?.toString() ?? '';
+      if (hop.isEmpty || picked.any((p) => p['name'] == hop)) continue;
+      final next = byName[hop];
+      if (next == null) return null;
+      picked.add(next);
+    }
+    return jsonEncode({
+      'name': name,
+      'proxies': picked,
+      'rules': ['MATCH,$name'],
+    });
   }
 
   // итеративно: рекурсия переполняла стек на глубоких json
