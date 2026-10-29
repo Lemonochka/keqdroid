@@ -668,10 +668,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayXmuxSection => 'XMUX (XHTTP)';
 
   @override
-  String get settingsXrayXmuxEnable => 'Включить XMUX';
+  String get settingsXrayXmuxEnable => 'Настраивать XMUX вручную';
 
   @override
-  String get settingsXrayXmuxEnableHint => 'Мультиплексирование для транспорта XHTTP (только клиент)';
+  String get settingsXrayXmuxEnableHint => 'Иначе Xray держит до 3 соединений и меняет каждое через 600-900 запросов или 30-50 минут';
 
   @override
   String get settingsXrayMuxSection => 'Mux';

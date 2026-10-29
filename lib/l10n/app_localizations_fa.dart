@@ -654,10 +654,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayXmuxSection => 'XMUX (XHTTP)';
 
   @override
-  String get settingsXrayXmuxEnable => 'فعال‌سازی XMUX';
+  String get settingsXrayXmuxEnable => 'تنظیم دستی XMUX';
 
   @override
-  String get settingsXrayXmuxEnableHint => 'مالتی‌پلکسینگ برای انتقال XHTTP (سمت کلاینت)';
+  String get settingsXrayXmuxEnableHint => 'وگرنه Xray تا 3 اتصال نگه می‌دارد و هر کدام را پس از 600-900 درخواست یا 30-50 دقیقه عوض می‌کند';
 
   @override
   String get settingsXrayMuxSection => 'Mux';

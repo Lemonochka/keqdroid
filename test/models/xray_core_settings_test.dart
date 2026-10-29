@@ -217,13 +217,52 @@ void main() {
         xmuxMaxConcurrency: '16-32',
         xmuxMaxConnections: '4',
       );
-      expect(both.buildXmuxMap(), {'maxConcurrency': '16-32'});
+      expect(both.buildXmuxMap(), {
+        'maxConcurrency': '16-32',
+        'hMaxRequestTimes': '600-900',
+        'hMaxReusableSecs': '1800-3000',
+      });
 
       const connectionsOnly = XrayCoreSettings(
         xmuxEnabled: true,
         xmuxMaxConnections: '4',
       );
-      expect(connectionsOnly.buildXmuxMap(), {'maxConnections': 4});
+      expect(connectionsOnly.buildXmuxMap(), {
+        'maxConnections': 4,
+        'hMaxRequestTimes': '600-900',
+        'hMaxReusableSecs': '1800-3000',
+      });
+    });
+
+    // xray 26.10 transport_method.go: умолчания только у пустого xmux, а незаданное поле значит без предела
+    test('buildXmuxMap: пустое поле получает значение Xray по умолчанию', () {
+      const empty = XrayCoreSettings(xmuxEnabled: true);
+      expect(empty.buildXmuxMap(), isEmpty);
+
+      const keepAliveOnly = XrayCoreSettings(
+        xmuxEnabled: true,
+        xmuxHKeepAlivePeriod: 30,
+      );
+      expect(keepAliveOnly.buildXmuxMap(), {
+        'hKeepAlivePeriod': 30,
+        'maxConnections': 3,
+        'hMaxRequestTimes': '600-900',
+        'hMaxReusableSecs': '1800-3000',
+      });
+
+      const all = XrayCoreSettings(
+        xmuxEnabled: true,
+        xmuxMaxConnections: '0',
+        xmuxCMaxReuseTimes: '64-128',
+        xmuxHMaxRequestTimes: '100',
+        xmuxHMaxReusableSecs: '60-90',
+      );
+      expect(all.buildXmuxMap(), {
+        'maxConnections': 0,
+        'cMaxReuseTimes': '64-128',
+        'hMaxRequestTimes': 100,
+        'hMaxReusableSecs': '60-90',
+      });
     });
 
     test('round-trips JSON', () {

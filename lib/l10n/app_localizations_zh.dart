@@ -654,10 +654,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayXmuxSection => 'XMUX (XHTTP)';
 
   @override
-  String get settingsXrayXmuxEnable => '启用 XMUX';
+  String get settingsXrayXmuxEnable => '手动设置 XMUX';
 
   @override
-  String get settingsXrayXmuxEnableHint => '用于 XHTTP 传输的多路复用（客户端侧）';
+  String get settingsXrayXmuxEnableHint => '否则 Xray 最多保持 3 个连接，每个连接在 600-900 次请求或 30-50 分钟后更换';
 
   @override
   String get settingsXrayMuxSection => 'Mux';

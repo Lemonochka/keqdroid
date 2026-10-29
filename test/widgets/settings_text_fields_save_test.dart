@@ -156,9 +156,9 @@ void main() {
       final fake = await _pumpSettings(tester, _xmuxOn);
       await _open(tester, _coreSettings);
       await _type(tester, 'Max concurrency', '8');
-      await tester.ensureVisible(find.text('Enable XMUX'));
+      await tester.ensureVisible(find.text('Custom XMUX values'));
       await tester.pump();
-      await tester.tap(find.text('Enable XMUX'));
+      await tester.tap(find.text('Custom XMUX values'));
       await _frames(tester);
 
       expect(fake.saves.last.xrayCore.xmuxEnabled, isFalse);

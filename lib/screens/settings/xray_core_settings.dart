@@ -561,7 +561,7 @@ class _XrayXmuxSection extends ConsumerWidget {
                                   child: _XrayCoreTextField(
                                     key: ValueKey('xmux_mconn_${core.xmuxMaxConnections}'),
                                     label: l10n.settingsXrayXmuxMaxConnections,
-                                    hint: '0',
+                                    hint: '3',
                                     initialValue: core.xmuxMaxConnections,
                                     enabled: connectionsSet || !concurrencySet,
                                     helperText: concurrencySet && !connectionsSet

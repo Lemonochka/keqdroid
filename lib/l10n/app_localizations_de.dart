@@ -658,10 +658,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayXmuxSection => 'XMUX (XHTTP)';
 
   @override
-  String get settingsXrayXmuxEnable => 'XMUX aktivieren';
+  String get settingsXrayXmuxEnable => 'XMUX selbst einstellen';
 
   @override
-  String get settingsXrayXmuxEnableHint => 'Multiplexing für den XHTTP-Transport (clientseitig)';
+  String get settingsXrayXmuxEnableHint => 'Sonst hält Xray bis zu 3 Verbindungen und ersetzt jede nach 600-900 Anfragen oder 30-50 Minuten';
 
   @override
   String get settingsXrayMuxSection => 'Mux';

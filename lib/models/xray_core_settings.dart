@@ -733,7 +733,14 @@ class XrayCoreSettings {
     if (xmuxHKeepAlivePeriod > 0) {
       map['hKeepAlivePeriod'] = xmuxHKeepAlivePeriod;
     }
-    return map.isEmpty ? <String, dynamic>{} : map;
+    // свои умолчания xray ставит только пустому xmux (transport_method.go), а незаданное поле у него без предела
+    if (map.isEmpty) return map;
+    if (!map.containsKey('maxConcurrency') && !map.containsKey('maxConnections')) {
+      map['maxConnections'] = 3;
+    }
+    map.putIfAbsent('hMaxRequestTimes', () => '600-900');
+    map.putIfAbsent('hMaxReusableSecs', () => '1800-3000');
+    return map;
   }
 
   static Object _parseRangeValue(String v) {

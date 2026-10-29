@@ -1196,13 +1196,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsXrayXmuxEnable.
   ///
   /// In en, this message translates to:
-  /// **'Enable XMUX'**
+  /// **'Custom XMUX values'**
   String get settingsXrayXmuxEnable;
 
   /// No description provided for @settingsXrayXmuxEnableHint.
   ///
   /// In en, this message translates to:
-  /// **'Multiplexing for XHTTP transport (client-side)'**
+  /// **'Otherwise Xray keeps up to 3 connections and replaces each after 600-900 requests or 30-50 minutes'**
   String get settingsXrayXmuxEnableHint;
 
   /// No description provided for @settingsXrayMuxSection.
