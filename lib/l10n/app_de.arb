@@ -110,7 +110,7 @@
       }
     }
   },
-  "routePickEmpty": "Keine Server, die der aktuelle Kern als eigenen Ausgang nutzen kann. Fertige Konfigurationen passen hier nicht, Ketten nur mit mihomo.",
+  "routePickEmpty": "Keine Server, die der aktuelle Kern als eigenen Ausgang nutzen kann. Eine fertige Konfiguration passt nur zu ihrem eigenen Kern, Ketten nur zu mihomo.",
   "@routePickEmpty": {},
   "settingsRoutingRouteCount": "{count, plural, =0{keine Routen} =1{1 Route} other{{count} Routen}}",
   "@settingsRoutingRouteCount": {

@@ -7,6 +7,7 @@ import 'package:keqdroid/models/xray_core_settings.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/owner_guard.dart';
 import 'package:keqdroid/utils/proxy_chain.dart';
+import 'package:keqdroid/utils/route_servers.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
 /// Побайтовая отсечка на конфиг mihomo целиком — пара к
@@ -288,6 +289,52 @@ void main() {
     });
   });
 
+  group('golden: серверы маршрутов', () {
+    _golden('route-server-link', () {
+      return MihomoConfigGen.generate(
+        'vless://$_uuid@198.51.100.33:443?type=tcp&security=none#active',
+        _settings,
+        socksPort: 2080,
+        httpPort: 2081,
+        routeServers: const [_routeLink],
+      );
+    });
+
+    _golden('custom-clash-route-server-link', () {
+      return MihomoConfigGen.generate(
+        _clashYaml,
+        _settings,
+        socksPort: 2080,
+        httpPort: 2081,
+        tun: _androidTun,
+        routeServers: const [_routeLink],
+      );
+    });
+
+    // из готового YAML его узлы и группа, имена наши: у автора NL и Proxy, как у активного
+    _golden('route-server-custom-clash', () {
+      return MihomoConfigGen.generate(
+        'vless://$_uuid@198.51.100.33:443?type=tcp&security=none#active',
+        _settings,
+        socksPort: 2080,
+        httpPort: 2081,
+        tun: _androidTun,
+        routeServers: const [_routeClash],
+      );
+    });
+
+    _golden('custom-clash-route-server-custom-clash', () {
+      return MihomoConfigGen.generate(
+        _clashYaml,
+        _settings,
+        socksPort: 2080,
+        httpPort: 2081,
+        tun: _androidTun,
+        routeServers: const [_routeClash],
+      );
+    });
+  });
+
   group('golden: MihomoConfigGen.generatePingConfig', () {
     _golden('ping-vless-reality', () {
       return const JsonEncoder.withIndent('  ').convert(jsonDecode(
@@ -302,6 +349,51 @@ void main() {
     });
   });
 }
+
+const _routeLink = RouteServerOutbound(
+  tag: 'keq-srv-0',
+  serverId: 'de',
+  config: 'trojan://password@198.51.100.34:443?security=tls&sni=de.example#de',
+  address: '198.51.100.34',
+  entries: 'route.example, geoip:de',
+);
+
+const _routeClash = RouteServerOutbound(
+  tag: 'keq-srv-0',
+  serverId: 'warp',
+  config: '''
+common: &common
+  type: wireguard
+  ip: 172.16.0.2
+  private-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=
+  public-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA=
+  udp: true
+  amnezia-wg-option:
+    jc: 4
+    jmin: 40
+    jmax: 70
+proxies:
+  - name: "NL"
+    <<: *common
+    server: 198.51.100.35
+    port: 4500
+  - name: "NL 2408"
+    <<: *common
+    server: 198.51.100.36
+    port: 2408
+proxy-groups:
+  - name: "Proxy"
+    type: url-test
+    proxies: ["NL", "NL 2408"]
+    url: https://cp.cloudflare.com/
+    interval: 300
+rules:
+  - DST-PORT,53,DIRECT
+  - MATCH,Proxy
+''',
+  address: '198.51.100.35',
+  entries: 'route.example, geoip:de',
+);
 
 const _androidTun = MihomoTunOptions(
   fromFileDescriptor: true,

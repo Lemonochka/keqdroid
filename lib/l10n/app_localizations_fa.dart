@@ -218,7 +218,7 @@ class AppLocalizationsFa extends AppLocalizations {
   }
 
   @override
-  String get routePickEmpty => 'سروری نیست که هستهٔ فعلی بتواند جداگانه از آن استفاده کند. کانفیگ‌های آماده اینجا مناسب نیستند و زنجیره‌ها فقط روی mihomo مناسب‌اند.';
+  String get routePickEmpty => 'سروری نیست که هستهٔ فعلی بتواند جداگانه از آن استفاده کند. هر کانفیگ آماده فقط با هستهٔ خودش کار می‌کند و زنجیره‌ها فقط روی mihomo مناسب‌اند.';
 
   @override
   String settingsRoutingRouteCount(int count) {

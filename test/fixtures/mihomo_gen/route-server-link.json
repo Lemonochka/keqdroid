@@ -1,0 +1,113 @@
+{
+  "socks-port": 2080,
+  "port": 2081,
+  "bind-address": "127.0.0.1",
+  "allow-lan": false,
+  "ipv6": false,
+  "authentication": [
+    "u:p"
+  ],
+  "mode": "rule",
+  "log-level": "warning",
+  "geodata-mode": true,
+  "geo-auto-update": false,
+  "find-process-mode": "off",
+  "sniffer": {
+    "enable": true,
+    "parse-pure-ip": true,
+    "override-destination": true,
+    "sniff": {
+      "HTTP": {
+        "ports": [
+          "80",
+          "8080-8880"
+        ]
+      },
+      "TLS": {
+        "ports": [
+          "443",
+          "8443"
+        ]
+      },
+      "QUIC": {
+        "ports": [
+          "443",
+          "8443"
+        ]
+      }
+    }
+  },
+  "dns": {
+    "enable": true,
+    "ipv6": false,
+    "enhanced-mode": "normal",
+    "default-nameserver": [
+      "https://1.1.1.1/dns-query",
+      "https://8.8.8.8/dns-query"
+    ],
+    "proxy-server-nameserver": [
+      "https://1.1.1.1/dns-query",
+      "https://8.8.8.8/dns-query"
+    ],
+    "nameserver": [
+      "https://1.1.1.1/dns-query",
+      "https://8.8.8.8/dns-query"
+    ],
+    "direct-nameserver": [
+      "https://1.1.1.1/dns-query",
+      "https://8.8.8.8/dns-query",
+      "1.1.1.1",
+      "8.8.8.8"
+    ],
+    "respect-rules": true
+  },
+  "proxies": [
+    {
+      "name": "proxy",
+      "type": "vless",
+      "server": "198.51.100.33",
+      "port": 443,
+      "uuid": "00000000-0000-4000-8000-000000000000",
+      "udp": true,
+      "network": "tcp"
+    },
+    {
+      "name": "keq-srv-0",
+      "type": "trojan",
+      "server": "198.51.100.34",
+      "port": 443,
+      "password": "password",
+      "udp": true,
+      "sni": "de.example",
+      "client-fingerprint": "firefox",
+      "network": "tcp"
+    }
+  ],
+  "rule-providers": {},
+  "rules": [
+    "AND,((NOT,((IN-TYPE,TUN))),(DOMAIN,www.cloudflare.com)),proxy",
+    "DOMAIN-SUFFIX,ads.example,REJECT",
+    "GEOSITE,category-ads-all,REJECT",
+    "IP-CIDR,198.51.100.33/32,DIRECT,no-resolve",
+    "IP-CIDR,198.51.100.34/32,DIRECT,no-resolve",
+    "DOMAIN-SUFFIX,direct.example,DIRECT",
+    "IP-CIDR,10.10.0.0/16,DIRECT,no-resolve",
+    "IP-CIDR,0.0.0.0/8,DIRECT,no-resolve",
+    "IP-CIDR,10.0.0.0/8,DIRECT,no-resolve",
+    "IP-CIDR,100.64.0.0/10,DIRECT,no-resolve",
+    "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
+    "IP-CIDR,169.254.0.0/16,DIRECT,no-resolve",
+    "IP-CIDR,172.16.0.0/12,DIRECT,no-resolve",
+    "IP-CIDR,192.168.0.0/16,DIRECT,no-resolve",
+    "IP-CIDR,192.0.0.0/24,DIRECT,no-resolve",
+    "IP-CIDR,198.51.100.0/24,DIRECT,no-resolve",
+    "IP-CIDR,203.0.113.0/24,DIRECT,no-resolve",
+    "DOMAIN-SUFFIX,route.example,keq-srv-0",
+    "GEOIP,de,keq-srv-0,no-resolve",
+    "DOMAIN-SUFFIX,proxy.example,proxy",
+    "GEOSITE,google,proxy",
+    "IP-CIDR,10.10.0.0/16,DIRECT",
+    "GEOIP,de,keq-srv-0",
+    "MATCH,proxy"
+  ]
+}

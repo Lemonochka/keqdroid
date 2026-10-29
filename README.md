@@ -132,6 +132,8 @@ Clash and sing-box subscriptions are split into servers, one per node. A Clash c
 
 A ready-made config keeps its own routing, DNS and outbound chains; only the inbounds are replaced. The server name comes from the root `remarks`. The app's routing lists apply only to traffic the config's own rules don't match. With "Ignore provider rules" on in Routing, the config's rules that send sites direct or block them, and its own catch-all, are dropped, so your routes and "Everything else" decide. Local network addresses always go direct.
 
+A ready-made config can also be the server of a route: an Xray JSON when the connection runs on Xray, a Clash config when it runs on mihomo. The route gets the config's main outbound, or its first proxy group, with whatever these go through; the config's own rules and DNS stay out. A Clash config whose groups take nodes from `proxy-providers` or `include-all`, or drop them by name with `exclude-filter`, can't be a route server.
+
 ---
 
 ## Platforms
@@ -358,6 +360,8 @@ Hysteria v1 не поддерживается.
 Подписки Clash и sing-box раскладываются на серверы, по одному на узел. Конфиг Clash, который разложить нельзя (`proxy-providers`, неизвестные типы узлов), импортируется одним сервером и работает на mihomo как есть.
 
 Готовый конфиг сохраняет свою маршрутизацию, DNS и цепочки аутбаундов, заменяются только инбаунды. Имя сервера берётся из корневого `remarks`. Списки маршрутизации приложения применяются только к трафику, который не поймали правила самого конфига. Переключатель «Не учитывать правила провайдера» в «Маршрутизации» убирает правила конфига, которые пускают сайты напрямую или блокируют их, и его собственное «всё остальное», и тогда решают ваши маршруты и «Всё остальное». Локальная сеть всегда идёт напрямую.
+
+Готовый конфиг может быть и сервером маршрута: JSON Xray, когда подключение идёт через Xray, конфиг Clash, когда через mihomo. В маршрут попадает главный аутбаунд конфига или его первая группа вместе с тем, через что они ходят, а правила и DNS самого конфига остаются за бортом. Конфиг Clash, чьи группы набирают узлы из `proxy-providers` или через `include-all` либо отсеивают их по имени через `exclude-filter`, сервером маршрута быть не может.
 
 ---
 

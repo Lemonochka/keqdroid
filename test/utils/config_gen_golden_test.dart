@@ -9,6 +9,7 @@ import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/desktop_tun.dart';
 import 'package:keqdroid/utils/owner_guard.dart';
 import 'package:keqdroid/utils/proxy_chain.dart';
+import 'package:keqdroid/utils/route_servers.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
 /// Побайтовая отсечка на форму конфига целиком.
@@ -438,6 +439,44 @@ void main() {
     });
   });
 
+  group('golden: серверы маршрутов', () {
+    _golden('route-server-link', () {
+      return ConfigGeneratorV2.generateConfig(
+        'vless://$_uuid@198.51.100.33:443?type=tcp&security=none#active',
+        _settings,
+        routeServers: const [_routeLink],
+      );
+    });
+
+    _golden('custom-json-route-server-link', () {
+      return ConfigGeneratorV2.generateConfig(
+        jsonEncode(_customNativeTun),
+        _settings,
+        nativeTunInbound: true,
+        routeServers: const [_routeLink],
+      );
+    });
+
+    // из готового конфига только его выходы, теги наши: у автора proxy, как у сессии
+    _golden('route-server-custom-json', () {
+      return ConfigGeneratorV2.generateConfig(
+        'vless://$_uuid@198.51.100.33:443?type=tcp&security=none#active',
+        _settings,
+        nativeTunInbound: true,
+        routeServers: [_routeJson],
+      );
+    });
+
+    _golden('custom-json-route-server-custom-json', () {
+      return ConfigGeneratorV2.generateConfig(
+        jsonEncode(_customNativeTun),
+        _settings,
+        nativeTunInbound: true,
+        routeServers: [_routeJson],
+      );
+    });
+  });
+
   group('golden: generatePingConfig', () {
     _golden('ping-http-inbound', () {
       return ConfigGeneratorV2.generatePingConfig(
@@ -583,6 +622,62 @@ void _golden(String name, String Function() generate, {bool compact = false}) {
     expect(actual.replaceAll('\r\n', '\n'), expected);
   });
 }
+
+const _routeLink = RouteServerOutbound(
+  tag: 'keq-srv-0',
+  serverId: 'de',
+  config: 'trojan://password@198.51.100.34:443?security=tls&sni=de.example#de',
+  address: '198.51.100.34',
+  entries: 'route.example, geoip:de',
+);
+
+final _routeJson = RouteServerOutbound(
+  tag: 'keq-srv-0',
+  serverId: 'warp',
+  config: jsonEncode({
+    'dns': {
+      'servers': ['9.9.9.9'],
+    },
+    'outbounds': [
+      {
+        'tag': 'proxy',
+        'protocol': 'wireguard',
+        'settings': {
+          'secretKey': 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=',
+          'address': ['172.16.0.2/32'],
+          'mtu': 1280,
+          'peers': [
+            {
+              'endpoint': '198.51.100.35:4500',
+              'publicKey': 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA=',
+            },
+          ],
+        },
+        'streamSettings': {
+          'sockopt': {'dialerProxy': 'noise-out'},
+        },
+      },
+      {
+        'tag': 'noise-out',
+        'protocol': 'freedom',
+        'settings': {
+          'noises': [
+            {'type': 'rand', 'packet': '10-20', 'delay': '1-2'},
+          ],
+        },
+      },
+      {'tag': 'direct', 'protocol': 'freedom'},
+    ],
+    'routing': {
+      'rules': [
+        {'type': 'field', 'port': '53', 'outboundTag': 'direct'},
+        {'type': 'field', 'network': 'tcp,udp', 'outboundTag': 'proxy'},
+      ],
+    },
+  }),
+  address: '198.51.100.35',
+  entries: 'route.example, geoip:de',
+);
 
 const _customNativeTun = {
   'outbounds': [

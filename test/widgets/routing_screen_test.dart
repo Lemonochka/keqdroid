@@ -421,8 +421,8 @@ void main() {
       type: ServerItemType.manual,
       config: 'trojan://pw@de.example:443?security=tls&sni=de.example#Germany',
     );
-    // Готовый конфиг отдельным выходом не встаёт — в списке его нет.
-    final custom = ServerItem(
+    // готовый конфиг встаёт выходом только у своего ядра: JSON у xray, Clash у mihomo
+    final customJson = ServerItem(
       id: 'custom',
       type: ServerItemType.manual,
       config: '{"remarks":"Ready JSON","outbounds":[{"protocol":"vless",'
@@ -430,14 +430,15 @@ void main() {
           '"port":443,"users":[{"id":"00000000-0000-4000-8000-000000000000",'
           '"encryption":"none"}]}]}}]}',
     );
+    final customClash = ServerItem(
+      id: 'clash',
+      type: ServerItemType.manual,
+      config: '{"remarks":"Ready Clash","proxies":[{"name":"NL",'
+          '"type":"trojan","server":"c.example","port":443,"password":"pw"}],'
+          '"proxy-groups":[{"name":"Proxy","type":"select","proxies":["NL"]}]}',
+    );
 
-    testWidgets('выбирается из списка серверов, которые возьмёт ядро',
-        (tester) async {
-      await _pump(
-        tester,
-        routes: const [TrafficRoute(id: 'r', sites: 'youtube.com')],
-        servers: [active, de, custom],
-      );
+    Future<void> openPicker(WidgetTester tester) async {
       await tester.tap(find.text('youtube.com'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Куда'));
@@ -445,8 +446,32 @@ void main() {
       expect(find.text('Другой сервер'), findsOneWidget);
       await tester.tap(find.text('Выберите сервер'));
       await tester.pumpAndSettle();
+    }
+
+    testWidgets('у mihomo в списке Clash, а не JSON', (tester) async {
+      await _pump(
+        tester,
+        settings: const AppSettings(vpnCore: AppSettings.vpnCoreMihomo),
+        routes: const [TrafficRoute(id: 'r', sites: 'youtube.com')],
+        servers: [active, de, customJson, customClash],
+      );
+      await openPicker(tester);
       expect(find.text('Germany'), findsOneWidget);
+      expect(find.text('Ready Clash'), findsOneWidget);
       expect(find.text('Ready JSON'), findsNothing);
+    });
+
+    testWidgets('выбирается из списка серверов, которые возьмёт ядро',
+        (tester) async {
+      await _pump(
+        tester,
+        routes: const [TrafficRoute(id: 'r', sites: 'youtube.com')],
+        servers: [active, de, customJson, customClash],
+      );
+      await openPicker(tester);
+      expect(find.text('Germany'), findsOneWidget);
+      expect(find.text('Ready JSON'), findsOneWidget);
+      expect(find.text('Ready Clash'), findsNothing);
       await tester.tap(find.text('Germany'));
       await tester.pumpAndSettle();
 

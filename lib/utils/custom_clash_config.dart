@@ -221,6 +221,105 @@ class CustomClashConfig {
     return name.isEmpty ? 'DIRECT' : name;
   }
 
+  static const _builtinTargets = {
+    'DIRECT',
+    'REJECT',
+    'REJECT-DROP',
+    'COMPATIBLE',
+    'PASS',
+    'PASS-RULE',
+  };
+
+  // exclude-filter ядро сверяет с именами и у явного списка (groupbase.go), а имена мы меняем
+  static bool _coreFillsGroup(Map<String, dynamic> group) {
+    bool set(Object? value) =>
+        value != null &&
+        value != false &&
+        !(value is List && value.isEmpty) &&
+        !const {'', '0', 'false'}.contains(value.toString().toLowerCase());
+    return set(group['use']) ||
+        set(group['include-all']) ||
+        set(group['include-all-proxies']) ||
+        set(group['include-all-providers']) ||
+        set(group['exclude-filter']);
+  }
+
+  // в маршрут идут узлы и группы, до которых дотягивается primaryTarget, под именами tag, tag-1...
+  // имена автора совпали бы с узлами сессии. null, если состав группы набирает ядро (use, include-all)
+  ({List<Map<String, dynamic>> proxies, List<Map<String, dynamic>> groups})?
+      routeNodes(String tag) {
+    final proxyByName = <String, Map<String, dynamic>>{
+      for (final proxy in proxies)
+        if ((proxy['name']?.toString() ?? '').isNotEmpty)
+          proxy['name'].toString(): proxy,
+    };
+    final rawGroups = map['proxy-groups'];
+    final groupByName = <String, Map<String, dynamic>>{
+      if (rawGroups is List)
+        for (final group in rawGroups)
+          if (group is Map && (group['name']?.toString() ?? '').isNotEmpty)
+            group['name'].toString(): group.cast<String, dynamic>(),
+    };
+
+    final start = primaryTarget;
+    if (!proxyByName.containsKey(start) && !groupByName.containsKey(start)) {
+      return null;
+    }
+    final names = <String, String>{start: tag};
+    final queue = [start];
+    bool reach(Object? ref) {
+      final name = ref?.toString() ?? '';
+      if (name.isEmpty || _builtinTargets.contains(name)) return true;
+      if (names.containsKey(name)) return true;
+      if (!proxyByName.containsKey(name) && !groupByName.containsKey(name)) {
+        return false;
+      }
+      names[name] = '$tag-${names.length}';
+      queue.add(name);
+      return true;
+    }
+
+    for (var i = 0; i < queue.length; i++) {
+      final group = groupByName[queue[i]];
+      if (group != null) {
+        if (_coreFillsGroup(group)) return null;
+        final members = group['proxies'];
+        if (members is! List || members.isEmpty) return null;
+        if (!members.every(reach)) return null;
+        if (!reach(group['empty-fallback'])) return null;
+      } else if (!reach(proxyByName[queue[i]]!['dialer-proxy'])) {
+        return null;
+      }
+    }
+
+    String rename(Object? ref) => names[ref?.toString()] ?? ref.toString();
+    Map<String, dynamic> copy(Map<String, dynamic> node) =>
+        (jsonDecode(jsonEncode(node)) as Map).cast<String, dynamic>();
+    return (
+      proxies: [
+        for (final proxy in proxies)
+          if (names.containsKey(proxy['name']?.toString()))
+            {
+              ...copy(proxy),
+              'name': rename(proxy['name']),
+              if (proxy['dialer-proxy'] != null)
+                'dialer-proxy': rename(proxy['dialer-proxy']),
+            },
+      ],
+      groups: [
+        for (final MapEntry(key: name, value: group) in groupByName.entries)
+          if (names.containsKey(name))
+            {
+              ...copy(group),
+              'name': rename(name),
+              'proxies': [for (final m in group['proxies'] as List) rename(m)],
+              if (group['empty-fallback'] != null)
+                'empty-fallback': rename(group['empty-fallback']),
+            },
+      ],
+    );
+  }
+
   ({String address, int port}) get endpoint {
     for (final proxy in proxies) {
       final address = proxy['server']?.toString().trim() ?? '';
@@ -243,6 +342,7 @@ class CustomClashConfig {
     List<String> prependRules = const [],
     List<String> appendRules = const [],
     List<Map<String, dynamic>> extraProxies = const [],
+    List<Map<String, dynamic>> extraGroups = const [],
     Map<String, dynamic> extra = const {},
   }) {
     final out = Map<String, dynamic>.from(map);
@@ -279,6 +379,13 @@ class CustomClashConfig {
       out['proxies'] = [
         if (authorProxies is List) ...authorProxies,
         ...extraProxies,
+      ];
+    }
+    if (extraGroups.isNotEmpty) {
+      final authorGroups = out['proxy-groups'];
+      out['proxy-groups'] = [
+        if (authorGroups is List) ...authorGroups,
+        ...extraGroups,
       ];
     }
 

@@ -1,19 +1,27 @@
 import '../models/server_item.dart';
 import '../models/traffic_route.dart';
 import '../tunnel/vpn_backend.dart';
+import 'custom_clash_config.dart';
+import 'custom_xray_config.dart';
 import 'proxy_chain.dart';
 import 'traffic_routes.dart';
 import 'vpn_core_support.dart';
 
-// готовый конфиг не годится: у него свои выходы, правила и DNS, в чужой конфиг их не вставить.
-// цепочку берёт только mihomo: у xray сервер маршрута собирается одним outbound (config_gen.dart)
+// из готового конфига в маршрут идут только его выходы: правила и DNS автора в чужую сессию не вставить.
+// цепочку берёт только mihomo: у xray сервер маршрута из ссылки собирается одним outbound (config_gen.dart)
 bool routeServerSupported(String config, VpnBackend core) =>
     switch (detectServerFormat(config)) {
       ServerFormat.link => backendsForLink(config).contains(core),
       ServerFormat.amneziaWg => core == VpnBackend.mihomo,
       ServerFormat.chain => core == VpnBackend.mihomo && _mihomoChain(config),
+      ServerFormat.xrayJson => core == VpnBackend.xray &&
+          CustomXrayConfig.tryParse(config)?.routeOutbounds(_probeTag) != null,
+      ServerFormat.clashYaml => core == VpnBackend.mihomo &&
+          CustomClashConfig.tryParse(config)?.routeNodes(_probeTag) != null,
       _ => false,
     };
+
+const _probeTag = 'keq-srv-probe';
 
 bool _mihomoChain(String config) {
   final chain = ProxyChainConfig.tryParse(config);

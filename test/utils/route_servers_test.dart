@@ -13,6 +13,14 @@ const _tuic = 'tuic://00000000-0000-4000-8000-000000000000:pw@fi.example:443'
     '?sni=fi.example#FI';
 const _xrayJson =
     '{"outbounds":[{"protocol":"vless","tag":"proxy","settings":{}}]}';
+const _clashYaml = '''
+proxies:
+  - {name: NL, type: trojan, server: nl.example, port: 443, password: password}
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: [NL]
+''';
 
 ServerItem _server(String id, String config) =>
     ServerItem(id: id, type: ServerItemType.manual, config: config);
@@ -43,9 +51,37 @@ void main() {
       expect(routeServerSupported(_tuic, VpnBackend.mihomo), isTrue);
     });
 
-    test('готовый конфиг — ни у одного ядра', () {
-      expect(routeServerSupported(_xrayJson, VpnBackend.xray), isFalse);
+    test('готовый JSON — только у xray, YAML — только у mihomo', () {
+      expect(routeServerSupported(_xrayJson, VpnBackend.xray), isTrue);
       expect(routeServerSupported(_xrayJson, VpnBackend.mihomo), isFalse);
+      expect(routeServerSupported(_clashYaml, VpnBackend.mihomo), isTrue);
+      expect(routeServerSupported(_clashYaml, VpnBackend.xray), isFalse);
+    });
+
+    test('JSON, у которого dialerProxy ведёт мимо его выходов, — нет', () {
+      const broken = '{"outbounds":[{"protocol":"vless","tag":"proxy",'
+          '"streamSettings":{"sockopt":{"dialerProxy":"fragment"}}}]}';
+      expect(routeServerSupported(broken, VpnBackend.xray), isFalse);
+    });
+
+    test('YAML, чьи группы набирает само ядро, — нет', () {
+      for (final key in [
+        'include-all: true',
+        'use: [remote]',
+        // фильтр сверяется с именами, а в маршруте они наши
+        'exclude-filter: NL',
+      ]) {
+        final yaml = _clashYaml.replaceFirst('type: select', 'type: select\n    $key');
+        expect(routeServerSupported(yaml, VpnBackend.mihomo), isFalse,
+            reason: key);
+      }
+      for (final key in ['include-all: false', 'use: []', 'filter: NL']) {
+        final yaml = _clashYaml.replaceFirst('type: select', 'type: select\n    $key');
+        expect(routeServerSupported(yaml, VpnBackend.mihomo), isTrue,
+            reason: key);
+      }
+      final unknown = _clashYaml.replaceFirst('[NL]', '[NL, Missing]');
+      expect(routeServerSupported(unknown, VpnBackend.mihomo), isFalse);
     });
   });
 

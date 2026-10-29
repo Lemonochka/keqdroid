@@ -110,7 +110,7 @@
       }
     }
   },
-  "routePickEmpty": "Нет серверов, которые текущее ядро возьмёт отдельным выходом. Готовые конфиги сюда не подходят, а цепочки подходят только на mihomo.",
+  "routePickEmpty": "Нет серверов, которые текущее ядро возьмёт отдельным выходом. Готовый конфиг подходит только своему ядру, а цепочки только mihomo.",
   "@routePickEmpty": {},
   "settingsRoutingRouteCount": "{count, plural, =0{нет маршрутов} one{{count} маршрут} few{{count} маршрута} many{{count} маршрутов} other{{count} маршрута}}",
   "@settingsRoutingRouteCount": {

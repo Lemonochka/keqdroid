@@ -476,7 +476,7 @@ abstract class AppLocalizations {
   /// No description provided for @routePickEmpty.
   ///
   /// In en, this message translates to:
-  /// **'No servers the current core can run as a separate outbound. Ready-made configs do not fit here, and chains fit only on mihomo.'**
+  /// **'No servers the current core can run as a separate outbound. A ready-made config fits only its own core, and chains fit only mihomo.'**
   String get routePickEmpty;
 
   /// No description provided for @settingsRoutingRouteCount.

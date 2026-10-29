@@ -218,7 +218,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get routePickEmpty => 'Keine Server, die der aktuelle Kern als eigenen Ausgang nutzen kann. Fertige Konfigurationen passen hier nicht, Ketten nur mit mihomo.';
+  String get routePickEmpty => 'Keine Server, die der aktuelle Kern als eigenen Ausgang nutzen kann. Eine fertige Konfiguration passt nur zu ihrem eigenen Kern, Ketten nur zu mihomo.';
 
   @override
   String settingsRoutingRouteCount(int count) {

@@ -220,7 +220,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get routePickEmpty => 'Нет серверов, которые текущее ядро возьмёт отдельным выходом. Готовые конфиги сюда не подходят, а цепочки подходят только на mihomo.';
+  String get routePickEmpty => 'Нет серверов, которые текущее ядро возьмёт отдельным выходом. Готовый конфиг подходит только своему ядру, а цепочки только mihomo.';
 
   @override
   String settingsRoutingRouteCount(int count) {

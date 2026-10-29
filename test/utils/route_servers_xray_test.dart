@@ -42,6 +42,36 @@ const _xrayCustom = '''
 }
 ''';
 
+// как у генератора WARP-профилей: wireguard ходит через freedom с шумом
+const _warpJson = '''
+{
+  "dns": {"servers": ["9.9.9.9"]},
+  "outbounds": [
+    {
+      "tag": "warp",
+      "protocol": "wireguard",
+      "settings": {
+        "secretKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=",
+        "address": ["172.16.0.2/32"],
+        "peers": [{"endpoint": "warp.example:4500",
+          "publicKey": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA="}]
+      },
+      "streamSettings": {"sockopt": {"dialerProxy": "noise-out"}}
+    },
+    {
+      "tag": "noise-out",
+      "protocol": "freedom",
+      "settings": {"noises": [{"type": "rand", "packet": "10-20", "delay": "1-2"}]}
+    },
+    {"tag": "unused", "protocol": "blackhole"}
+  ],
+  "routing": {"rules": [
+    {"type": "field", "port": "53", "outboundTag": "noise-out"},
+    {"type": "field", "network": "tcp,udp", "outboundTag": "warp"}
+  ]}
+}
+''';
+
 Map<String, dynamic> _build(
   String server, {
   AppSettings settings = _settings,
@@ -132,6 +162,70 @@ void main() {
       ConfigGeneratorV2.generateConfig(_active, _settings, routeServers: const []),
       ConfigGeneratorV2.generateConfig(_active, _settings),
     );
+  });
+
+  group('готовый JSON сервером маршрута', () {
+    const toWarp = RouteServerOutbound(
+      tag: 'keq-srv-0',
+      serverId: 'warp',
+      config: _warpJson,
+      address: 'warp.example',
+      entries: 'youtube.com',
+    );
+
+    test('главный выход и его dialerProxy — под нашими тегами', () {
+      final outbounds = _outbounds(_build(_active, routes: const [toWarp]));
+      final wg = outbounds.firstWhere((o) => o['tag'] == 'keq-srv-0');
+      expect(wg['protocol'], 'wireguard');
+      expect(
+        ((wg['streamSettings'] as Map)['sockopt'] as Map)['dialerProxy'],
+        'keq-srv-0-1',
+      );
+      final noise = outbounds.firstWhere((o) => o['tag'] == 'keq-srv-0-1');
+      expect(noise['protocol'], 'freedom');
+      expect((noise['settings'] as Map)['noises'], isNotEmpty);
+      expect(outbounds.map((o) => o['tag']), isNot(contains('noise-out')));
+      expect(outbounds.map((o) => o['tag']), isNot(contains('unused')));
+    });
+
+    test('правила и DNS автора в сессию не попадают', () {
+      final c = _build(_active, routes: const [toWarp]);
+      final rules = _rules(c);
+      expect(rules.where((r) => r['outboundTag'] == 'keq-srv-0-1'), isEmpty);
+      expect(
+        rules[_at(rules, 'keq-srv-0-domains')]['outboundTag'],
+        'keq-srv-0',
+      );
+      expect(jsonEncode(c['dns']), isNot(contains('9.9.9.9')));
+    });
+
+    test('под готовым конфигом с теми же тегами — без дублей', () {
+      final c = _build(_warpJson, routes: const [toWarp]);
+      final tags = _outbounds(c).map((o) => o['tag']).toList();
+      expect(tags.where((t) => t == 'noise-out'), hasLength(1));
+      expect(tags.toSet(), hasLength(tags.length), reason: '$tags');
+      expect(tags, containsAll(['keq-srv-0', 'keq-srv-0-1']));
+    });
+
+    test('поле, которое ядро снесло, вычищено и из выхода маршрута', () {
+      final c = _build(
+        _active,
+        routes: [
+          RouteServerOutbound(
+            tag: 'keq-srv-0',
+            serverId: 'tls',
+            config: _xrayCustom.replaceFirst(
+              '"protocol": "vless",',
+              '"protocol": "vless", "streamSettings": {"security": "tls", '
+                  '"tlsSettings": {"allowInsecure": true}},',
+            ),
+            address: 'nl.example',
+            entries: 'youtube.com',
+          ),
+        ],
+      );
+      expect(jsonEncode(c), isNot(contains('allowInsecure')));
+    });
   });
 
   test('готовый конфиг: аутбаунд и правила добавлены к авторским', () {

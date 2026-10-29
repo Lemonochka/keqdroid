@@ -218,7 +218,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get routePickEmpty => '没有当前内核可作为独立出站使用的服务器。现成配置不适用，链式代理仅在 mihomo 下可用。';
+  String get routePickEmpty => '没有当前内核可作为独立出站使用的服务器。现成配置只适用于它自己的内核，链式代理仅在 mihomo 下可用。';
 
   @override
   String settingsRoutingRouteCount(int count) {

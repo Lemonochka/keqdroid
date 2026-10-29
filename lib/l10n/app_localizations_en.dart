@@ -218,7 +218,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get routePickEmpty => 'No servers the current core can run as a separate outbound. Ready-made configs do not fit here, and chains fit only on mihomo.';
+  String get routePickEmpty => 'No servers the current core can run as a separate outbound. A ready-made config fits only its own core, and chains fit only mihomo.';
 
   @override
   String settingsRoutingRouteCount(int count) {

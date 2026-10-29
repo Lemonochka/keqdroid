@@ -118,6 +118,54 @@ class CustomXrayConfig {
     return tag.isEmpty ? 'proxy' : tag;
   }
 
+  // в маршрут идёт главный выход и те, через которые он ходит сам, под тегами tag, tag-1...
+  // теги автора совпали бы с тегами сессии. null, если dialerProxy ведёт мимо его выходов
+  List<Map<String, dynamic>>? routeOutbounds(String tag) {
+    final primary = primaryOutbound;
+    if (primary == null) return null;
+    final byTag = <String, Map<String, dynamic>>{
+      for (final outbound in _outboundsOf(json))
+        if ((outbound['tag']?.toString() ?? '').isNotEmpty)
+          outbound['tag'].toString(): outbound,
+    };
+    final picked = [primary];
+    final tags = <String, String>{
+      if ((primary['tag']?.toString() ?? '').isNotEmpty)
+        primary['tag'].toString(): tag,
+    };
+    for (var i = 0; i < picked.length; i++) {
+      final dialer = _dialerProxyOf(picked[i]);
+      if (dialer == null || tags.containsKey(dialer)) continue;
+      final next = byTag[dialer];
+      if (next == null) return null;
+      tags[dialer] = '$tag-${picked.length}';
+      picked.add(next);
+    }
+
+    final out = <Map<String, dynamic>>[];
+    for (var i = 0; i < picked.length; i++) {
+      final copy = (jsonDecode(jsonEncode(picked[i])) as Map).cast<String, dynamic>();
+      copy['tag'] = i == 0 ? tag : tags[picked[i]['tag'].toString()];
+      final sockopt = (copy['streamSettings'] as Map?)?['sockopt'];
+      final dialer = _dialerProxyOf(copy);
+      if (sockopt is Map && dialer != null) sockopt['dialerProxy'] = tags[dialer];
+      out.add(copy);
+    }
+    final wrapped = <String, dynamic>{'outbounds': out};
+    stripRemovedTlsFields(wrapped);
+    migrateDeprecatedXrayFields(wrapped);
+    return out;
+  }
+
+  static String? _dialerProxyOf(Map<String, dynamic> outbound) {
+    final stream = outbound['streamSettings'];
+    if (stream is! Map) return null;
+    final sockopt = stream['sockopt'];
+    if (sockopt is! Map) return null;
+    final dialer = sockopt['dialerProxy']?.toString().trim() ?? '';
+    return dialer.isEmpty ? null : dialer;
+  }
+
   // по адресу tcp-пинг и исключение сервера из TUN, иначе коннект ядра к серверу уйдёт в петлю
   ({String address, int port}) get endpoint {
     for (final outbound in _outboundsOf(json)) {

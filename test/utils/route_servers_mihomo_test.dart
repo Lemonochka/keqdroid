@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/services/traffic_split_service.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/route_servers.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
@@ -40,6 +41,42 @@ proxy-groups:
 rules:
   - DOMAIN-SUFFIX,author.example,DIRECT
   - MATCH,Proxy
+''';
+
+// как у генератора WARP-профилей: общий блок якорем, третий узел ходит через первый
+const _warpYaml = '''
+warp-common: &warp-common
+  type: wireguard
+  ip: 172.16.0.2
+  private-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA=
+  public-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA=
+  udp: true
+proxies:
+  - name: "[WARP] One"
+    <<: *warp-common
+    server: warp.example
+    port: 4500
+  - name: "[WARP] Two"
+    <<: *warp-common
+    server: warp.example
+    port: 2408
+  - name: "[WARP] Inner"
+    <<: *warp-common
+    server: relay.example
+    port: 4500
+    dialer-proxy: "[WARP] One"
+  - name: Unused
+    type: trojan
+    server: unused.example
+    port: 443
+    password: password
+proxy-groups:
+  - name: Cloudflare
+    type: select
+    proxies: ["[WARP] One", "[WARP] Two", "[WARP] Inner", DIRECT]
+rules:
+  - DST-PORT,53,DIRECT
+  - MATCH,Cloudflare
 ''';
 
 List<String> _rules(Map<String, dynamic> c) =>
@@ -127,6 +164,106 @@ void main() {
         routeServers: const [],
       ),
     );
+  });
+
+  group('готовый YAML сервером маршрута', () {
+    const toWarp = RouteServerOutbound(
+      tag: 'keq-srv-0',
+      serverId: 'warp',
+      config: _warpYaml,
+      address: 'warp.example',
+      entries: 'youtube.com',
+    );
+
+    List<Map<String, dynamic>> groups(Map<String, dynamic> c) =>
+        (c['proxy-groups'] as List).cast<Map<String, dynamic>>();
+
+    test('группа автора под тегом маршрута, узлы под нашими именами', () {
+      final c = MihomoConfigGen.build(
+        _active,
+        _settings,
+        socksPort: 2080,
+        routeServers: const [toWarp],
+      );
+      expect(_proxies(c).map((p) => p['name']), [
+        MihomoConfigGen.proxyName,
+        'keq-srv-0-1',
+        'keq-srv-0-2',
+        'keq-srv-0-3',
+      ]);
+      expect(_proxies(c)[1]['type'], 'wireguard',
+          reason: 'якорь раскрыт до того, как узел ушёл в сессию');
+      expect(_proxies(c)[3]['dialer-proxy'], 'keq-srv-0-1');
+      expect(groups(c).single, {
+        'name': 'keq-srv-0',
+        'type': 'select',
+        'proxies': ['keq-srv-0-1', 'keq-srv-0-2', 'keq-srv-0-3', 'DIRECT'],
+      });
+      expect(_rules(c), contains('DOMAIN-SUFFIX,youtube.com,keq-srv-0'));
+      expect(_rules(c), isNot(contains('MATCH,Cloudflare')));
+      expect(_proxies(c).map((p) => p['name']), isNot(contains('Unused')));
+    });
+
+    test('ко всем его серверам — напрямую', () {
+      final rules = _rules(MihomoConfigGen.build(
+        _active,
+        _settings,
+        socksPort: 2080,
+        routeServers: const [toWarp],
+      ));
+      expect(rules, contains('DOMAIN,warp.example,DIRECT'));
+      expect(rules, contains('DOMAIN,relay.example,DIRECT'));
+      expect(rules.where((r) => r == 'DOMAIN,warp.example,DIRECT'), hasLength(1));
+    });
+
+    test('узел только для dialer-proxy — звено цепочки, счётчик его не задвоит',
+        () {
+      const yaml = '''
+proxies:
+  - {name: Entry, type: trojan, server: entry.example, port: 443, password: pw}
+  - {name: Exit, type: trojan, server: exit.example, port: 443, password: pw,
+     dialer-proxy: Entry}
+proxy-groups:
+  - {name: Proxy, type: select, proxies: [Exit]}
+''';
+      final c = MihomoConfigGen.build(
+        _active,
+        _settings,
+        socksPort: 2080,
+        routeServers: const [
+          RouteServerOutbound(
+            tag: 'keq-srv-0',
+            serverId: 'chain',
+            config: yaml,
+            address: 'exit.example',
+            entries: 'youtube.com',
+          ),
+        ],
+      );
+      final byServer = {for (final p in _proxies(c)) p['server']: p};
+      final entry = byServer['entry.example']!['name'] as String;
+      expect(MihomoConfigGen.isChainHop(entry), isTrue, reason: entry);
+      expect(byServer['exit.example']!['name'], 'keq-srv-0-1');
+      expect(byServer['exit.example']!['dialer-proxy'], entry);
+      expect(channelOfChains([entry]), TrafficChannel.unknown);
+    });
+
+    test('под готовым YAML с теми же именами — без дублей, группы автора целы',
+        () {
+      final c = MihomoConfigGen.build(
+        _warpYaml,
+        _settings,
+        socksPort: 2080,
+        routeServers: const [toWarp],
+      );
+      final names = [
+        ..._proxies(c).map((p) => p['name']),
+        ...groups(c).map((g) => g['name']),
+      ];
+      expect(names.toSet(), hasLength(names.length), reason: '$names');
+      expect(groups(c).map((g) => g['name']), ['Cloudflare', 'keq-srv-0']);
+      expect(_rules(c).last, 'MATCH,Cloudflare');
+    });
   });
 
   test('готовый clash-конфиг: выход добавлен к выходам автора', () {

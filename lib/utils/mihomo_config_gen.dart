@@ -206,6 +206,8 @@ class MihomoConfigGen {
           ),
         },
       'proxies': [...proxies, ...buildRouteServerProxies(routeServers)],
+      if (buildRouteServerGroups(routeServers).isNotEmpty)
+        'proxy-groups': buildRouteServerGroups(routeServers),
       if (!ruleLists.isEmpty ||
           routeServers.isNotEmpty ||
           appRules.isNotEmpty)
@@ -314,6 +316,7 @@ class MihomoConfigGen {
           'MATCH,${_customFinalTarget(settings, clash, routingMode, managedProcessNames)}',
       ],
       extraProxies: buildRouteServerProxies(routeServers),
+      extraGroups: buildRouteServerGroups(routeServers),
       extra: {
         if (!ruleLists.isEmpty ||
             routeServers.isNotEmpty ||
@@ -1680,10 +1683,64 @@ class MihomoConfigGen {
   ) =>
       [
         for (final server in servers)
-          ...buildProxies(server.config.trim(), name: server.tag),
+          ...switch (_routeClashNodes(server)) {
+            final nodes? => nodes.proxies,
+            null => buildProxies(server.config.trim(), name: server.tag),
+          },
       ];
 
-  // address у цепочки это её входной узел
+  static List<Map<String, dynamic>> buildRouteServerGroups(
+    List<RouteServerOutbound> servers,
+  ) =>
+      [
+        for (final server in servers)
+          ...?_routeClashNodes(server)?.groups,
+      ];
+
+  static ({List<Map<String, dynamic>> proxies, List<Map<String, dynamic>> groups})?
+      _routeClashNodes(RouteServerOutbound server) {
+    if (!CustomClashConfig.looksLikeClash(server.config)) return null;
+    final clash = CustomClashConfig.tryParse(server.config.trim());
+    if (clash == null) return null;
+    final nodes = clash.routeNodes(server.tag);
+    if (nodes == null) {
+      throw ArgumentError('Route server ${server.tag}: its groups are filled '
+          'by the core or point outside the config');
+    }
+    // узел, до которого доходят только через dialer-proxy, зовём звеном цепочки: иначе его Inner-соединение посчиталось бы второй раз
+    final used = <String>{
+      server.tag,
+      for (final group in nodes.groups)
+        for (final member in group['proxies'] as List) member.toString(),
+    };
+    final hops = <String>{
+      for (final proxy in nodes.proxies)
+        if (proxy['dialer-proxy'] case final Object dialer
+            when !used.contains(dialer.toString()))
+          dialer.toString(),
+    };
+    if (hops.isEmpty) return nodes;
+    String hop(Object? name) => hops.contains(name.toString())
+        ? '$chainHopPrefix$name'
+        : name.toString();
+    return (
+      proxies: [
+        for (final proxy in nodes.proxies)
+          {
+            ...proxy,
+            'name': hop(proxy['name']),
+            if (proxy['dialer-proxy'] != null)
+              'dialer-proxy': hop(proxy['dialer-proxy']),
+          },
+      ],
+      groups: [
+        for (final group in nodes.groups)
+          {...group, 'name': hop(group['name'])},
+      ],
+    );
+  }
+
+  // address у цепочки это её входной узел, у готового конфига первый из его узлов
   static List<String> routeServerDirectRules(
     List<RouteServerOutbound> servers,
   ) =>
@@ -1694,6 +1751,10 @@ class MihomoConfigGen {
             for (final address in _serverAddresses(
               buildProxies(server.config.trim(), name: server.tag),
             ).skip(1))
+              ...buildServerDirectRules(serverAddress: address),
+          if (_routeClashNodes(server) case final nodes?)
+            for (final address in {..._serverAddresses(nodes.proxies)}
+              ..remove(server.address))
               ...buildServerDirectRules(serverAddress: address),
         ],
       ];

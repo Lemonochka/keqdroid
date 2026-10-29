@@ -556,6 +556,16 @@ class ConfigGeneratorV2 {
   ) {
     final out = <Map<String, dynamic>>[];
     for (final server in servers) {
+      final custom = CustomXrayConfig.tryParse(server.config.trim());
+      if (custom != null) {
+        final outbounds = custom.routeOutbounds(server.tag);
+        if (outbounds == null) {
+          throw ArgumentError('Route server ${server.tag}: its dialerProxy '
+              'points outside the config');
+        }
+        out.addAll(outbounds);
+        continue;
+      }
       final outbound = _buildLinkOutbound(server.config.trim(), settings).outbound;
       outbound['tag'] = server.tag;
       _applyMux(outbound, settings.xrayCore);
