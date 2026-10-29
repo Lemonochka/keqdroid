@@ -15,11 +15,45 @@ class LinuxAutostart {
 
   static const _marker = 'X-KeqDroid-Autostart=true';
 
-  static File _file() {
+  @visibleForTesting
+  static String? configHomeOverride;
+
+  // менеджер systemd пользователя может пережить выход из сессии, и без reload следующий вход новых файлов не увидит
+  @visibleForTesting
+  static Future<void> Function() reloadUserUnits = () async {
+    try {
+      await Process.run('systemctl', ['--user', 'daemon-reload']);
+    } catch (_) {}
+  };
+
+  // Hyprland без uwsm (так у caelestia) ~/.config/autostart не читает и поднимает только hyprland-session.target.
+  // цепляем к ней службу, которую systemd-xdg-autostart-generator делает из ярлыка: под uwsm и в GNOME/KDE запуск остаётся один
+  static const _generatedUnit = 'app-keqdroid@autostart.service';
+
+  static String _configHome() {
+    final override = configHomeOverride;
+    if (override != null) return override;
     final home = Platform.environment['HOME'] ?? '';
-    final config =
-        Platform.environment['XDG_CONFIG_HOME'] ?? p.join(home, '.config');
-    return File(p.join(config, 'autostart', _fileName));
+    return Platform.environment['XDG_CONFIG_HOME'] ?? p.join(home, '.config');
+  }
+
+  static File _file() => File(p.join(_configHome(), 'autostart', _fileName));
+
+  static File _hyprlandDropIn() => File(p.join(_configHome(), 'systemd', 'user',
+      'hyprland-session.target.d', 'keqdroid.conf'));
+
+  static Future<bool> _syncHyprlandDropIn(bool wanted) async {
+    final file = _hyprlandDropIn();
+    if (!wanted) {
+      if (!file.existsSync()) return false;
+      await file.delete();
+      return true;
+    }
+    const content = '[Unit]\nWants=$_generatedUnit\n';
+    if (file.existsSync() && await file.readAsString() == content) return false;
+    await file.parent.create(recursive: true);
+    await file.writeAsString(content);
+    return true;
   }
 
   // сам AppImage: бинарь во временном монте исчезает вместе с процессом
@@ -40,11 +74,15 @@ class LinuxAutostart {
       final file = _file();
       if (!enabled) {
         if (isEnabled()) await file.delete();
+        await _syncHyprlandDropIn(false);
+        await reloadUserUnits();
         return true;
       }
       if (file.existsSync() && !isEnabled()) return false;
       await file.parent.create(recursive: true);
       await file.writeAsString(contentFor(_target()));
+      await _syncHyprlandDropIn(true);
+      await reloadUserUnits();
       return true;
     } catch (e, st) {
       AppLogger.instance.warn(
@@ -57,12 +95,18 @@ class LinuxAutostart {
   }
 
   static Future<void> refresh() async {
-    if (!isEnabled()) return;
-    final content = contentFor(_target());
+    final enabled = isEnabled();
     try {
-      if (await _file().readAsString() != content) {
-        await _file().writeAsString(content);
+      var changed = false;
+      if (enabled) {
+        final content = contentFor(_target());
+        if (await _file().readAsString() != content) {
+          await _file().writeAsString(content);
+          changed = true;
+        }
       }
+      if (await _syncHyprlandDropIn(enabled)) changed = true;
+      if (changed) await reloadUserUnits();
     } catch (_) {}
   }
 
