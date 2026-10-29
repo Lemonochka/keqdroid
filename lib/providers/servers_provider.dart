@@ -307,8 +307,9 @@ class ServersNotifier extends Notifier<ServersState> {
         lower.startsWith('hy2://') ||
         lower.startsWith('tuic://') ||
         lower.startsWith('anytls://') ||
-        lower.startsWith('mierus://'))) {
-      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic://, anytls://, mierus://, wg://, an Xray JSON config, a sing-box config, a Clash YAML config or an AmneziaWG .conf';
+        lower.startsWith('mierus://') ||
+        SocksLink.isSocks(rawConfig))) {
+      return 'Unsupported format. Use vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic://, anytls://, mierus://, socks://, wg://, an Xray JSON config, a sing-box config, a Clash YAML config or an AmneziaWG .conf';
     }
 
     if (HysteriaLinkParams.isV1(rawConfig)) {
@@ -324,6 +325,11 @@ class ServersNotifier extends Notifier<ServersState> {
     if (lower.startsWith('mierus://')) {
       return MieruLink.tryParse(rawConfig) == null
           ? 'Invalid Mieru link: it needs a host and port/protocol pairs'
+          : null;
+    }
+    if (SocksLink.isSocks(rawConfig)) {
+      return SocksLink.tryParse(rawConfig) == null
+          ? 'Invalid SOCKS link: it needs a host and a port'
           : null;
     }
 

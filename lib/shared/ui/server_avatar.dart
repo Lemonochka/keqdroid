@@ -64,6 +64,7 @@ Color serverProtocolColor(BuildContext context, String protocol) =>
       'anytls' => AppTheme.harmonize(context, const Color(0xFF5E35B1)),
       'ssr' => AppTheme.harmonize(context, const Color(0xFF2E7D32)),
       'mieru' => AppTheme.harmonize(context, const Color(0xFFEF6C00)),
+      'socks' => AppTheme.harmonize(context, const Color(0xFF546E7A)),
       'custom' => AppTheme.harmonize(context, const Color(0xFFF9A825)),
       'chain' => AppTheme.harmonize(context, const Color(0xFF8E24AA)),
       _ => AppTheme.textLight(context),

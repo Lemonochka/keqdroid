@@ -65,7 +65,7 @@ ServerFormat detectServerFormat(String config) {
 }
 
 final _linkScheme = RegExp(
-  r'^(vless|vmess|trojan|ss|ssr|hysteria|hysteria2|hy2|tuic|anytls|mierus)://',
+  r'^(vless|vmess|trojan|ss|ssr|hysteria|hysteria2|hy2|tuic|anytls|mierus|socks|socks5|socks5h)://',
   caseSensitive: false,
 );
 

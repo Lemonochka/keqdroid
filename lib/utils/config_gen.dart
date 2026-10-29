@@ -19,6 +19,7 @@ import '../utils/route_servers.dart';
 import '../utils/routing_entry.dart';
 import '../utils/rule_lists.dart';
 import '../utils/socks5_credentials.dart';
+import '../utils/socks_uri.dart';
 import '../utils/tls_fingerprint.dart';
 
 // причуды xray 26: пустой fingerprint ядро читает как chrome, allowInsecure не пишем вовсе,
@@ -290,6 +291,25 @@ class ConfigGeneratorV2 {
     final bool isHysteria = lowerTrimmed.startsWith('hysteria://') ||
         lowerTrimmed.startsWith('hysteria2://') ||
         lowerTrimmed.startsWith('hy2://');
+
+    if (SocksLink.isSocks(trimmed)) {
+      final socks = SocksLink.tryParse(trimmed);
+      if (socks == null) throw ArgumentError('Invalid SOCKS link');
+      final outbound = <String, dynamic>{
+        'tag': 'proxy',
+        'protocol': 'socks',
+        'settings': {
+          'address': socks.host,
+          'port': socks.port,
+          if (socks.username.isNotEmpty) 'user': socks.username,
+          if (socks.username.isNotEmpty) 'pass': socks.password,
+        },
+        'streamSettings': <String, dynamic>{'network': 'tcp'},
+      };
+      _applyXrayStreamExtras(outbound, settings.xrayCore);
+      _applyServerDomainStrategy(outbound, socks.host, settings.xrayCore);
+      return (outbound: outbound, address: socks.host, port: socks.port);
+    }
 
     Uri uri;
     Map<String, dynamic>? vmessConfig;

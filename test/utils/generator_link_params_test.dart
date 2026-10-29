@@ -34,8 +34,8 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 /// это готовый эталон), стандарт ссылок XTLS/Xray-core #716, поля vmess-json
 /// v2rayN и наши алиасы из `lib/utils/hysteria_uri.dart`.
 ///
-/// Чего здесь намеренно нет: SOCKS и HTTP как серверы, Hysteria v1 — решено
-/// не поддерживать.
+/// Чего здесь намеренно нет: HTTP как сервер и Hysteria v1 — решено не
+/// поддерживать. У SOCKS параметров в запросе нет, его разбор в socks_uri_test.
 
 const _uuid = '00000000-0000-4000-8000-000000000000';
 const _host = '198.51.100.10:443';

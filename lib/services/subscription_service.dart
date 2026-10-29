@@ -19,6 +19,7 @@ import '../utils/hysteria_uri.dart';
 import '../utils/identity_presets.dart';
 import '../utils/mieru_uri.dart';
 import '../utils/singbox_outbounds.dart';
+import '../utils/socks_uri.dart';
 import '../utils/ssr_uri.dart';
 import '../utils/vmess_json_link.dart';
 import '../core/exceptions.dart';
@@ -1163,7 +1164,7 @@ class SubscriptionService {
       }
     }
     throw const FormatException(
-      'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic://, anytls:// or mierus://',
+      'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic://, anytls://, mierus:// or socks://',
     );
   }
 
@@ -2162,7 +2163,7 @@ class SubscriptionService {
     // пробел внутри ссылки допустим (имя сервера во fragment), режем по переводам строк.
     // lookbehind по символам схемы: иначе wss://host из html матчился как ss://host
     final matches = RegExp(
-      r'''(?<![A-Za-z0-9+.\-])(?:vless|vmess|trojan|ss|ssr|hysteria2?|hy2|tuic|anytls|mierus)://(?:(?!(?:vless|vmess|trojan|ssr|ss|hysteria2?|hy2|tuic|anytls|mierus)://)[^\r\n<>"'])+''',
+      r'''(?<![A-Za-z0-9+.\-])(?:vless|vmess|trojan|ss|ssr|hysteria2?|hy2|tuic|anytls|mierus|socks5h|socks5|socks)://(?:(?!(?:vless|vmess|trojan|ssr|ss|hysteria2?|hy2|tuic|anytls|mierus|socks5h|socks5|socks)://)[^\r\n<>"'])+''',
       caseSensitive: false,
     ).allMatches(text);
     final links = <String>[];
@@ -2204,7 +2205,8 @@ class SubscriptionService {
         lower.startsWith('hy2://') ||
         lower.startsWith('tuic://') ||
         lower.startsWith('anytls://') ||
-        lower.startsWith('mierus://');
+        lower.startsWith('mierus://') ||
+        SocksLink.tryParse(s) != null;
   }
 
   static bool _isMetadataConfig(String raw) {

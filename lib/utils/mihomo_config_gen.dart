@@ -19,6 +19,7 @@ import 'route_servers.dart';
 import 'routing_entry.dart';
 import 'rule_lists.dart';
 import 'socks5_credentials.dart';
+import 'socks_uri.dart';
 import 'ssr_uri.dart';
 import 'tls_fingerprint.dart';
 
@@ -699,6 +700,7 @@ class MihomoConfigGen {
     if (lower.startsWith('anytls://')) return _anytls(link);
     if (lower.startsWith('ssr://')) return _ssr(link);
     if (lower.startsWith('mierus://')) return _mieru(link);
+    if (SocksLink.isSocks(link)) return _socks(link);
     if (lower.startsWith('hysteria://')) {
       if (HysteriaLinkParams.isV1(link)) {
         throw ArgumentError(
@@ -1226,6 +1228,20 @@ class MihomoConfigGen {
     } catch (_) {
       return uri.userInfo;
     }
+  }
+
+  static Map<String, dynamic> _socks(String link) {
+    final socks = SocksLink.tryParse(link);
+    if (socks == null) throw ArgumentError('Invalid SOCKS link');
+    return {
+      'name': proxyName,
+      'type': 'socks5',
+      'server': socks.host,
+      'port': socks.port,
+      if (socks.username.isNotEmpty) 'username': socks.username,
+      if (socks.username.isNotEmpty) 'password': socks.password,
+      'udp': true,
+    };
   }
 
   static Map<String, dynamic> _trojan(String link) {

@@ -97,7 +97,7 @@ Two cores run servers on every platform: **Xray** and **mihomo**. Each runs its 
 
 | Server | Runs on |
 |--------|---------|
-| Links `vless://` `vmess://` `trojan://` `ss://` `hy2://` | Xray or mihomo, your choice |
+| Links `vless://` `vmess://` `trojan://` `ss://` `hy2://` `socks://` | Xray or mihomo, your choice |
 | `tuic://` `anytls://` `ssr://` `mierus://`, and links with a transport only mihomo has (for example HTTP/2 or a Shadowsocks plugin) | mihomo |
 | Links with a transport only Xray has (for example mKCP, XHTTP for VMess and Trojan, finalmask) | Xray |
 | Ready-made Xray config (`.json`) | Xray |
@@ -122,6 +122,7 @@ For links both cores support, pick the core in **Settings → About**; Xray is t
 | TUIC | `tuic://` |
 | AnyTLS | `anytls://` |
 | Mieru | `mierus://` |
+| SOCKS5 | `socks://`, `socks5://`, `socks5h://` |
 | WireGuard / AmneziaWG | `.conf` profile; `wg://`, `awg://`, `wireguard://` links |
 | Ready-made Xray config | whole `.json` (paste, file, subscription) |
 | Ready-made Clash config | whole config (paste, file, subscription) |
@@ -326,7 +327,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 
 | Сервер | Исполняет |
 |--------|-----------|
-| Ссылки `vless://` `vmess://` `trojan://` `ss://` `hy2://` | Xray или mihomo — на выбор |
+| Ссылки `vless://` `vmess://` `trojan://` `ss://` `hy2://` `socks://` | Xray или mihomo — на выбор |
 | `tuic://` `anytls://` `ssr://` `mierus://` и ссылки с транспортом, который есть только у mihomo (например, HTTP/2 или плагин Shadowsocks) | mihomo |
 | Ссылки с транспортом, который есть только у Xray (например, mKCP, XHTTP у VMess и Trojan, finalmask) | Xray |
 | Готовый конфиг Xray (`.json`) | Xray |
@@ -351,6 +352,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 | TUIC | `tuic://` |
 | AnyTLS | `anytls://` |
 | Mieru | `mierus://` |
+| SOCKS5 | `socks://`, `socks5://`, `socks5h://` |
 | WireGuard / AmneziaWG | профиль `.conf`; ссылки `wg://`, `awg://`, `wireguard://` |
 | Готовый конфиг Xray | `.json` целиком (вставка, файл, подписка) |
 | Готовый конфиг Clash | конфиг целиком (вставка, файл, подписка) |

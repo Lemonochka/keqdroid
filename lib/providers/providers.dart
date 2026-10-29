@@ -66,6 +66,7 @@ import '../utils/traffic_routes.dart';
 import '../utils/rule_lists.dart';
 import '../utils/singbox_outbounds.dart';
 import '../utils/socks5_credentials.dart';
+import '../utils/socks_uri.dart';
 import '../utils/split_tunnel_routing.dart';
 import '../utils/split_tunneling_entries.dart';
 import '../utils/ssr_uri.dart';

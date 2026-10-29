@@ -7,6 +7,7 @@ import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
 import '../utils/mieru_uri.dart';
 import '../utils/proxy_chain.dart';
+import '../utils/socks_uri.dart';
 import '../utils/ssr_uri.dart';
 import 'ping_sample.dart';
 import 'server_flag.dart';
@@ -308,6 +309,7 @@ class ServerItem {
       }
       if (protocol == 'ssr') return SsrLink.tryParse(config)?.host ?? '';
       if (protocol == 'mieru') return MieruLink.tryParse(config)?.host ?? '';
+      if (protocol == 'socks') return SocksLink.tryParse(config)?.host ?? '';
       return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).host;
     } catch (_) {
       return '';
@@ -339,6 +341,7 @@ class ServerItem {
       }
       if (protocol == 'mieru') return MieruLink.tryParse(config)?.port ?? 0;
       if (protocol == 'ssr') return SsrLink.tryParse(config)?.port ?? 0;
+      if (protocol == 'socks') return SocksLink.tryParse(config)?.port ?? 0;
       return Uri.parse(config.replaceFirst(RegExp(r'^[a-z]+://'), 'https://')).port;
     } catch (_) {
       return 0;
@@ -406,6 +409,7 @@ class ServerItem {
     if (lower.startsWith('tuic://')) return 'tuic';
     if (lower.startsWith('anytls://')) return 'anytls';
     if (lower.startsWith('mierus://')) return 'mieru';
+    if (SocksLink.isSocks(config)) return 'socks';
     if (AwgProfile.isAwgConfig(config)) return 'awg';
     // clash проверять раньше xray: json-конфиг clash тоже начинается с {
     if (clashConfig != null) return 'clash';
