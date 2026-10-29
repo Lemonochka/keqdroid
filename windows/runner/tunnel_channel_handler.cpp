@@ -103,6 +103,7 @@ DWORD GetLastProxyError() {
 }
 
 bool ReadRegistryProxy(bool* enabled, std::wstring* server);
+std::wstring ReadRegistryProxyOverride();
 
 const char* LstatusName(LSTATUS status) {
   switch (status) {
@@ -299,8 +300,10 @@ void LogRegistryProxySnapshot(const char* tag) {
   }
 
   ProxyDebugLog(
-      "[%s] HKCU ProxyEnable=%d ProxyServer=\"%s\" AutoDetect=%lu AutoConfigURL=\"%s\"",
+      "[%s] HKCU ProxyEnable=%d ProxyServer=\"%s\" ProxyOverride=\"%s\" AutoDetect=%lu "
+      "AutoConfigURL=\"%s\"",
       tag, enabled ? 1 : 0, WideToUtf8(server).c_str(),
+      WideToUtf8(ReadRegistryProxyOverride()).c_str(),
       static_cast<unsigned long>(auto_detect), WideToUtf8(pac).c_str());
 }
 
@@ -735,19 +738,35 @@ bool ReadRegistryProxy(bool* enabled, std::wstring* server) {
   return true;
 }
 
-// наши только прокси на loopback, корпоративный не трогаем
-bool LoopbackSystemProxyActive(std::wstring* server) {
+std::wstring ReadRegistryProxyOverride() {
+  HKEY key = nullptr;
+  if (RegOpenKeyExW(HKEY_CURRENT_USER, kInternetSettingsKey, 0, KEY_QUERY_VALUE,
+                    &key) != ERROR_SUCCESS) {
+    return std::wstring();
+  }
+  wchar_t buffer[512] = {};
+  DWORD buffer_size = sizeof(buffer) - sizeof(wchar_t);
+  RegQueryValueExW(key, L"ProxyOverride", nullptr, nullptr,
+                   reinterpret_cast<BYTE*>(buffer), &buffer_size);
+  RegCloseKey(key);
+  return buffer;
+}
+
+// свой прокси узнаём по списку исключений, как linux_system_proxy.dart: на 127.0.0.1 держат прокси и Clash Verge, и v2rayN
+bool OurSystemProxyActive(std::wstring* server) {
   bool enabled = false;
-  if (!ReadRegistryProxy(&enabled, server)) {
+  if (!ReadRegistryProxy(&enabled, server) || !enabled) {
     return false;
   }
-  return enabled && server->find(L"127.0.0.1") != std::wstring::npos;
+  const std::wstring bypass = ReadRegistryProxyOverride();
+  return server->rfind(L"127.0.0.1:", 0) == 0 &&
+         (bypass == kProxyBypass || bypass == kPerConnBypass);
 }
 
 // после грязного выхода реестр мог оставить систему на мёртвом порту. до main Dart, с автоподключением не гоняется
 void CleanupStaleSystemProxy() {
   std::wstring server;
-  if (!LoopbackSystemProxyActive(&server)) {
+  if (!OurSystemProxyActive(&server)) {
     return;
   }
   ProxyDebugLog("Startup: clearing stale loopback system proxy \"%s\"",
@@ -973,7 +992,7 @@ void KeqdisNotifyWindowVisibility(bool visible) {
 // без этого после перезагрузки системный трафик шёл в мёртвый порт до открытия приложения
 void KeqdisClearSystemProxyOnSessionEnd() {
   std::wstring server;
-  if (!LoopbackSystemProxyActive(&server)) {
+  if (!OurSystemProxyActive(&server)) {
     return;
   }
   ProxyDebugLog("Session end: clearing loopback system proxy \"%s\"",
