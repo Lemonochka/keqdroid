@@ -196,9 +196,11 @@ class _XrayDnsSection extends ConsumerWidget {
               activeThumbColor: accent,
               title: Text(l10n.settingsXrayDnsCustom),
               subtitle: Text(
-                core.dnsUseCustom
-                    ? l10n.settingsXrayDnsCustomHint
-                    : l10n.settingsXrayDnsDefaultNote,
+                !core.dnsUseCustom
+                    ? l10n.settingsXrayDnsDefaultNote
+                    : xray
+                        ? l10n.settingsXrayDnsCustomHintXray
+                        : l10n.settingsXrayDnsCustomHint,
               ),
             ),
             AnimatedCrossFade(
@@ -232,7 +234,11 @@ class _XrayDnsSection extends ConsumerWidget {
                 ),
                 activeThumbColor: accent,
                 title: Text(l10n.settingsXrayDnsSplitDirect),
-                subtitle: Text(l10n.settingsXrayDnsSplitDirectHint),
+                subtitle: Text(
+                  core.dnsUseCustom
+                      ? l10n.settingsXrayDnsSplitDirectHint
+                      : l10n.settingsXrayDnsSplitDirectSystemHint,
+                ),
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),

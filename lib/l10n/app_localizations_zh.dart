@@ -630,6 +630,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsXrayDnsCustomHint => '每行一个地址（DoH、DoT 或普通）';
 
   @override
+  String get settingsXrayDnsCustomHintXray => '每行一个地址（DoH 或普通），Xray 不支持 DoT';
+
+  @override
   String get settingsXrayDnsServers => 'DNS 服务器';
 
   @override
@@ -637,6 +640,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsXrayDnsSplitDirectHint => '对直连列表中的域名使用第一个服务器';
+
+  @override
+  String get settingsXrayDnsSplitDirectSystemHint => '直连列表中的域名由系统 DNS 解析';
 
   @override
   String get settingsXrayDnsHosts => '为域名指定地址';

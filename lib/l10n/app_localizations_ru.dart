@@ -644,6 +644,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsXrayDnsCustomHint => 'Один адрес на строку (DoH, DoT или обычный)';
 
   @override
+  String get settingsXrayDnsCustomHintXray => 'Один адрес на строку (DoH или обычный), DoT в Xray нет';
+
+  @override
   String get settingsXrayDnsServers => 'DNS-серверы';
 
   @override
@@ -651,6 +654,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsXrayDnsSplitDirectHint => 'Первый сервер отвечает за домены из списка direct';
+
+  @override
+  String get settingsXrayDnsSplitDirectSystemHint => 'Домены из списка direct разрешает DNS системы';
 
   @override
   String get settingsXrayDnsHosts => 'Свои адреса для доменов';

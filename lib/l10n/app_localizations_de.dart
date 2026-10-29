@@ -634,6 +634,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsXrayDnsCustomHint => 'Eine Adresse pro Zeile (DoH, DoT oder unverschlüsselt)';
 
   @override
+  String get settingsXrayDnsCustomHintXray => 'Eine Adresse pro Zeile (DoH oder unverschlüsselt), DoT kann Xray nicht';
+
+  @override
   String get settingsXrayDnsServers => 'DNS-Server';
 
   @override
@@ -641,6 +644,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsXrayDnsSplitDirectHint => 'Domains aus der Direkt-Liste löst der erste Server auf';
+
+  @override
+  String get settingsXrayDnsSplitDirectSystemHint => 'Domains aus der Direkt-Liste löst das System-DNS auf';
 
   @override
   String get settingsXrayDnsHosts => 'Eigene Adressen für Domains';

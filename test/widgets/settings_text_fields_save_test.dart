@@ -216,10 +216,43 @@ void main() {
       await _pumpSettings(tester, const AppSettings());
       await _open(tester, _coreSettings);
       expect(find.text(label), findsOneWidget);
+      // buildDnsBlock кладёт их на localhost, первого своего сервера тут нет
+      expect(find.text('Domains from the direct list are resolved by the system DNS'),
+          findsOneWidget);
+      expect(find.text('Uses first server for domains from direct list'), findsNothing);
+    });
+
+    testWidgets('со своими серверами подпись про первый сервер', (tester) async {
+      await _pumpSettings(
+        tester,
+        const AppSettings(
+          xrayCore: XrayCoreSettings(dnsUseCustom: true, dnsServers: '1.1.1.1, 8.8.8.8'),
+        ),
+      );
+      await _open(tester, _coreSettings);
+      expect(find.text('Uses first server for domains from direct list'), findsOneWidget);
     });
   });
 
   group('Подписи и выбор по ядру', () {
+    const customDns = AppSettings(
+      xrayCore: XrayCoreSettings(dnsUseCustom: true, dnsServers: '1.1.1.1, 8.8.8.8'),
+    );
+
+    // app/dns/nameserver.go в Xray 26.10: схемы tls нет, такой адрес выбрасывается
+    testWidgets('на Xray подпись своих DNS не обещает DoT', (tester) async {
+      await _pumpSettings(tester, customDns);
+      await _open(tester, _coreSettings);
+      expect(find.text('One address per line (DoH or plain), Xray has no DoT'),
+          findsOneWidget);
+    });
+
+    testWidgets('на mihomo DoT в подписи остаётся', (tester) async {
+      await _pumpSettings(tester, customDns, backend: VpnBackend.mihomo);
+      await _open(tester, _coreSettings);
+      expect(find.text('One address per line (DoH, DoT, or plain)'), findsOneWidget);
+    });
+
     testWidgets('стратегия доменов видна и на mihomo', (tester) async {
       await _pumpSettings(tester, const AppSettings(), backend: VpnBackend.mihomo);
       await _open(tester, _coreSettings);

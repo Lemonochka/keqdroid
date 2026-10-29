@@ -1145,6 +1145,12 @@ abstract class AppLocalizations {
   /// **'One address per line (DoH, DoT, or plain)'**
   String get settingsXrayDnsCustomHint;
 
+  /// No description provided for @settingsXrayDnsCustomHintXray.
+  ///
+  /// In en, this message translates to:
+  /// **'One address per line (DoH or plain), Xray has no DoT'**
+  String get settingsXrayDnsCustomHintXray;
+
   /// No description provided for @settingsXrayDnsServers.
   ///
   /// In en, this message translates to:
@@ -1162,6 +1168,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Uses first server for domains from direct list'**
   String get settingsXrayDnsSplitDirectHint;
+
+  /// No description provided for @settingsXrayDnsSplitDirectSystemHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Domains from the direct list are resolved by the system DNS'**
+  String get settingsXrayDnsSplitDirectSystemHint;
 
   /// No description provided for @settingsXrayDnsHosts.
   ///

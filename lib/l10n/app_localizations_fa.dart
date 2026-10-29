@@ -630,6 +630,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsXrayDnsCustomHint => 'هر آدرس در یک خط (DoH، DoT یا ساده)';
 
   @override
+  String get settingsXrayDnsCustomHintXray => 'هر آدرس در یک خط (DoH یا ساده)، Xray از DoT پشتیبانی نمی‌کند';
+
+  @override
   String get settingsXrayDnsServers => 'سرورهای DNS';
 
   @override
@@ -637,6 +640,9 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get settingsXrayDnsSplitDirectHint => 'برای دامنه‌های فهرست مستقیم از سرور اول استفاده می‌کند';
+
+  @override
+  String get settingsXrayDnsSplitDirectSystemHint => 'دامنه‌های فهرست مستقیم را DNS سیستم پاسخ می‌دهد';
 
   @override
   String get settingsXrayDnsHosts => 'آدرس دلخواه برای دامنه‌ها';
