@@ -21,6 +21,9 @@ constexpr wchar_t kRunValue[] = L"KeqDroid";
 constexpr wchar_t kSettingsKey[] = L"Software\\KeqDroid";
 constexpr wchar_t kInTrayValue[] = L"AutostartInTray";
 
+// 7, умолчание планировщика, это BELOW_NORMAL_PRIORITY_CLASS, и его наследуют ядра. 4-6 интерактивные (TaskSettings.Priority)
+constexpr int kTaskPriority = 5;
+
 std::wstring CurrentExePath() {
   wchar_t path[MAX_PATH] = {};
   const DWORD len = ::GetModuleFileNameW(nullptr, path, MAX_PATH);
@@ -85,9 +88,15 @@ std::wstring XmlEscape(const std::wstring& value) {
   return out;
 }
 
+struct ElevatedTask {
+  std::wstring exe;
+  int priority = -1;
+};
+
 // через COM: вывод schtasks зависит от языка системы, а /XML ещё и от кодировки потока
-std::wstring TaskExecPath() {
+ElevatedTask ReadElevatedTask() {
   std::wstring result;
+  int priority = -1;
   // S_FALSE: COM уже поднят в main.cpp, но пара CoUninitialize нужна. RPC_E_CHANGED_MODE внутрипроцессному объекту не мешает
   const HRESULT com = ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
   const bool balance = SUCCEEDED(com);
@@ -108,6 +117,12 @@ std::wstring TaskExecPath() {
           ITaskDefinition* definition = nullptr;
           if (SUCCEEDED(task->get_Definition(&definition)) &&
               definition != nullptr) {
+            ITaskSettings* settings = nullptr;
+            if (SUCCEEDED(definition->get_Settings(&settings)) &&
+                settings != nullptr) {
+              settings->get_Priority(&priority);
+              settings->Release();
+            }
             IActionCollection* actions = nullptr;
             if (SUCCEEDED(definition->get_Actions(&actions)) &&
                 actions != nullptr) {
@@ -146,7 +161,20 @@ std::wstring TaskExecPath() {
   if (result.size() >= 2 && result.front() == L'"' && result.back() == L'"') {
     result = result.substr(1, result.size() - 2);
   }
-  return result;
+  return {result, priority};
+}
+
+bool ProcessIsElevated() {
+  HANDLE token = nullptr;
+  if (!::OpenProcessToken(::GetCurrentProcess(), TOKEN_QUERY, &token)) {
+    return false;
+  }
+  TOKEN_ELEVATION elevation = {};
+  DWORD size = 0;
+  const bool ok = ::GetTokenInformation(token, TokenElevation, &elevation,
+                                        sizeof(elevation), &size) != 0;
+  ::CloseHandle(token);
+  return ok && elevation.TokenIsElevated != 0;
 }
 
 std::wstring TempXmlPath() {
@@ -214,7 +242,8 @@ std::wstring BuildTaskXml() {
   xml += L"    <WakeToRun>false</WakeToRun>\n";
   // по умолчанию задачу убивают через трое суток
   xml += L"    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>\n";
-  xml += L"    <Priority>7</Priority>\n  </Settings>\n";
+  xml += L"    <Priority>" + std::to_wstring(kTaskPriority) +
+         L"</Priority>\n  </Settings>\n";
   xml += L"  <Actions Context=\"Author\">\n    <Exec>\n";
   xml += L"      <Command>" + XmlEscape(exe) + L"</Command>\n";
   xml += L"      <Arguments>--autostart</Arguments>\n";
@@ -233,7 +262,8 @@ bool RunSchtasksElevated(const std::wstring& params) {
   SHELLEXECUTEINFOW info = {};
   info.cbSize = sizeof(info);
   info.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
-  info.lpVerb = L"runas";
+  // из процесса с правами runas не нужен: потомок наследует его токен, и окна UAC нет
+  info.lpVerb = ProcessIsElevated() ? L"open" : L"runas";
   info.lpFile = exe.c_str();
   info.lpParameters = params.c_str();
   info.nShow = SW_HIDE;
@@ -298,7 +328,7 @@ bool TaskMatchesThisExe(const std::wstring& task_exe) {
 }  // namespace
 
 bool KeqdroidIsAutostartElevated() {
-  return TaskMatchesThisExe(TaskExecPath());
+  return TaskMatchesThisExe(ReadElevatedTask().exe);
 }
 
 bool KeqdroidIsAutostartEnabled() {
@@ -344,14 +374,18 @@ bool KeqdroidAutostartInTray() {
 bool KeqdroidApplyAutostart(bool enabled, bool elevated, bool allow_elevation) {
   const bool want_task = enabled && elevated;
   // выключая, сносим любую задачу: после переезда папки осталась бы чужая. включая, пересоздаём при другом пути
-  const std::wstring task_exe = TaskExecPath();
-  const bool task_present = !task_exe.empty();
-  const bool task_matches = TaskMatchesThisExe(task_exe);
+  const ElevatedTask task = ReadElevatedTask();
+  const bool task_present = !task.exe.empty();
+  const bool task_matches = TaskMatchesThisExe(task.exe);
+  // задачи до этой версии стоят с приоритетом 7. запущенное ими приложение уже с правами, пересоздаём без UAC
+  const bool stale_priority =
+      want_task && task_matches && task.priority != kTaskPriority;
 
   bool ok = true;
   bool task_now = task_matches;
-  if (want_task != task_matches || (!want_task && task_present)) {
-    if (allow_elevation) {
+  if (want_task != task_matches || (!want_task && task_present) ||
+      stale_priority) {
+    if (allow_elevation || (stale_priority && ProcessIsElevated())) {
       if (want_task) {
         task_now = CreateElevatedTask();
         ok = task_now;
