@@ -1133,50 +1133,53 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
   Widget _emptyState() {
     final l10n = AppLocalizations.of(context)!;
+    // окно 480x580 и крупный шрифт Windows: без прокрутки кнопки внизу обрезались
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.cloud_off_rounded,
-            size: 48,
-            color: AppTheme.accent(context).withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.serversEmptyTitle,
-            style: TextStyle(color: AppTheme.textLight(context)),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.serversEmptyHint,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-          ),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.accentContainer(context),
-              foregroundColor: AppTheme.onAccentContainer(context),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 48,
+              color: AppTheme.accent(context).withValues(alpha: 0.5),
             ),
-            onPressed: () => _showAddServerDialog(context),
-            icon: const SeasonalIcon(Icons.add_rounded, size: 18),
-            label: Text(l10n.serversAddServer),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () => pasteLinksFromClipboard(context, ref),
-            icon: Icon(
-              Icons.content_paste_rounded,
-              size: 16,
-              color: AppTheme.accent(context),
+            const SizedBox(height: 12),
+            Text(
+              l10n.serversEmptyTitle,
+              style: TextStyle(color: AppTheme.textLight(context)),
             ),
-            label: Text(
-              l10n.serversPasteLinks,
-              style: TextStyle(color: AppTheme.accent(context)),
+            const SizedBox(height: 8),
+            Text(
+              l10n.serversEmptyHint,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.accentContainer(context),
+                foregroundColor: AppTheme.onAccentContainer(context),
+              ),
+              onPressed: () => _showAddServerDialog(context),
+              icon: const SeasonalIcon(Icons.add_rounded, size: 18),
+              label: Text(l10n.serversAddServer),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () => pasteLinksFromClipboard(context, ref),
+              icon: Icon(
+                Icons.content_paste_rounded,
+                size: 16,
+                color: AppTheme.accent(context),
+              ),
+              label: Text(
+                l10n.serversPasteLinks,
+                style: TextStyle(color: AppTheme.accent(context)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

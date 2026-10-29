@@ -859,10 +859,13 @@ class _UpdateVersionInfoState extends ConsumerState<_UpdateVersionInfo> {
                           children: [
                             statusIndicator,
                             const SizedBox(width: ExpressiveSpacing.extraSmall),
-                            Text(
-                              statusLabel,
-                              style: textTheme.labelLarge?.copyWith(
-                                color: statusColor,
+                            // в узком окне длинный статус на немецком и фарси вылезал вправо
+                            Flexible(
+                              child: Text(
+                                statusLabel,
+                                style: textTheme.labelLarge?.copyWith(
+                                  color: statusColor,
+                                ),
                               ),
                             ),
                           ],

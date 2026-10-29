@@ -776,26 +776,31 @@ class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
               if (sub.usedDisplay != null && showsUsage)
                 // LtrBlock: в фарси Row зеркалился и выходило / 100 GiB 621.8 GiB
                 LtrBlock(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        sub.usedDisplay!,
-                        style: Theme.of(context).textTheme
-                            .emphasized(
-                              Theme.of(context).textTheme.headlineSmall,
-                            )
-                            ?.copyWith(color: textColor),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '/ ${sub.limitDisplay}',
-                        style: Theme.of(context).textTheme.bodyMedium
-                            ?.copyWith(color: textLightColor),
-                      ),
-                    ],
+                  // числа не переносим, а в узком окне с крупным шрифтом ужимаем: строка вылезала на 100 px
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          sub.usedDisplay!,
+                          style: Theme.of(context).textTheme
+                              .emphasized(
+                                Theme.of(context).textTheme.headlineSmall,
+                              )
+                              ?.copyWith(color: textColor),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '/ ${sub.limitDisplay}',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: textLightColor),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               if (_subIsInsecureHttp(sub))
@@ -892,27 +897,38 @@ class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
               const SizedBox(height: 12),
               Row(
                 children: [
-                  if (sub.expiresAt != null) ...[
-                    Icon(
-                      Icons.timer_rounded,
-                      size: 14,
-                      color: sub.isExpired ? redColor : textLightColor,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      sub.isExpired
-                          ? l10n.subscriptionsExpired
-                          : _subFormatExpiry(context, sub.expiresAt!),
-                      style: Theme.of(context).textTheme.labelMedium
-                          ?.copyWith(
-                            color: sub.isExpired
-                                ? redColor
-                                : textLightColor,
+                  // срок ужимается, а не вылезает за карточку в узком окне с крупным шрифтом
+                  Expanded(
+                    child: Row(
+                      children: [
+                        if (sub.expiresAt != null) ...[
+                          Icon(
+                            Icons.timer_rounded,
+                            size: 14,
+                            color: sub.isExpired ? redColor : textLightColor,
                           ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              sub.isExpired
+                                  ? l10n.subscriptionsExpired
+                                  : _subFormatExpiry(context, sub.expiresAt!),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelMedium
+                                  ?.copyWith(
+                                    color: sub.isExpired
+                                        ? redColor
+                                        : textLightColor,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
+                  ),
                   if (sub.lastUpdatedAt != null) ...[
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Text(
                       _subFormatDate(context, sub.lastUpdatedAt!),
                       style: Theme.of(context).textTheme.labelMedium
@@ -2091,10 +2107,14 @@ class _CardChip extends StatelessWidget {
             children: [
               Icon(icon, size: 14, color: fg),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: fg,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: fg,
+                  ),
                 ),
               ),
             ],

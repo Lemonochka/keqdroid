@@ -502,13 +502,17 @@ class _ModeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final modes = TunnelMode.values;
-    return SizedBox(
-      height: _height,
-      child: Row(
-        children: [
-          for (var i = 0; i < modes.length; i++)
-            Expanded(child: _segment(context, modes, i)),
-        ],
+    // две строки подписи при крупном шрифте Windows в 78 не влезали, низ обрезался
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: _height),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var i = 0; i < modes.length; i++)
+              Expanded(child: _segment(context, modes, i)),
+          ],
+        ),
       ),
     );
   }
