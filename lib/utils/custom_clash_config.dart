@@ -150,20 +150,38 @@ class CustomClashConfig {
       }
     }
     try {
-      return _plain(loadYaml(text));
+      return _plain(loadYaml(text), yamlMerge: true);
     } on Object {
       return null;
     }
   }
 
-  static Object? _plain(Object? node) {
+  // слияние << из YAML 1.1: package:yaml его не знает, а go-yaml у mihomo раскрывает. без этого узлы на якорях теряли type
+  static Object? _plain(Object? node, {bool yamlMerge = false}) {
     if (node is Map) {
-      return <String, dynamic>{
-        for (final entry in node.entries)
-          entry.key.toString(): _plain(entry.value),
-      };
+      final out = <String, dynamic>{};
+      for (final entry in node.entries) {
+        final key = entry.key.toString();
+        if (!yamlMerge || key != '<<') {
+          out[key] = _plain(entry.value, yamlMerge: yamlMerge);
+          continue;
+        }
+        final sources = entry.value;
+        for (final source in sources is List ? sources : [sources]) {
+          if (source is! Map) continue;
+          final merged = _plain(source, yamlMerge: true) as Map<String, dynamic>;
+          for (final m in merged.entries) {
+            if (!node.containsKey(m.key) && !out.containsKey(m.key)) {
+              out[m.key] = m.value;
+            }
+          }
+        }
+      }
+      return out;
     }
-    if (node is List) return [for (final item in node) _plain(item)];
+    if (node is List) {
+      return [for (final item in node) _plain(item, yamlMerge: yamlMerge)];
+    }
     return node;
   }
 

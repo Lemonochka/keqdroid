@@ -34,6 +34,7 @@ void main() {
     _golden('plain-uri-list');
     _golden('json-proxy-array');
     _golden('clash-yaml');
+    _golden('clash-yaml-anchors');
     _golden('html-pre');
     _golden('html-js-var');
     _golden('xray-json-object');

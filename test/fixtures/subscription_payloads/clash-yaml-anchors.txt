@@ -1,0 +1,22 @@
+common: &common
+  type: trojan
+  port: 443
+  password: password
+  sni: anchor.example
+
+proxies:
+  - name: "Anchor One"
+    <<: *common
+    server: 198.51.100.40
+  - name: "Anchor Two"
+    <<: *common
+    server: 198.51.100.41
+    port: 8443
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [Anchor One, Anchor Two]
+
+rules:
+  - MATCH,PROXY

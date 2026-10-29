@@ -56,6 +56,28 @@ rules:
   - MATCH,🚀 Proxy
 ''';
 
+// так их отдаёт генератор WARP-профилей: общий блок якорем, у узлов только адрес
+const _anchors = '''
+common: &common
+  type: trojan
+  port: 443
+  password: password
+proxies:
+  - name: One
+    <<: *common
+    server: one.example
+  - name: Two
+    <<: *common
+    server: two.example
+    port: 8443
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: [One, Two]
+rules:
+  - MATCH,Proxy
+''';
+
 void main() {
   setUp(() => Socks5Credentials().init('user', 'pass'));
 
@@ -81,6 +103,47 @@ void main() {
       final reparsed = CustomClashConfig.tryParse(asJson)!;
       expect(reparsed.address, 'nl.example');
       expect(reparsed.primaryTarget, '🚀 Proxy');
+    });
+
+    test('узлы на якорях получают общий блок, свои поля сильнее', () {
+      final clash = CustomClashConfig.tryParse(_anchors)!;
+      expect(clash.proxies, hasLength(2));
+      expect(clash.proxies.first, {
+        'name': 'One',
+        'type': 'trojan',
+        'port': 443,
+        'password': 'password',
+        'server': 'one.example',
+      });
+      expect(clash.proxies.last['port'], 8443);
+      expect(clash.proxies.last.containsKey('<<'), isFalse);
+    });
+
+    test('из списка якорей первый сильнее следующих', () {
+      final clash = CustomClashConfig.tryParse('''
+a: &a {type: trojan, port: 443, sni: a.example}
+b: &b {type: vless, port: 8443, password: password}
+proxies:
+  - {name: X, server: x.example, <<: [*a, *b]}
+''')!;
+      expect(clash.proxies.single['type'], 'trojan');
+      expect(clash.proxies.single['port'], 443);
+      expect(clash.proxies.single['password'], 'password');
+    });
+
+    test('в JSON << обычный ключ: слияние только у YAML', () {
+      final clash = CustomClashConfig.tryParse(jsonEncode({
+        'proxies': [
+          {
+            'name': 'X',
+            'type': 'trojan',
+            'server': 'x.example',
+            '<<': {'port': 1},
+          },
+        ],
+      }))!;
+      expect(clash.proxies.single['<<'], {'port': 1});
+      expect(clash.proxies.single.containsKey('port'), isFalse);
     });
 
     test('не clash — не clash', () {
