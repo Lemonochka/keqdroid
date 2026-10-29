@@ -10,6 +10,7 @@ import 'awg_profile.dart';
 import 'custom_clash_config.dart';
 import 'exit_ip_probe.dart';
 import 'fake_ip.dart';
+import 'geo_asset_index.dart';
 import 'hysteria_uri.dart';
 import 'mieru_uri.dart';
 import 'owner_guard.dart';
@@ -79,6 +80,7 @@ class MihomoConfigGen {
     List<RouteServerOutbound> routeServers = const [],
     List<RouteAppRules> appRoutes = const [],
     OwnerGuard ownerGuard = OwnerGuard.off,
+    GeoAssetIndex? geoIndex,
   }) =>
       const JsonEncoder.withIndent('  ').convert(
         build(
@@ -99,6 +101,7 @@ class MihomoConfigGen {
           routeServers: routeServers,
           appRoutes: appRoutes,
           ownerGuard: ownerGuard,
+          geoIndex: geoIndex,
         ),
       );
 
@@ -121,6 +124,7 @@ class MihomoConfigGen {
     List<RouteServerOutbound> routeServers = const [],
     List<RouteAppRules> appRoutes = const [],
     OwnerGuard ownerGuard = OwnerGuard.off,
+    GeoAssetIndex? geoIndex,
   }) {
     // сплит по процессам только на десктопном TUN: на Android его исполняет VpnService
     final processRules = tun != null && !tun.fromFileDescriptor;
@@ -140,7 +144,9 @@ class MihomoConfigGen {
     // fake-ip держится на перехвате DNS из tun-блока, без своего туннеля подменный адрес некому вернуть
     final fakeIp = settings.fakeIp && tun != null;
 
-    final parsedClash = CustomClashConfig.tryParse(input);
+    final authored = CustomClashConfig.tryParse(input);
+    final parsedClash =
+        geoIndex == null ? authored : authored?.withKnownGeo(geoIndex).config;
     final clash = settings.ignoreProviderRules
         ? parsedClash?.withoutProviderRules()
         : parsedClash;

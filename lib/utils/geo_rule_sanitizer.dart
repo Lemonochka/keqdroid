@@ -32,12 +32,20 @@ GeoSanitizeResult stripUnknownGeoTokens(
   if (index.isEmpty) return (text: raw, dropped: const []);
   final kept = <String>[];
   final dropped = <String>[];
+  var replaced = false;
   for (final token in raw.split(RegExp(r'[\r\n,]+'))) {
     final trimmed = token.trim();
     if (trimmed.isEmpty) continue;
-    (isKnownGeoToken(trimmed, index) ? kept : dropped).add(trimmed);
+    if (isKnownGeoToken(trimmed, index)) {
+      kept.add(trimmed);
+    } else if (geoSubstitutes(trimmed, index) case final subs?) {
+      kept.addAll(subs);
+      replaced = true;
+    } else {
+      dropped.add(trimmed);
+    }
   }
-  if (dropped.isEmpty) return (text: raw, dropped: const []);
+  if (dropped.isEmpty && !replaced) return (text: raw, dropped: const []);
   return (text: kept.join(', '), dropped: dropped);
 }
 
@@ -52,6 +60,23 @@ List<String> unknownGeoTokens(String raw, GeoAssetIndex index) {
     if (seen.add(trimmed.toLowerCase())) unknown.add(trimmed);
   }
   return unknown;
+}
+
+// замены по составу категории, не по похожему имени: ru-blocked тоже про ru, но это обратное ru-direct
+const _geositeAliases = {
+  // huzgnm/ru-direct: category-ru v2fly + ru-available-only-inside runetfreedom + зоны .ru .su .рф
+  'ru-direct': ['category-ru', 'tld-ru'],
+};
+
+// незнакомый код на известные, если для него есть замена и вся она есть в базе. иначе null
+List<String>? geoSubstitutes(String token, GeoAssetIndex index) {
+  final trimmed = token.trim();
+  final colon = trimmed.indexOf(':');
+  if (colon < 0) return null;
+  if (trimmed.substring(0, colon).toLowerCase() != 'geosite') return null;
+  final targets = _geositeAliases[trimmed.substring(colon + 1).trim().toLowerCase()];
+  if (targets == null || !targets.every(index.geositeCodes.contains)) return null;
+  return [for (final code in targets) 'geosite:$code'];
 }
 
 bool isKnownGeoToken(String token, GeoAssetIndex index) {

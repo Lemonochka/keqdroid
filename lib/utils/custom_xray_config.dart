@@ -491,6 +491,8 @@ List<String> stripUnknownGeoFromConfig(
       if (token.isEmpty) continue;
       if (isKnownGeoToken(token, index)) {
         kept.add(token);
+      } else if (geoSubstitutes(token, index) case final subs?) {
+        kept.addAll(subs);
       } else {
         dropped.add(token);
       }

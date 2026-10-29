@@ -598,6 +598,24 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         mihomoTun = null;
       }
 
+      final clashGeoIndex = mihomoPicked && server.protocol == 'clash'
+          ? await GeoAssetService.index()
+          : null;
+      if (clashGeoIndex != null) {
+        final dropped = CustomClashConfig.tryParse(server.config)
+                ?.withKnownGeo(clashGeoIndex)
+                .dropped ??
+            const <String>[];
+        if (dropped.isNotEmpty) {
+          AppLogger.instance.warn(
+            'Provider config: ${dropped.length} rule(s) were dropped — their '
+            'geo codes are not in the bundled databases: '
+            '${dropped.toSet().join(', ')}. mihomo refuses the whole config on '
+            'an unknown code. Their traffic now follows the next rules.',
+          );
+        }
+      }
+
       final mihomoConfig = mihomoPicked
           ? MihomoConfigGen.generate(
               server.config,
@@ -624,6 +642,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
               routeServers: routeServers,
               appRoutes: appRoutes,
               ownerGuard: ownerGuard,
+              geoIndex: clashGeoIndex,
             )
           : null;
 

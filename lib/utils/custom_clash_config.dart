@@ -2,6 +2,9 @@ import 'dart:convert';
 
 import 'package:yaml/yaml.dart';
 
+import 'geo_asset_index.dart';
+import 'geo_rule_sanitizer.dart';
+
 // храним JSON: YAML 1.2 его надмножество, и mihomo разбирает тем же парсером. инбаунды автора не берём никогда
 class CustomClashConfig {
   CustomClashConfig._(this.map);
@@ -404,6 +407,62 @@ class CustomClashConfig {
           if (!_isProviderSiteRule(rule.toString())) rule,
       ],
     });
+  }
+
+  // на коде, которого нет в geosite.dat, mihomo отказывает всему конфигу (list ru-direct not found).
+  // правило заменяем по таблице или выбрасываем, как у xray. lan у GEOIP псевдокод ядра, базы ему не надо
+  ({CustomClashConfig config, List<String> dropped}) withKnownGeo(
+    GeoAssetIndex index,
+  ) {
+    final dropped = <String>[];
+    if (index.isEmpty) return (config: this, dropped: dropped);
+    List<Object?> clean(List<Object?> rules) {
+      final out = <Object?>[];
+      for (final rule in rules) {
+        final text = rule.toString();
+        final unknown = _unknownGeoIn(text, index);
+        if (unknown == null) {
+          out.add(rule);
+          continue;
+        }
+        final parsed = _parseRule(text);
+        final subs = geoSubstitutes(unknown, index);
+        if (parsed != null && parsed.type == 'GEOSITE' && subs != null) {
+          final tail = text.substring(text.indexOf(parsed.payload) + parsed.payload.length);
+          out.addAll([for (final s in subs) 'GEOSITE,${s.substring('geosite:'.length)}$tail']);
+        } else {
+          dropped.add(unknown);
+        }
+      }
+      return out;
+    }
+
+    final out = Map<String, dynamic>.from(map);
+    final rules = out['rules'];
+    if (rules is List) out['rules'] = clean(rules);
+    final subRules = out['sub-rules'];
+    if (subRules is Map) {
+      out['sub-rules'] = {
+        for (final MapEntry(:key, :value) in subRules.entries)
+          key.toString(): value is List ? clean(value) : value,
+      };
+    }
+    return (config: CustomClashConfig._(out), dropped: dropped);
+  }
+
+  static final _geoCondition = RegExp(r'(?:^|\()\s*(GEOSITE|GEOIP)\s*,\s*([^,)\s]+)', caseSensitive: false);
+
+  static String? _unknownGeoIn(String rule, GeoAssetIndex index) {
+    for (final m in _geoCondition.allMatches(rule)) {
+      final geoip = m.group(1)!.toUpperCase() == 'GEOIP';
+      var code = m.group(2)!.trim().toLowerCase();
+      final attr = code.indexOf('@');
+      if (attr >= 0) code = code.substring(0, attr);
+      if (geoip && code == 'lan') continue;
+      final token = '${geoip ? 'geoip' : 'geosite'}:$code';
+      if (!isKnownGeoToken(token, index)) return token;
+    }
+    return null;
   }
 
   bool get hasProviderRules => _rulesOf(map).any(_isProviderSiteRule);
