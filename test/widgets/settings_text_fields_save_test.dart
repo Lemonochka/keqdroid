@@ -179,6 +179,43 @@ void main() {
     });
   });
 
+  group('Отдельный резолвер для direct-доменов', () {
+    const label = 'Split resolver for direct domains';
+
+    testWidgets('со своим DNS из одного сервера не показан: он бы ничего не менял',
+        (tester) async {
+      await _pumpSettings(
+        tester,
+        const AppSettings(
+          xrayCore: XrayCoreSettings(
+            dnsUseCustom: true,
+            dnsServers: 'https+local://8.8.8.8/dns-query',
+          ),
+        ),
+      );
+      await _open(tester, _coreSettings);
+      expect(find.text(label), findsNothing);
+    });
+
+    testWidgets('с двумя своими серверами показан', (tester) async {
+      await _pumpSettings(
+        tester,
+        const AppSettings(
+          xrayCore: XrayCoreSettings(dnsUseCustom: true, dnsServers: '1.1.1.1, 8.8.8.8'),
+        ),
+      );
+      await _open(tester, _coreSettings);
+      expect(find.text(label), findsOneWidget);
+    });
+
+    testWidgets('без своего DNS показан: прямые домены идут в системный резолвер',
+        (tester) async {
+      await _pumpSettings(tester, const AppSettings());
+      await _open(tester, _coreSettings);
+      expect(find.text(label), findsOneWidget);
+    });
+  });
+
   group('LAN Proxy', () {
     const lanOn = AppSettings(lanSharing: true);
 

@@ -222,7 +222,7 @@ class _XrayDnsSection extends ConsumerWidget {
               duration: const Duration(milliseconds: 200),
               sizeCurve: Curves.easeOutCubic,
             ),
-            if (xray)
+            if (xray && core.dnsSplitApplies)
               SwitchListTile(
                 value: core.dnsSplitDirectDomains,
                 onChanged: (v) => _saveXrayCore(

@@ -236,5 +236,26 @@ void main() {
           XrayCoreSettings.fromJson(core.toJson());
       expect(restored, core);
     });
+
+    // переключатель виден только там, где меняет конфиг: иначе он мёртвый
+    test('dnsSplitApplies ровно там, где сплит меняет DNS-блок', () {
+      for (final core in const [
+        XrayCoreSettings(),
+        XrayCoreSettings(dnsUseCustom: true, dnsServers: 'https+local://8.8.8.8/dns-query'),
+        XrayCoreSettings(dnsUseCustom: true, dnsServers: '1.1.1.1, 8.8.8.8'),
+      ]) {
+        final on = core.copyWith(dnsSplitDirectDomains: true)
+            .buildDnsBlock(directDomains: ['domain:corp.example']);
+        final off = core.copyWith(dnsSplitDirectDomains: false)
+            .buildDnsBlock(directDomains: ['domain:corp.example']);
+        expect(on.toString() != off.toString(), core.dnsSplitApplies,
+            reason: core.dnsServers);
+      }
+      expect(
+        const XrayCoreSettings(dnsUseCustom: true, dnsServers: 'https+local://8.8.8.8/dns-query')
+            .dnsSplitApplies,
+        isFalse,
+      );
+    });
   });
 }

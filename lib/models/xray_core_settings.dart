@@ -495,6 +495,10 @@ class XrayCoreSettings {
     return (address: trimmed, port: null);
   }
 
+  // как в buildDnsBlock: со своим DNS из одного сервера сплит не делается, переключатель был бы мёртвым
+  bool get dnsSplitApplies =>
+      !dnsUseCustom || xrayDnsServers(dnsServers).servers.length != 1;
+
   static ({List<Map<String, dynamic>> servers, List<String> dropped})
       xrayDnsServers(String raw) {
     final servers = <Map<String, dynamic>>[];
