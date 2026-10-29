@@ -1,8 +1,6 @@
-<p align="center">
-  <img src="assets/icon.png" width="88" alt="KEQDIS">
+<p align="center" id="keqdroid">
+  <img src="docs/readme/banner.png" alt="keqdroid: proxy and VPN client for Android, Windows, Linux and Android TV">
 </p>
-
-<h1 align="center" id="keqdis">KEQDIS</h1>
 
 <p align="center">˚ʚ♡ɞ˚</p>
 
@@ -11,8 +9,7 @@
 </p>
 
 <p align="center">
-  Proxy and VPN client: subscriptions, standalone configs, routing.<br>
-  Android · Windows · Linux
+  Proxy and VPN client: subscriptions, standalone configs, routing.
 </p>
 
 <p align="center">
@@ -31,14 +28,6 @@
   &nbsp;·&nbsp;
   <a href="docs/BUILD.md">Build from source</a>
 </p>
-
----
-
-<h2 id="screenshots">Screenshots</h2>
-
-| Android | Windows |
-|:-------:|:-------:|
-| <img src="docs/readme/android.png" width="280" alt="Android"> | <img src="docs/readme/windows.png" width="480" alt="Windows"> |
 
 ---
 
@@ -243,7 +232,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 <p align="center">˚ʚ♡ɞ˚</p>
 
 <p align="center">
-  <a href="#keqdis">English</a> · <strong>Русский</strong>
+  <a href="#keqdroid">English</a> · <strong>Русский</strong>
 </p>
 
 <p align="center">
@@ -271,8 +260,6 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 ---
 
 ## Скачать
-
-Скриншоты — [выше](#screenshots).
 
 Готовые сборки — в [Releases](https://github.com/Lemonochka/keqdroid/releases).  
 Хеши всех файлов релиза лежат в `SHA256SUMS`, встроенный апдейтер сверяет их перед установкой.
