@@ -265,13 +265,18 @@ class _XrayDnsSection extends ConsumerWidget {
               ),
             ),
             RadioGroup<String>(
-              groupValue: core.dnsQueryStrategy,
+              groupValue: xray || core.dnsQueryStrategy == 'UseIPv4'
+                  ? core.dnsQueryStrategy
+                  : 'UseIP',
               onChanged: (v) {
                 if (v != null) _saveXrayCore(ref, settings, core.copyWith(dnsQueryStrategy: v));
               },
               child: Column(
                 children: [
-                  for (final strategy in XrayCoreSettings.dnsQueryStrategies)
+                  // у mihomo только dns.ipv6 да или нет, остальные три вели бы себя как UseIP
+                  for (final strategy in xray
+                      ? XrayCoreSettings.dnsQueryStrategies
+                      : const ['UseIPv4', 'UseIP'])
                     _xrayChoiceTile(
                       context: context,
                       value: strategy,
@@ -1025,7 +1030,6 @@ class _XrayGeneralSection extends ConsumerWidget {
         ref.watch(settingsNotifierProvider).value ?? const AppSettings();
     final core = settings.xrayCore;
     final accent = AppTheme.accent(context);
-    final xray = ref.watch(activeVpnBackendProvider) == VpnBackend.xray;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1060,42 +1064,41 @@ class _XrayGeneralSection extends ConsumerWidget {
                 ],
               ),
             ),
-            if (xray) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(
-                  l10n.settingsXrayDomainStrategy,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(color: AppTheme.text(context)),
-                ),
+            // mihomo её тоже читает: _ipRuleStrategy решает, резолвить ли домен под GEOIP и IP-CIDR
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                l10n.settingsXrayDomainStrategy,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(color: AppTheme.text(context)),
               ),
-              RadioGroup<String>(
-                groupValue: core.routingDomainStrategy,
-                onChanged: (v) {
-                  if (v != null) {
-                    _saveXrayCore(
-                      ref,
-                      settings,
-                      core.copyWith(routingDomainStrategy: v),
-                    );
-                  }
-                },
-                child: Column(
-                  children: [
-                    for (final strategy
-                        in XrayCoreSettings.routingDomainStrategies)
-                      _xrayChoiceTile(
-                        context: context,
-                        value: strategy,
-                        accent: accent,
-                        title: strategy,
-                      ),
-                  ],
-                ),
+            ),
+            RadioGroup<String>(
+              groupValue: core.routingDomainStrategy,
+              onChanged: (v) {
+                if (v != null) {
+                  _saveXrayCore(
+                    ref,
+                    settings,
+                    core.copyWith(routingDomainStrategy: v),
+                  );
+                }
+              },
+              child: Column(
+                children: [
+                  for (final strategy
+                      in XrayCoreSettings.routingDomainStrategies)
+                    _xrayChoiceTile(
+                      context: context,
+                      value: strategy,
+                      accent: accent,
+                      title: strategy,
+                    ),
+                ],
               ),
-            ],
+            ),
             SwitchListTile(
               value: core.concurrentDial,
               onChanged: (v) =>

@@ -9,6 +9,7 @@ import 'package:keqdroid/models/xray_core_settings.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/settings_tab.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
+import 'package:keqdroid/tunnel/vpn_backend.dart';
 
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
@@ -39,8 +40,9 @@ Future<void> _frames(WidgetTester tester) async {
 
 Future<_FakeSettings> _pumpSettings(
   WidgetTester tester,
-  AppSettings settings,
-) async {
+  AppSettings settings, {
+  VpnBackend backend = VpnBackend.xray,
+}) async {
   tester.view.physicalSize = const Size(900, 1800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -53,6 +55,7 @@ Future<_FakeSettings> _pumpSettings(
       overrides: [
         storageProvider.overrideWithValue(storage),
         settingsNotifierProvider.overrideWith(() => fake),
+        activeVpnBackendProvider.overrideWithValue(backend),
         vpnEngineProvider.overrideWithValue(
           VpnEngine.withBackend(FakeTunnelBackend()),
         ),
@@ -213,6 +216,49 @@ void main() {
       await _pumpSettings(tester, const AppSettings());
       await _open(tester, _coreSettings);
       expect(find.text(label), findsOneWidget);
+    });
+  });
+
+  group('Подписи и выбор по ядру', () {
+    testWidgets('стратегия доменов видна и на mihomo', (tester) async {
+      await _pumpSettings(tester, const AppSettings(), backend: VpnBackend.mihomo);
+      await _open(tester, _coreSettings);
+      await tester.scrollUntilVisible(
+        find.text('IPOnDemand'),
+        300,
+        scrollable: find
+            .descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable))
+            .first,
+      );
+      expect(find.text('Routing domain strategy'), findsOneWidget);
+      expect(find.text('IPIfNonMatch'), findsOneWidget);
+    });
+
+    testWidgets('стратегия запросов на mihomo только из двух, сохранённая показана как UseIP',
+        (tester) async {
+      await _pumpSettings(
+        tester,
+        const AppSettings(xrayCore: XrayCoreSettings(dnsQueryStrategy: 'PreferIPv4')),
+        backend: VpnBackend.mihomo,
+      );
+      await _open(tester, _coreSettings);
+      expect(find.text('UseIPv4'), findsOneWidget);
+      expect(find.text('UseIP'), findsOneWidget);
+      for (final gone in const ['UseIPv6', 'PreferIPv4', 'PreferIPv6']) {
+        expect(find.text(gone), findsNothing, reason: gone);
+      }
+      final group = tester.widget<RadioGroup<String>>(
+        find.ancestor(of: find.text('UseIP'), matching: find.byType(RadioGroup<String>)),
+      );
+      expect(group.groupValue, 'UseIP');
+    });
+
+    testWidgets('стратегия запросов на Xray все пять', (tester) async {
+      await _pumpSettings(tester, const AppSettings());
+      await _open(tester, _coreSettings);
+      for (final s in XrayCoreSettings.dnsQueryStrategies) {
+        expect(find.text(s), findsOneWidget, reason: s);
+      }
     });
   });
 
