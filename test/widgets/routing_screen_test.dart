@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/app/app.dart';
+import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/app_info.dart';
 import 'package:keqdroid/models/app_settings.dart';
@@ -890,6 +892,26 @@ void main() {
         _texts(tester),
         contains('Остальные подписки и свои серверы\n1 маршрут'),
       );
+    });
+
+    testWidgets('на телевизоре профиль раскрывается пультом: стрелка и OK',
+        (tester) async {
+      PlatformBootstrap.debugIsTelevisionOverride = true;
+      addTearDown(() => PlatformBootstrap.debugIsTelevisionOverride = null);
+      await _pump(
+        tester,
+        routes: const [_direct],
+        profiles: const [games],
+        subs: subs,
+      );
+      Focus.of(tester.element(find.descendant(
+        of: find.byKey(const ValueKey('routing-profile-games')),
+        matching: find.byIcon(Icons.expand_more_rounded),
+      ))).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(_texts(tester), contains('steampowered.com'));
     });
 
     testWidgets('переключатель профиля не меняет высоту свёрнутого «Основного»',

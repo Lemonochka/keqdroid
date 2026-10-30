@@ -1046,6 +1046,9 @@ class _SubCardHeader extends ConsumerWidget {
     final accentColor = AppTheme.accent(context);
     final redColor = AppTheme.red(context);
     final isDesktop = PlatformBootstrap.isDesktop;
+    void toggleFold() => ref
+        .read(collapsedSubscriptionCardsProvider.notifier)
+        .update((m) => {...m, sub.id: !collapsed});
     return Padding(
         padding: EdgeInsets.fromLTRB(16, 14, isDesktop ? 16 : 8, 0),
         child: Row(
@@ -1068,29 +1071,31 @@ class _SubCardHeader extends ConsumerWidget {
               listIndex: listIndex,
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => ref
-                        .read(collapsedSubscriptionCardsProvider.notifier)
-                        .update((m) => {...m, sub.id: !collapsed}),
-                    child: AnimatedRotation(
-                      turns: collapsed ? -0.25 : 0,
-                      duration: ExpressiveMotion.durationFast,
-                      curve: ExpressiveMotion.emphasized,
-                      child: Icon(
-                        Icons.expand_more_rounded,
-                        size: 20,
-                        color: textLightColor,
+                  TvTappable(
+                    onTap: toggleFold,
+                    radius: BorderRadius.circular(10),
+                    child: GestureDetector(
+                      onTap: toggleFold,
+                      child: AnimatedRotation(
+                        turns: collapsed ? -0.25 : 0,
+                        duration: ExpressiveMotion.durationFast,
+                        curve: ExpressiveMotion.emphasized,
+                        child: Builder(
+                          builder: (context) => Icon(
+                            Icons.expand_more_rounded,
+                            size: 20,
+                            color: TvFocusHighlight.containerOf(context) != null
+                                ? Theme.of(context).colorScheme.onSurface
+                                : textLightColor,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => ref
-                          .read(
-                            collapsedSubscriptionCardsProvider.notifier,
-                          )
-                          .update((m) => {...m, sub.id: !collapsed}),
+                      onTap: toggleFold,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,

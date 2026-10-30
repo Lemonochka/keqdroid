@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
@@ -286,5 +287,22 @@ void main() {
       }
     }
     expect(shut, isTrue);
+  });
+
+  testWidgets('на телевизоре группа сворачивается пультом: фокус на стрелке и OK', (tester) async {
+    PlatformBootstrap.debugIsTelevisionOverride = true;
+    addTearDown(() => PlatformBootstrap.debugIsTelevisionOverride = null);
+    await _pumpServers(tester, _FakeSubs.new);
+    await tester.pump(const Duration(seconds: 1));
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ServersTab)),
+    );
+    Focus.of(tester.element(find.byIcon(Icons.expand_more_rounded).first))
+        .requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    expect(container.read(collapsedServerGroupsProvider)['s1'], isTrue);
+    await tester.pump(const Duration(seconds: 2));
   });
 }

@@ -176,13 +176,22 @@ class _ProfileCard extends StatelessWidget {
                     constraints: const BoxConstraints(minHeight: 48),
                     child: Row(
                       children: [
-                        AnimatedRotation(
-                          turns: expanded ? 0 : -0.25,
-                          duration: const Duration(milliseconds: 200),
-                          child: Icon(
-                            Icons.expand_more_rounded,
-                            size: 22,
-                            color: light,
+                        TvTappable(
+                          onTap: onToggle,
+                          radius: BorderRadius.circular(11),
+                          child: AnimatedRotation(
+                            turns: expanded ? 0 : -0.25,
+                            duration: const Duration(milliseconds: 200),
+                            child: Builder(
+                              builder: (context) => Icon(
+                                Icons.expand_more_rounded,
+                                size: 22,
+                                color: TvFocusHighlight.containerOf(context) !=
+                                        null
+                                    ? Theme.of(context).colorScheme.onSurface
+                                    : light,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),

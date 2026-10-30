@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
+import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/routing_profile.dart';
 import 'package:keqdroid/models/subscription.dart';
@@ -80,6 +82,21 @@ Future<void> _pump(
 }
 
 void main() {
+  testWidgets('на телевизоре карточка подписки сворачивается пультом', (tester) async {
+    PlatformBootstrap.debugIsTelevisionOverride = true;
+    addTearDown(() => PlatformBootstrap.debugIsTelevisionOverride = null);
+    await _pump(tester, const []);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(SubscriptionsTab)),
+    );
+    Focus.of(tester.element(find.byIcon(Icons.expand_more_rounded).first))
+        .requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(container.read(collapsedSubscriptionCardsProvider)['a'], isTrue);
+  });
+
   testWidgets('без профиля плашки нет', (tester) async {
     await _pump(tester, const []);
     expect(find.text('Gaming VPN'), findsOneWidget);

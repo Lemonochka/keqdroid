@@ -497,6 +497,9 @@ class _ServerGroupHeader extends ConsumerWidget {
         scheme.surfaceContainerLow;
     final accentColor = accent?.seed ?? AppTheme.accent(context);
     final textLightColor = AppTheme.textLight(context);
+    void toggleFold() => ref
+        .read(collapsedServerGroupsProvider.notifier)
+        .update((m) => {...m, collapseKey: !collapsed});
     final pingScope = collapseKey;
     final isPingingAll = ref.watch(
       pingingScopesProvider.select((scopes) => scopes.contains(pingScope)),
@@ -560,11 +563,7 @@ class _ServerGroupHeader extends ConsumerWidget {
                   child: MergeSemantics(
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
-                      onTap: () => ref
-                          .read(collapsedServerGroupsProvider.notifier)
-                          .update(
-                            (m) => {...m, collapseKey: !collapsed},
-                          ),
+                      onTap: toggleFold,
                       onLongPress: () {
                         HapticFeedback.mediumImpact();
                         _serverGroupSortMenu(ref, context, collapseKey, sortMode);
@@ -572,18 +571,32 @@ class _ServerGroupHeader extends ConsumerWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          SizedBox(
-                            width: _subCardHeaderIconSize,
-                            height: _subCardHeaderIconSize,
-                            child: Center(
-                              child: AnimatedRotation(
-                                turns: collapsed ? -0.25 : 0,
-                                duration: ExpressiveMotion.durationFast,
-                                curve: ExpressiveMotion.emphasized,
-                                child: Icon(
-                                  Icons.expand_more_rounded,
-                                  size: ExpressiveIconSize.medium,
-                                  color: textLightColor,
+                          TvTappable(
+                            onTap: toggleFold,
+                            radius: BorderRadius.circular(
+                              _subCardHeaderIconSize / 2,
+                            ),
+                            child: SizedBox(
+                              width: _subCardHeaderIconSize,
+                              height: _subCardHeaderIconSize,
+                              child: Center(
+                                child: AnimatedRotation(
+                                  turns: collapsed ? -0.25 : 0,
+                                  duration: ExpressiveMotion.durationFast,
+                                  curve: ExpressiveMotion.emphasized,
+                                  child: Builder(
+                                    builder: (context) => Icon(
+                                      Icons.expand_more_rounded,
+                                      size: ExpressiveIconSize.medium,
+                                      color: TvFocusHighlight.containerOf(
+                                                context) !=
+                                              null
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                          : textLightColor,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
