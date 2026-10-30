@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../haptics.dart';
+import '../tv_focus.dart';
 
 // движение и тайминги перенесены из согласованного прототипа один в один
 class PumpkinConnectButton extends StatefulWidget {
@@ -220,36 +221,47 @@ class _PumpkinConnectButtonState extends State<PumpkinConnectButton> with Ticker
     }
   }
 
+  void _activate() {
+    AppHaptics.impact();
+    widget.onTap!();
+  }
+
   @override
   Widget build(BuildContext context) {
+    // цвета снаружи обёртки фокуса: внутри тело спящей тыквы инвертировалось бы в цвет самой заливки
     final scheme = Theme.of(context).colorScheme;
     _sleepInk = scheme.onSurfaceVariant;
     final enabled = widget.onTap != null;
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      child: MouseRegion(
-        cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: enabled ? (_) => _setPressed(true) : null,
-          onTapUp: enabled ? (_) => _setPressed(false) : null,
-          onTapCancel: enabled ? () => _setPressed(false) : null,
-          onTap: enabled
-              ? () {
-                  AppHaptics.impact();
-                  widget.onTap!();
-                }
-              : null,
-          child: SizedBox.square(
-            dimension: PumpkinConnectButton.size,
-            child: CustomPaint(
-              painter: _PumpkinPainter(
-                state: this,
-                sleepInk: scheme.onSurfaceVariant,
-                idleBody: scheme.surfaceContainerHighest,
-                idleRibs: scheme.outlineVariant,
-                repaint: _frame,
+    return TvFocusHighlight(
+      radius: BorderRadius.circular(PumpkinConnectButton.size / 2),
+      // на одном GestureDetector фокус не вставал, и пультом Android TV тыква не включалась
+      child: FocusableActionDetector(
+        enabled: enabled,
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => _activate()),
+        },
+        child: Semantics(
+          button: true,
+          enabled: enabled,
+          child: MouseRegion(
+            cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapDown: enabled ? (_) => _setPressed(true) : null,
+              onTapUp: enabled ? (_) => _setPressed(false) : null,
+              onTapCancel: enabled ? () => _setPressed(false) : null,
+              onTap: enabled ? _activate : null,
+              child: SizedBox.square(
+                dimension: PumpkinConnectButton.size,
+                child: CustomPaint(
+                  painter: _PumpkinPainter(
+                    state: this,
+                    sleepInk: scheme.onSurfaceVariant,
+                    idleBody: scheme.surfaceContainerHighest,
+                    idleRibs: scheme.outlineVariant,
+                    repaint: _frame,
+                  ),
+                ),
               ),
             ),
           ),

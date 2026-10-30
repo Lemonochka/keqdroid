@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/shared/ui/halloween/pumpkin_button.dart';
+import 'package:keqdroid/shared/ui/tv_focus.dart';
 
 Widget _button({
   bool connected = false,
@@ -71,5 +74,36 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpWidget(_button(error: true));
     await tester.pumpAndSettle();
+  });
+
+  group('пульт телевизора', () {
+    setUp(() => PlatformBootstrap.debugIsTelevisionOverride = true);
+    tearDown(() => PlatformBootstrap.debugIsTelevisionOverride = null);
+
+    // жалоба с Android TV 30.10.2026: тыква пультом не включалась
+    testWidgets('доходит до тыквы и включает её кнопкой OK', (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(_button(onTap: () => taps++));
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.pumpAndSettle();
+      expect(taps, 1);
+    });
+
+    testWidgets('в фокусе тыква лежит на заливке и не перекрашивается в её цвет', (tester) async {
+      await tester.pumpWidget(_button(onTap: () {}));
+      final scheme = Theme.of(tester.element(find.byType(PumpkinConnectButton))).colorScheme;
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      final paint = find.descendant(
+        of: find.byType(PumpkinConnectButton),
+        matching: find.byType(CustomPaint),
+      );
+      expect(TvFocusHighlight.containerOf(tester.element(paint)), scheme.inverseSurface);
+      // тело спящей тыквы и заливка фокуса обе были бы inverseSurface, и тыква пропала бы
+      final painter = tester.widget<CustomPaint>(paint).painter! as dynamic;
+      expect(painter.idleBody, scheme.surfaceContainerHighest);
+    });
   });
 }
