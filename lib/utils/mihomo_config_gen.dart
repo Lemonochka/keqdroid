@@ -497,7 +497,19 @@ class MihomoConfigGen {
     bool httpInbound = false,
     String? outboundInterface,
   }) {
-    final proxies = buildProxies(input.trim());
+    // готовый Clash узлов-ссылок не имеет: buildProxies на нём бросал, и любой сервер из Clash-подписки
+    // не пинговался вовсе (31.10.2026). узлы берём как у сервера маршрута, главный под именем proxyName
+    final clash = CustomClashConfig.looksLikeClash(input)
+        ? CustomClashConfig.tryParse(input.trim())
+        : null;
+    final nodes = clash?.routeNodes(proxyName);
+    if (clash != null && nodes == null) {
+      throw ArgumentError(
+        'mihomo: this Clash config takes its servers from proxy-providers, '
+        'they are known only after connecting',
+      );
+    }
+    final proxies = nodes?.proxies ?? buildProxies(input.trim());
     return jsonEncode(<String, dynamic>{
       if (httpInbound) 'port': socksPort else 'socks-port': socksPort,
       'bind-address': '127.0.0.1',
@@ -511,6 +523,7 @@ class MihomoConfigGen {
       'interface-name': ?outboundInterface,
       'dns': _pingDns(),
       'proxies': proxies,
+      if (nodes != null && nodes.groups.isNotEmpty) 'proxy-groups': nodes.groups,
       'rules': ['MATCH,$proxyName'],
     });
   }

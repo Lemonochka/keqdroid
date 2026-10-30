@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/multi_ping_config.dart';
 
 /// Общий конфиг замера: весь батч меряется одним ядром вместо ядра на сервер.
@@ -191,6 +193,77 @@ void main() {
         ),
       ) as Map<String, dynamic>;
       expect((http['listeners'] as List).first['type'], 'http');
+    });
+  });
+
+  // 31.10.2026: проба строилась только из ссылки, и сервер из Clash-подписки или файла не пинговался вовсе
+  group('готовый Clash', () {
+    const single = '{"name":"DE","proxies":[{"name":"DE","type":"hysteria2",'
+        '"server":"198.51.100.90","port":443,"password":"password"}],'
+        '"rules":["MATCH,DE"]}';
+    const profile = '''
+proxies:
+  - {name: "NL", type: trojan, server: 198.51.100.91, port: 443, password: password}
+  - {name: "FI", type: trojan, server: 198.51.100.92, port: 443, password: password}
+proxy-groups:
+  - {name: Select, type: select, proxies: [NL, FI]}
+rules:
+  - MATCH,Select
+''';
+
+    String probe(String config, int port) => MihomoConfigGen.generatePingConfig(
+          config,
+          const AppSettings(),
+          socksPort: port,
+        );
+
+    test('проба одного узла ведёт в сам узел', () {
+      final config = jsonDecode(probe(single, 3001)) as Map<String, dynamic>;
+      final proxy = (config['proxies'] as List).single as Map;
+      expect(proxy['name'], MihomoConfigGen.proxyName);
+      expect(proxy['type'], 'hysteria2');
+      expect(proxy['server'], '198.51.100.90');
+      expect(config['rules'], ['MATCH,${MihomoConfigGen.proxyName}']);
+    });
+
+    test('у профиля с группой проба идёт в группу, имена двух проб разведены', () {
+      final merged = jsonDecode(
+        MultiPingConfig.mergeMihomo(
+          [
+            (id: 'a', configJson: probe(single, 3001), port: 3001),
+            (id: 'b', configJson: probe(profile, 3002), port: 3002),
+          ],
+          httpListeners: false,
+        ),
+      ) as Map<String, dynamic>;
+      final proxies = [for (final p in merged['proxies'] as List) p['name']];
+      final groups = (merged['proxy-groups'] as List).cast<Map>();
+      expect(proxies.toSet(), hasLength(proxies.length));
+      expect(groups.single['name'], '${MihomoConfigGen.proxyName}-1');
+      expect(groups.single['proxies'], everyElement(isIn(proxies)));
+      expect(merged['sub-rules'], {
+        'probe-0': ['MATCH,${MihomoConfigGen.proxyName}-0'],
+        'probe-1': ['MATCH,${MihomoConfigGen.proxyName}-1'],
+      });
+    });
+
+    test('узлы из proxy-providers до подключения не известны: причина названа', () {
+      const providers = '''
+proxy-providers:
+  main: {type: http, url: "https://provider.example/nodes.yaml"}
+proxy-groups:
+  - {name: Select, type: select, use: [main]}
+rules:
+  - MATCH,Select
+''';
+      expect(
+        () => probe(providers, 3001),
+        throwsA(isA<ArgumentError>().having(
+          (e) => e.message,
+          'message',
+          contains('proxy-providers'),
+        )),
+      );
     });
   });
 }

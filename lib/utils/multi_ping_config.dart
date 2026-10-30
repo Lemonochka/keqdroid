@@ -110,6 +110,7 @@ abstract final class MultiPingConfig {
     if (probes.isEmpty) throw ArgumentError('no probes');
 
     final proxies = <Map<String, dynamic>>[];
+    final groups = <Map<String, dynamic>>[];
     final listeners = <Map<String, dynamic>>[];
     final subRules = <String, List<String>>{};
     Map<String, dynamic>? base;
@@ -130,12 +131,34 @@ abstract final class MultiPingConfig {
         }
         probeProxies.add(proxy);
       }
+      // группы приходят от готового Clash; их имена в той же карте, на них ссылаются правило и узлы
+      final probeGroups = <Map<String, dynamic>>[];
+      for (final raw in (config['proxy-groups'] as List? ?? const [])) {
+        final group = Map<String, dynamic>.from(raw as Map);
+        final name = group['name']?.toString();
+        if (name != null) {
+          renamed[name] = '$name-$i';
+          group['name'] = '$name-$i';
+        }
+        probeGroups.add(group);
+      }
       // без этого звено цепочки ссылалось бы на имя до переименования, и ядро не нашло бы его
       for (final proxy in probeProxies) {
         final via = renamed[proxy['dialer-proxy']?.toString()];
         if (via != null) proxy['dialer-proxy'] = via;
       }
+      for (final group in probeGroups) {
+        final members = group['proxies'];
+        if (members is List) {
+          group['proxies'] = [
+            for (final m in members) renamed[m.toString()] ?? m,
+          ];
+        }
+        final fallback = renamed[group['empty-fallback']?.toString()];
+        if (fallback != null) group['empty-fallback'] = fallback;
+      }
       proxies.addAll(probeProxies);
+      groups.addAll(probeGroups);
 
       final ruleSet = 'probe-$i';
       subRules[ruleSet] = [
@@ -163,6 +186,7 @@ abstract final class MultiPingConfig {
       'geo-auto-update': false,
       if (first['dns'] != null) 'dns': first['dns'],
       'proxies': proxies,
+      if (groups.isNotEmpty) 'proxy-groups': groups,
       'listeners': listeners,
       'sub-rules': subRules,
       // без rules mihomo считает конфиг неполным
