@@ -83,12 +83,54 @@ abstract final class TvFocus {
   }
 }
 
+// у голого GestureDetector фокуса нет: пульт его обходит, и OK ничего не нажимает
+class TvTappable extends StatelessWidget {
+  const TvTappable({
+    super.key,
+    required this.onTap,
+    required this.child,
+    this.radius,
+    this.shape,
+  });
+
+  final VoidCallback? onTap;
+  final Widget child;
+  final BorderRadiusGeometry? radius;
+  final ShapeBorder? shape;
+
+  @override
+  Widget build(BuildContext context) {
+    final onTap = this.onTap;
+    return TvFocusHighlight(
+      radius: radius,
+      shape: shape,
+      child: FocusableActionDetector(
+        enabled: onTap != null,
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) => onTap?.call(),
+          ),
+        },
+        child: child,
+      ),
+    );
+  }
+}
+
 class TvFocusHighlight extends StatefulWidget {
-  const TvFocusHighlight({super.key, required this.child, this.radius});
+  const TvFocusHighlight({
+    super.key,
+    required this.child,
+    this.radius,
+    this.shape,
+  });
 
   final Widget child;
 
   final BorderRadiusGeometry? radius;
+
+  // заливка по фигуре, а не по скруглённому прямоугольнику
+  final ShapeBorder? shape;
 
   static Color? containerOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<_TvFocusScope>()
@@ -147,10 +189,15 @@ class _TvFocusHighlightState extends State<TvFocusHighlight>
           colorScheme: _focused ? TvFocus.invert(scheme) : scheme,
         ),
         child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: _focused ? scheme.inverseSurface : null,
-            borderRadius: widget.radius,
-          ),
+          decoration: widget.shape == null
+              ? BoxDecoration(
+                  color: _focused ? scheme.inverseSurface : null,
+                  borderRadius: widget.radius,
+                )
+              : ShapeDecoration(
+                  color: _focused ? scheme.inverseSurface : null,
+                  shape: widget.shape!,
+                ),
           child: widget.child,
         ),
       ),

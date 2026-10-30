@@ -1,7 +1,10 @@
 part of '../settings_tab.dart';
 
-Widget appearanceGeneralTabForTest(AppSettings current) =>
-    _AppearanceGeneralTab(current: current, onSave: (_) async {});
+Widget appearanceGeneralTabForTest(
+  AppSettings current, {
+  Future<void> Function(AppSettings)? onSave,
+}) =>
+    _AppearanceGeneralTab(current: current, onSave: onSave ?? (_) async {});
 
 class _ThemeCustomizationCard extends ConsumerWidget {
   final AsyncValue<AppSettings> settingsAsync;
@@ -497,26 +500,33 @@ class _ShapeSwatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Tooltip(
       message: label,
       child: Semantics(
         label: label,
         selected: selected,
         button: true,
-        child: GestureDetector(
+        child: TvTappable(
           onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOutCubic,
-            width: _size,
-            height: _size,
-            decoration: ShapeDecoration(
-              color: selected
-                  ? scheme.primary
-                  : scheme.surfaceContainerHighest,
-              shape: shape.border(_size),
-            ),
+          shape: shape.border(_size),
+          child: GestureDetector(
+            onTap: onTap,
+            child: Builder(builder: (context) {
+              final scheme = Theme.of(context).colorScheme;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                width: _size,
+                height: _size,
+                decoration: ShapeDecoration(
+                  color: TvFocusHighlight.containerOf(context) ??
+                      (selected
+                          ? scheme.primary
+                          : scheme.surfaceContainerHighest),
+                  shape: shape.border(_size),
+                ),
+              );
+            }),
           ),
         ),
       ),
@@ -597,35 +607,45 @@ class _FontSwatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Tooltip(
       message: label,
       child: Semantics(
         label: label,
         selected: selected,
         button: true,
-        child: GestureDetector(
+        child: TvTappable(
           onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOutCubic,
-            height: 56,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-              color: selected
-                  ? scheme.primary
-                  : scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(ExpressiveShape.large),
-            ),
-            child: Text(
-              'Aa Яя',
-              maxLines: 1,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontFamily: fontFamily,
-                    color: selected ? scheme.onPrimary : scheme.onSurface,
-                  ),
-            ),
+          radius: BorderRadius.circular(ExpressiveShape.large),
+          child: GestureDetector(
+            onTap: onTap,
+            child: Builder(builder: (context) {
+              final scheme = Theme.of(context).colorScheme;
+              final focusFill = TvFocusHighlight.containerOf(context);
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                height: 56,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: focusFill ??
+                      (selected
+                          ? scheme.primary
+                          : scheme.surfaceContainerHighest),
+                  borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                ),
+                child: Text(
+                  'Aa Яя',
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontFamily: fontFamily,
+                        color: selected && focusFill == null
+                            ? scheme.onPrimary
+                            : scheme.onSurface,
+                      ),
+                ),
+              );
+            }),
           ),
         ),
       ),

@@ -11,7 +11,11 @@ import 'package:keqdroid/screens/settings_tab.dart';
 import '../helpers/test_storage.dart';
 
 // жалоба с Android TV 30.10.2026: дошёл пультом до масштаба, и обратно наверх не уйти
-Future<FocusNode> _focusScaleSlider(WidgetTester tester) async {
+Future<FocusNode> _focusScaleSlider(
+  WidgetTester tester, {
+  bool tabsAbove = true,
+  Future<void> Function(AppSettings)? onSave,
+}) async {
   tester.view.devicePixelRatio = 2;
   tester.view.physicalSize = const Size(1920, 1080);
   addTearDown(tester.view.reset);
@@ -19,17 +23,20 @@ Future<FocusNode> _focusScaleSlider(WidgetTester tester) async {
   final storage = await tester.runAsync(() => buildStorageService(
         initialValues: {'keqdis_settings': settings.toJsonString()},
       ));
+  final tab = appearanceGeneralTabForTest(settings, onSave: onSave);
   await tester.pumpWidget(ProviderScope(
     overrides: [storageProvider.overrideWithValue(storage!)],
     child: KeqdisApp(
-      // кнопка сверху вместо вкладок экрана: шрифты над ползунком пульт не берёт
+      // кнопка сверху вместо вкладок экрана
       home: Scaffold(
-        body: Column(
-          children: [
-            TextButton(onPressed: () {}, child: const Text('tabs')),
-            Expanded(child: appearanceGeneralTabForTest(settings)),
-          ],
-        ),
+        body: tabsAbove
+            ? Column(
+                children: [
+                  TextButton(onPressed: () {}, child: const Text('tabs')),
+                  Expanded(child: tab),
+                ],
+              )
+            : tab,
       ),
     ),
   ));
@@ -70,5 +77,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(node.hasPrimaryFocus, isTrue);
     expect(find.text('105%'), findsOneWidget);
+  });
+
+  testWidgets('на телевизоре шрифт выбирается пультом: вверх с масштаба встаёт на шрифт, OK его выбирает', (tester) async {
+    final saved = <AppSettings>[];
+    await _focusScaleSlider(tester, tabsAbove: false, onSave: (s) async => saved.add(s));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(saved, hasLength(1));
+    expect(saved.single.fontId, isNot(const AppSettings().fontId));
+  });
+
+  testWidgets('на телевизоре форма значков выбирается пультом: вниз с масштаба и OK', (tester) async {
+    final saved = <AppSettings>[];
+    await _focusScaleSlider(tester, onSave: (s) async => saved.add(s));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(saved, hasLength(1));
+    expect(saved.single.iconShapeId, isNot(const AppSettings().iconShapeId));
   });
 }
