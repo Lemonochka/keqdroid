@@ -32,6 +32,7 @@ import '../../shared/ui/update_dialog.dart';
 import '../../utils/clipboard_import.dart';
 import 'desktop_connection_mode.dart';
 import 'desktop_rail.dart';
+import 'desktop_tab_switcher.dart';
 
 // свой сайдбар: NavigationRail на Windows ломал раскладку
 class DesktopHomeScreen extends ConsumerStatefulWidget {
@@ -401,20 +402,15 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
           ),
           VerticalDivider(width: 1, color: AppTheme.divider(context)),
           Expanded(
-            // скрытые вкладки IndexedStack продолжали бы крутить гифки подписок
-            child: IndexedStack(
+            child: DesktopTabSwitcher(
               index: _index,
-              sizing: StackFit.expand,
               children: [
-                for (final (i, tab) in const [
+                for (final tab in const [
                   ServersTab(),
                   SubscriptionsTab(),
                   SettingsTab(),
-                ].indexed)
-                  TickerMode(
-                    enabled: i == _index,
-                    child: _DesktopTabHost(child: tab),
-                  ),
+                ])
+                  _DesktopTabHost(child: tab),
               ],
             ),
           ),
