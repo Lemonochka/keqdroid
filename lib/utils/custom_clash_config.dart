@@ -82,7 +82,8 @@ class CustomClashConfig {
     return groups is List && groups.isNotEmpty;
   }
 
-  bool get usesProviders => proxies.isEmpty && usesProviderNodes(map);
+  // локальный direct рядом не мешает: так устроен пример docs/example/conf.md самого mihomo
+  bool get usesProviders => usesProviderNodes(map);
 
   static String? describeProblem(String raw) {
     final decoded = _decode(raw);

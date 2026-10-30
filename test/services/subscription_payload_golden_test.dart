@@ -39,6 +39,8 @@ void main() {
     _golden('clash-yaml-warp');
     // мусорный адрес в публичном списке ронял Uri и вместе с ним всю подписку
     _golden('clash-yaml-broken-node');
+    // как docs/example/conf.md mihomo: узлы в провайдере, рядом локальный direct
+    _golden('clash-providers-direct');
     _golden('html-pre');
     _golden('html-js-var');
     _golden('xray-json-object');
