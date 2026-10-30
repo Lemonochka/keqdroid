@@ -17,6 +17,7 @@ import '../../models/server_item.dart';
 import '../../models/server_name_utils.dart';
 import '../../providers/providers.dart';
 import '../../services/vpn_engine.dart';
+import '../../utils/custom_clash_config.dart';
 import '../../utils/custom_xray_config.dart';
 import '../../utils/bidi.dart';
 import '../../utils/error_messages.dart';
@@ -844,8 +845,14 @@ class _ServerConfigEditorScreenState
 
   Widget _rawSection(AppLocalizations l10n) {
     final raw = _rawCtrl.text;
-    final isJson = CustomXrayConfig.looksLikeJson(raw);
-    final problem = isJson ? CustomXrayConfig.describeProblem(raw) : null;
+    // Clash хранится тем же JSON, но без outbounds, и проверка Xray называла его неверным
+    final clash = CustomClashConfig.looksLikeClash(raw);
+    final isJson = clash || CustomXrayConfig.looksLikeJson(raw);
+    final problem = !isJson
+        ? null
+        : clash
+            ? CustomClashConfig.describeProblem(raw)
+            : CustomXrayConfig.describeProblem(raw);
     final green = AppTheme.green(context);
     final red = AppTheme.red(context);
 
@@ -876,7 +883,10 @@ class _ServerConfigEditorScreenState
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  problem ?? l10n.serverEditorJsonValid,
+                  problem ??
+                      (clash
+                          ? l10n.serverEditorClashValid
+                          : l10n.serverEditorJsonValid),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: problem == null ? green : red,
                       ),

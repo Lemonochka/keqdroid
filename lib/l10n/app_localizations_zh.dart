@@ -1250,6 +1250,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serverEditorJsonValid => '有效的 Xray 配置';
 
   @override
+  String get serverEditorClashValid => '有效的 Clash 配置';
+
+  @override
   String get serverEditorJsonFormat => '格式化';
 
   @override

@@ -139,4 +139,17 @@ void main() {
     expect(find.textContaining('Vision only works on TCP'), findsNothing);
     expect(find.text('xtls-rprx-vision'), findsWidgets);
   });
+
+  // 31.10.2026: сервер из Clash-подписки открывался красным «нет outbounds, это не конфиг Xray»
+  testWidgets('Clash-сервер в сыром виде не называется неверным', (tester) async {
+    await _open(
+      tester,
+      '{"name":"DE","proxies":[{"name":"DE","type":"hysteria2",'
+      '"server":"198.51.100.90","port":443,"password":"password"}],'
+      '"rules":["MATCH,DE"]}',
+    );
+
+    expect(find.text('Valid Clash config'), findsOneWidget);
+    expect(find.textContaining('outbounds'), findsNothing);
+  });
 }

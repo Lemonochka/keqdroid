@@ -707,6 +707,7 @@
   "settingsAdvanced": "高级",
   "settingsAdvancedSubtitle": "内核设置、延迟测试、路由、HWID 和调试",
   "serverEditorJsonValid": "有效的 Xray 配置",
+  "serverEditorClashValid": "有效的 Clash 配置",
   "serverEditorJsonFormat": "格式化",
   "subscriptionsCardMenu": "更多",
   "subscriptionsAutoUpdateOff": "不自动更新",

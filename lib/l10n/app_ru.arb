@@ -707,6 +707,7 @@
   "settingsAdvanced": "Дополнительно",
   "settingsAdvancedSubtitle": "Настройки ядра, пинг, маршрутизация, HWID и отладка",
   "serverEditorJsonValid": "Корректный конфиг Xray",
+  "serverEditorClashValid": "Корректный конфиг Clash",
   "serverEditorJsonFormat": "Формат",
   "subscriptionsCardMenu": "Ещё",
   "subscriptionsAutoUpdateOff": "Не обновлять автоматически",

@@ -372,6 +372,7 @@
   "settingsAdvanced": "پیشرفته",
   "settingsAdvancedSubtitle": "تنظیمات هسته، پینگ، مسیریابی، HWID و اشکال‌زدایی",
   "serverEditorJsonValid": "کانفیگ معتبر Xray",
+  "serverEditorClashValid": "کانفیگ معتبر Clash",
   "serverEditorJsonFormat": "قالب‌بندی",
   "subscriptionsCardMenu": "بیشتر",
   "subscriptionsAutoUpdateOff": "به‌روزرسانی خودکار نشود",

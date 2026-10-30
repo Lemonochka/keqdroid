@@ -707,6 +707,7 @@
   "settingsAdvanced": "Erweitert",
   "settingsAdvancedSubtitle": "Kerneinstellungen, Ping, Routing, HWID und Debug",
   "serverEditorJsonValid": "Gültige Xray-Konfiguration",
+  "serverEditorClashValid": "Gültige Clash-Konfiguration",
   "serverEditorJsonFormat": "Formatieren",
   "subscriptionsCardMenu": "Mehr",
   "subscriptionsAutoUpdateOff": "Nicht automatisch aktualisieren",

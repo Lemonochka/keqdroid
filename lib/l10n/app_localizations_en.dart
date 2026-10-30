@@ -1254,6 +1254,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serverEditorJsonValid => 'Valid Xray config';
 
   @override
+  String get serverEditorClashValid => 'Valid Clash config';
+
+  @override
   String get serverEditorJsonFormat => 'Format';
 
   @override

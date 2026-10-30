@@ -1250,6 +1250,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serverEditorJsonValid => 'کانفیگ معتبر Xray';
 
   @override
+  String get serverEditorClashValid => 'کانفیگ معتبر Clash';
+
+  @override
   String get serverEditorJsonFormat => 'قالب‌بندی';
 
   @override

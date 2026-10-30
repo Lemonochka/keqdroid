@@ -1264,6 +1264,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serverEditorJsonValid => 'Корректный конфиг Xray';
 
   @override
+  String get serverEditorClashValid => 'Корректный конфиг Clash';
+
+  @override
   String get serverEditorJsonFormat => 'Формат';
 
   @override

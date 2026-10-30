@@ -2333,6 +2333,12 @@ abstract class AppLocalizations {
   /// **'Valid Xray config'**
   String get serverEditorJsonValid;
 
+  /// No description provided for @serverEditorClashValid.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid Clash config'**
+  String get serverEditorClashValid;
+
   /// No description provided for @serverEditorJsonFormat.
   ///
   /// In en, this message translates to:
