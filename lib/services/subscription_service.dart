@@ -1752,7 +1752,18 @@ class SubscriptionService {
     return map;
   }
 
+  // битый узел (server: 82164024@ca.tronsg.com в публичном списке) ронял Uri, а с ним и всю подписку
   static String? _proxyMapToUri(Map<String, dynamic> raw) {
+    try {
+      return _proxyMapToUriOrThrow(raw);
+    } on FormatException {
+      return null;
+    } on ArgumentError {
+      return null;
+    }
+  }
+
+  static String? _proxyMapToUriOrThrow(Map<String, dynamic> raw) {
     final map = _flattenClashProxy(raw);
 
     String pick(List<String> keys) {

@@ -37,6 +37,8 @@ void main() {
     _golden('clash-yaml-anchors');
     // WARP из файла: AWG и MASQUE ссылкой не записать, каждый узел исполняет mihomo
     _golden('clash-yaml-warp');
+    // мусорный адрес в публичном списке ронял Uri и вместе с ним всю подписку
+    _golden('clash-yaml-broken-node');
     _golden('html-pre');
     _golden('html-js-var');
     _golden('xray-json-object');

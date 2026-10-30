@@ -1,0 +1,27 @@
+proxies:
+  - name: "Good One"
+    type: trojan
+    server: 198.51.100.50
+    port: 443
+    password: password
+    sni: good.example
+  - name: "Broken"
+    type: vless
+    server: 82164024@broken.example
+    port: 443
+    uuid: 00000000-0000-0000-0000-000000000000
+    tls: true
+  - name: "Good Two"
+    type: ss
+    server: 198.51.100.51
+    port: 8388
+    cipher: aes-128-gcm
+    password: password
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [Good One, Broken, Good Two]
+
+rules:
+  - MATCH,PROXY
