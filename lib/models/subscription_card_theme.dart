@@ -83,6 +83,15 @@ class SubscriptionCardTheme {
   // первый кадр видео рядом с ним: по нему цвет акцента и превью, и его видно, пока видео грузится
   static String posterFor(String videoPath) => '$videoPath.png';
 
+  // фото 4000 px с телефона это 53 МБ пикселей, а на AMD картинка стоила в 5-6 раз больше них (проба 30.10.2026).
+  // карточка не шире 920 dp, крупнее 2048 декодер работал бы впустую
+  static ImageProvider coverImage(String path) => ResizeImage(
+        FileImage(File(path)),
+        width: 2048,
+        height: 2048,
+        policy: ResizeImagePolicy.fit,
+      );
+
   String? get still {
     final asset = this.asset;
     if (asset == null) return null;
@@ -209,7 +218,7 @@ class _ImageBackground extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         Image(
-          image: FileImage(File(asset)),
+          image: SubscriptionCardTheme.coverImage(asset),
           fit: BoxFit.cover,
           errorBuilder: (_, _, _) => const SizedBox.shrink(),
         ),

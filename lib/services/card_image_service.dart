@@ -182,8 +182,8 @@ class CardImageService {
       ..add(SubscriptionCardTheme.posterFor(videoName));
     // постер в кэше картинок заранее: иначе при подмене темы карточка кадр-другой пустая
     final ready = Completer<void>();
-    final stream = FileImage(
-      File(p.join(dir, SubscriptionCardTheme.posterFor(videoName))),
+    final stream = SubscriptionCardTheme.coverImage(
+      p.join(dir, SubscriptionCardTheme.posterFor(videoName)),
     ).resolve(ImageConfiguration.empty);
     late final ImageStreamListener listener;
     listener = ImageStreamListener(

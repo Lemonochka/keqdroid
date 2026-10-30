@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 
@@ -93,7 +91,7 @@ class SubscriptionAccentService {
     try {
       final fromImage = await ColorScheme.fromImageProvider(
         provider: theme.id.startsWith(SubscriptionCardTheme.filePrefix)
-            ? FileImage(File(asset)) as ImageProvider
+            ? SubscriptionCardTheme.coverImage(asset)
             : AssetImage(asset),
         brightness: scheme.brightness,
       );

@@ -2033,11 +2033,11 @@ class _CustomImageSlot extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   Image(
-                    image: FileImage(File(
+                    image: SubscriptionCardTheme.coverImage(
                       SubscriptionCardTheme.isVideoFile(path)
                           ? SubscriptionCardTheme.posterFor(path)
                           : path,
-                    )),
+                    ),
                     fit: BoxFit.cover,
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),

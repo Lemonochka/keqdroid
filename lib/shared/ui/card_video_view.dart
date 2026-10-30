@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../models/subscription_card_theme.dart';
+
 // фон шапки подписки из видео. Плеер живёт, только пока видео на экране: на чужой вкладке
 // (TickerMode) и за краем списка его нет. Шапки групп серверов строятся и за экраном: десять
 // плееров разом держали по ~37 МБ буферов декодера и грузили сервис кодеков на ~47% ядра
@@ -165,7 +167,7 @@ class _CardVideoViewState extends State<CardVideoView> {
       fit: StackFit.expand,
       children: [
         Image(
-          image: FileImage(File(widget.poster)),
+          image: SubscriptionCardTheme.coverImage(widget.poster),
           fit: BoxFit.cover,
           gaplessPlayback: true,
           errorBuilder: (_, _, _) => const SizedBox.shrink(),
