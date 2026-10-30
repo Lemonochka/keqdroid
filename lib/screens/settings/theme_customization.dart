@@ -776,18 +776,20 @@ class _UiScalePickerState extends State<_UiScalePicker> {
         Row(
           children: [
             Expanded(
-              child: Slider(
-                value: value.clamp(
-                  AppSettings.minUiScale,
-                  AppSettings.maxUiScale,
+              child: TvFocus.slider(
+                Slider(
+                  value: value.clamp(
+                    AppSettings.minUiScale,
+                    AppSettings.maxUiScale,
+                  ),
+                  min: AppSettings.minUiScale,
+                  max: AppSettings.maxUiScale,
+                  divisions: divisions,
+                  activeColor: accent,
+                  label: '$percent%',
+                  onChanged: (v) => setState(() => _dragging = v),
+                  onChangeEnd: widget.onChanged,
                 ),
-                min: AppSettings.minUiScale,
-                max: AppSettings.maxUiScale,
-                divisions: divisions,
-                activeColor: accent,
-                label: '$percent%',
-                onChanged: (v) => setState(() => _dragging = v),
-                onChangeEnd: widget.onChanged,
               ),
             ),
             SizedBox(

@@ -13,6 +13,17 @@ abstract final class TvFocus {
         child: Builder(builder: builder),
       );
 
+  // по умолчанию Slider забирает себе и стрелки вверх-вниз, и пульт не мог уйти с ползунка
+  static Widget slider(Widget slider) => enabled
+      ? Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(navigationMode: NavigationMode.directional),
+            child: slider,
+          ),
+        )
+      : slider;
+
   static ColorScheme invert(ColorScheme s) {
     final muted = Color.lerp(s.onInverseSurface, s.inverseSurface, 0.25)!;
     return s.copyWith(

@@ -249,13 +249,15 @@ class _ColorSlider extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.labelLarge),
-        Slider(
-          value: value.clamp(min, max),
-          min: min,
-          max: max,
-          divisions: divisions,
-          activeColor: activeColor,
-          onChanged: onChanged,
+        TvFocus.slider(
+          Slider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            divisions: divisions,
+            activeColor: activeColor,
+            onChanged: onChanged,
+          ),
         ),
       ],
     );
