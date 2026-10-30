@@ -71,11 +71,15 @@ class CustomXrayConfig {
   static List<String> extractConfigs(String raw) {
     final text = raw.trim();
     if (text.isEmpty) return const [];
-    final Object? decoded;
+    Object? decoded;
     try {
       decoded = jsonDecode(text);
     } on Object {
-      return const [];
+      try {
+        decoded = jsonDecode(_withoutComments(text));
+      } on Object {
+        return const [];
+      }
     }
     if (decoded is Map) {
       final config = _fromMap(_asStringMap(decoded));
@@ -91,6 +95,42 @@ class CustomXrayConfig {
       return out;
     }
     return const [];
+  }
+
+  // сам xray читает // /* */ и # вне строк (infra/conf/json/reader.go), примеры Xray-examples ими полны
+  static String _withoutComments(String text) {
+    final out = StringBuffer();
+    String? quote;
+    var i = 0;
+    while (i < text.length) {
+      final c = text[i];
+      final next = i + 1 < text.length ? text[i + 1] : '';
+      if (quote != null) {
+        out.write(c);
+        if (c == '\\' && next.isNotEmpty) {
+          out.write(next);
+          i += 2;
+          continue;
+        }
+        if (c == quote) quote = null;
+        i++;
+      } else if (c == '"' || c == "'") {
+        quote = c;
+        out.write(c);
+        i++;
+      } else if (c == '#' || (c == '/' && next == '/')) {
+        while (i < text.length && text[i] != '\n') {
+          i++;
+        }
+      } else if (c == '/' && next == '*') {
+        final end = text.indexOf('*/', i + 2);
+        i = end < 0 ? text.length : end + 2;
+      } else {
+        out.write(c);
+        i++;
+      }
+    }
+    return out.toString();
   }
 
   String encode() => const JsonEncoder.withIndent('  ').convert(json);

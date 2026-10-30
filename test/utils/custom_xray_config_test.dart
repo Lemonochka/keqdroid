@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
@@ -328,6 +329,17 @@ void main() {
 
     test('splits a json array into separate servers', () {
       expect(splitServerImportPayload('[$_customConfig, $_customConfig]').length, 2);
+    });
+
+    test('takes a config with comments, as xray itself does', () {
+      final configs = splitServerImportPayload(File(
+        'test/fixtures/subscription_payloads/xray-json-comments.txt',
+      ).readAsStringSync());
+      expect(configs, hasLength(1));
+      expect(ServersNotifier.validateServerConfig(configs.single), isNull);
+      final server = ServerItem.fromRaw(configs.single);
+      expect(server.address, '198.51.100.60');
+      expect(server.displayName, 'NL #1 // reality');
     });
 
     test('still splits a list of links line by line', () {

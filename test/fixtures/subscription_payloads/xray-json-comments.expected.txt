@@ -1,0 +1,42 @@
+{
+  "remarks": "NL #1 // reality",
+  "log": {
+    "loglevel": "warning"
+  },
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "198.51.100.60",
+            "port": 443,
+            "users": [
+              {
+                "id": "00000000-0000-0000-0000-000000000000",
+                "encryption": "none",
+                "flow": "xtls-rprx-vision"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "serverName": "www.example.org",
+          "fingerprint": "chrome",
+          "publicKey": "aGVsbG8gd29ybGQgaGVsbG8gd29ybGQgaGVsbG8gd28",
+          "shortId": "0123abcd",
+          "spiderX": "https://www.example.org/path/*"
+        }
+      }
+    },
+    {
+      "tag": "direct",
+      "protocol": "freedom"
+    }
+  ]
+}

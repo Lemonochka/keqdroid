@@ -45,6 +45,8 @@ void main() {
     _golden('html-pre');
     _golden('html-js-var');
     _golden('xray-json-object');
+    // комментарии // /* */ и # xray читает сам, а внутри строк они не комментарии
+    _golden('xray-json-comments');
     _golden('xray-json-array');
     _golden('mixed-links-and-config');
     _golden('fragment-with-spaces');
