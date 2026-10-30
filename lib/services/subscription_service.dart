@@ -2536,7 +2536,20 @@ class SubscriptionService {
     return (v * multiplier).round();
   }
 
+  // окно из трея будит автообновление провайдера и DesktopBackgroundService разом, и подписку качали дважды
+  static final _inFlight = <String, Future<UpdateResult>>{};
+
   Future<UpdateResult> updateSubscription(Subscription sub,
+      {CancelToken? cancelToken}) {
+    if (cancelToken != null) return _update(sub, cancelToken: cancelToken);
+    final key = '${sub.id}\n${sub.url}\n${sub.userAgent}';
+    return _inFlight[key] ??=
+        _update(sub).whenComplete(() {
+          _inFlight.remove(key);
+        });
+  }
+
+  Future<UpdateResult> _update(Subscription sub,
       {CancelToken? cancelToken}) async {
     try {
       final result = await fetchRaw(
