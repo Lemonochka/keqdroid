@@ -1337,17 +1337,59 @@ class SubscriptionService {
       }
     }
 
-    final proxies = _extractYamlLikeProxies(content);
+    final (:proxies, :standalone) = _extractYamlLikeProxies(content);
     for (final proxy in proxies) {
-      final uri = _proxyMapToUri(proxy);
-      if (uri != null && !_isMetadataConfig(uri)) {
-        found.add(_linkKeepsNode(proxy, uri)
-            ? uri
-            : _singleNodeClash(proxy, proxies) ?? uri);
-      }
+      final config = _clashNodeConfig(proxy, proxies, standalone: standalone);
+      if (config != null) found.add(config);
     }
 
     return found.toList();
+  }
+
+  // файл и буфер раскладываются по узлам так же, как подписка. профиль на proxy-providers остаётся целым
+  static List<String> clashNodeConfigs(String content) {
+    final clash = CustomClashConfig.tryParse(content);
+    if (clash == null || CustomClashConfig.usesProviderNodes(clash.map)) {
+      return const [];
+    }
+    final proxies = clash.proxies;
+    return {
+      for (final proxy in proxies)
+        ?_clashNodeConfig(proxy, proxies, standalone: true),
+    }.toList();
+  }
+
+  // ссылки у этих типов нет, узел исполняет mihomo. по adapter/parser.go 1.19.32 без вырезанных сборкой
+  static const _mihomoOnlyTypes = {
+    'snell',
+    'hysteria',
+    'wireguard',
+    'shadowquic',
+    'gost-relay',
+    'ssh',
+    'sudoku',
+    'masque',
+    'trusttunnel',
+    'openvpn',
+    'socks5',
+    'http',
+  };
+
+  static String? _clashNodeConfig(
+    Map<String, dynamic> node,
+    List<Map<String, dynamic>> all, {
+    required bool standalone,
+  }) {
+    final uri = _proxyMapToUri(node);
+    if (uri != null) {
+      if (_isMetadataConfig(uri)) return null;
+      return _linkKeepsNode(node, uri) ? uri : _singleNodeClash(node, all) ?? uri;
+    }
+    if (!standalone) return null;
+    final type = node['type']?.toString().trim().toLowerCase() ?? '';
+    if (!_mihomoOnlyTypes.contains(type)) return null;
+    if ((node['server']?.toString().trim() ?? '').isEmpty) return null;
+    return _singleNodeClash(node, all);
   }
 
   // skip-cert-verify ссылка не несёт намеренно (_applyTransport), name и udp генератор пишет свои
@@ -1520,8 +1562,12 @@ class SubscriptionService {
   @visibleForTesting
   static Map<String, int> unsupportedClashNodes(String content) {
     final counts = <String, int>{};
-    for (final proxy in _extractYamlLikeProxies(content)) {
+    final (:proxies, :standalone) = _extractYamlLikeProxies(content);
+    for (final proxy in proxies) {
       if (_proxyMapToUri(proxy) != null) continue;
+      if (_clashNodeConfig(proxy, proxies, standalone: standalone) != null) {
+        continue;
+      }
       final type = (proxy['type'] ?? proxy['protocol'] ?? '')
           .toString()
           .trim()
@@ -1539,10 +1585,18 @@ class SubscriptionService {
     return parts.map((e) => '${e.value} of type ${e.key}').join(', ');
   }
 
-  static List<Map<String, dynamic>> _extractYamlLikeProxies(String content) {
+  // standalone: узел без ссылки можно отдать mihomo одного. строчный разбор теряет вложенные карты (amnezia-wg-option),
+  // а у профиля на proxy-providers вынутый socks5 заслонил бы узлы провайдера, и профиль целиком уже не собрался бы
+  static ({List<Map<String, dynamic>> proxies, bool standalone})
+      _extractYamlLikeProxies(String content) {
     final parsed = CustomClashConfig.tryParse(content);
-    if (parsed != null && parsed.proxies.isNotEmpty) return parsed.proxies;
-    return _scanYamlLikeProxies(content);
+    if (parsed != null && parsed.proxies.isNotEmpty) {
+      return (
+        proxies: parsed.proxies,
+        standalone: !CustomClashConfig.usesProviderNodes(parsed.map),
+      );
+    }
+    return (proxies: _scanYamlLikeProxies(content), standalone: false);
   }
 
   static List<Map<String, dynamic>> _scanYamlLikeProxies(String content) {

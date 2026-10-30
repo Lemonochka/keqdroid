@@ -1,0 +1,65 @@
+warp-common: &warp-common
+  type: wireguard
+  ip: 172.16.0.2
+  ipv6: 2001:db8::2
+  private-key: cGFzc3dvcmQtcGFzc3dvcmQtcGFzc3dvcmQtcGFzcw==
+  public-key: cGFzc3dvcmQtcGFzc3dvcmQtcGFzc3dvcmQtcGFzcw==
+  allowed-ips: ['0.0.0.0/0', '::/0']
+  reserved: [1, 2, 3]
+  udp: true
+  mtu: 1280
+  remote-dns-resolve: true
+  dns: [1.1.1.1, 1.0.0.1]
+  amnezia-wg-option:
+    s1: 0
+    s2: 0
+    s3: 0
+    s4: 0
+    jc: 4
+    jmin: 40
+    jmax: 70
+    h1: 1
+    h2: 2
+    h3: 3
+    h4: 4
+    i1: <b 0xc10000000114367096bb0fb3f58f3a3f>
+
+warp-masque: &warp-masque
+  type: masque
+  sni: sni.example
+  private-key: cGFzc3dvcmQ=
+  public-key: cGFzc3dvcmQ=
+  ip: 172.16.0.2
+  ipv6: 2001:db8::3
+  udp: true
+  remote-dns-resolve: true
+  dns: [1.1.1.1, 1.0.0.1]
+
+proxies:
+- name: "[WARP-AWG] Default"
+  <<: *warp-common
+  server: 203.0.113.40
+  port: 4500
+- name: "[WARP-MASQUE] QUIC"
+  <<: *warp-masque
+  server: 203.0.113.40
+  port: 443
+- name: "[WARP-MASQUE] H2"
+  <<: *warp-masque
+  server: 203.0.113.40
+  port: 443
+  network: h2
+
+proxy-groups:
+- name: Cloudflare
+  type: select
+  icon: https://icon.example/cloudflare.svg
+  proxies:
+    - "[WARP-AWG] Default"
+    - "[WARP-MASQUE] QUIC"
+    - "[WARP-MASQUE] H2"
+  url: 'http://speed.cloudflare.com/'
+  interval: 300
+
+rules:
+- MATCH,Cloudflare

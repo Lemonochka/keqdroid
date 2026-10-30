@@ -1,3 +1,4 @@
+import '../services/subscription_service.dart';
 import 'awg_profile.dart';
 import 'custom_clash_config.dart';
 import 'custom_xray_config.dart';
@@ -11,6 +12,8 @@ List<String> splitServerImportPayload(String raw) {
 
   // clash раньше xray: json clash тоже начинается с {
   if (CustomClashConfig.looksLikeClash(text)) {
+    final nodes = SubscriptionService.clashNodeConfigs(text);
+    if (nodes.isNotEmpty) return nodes;
     final clash = CustomClashConfig.extractConfigs(text);
     return clash.isNotEmpty ? clash : [text];
   }

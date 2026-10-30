@@ -11,6 +11,7 @@ import 'package:keqdroid/utils/mieru_uri.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 import 'package:keqdroid/utils/ssr_uri.dart';
+import 'package:keqdroid/utils/vpn_core_support.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockStorageService extends Mock implements StorageService {}
@@ -392,7 +393,7 @@ rules:
       expect(uri.queryParameters['type'], 'tcp');
     });
 
-    test('узел type: hysteria пропускается, hysteria2 рядом переводится', () {
+    test('узел type: hysteria уходит в mihomo первой версией, hysteria2 рядом переводится', () {
       // `type: hysteria` у Clash — всегда первая версия. Раньше ему
       // приписывался `version=2`, и он уезжал в ядро как hysteria2: конфиг не
       // того протокола и сервер, который не отвечает.
@@ -419,8 +420,12 @@ rules:
   - MATCH,Proxy
 ''';
       final configs = SubscriptionService.parseBodyForTest(mixed);
-      expect(configs, hasLength(1));
-      expect(Uri.parse(configs.single).host, 'v2.example');
+      expect(configs, hasLength(2));
+      final old = ServerItem.fromRaw(configs[0]);
+      expect(old.protocol, 'clash');
+      expect(old.clashConfig!.proxies.single['type'], 'hysteria');
+      expect(old.clashConfig!.proxies.single['auth_str'], 'secret');
+      expect(Uri.parse(configs[1]).host, 'v2.example');
     });
 
     // Стадия 2: узлы этих типов у Clash молча выпадали — `_proxyMapToUri`
@@ -710,6 +715,48 @@ rules:
     // Узел неизвестного типа исчезал молча: подписка на 20 серверов приезжала
     // как 12, и спросить было не о чем.
     test('узлы, которых мы не умеем, считаются по типам', () {
+      // tailscale вырезан из нашей сборки mihomo, brook ядро не знает,
+      // direct и dns служебные: серверами они не становятся
+      const profile = '''
+proxies:
+  - name: "ok"
+    type: vless
+    server: ok.example
+    port: 443
+    uuid: 11111111-2222-3333-4444-555555555555
+  - name: "t1"
+    type: tailscale
+    server: t1.example
+    port: 443
+  - name: "t2"
+    type: tailscale
+    server: t2.example
+    port: 443
+  - name: "b"
+    type: brook
+    server: b.example
+    port: 9999
+  - name: "d"
+    type: direct
+  - name: "dns-out"
+    type: dns
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: ["ok", "t1", "t2", "b"]
+rules:
+  - MATCH,Proxy
+''';
+      expect(SubscriptionService.parseBodyForTest(profile), hasLength(1));
+      expect(
+        SubscriptionService.unsupportedClashNodes(profile),
+        {'tailscale': 2, 'brook': 1, 'direct': 1, 'dns': 1},
+      );
+    });
+
+    // Узлы без своей ссылки (snell, wireguard, masque) выпадали молча, а
+    // профиль из одних таких приезжал одним сервером целиком
+    test('узлы без ссылки становятся серверами mihomo по одному', () {
       const profile = '''
 proxies:
   - name: "ok"
@@ -722,27 +769,63 @@ proxies:
     server: s1.example
     port: 443
     psk: x
-  - name: "s2"
-    type: snell
-    server: s2.example
-    port: 443
-    psk: y
   - name: "w"
     type: wireguard
     server: w.example
     port: 51820
     private-key: k
+  - name: "m"
+    type: masque
+    server: m.example
+    port: 443
+    network: h2
 proxy-groups:
   - name: Proxy
     type: select
-    proxies: ["ok", "s1", "s2", "w"]
+    proxies: ["ok", "s1", "w", "m"]
 rules:
   - MATCH,Proxy
 ''';
-      expect(SubscriptionService.parseBodyForTest(profile), hasLength(1));
+      final configs = SubscriptionService.parseBodyForTest(profile);
+      expect(configs, hasLength(4));
+      expect(configs.first, startsWith('vless://'));
+      for (final (i, name, type) in [
+        (1, 's1', 'snell'),
+        (2, 'w', 'wireguard'),
+        (3, 'm', 'masque'),
+      ]) {
+        final server = ServerItem.fromRaw(configs[i]);
+        expect(server.protocol, 'clash');
+        expect(server.displayName, name);
+        expect(detectServerFormat(configs[i]), ServerFormat.clashYaml);
+        expect(server.clashConfig!.proxies.single['type'], type);
+      }
       expect(
-        SubscriptionService.unsupportedClashNodes(profile),
-        {'snell': 2, 'wireguard': 1},
+        ServerItem.fromRaw(configs[3]).clashConfig!.proxies.single['network'],
+        'h2',
+      );
+      expect(SubscriptionService.unsupportedClashNodes(profile), isEmpty);
+    });
+
+    test('строчный разбор битого YAML не отдаёт ядру узел без ссылки', () {
+      // табы YAML не пускает, узлы достаёт строчный разбор: вложенные карты
+      // он теряет, и wireguard без amnezia-wg-option молча не подключился бы
+      const broken = 'proxies:\n'
+          '\t- name: "ok"\n'
+          '\t\ttype: vless\n'
+          '\t\tserver: ok.example\n'
+          '\t\tport: 443\n'
+          '\t\tuuid: 11111111-2222-3333-4444-555555555555\n'
+          '\t- name: "w"\n'
+          '\t\ttype: wireguard\n'
+          '\t\tserver: w.example\n'
+          '\t\tport: 51820\n';
+      final configs = SubscriptionService.parseBodyForTest(broken);
+      expect(configs, hasLength(1));
+      expect(configs.single, startsWith('vless://'));
+      expect(
+        SubscriptionService.unsupportedClashNodes(broken),
+        {'wireguard': 1},
       );
     });
 

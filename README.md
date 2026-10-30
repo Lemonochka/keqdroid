@@ -116,9 +116,9 @@ For links both cores support, pick the core in **Settings → About**; Xray is t
 | Ready-made Xray config | whole `.json` (paste, file, subscription) |
 | Ready-made Clash config | whole config (paste, file, subscription) |
 
-Hysteria v1 is not supported.
+Hysteria v1 links are not supported; a Hysteria v1 node in a Clash config runs on mihomo.
 
-Clash and sing-box subscriptions are split into servers, one per node. A Clash config that can't be split (`proxy-providers`, unknown node types) is imported as one server and runs on mihomo as is. A node with settings a link can't carry (`ss-opts`, `smux`, a `dialer-proxy` chain, shadow-tls and the like) becomes a server of its own that runs on mihomo as is, so nothing it carries is lost.
+Clash and sing-box configs are split into servers, one per node, whether they come from a subscription, a file or a paste. A Clash config that can't be split (`proxy-providers`, unknown node types) is imported as one server and runs on mihomo as is. A node no link can describe (WireGuard and AmneziaWG, MASQUE, Snell, SSH and the like) or with settings a link can't carry (`ss-opts`, `smux`, a `dialer-proxy` chain, shadow-tls and the like) becomes a server of its own that runs on mihomo as is, so nothing it carries is lost.
 
 A ready-made config keeps its own routing, DNS and outbound chains; only the inbounds are replaced. The server name comes from the root `remarks`. The app's routing lists apply only to traffic the config's own rules don't match. With "Ignore provider rules" on in Routing, the config's rules that send sites direct or block them, and its own catch-all, are dropped, so your routes and "Everything else" decide. Local network addresses always go direct.
 
@@ -344,9 +344,9 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 | Готовый конфиг Xray | `.json` целиком (вставка, файл, подписка) |
 | Готовый конфиг Clash | конфиг целиком (вставка, файл, подписка) |
 
-Hysteria v1 не поддерживается.
+Ссылки Hysteria v1 не поддерживаются; узел Hysteria v1 в конфиге Clash работает на mihomo.
 
-Подписки Clash и sing-box раскладываются на серверы, по одному на узел. Конфиг Clash, который разложить нельзя (`proxy-providers`, неизвестные типы узлов), импортируется одним сервером и работает на mihomo как есть. Узел с настройками, которые ссылка не передаёт (`ss-opts`, `smux`, цепочка `dialer-proxy`, shadow-tls и подобные), становится отдельным сервером и работает на mihomo как есть, без потерь.
+Конфиги Clash и sing-box раскладываются на серверы, по одному на узел, откуда бы они ни пришли: из подписки, файла или вставки. Конфиг Clash, который разложить нельзя (`proxy-providers`, неизвестные типы узлов), импортируется одним сервером и работает на mihomo как есть. Узел, который ссылкой не записать (WireGuard и AmneziaWG, MASQUE, Snell, SSH и подобные), или с настройками, которые ссылка не передаёт (`ss-opts`, `smux`, цепочка `dialer-proxy`, shadow-tls и подобные), становится отдельным сервером и работает на mihomo как есть, без потерь.
 
 Готовый конфиг сохраняет свою маршрутизацию, DNS и цепочки аутбаундов, заменяются только инбаунды. Имя сервера берётся из корневого `remarks`. Списки маршрутизации приложения применяются только к трафику, который не поймали правила самого конфига. Переключатель «Не учитывать правила провайдера» в «Маршрутизации» убирает правила конфига, которые пускают сайты напрямую или блокируют их, и его собственное «всё остальное», и тогда решают ваши маршруты и «Всё остальное». Локальная сеть всегда идёт напрямую.
 
