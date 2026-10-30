@@ -79,10 +79,9 @@ void main() {
 }
 
 class _CountingAdapter implements HttpClientAdapter {
-  _CountingAdapter(this.body, {this.status = 200});
+  _CountingAdapter(this.body);
 
   final String body;
-  final int status;
   int requests = 0;
 
   @override
@@ -98,7 +97,7 @@ class _CountingAdapter implements HttpClientAdapter {
     await Future<void>.delayed(const Duration(milliseconds: 20));
     return ResponseBody.fromString(
       body,
-      status,
+      200,
       headers: {
         'content-type': ['text/plain; charset=utf-8'],
       },
