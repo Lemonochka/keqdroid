@@ -255,4 +255,42 @@ proxies:
       expect(() => jsonEncode(build()), returnsNormally);
     });
   });
+
+  // форма из docs/config/proxies/wg.md mihomo: адрес только у пира
+  group('wireguard с адресом в peers', () {
+    const peers = '''
+proxies:
+- name: "wg"
+  type: wireguard
+  ip: 172.16.0.2
+  private-key: cGFzc3dvcmQtcGFzc3dvcmQtcGFzc3dvcmQtcGFzcw==
+  peers:
+    - server: 203.0.113.60
+      port: 2408
+      public-key: cGFzc3dvcmQtcGFzc3dvcmQtcGFzc3dvcmQtcGFzcw==
+      allowed-ips: ['0.0.0.0/0']
+''';
+
+    test('адрес и порт берутся у первого пира', () {
+      final clash = CustomClashConfig.tryParse(peers);
+      expect(clash, isNotNull);
+      expect(clash!.endpoint, (address: '203.0.113.60', port: 2408));
+      final server = ServerItem.fromRaw(clash.encode());
+      expect(server.address, '203.0.113.60');
+      expect(server.port, 2408);
+    });
+
+    test('адрес пира идёт мимо туннеля', () {
+      Socks5Credentials().init('u', 'p');
+      final session = MihomoConfigGen.build(
+        CustomClashConfig.tryParse(peers)!.encode(),
+        const AppSettings(),
+        socksPort: 2080,
+      );
+      expect(
+        session['rules'] as List,
+        contains(startsWith('IP-CIDR,203.0.113.60/32,DIRECT')),
+      );
+    });
+  });
 }

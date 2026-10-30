@@ -41,6 +41,7 @@ void main() {
     _golden('clash-yaml-broken-node');
     // как docs/example/conf.md mihomo: узлы в провайдере, рядом локальный direct
     _golden('clash-providers-direct');
+    _golden('clash-wireguard-peers');
     _golden('html-pre');
     _golden('html-js-var');
     _golden('xray-json-object');

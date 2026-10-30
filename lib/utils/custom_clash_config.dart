@@ -65,9 +65,8 @@ class CustomClashConfig {
   }
 
   static CustomClashConfig? _fromMap(Map<String, dynamic> map) {
-    if (proxiesOf(map).any((p) =>
-        p['type'] != null &&
-        (p['server']?.toString().trim().isNotEmpty ?? false))) {
+    if (proxiesOf(map)
+        .any((p) => p['type'] != null && serverOf(p).address.isNotEmpty)) {
       return CustomClashConfig._(map);
     }
     if (usesProviderNodes(map)) return CustomClashConfig._(map);
@@ -84,6 +83,22 @@ class CustomClashConfig {
 
   // локальный direct рядом не мешает: так устроен пример docs/example/conf.md самого mihomo
   bool get usesProviders => usesProviderNodes(map);
+
+  // у wireguard адрес бывает только в peers (WireGuardPeerOption в adapter/outbound/wireguard.go)
+  static ({String address, int port}) serverOf(Map<String, dynamic> proxy) {
+    var node = proxy;
+    final peers = proxy['peers'];
+    if ((proxy['server']?.toString().trim() ?? '').isEmpty &&
+        peers is List &&
+        peers.isNotEmpty &&
+        peers.first is Map) {
+      node = (peers.first as Map).cast<String, dynamic>();
+    }
+    return (
+      address: node['server']?.toString().trim() ?? '',
+      port: int.tryParse(node['port']?.toString() ?? '') ?? 0,
+    );
+  }
 
   static String? describeProblem(String raw) {
     final decoded = _decode(raw);
@@ -326,10 +341,8 @@ class CustomClashConfig {
 
   ({String address, int port}) get endpoint {
     for (final proxy in proxies) {
-      final address = proxy['server']?.toString().trim() ?? '';
-      if (address.isEmpty) continue;
-      final port = int.tryParse(proxy['port']?.toString() ?? '') ?? 0;
-      return (address: address, port: port);
+      final server = serverOf(proxy);
+      if (server.address.isNotEmpty) return server;
     }
     return (address: '', port: 0);
   }

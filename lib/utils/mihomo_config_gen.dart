@@ -688,8 +688,8 @@ class MihomoConfigGen {
   // мимо туннеля все узлы, как у xray: обращение к промежуточному закольцевалось бы через цепочку
   static List<String> _serverAddresses(List<Map<String, dynamic>> proxies) => [
         for (final proxy in proxies)
-          if ((proxy['server']?.toString() ?? '').isNotEmpty)
-            proxy['server'].toString(),
+          if (CustomClashConfig.serverOf(proxy).address.isNotEmpty)
+            CustomClashConfig.serverOf(proxy).address,
       ];
 
   static Map<String, dynamic> buildProxy(String link) {

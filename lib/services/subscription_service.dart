@@ -1388,7 +1388,7 @@ class SubscriptionService {
     if (!standalone) return null;
     final type = node['type']?.toString().trim().toLowerCase() ?? '';
     if (!_mihomoOnlyTypes.contains(type)) return null;
-    if ((node['server']?.toString().trim() ?? '').isEmpty) return null;
+    if (CustomClashConfig.serverOf(node).address.isEmpty) return null;
     return _singleNodeClash(node, all);
   }
 
