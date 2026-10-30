@@ -1214,6 +1214,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversImportFile => '导入文件';
 
   @override
+  String get serversImportFileHint => '含服务器链接或配置的文件';
+
+  @override
   String get serversAddServerTitle => '添加服务器';
 
   @override

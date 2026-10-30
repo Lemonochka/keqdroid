@@ -790,7 +790,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
                 ExpressiveActionTile(
                   icon: Icons.description_rounded,
                   title: l10n.serversImportFile,
-                  subtitle: 'AmneziaWG (.conf)',
+                  subtitle: l10n.serversImportFileHint,
                   accent: ExpressiveAccent.secondary,
                   onTap: () {
                     Navigator.pop(ctx2);

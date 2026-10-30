@@ -1218,6 +1218,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversImportFile => 'Import file';
 
   @override
+  String get serversImportFileHint => 'A file with server links or a config';
+
+  @override
   String get serversAddServerTitle => 'Add Server';
 
   @override

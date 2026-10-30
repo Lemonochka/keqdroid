@@ -695,6 +695,7 @@
   "serversPasteLinks": "Вставить ссылку(и)",
   "serversPasteLinksHint": "Ссылки на серверы или конфиг целиком",
   "serversImportFile": "Импорт из файла",
+  "serversImportFileHint": "Файл со ссылками на серверы или конфигом",
   "serversAddServerTitle": "Добавить сервер",
   "serversPasteVlessHint": "По одной ссылке на строку либо конфиг целиком: Xray, Clash, sing-box, AmneziaWG",
   "serversPasteHint": "vless://… или hy2://host:port?auth=…",

@@ -360,6 +360,7 @@
   "serversPasteLinks": "چسباندن لینک",
   "serversPasteLinksHint": "لینک‌های سرور یا کانفیگ کامل",
   "serversImportFile": "وارد کردن از فایل",
+  "serversImportFileHint": "فایل حاوی لینک‌های سرور یا کانفیگ",
   "serversAddServerTitle": "افزودن سرور",
   "serversPasteVlessHint": "در هر خط یک لینک، یا یک کانفیگ کامل: Xray، Clash، sing-box، AmneziaWG",
   "serversPasteHint": "\u200evless://…\u200e یا \u200ehy2://host:port?auth=…\u200e",

@@ -695,6 +695,7 @@
   "serversPasteLinks": "Link(s) einfügen",
   "serversPasteLinksHint": "Serverlinks oder komplette Konfiguration",
   "serversImportFile": "Datei importieren",
+  "serversImportFileHint": "Datei mit Serverlinks oder Konfiguration",
   "serversAddServerTitle": "Server hinzufügen",
   "serversPasteVlessHint": "Ein Link pro Zeile oder eine komplette Konfiguration: Xray, Clash, sing-box, AmneziaWG",
   "serversPasteHint": "vless://… oder hy2://host:port?auth=…",

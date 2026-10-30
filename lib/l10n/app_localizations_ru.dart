@@ -1228,6 +1228,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversImportFile => 'Импорт из файла';
 
   @override
+  String get serversImportFileHint => 'Файл со ссылками на серверы или конфигом';
+
+  @override
   String get serversAddServerTitle => 'Добавить сервер';
 
   @override

@@ -1214,6 +1214,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversImportFile => 'وارد کردن از فایل';
 
   @override
+  String get serversImportFileHint => 'فایل حاوی لینک‌های سرور یا کانفیگ';
+
+  @override
   String get serversAddServerTitle => 'افزودن سرور';
 
   @override

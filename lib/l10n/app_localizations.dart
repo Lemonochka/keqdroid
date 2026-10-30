@@ -2261,6 +2261,12 @@ abstract class AppLocalizations {
   /// **'Import file'**
   String get serversImportFile;
 
+  /// No description provided for @serversImportFileHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A file with server links or a config'**
+  String get serversImportFileHint;
+
   /// No description provided for @serversAddServerTitle.
   ///
   /// In en, this message translates to:
