@@ -2248,21 +2248,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceNotifSubUpdatesTitle => '订阅更新通知';
 
   @override
-  String get tunRememberTitle => '记住授权？';
-
-  @override
-  String get tunRememberMessage => 'TUN 模式需要 root 并且每次都会要求输入密码。是否安装 polkit 规则，使其今后无需密码即可启动？安装时需要输入一次密码。';
-
-  @override
-  String get tunRememberWarning => '此后，以您的用户身份运行的任何程序都能以 root 免密码启动 VPN 内核。可随时在“高级 → 权限”中撤销。';
-
-  @override
-  String get tunRememberEnable => '启用';
-
-  @override
-  String get tunRememberNotNow => '暂不';
-
-  @override
   String get tunRememberInstalled => '已启用免密码 TUN';
 
   @override

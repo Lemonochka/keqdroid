@@ -286,13 +286,6 @@ class _LinuxTunPasswordlessTileState
         ? await LinuxTunnelBackend.installPasswordlessTun()
         : await LinuxTunnelBackend.removePasswordlessTun();
     if (!mounted) return;
-    final current = ref.read(settingsNotifierProvider).value;
-    if (current != null && !current.linuxTunRememberDismissed) {
-      await ref
-          .read(settingsNotifierProvider.notifier)
-          .save(current.copyWith(linuxTunRememberDismissed: true));
-    }
-    if (!mounted) return;
     setState(() {
       _installed = LinuxTunnelBackend.isPasswordlessTunInstalled();
       _busy = false;

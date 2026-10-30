@@ -4265,36 +4265,6 @@ abstract class AppLocalizations {
   /// **'Subscription update notifications'**
   String get appearanceNotifSubUpdatesTitle;
 
-  /// No description provided for @tunRememberTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Remember authorization?'**
-  String get tunRememberTitle;
-
-  /// No description provided for @tunRememberMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'TUN mode needs root and asks for your password each time. Install a polkit rule so it starts without a password from now on? You\'ll be asked for your password once to install it.'**
-  String get tunRememberMessage;
-
-  /// No description provided for @tunRememberWarning.
-  ///
-  /// In en, this message translates to:
-  /// **'After this, any program running as your user can start the VPN core as root without a password. You can undo it anytime in Advanced → Permissions.'**
-  String get tunRememberWarning;
-
-  /// No description provided for @tunRememberEnable.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable'**
-  String get tunRememberEnable;
-
-  /// No description provided for @tunRememberNotNow.
-  ///
-  /// In en, this message translates to:
-  /// **'Not now'**
-  String get tunRememberNotNow;
-
   /// No description provided for @tunRememberInstalled.
   ///
   /// In en, this message translates to:

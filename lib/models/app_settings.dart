@@ -84,7 +84,6 @@ class AppSettings {
   final bool showSpeedInNotification;
   final bool showUptimeInNotification;
   final bool notifySubscriptionUpdates;
-  final bool linuxTunRememberDismissed;
 
   final double uiScale;
 
@@ -157,7 +156,6 @@ class AppSettings {
     this.showSpeedInNotification = true,
     this.showUptimeInNotification = true,
     this.notifySubscriptionUpdates = true,
-    this.linuxTunRememberDismissed = false,
     this.uiScale = 1.0,
   });
 
@@ -222,7 +220,6 @@ class AppSettings {
     'showSpeedInNotification': showSpeedInNotification,
     'showUptimeInNotification': showUptimeInNotification,
     'notifySubscriptionUpdates': notifySubscriptionUpdates,
-    'linuxTunRememberDismissed': linuxTunRememberDismissed,
     'uiScale': uiScale,
   };
 
@@ -322,8 +319,6 @@ class AppSettings {
           json['showUptimeInNotification'] as bool? ?? true,
       notifySubscriptionUpdates:
           json['notifySubscriptionUpdates'] as bool? ?? true,
-      linuxTunRememberDismissed:
-          json['linuxTunRememberDismissed'] as bool? ?? false,
       // из отредактированного руками бэкапа может приехать и строка
       uiScale: clampUiScale(
         json['uiScale'] is num ? (json['uiScale'] as num).toDouble() : 1.0,
@@ -486,7 +481,6 @@ class AppSettings {
     bool? showSpeedInNotification,
     bool? showUptimeInNotification,
     bool? notifySubscriptionUpdates,
-    bool? linuxTunRememberDismissed,
     double? uiScale,
   }) =>
       AppSettings(
@@ -556,8 +550,6 @@ class AppSettings {
             showUptimeInNotification ?? this.showUptimeInNotification,
         notifySubscriptionUpdates:
             notifySubscriptionUpdates ?? this.notifySubscriptionUpdates,
-        linuxTunRememberDismissed:
-            linuxTunRememberDismissed ?? this.linuxTunRememberDismissed,
         uiScale: clampUiScale(uiScale ?? this.uiScale),
       );
 
@@ -635,7 +627,6 @@ class AppSettings {
               showSpeedInNotification == other.showSpeedInNotification &&
               showUptimeInNotification == other.showUptimeInNotification &&
               notifySubscriptionUpdates == other.notifySubscriptionUpdates &&
-              linuxTunRememberDismissed == other.linuxTunRememberDismissed &&
               uiScale == other.uiScale &&
               _hotkeysEqual(hotkeys, other.hotkeys);
 
@@ -709,7 +700,6 @@ class AppSettings {
     showSpeedInNotification,
     showUptimeInNotification,
     notifySubscriptionUpdates,
-    linuxTunRememberDismissed,
     uiScale,
     Object.hashAll(
       (hotkeys.entries.toList()

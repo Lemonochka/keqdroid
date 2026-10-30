@@ -54,7 +54,6 @@ const _machineLocalKeys = <String>{
   'launchAtStartupElevated',
   'autostartInTray',
   'hotkeys',
-  'linuxTunRememberDismissed',
   // Состояние отладки, а не настройка: перевезти включённый debug на чистую
   // машину — это подарить себе многословные логи и вопрос «почему так».
   'debugMode',

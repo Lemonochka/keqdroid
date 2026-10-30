@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:keqdroid/shared/ui/expressive.dart';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show mapEquals;
@@ -27,7 +26,6 @@ import '../../services/update_service.dart';
 import '../../services/vpn_engine.dart';
 import '../../services/windows_desktop_service.dart';
 import '../../services/windows_tray_menu.dart';
-import '../../tunnel/linux_tunnel_backend.dart';
 import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/halloween/halloween_icons.dart';
 import '../../shared/ui/update_dialog.dart';
@@ -48,8 +46,6 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   int _index = 0;
   bool _startupTasksDone = false;
   bool _startupConnectInFlight = false;
-  StreamSubscription<void>? _tunRememberSub;
-  bool _tunRememberDialogOpen = false;
 
   @override
   void initState() {
@@ -60,9 +56,6 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       LinuxBackgroundService.instance.onQuit = _disconnectForQuit;
       LinuxBackgroundService.instance.uiVisible
           .addListener(_onLinuxWindowVisibility);
-      _tunRememberSub = linuxTunRememberOffers.listen((_) {
-        if (mounted) unawaited(_maybeOfferTunRemember());
-      });
     }
     VpnNativeBridge.registerAutostartHandler(
       () => _maybeAutostartConnect(force: true),
@@ -326,100 +319,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     }
   }
 
-  Future<void> _maybeOfferTunRemember() async {
-    if (!Platform.isLinux || _tunRememberDialogOpen) return;
-    if (LinuxTunnelBackend.isPasswordlessTunInstalled()) return;
-    final settings = await ref.read(storageProvider).getSettings();
-    if (settings.linuxTunRememberDismissed) return;
-    if (!mounted) return;
-
-    _tunRememberDialogOpen = true;
-    final l10n = AppLocalizations.of(context)!;
-    final enable = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.card(ctx),
-        title: Row(
-          children: [
-            Icon(Icons.lock_open_rounded, color: AppTheme.accent(ctx), size: 26),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                l10n.tunRememberTitle,
-                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(color: AppTheme.text(ctx)),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.tunRememberMessage,
-              style: TextStyle(color: AppTheme.textLight(ctx), height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.tunRememberWarning,
-              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(ctx), height: 1.4),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              l10n.tunRememberNotNow,
-              style: TextStyle(color: AppTheme.textLight(ctx)),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentContainer(ctx),
-              foregroundColor: AppTheme.onAccentContainer(ctx),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              l10n.tunRememberEnable,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-    _tunRememberDialogOpen = false;
-    if (!mounted) return;
-
-    // отметку до установки, чтобы отказ тоже запомнился
-    final current = ref.read(settingsNotifierProvider).value;
-    if (current != null) {
-      await ref
-          .read(settingsNotifierProvider.notifier)
-          .save(current.copyWith(linuxTunRememberDismissed: true));
-    }
-
-    if (enable != true || !mounted) return;
-
-    final ok = await LinuxTunnelBackend.installPasswordlessTun();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ok ? l10n.tunRememberInstalled : l10n.tunRememberFailed),
-        backgroundColor: ok ? AppTheme.green(context) : AppTheme.red(context),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onGlobalKey);
-    unawaited(_tunRememberSub?.cancel());
     if (Platform.isLinux) {
       LinuxBackgroundService.instance.onQuit = null;
       LinuxBackgroundService.instance.uiVisible

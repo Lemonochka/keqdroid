@@ -2248,21 +2248,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appearanceNotifSubUpdatesTitle => 'اعلان به‌روزرسانی اشتراک';
 
   @override
-  String get tunRememberTitle => 'اجازه به خاطر سپرده شود؟';
-
-  @override
-  String get tunRememberMessage => 'حالت TUN به دسترسی root نیاز دارد و هر بار رمز شما را می‌پرسد. یک قانون polkit نصب شود تا از این به بعد بدون رمز اجرا شود؟ برای نصب آن یک بار رمزتان پرسیده می‌شود.';
-
-  @override
-  String get tunRememberWarning => 'بعد از این، هر برنامه‌ای که با کاربر شما اجرا شود می‌تواند هستهٔ VPN را بدون رمز با دسترسی root اجرا کند. هر وقت خواستید می‌توانید از «پیشرفته ← دسترسی‌ها» برش گردانید.';
-
-  @override
-  String get tunRememberEnable => 'فعال‌سازی';
-
-  @override
-  String get tunRememberNotNow => 'فعلاً نه';
-
-  @override
   String get tunRememberInstalled => 'TUN بدون رمز فعال شد';
 
   @override

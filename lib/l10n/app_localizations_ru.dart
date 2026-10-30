@@ -2262,21 +2262,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appearanceNotifSubUpdatesTitle => 'Уведомлять об обновлении подписок';
 
   @override
-  String get tunRememberTitle => 'Запомнить авторизацию?';
-
-  @override
-  String get tunRememberMessage => 'Режим TUN требует root и спрашивает пароль при каждом запуске. Установить правило polkit, чтобы дальше запускалось без пароля? Один раз потребуется ввести пароль для установки.';
-
-  @override
-  String get tunRememberWarning => 'После этого любая программа под вашим пользователем сможет запускать ядро VPN под root без пароля. Отключить можно в «Дополнительно → Разрешения».';
-
-  @override
-  String get tunRememberEnable => 'Включить';
-
-  @override
-  String get tunRememberNotNow => 'Не сейчас';
-
-  @override
   String get tunRememberInstalled => 'Беспарольный TUN включён';
 
   @override

@@ -2252,21 +2252,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appearanceNotifSubUpdatesTitle => 'Benachrichtigungen zu Abonnement-Updates';
 
   @override
-  String get tunRememberTitle => 'Autorisierung merken?';
-
-  @override
-  String get tunRememberMessage => 'Der TUN-Modus benötigt Root und fragt jedes Mal nach deinem Passwort. Eine polkit-Regel installieren, damit er künftig ohne Passwort startet? Zur Installation wirst du einmal nach dem Passwort gefragt.';
-
-  @override
-  String get tunRememberWarning => 'Danach kann jedes unter deinem Benutzer laufende Programm den VPN-Kern ohne Passwort als Root starten. Rückgängig machen kannst du das jederzeit unter „Erweitert → Berechtigungen“.';
-
-  @override
-  String get tunRememberEnable => 'Aktivieren';
-
-  @override
-  String get tunRememberNotNow => 'Nicht jetzt';
-
-  @override
   String get tunRememberInstalled => 'TUN ohne Passwort aktiviert';
 
   @override

@@ -2252,21 +2252,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceNotifSubUpdatesTitle => 'Subscription update notifications';
 
   @override
-  String get tunRememberTitle => 'Remember authorization?';
-
-  @override
-  String get tunRememberMessage => 'TUN mode needs root and asks for your password each time. Install a polkit rule so it starts without a password from now on? You\'ll be asked for your password once to install it.';
-
-  @override
-  String get tunRememberWarning => 'After this, any program running as your user can start the VPN core as root without a password. You can undo it anytime in Advanced → Permissions.';
-
-  @override
-  String get tunRememberEnable => 'Enable';
-
-  @override
-  String get tunRememberNotNow => 'Not now';
-
-  @override
   String get tunRememberInstalled => 'Passwordless TUN enabled';
 
   @override

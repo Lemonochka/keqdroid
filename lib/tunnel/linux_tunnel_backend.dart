@@ -28,17 +28,14 @@ import 'tunnel_state.dart';
 import 'vpn_backend.dart';
 import 'xray_desktop_config.dart';
 
-final StreamController<void> _linuxTunRememberController =
-    StreamController<void>.broadcast();
-Stream<void> get linuxTunRememberOffers => _linuxTunRememberController.stream;
-
 class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   static const tunInterfaceName = 'tun-keqdis';
 
   // pkexec не держит наш pipe, причину падения ядра видно только из файла.
-  // в каталоге сессии (0700), а не в /tmp: root создаёт его 0644, а в логе адреса серверов
-  String get _coreLogPath =>
-      _sessionDir == null ? '' : p.join(_sessionDir!.path, 'core.log');
+  // root пишет только в свой каталог: в нашем каталоге сессии ссылка вместо файла увела бы запись куда угодно
+  static String get _rootRunDir => '$_runRootDir/${linuxRealUid()}';
+
+  String get _coreLogPath => p.join(_rootRunDir, 'core.log');
 
   // по mtime отличаем свежий лог от прошлой сессии: при падении самого pkexec файл не обнулён
   DateTime? _rootCoreLaunchedAt;
@@ -378,8 +375,10 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   static const _trustedCoresDir = '/usr/local/lib/keqdroid/cores';
 
-  // хелпер без метки запускал от root любой бинарь из аргумента
-  static const _helperVersionMark = '[wrap v5';
+  static const _runRootDir = '/run/keqdroid';
+
+  // v5 и старше обнуляли от root любой файл из аргумента, поэтому такой хелпер считается неустановленным
+  static const _helperVersionMark = '[wrap v6';
 
   static const _untrustedCoreExit = 4;
 
@@ -395,49 +394,75 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   @visibleForTesting
   static const helperVersionMarkForTest = _helperVersionMark;
 
-  static bool _rememberOfferedThisRun = false;
-
-  // хелпер без пароля запускает только ядро, байт в байт совпавшее с доверенной копией, и запускает саму копию.
-  // слот keqrnel в теле обёртки v5 зашит, с переезда в нём лежит xray
-  // modprobe tun здесь: это единственное место, где мы root, а без модуля нет /dev/net/tun
-  static const _tunWrapperBody = r'''SB="$1"; CFG="$2"; GEO="$3"; LOGF="$4"; SENT="$5"; APPPID="$6"; AUTHF="$7"; KIND="$8"
+  // беспарольный хелпер может позвать любая программа пользователя, поэтому названное в аргументах читается его правами,
+  // а root пишет только в свой /run/keqdroid/<uid>. журнал отдан владельцу 0600: в нём адреса серверов.
+  // ядро без пароля только доверенная копия и под systemd с ProtectSystem=strict: подсунутый конфиг не допишет файлы мимо RUN
+  static const _tunWrapperBody = r'''umask 022
+SB="$1"; CFG="$2"; GEO="$3"; SENT="$4"; APPPID="$5"; KIND="$6"
 HELPER=/usr/local/lib/keqdroid/core-tun-root
 CORES=/usr/local/lib/keqdroid/cores
-NAME=keqrnel
-[ "$KIND" = "mihomo" ] && NAME=mihomo
-if [ "$0" = "$HELPER" ]; then
-  [ "$(sha256sum <"$SB")" = "$(sha256sum <"$CORES/$NAME")" ] || exit 4
-  SB="$CORES/$NAME"
-elif grep -q '\[wrap v5' "$HELPER" 2>/dev/null; then
-  mkdir -p "$CORES" && install -m 0755 "$SB" "$CORES/$NAME"
-elif [ -f "$HELPER" ]; then
+case "$KIND" in xray) NAME=keqrnel; EXT=json ;; mihomo) NAME=mihomo; EXT=yaml ;; *) exit 5 ;; esac
+case "$APPPID" in ''|*[!0-9]*) exit 5 ;; esac
+OWNER="${PKEXEC_UID:-$(id -u)}"
+case "$OWNER" in ''|*[!0-9]*) exit 5 ;; esac
+if command -v setpriv >/dev/null 2>&1; then
+  GID=$(getent passwd "$OWNER" | cut -d: -f4)
+  case "$GID" in ''|*[!0-9]*) exit 5 ;; esac
+  as_owner() { setpriv --reuid="$OWNER" --regid="$GID" --clear-groups "$@"; }
+elif [ "$0" = "$HELPER" ]; then
+  exit 5
+else
+  as_owner() { "$@"; }
+fi
+if [ "$0" != "$HELPER" ] && [ -f "$HELPER" ] && ! grep -q '\[wrap v6' "$HELPER"; then
   rm -f "$HELPER" /usr/local/lib/keqdroid/keqrnel-tun-root /etc/polkit-1/rules.d/49-keqdroid-tun.rules
 fi
-: >"$LOGF"
-: >"$AUTHF"
-echo "[wrap v5 sentinel] start KIND=$KIND SENT=$SENT exists=$([ -e "$SENT" ] && echo y || echo n) APPPID=$APPPID app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+RUN=/run/keqdroid/$OWNER
+UNIT=keqdroid-core-$OWNER
+SANDBOX=
+[ -d /run/systemd/system ] && command -v systemd-run >/dev/null 2>&1 && SANDBOX=1
+[ -n "$SANDBOX" ] && { systemctl stop "$UNIT"; systemctl reset-failed "$UNIT"; } >/dev/null 2>&1
+mkdir -p /run/keqdroid && rm -rf "$RUN" && mkdir -m 0755 "$RUN" "$RUN/home" || exit 5
+LOGF=$RUN/core.log
+: >"$LOGF" && chown "$OWNER" "$LOGF" && chmod 0600 "$LOGF" || exit 5
+if [ "$0" = "$HELPER" ]; then
+  [ "$(as_owner cat -- "$SB" | sha256sum)" = "$(sha256sum <"$CORES/$NAME")" ] || exit 4
+  SB=$CORES/$NAME
+fi
+CONF=$RUN/config.$EXT
+as_owner cat -- "$CFG" >"$CONF" || exit 5
+for f in geoip.dat geosite.dat; do
+  [ -n "$GEO" ] && as_owner test -f "$GEO/$f" && as_owner cat -- "$GEO/$f" >"$RUN/home/$f"
+done
+: >"$RUN/core.auth"
+echo "[wrap v6] start KIND=$KIND sandbox=${SANDBOX:-no} app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n)" >>"$LOGF"
 if [ ! -e /dev/net/tun ]; then
   echo "[wrap] /dev/net/tun missing, loading module" >>"$LOGF"
   modprobe tun >>"$LOGF" 2>&1 || echo "[wrap] modprobe tun failed" >>"$LOGF"
 fi
-if [ "$KIND" = "mihomo" ]; then
-  "$SB" -d "$GEO" -f "$CFG" >>"$LOGF" 2>&1 &
+if [ "$KIND" = mihomo ]; then
+  set -- "$SB" -d "$RUN/home" -f "$CONF"
 else
-  if [ -n "$GEO" ]; then export XRAY_LOCATION_ASSET="$GEO"; fi
-  "$SB" run -c "$CFG" >>"$LOGF" 2>&1 &
+  set -- "$SB" run -c "$CONF"
+fi
+if [ -n "$SANDBOX" ]; then
+  systemd-run --quiet --collect --wait --pipe --unit="$UNIT" -p ProtectSystem=strict -p ProtectHome=read-only -p ReadWritePaths="$RUN" --setenv=XRAY_LOCATION_ASSET="$RUN/home" "$@" >>"$LOGF" 2>&1 &
+else
+  XRAY_LOCATION_ASSET="$RUN/home" "$@" >>"$LOGF" 2>&1 &
 fi
 sb=$!
 while [ -e "$SENT" ] && kill -0 "$APPPID" 2>/dev/null; do
   kill -0 "$sb" 2>/dev/null || break
   sleep 1
 done
-echo "[wrap v5 sentinel] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) sb=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+echo "[wrap v6] stop sent=$([ -e "$SENT" ] && echo y || echo n) app=$(kill -0 "$APPPID" 2>/dev/null && echo y || echo n) core=$(kill -0 "$sb" 2>/dev/null && echo y || echo n)" >>"$LOGF"
+[ -n "$SANDBOX" ] && systemctl stop "$UNIT" >/dev/null 2>&1
 kill -TERM "$sb" 2>/dev/null
 wait "$sb"
 ''';
 
   static const _polkitRuleContent =
-      '''// keqdroid: passwordless authorization for TUN mode (installed on user request).
+      '''// keqdroid: passwordless authorization for TUN mode.
 // Removing this file restores the password prompt on every TUN connect.
 polkit.addRule(function(action, subject) {
     if (action.id == "org.freedesktop.policykit.exec" &&
@@ -460,8 +485,21 @@ polkit.addRule(function(action, subject) {
     }
   }
 
-  static Future<bool> installPasswordlessTun() async {
+  // отказ хранится файлом у данных приложения: он про эту машину, в резервную копию на другой компьютер ехать не должен
+  static Future<File> _passwordlessOffMarker() async => File(p.join(
+      (await getApplicationSupportDirectory()).path, 'tun_password_always'));
+
+  static Future<bool> passwordlessTunDeclined() async {
     if (!Platform.isLinux) return false;
+    try {
+      return (await _passwordlessOffMarker()).existsSync();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // с runAfter тот же root сразу запускает ядро через новый хелпер: один пароль на установку и подключение
+  static Future<String> _installScript({required bool runAfter}) async {
     final helper = '#!/bin/sh\n$_tunWrapperBody';
     final cores = <String, String?>{
       'keqrnel': await LinuxCorePaths.xrayExecutable(),
@@ -472,8 +510,9 @@ polkit.addRule(function(action, subject) {
         if (value != null)
           "install -m 0755 ${_shellQuote(value)} '$_trustedCoresDir/$key'",
     ].join('\n');
+    final run = runAfter ? "set +e\nexec '$_polkitHelperPath' \"\$@\"\n" : '';
     // <<'EOF' в кавычках: $1 и $(...) пишутся в файл буквально
-    final script = '''
+    return '''
 set -e
 mkdir -p /usr/local/lib/keqdroid '$_trustedCoresDir'
 rm -f '$_legacyPolkitHelperPath'
@@ -489,16 +528,30 @@ $_polkitRuleContent
 KEQDROID_RULE_EOF
 chmod 0644 '$_polkitRulePath'
 chown root:root '$_polkitRulePath' 2>/dev/null || true
-''';
+$run''';
+  }
+
+  @visibleForTesting
+  static Future<String> installScriptForTest({required bool runAfter}) =>
+      _installScript(runAfter: runAfter);
+
+  static Future<bool> installPasswordlessTun() async {
+    if (!Platform.isLinux) return false;
     try {
-      final res = await Process.run('pkexec', ['sh', '-c', script]);
+      final res = await Process.run(
+        'pkexec',
+        ['sh', '-c', await _installScript(runAfter: false)],
+      );
       if (res.exitCode != 0) {
         AppLogger.instance.warn(
           'installPasswordlessTun failed: code=${res.exitCode} '
           'err=${res.stderr}',
         );
+        return false;
       }
-      return res.exitCode == 0;
+      final marker = await _passwordlessOffMarker();
+      if (marker.existsSync()) await marker.delete();
+      return true;
     } catch (e, st) {
       AppLogger.instance
           .error('installPasswordlessTun error', error: e, stackTrace: st);
@@ -513,7 +566,11 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
         "rm -rf '$_trustedCoresDir'";
     try {
       final res = await Process.run('pkexec', ['sh', '-c', script]);
-      return res.exitCode == 0;
+      if (res.exitCode != 0) return false;
+      final marker = await _passwordlessOffMarker();
+      await marker.parent.create(recursive: true);
+      await marker.writeAsString('1');
+      return true;
     } catch (e, st) {
       AppLogger.instance
           .error('removePasswordlessTun error', error: e, stackTrace: st);
@@ -545,7 +602,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
       binPath: rootBin,
       configPath: configFile.path,
       geoOrHomeDir: rootGeoDir ?? '',
-      kind: '',
+      kind: 'xray',
       label: 'xray',
       log: _rootLog,
       onStarted: (p) => _rootXrayProcess = p,
@@ -655,27 +712,31 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
     final sentinelFile = File(p.join(_sessionDir!.path, 'core.run'));
     await sentinelFile.writeAsString('1');
     _rootSentinel = sentinelFile;
-    // маркер создаёт обёртка сразу после polkit: по нему отличаем ввод пароля от старта ядра
-    final authMarker = File(p.join(_sessionDir!.path, 'core.auth'));
+    // маркер создаёт обёртка сразу после polkit: по нему отличаем ввод пароля от старта ядра.
+    // каталог переживает сессию, поэтому маркер прошлой отсекаем по времени
+    final authMarker = File(p.join(_rootRunDir, 'core.auth'));
     _rootCoreLaunchedAt = DateTime.now();
 
-    // позиции аргументов это контракт с телом обёртки, менять только вместе с путём хелпера
+    // позиции аргументов это контракт с телом обёртки, менять только вместе с меткой версии хелпера
     final coreArgs = <String>[
       binPath,
       configPath,
       geoOrHomeDir,
-      _coreLogPath,
       sentinelFile.path,
       '$pid',
-      authMarker.path,
       kind,
     ];
+    final asRoot = runningAsRoot();
     final usePasswordless = allowPasswordless && isPasswordlessTunInstalled();
+    final installNow =
+        !asRoot && !usePasswordless && !await passwordlessTunDeclined();
     final launch = planElevation(
       coreArgs: coreArgs,
-      wrapperBody: _tunWrapperBody,
+      wrapperBody: installNow
+          ? await _installScript(runAfter: true)
+          : _tunWrapperBody,
       helperPath: _polkitHelperPath,
-      asRoot: runningAsRoot(),
+      asRoot: asRoot,
       passwordless: usePasswordless,
     );
     if (launch.viaPkexec && LinuxCorePaths.findPkexec() == null) {
@@ -726,13 +787,6 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
         allowPasswordless: false,
       );
     }
-
-    if (launch.viaPkexec && !usePasswordless && !_rememberOfferedThisRun) {
-      _rememberOfferedThisRun = true;
-      if (!_linuxTunRememberController.isClosed) {
-        _linuxTunRememberController.add(null);
-      }
-    }
     return process;
   }
 
@@ -767,7 +821,7 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
         if (code == untrustedCoreExit) return false;
         throw VpnStartException(_elevationError(code, log));
       }
-      if (authMarker.existsSync()) return true;
+      if (_freshSince(authMarker, _rootCoreLaunchedAt)) return true;
       if (await _tunInterfaceExists()) return true;
       await Future<void>.delayed(const Duration(milliseconds: 300));
     }
@@ -851,6 +905,19 @@ chown root:root '$_polkitRulePath' 2>/dev/null || true
         }
         return 'The tunnel core exited with code $code (TUN/elevation failed?).\n'
             '$detail';
+    }
+  }
+
+  // секунда запаса: у tmpfs время файла и наши часы могут разойтись на доли секунды
+  static bool _freshSince(File file, DateTime? since) {
+    try {
+      if (!file.existsSync()) return false;
+      if (since == null) return true;
+      return !file
+          .lastModifiedSync()
+          .isBefore(since.subtract(const Duration(seconds: 1)));
+    } catch (_) {
+      return false;
     }
   }
 
