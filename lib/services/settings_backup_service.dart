@@ -165,6 +165,7 @@ class SettingsBackupService {
     'waveLatencyColor',
     'showSpeedInNotification',
     'showUptimeInNotification',
+    'updatePromptDays',
     'appLanguageCode',
   };
 

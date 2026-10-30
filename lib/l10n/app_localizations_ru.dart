@@ -1432,6 +1432,29 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get settingsBehaviourTitle => 'Поведение';
+
+  @override
+  String settingsBehaviourSubtitle(Object interval) {
+    return 'Обновления: $interval';
+  }
+
+  @override
+  String get behaviourUpdatesSection => 'Обновления приложения';
+
+  @override
+  String get behaviourUpdatePrompt => 'Сообщать о новой версии';
+
+  @override
+  String get behaviourEveryDay => 'Каждый день';
+
+  @override
+  String get behaviourEvery3Days => 'Раз в 3 дня';
+
+  @override
+  String get behaviourEveryWeek => 'Раз в неделю';
+
+  @override
   String get settingsLanguageSystem => 'Как в системе';
 
   @override

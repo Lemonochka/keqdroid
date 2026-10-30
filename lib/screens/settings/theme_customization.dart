@@ -294,32 +294,6 @@ class _AppearanceGeneralTab extends ConsumerWidget {
               ],
             ),
           ],
-          ExpressiveSectionHeader(l10n.appearanceNotifSectionTitle),
-          ExpressiveGroup(
-            children: [
-              _AppearanceSwitchTile(
-                icon: Icons.speed_rounded,
-                title: l10n.appearanceNotifSpeedTitle,
-                value: current.showSpeedInNotification,
-                onChanged: (v) =>
-                    onSave(current.copyWith(showSpeedInNotification: v)),
-              ),
-              _AppearanceSwitchTile(
-                icon: Icons.timer_outlined,
-                title: l10n.appearanceNotifUptimeTitle,
-                value: current.showUptimeInNotification,
-                onChanged: (v) =>
-                    onSave(current.copyWith(showUptimeInNotification: v)),
-              ),
-              _AppearanceSwitchTile(
-                icon: Icons.sync_rounded,
-                title: l10n.appearanceNotifSubUpdatesTitle,
-                value: current.notifySubscriptionUpdates,
-                onChanged: (v) =>
-                    onSave(current.copyWith(notifySubscriptionUpdates: v)),
-              ),
-            ],
-          ),
           const SizedBox(height: 8),
         ],
       ),

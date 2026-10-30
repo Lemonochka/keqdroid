@@ -2645,6 +2645,48 @@ abstract class AppLocalizations {
   /// **'{language}'**
   String settingsLanguageSubtitle(Object language);
 
+  /// No description provided for @settingsBehaviourTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Behaviour'**
+  String get settingsBehaviourTitle;
+
+  /// No description provided for @settingsBehaviourSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates: {interval}'**
+  String settingsBehaviourSubtitle(Object interval);
+
+  /// No description provided for @behaviourUpdatesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'App updates'**
+  String get behaviourUpdatesSection;
+
+  /// No description provided for @behaviourUpdatePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell me about a new version'**
+  String get behaviourUpdatePrompt;
+
+  /// No description provided for @behaviourEveryDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Every day'**
+  String get behaviourEveryDay;
+
+  /// No description provided for @behaviourEvery3Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Every 3 days'**
+  String get behaviourEvery3Days;
+
+  /// No description provided for @behaviourEveryWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Every week'**
+  String get behaviourEveryWeek;
+
   /// No description provided for @settingsLanguageSystem.
   ///
   /// In en, this message translates to:

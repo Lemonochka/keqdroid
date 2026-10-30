@@ -1418,6 +1418,29 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get settingsBehaviourTitle => '行为';
+
+  @override
+  String settingsBehaviourSubtitle(Object interval) {
+    return '更新：$interval';
+  }
+
+  @override
+  String get behaviourUpdatesSection => '应用更新';
+
+  @override
+  String get behaviourUpdatePrompt => '提示新版本';
+
+  @override
+  String get behaviourEveryDay => '每天';
+
+  @override
+  String get behaviourEvery3Days => '每 3 天';
+
+  @override
+  String get behaviourEveryWeek => '每周';
+
+  @override
   String get settingsLanguageSystem => '系统默认';
 
   @override

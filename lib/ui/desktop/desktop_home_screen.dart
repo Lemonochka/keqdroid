@@ -382,7 +382,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       if (info == null) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        showUpdateDialog(context, info);
+        final days = ref.read(settingsNotifierProvider).value?.updatePromptDays ??
+            const AppSettings().updatePromptDays;
+        unawaited(autoPromptForUpdate(context, info, days: days));
       });
     });
 

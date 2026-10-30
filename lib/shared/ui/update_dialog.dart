@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:keqdroid/shared/extensions/build_context_l10n.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/providers.dart';
 import '../../services/resume_after_update.dart';
@@ -20,6 +21,39 @@ class UpdatePrompt {
 
   static void markShown(String version) =>
       promptedVersionThisSession = version;
+
+  static const _prefAutoPromptedAt = 'update_auto_prompted_at';
+
+  // проверка обновлений идёт как раньше, реже только окно: иначе карточка версии называла бы старую версию актуальной.
+  // часы ушли назад, значит отметке верить нельзя
+  static Future<bool> autoPromptDue(int days) async {
+    final prefs = await SharedPreferences.getInstance();
+    final last = prefs.getInt(_prefAutoPromptedAt);
+    if (last == null) return true;
+    final since =
+        DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(last));
+    return since.isNegative || since >= Duration(days: days);
+  }
+
+  static Future<void> markAutoPrompted() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+      _prefAutoPromptedAt,
+      DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+}
+
+Future<void> autoPromptForUpdate(
+  BuildContext context,
+  UpdateInfo info, {
+  required int days,
+}) async {
+  if (!await UpdatePrompt.autoPromptDue(days)) return;
+  if (!context.mounted) return;
+  await UpdatePrompt.markAutoPrompted();
+  if (!context.mounted) return;
+  await showUpdateDialog(context, info);
 }
 
 bool shouldAutoPromptForUpdate(

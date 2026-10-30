@@ -791,6 +791,13 @@
       "language": {}
     }
   },
+  "settingsBehaviourTitle": "Поведение",
+  "settingsBehaviourSubtitle": "Обновления: {interval}",
+  "behaviourUpdatesSection": "Обновления приложения",
+  "behaviourUpdatePrompt": "Сообщать о новой версии",
+  "behaviourEveryDay": "Каждый день",
+  "behaviourEvery3Days": "Раз в 3 дня",
+  "behaviourEveryWeek": "Раз в неделю",
   "settingsLanguageSystem": "Как в системе",
   "settingsLanguageEnglish": "English",
   "settingsLanguageRussian": "Русский",

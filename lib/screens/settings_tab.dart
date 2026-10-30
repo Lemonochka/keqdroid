@@ -96,6 +96,7 @@ part 'settings/advanced_settings.dart';
 part 'settings/app_internals.dart';
 part 'settings/app_log.dart';
 part 'settings/backup_restore.dart';
+part 'settings/behaviour_settings.dart';
 part 'settings/connections.dart';
 part 'settings/custom_color_sheet.dart';
 part 'settings/debug_and_logs.dart';
@@ -156,6 +157,7 @@ class SettingsTab extends ConsumerWidget {
                         children: [
                           _ThemeCustomizationCard(settingsAsync: settingsAsync),
                           _LanguageSettingsCard(settingsAsync: settingsAsync),
+                          _BehaviourSettingsCard(settingsAsync: settingsAsync),
                         ],
                       ),
                       const SizedBox(height: 16),

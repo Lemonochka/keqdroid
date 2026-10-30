@@ -1422,6 +1422,29 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingsBehaviourTitle => 'Behaviour';
+
+  @override
+  String settingsBehaviourSubtitle(Object interval) {
+    return 'Updates: $interval';
+  }
+
+  @override
+  String get behaviourUpdatesSection => 'App updates';
+
+  @override
+  String get behaviourUpdatePrompt => 'Tell me about a new version';
+
+  @override
+  String get behaviourEveryDay => 'Every day';
+
+  @override
+  String get behaviourEvery3Days => 'Every 3 days';
+
+  @override
+  String get behaviourEveryWeek => 'Every week';
+
+  @override
   String get settingsLanguageSystem => 'System default';
 
   @override

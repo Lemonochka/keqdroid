@@ -791,6 +791,13 @@
       "language": {}
     }
   },
+  "settingsBehaviourTitle": "Verhalten",
+  "settingsBehaviourSubtitle": "Updates: {interval}",
+  "behaviourUpdatesSection": "App-Updates",
+  "behaviourUpdatePrompt": "Über neue Versionen informieren",
+  "behaviourEveryDay": "Täglich",
+  "behaviourEvery3Days": "Alle 3 Tage",
+  "behaviourEveryWeek": "Wöchentlich",
   "settingsLanguageSystem": "Systemsprache",
   "settingsLanguageEnglish": "English",
   "settingsLanguageRussian": "Русский",

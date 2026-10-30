@@ -70,6 +70,7 @@ class AppSettings {
   final Map<String, String> hotkeys;
   final bool serversTwoColumns;
   final int serversColumns;
+  final int updatePromptDays;
   final bool modernConnectPanel;
   final String bottomBarStyle;
   final bool desktopRailExpanded;
@@ -94,6 +95,9 @@ class AppSettings {
       v.isFinite ? v.clamp(minUiScale, maxUiScale) : 1.0;
 
   static int normalizeServersColumns(Object? v) => v == 3 ? 3 : 2;
+
+  static int normalizeUpdatePromptDays(Object? v) =>
+      v is num && (v == 1 || v == 7) ? v.toInt() : 3;
 
   const AppSettings({
     this.localPort = 2080,
@@ -143,6 +147,7 @@ class AppSettings {
     this.hotkeys = const {},
     this.serversTwoColumns = false,
     this.serversColumns = 2,
+    this.updatePromptDays = 3,
     this.modernConnectPanel = false,
     this.bottomBarStyle = bottomBarModern,
     this.desktopRailExpanded = true,
@@ -207,6 +212,7 @@ class AppSettings {
     'hotkeys': hotkeys,
     'serversTwoColumns': serversTwoColumns,
     'serversColumns': serversColumns,
+    'updatePromptDays': updatePromptDays,
     'modernConnectPanel': modernConnectPanel,
     'bottomBarStyle': bottomBarStyle,
     'desktopRailExpanded': desktopRailExpanded,
@@ -302,6 +308,7 @@ class AppSettings {
       hotkeys: _readHotkeys(json['hotkeys']),
       serversTwoColumns: json['serversTwoColumns'] as bool? ?? false,
       serversColumns: normalizeServersColumns(json['serversColumns']),
+      updatePromptDays: normalizeUpdatePromptDays(json['updatePromptDays']),
       modernConnectPanel: json['modernConnectPanel'] as bool? ?? false,
       bottomBarStyle: json['bottomBarStyle'] as String? ?? bottomBarModern,
       desktopRailExpanded: json['desktopRailExpanded'] as bool? ?? true,
@@ -468,6 +475,7 @@ class AppSettings {
     Map<String, String>? hotkeys,
     bool? serversTwoColumns,
     int? serversColumns,
+    int? updatePromptDays,
     bool? modernConnectPanel,
     String? bottomBarStyle,
     bool? desktopRailExpanded,
@@ -534,6 +542,8 @@ class AppSettings {
         serversTwoColumns: serversTwoColumns ?? this.serversTwoColumns,
         serversColumns:
             normalizeServersColumns(serversColumns ?? this.serversColumns),
+        updatePromptDays: normalizeUpdatePromptDays(
+            updatePromptDays ?? this.updatePromptDays),
         modernConnectPanel: modernConnectPanel ?? this.modernConnectPanel,
         bottomBarStyle: bottomBarStyle ?? this.bottomBarStyle,
         desktopRailExpanded: desktopRailExpanded ?? this.desktopRailExpanded,
@@ -614,6 +624,7 @@ class AppSettings {
               fakeIp == other.fakeIp &&
               serversTwoColumns == other.serversTwoColumns &&
               serversColumns == other.serversColumns &&
+              updatePromptDays == other.updatePromptDays &&
               modernConnectPanel == other.modernConnectPanel &&
               bottomBarStyle == other.bottomBarStyle &&
               desktopRailExpanded == other.desktopRailExpanded &&
@@ -687,6 +698,7 @@ class AppSettings {
     fakeIp,
     serversTwoColumns,
     serversColumns,
+    updatePromptDays,
     modernConnectPanel,
     bottomBarStyle,
     desktopRailExpanded,

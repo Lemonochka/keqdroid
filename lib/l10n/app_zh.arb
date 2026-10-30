@@ -791,6 +791,13 @@
       "language": {}
     }
   },
+  "settingsBehaviourTitle": "行为",
+  "settingsBehaviourSubtitle": "更新：{interval}",
+  "behaviourUpdatesSection": "应用更新",
+  "behaviourUpdatePrompt": "提示新版本",
+  "behaviourEveryDay": "每天",
+  "behaviourEvery3Days": "每 3 天",
+  "behaviourEveryWeek": "每周",
   "settingsLanguageSystem": "系统默认",
   "settingsLanguageEnglish": "English",
   "settingsLanguageRussian": "Русский",

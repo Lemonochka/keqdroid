@@ -1418,6 +1418,29 @@ class AppLocalizationsFa extends AppLocalizations {
   }
 
   @override
+  String get settingsBehaviourTitle => 'رفتار';
+
+  @override
+  String settingsBehaviourSubtitle(Object interval) {
+    return 'به‌روزرسانی: $interval';
+  }
+
+  @override
+  String get behaviourUpdatesSection => 'به‌روزرسانی برنامه';
+
+  @override
+  String get behaviourUpdatePrompt => 'اطلاع از نسخهٔ جدید';
+
+  @override
+  String get behaviourEveryDay => 'هر روز';
+
+  @override
+  String get behaviourEvery3Days => 'هر 3 روز';
+
+  @override
+  String get behaviourEveryWeek => 'هر هفته';
+
+  @override
   String get settingsLanguageSystem => 'پیش‌فرض سیستم';
 
   @override
