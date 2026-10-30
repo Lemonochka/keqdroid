@@ -67,7 +67,8 @@ void main() {
   });
 
   test('ошибка первого не залипает для следующего', () async {
-    final failing = _CountingAdapter('<html>502 Bad Gateway</html>', status: 502);
+    // не 502: на нём сервис идёт запасным HttpClient мимо адаптера в настоящую сеть, и под нагрузкой тест упирался в 30 с
+    final failing = _CountingAdapter('not a subscription');
     final first = await service(failing).updateSubscription(sub);
     expect(first.success, isFalse);
     final ok = _CountingAdapter(body);
