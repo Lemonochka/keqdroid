@@ -42,6 +42,8 @@ void main() {
     // как docs/example/conf.md mihomo: узлы в провайдере, рядом локальный direct
     _golden('clash-providers-direct');
     _golden('clash-wireguard-peers');
+    // Uri не берёт @ # / ? [ ] в userInfo: trojan с таким паролем падал вместе со всей подпиской
+    _golden('clash-yaml-password-chars');
     _golden('html-pre');
     _golden('html-js-var');
     _golden('xray-json-object');

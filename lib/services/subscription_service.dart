@@ -19,6 +19,7 @@ import '../utils/hysteria_uri.dart';
 import '../utils/identity_presets.dart';
 import '../utils/mieru_uri.dart';
 import '../utils/mihomo_config_gen.dart';
+import '../utils/raw_share_uri.dart';
 import '../utils/singbox_outbounds.dart';
 import '../utils/socks_uri.dart';
 import '../utils/ssr_uri.dart';
@@ -1832,7 +1833,7 @@ class SubscriptionService {
       };
       final uri = Uri(
         scheme: 'trojan',
-        userInfo: password,
+        userInfo: userInfoForUri(password),
         host: host,
         port: port,
         queryParameters: query.isEmpty ? null : query,
@@ -1928,7 +1929,7 @@ class SubscriptionService {
       };
       return Uri(
         scheme: 'anytls',
-        userInfo: password,
+        userInfo: userInfoForUri(password),
         host: host,
         port: port,
         queryParameters: query.isEmpty ? null : query,

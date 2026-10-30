@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'raw_share_uri.dart';
 import 'ssr_uri.dart';
 import 'vmess_json_link.dart';
 
@@ -408,7 +409,7 @@ class SingboxOutbounds {
   ) =>
       Uri(
         scheme: scheme,
-        userInfo: userInfo,
+        userInfo: userInfoForUri(userInfo),
         host: host,
         port: port,
         queryParameters: query.isEmpty ? null : query,

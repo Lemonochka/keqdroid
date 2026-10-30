@@ -1,3 +1,10 @@
+// Uri(userInfo:) бросает на @ # / ? [ ], и trojan с таким паролем ронял разбор. генераторы userInfo раскодируют.
+// остальное не трогаем: ссылка прежних паролей должна остаться байт в байт, по ней узнаётся сервер
+String userInfoForUri(String raw) => raw.replaceAllMapped(
+      RegExp(r'[@#/?\[\]]'),
+      (m) => '%${m[0]!.codeUnitAt(0).toRadixString(16).toUpperCase()}',
+    );
+
 // разбираем сами: акцессоры Uri декодируют компоненты, и пересборка меняла бы percent-encoding нетронутых частей
 class RawShareUri {
   final String scheme;
