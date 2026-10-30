@@ -1,0 +1,40 @@
+{
+  "outbounds": [
+    {"type": "selector", "tag": "proxy", "outbounds": ["warp-legacy", "WARP", "socks-out", "http-out"]},
+    {
+      "type": "wireguard",
+      "tag": "warp-legacy",
+      "server": "203.0.113.70",
+      "server_port": 2408,
+      "local_address": ["172.16.0.2/32", "2001:db8::7/128"],
+      "private_key": "cGFzc3dvcmQtcGFzc3dvcmQtcGFzc3dvcmQtcGFzcw==",
+      "peer_public_key": "cGFzc3dvcmQtcGFzc3dvcmQtcGFzc3dvcmQtcGFzcw==",
+      "reserved": [1, 2, 3],
+      "mtu": 1280
+    },
+    {"type": "socks", "tag": "socks-out", "server": "198.51.100.71", "server_port": 1080, "version": "5", "username": "user", "password": "p@ss"},
+    {"type": "http", "tag": "http-out", "server": "198.51.100.72", "server_port": 8443, "username": "user", "password": "password",
+     "tls": {"enabled": true, "server_name": "http.example"}},
+    {"type": "direct", "tag": "direct"}
+  ],
+  "endpoints": [
+    {
+      "type": "wireguard",
+      "tag": "WARP",
+      "mtu": 1280,
+      "address": ["172.16.0.2/32", "2001:db8::8/128"],
+      "private_key": "cGFzc3dvcmQtcGFzc3dvcmQtcGFzc3dvcmQtcGFzcw==",
+      "peers": [
+        {
+          "address": "203.0.113.71",
+          "port": 2408,
+          "public_key": "cGFzc3dvcmQtcGFzc3dvcmQtcGFzc3dvcmQtcGFzcw==",
+          "allowed_ips": ["0.0.0.0/0", "::/0"],
+          "persistent_keepalive_interval": 25,
+          "reserved": [4, 5, 6]
+        }
+      ]
+    }
+  ],
+  "route": {"final": "proxy"}
+}

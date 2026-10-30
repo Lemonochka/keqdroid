@@ -54,6 +54,8 @@ void main() {
     _golden('fragment-with-spaces');
     _golden('wss-in-html');
     _golden('singbox-outbounds');
+    // WARP в обоих видах (endpoints с 1.11 и старый аутбаунд), socks и http: ссылки нет только у WireGuard и http
+    _golden('singbox-wireguard');
   });
 
   group('golden: base64-обёртки', () {

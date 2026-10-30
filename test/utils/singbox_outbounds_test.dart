@@ -7,6 +7,7 @@ import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/singbox_outbounds.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
+import 'package:keqdroid/utils/socks_uri.dart';
 import 'package:keqdroid/utils/ssr_uri.dart';
 import 'package:keqdroid/utils/vpn_core_support.dart';
 
@@ -593,7 +594,7 @@ void main() {
         [
           _node('ssh', {'user': 'root'}),
           _node('hysteria', {'auth_str': 'password'}),
-          _node('socks', {}),
+          _node('naive', {}),
           // Без uuid это не сервер.
           _node('vless', {}),
         ],
@@ -605,10 +606,18 @@ void main() {
       expect(nodes.skipped, {
         'ssh': 1,
         'hysteria': 1,
-        'socks': 1,
+        'naive': 1,
         'vless': 1,
         'wireguard': 1,
       });
+    });
+
+    test('socks5 с паролем доезжает, socks4 нет', () {
+      final link = _link(_node('socks', {'username': 'u', 'password': 'p@ss/1'}));
+      final socks = SocksLink.tryParse(link)!;
+      expect((socks.host, socks.port), ('198.51.100.40', 443));
+      expect((socks.username, socks.password), ('u', 'p@ss/1'));
+      expect(_skipped(_node('socks', {'version': '4'})), {'socks': 1});
     });
 
     test('узел за другим узлом — цепочка, в пропущенных', () {
@@ -657,19 +666,22 @@ void main() {
 
     final nodes = SingboxOutbounds.translate(File(_corpus).readAsStringSync());
 
-    test('взято двенадцать узлов, пропущено четыре', () {
-      expect(nodes.links, hasLength(12));
+    test('взято тринадцать узлов, пропущено три', () {
+      expect(nodes.links, hasLength(13));
       expect(nodes.skipped, {
         'ssh': 1,
         'hysteria': 1,
         'vless over quic': 1,
-        'wireguard': 1,
       });
     });
 
+    // у WireGuard ссылки нет, он едет одноузловым Clash на mihomo
     for (final (i, link) in nodes.links.indexed) {
-      test('узел ${i + 1}: ${link.substring(0, link.indexOf('://'))}', () {
-        final backends = backendsForLink(link);
+      final clash = !link.contains('://');
+      test('узел ${i + 1}: ${clash ? 'clash' : link.substring(0, link.indexOf('://'))}', () {
+        final backends = clash
+            ? backendsForFormat(detectServerFormat(link))
+            : backendsForLink(link);
         expect(backends, isNotEmpty);
         for (final backend in backends) {
           switch (backend.name) {

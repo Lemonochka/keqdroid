@@ -49,7 +49,12 @@ class SingboxOutbounds {
     // WireGuard и Tailscale с 1.11 лежат в endpoints
     for (final e in _maps(config['endpoints'])) {
       final type = _str(e['type']).toLowerCase();
-      skip(type.isEmpty ? 'unknown' : type);
+      final node = type == 'wireguard' ? _wireguard(e) : null;
+      if (node != null) {
+        links.add(node);
+      } else {
+        skip(type.isEmpty ? 'unknown' : type);
+      }
     }
     return (links: links, skipped: skipped);
   }
@@ -100,6 +105,10 @@ class SingboxOutbounds {
       'hysteria2' => _hysteria2(o, security),
       'tuic' => _tuic(o, security),
       'anytls' => _anytls(o, security),
+      'socks' => _socks(o),
+      'http' => _http(o, security),
+      // до 1.11 WireGuard был аутбаундом, так до сих пор раздают WARP
+      'wireguard' => _wireguard(o),
       _ => null,
     };
     return (link: link, kind: type.isEmpty ? 'unknown' : type);
@@ -443,6 +452,112 @@ class SingboxOutbounds {
       if (values.isNotEmpty) return values.first;
     }
     return '';
+  }
+
+  static String? _socks(Map<String, dynamic> o) {
+    final server = _str(o['server']);
+    final port = _int(o['server_port']);
+    final version = _str(o['version']);
+    if (server.isEmpty || port <= 0 || (version.isNotEmpty && version != '5')) {
+      return null;
+    }
+    final user = _str(o['username']);
+    final password = _str(o['password']);
+    return _uri(
+      'socks5',
+      user.isEmpty ? '' : '$user:$password',
+      server,
+      port,
+      _str(o['tag']),
+      const {},
+    );
+  }
+
+  // у http и wireguard ссылки нет, узел исполняет mihomo, как одиночный узел Clash из подписки
+  static String? _http(Map<String, dynamic> o, Map<String, String> security) {
+    final server = _str(o['server']);
+    final port = _int(o['server_port']);
+    if (server.isEmpty || port <= 0) return null;
+    final user = _str(o['username']);
+    final password = _str(o['password']);
+    final tls = security['security'] == 'tls';
+    final sni = security['sni'] ?? '';
+    return _mihomoNode(_str(o['tag']), {
+      'type': 'http',
+      'server': server,
+      'port': port,
+      if (user.isNotEmpty) 'username': user,
+      if (password.isNotEmpty) 'password': password,
+      if (tls) 'tls': true,
+      if (tls && sni.isNotEmpty) 'sni': sni,
+    });
+  }
+
+  // пиры списком, как у нашего AWG: в плоской форме mihomo ставит allowed-ips 0.0.0.0/0 сам
+  static String? _wireguard(Map<String, dynamic> o) {
+    final key = _str(o['private_key']);
+    // endpoint 1.11+ держит адрес в peers, старый аутбаунд в server и peer_public_key
+    final rawPeers = _maps(o['peers']);
+    final peers = [
+      for (final p in rawPeers.isNotEmpty ? rawPeers : [o])
+        <String, dynamic>{
+          'server': _str(p['address']).isNotEmpty
+              ? _str(p['address'])
+              : _str(p['server']),
+          'port': _int(p['port']) > 0 ? _int(p['port']) : _int(p['server_port']),
+          'public-key': _str(p['public_key']).isNotEmpty
+              ? _str(p['public_key'])
+              : _str(p['peer_public_key']),
+          if (_str(p['pre_shared_key']).isNotEmpty)
+            'pre-shared-key': _str(p['pre_shared_key']),
+          'allowed-ips': _list(p['allowed_ips']).isEmpty
+              ? const ['0.0.0.0/0', '::/0']
+              : _list(p['allowed_ips']),
+          if ((p['reserved'] ?? o['reserved']) != null)
+            'reserved': p['reserved'] ?? o['reserved'],
+        },
+    ];
+    final first = peers.firstOrNull;
+    if (key.isEmpty ||
+        first == null ||
+        _str(first['server']).isEmpty ||
+        _int(first['port']) <= 0 ||
+        _str(first['public-key']).isEmpty) {
+      return null;
+    }
+    final addresses = _list(o['address']).isNotEmpty
+        ? _list(o['address'])
+        : _list(o['local_address']);
+    final v4 = addresses.where((a) => !a.contains(':')).firstOrNull;
+    final v6 = addresses.where((a) => a.contains(':')).firstOrNull;
+    if (v4 == null && v6 == null) return null;
+    final keepalive = rawPeers.isEmpty
+        ? 0
+        : _int(rawPeers.first['persistent_keepalive_interval']);
+    final mtu = _int(o['mtu']);
+    return _mihomoNode(_str(o['tag']), {
+      'type': 'wireguard',
+      'server': first['server'],
+      'port': first['port'],
+      'ip': ?v4,
+      'ipv6': ?v6,
+      'private-key': key,
+      'peers': peers,
+      if (mtu > 0) 'mtu': mtu,
+      'udp': true,
+      if (keepalive > 0) 'persistent-keepalive': keepalive,
+    });
+  }
+
+  static String _mihomoNode(String tag, Map<String, dynamic> fields) {
+    final name = tag.isEmpty ? fields['type'] as String : tag;
+    return jsonEncode({
+      'name': name,
+      'proxies': [
+        {'name': name, ...fields},
+      ],
+      'rules': ['MATCH,$name'],
+    });
   }
 
   static String _str(Object? value) => switch (value) {
