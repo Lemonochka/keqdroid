@@ -59,7 +59,7 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 
 **Routing and tunnel**
 - routes: block, direct, through the VPN or through another server, for all apps or chosen ones
-- a route covers sites, IPs, ready-made lists (Russian sites, ads and trackers, Re-filter, Russian mobile whitelists) or links to AdBlock and hosts lists, refreshed daily
+- a route covers sites, IPs, ready-made lists (Russian sites, Iranian sites, ads and trackers, Re-filter, Russian mobile whitelists) or links to AdBlock and hosts lists, refreshed daily
 - routing profiles: their own routes and Everything else for chosen subscriptions
 - split tunnel: per-app on Android, per-program on Windows and Linux (TUN mode)
 - **Connections**: active connections and the rule that matched each one
@@ -287,7 +287,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 
 **Маршрутизация и туннель**
 - маршруты: блокировать, напрямую, через VPN или через другой сервер, для всех приложений или выбранных
-- маршрут охватывает сайты, IP, готовые списки («Российские сайты», «Реклама и трекеры», Re-filter, «Белые списки мобильной связи») или ссылки на списки AdBlock и hosts, которые обновляются раз в сутки
+- маршрут охватывает сайты, IP, готовые списки («Российские сайты», «Иранские сайты», «Реклама и трекеры», Re-filter, «Белые списки мобильной связи») или ссылки на списки AdBlock и hosts, которые обновляются раз в сутки
 - профили маршрутизации: свои маршруты и «Всё остальное» для выбранных подписок
 - split tunnel: на Android по приложениям, на Windows и Linux по программам (режим TUN)
 - **Соединения**: активные соединения и правило, которое сработало для каждого

@@ -28,12 +28,23 @@ import 'package:keqdroid/utils/geo_dat_reader.dart';
 /// Коды, которые приложение выпускает само: пресеты маршрутизации плюс
 /// `private`, который генераторы конфига дописывают всегда. `ru` и `telegram`
 /// клали убранные пресеты, и у тех, кто их нажимал, коды остались в списках.
+/// `ir` и четыре иранских CDN берёт пресет «Иранские сайты».
 ///
 /// Список обязан оставаться надмножеством того, что может попасть в конфиг без
 /// участия пользователя. Иначе свежая установка молча потеряет часть
 /// маршрутизации: неизвестный код санитайзер выбрасывает до генерации конфига,
 /// потому что xray на нём роняет конфиг целиком.
-const _defaultCodes = ['private', 'ru', 'telegram', 'refilter'];
+const _defaultCodes = [
+  'private',
+  'ru',
+  'telegram',
+  'refilter',
+  'ir',
+  'arvancloud',
+  'derakcloud',
+  'iranserver',
+  'parspack',
+];
 
 const _defaultSource = 'assets/bin/windows/geoip.dat';
 const _defaultOut = 'assets/geo/geoip-lite.dat';

@@ -36,6 +36,17 @@ class RoutingPresets {
   // geoip:ru не входит намеренно: российскими по адресу выглядят и кэши у провайдера (TikTok через Akamai в Дом.ру)
   static const List<String> russia = ['geosite:category-ru'];
 
+  // Chocolate4U/Iran-v2ray-rules, домержен через tool/fetch_xray_geo.ps1. geoip вместе с иранскими CDN, как в их образце:
+  // часть иранских сайтов не пускает зарубежные адреса, а внутри страны иностранные CDN своих узлов не держат
+  static const List<String> iran = [
+    'geosite:ir',
+    'geoip:ir',
+    'geoip:arvancloud',
+    'geoip:derakcloud',
+    'geoip:iranserver',
+    'geoip:parspack',
+  ];
+
   // этих шести адресов во вшитой category-ads-all нет
   static const List<String> ads = [
     'geosite:category-ads-all',
@@ -62,6 +73,11 @@ class RoutingPresets {
       id: 'ru',
       field: RoutingField.direct,
       values: russia,
+    ),
+    RoutingPreset(
+      id: 'ir',
+      field: RoutingField.direct,
+      values: iran,
     ),
     RoutingPreset(
       id: 'ads',

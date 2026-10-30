@@ -419,6 +419,12 @@ abstract class AppLocalizations {
   /// **'Russian sites'**
   String get settingsRoutingPresetRuTitle;
 
+  /// No description provided for @settingsRoutingPresetIrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Iranian sites'**
+  String get settingsRoutingPresetIrTitle;
+
   /// No description provided for @settingsRoutingPresetAdsTitle.
   ///
   /// In en, this message translates to:

@@ -182,6 +182,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRoutingPresetRuTitle => 'Russian sites';
 
   @override
+  String get settingsRoutingPresetIrTitle => 'Iranian sites';
+
+  @override
   String get settingsRoutingPresetAdsTitle => 'Ads & trackers';
 
   @override

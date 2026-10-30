@@ -31,6 +31,7 @@ String _finalOutboundOf(RouteTarget target) => switch (target) {
 
 String _presetName(AppLocalizations l10n, String id) => switch (id) {
       'ru' => l10n.settingsRoutingPresetRuTitle,
+      'ir' => l10n.settingsRoutingPresetIrTitle,
       'ads' => l10n.settingsRoutingPresetAdsTitle,
       'refilter' => l10n.settingsRoutingPresetRefilterTitle,
       'whitelist' => l10n.settingsRoutingPresetWhitelistTitle,
@@ -38,7 +39,7 @@ String _presetName(AppLocalizations l10n, String id) => switch (id) {
     };
 
 IconData _presetIcon(String id) => switch (id) {
-      'ru' => Icons.flag_rounded,
+      'ru' || 'ir' => Icons.flag_rounded,
       'ads' => Icons.block_rounded,
       'refilter' => Icons.shield_rounded,
       'whitelist' => Icons.signal_cellular_alt_rounded,

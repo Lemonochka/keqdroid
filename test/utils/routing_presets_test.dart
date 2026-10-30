@@ -31,4 +31,20 @@ void main() {
     };
     expect(zones, containsAll(['ru', 'su', 'xn--p1ai']));
   });
+
+  // geosite:ir у Chocolate4U это обе иранские зоны плюс иранские сайты на чужих, без него пресет держался бы на 190 доменах v2fly
+  test('«Иранские сайты» берут зоны .ir и .ایران и иранские CDN по адресам', () async {
+    final domains = await GeoDatReader.domains(geosite, 'ir');
+    final zones = {
+      for (final d in domains)
+        if (d.type == GeoDomainType.domain) d.value,
+    };
+    expect(zones, containsAll(['ir', 'xn--mgba3a4f16a']));
+    expect(domains.length, greaterThan(10000));
+
+    final geoip = File('assets/bin/windows/geoip.dat');
+    for (final cdn in ['arvancloud', 'derakcloud', 'iranserver', 'parspack']) {
+      expect(await GeoDatReader.cidrs(geoip, cdn), isNotEmpty, reason: cdn);
+    }
+  });
 }

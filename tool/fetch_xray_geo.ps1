@@ -8,6 +8,9 @@
 #   geosite: refilter                 (from 1andrevich/Re-filter-lists)
 #   geosite: ru-whitelist             (from hxehex/russia-mobile-internet-whitelist,
 #                                      whitelist.txt, each line with its subdomains)
+#   geosite: ir                       (from Chocolate4U/Iran-v2ray-rules, geosite-lite.dat:
+#                                      .ir plus Iranian sites on other zones)
+#   geoip:  arvancloud, derakcloud, iranserver, parspack   (Iranian CDNs, same source)
 #
 # Appending works because both files are protobuf `repeated entry = 1`, so a
 # concatenation of records is still a valid message. Base codes win on conflict
@@ -64,12 +67,18 @@ try {
     Get-File 'https://github.com/1andrevich/Re-filter-lists/releases/latest/download/geosite.dat' $refilterGeosite
     $whitelist = Join-Path $tmpDir 'ru_whitelist.txt'
     Get-File 'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/whitelist.txt' $whitelist
+    $iranGeosite = Join-Path $tmpDir 'iran_geosite_lite.dat'
+    $iranGeoip = Join-Path $tmpDir 'iran_geoip.dat'
+    Get-File 'https://raw.githubusercontent.com/Chocolate4U/Iran-v2ray-rules/release/geosite-lite.dat' $iranGeosite
+    Get-File 'https://raw.githubusercontent.com/Chocolate4U/Iran-v2ray-rules/release/geoip.dat' $iranGeoip
 
     # 3. merge the extra codes into the bundled databases
     Merge-Codes $geoip $loyalGeoip 'telegram,google,netflix,twitter,facebook,cloudflare,cloudfront,fastly,tor'
     Merge-Codes $geoip $refilterGeoip 'refilter'
     Merge-Codes $geosite $refilterGeosite 'refilter'
     Merge-Codes $geosite $whitelist 'ru-whitelist' '--list'
+    Merge-Codes $geosite $iranGeosite 'ir'
+    Merge-Codes $geoip $iranGeoip 'arvancloud,derakcloud,iranserver,parspack'
 
     # 4. mirror into the Linux asset dir (installed wholesale by linux/CMakeLists.txt)
     $linuxDir = Join-Path $root 'assets\bin\linux'

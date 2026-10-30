@@ -182,6 +182,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsRoutingPresetRuTitle => 'سایت‌های روسی';
 
   @override
+  String get settingsRoutingPresetIrTitle => 'سایت‌های ایرانی';
+
+  @override
   String get settingsRoutingPresetAdsTitle => 'تبلیغات و ردیاب‌ها';
 
   @override

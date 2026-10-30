@@ -182,6 +182,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingPresetRuTitle => '俄罗斯网站';
 
   @override
+  String get settingsRoutingPresetIrTitle => '伊朗网站';
+
+  @override
   String get settingsRoutingPresetAdsTitle => '广告和跟踪器';
 
   @override
