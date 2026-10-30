@@ -56,6 +56,88 @@ class LinuxAutostart {
     return true;
   }
 
+  // Hyprland без systemd-сборки цели не имеет вовсе (так у caelestia на EndeavourOS), и без uwsm ярлык не исполнит никто.
+  // остаётся его собственный запуск при старте; строку ставим только там, иначе приложение стартовало бы дважды
+  static const _hyprMarker = 'keqdroid autostart, added and removed by the app';
+
+  @visibleForTesting
+  static bool Function() hyprlandSession = () =>
+      (Platform.environment['XDG_CURRENT_DESKTOP'] ?? '')
+          .toLowerCase()
+          .contains('hyprland');
+
+  @visibleForTesting
+  static Future<bool> Function() desktopRunsAutostart = () async {
+    for (final unit in const [
+      'xdg-desktop-autostart.target',
+      'hyprland-session.target',
+    ]) {
+      try {
+        final r = await Process.run(
+            'systemctl', ['--user', 'is-active', '--quiet', unit]);
+        if (r.exitCode == 0) return true;
+      } catch (_) {}
+    }
+    return false;
+  };
+
+  // caelestia подключает свой пустой hypr-user.lua именно для пользовательских строк
+  static List<File> _hyprlandConfigs() {
+    final home = _configHome();
+    return [
+      File(p.join(home, 'caelestia', 'hypr-user.lua')),
+      File(p.join(home, 'hypr', 'hyprland.lua')),
+      File(p.join(home, 'hypr', 'hyprland.conf')),
+    ];
+  }
+
+  @visibleForTesting
+  static String hyprlandLines(String target, {required bool lua}) {
+    final command = "'${target.replaceAll("'", r"'\''")}' $flag";
+    if (lua) {
+      final literal =
+          command.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+      return '-- $_hyprMarker\n'
+          'hl.on("hyprland.start", function() hl.exec_cmd("$literal") end)\n';
+    }
+    // в hyprlang решётка начинает комментарий, буквальная пишется двойной
+    return '# $_hyprMarker\nexec-once = ${command.replaceAll('#', '##')}\n';
+  }
+
+  static String _withoutHyprlandLines(String text) {
+    final lines = text.split('\n');
+    final out = <String>[];
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].contains(_hyprMarker)) {
+        // строку запуска могли стереть руками, тогда под меткой уже чужая
+        if (i + 1 < lines.length && lines[i + 1].contains(flag)) i++;
+        continue;
+      }
+      out.add(lines[i]);
+    }
+    return out.join('\n');
+  }
+
+  static Future<bool> _syncHyprlandConfig(bool wanted) async {
+    var changed = false;
+    File? into;
+    for (final file in _hyprlandConfigs()) {
+      if (!file.existsSync()) continue;
+      into ??= file;
+      final text = await file.readAsString();
+      var next = _withoutHyprlandLines(text);
+      if (wanted && identical(file, into)) {
+        if (next.isNotEmpty && !next.endsWith('\n')) next += '\n';
+        next += hyprlandLines(_target(), lua: file.path.endsWith('.lua'));
+      }
+      if (next != text) {
+        await file.writeAsString(next);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
   // сам AppImage: бинарь во временном монте исчезает вместе с процессом
   static String _target() =>
       LinuxAppImageUpdater.currentAppImagePath() ?? Platform.resolvedExecutable;
@@ -75,6 +157,7 @@ class LinuxAutostart {
       if (!enabled) {
         if (isEnabled()) await file.delete();
         await _syncHyprlandDropIn(false);
+        await _syncHyprlandConfig(false);
         await reloadUserUnits();
         return true;
       }
@@ -82,6 +165,9 @@ class LinuxAutostart {
       await file.parent.create(recursive: true);
       await file.writeAsString(contentFor(_target()));
       await _syncHyprlandDropIn(true);
+      if (hyprlandSession()) {
+        await _syncHyprlandConfig(!await desktopRunsAutostart());
+      }
       await reloadUserUnits();
       return true;
     } catch (e, st) {
@@ -107,6 +193,12 @@ class LinuxAutostart {
       }
       if (await _syncHyprlandDropIn(enabled)) changed = true;
       if (changed) await reloadUserUnits();
+      // вне Hyprland конфиг не трогаем: иначе вход в GNOME снимал бы строку, нужную следующему входу в Hyprland
+      if (!enabled) {
+        await _syncHyprlandConfig(false);
+      } else if (hyprlandSession()) {
+        await _syncHyprlandConfig(!await desktopRunsAutostart());
+      }
     } catch (_) {}
   }
 
