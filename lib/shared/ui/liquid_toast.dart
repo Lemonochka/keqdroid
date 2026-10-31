@@ -8,7 +8,7 @@ import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/floating_bar.dart';
 
 // уведомление Модерна: капля вытекает из левого края экрана и растекается в плитку над
-// лентой, уходит обратно в край. в письме справа налево из правого. смахивается вниз
+// лентой, уходит обратно в край. в письме справа налево из правого. смахивается в тот же край
 class LiquidToast {
   const LiquidToast({
     required this.message,
@@ -82,7 +82,7 @@ class LiquidToastHost extends StatefulWidget {
 }
 
 class _LiquidToastHostState extends State<LiquidToastHost>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   // вытекает чуть медленнее spatialSlow: 0,35 с были резковаты, теперь около 0,5 с;
   // уходит мягко, без перелёта, как лента
   static const _riseSpring =
@@ -94,6 +94,9 @@ class _LiquidToastHostState extends State<LiquidToastHost>
   static const _drop = Size(44, 36);
 
   late final AnimationController _t;
+  // насколько плитку утянули пальцем к её краю, в пикселях
+  late final AnimationController _pull;
+  late final Listenable _motion;
   final ui.FragmentShader? _shader = FloatingBar.newDropShader();
   LiquidToast? _shown;
   // лента на момент показа: спрячет её прокрутка, уведомление не прыгает
@@ -106,6 +109,8 @@ class _LiquidToastHostState extends State<LiquidToastHost>
   void initState() {
     super.initState();
     _t = AnimationController(vsync: this);
+    _pull = AnimationController.unbounded(vsync: this);
+    _motion = Listenable.merge([_t, _pull]);
     LiquidToast.current.addListener(_onToast);
   }
 
@@ -114,6 +119,7 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     LiquidToast.current.removeListener(_onToast);
     _timer?.cancel();
     _t.dispose();
+    _pull.dispose();
     _shader?.dispose();
     super.dispose();
   }
@@ -130,18 +136,46 @@ class _LiquidToastHostState extends State<LiquidToastHost>
       _shown = next;
       _bar = FloatingBar.barOnScreen.value != null && !FloatingBar.hidden.value;
     });
+    _pull.value = 0;
     if (next == null) return;
     await ExpressiveMotion.springTo(_t, 1, spring: _riseSpring)
         .orCancel
         .catchError((_) {});
     if (!mounted || generation != _generation) return;
-    _timer = Timer(next.duration, () {
-      if (LiquidToast.current.value == next) LiquidToast.hide();
+    _arm(next);
+  }
+
+  void _arm(LiquidToast toast) {
+    _timer?.cancel();
+    _timer = Timer(toast.duration, () {
+      if (LiquidToast.current.value == toast) LiquidToast.hide();
     });
   }
 
   Future<void> _sink() =>
       ExpressiveMotion.springTo(_t, 0, spring: _sinkSpring).orCancel.catchError((_) {});
+
+  static double _width(Size screen) =>
+      math.min(screen.width - 2 * FloatingBar.margin, 560.0);
+
+  void _onDragUpdate(DragUpdateDetails d, bool rtl) {
+    if (LiquidToast.current.value == null) return;
+    _timer?.cancel();
+    _pull.value = math.max(0, _pull.value + (rtl ? d.delta.dx : -d.delta.dx));
+  }
+
+  void _onDragEnd(DragEndDetails d, bool rtl) {
+    final toast = LiquidToast.current.value;
+    if (toast == null) return;
+    final toEdge = (rtl ? 1 : -1) * (d.primaryVelocity ?? 0);
+    // пороги как у Dismissible: бросок от 700 px/с или сдвиг на 0,4 ширины
+    if (toEdge >= 700 || _pull.value >= 0.4 * _width(MediaQuery.sizeOf(context))) {
+      LiquidToast.hide();
+      return;
+    }
+    ExpressiveMotion.springTo(_pull, 0, spring: _riseSpring).orCancel.catchError((_) {});
+    _arm(toast);
+  }
 
   void _onSize(Size size) {
     if ((size.height - _height).abs() < 0.5) return;
@@ -158,7 +192,7 @@ class _LiquidToastHostState extends State<LiquidToastHost>
         widget.child,
         if (toast != null)
           AnimatedBuilder(
-            animation: _t,
+            animation: _motion,
             builder: (context, _) => _layout(context, toast),
           ),
       ],
@@ -170,7 +204,7 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     final cs = Theme.of(context).colorScheme;
     final color = toast.color ?? FloatingBar.tileColor(cs);
     final ink = toast.ink ?? cs.onSurface;
-    final width = math.min(mq.size.width - 2 * FloatingBar.margin, 560.0);
+    final width = _width(mq.size);
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final restBottom = mq.padding.bottom +
         FloatingBar.bottomMargin +
@@ -182,15 +216,19 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     final size = Size.lerp(_drop, Size(width, _height), Curves.easeOut.transform(grow))!;
     final restStart = (mq.size.width - width) / 2;
     // начало за краем на всю склейку: бугорок у края тает, а не обрывается
-    final start = -_drop.width - _goo + (restStart + _drop.width + _goo) * t;
+    final start =
+        -_drop.width - _goo + (restStart + _drop.width + _goo) * t - _pull.value;
     final rect = Rect.fromLTWH(
       rtl ? mq.size.width - start - size.width : start,
       centerY - size.height / 2,
       size.width,
       size.height,
     );
-    // склейка с краем только в пути: в покое плитка стоит отдельно
-    final goo = _goo * (t / 0.2).clamp(0.0, 1.0) * ((1 - t) / 0.25).clamp(0.0, 1.0);
+    // склейка с краем только в пути: в покое плитка стоит отдельно, а утянутую край ловит
+    final goo = math.max(
+      _goo * (t / 0.2).clamp(0.0, 1.0) * ((1 - t) / 0.25).clamp(0.0, 1.0),
+      _pull.value.clamp(0.0, _goo),
+    );
     final radius = math.min(_radius, size.height / 2);
     final edge = rtl ? (-1.0, 0.0, -mq.size.width) : (1.0, 0.0, 0.0);
     return Stack(
@@ -213,9 +251,9 @@ class _LiquidToastHostState extends State<LiquidToastHost>
           Positioned.fromRect(
             rect: rect,
             child: GestureDetector(
-              onVerticalDragEnd: (d) {
-                if ((d.primaryVelocity ?? 0) > 0) LiquidToast.hide();
-              },
+              onHorizontalDragUpdate: (d) => _onDragUpdate(d, rtl),
+              onHorizontalDragEnd: (d) => _onDragEnd(d, rtl),
+              onHorizontalDragCancel: () => _onDragEnd(DragEndDetails(), rtl),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(radius),
                 child: OverflowBox(

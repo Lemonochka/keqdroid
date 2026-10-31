@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
-Future<BuildContext> _pump(WidgetTester tester) async {
+Future<BuildContext> _pump(
+  WidgetTester tester, {
+  TextDirection direction = TextDirection.ltr,
+}) async {
   late BuildContext captured;
   await tester.pumpWidget(MaterialApp(
-    builder: (context, child) => LiquidToastHost(child: child!),
+    builder: (context, child) => Directionality(
+      textDirection: direction,
+      child: LiquidToastHost(child: child!),
+    ),
     home: Scaffold(
       body: Builder(builder: (context) {
         captured = context;
@@ -71,5 +77,72 @@ void main() {
     await tester.pumpAndSettle();
     expect(undone, 1);
     expect(LiquidToast.current.value, isNull);
+  });
+
+  group('swipe', () {
+    Future<Finder> showDrop(WidgetTester tester,
+        {TextDirection direction = TextDirection.ltr}) async {
+      LiquidToast.enabled = true;
+      final context = await _pump(tester, direction: direction);
+      AppSnack.of(context).showSnackBar(const SnackBar(content: Text('готово')));
+      await tester.pumpAndSettle();
+      return find.text('готово');
+    }
+
+    Future<void> expectGone(WidgetTester tester) async {
+      await tester.pumpAndSettle();
+      expect(LiquidToast.current.value, isNull);
+      expect(find.text('готово'), findsNothing);
+    }
+
+    testWidgets('pulled toward the edge it came from, it leaves', (tester) async {
+      final drop = await showDrop(tester);
+      await tester.drag(drop, const Offset(-300, 0));
+      await expectGone(tester);
+    });
+
+    testWidgets('a quick flick toward the edge is enough', (tester) async {
+      final drop = await showDrop(tester);
+      await tester.fling(drop, const Offset(-60, 0), 1000);
+      await expectGone(tester);
+    });
+
+    testWidgets('down or away from the edge it stays, and still leaves on time',
+        (tester) async {
+      final drop = await showDrop(tester);
+      final rest = tester.getTopLeft(drop);
+      await tester.fling(drop, const Offset(0, 300), 1000);
+      await tester.pumpAndSettle();
+      await tester.fling(drop, const Offset(300, 0), 1000);
+      await tester.pumpAndSettle();
+      expect(LiquidToast.current.value, isNotNull);
+      expect(tester.getTopLeft(drop), rest);
+      await tester.pump(const Duration(seconds: 4));
+      await expectGone(tester);
+    });
+
+    testWidgets('a short slow pull springs back and the timer starts over',
+        (tester) async {
+      final drop = await showDrop(tester);
+      final rest = tester.getTopLeft(drop);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.timedDrag(
+          drop, const Offset(-60, 0), const Duration(milliseconds: 600));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(drop).dx, closeTo(rest.dx, 0.5));
+      await tester.pump(const Duration(seconds: 2));
+      expect(LiquidToast.current.value, isNotNull);
+      await tester.pump(const Duration(seconds: 2));
+      await expectGone(tester);
+    });
+
+    testWidgets('in right-to-left text it goes to the right edge', (tester) async {
+      final drop = await showDrop(tester, direction: TextDirection.rtl);
+      await tester.drag(drop, const Offset(-300, 0));
+      await tester.pumpAndSettle();
+      expect(LiquidToast.current.value, isNotNull);
+      await tester.drag(drop, const Offset(300, 0));
+      await expectGone(tester);
+    });
   });
 }
