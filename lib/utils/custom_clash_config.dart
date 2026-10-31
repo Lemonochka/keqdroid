@@ -407,6 +407,60 @@ class CustomClashConfig {
     }
 
     out.addAll(extra);
+    return _aliasCommaTargets(out);
+  }
+
+  // ядро режет правило по запятым без экранирования (rules/common/base.go), узел с запятой в имени правилом не найти.
+  // правила ведём на группу-двойник с широкой запятой, сам узел и ссылки на него прежние
+  static Map<String, dynamic> _aliasCommaTargets(Map<String, dynamic> out) {
+    final authorGroups = out['proxy-groups'];
+    final taken = <String>{
+      for (final proxy in proxiesOf(out)) proxy['name']?.toString() ?? '',
+      if (authorGroups is List)
+        for (final group in authorGroups)
+          if (group is Map) group['name']?.toString() ?? '',
+    };
+    final unsafe = [
+      for (final name in taken)
+        if (name.contains(',')) name,
+    ]..sort((a, b) => b.length.compareTo(a.length));
+    if (unsafe.isEmpty) return out;
+
+    final alias = <String, String>{};
+    for (final name in unsafe) {
+      final base = name.replaceAll(',', '，').trim();
+      var candidate = base;
+      for (var i = 2; taken.contains(candidate); i++) {
+        candidate = '$base $i';
+      }
+      taken.add(candidate);
+      alias[name] = candidate;
+    }
+    String retarget(Object? rule) {
+      var text = rule.toString();
+      for (final name in unsafe) {
+        text = text.replaceAll(
+          RegExp(',\\s*${RegExp.escape(name.trim())}\\s*(?=,|\$)'),
+          ',${alias[name]}',
+        );
+      }
+      return text;
+    }
+
+    final rules = out['rules'];
+    if (rules is List) out['rules'] = [for (final rule in rules) retarget(rule)];
+    final subRules = out['sub-rules'];
+    if (subRules is Map) {
+      out['sub-rules'] = {
+        for (final MapEntry(:key, :value) in subRules.entries)
+          key.toString(): value is List ? [for (final r in value) retarget(r)] : value,
+      };
+    }
+    out['proxy-groups'] = [
+      if (authorGroups is List) ...authorGroups,
+      for (final name in unsafe)
+        {'name': alias[name], 'type': 'select', 'proxies': [name]},
+    ];
     return out;
   }
 

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_item.dart';
+import 'package:keqdroid/services/subscription_service.dart';
 import 'package:keqdroid/utils/custom_clash_config.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
@@ -253,6 +254,103 @@ proxies:
 
     test('конфиг остаётся json-совместимым (его читает ядро)', () {
       expect(() => jsonEncode(build()), returnsNormally);
+    });
+  });
+
+  // 31.10.2026: узел «Ultima Free (YT no ads, no torrent)» из Clash-подписки ронял mihomo на старте,
+  // правило искало сервер «no torrent)». ссылкой тот же сервер работал
+  group('запятая в имени узла', () {
+    const name = '🇫🇮 Ultima Free (YT no ads, no torrent)';
+    const yaml = '''
+proxies:
+  - name: "$name"
+    type: vless
+    server: fi.example
+    port: 443
+    uuid: 716e3485-d4f9-4471-9660-fb4b0b838100
+    network: grpc
+    udp: true
+    packet-encoding: xudp
+    tls: true
+    servername: fi.example
+    client-fingerprint: chrome
+    reality-opts:
+      public-key: oYXosxG2YU6_mQkkPTS8JUnoRxqvaBaG5mH-y0pc2nA
+      short-id: 9f2c
+      support-x25519mlkem768: true
+    grpc-opts:
+      grpc-service-name: xyz
+proxy-groups:
+  - name: Select
+    type: select
+    proxies: ["$name"]
+rules:
+  - MATCH,Select
+''';
+
+    // так строку правила режет ядро (rules/common/base.go, ParseRulePayload): по запятым, без экранирования
+    String coreTarget(String rule) {
+      final item = [for (final part in rule.split(',')) part.trim()];
+      if (item.length < 2) return '';
+      return switch (item.first.toUpperCase()) {
+        'MATCH' => item[1],
+        'NOT' || 'OR' || 'AND' || 'SUB-RULE' || 'DOMAIN-REGEX' ||
+        'PROCESS-NAME-REGEX' || 'PROCESS-PATH-REGEX' =>
+          item.last,
+        _ => item.length > 2 ? item[2] : '',
+      };
+    }
+
+    Map<String, dynamic> session() {
+      final node = SubscriptionService.clashNodeConfigs(yaml).single;
+      return MihomoConfigGen.build(
+        node,
+        const AppSettings(
+          lanSharing: true,
+          directRules: 'vk.com',
+          proxyRules: 'youtube.com',
+        ),
+        socksPort: 2080,
+        tun: const MihomoTunOptions(
+          stack: 'gvisor',
+          autoRoute: false,
+          fromFileDescriptor: true,
+        ),
+      );
+    }
+
+    test('каждое правило ведёт туда, что ядро найдёт по имени', () {
+      final config = session();
+      final names = {
+        'DIRECT', 'REJECT', 'REJECT-DROP', 'PASS', 'COMPATIBLE',
+        for (final p in config['proxies'] as List) (p as Map)['name'],
+        for (final g in config['proxy-groups'] as List? ?? const []) (g as Map)['name'],
+      };
+      final subRules = (config['sub-rules'] as Map? ?? const {}).keys.toSet();
+      final lines = [
+        ...(config['rules'] as List).cast<String>(),
+        for (final set in (config['sub-rules'] as Map? ?? const {}).values)
+          ...(set as List).cast<String>(),
+      ];
+      for (final rule in lines) {
+        final target = coreTarget(rule);
+        expect(
+          names.contains(target) || subRules.contains(target),
+          isTrue,
+          reason: '$rule -> $target',
+        );
+      }
+    });
+
+    test('трафик идёт на этот узел, имя на экране соединений прежнее', () {
+      final config = session();
+      final match = (config['rules'] as List).cast<String>().lastWhere(
+            (r) => r.startsWith('MATCH'),
+          );
+      final groups = (config['proxy-groups'] as List).cast<Map>();
+      final target = groups.firstWhere((g) => g['name'] == coreTarget(match));
+      expect(target['proxies'], [name]);
+      expect(((config['proxies'] as List).single as Map)['name'], name);
     });
   });
 
