@@ -28,6 +28,7 @@ import '../../services/windows_desktop_service.dart';
 import '../../services/windows_tray_menu.dart';
 import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/halloween/halloween_icons.dart';
+import '../../shared/ui/liquid_toast.dart';
 import '../../shared/ui/update_dialog.dart';
 import '../../utils/clipboard_import.dart';
 import 'desktop_connection_mode.dart';
@@ -116,7 +117,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     final labels = failedActionIds
         .map((id) => HotkeyBinding.fromToken(hotkeys[id])?.label ?? id)
         .join(', ');
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(content: Text(l10n.hotkeyConflictTaken(labels))),
     );
   }
@@ -208,7 +209,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
     if (l10n == null) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    AppSnack.of(context).showSnackBar(
       SnackBar(content: Text(message(l10n))),
     );
   }

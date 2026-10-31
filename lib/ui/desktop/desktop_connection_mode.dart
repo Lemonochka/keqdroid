@@ -9,6 +9,7 @@ import '../../providers/providers.dart';
 import '../../services/vpn_engine.dart';
 import '../../services/windows_desktop_service.dart';
 import '../../shared/ui/app_theme.dart';
+import '../../shared/ui/liquid_toast.dart';
 import '../../utils/error_messages.dart';
 
 // у Ref и WidgetRef нет общего предка, а меню трея знает только Ref, поэтому зависимости явно
@@ -66,7 +67,7 @@ Future<void> applyDesktopConnectionMode(
           );
       final ok = await WindowsDesktopService.restartAsAdministrator();
       if (!ok && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        AppSnack.of(context).showSnackBar(
           SnackBar(
             content: Text(
               AppLocalizations.of(context)!.desktopTunAdminRestartFailed,
@@ -86,7 +87,7 @@ Future<void> applyDesktopConnectionMode(
       await deps.vpn.disconnect();
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        AppSnack.of(context).showSnackBar(
           SnackBar(content: Text(friendlyError(e, context))),
         );
       }
@@ -104,7 +105,7 @@ Future<void> applyDesktopConnectionMode(
       await deps.vpn.connect();
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        AppSnack.of(context).showSnackBar(
           SnackBar(content: Text(friendlyError(e, context))),
         );
       }
