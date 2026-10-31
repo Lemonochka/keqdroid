@@ -2431,8 +2431,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionsSplitTunnelNote => 'Apps kept out of the tunnel are not listed here: Android routes them past it. A row with the outside-vpn rule means such an app pushed a connection into the tunnel itself and the core refused it.';
 
   @override
-  String subscriptionsExpiredOn(String date) {
-    return 'Subscription expired on $date';
+  String subscriptionsExpiredOn(String when) {
+    return 'Subscription expired $when';
   }
 
   @override

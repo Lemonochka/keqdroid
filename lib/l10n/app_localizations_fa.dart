@@ -2427,8 +2427,8 @@ class AppLocalizationsFa extends AppLocalizations {
   String get connectionsSplitTunnelNote => 'برنامه‌هایی که بیرون تونل مانده‌اند اینجا نمی‌آیند: اندروید آن‌ها را از کنار تونل رد می‌کند. ردیفی با قانون outside-vpn یعنی چنین برنامه‌ای خودش اتصالی را به تونل فرستاده و هسته آن را رد کرده است.';
 
   @override
-  String subscriptionsExpiredOn(String date) {
-    return 'اشتراک در $date منقضی شد';
+  String subscriptionsExpiredOn(String when) {
+    return 'اشتراک $when منقضی شد';
   }
 
   @override

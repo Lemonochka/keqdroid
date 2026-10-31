@@ -4604,8 +4604,8 @@ abstract class AppLocalizations {
   /// No description provided for @subscriptionsExpiredOn.
   ///
   /// In en, this message translates to:
-  /// **'Subscription expired on {date}'**
-  String subscriptionsExpiredOn(String date);
+  /// **'Subscription expired {when}'**
+  String subscriptionsExpiredOn(String when);
 
   /// No description provided for @subscriptionsExpiredHint.
   ///

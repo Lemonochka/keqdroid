@@ -28,7 +28,7 @@ final _expired = Subscription(
   name: 'Gaming VPN',
   url: 'https://a.example',
   usedBytes: 6353261407,
-  expiresAt: DateTime.now().subtract(const Duration(days: 3)),
+  expiresAt: DateTime.now().subtract(const Duration(days: 3, hours: 1)),
 );
 
 var _subs = <Subscription>[_live];
@@ -66,7 +66,10 @@ class _DeviceLimitService extends SubscriptionService {
       );
 }
 
-Future<ProviderContainer> _pump(WidgetTester tester) async {
+Future<ProviderContainer> _pump(
+  WidgetTester tester, {
+  Locale locale = const Locale('ru'),
+}) async {
   tester.view.physicalSize = const Size(1080, 2400);
   tester.view.devicePixelRatio = 2.625;
   addTearDown(tester.view.reset);
@@ -89,7 +92,7 @@ Future<ProviderContainer> _pump(WidgetTester tester) async {
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('ru'),
+        locale: locale,
         home: const SubscriptionsTab(),
       ),
     ),
@@ -144,6 +147,22 @@ void main() {
     expect(find.text(_ru.errorDeviceLimitTitle), findsNothing);
     expect(_anyErrorText, findsNothing);
   });
+
+  // срок подставляется как «3д назад», а не датой: было «expired on 3d ago», «am vor 3 Tg.»
+  for (final (code, title) in const [
+    ('en', 'Subscription expired 3d ago'),
+    ('ru', 'Подписка истекла 3д назад'),
+    ('de', 'Abonnement vor 3 Tg. abgelaufen'),
+    ('zh', '订阅已到期（3 天前）'),
+    ('fa', 'اشتراک 3 روز پیش منقضی شد'),
+  ]) {
+    testWidgets('плашка истёкшей подписки читается по-человечески: $code',
+        (tester) async {
+      _subs = [_expired];
+      await _pump(tester, locale: Locale(code));
+      expect(find.text(title), findsOneWidget);
+    });
+  }
 
   testWidgets('свёрнутая карточка ошибку не прячет, как и объявление',
       (tester) async {

@@ -1236,10 +1236,10 @@
   "connectionsClosed": "closed",
   "connectionsAppNamesHint": "App names come from the system, and it knows only live connections, so closed ones stay unnamed.",
   "connectionsSplitTunnelNote": "Apps kept out of the tunnel are not listed here: Android routes them past it. A row with the outside-vpn rule means such an app pushed a connection into the tunnel itself and the core refused it.",
-  "subscriptionsExpiredOn": "Subscription expired on {date}",
+  "subscriptionsExpiredOn": "Subscription expired {when}",
   "@subscriptionsExpiredOn": {
     "placeholders": {
-      "date": {
+      "when": {
         "type": "String"
       }
     }

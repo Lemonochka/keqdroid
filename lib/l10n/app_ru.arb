@@ -1178,10 +1178,10 @@
   "connectionsClosed": "закрыто",
   "connectionsAppNamesHint": "Название приложения сообщает система, а она знает только живые соединения, поэтому у закрытых имени не будет.",
   "connectionsSplitTunnelNote": "Приложения, выведенные из туннеля, здесь не появятся: Android пускает их мимо. Строка с правилом outside-vpn значит, что такое приложение само полезло в туннель, и ядро его не пустило.",
-  "subscriptionsExpiredOn": "Подписка истекла {date}",
+  "subscriptionsExpiredOn": "Подписка истекла {when}",
   "@subscriptionsExpiredOn": {
     "placeholders": {
-      "date": {
+      "when": {
         "type": "String"
       }
     }

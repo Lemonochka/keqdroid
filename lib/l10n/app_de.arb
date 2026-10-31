@@ -1176,10 +1176,10 @@
   "connectionsClosed": "geschlossen",
   "connectionsAppNamesHint": "App-Namen liefert das System, und es kennt nur offene Verbindungen – geschlossene bleiben ohne Namen.",
   "connectionsSplitTunnelNote": "Apps außerhalb des Tunnels stehen hier nicht: Android leitet sie daran vorbei. Eine Zeile mit der Regel outside-vpn heißt, dass so eine App selbst eine Verbindung in den Tunnel geschickt und der Kern sie abgewiesen hat.",
-  "subscriptionsExpiredOn": "Abonnement am {date} abgelaufen",
+  "subscriptionsExpiredOn": "Abonnement {when} abgelaufen",
   "@subscriptionsExpiredOn": {
     "placeholders": {
-      "date": {
+      "when": {
         "type": "String"
       }
     }

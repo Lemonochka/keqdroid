@@ -765,7 +765,7 @@
   "connectionsClosed": "بسته شد",
   "connectionsAppNamesHint": "نام برنامه را سیستم می‌دهد و فقط اتصال‌های زنده را می‌شناسد؛ اتصال‌های بسته نامی ندارند.",
   "connectionsSplitTunnelNote": "برنامه‌هایی که بیرون تونل مانده‌اند اینجا نمی‌آیند: اندروید آن‌ها را از کنار تونل رد می‌کند. ردیفی با قانون outside-vpn یعنی چنین برنامه‌ای خودش اتصالی را به تونل فرستاده و هسته آن را رد کرده است.",
-  "subscriptionsExpiredOn": "اشتراک در {date} منقضی شد",
+  "subscriptionsExpiredOn": "اشتراک {when} منقضی شد",
   "subscriptionsExpiredHint": "سرویس‌دهنده دیگر فهرست سرورها را به‌روز نمی‌کند. برای ادامهٔ کار اشتراک را تمدید کنید.",
   "subscriptionsExpiredNotifTitle": "اشتراک منقضی شد",
   "subscriptionsExpiredNotifBody": "«{name}» در {date} منقضی شد. سرویس‌دهنده دیگر فهرست سرورها را به‌روز نمی‌کند — برای اینکه سرورها کار کنند تمدیدش کنید.",

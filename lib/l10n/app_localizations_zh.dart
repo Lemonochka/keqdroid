@@ -2426,8 +2426,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get connectionsSplitTunnelNote => '被排除在隧道之外的应用不会列出：Android 让它们绕过隧道。带有 outside-vpn 规则的条目表示这类应用自行把连接发进隧道，被内核拒绝。';
 
   @override
-  String subscriptionsExpiredOn(String date) {
-    return '订阅已于 $date 到期';
+  String subscriptionsExpiredOn(String when) {
+    return '订阅已到期（$when）';
   }
 
   @override

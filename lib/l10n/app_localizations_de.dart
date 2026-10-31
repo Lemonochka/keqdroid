@@ -2431,8 +2431,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get connectionsSplitTunnelNote => 'Apps außerhalb des Tunnels stehen hier nicht: Android leitet sie daran vorbei. Eine Zeile mit der Regel outside-vpn heißt, dass so eine App selbst eine Verbindung in den Tunnel geschickt und der Kern sie abgewiesen hat.';
 
   @override
-  String subscriptionsExpiredOn(String date) {
-    return 'Abonnement am $date abgelaufen';
+  String subscriptionsExpiredOn(String when) {
+    return 'Abonnement $when abgelaufen';
   }
 
   @override

@@ -2443,8 +2443,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get connectionsSplitTunnelNote => 'Приложения, выведенные из туннеля, здесь не появятся: Android пускает их мимо. Строка с правилом outside-vpn значит, что такое приложение само полезло в туннель, и ядро его не пустило.';
 
   @override
-  String subscriptionsExpiredOn(String date) {
-    return 'Подписка истекла $date';
+  String subscriptionsExpiredOn(String when) {
+    return 'Подписка истекла $when';
   }
 
   @override
