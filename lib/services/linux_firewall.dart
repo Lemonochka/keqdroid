@@ -7,21 +7,33 @@ enum LinuxFirewall { firewalld, ufw }
 class LinuxFirewalls {
   LinuxFirewalls._();
 
+  @visibleForTesting
+  static Future<ProcessResult> Function(String, List<String>) run = Process.run;
+
+  @visibleForTesting
+  static String firewalldPidFile = '/var/run/firewalld.pid';
+
   // ufw status требует root, поэтому читаем его конфиг
   static Future<LinuxFirewall?> detect() async {
-    try {
-      final r = await Process.run('firewall-cmd', ['--state']);
-      if (r.exitCode == 0 && '${r.stdout}'.trim() == 'running') {
-        return LinuxFirewall.firewalld;
-      }
-    } on ProcessException {
-      // firewalld не установлен
-    }
+    if (await _firewalldRunning()) return LinuxFirewall.firewalld;
     try {
       final conf = await File('/etc/ufw/ufw.conf').readAsString();
       if (ufwEnabled(conf)) return LinuxFirewall.ufw;
     } catch (_) {}
     return null;
+  }
+
+  // не firewall-cmd --state: firewalld 2.5 проверяет чтение свойства по D-Bus правом config,
+  // и polkit спрашивал пароль на каждом запуске, карточка строится вместе со скрытой вкладкой настроек
+  static Future<bool> _firewalldRunning() async {
+    try {
+      final r = await run('systemctl', ['is-active', '--quiet', 'firewalld']);
+      if (r.exitCode == 0) return true;
+    } on ProcessException {
+      // без systemd
+    }
+    // под systemd firewalld идёт с --nopid, pid-файл бывает только без него
+    return File(firewalldPidFile).existsSync();
   }
 
   @visibleForTesting
