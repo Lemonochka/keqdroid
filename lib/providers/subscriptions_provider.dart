@@ -230,7 +230,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     final id = sub.id;
     ref.read(subscriptionRefreshingIdsProvider.notifier).update((set) => {...set, id});
     ref.read(subscriptionRefreshErrorsProvider.notifier).update((m) {
-      final next = <String, String>{...m};
+      final next = <String, Object>{...m};
       next.remove(id);
       return next;
     });
@@ -240,17 +240,13 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     } catch (e) {
       ref.read(subscriptionRefreshErrorsProvider.notifier).update((m) => {
             ...m,
-            id: _shortError(e),
+            id: e,
           });
       rethrow;
     } finally {
       ref.read(subscriptionRefreshingIdsProvider.notifier)
           .update((set) => {...set}..remove(id));
     }
-  }
-
-  static String _shortError(Object e) {
-    return explainError(e).short;
   }
 
   Future<void> updateInterval(String id, int hours) async {

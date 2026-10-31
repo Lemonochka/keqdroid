@@ -609,52 +609,130 @@ class _SubExpiredBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final redColor = AppTheme.red(context);
-    final textLightColor = AppTheme.textLight(context);
-    return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 8,
-          ),
-          decoration: BoxDecoration(
-            color: redColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-            border: Border.all(color: redColor.withValues(alpha: 0.35)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.timer_off_rounded, size: 15, color: redColor),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      sub.expiresAt != null
-                          ? l10n.subscriptionsExpiredOn(
-                              _subFormatDate(context, sub.expiresAt!),
-                            )
-                          : l10n.subscriptionsExpired,
-                      style: Theme.of(context).textTheme
-                          .emphasized(
-                            Theme.of(context).textTheme.labelMedium,
-                          )
-                          ?.copyWith(color: redColor),
-                    ),
-                    Text(
-                      l10n.subscriptionsExpiredHint,
-                      style: Theme.of(context).textTheme.bodySmall
-                          ?.copyWith(color: textLightColor),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    return _SubAlertPlate(
+      icon: Icons.timer_off_rounded,
+      title: sub.expiresAt != null
+          ? l10n.subscriptionsExpiredOn(_subFormatDate(context, sub.expiresAt!))
+          : l10n.subscriptionsExpired,
+      message: l10n.subscriptionsExpiredHint,
+    );
+  }
+}
+
+class _SubRefreshErrorBanner extends ConsumerWidget {
+  const _SubRefreshErrorBanner({required this.sub});
+
+  final Subscription sub;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final error = ref.watch(
+      subscriptionRefreshErrorsProvider.select((m) => m[sub.id]),
+    );
+    final collapsed = ref.watch(
+      collapsedSubscriptionCardsProvider.select((m) => m[sub.id] ?? false),
+    );
+    final still = MediaQuery.disableAnimationsOf(context);
+    final explained = error == null
+        ? null
+        : explainErrorLocalized(error, AppLocalizations.of(context)!);
+    return AnimatedSwitcher(
+      duration: still ? Duration.zero : _subAlertIn,
+      reverseDuration: still ? Duration.zero : ExpressiveMotion.durationFast,
+      switchInCurve: const SpringCurve(ExpressiveMotion.spatialDefault, _subAlertIn),
+      switchOutCurve: ExpressiveMotion.emphasizedAccelerate.flipped,
+      layoutBuilder: (current, previous) => Stack(
+        alignment: Alignment.topCenter,
+        children: [...previous, ?current],
+      ),
+      // пружина перелетает за 1: высота пусть перелетает, прозрачность нет
+      transitionBuilder: (child, animation) => AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) => ClipRect(
+          child: Align(
+            alignment: Alignment.topCenter,
+            heightFactor: math.max(0.0, animation.value),
+            child: Opacity(
+              opacity: animation.value.clamp(0.0, 1.0),
+              child: child,
+            ),
           ),
         ),
-      );
+        child: child,
+      ),
+      // у истёкшей подписки отказ обновления ожидаем, плашки про срок хватает
+      child: explained == null || sub.isExpired
+          ? const SizedBox(key: ValueKey(false), width: double.infinity)
+          : _SubAlertPlate(
+              key: const ValueKey(true),
+              icon: Icons.error_rounded,
+              title: explained.title,
+              message: explained.message,
+              messageMaxLines: collapsed ? 2 : null,
+            ),
+    );
+  }
+}
+
+const _subAlertIn = Duration(milliseconds: 450);
+
+class _SubAlertPlate extends StatelessWidget {
+  const _SubAlertPlate({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.messageMaxLines,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final int? messageMaxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final ink = scheme.onErrorContainer;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: scheme.errorContainer,
+          borderRadius: ExpressiveShape.radius(ExpressiveShape.medium),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 18, color: ink),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: textTheme
+                        .emphasized(textTheme.bodyMedium)
+                        ?.copyWith(color: ink),
+                  ),
+                  Text(
+                    message,
+                    style: textTheme.bodyMedium?.copyWith(color: ink),
+                    maxLines: messageMaxLines,
+                    overflow:
+                        messageMaxLines == null ? null : TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -729,10 +807,6 @@ class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
         }
       },
     );
-    final refreshError = ref.watch(
-      subscriptionRefreshErrorsProvider.select((m) => m[sub.id]),
-    );
-    final hasRefreshError = refreshError != null;
     final profile = profileForSubscription(
       ref.watch(routingProfilesProvider).value ?? const [],
       sub.id,
@@ -853,43 +927,6 @@ class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
                           ? orangeColor
                           : accentColor,
                     ),
-                  ),
-                ),
-              ],
-              if (hasRefreshError) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: redColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(ExpressiveShape.small),
-                    border: Border.all(
-                      color: redColor.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.error_outline_rounded,
-                        size: 14,
-                        color: redColor,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          refreshError,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: redColor),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],
@@ -1279,6 +1316,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
                 sub.showsCard(SubscriptionCardElement.announce))
               _SubAnnounceBanner(sub: sub),
             if (sub.isExpired) _SubExpiredBanner(sub: sub),
+            _SubRefreshErrorBanner(sub: sub),
             _SubCardDetails(sub: sub, onSwitchToHttps: _switchToHttps),
               ],
             ),

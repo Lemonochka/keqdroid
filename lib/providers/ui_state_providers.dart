@@ -15,21 +15,20 @@ abstract class StringBoolMapNotifier extends Notifier<Map<String, bool>> {
       state = fn(state);
 }
 
-abstract class StringStringMapNotifier extends Notifier<Map<String, String>> {
-  @override
-  Map<String, String> build() => {};
-
-  void update(Map<String, String> Function(Map<String, String> state) fn) =>
-      state = fn(state);
-}
-
 class SubscriptionRefreshingIdsNotifier extends StringSetNotifier {}
 
 class PingingScopesNotifier extends StringSetNotifier {}
 
 class PingingServerIdsNotifier extends StringSetNotifier {}
 
-class SubscriptionRefreshErrorsNotifier extends StringStringMapNotifier {}
+// сама ошибка, а не текст: переводится при показе, готовой строкой в карточке оставался английский
+class SubscriptionRefreshErrorsNotifier extends Notifier<Map<String, Object>> {
+  @override
+  Map<String, Object> build() => {};
+
+  void update(Map<String, Object> Function(Map<String, Object> state) fn) =>
+      state = fn(state);
+}
 
 class CollapsedServerGroupsNotifier extends StringBoolMapNotifier {}
 
@@ -78,7 +77,7 @@ final subscriptionRefreshingIdsProvider =
 );
 
 final subscriptionRefreshErrorsProvider =
-    NotifierProvider<SubscriptionRefreshErrorsNotifier, Map<String, String>>(
+    NotifierProvider<SubscriptionRefreshErrorsNotifier, Map<String, Object>>(
   SubscriptionRefreshErrorsNotifier.new,
 );
 
