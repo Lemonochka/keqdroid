@@ -56,15 +56,33 @@ class LinuxAutostart {
     return true;
   }
 
-  // Hyprland без systemd-сборки цели не имеет вовсе (так у caelestia на EndeavourOS), и без uwsm ярлык не исполнит никто.
-  // остаётся его собственный запуск при старте; строку ставим только там, иначе приложение стартовало бы дважды
-  static const _hyprMarker = 'keqdroid autostart, added and removed by the app';
+  // Hyprland без systemd-сборки (caelestia на EndeavourOS), sway, river и niri вне своей сессии ярлык не исполнят: никто не поднимает
+  // xdg-desktop-autostart.target. остаётся их собственный запуск при старте; строку ставим только там, иначе приложение стартовало бы дважды
+  static const _startMarker = 'keqdroid autostart, added and removed by the app';
+
+  static const _compositors = ['hyprland', 'sway', 'river', 'niri'];
 
   @visibleForTesting
-  static bool Function() hyprlandSession = () =>
-      (Platform.environment['XDG_CURRENT_DESKTOP'] ?? '')
-          .toLowerCase()
-          .contains('hyprland');
+  static String? homeOverride;
+
+  static String _home() => homeOverride ?? Platform.environment['HOME'] ?? '';
+
+  @visibleForTesting
+  static String? Function() compositor = () {
+    final env = Platform.environment;
+    final desktop = (env['XDG_CURRENT_DESKTOP'] ?? '').toLowerCase();
+    if (desktop.contains('hyprland') ||
+        env.containsKey('HYPRLAND_INSTANCE_SIGNATURE')) {
+      return 'hyprland';
+    }
+    // sway и niri без сессии XDG_CURRENT_DESKTOP не ставят, а сокет детям дают всегда
+    if (desktop.contains('sway') || env.containsKey('SWAYSOCK')) return 'sway';
+    if (desktop.contains('niri') || env.containsKey('NIRI_SOCKET')) {
+      return 'niri';
+    }
+    if (desktop.contains('river')) return 'river';
+    return null;
+  };
 
   @visibleForTesting
   static Future<bool> Function() desktopRunsAutostart = () async {
@@ -81,34 +99,65 @@ class LinuxAutostart {
     return false;
   };
 
-  // caelestia подключает свой пустой hypr-user.lua именно для пользовательских строк
-  static List<File> _hyprlandConfigs() {
-    final home = _configHome();
-    return [
-      File(p.join(home, 'caelestia', 'hypr-user.lua')),
-      File(p.join(home, 'hypr', 'hyprland.lua')),
-      File(p.join(home, 'hypr', 'hyprland.conf')),
-    ];
+  // порядок как у самих композиторов: пишем в тот файл, который они прочтут
+  static List<File> _compositorConfigs(String wm) {
+    final config = _configHome();
+    return switch (wm) {
+      'hyprland' => [
+          // caelestia подключает свой пустой hypr-user.lua именно для пользовательских строк
+          File(p.join(config, 'caelestia', 'hypr-user.lua')),
+          File(p.join(config, 'hypr', 'hyprland.lua')),
+          File(p.join(config, 'hypr', 'hyprland.conf')),
+        ],
+      'sway' => [
+          File(p.join(_home(), '.sway', 'config')),
+          File(p.join(config, 'sway', 'config')),
+        ],
+      'river' => [File(p.join(config, 'river', 'init'))],
+      'niri' => [File(p.join(config, 'niri', 'config.kdl'))],
+      _ => const [],
+    };
   }
 
   @visibleForTesting
-  static String hyprlandLines(String target, {required bool lua}) {
-    final command = "'${target.replaceAll("'", r"'\''")}' $flag";
-    if (lua) {
-      final literal =
-          command.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
-      return '-- $_hyprMarker\n'
-          'hl.on("hyprland.start", function() hl.exec_cmd("$literal") end)\n';
-    }
-    // в hyprlang решётка начинает комментарий, буквальная пишется двойной
-    return '# $_hyprMarker\nexec-once = ${command.replaceAll('#', '##')}\n';
+  static String startLines(String wm, String configPath, String target) {
+    // апостроф без обратной косой: sway снимает её ещё до оболочки (unescape_string)
+    final command = "'${target.replaceAll("'", "'\"'\"'")}' $flag";
+    final escaped = command.replaceAll(r'\', r'\\');
+    String quoted(String s) =>
+        '"${s.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"';
+    return switch (wm) {
+      'hyprland' when configPath.endsWith('.lua') => '-- $_startMarker\n'
+          'hl.on("hyprland.start", function() hl.exec_cmd(${quoted(command)}) end)\n',
+      // hyprlang режет комментарий по решётке и подставляет $имя без всякого экранирования, поэтому $ рвём кавычками
+      'hyprland' => '# $_startMarker\nexec-once = '
+          '${escaped.replaceAll('#', '##').replaceAll(r'$', r"$''")}\n',
+      'sway' =>
+        '# $_startMarker\nexec ${escaped.replaceAll(r'$', r'$$')}\n',
+      'river' => '# $_startMarker\n$command &\n',
+      'niri' =>
+        '// $_startMarker\nspawn-at-startup ${quoted(target)} "$flag"\n',
+      _ => '',
+    };
   }
 
-  static String _withoutHyprlandLines(String text) {
+  // init у river исполняемый файл на любом языке, строку оболочки ставим только в скрипт оболочки
+  static bool _shellScript(String text) {
+    if (!text.startsWith('#!')) return true;
+    final words = text.split('\n').first.substring(2).trim().split(RegExp(r'\s+'));
+    var program = p.posix.basename(words.first);
+    if (program == 'env') {
+      program = words.skip(1).firstWhere((w) => !w.startsWith('-'), orElse: () => '');
+    }
+    return const {'sh', 'bash', 'dash', 'zsh', 'ksh', 'mksh', 'fish'}
+        .contains(program);
+  }
+
+  static String _withoutStartLines(String text) {
     final lines = text.split('\n');
     final out = <String>[];
     for (var i = 0; i < lines.length; i++) {
-      if (lines[i].contains(_hyprMarker)) {
+      if (lines[i].contains(_startMarker)) {
         // строку запуска могли стереть руками, тогда под меткой уже чужая
         if (i + 1 < lines.length && lines[i + 1].contains(flag)) i++;
         continue;
@@ -118,17 +167,31 @@ class LinuxAutostart {
     return out.join('\n');
   }
 
-  static Future<bool> _syncHyprlandConfig(bool wanted) async {
+  static String _withStartLines(String wm, String text, String block) {
+    // у river строку в конец не поставить: init часто кончается exec-ом генератора раскладки
+    if (wm == 'river') {
+      if (!text.startsWith('#!')) return block + text;
+      final eol = text.indexOf('\n');
+      if (eol < 0) return '$text\n$block';
+      return text.substring(0, eol + 1) + block + text.substring(eol + 1);
+    }
+    final base = text.isNotEmpty && !text.endsWith('\n') ? '$text\n' : text;
+    return base + block;
+  }
+
+  static Future<bool> _syncStartLines(String wm, bool wanted) async {
     var changed = false;
-    File? into;
-    for (final file in _hyprlandConfigs()) {
+    var placed = false;
+    for (final file in _compositorConfigs(wm)) {
       if (!file.existsSync()) continue;
-      into ??= file;
       final text = await file.readAsString();
-      var next = _withoutHyprlandLines(text);
-      if (wanted && identical(file, into)) {
-        if (next.isNotEmpty && !next.endsWith('\n')) next += '\n';
-        next += hyprlandLines(_target(), lua: file.path.endsWith('.lua'));
+      var next = _withoutStartLines(text);
+      if (wanted && !placed) {
+        placed = true;
+        if (wm != 'river' || _shellScript(next)) {
+          next = _withStartLines(
+              wm, next, startLines(wm, file.path, _target()));
+        }
       }
       if (next != text) {
         await file.writeAsString(next);
@@ -136,6 +199,19 @@ class LinuxAutostart {
       }
     }
     return changed;
+  }
+
+  // вне своего композитора чужой конфиг не трогаем: иначе вход в GNOME снимал бы строку, нужную следующему входу в Hyprland
+  static Future<void> _syncCompositorStart({required bool enabled}) async {
+    if (!enabled) {
+      for (final wm in _compositors) {
+        await _syncStartLines(wm, false);
+      }
+      return;
+    }
+    final wm = compositor();
+    if (wm == null) return;
+    await _syncStartLines(wm, !await desktopRunsAutostart());
   }
 
   // сам AppImage: бинарь во временном монте исчезает вместе с процессом
@@ -157,7 +233,7 @@ class LinuxAutostart {
       if (!enabled) {
         if (isEnabled()) await file.delete();
         await _syncHyprlandDropIn(false);
-        await _syncHyprlandConfig(false);
+        await _syncCompositorStart(enabled: false);
         await reloadUserUnits();
         return true;
       }
@@ -165,9 +241,7 @@ class LinuxAutostart {
       await file.parent.create(recursive: true);
       await file.writeAsString(contentFor(_target()));
       await _syncHyprlandDropIn(true);
-      if (hyprlandSession()) {
-        await _syncHyprlandConfig(!await desktopRunsAutostart());
-      }
+      await _syncCompositorStart(enabled: true);
       await reloadUserUnits();
       return true;
     } catch (e, st) {
@@ -193,12 +267,7 @@ class LinuxAutostart {
       }
       if (await _syncHyprlandDropIn(enabled)) changed = true;
       if (changed) await reloadUserUnits();
-      // вне Hyprland конфиг не трогаем: иначе вход в GNOME снимал бы строку, нужную следующему входу в Hyprland
-      if (!enabled) {
-        await _syncHyprlandConfig(false);
-      } else if (hyprlandSession()) {
-        await _syncHyprlandConfig(!await desktopRunsAutostart());
-      }
+      await _syncCompositorStart(enabled: enabled);
     } catch (_) {}
   }
 
