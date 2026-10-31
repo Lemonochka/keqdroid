@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/shared/ui/liquid_toast.dart';
@@ -22,10 +24,33 @@ Future<BuildContext> _pump(
   return captured;
 }
 
+// как на ПК: боковая панель у края окна, капля вытекает из её кромки
+Future<BuildContext> _pumpPc(WidgetTester tester) async {
+  late BuildContext captured;
+  await tester.pumpWidget(MaterialApp(
+    builder: (context, child) => LiquidToastHost(child: child!),
+    home: Scaffold(
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const LiquidToastSource(child: SizedBox(width: 272)),
+          Expanded(child: Builder(builder: (context) {
+            captured = context;
+            return const SizedBox.expand();
+          })),
+        ],
+      ),
+    ),
+  ));
+  await tester.pump();
+  return captured;
+}
+
 void main() {
   tearDown(() {
     LiquidToast.enabled = false;
     LiquidToast.current.value = null;
+    LiquidToast.source.value = null;
   });
 
   testWidgets('outside Modern the usual snack bar shows', (tester) async {
@@ -143,6 +168,64 @@ void main() {
       expect(LiquidToast.current.value, isNotNull);
       await tester.drag(drop, const Offset(300, 0));
       await expectGone(tester);
+    });
+  });
+
+  group('on PC', () {
+    // отступ плитки 16 и текста в ней 18
+    const inset = 16 + 18;
+
+    testWidgets('the drop stands next to the side panel and swipes back into it',
+        (tester) async {
+      LiquidToast.enabled = true;
+      final context = await _pumpPc(tester);
+      expect(LiquidToast.source.value, 272);
+      AppSnack.of(context).showSnackBar(const SnackBar(content: Text('готово')));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.text('готово')).dx, closeTo(272 + inset, 0.5));
+      await tester.drag(find.text('готово'), const Offset(-300, 0));
+      await tester.pumpAndSettle();
+      expect(LiquidToast.current.value, isNull);
+    });
+
+    testWidgets('on a page over the panel it comes from the window edge',
+        (tester) async {
+      LiquidToast.enabled = true;
+      final context = await _pumpPc(tester);
+      late BuildContext page;
+      unawaited(Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => Scaffold(body: Builder(builder: (context) {
+          page = context;
+          return const SizedBox.expand();
+        })),
+      )));
+      await tester.pumpAndSettle();
+      expect(LiquidToast.source.value, 0);
+      AppSnack.of(page).showSnackBar(const SnackBar(content: Text('сохранено')));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.text('сохранено')).dx, closeTo(inset, 0.5));
+      LiquidToast.hide();
+      Navigator.of(page).pop();
+      await tester.pumpAndSettle();
+      expect(LiquidToast.source.value, 272);
+    });
+
+    testWidgets('a dialog leaves the panel visible, so the panel edge stays',
+        (tester) async {
+      final context = await _pumpPc(tester);
+      unawaited(showDialog<void>(
+          context: context, builder: (_) => const AlertDialog(content: Text('?'))));
+      await tester.pumpAndSettle();
+      expect(LiquidToast.source.value, 272);
+    });
+
+    testWidgets('the phone keeps the drop in the middle', (tester) async {
+      LiquidToast.enabled = true;
+      final context = await _pump(tester);
+      AppSnack.of(context).showSnackBar(const SnackBar(content: Text('готово')));
+      await tester.pumpAndSettle();
+      // ширина 560 посередине окна 800
+      expect(tester.getTopLeft(find.text('готово')).dx, closeTo(120 + 18, 0.5));
     });
   });
 }

@@ -377,6 +377,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     });
 
     ref.watch(windowsTrayMenuProvider);
+    LiquidToast.enabled = true;
 
     ref.listen<AsyncValue<UpdateInfo?>>(updateInfoProvider, (prev, next) {
       if (!shouldAutoPromptForUpdate(prev, next)) return;
@@ -395,10 +396,12 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          HalloweenIconScope(
-            child: Material(
-              color: Theme.of(context).colorScheme.surfaceContainerLow,
-              child: DesktopRail(index: _index, onSelect: _selectTab),
+          LiquidToastSource(
+            child: HalloweenIconScope(
+              child: Material(
+                color: Theme.of(context).colorScheme.surfaceContainerLow,
+                child: DesktopRail(index: _index, onSelect: _selectTab),
+              ),
             ),
           ),
           VerticalDivider(width: 1, color: AppTheme.divider(context)),

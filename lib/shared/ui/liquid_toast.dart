@@ -30,8 +30,11 @@ class LiquidToast {
 
   static final current = ValueNotifier<LiquidToast?>(null);
 
-  // включает главный экран, когда нижняя панель в Модерне
+  // включает главный экран, когда нижняя панель в Модерне, и всегда на ПК
   static bool enabled = false;
+
+  // на ПК отступ кромки, из которой вытекает капля, от края окна; на телефоне null
+  static final source = ValueNotifier<double?>(null);
 
   static void show(LiquidToast toast) => current.value = toast;
 
@@ -110,7 +113,7 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     super.initState();
     _t = AnimationController(vsync: this);
     _pull = AnimationController.unbounded(vsync: this);
-    _motion = Listenable.merge([_t, _pull]);
+    _motion = Listenable.merge([_t, _pull, LiquidToast.source]);
     LiquidToast.current.addListener(_onToast);
   }
 
@@ -155,8 +158,8 @@ class _LiquidToastHostState extends State<LiquidToastHost>
   Future<void> _sink() =>
       ExpressiveMotion.springTo(_t, 0, spring: _sinkSpring).orCancel.catchError((_) {});
 
-  static double _width(Size screen) =>
-      math.min(screen.width - 2 * FloatingBar.margin, 560.0);
+  static double _width(Size screen, double edge) =>
+      math.min(screen.width - edge - 2 * FloatingBar.margin, 560.0);
 
   void _onDragUpdate(DragUpdateDetails d, bool rtl) {
     if (LiquidToast.current.value == null) return;
@@ -169,7 +172,8 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     if (toast == null) return;
     final toEdge = (rtl ? 1 : -1) * (d.primaryVelocity ?? 0);
     // пороги как у Dismissible: бросок от 700 px/с или сдвиг на 0,4 ширины
-    if (toEdge >= 700 || _pull.value >= 0.4 * _width(MediaQuery.sizeOf(context))) {
+    final width = _width(MediaQuery.sizeOf(context), LiquidToast.source.value ?? 0);
+    if (toEdge >= 700 || _pull.value >= 0.4 * width) {
       LiquidToast.hide();
       return;
     }
@@ -204,7 +208,9 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     final cs = Theme.of(context).colorScheme;
     final color = toast.color ?? FloatingBar.tileColor(cs);
     final ink = toast.ink ?? cs.onSurface;
-    final width = _width(mq.size);
+    final source = LiquidToast.source.value;
+    final edgeAt = source ?? 0;
+    final width = _width(mq.size, edgeAt);
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final restBottom = mq.padding.bottom +
         FloatingBar.bottomMargin +
@@ -214,10 +220,15 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     // капля выходит из-за края, а растекается в плитку уже на лету
     final grow = ((t - 0.2) / 0.8).clamp(0.0, 1.0);
     final size = Size.lerp(_drop, Size(width, _height), Curves.easeOut.transform(grow))!;
-    final restStart = (mq.size.width - width) / 2;
+    // на ПК плитка стоит у своей кромки, на телефоне посередине
+    final restStart =
+        source == null ? (mq.size.width - width) / 2 : FloatingBar.margin;
     // начало за краем на всю склейку: бугорок у края тает, а не обрывается
-    final start =
-        -_drop.width - _goo + (restStart + _drop.width + _goo) * t - _pull.value;
+    final start = edgeAt -
+        _drop.width -
+        _goo +
+        (restStart + _drop.width + _goo) * t -
+        _pull.value;
     final rect = Rect.fromLTWH(
       rtl ? mq.size.width - start - size.width : start,
       centerY - size.height / 2,
@@ -230,8 +241,9 @@ class _LiquidToastHostState extends State<LiquidToastHost>
       _pull.value.clamp(0.0, _goo),
     );
     final radius = math.min(_radius, size.height / 2);
-    final edge = rtl ? (-1.0, 0.0, -mq.size.width) : (1.0, 0.0, 0.0);
-    return Stack(
+    final edge =
+        rtl ? (-1.0, 0.0, edgeAt - mq.size.width) : (1.0, 0.0, edgeAt);
+    final drop = Stack(
         children: [
           Positioned.fill(
             child: IgnorePointer(
@@ -282,6 +294,9 @@ class _LiquidToastHostState extends State<LiquidToastHost>
           ),
         ],
     );
+    if (edgeAt <= 0) return drop;
+    // панель рисует себя сама: капля и текст только снаружи её кромки
+    return ClipRect(clipper: _BeyondEdge(edgeAt, rtl), child: drop);
   }
 
   Widget _content(BuildContext context, LiquidToast toast, Color ink) {
@@ -317,6 +332,77 @@ class _LiquidToastHostState extends State<LiquidToastHost>
       ),
     );
   }
+}
+
+class _BeyondEdge extends CustomClipper<Rect> {
+  const _BeyondEdge(this.edge, this.rtl);
+
+  final double edge;
+  final bool rtl;
+
+  @override
+  Rect getClip(Size size) => rtl
+      ? Rect.fromLTRB(0, 0, size.width - edge, size.height)
+      : Rect.fromLTRB(edge, 0, size.width, size.height);
+
+  @override
+  bool shouldReclip(_BeyondEdge old) => old.edge != edge || old.rtl != rtl;
+}
+
+// кромка, из которой капля вытекает на ПК: боковая панель. страница поверх закрывает панель,
+// тогда капля идёт из края окна. secondaryAnimation двигают только страницы, диалоги нет
+class LiquidToastSource extends StatefulWidget {
+  const LiquidToastSource({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<LiquidToastSource> createState() => _LiquidToastSourceState();
+}
+
+class _LiquidToastSourceState extends State<LiquidToastSource> {
+  Animation<double>? _cover;
+  double _width = 0;
+  bool _scheduled = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final cover = ModalRoute.of(context)?.secondaryAnimation;
+    if (cover == _cover) return;
+    _cover?.removeListener(_publish);
+    _cover = cover?..addListener(_publish);
+    _publish();
+  }
+
+  @override
+  void dispose() {
+    _cover?.removeListener(_publish);
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => LiquidToast.source.value = null);
+    super.dispose();
+  }
+
+  // из раскладки и сборки уведомление трогать нельзя, только после кадра
+  void _publish() {
+    if (_scheduled) return;
+    _scheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scheduled = false;
+      if (!mounted) return;
+      LiquidToast.source.value = (_cover?.value ?? 0) > 0 ? 0 : _width;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => _SizeReporter(
+        onSize: (size) {
+          if (size.width == _width) return;
+          _width = size.width;
+          _publish();
+        },
+        child: widget.child,
+      );
 }
 
 class _SizeReporter extends SingleChildRenderObjectWidget {
