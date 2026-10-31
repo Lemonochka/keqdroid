@@ -1267,6 +1267,42 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serverEditorClashValid => 'Корректный конфиг Clash';
 
   @override
+  String get serverEditorModeFields => 'Поля';
+
+  @override
+  String get serverEditorModeText => 'Текст';
+
+  @override
+  String get serverEditorXhttpDetails => 'XHTTP подробно';
+
+  @override
+  String get serverEditorXhttpPadding => 'Набивка';
+
+  @override
+  String get serverEditorXhttpUplink => 'Отправка';
+
+  @override
+  String get serverEditorXhttpSession => 'Сессия';
+
+  @override
+  String get serverEditorXhttpXmux => 'Мультиплекс XMUX';
+
+  @override
+  String get serverEditorXhttpRest => 'Остальные параметры';
+
+  @override
+  String get serverEditorXhttpRestInvalid => 'Это не JSON-объект, правка здесь не сохранится';
+
+  @override
+  String get serverEditorXhttpShowAll => 'Все параметры';
+
+  @override
+  String get serverEditorXhttpHideEmpty => 'Скрыть пустые';
+
+  @override
+  String get serverEditorClashRest => 'Остальное из Clash, как есть';
+
+  @override
   String get serverEditorJsonFormat => 'Формат';
 
   @override
@@ -2141,13 +2177,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serverEditorRawConfig => 'Сырой конфиг';
 
   @override
-  String get serverEditorRawToggle => 'Редактировать как текст';
-
-  @override
   String get serverEditorRawOnlyNote => 'Этот формат редактируется как сырой текст';
-
-  @override
-  String get serverEditorPreview => 'Итоговая ссылка';
 
   @override
   String get serverEditorSubscriptionNote => 'Сервер из подписки: правки сохранятся при её обновлении.';

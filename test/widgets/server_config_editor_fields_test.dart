@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -140,16 +142,113 @@ void main() {
     expect(find.text('xtls-rprx-vision'), findsWidgets);
   });
 
-  // 31.10.2026: сервер из Clash-подписки открывался красным «нет outbounds, это не конфиг Xray»
-  testWidgets('Clash-сервер в сыром виде не называется неверным', (tester) async {
-    await _open(
-      tester,
-      '{"name":"DE","proxies":[{"name":"DE","type":"hysteria2",'
-      '"server":"198.51.100.90","port":443,"password":"password"}],'
-      '"rules":["MATCH,DE"]}',
-    );
+  // 31.10.2026: extra XHTTP был одной строкой JSON, её «никак не потыкать, не посмотреть»
+  group('extra XHTTP полями', () {
+    const extra = '{"xPaddingBytes":"50-150","xmux":{"maxConcurrency":"16-32"},'
+        '"headers":{"X-Api":"1"}}';
+    final link = 'vless://716e3485-d4f9-4471-9660-fb4b0b838100@example.com:443'
+        '?type=xhttp&security=reality&sni=example.com'
+        '&pbk=oYXosxG2YU6_mQkkPTS8JUnoRxqvaBaG5mH-y0pc2nA'
+        '&extra=${Uri.encodeQueryComponent(extra)}#node';
 
-    expect(find.text('Valid Clash config'), findsOneWidget);
-    expect(find.textContaining('outbounds'), findsNothing);
+    Future<String> save(WidgetTester tester, _FakeServers servers) async {
+      await tester.ensureVisible(find.text('Save'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      return Uri.parse(servers.saved!).queryParameters['extra']!;
+    }
+
+    testWidgets('заданные параметры видны полями, неизвестные в остальном', (tester) async {
+      await _open(tester, link);
+      expect(find.text('XHTTP details'), findsOneWidget);
+      expect(find.text('xPaddingBytes'), findsOneWidget);
+      expect(find.text('maxConcurrency'), findsOneWidget);
+      expect(find.textContaining('X-Api'), findsOneWidget);
+      expect(find.text('noGRPCHeader'), findsNothing);
+
+      await tester.ensureVisible(find.text('All parameters'));
+      await tester.tap(find.text('All parameters'));
+      await tester.pumpAndSettle();
+      expect(find.text('noGRPCHeader'), findsOneWidget);
+    });
+
+    testWidgets('правка поля доезжает до ссылки, остальное как было', (tester) async {
+      final servers = await _open(tester, link);
+      final field = find.ancestor(
+        of: find.text('maxConcurrency'),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(field, '8');
+      await tester.pumpAndSettle();
+
+      final saved = jsonDecode(await save(tester, servers)) as Map;
+      expect(saved['xmux'], {'maxConcurrency': 8});
+      expect(saved['xPaddingBytes'], '50-150');
+      expect(saved['headers'], {'X-Api': '1'});
+    });
+
+    testWidgets('нетронутый extra уходит байт в байт', (tester) async {
+      final servers = await _open(tester, link);
+      await tester.enterText(find.byType(TextField).first, 'edited.example.com');
+      await tester.pumpAndSettle();
+      expect(await save(tester, servers), extra);
+    });
+  });
+
+  // 31.10.2026: сервер из Clash-подписки открывался красным «нет outbounds, это не конфиг Xray»
+  group('узел Clash', () {
+    const clash = '{"name":"DE","proxies":[{"name":"DE","type":"hysteria2",'
+        '"server":"198.51.100.90","port":443,"password":"password",'
+        '"sni":"de.example","alpn":["h3"],"udp":true}],"rules":["MATCH,DE"]}';
+
+    testWidgets('в тексте не называется неверным', (tester) async {
+      await _open(tester, clash);
+      await tester.tap(find.text('Text'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Valid Clash config'), findsOneWidget);
+      expect(find.textContaining('outbounds'), findsNothing);
+    });
+
+    testWidgets('открывается полями по слоям, неизвестное в остальном', (tester) async {
+      await _open(tester, clash);
+      expect(find.text('Server'), findsWidgets);
+      expect(find.text('server'), findsOneWidget);
+      expect(find.text('sni'), findsOneWidget);
+      expect(find.text('Other Clash keys, as they are'), findsOneWidget);
+      expect(find.textContaining('"udp": true'), findsWidgets);
+    });
+
+    testWidgets('правка поля сохраняет типы и остальные ключи', (tester) async {
+      final servers = await _open(tester, clash);
+      final port = find.ancestor(
+        of: find.text('port'),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(port, '8443');
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Save'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final saved = jsonDecode(servers.saved!) as Map;
+      final node = (saved['proxies'] as List).single as Map;
+      expect(node['port'], 8443);
+      expect(node['alpn'], ['h3']);
+      expect(node['udp'], isTrue);
+      expect(node['type'], 'hysteria2');
+      expect(saved['rules'], ['MATCH,DE']);
+    });
+
+    testWidgets('без правок ничего не сохраняется', (tester) async {
+      final servers = await _open(tester, clash);
+      await tester.ensureVisible(find.text('Save'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(servers.saved, isNull);
+    });
   });
 }

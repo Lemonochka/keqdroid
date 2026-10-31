@@ -2339,6 +2339,78 @@ abstract class AppLocalizations {
   /// **'Valid Clash config'**
   String get serverEditorClashValid;
 
+  /// No description provided for @serverEditorModeFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Fields'**
+  String get serverEditorModeFields;
+
+  /// No description provided for @serverEditorModeText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get serverEditorModeText;
+
+  /// No description provided for @serverEditorXhttpDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'XHTTP details'**
+  String get serverEditorXhttpDetails;
+
+  /// No description provided for @serverEditorXhttpPadding.
+  ///
+  /// In en, this message translates to:
+  /// **'Padding'**
+  String get serverEditorXhttpPadding;
+
+  /// No description provided for @serverEditorXhttpUplink.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload'**
+  String get serverEditorXhttpUplink;
+
+  /// No description provided for @serverEditorXhttpSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Session'**
+  String get serverEditorXhttpSession;
+
+  /// No description provided for @serverEditorXhttpXmux.
+  ///
+  /// In en, this message translates to:
+  /// **'Multiplexing XMUX'**
+  String get serverEditorXhttpXmux;
+
+  /// No description provided for @serverEditorXhttpRest.
+  ///
+  /// In en, this message translates to:
+  /// **'Other parameters'**
+  String get serverEditorXhttpRest;
+
+  /// No description provided for @serverEditorXhttpRestInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a JSON object, changes here are not saved'**
+  String get serverEditorXhttpRestInvalid;
+
+  /// No description provided for @serverEditorXhttpShowAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All parameters'**
+  String get serverEditorXhttpShowAll;
+
+  /// No description provided for @serverEditorXhttpHideEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide empty'**
+  String get serverEditorXhttpHideEmpty;
+
+  /// No description provided for @serverEditorClashRest.
+  ///
+  /// In en, this message translates to:
+  /// **'Other Clash keys, as they are'**
+  String get serverEditorClashRest;
+
   /// No description provided for @serverEditorJsonFormat.
   ///
   /// In en, this message translates to:
@@ -4019,23 +4091,11 @@ abstract class AppLocalizations {
   /// **'Raw config'**
   String get serverEditorRawConfig;
 
-  /// No description provided for @serverEditorRawToggle.
-  ///
-  /// In en, this message translates to:
-  /// **'Edit as text'**
-  String get serverEditorRawToggle;
-
   /// No description provided for @serverEditorRawOnlyNote.
   ///
   /// In en, this message translates to:
   /// **'This format is edited as raw text'**
   String get serverEditorRawOnlyNote;
-
-  /// No description provided for @serverEditorPreview.
-  ///
-  /// In en, this message translates to:
-  /// **'Resulting link'**
-  String get serverEditorPreview;
 
   /// No description provided for @serverEditorSubscriptionNote.
   ///

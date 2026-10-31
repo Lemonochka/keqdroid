@@ -1257,6 +1257,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serverEditorClashValid => 'Valid Clash config';
 
   @override
+  String get serverEditorModeFields => 'Fields';
+
+  @override
+  String get serverEditorModeText => 'Text';
+
+  @override
+  String get serverEditorXhttpDetails => 'XHTTP details';
+
+  @override
+  String get serverEditorXhttpPadding => 'Padding';
+
+  @override
+  String get serverEditorXhttpUplink => 'Upload';
+
+  @override
+  String get serverEditorXhttpSession => 'Session';
+
+  @override
+  String get serverEditorXhttpXmux => 'Multiplexing XMUX';
+
+  @override
+  String get serverEditorXhttpRest => 'Other parameters';
+
+  @override
+  String get serverEditorXhttpRestInvalid => 'Not a JSON object, changes here are not saved';
+
+  @override
+  String get serverEditorXhttpShowAll => 'All parameters';
+
+  @override
+  String get serverEditorXhttpHideEmpty => 'Hide empty';
+
+  @override
+  String get serverEditorClashRest => 'Other Clash keys, as they are';
+
+  @override
   String get serverEditorJsonFormat => 'Format';
 
   @override
@@ -2131,13 +2167,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serverEditorRawConfig => 'Raw config';
 
   @override
-  String get serverEditorRawToggle => 'Edit as text';
-
-  @override
   String get serverEditorRawOnlyNote => 'This format is edited as raw text';
-
-  @override
-  String get serverEditorPreview => 'Resulting link';
 
   @override
   String get serverEditorSubscriptionNote => 'This server comes from a subscription: your edits are kept when it refreshes.';

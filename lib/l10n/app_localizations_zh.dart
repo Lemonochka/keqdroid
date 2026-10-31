@@ -1253,6 +1253,42 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serverEditorClashValid => '有效的 Clash 配置';
 
   @override
+  String get serverEditorModeFields => '字段';
+
+  @override
+  String get serverEditorModeText => '文本';
+
+  @override
+  String get serverEditorXhttpDetails => 'XHTTP 详细设置';
+
+  @override
+  String get serverEditorXhttpPadding => '填充';
+
+  @override
+  String get serverEditorXhttpUplink => '上传';
+
+  @override
+  String get serverEditorXhttpSession => '会话';
+
+  @override
+  String get serverEditorXhttpXmux => 'XMUX 多路复用';
+
+  @override
+  String get serverEditorXhttpRest => '其他参数';
+
+  @override
+  String get serverEditorXhttpRestInvalid => '不是 JSON 对象，此处的修改不会保存';
+
+  @override
+  String get serverEditorXhttpShowAll => '全部参数';
+
+  @override
+  String get serverEditorXhttpHideEmpty => '隐藏空项';
+
+  @override
+  String get serverEditorClashRest => '其他 Clash 键，原样保留';
+
+  @override
   String get serverEditorJsonFormat => '格式化';
 
   @override
@@ -2127,13 +2163,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serverEditorRawConfig => '原始配置';
 
   @override
-  String get serverEditorRawToggle => '以文本方式编辑';
-
-  @override
   String get serverEditorRawOnlyNote => '该格式以原始文本方式编辑';
-
-  @override
-  String get serverEditorPreview => '最终链接';
 
   @override
   String get serverEditorSubscriptionNote => '该服务器来自订阅：更新订阅时将保留您的修改。';

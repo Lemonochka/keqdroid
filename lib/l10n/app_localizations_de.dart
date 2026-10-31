@@ -1257,6 +1257,42 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serverEditorClashValid => 'Gültige Clash-Konfiguration';
 
   @override
+  String get serverEditorModeFields => 'Felder';
+
+  @override
+  String get serverEditorModeText => 'Text';
+
+  @override
+  String get serverEditorXhttpDetails => 'XHTTP-Details';
+
+  @override
+  String get serverEditorXhttpPadding => 'Auffüllung';
+
+  @override
+  String get serverEditorXhttpUplink => 'Upload';
+
+  @override
+  String get serverEditorXhttpSession => 'Sitzung';
+
+  @override
+  String get serverEditorXhttpXmux => 'Multiplexing XMUX';
+
+  @override
+  String get serverEditorXhttpRest => 'Weitere Parameter';
+
+  @override
+  String get serverEditorXhttpRestInvalid => 'Kein JSON-Objekt, Änderungen hier werden nicht gespeichert';
+
+  @override
+  String get serverEditorXhttpShowAll => 'Alle Parameter';
+
+  @override
+  String get serverEditorXhttpHideEmpty => 'Leere ausblenden';
+
+  @override
+  String get serverEditorClashRest => 'Weitere Clash-Schlüssel, unverändert';
+
+  @override
   String get serverEditorJsonFormat => 'Formatieren';
 
   @override
@@ -2131,13 +2167,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serverEditorRawConfig => 'Roh-Konfiguration';
 
   @override
-  String get serverEditorRawToggle => 'Als Text bearbeiten';
-
-  @override
   String get serverEditorRawOnlyNote => 'Dieses Format wird als Rohtext bearbeitet';
-
-  @override
-  String get serverEditorPreview => 'Ergebnis-Link';
 
   @override
   String get serverEditorSubscriptionNote => 'Server aus einem Abonnement: Deine Änderungen bleiben beim Aktualisieren erhalten.';

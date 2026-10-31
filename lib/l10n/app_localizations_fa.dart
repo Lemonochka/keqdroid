@@ -1253,6 +1253,42 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serverEditorClashValid => 'کانفیگ معتبر Clash';
 
   @override
+  String get serverEditorModeFields => 'فیلدها';
+
+  @override
+  String get serverEditorModeText => 'متن';
+
+  @override
+  String get serverEditorXhttpDetails => 'جزئیات XHTTP';
+
+  @override
+  String get serverEditorXhttpPadding => 'پدینگ';
+
+  @override
+  String get serverEditorXhttpUplink => 'آپلود';
+
+  @override
+  String get serverEditorXhttpSession => 'نشست';
+
+  @override
+  String get serverEditorXhttpXmux => 'مالتی‌پلکس XMUX';
+
+  @override
+  String get serverEditorXhttpRest => 'سایر پارامترها';
+
+  @override
+  String get serverEditorXhttpRestInvalid => 'این یک شیء JSON نیست و تغییرات اینجا ذخیره نمی‌شود';
+
+  @override
+  String get serverEditorXhttpShowAll => 'همهٔ پارامترها';
+
+  @override
+  String get serverEditorXhttpHideEmpty => 'پنهان کردن موارد خالی';
+
+  @override
+  String get serverEditorClashRest => 'سایر کلیدهای Clash، بدون تغییر';
+
+  @override
   String get serverEditorJsonFormat => 'قالب‌بندی';
 
   @override
@@ -2127,13 +2163,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serverEditorRawConfig => 'کانفیگ خام';
 
   @override
-  String get serverEditorRawToggle => 'ویرایش به‌صورت متن';
-
-  @override
   String get serverEditorRawOnlyNote => 'این قالب فقط به‌صورت متن خام ویرایش می‌شود';
-
-  @override
-  String get serverEditorPreview => 'لینک نهایی';
 
   @override
   String get serverEditorSubscriptionNote => 'این سرور از یک اشتراک آمده: تغییرات شما بعد از به‌روزرسانی هم می‌ماند.';
