@@ -1762,6 +1762,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get qrNotSubscriptionLink => 'Der QR-Code enthält keinen Abonnement-Link';
 
   @override
+  String routingProfileImported(Object name) {
+    return 'Routing-Profil hinzugefügt: $name';
+  }
+
+  @override
+  String get routingProfileFromProvider => 'Vom Anbieter';
+
+  @override
+  String routingProfileLockedHint(Object setting) {
+    return 'Diese Regeln schickt der Anbieter. Zum Bearbeiten schalte „$setting“ ein: Das Profil gehört dann dir.';
+  }
+
+  @override
   String get tvReceiveTitle => 'Vom Smartphone empfangen';
 
   @override

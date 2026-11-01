@@ -66,6 +66,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     if (_hasSubscriptionsChanged(current, latest)) {
       state = AsyncData(latest);
       await ref.read(serversProvider.notifier).reloadPreservingActive();
+      // фоновый воркер мог записать и профиль провайдера
+      ref.invalidate(routingProfilesProvider);
       // обновил фоновый воркер: пингуем то, что он принёс
       final before = {for (final s in current) s.id: s.lastUpdatedAt};
       for (final s in latest) {
@@ -155,6 +157,9 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       final latest = await ref.read(storageProvider).getSubscriptions();
       state = AsyncData(latest);
       await ref.read(serversProvider.notifier).reloadPreservingActive();
+      if (results.any((r) => r.routingChanged)) {
+        ref.invalidate(routingProfilesProvider);
+      }
       for (final r in results) {
         if (r.success) _autoPing(r.subscription.id);
       }
@@ -200,6 +205,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
 
   Future<void> remove(String id) async {
     await ref.read(storageProvider).deleteSubscription(id);
+    await ref.read(routingProfilesProvider.notifier).dropProviderProfileOf(id);
     unawaited(CardImageService.remove(id).catchError((_) {}));
     state = AsyncData(
       (state.value ?? []).where((s) => s.id != id).toList(),
@@ -216,6 +222,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
           .toList();
       state = AsyncData(subs);
       await ref.read(serversProvider.notifier).reloadPreservingActive();
+      if (result.routingChanged) ref.invalidate(routingProfilesProvider);
       _autoPing(sub.id);
       await notifyExpired(subs);
     } else {

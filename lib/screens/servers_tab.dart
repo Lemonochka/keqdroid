@@ -59,6 +59,7 @@ import '../platform/vpn_native_bridge.dart';
 import '../ui/responsive/desktop_page_layout.dart';
 import '../ui/responsive/window_breakpoints.dart';
 import '../utils/clipboard_import.dart';
+import '../utils/provider_routing.dart';
 import '../utils/subscription_deep_link.dart';
 import '../utils/bidi.dart';
 import '../utils/error_messages.dart';
@@ -504,6 +505,10 @@ class _ServersTabState extends ConsumerState<ServersTab>
       await sendSubscriptionToTv(context, ref, tv);
       return;
     }
+    if (isRoutingLink(raw)) {
+      await _importRoutingLink(context, raw);
+      return;
+    }
     final subUrl = subscriptionUrlFromDeepLink(raw);
     if (subUrl != null) {
       await _addSubscriptionFromUrl(context, subUrl);
@@ -852,6 +857,11 @@ class _ServersTabState extends ConsumerState<ServersTab>
       return;
     }
 
+    if (isRoutingLink(raw)) {
+      await _importRoutingLink(ctx, raw);
+      return;
+    }
+
     final asUri = Uri.tryParse(raw);
     if (asUri != null && (asUri.scheme == 'http' || asUri.scheme == 'https')) {
       await _addSubscriptionFromUrl(ctx, raw);
@@ -1066,10 +1076,18 @@ class _ServersTabState extends ConsumerState<ServersTab>
                             loading = true;
                             sheetError = null;
                           });
-                          final result = await importPastedLinksInto(ref, raw);
+                          final result = await importPastedLinksInto(
+                            ref,
+                            raw,
+                            routingFallbackName: l10n.routingProfileNew,
+                          );
                           if (!ctx2.mounted) return;
                           if (result.firstError == null) {
                             Navigator.pop(ctx2);
+                            // профиль в списке серверов не появится, без строки вставка выглядела бы пропавшей
+                            if (result.routingProfiles.isNotEmpty) {
+                              _showSnack(pastedLinksSummary(l10n, result)!);
+                            }
                             return;
                           }
                           if (result.added > 0) {
@@ -1253,6 +1271,20 @@ class _ServersTabState extends ConsumerState<ServersTab>
         if (!mounted) return;
         _showSnack(_shortError(e, context));
       }
+    }
+  }
+
+  Future<void> _importRoutingLink(BuildContext ctx, String raw) async {
+    final l10n = AppLocalizations.of(ctx)!;
+    try {
+      final name = await importRoutingLink(
+        ref,
+        raw,
+        fallbackName: l10n.routingProfileNew,
+      );
+      if (name != null) _showSnack(l10n.routingProfileImported(name));
+    } catch (e) {
+      if (ctx.mounted) _showImportError(ctx, e);
     }
   }
 

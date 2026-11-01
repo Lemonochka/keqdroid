@@ -3305,6 +3305,24 @@ abstract class AppLocalizations {
   /// **'QR code doesn\'t contain a subscription link'**
   String get qrNotSubscriptionLink;
 
+  /// No description provided for @routingProfileImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing profile added: {name}'**
+  String routingProfileImported(Object name);
+
+  /// No description provided for @routingProfileFromProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'From the provider'**
+  String get routingProfileFromProvider;
+
+  /// No description provided for @routingProfileLockedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The provider sends these rules. To edit them, turn on “{setting}”: the profile becomes yours.'**
+  String routingProfileLockedHint(Object setting);
+
   /// No description provided for @tvReceiveTitle.
   ///
   /// In en, this message translates to:

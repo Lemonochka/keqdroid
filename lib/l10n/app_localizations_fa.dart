@@ -1758,6 +1758,19 @@ class AppLocalizationsFa extends AppLocalizations {
   String get qrNotSubscriptionLink => 'این کد QR لینک اشتراک ندارد';
 
   @override
+  String routingProfileImported(Object name) {
+    return 'پروفایل مسیریابی اضافه شد: $name';
+  }
+
+  @override
+  String get routingProfileFromProvider => 'از ارائه‌دهنده';
+
+  @override
+  String routingProfileLockedHint(Object setting) {
+    return 'این قوانین را ارائه‌دهنده می‌فرستد. برای ویرایش، «$setting» را روشن کنید: پروفایل مال شما می‌شود.';
+  }
+
+  @override
   String get tvReceiveTitle => 'دریافت از گوشی';
 
   @override

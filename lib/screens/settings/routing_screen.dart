@@ -251,16 +251,21 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     );
     // выключать нечего, пока ни один сервер не принёс своих правил; включённую строку не прячем
     final showProviderRules = ignoreProviderRules ||
+        profiles.any((p) => p.providerSubscriptionId != null) ||
         servers.any((s) =>
             (s.customConfig?.hasProviderRules ?? false) ||
             (s.clashConfig?.hasProviderRules ?? false));
+    // профиль провайдера только смотрят, пока его правила слушают
+    bool locked(RoutingProfile p) =>
+        p.providerSubscriptionId != null && !ignoreProviderRules;
     final rowColor = Theme.of(context).colorScheme.surfaceContainer;
 
     List<Widget> routeRows(
       String? profileId,
       List<TrafficRoute> list,
-      String finalOutbound,
-    ) {
+      String finalOutbound, {
+      bool locked = false,
+    }) {
       Widget tile(TrafficRoute route) => _RouteTile(
             route: route,
             servers: servers,
@@ -268,7 +273,9 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             installed: installed,
             background: rowColor,
             issue: _routeIssue(l10n, route, caps, servers, split, installed),
-            onTap: () => _openRouteEditor(context, route, profileId),
+            onTap: locked
+                ? () => _showRouteEntries(context, route)
+                : () => _openRouteEditor(context, route, profileId),
           );
       final block = routesIn(RouteSection.block, list);
       final apps = routesIn(RouteSection.apps, list);
@@ -290,22 +297,25 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
             _FinalRouteTile(
               target: target,
               background: rowColor,
-              onTap: () => _pickFinalTarget(context, ref, profileId, target),
+              onTap: locked
+                  ? null
+                  : () => _pickFinalTarget(context, ref, profileId, target),
             ),
-            ExpressiveGroupTile(
-              onTap: () => _openRouteEditor(context, null, profileId),
-              color: rowColor,
-              child: _RouteRowContent(
-                badge: const ExpressiveIconBadge(icon: Icons.add_rounded),
-                title: Text(l10n.routeNew),
-                subtitle: Text(
-                  caps.appsOffered
-                      ? l10n.routeNewSubtitle
-                      : l10n.routeNewSubtitleSites,
+            if (!locked)
+              ExpressiveGroupTile(
+                onTap: () => _openRouteEditor(context, null, profileId),
+                color: rowColor,
+                child: _RouteRowContent(
+                  badge: const ExpressiveIconBadge(icon: Icons.add_rounded),
+                  title: Text(l10n.routeNew),
+                  subtitle: Text(
+                    caps.appsOffered
+                        ? l10n.routeNewSubtitle
+                        : l10n.routeNewSubtitleSites,
+                  ),
+                  chevron: false,
                 ),
-                chevron: false,
               ),
-            ),
           ],
         ),
       ];
@@ -319,33 +329,63 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         ? l10n.routingProfileScopeRest
         : l10n.routingProfileScopeAll;
 
-    Widget profileCard(RoutingProfile p) => _ProfileCard(
-          key: ValueKey('routing-profile-${p.id}'),
-          title: p.name,
-          summary: !p.enabled
-              ? l10n.routingProfileOff
-              : !p.subscriptionIds.any(subNames.containsKey)
-                  ? l10n.routingProfileNoSubscriptions
-                  : '${l10n.routingProfileRouteCount(p.routes.length)} · '
-                      '${l10n.routingProfileFinal(_finalLabel(l10n, p.finalOutbound))}',
-          chips: [for (final id in p.subscriptionIds) ?subNames[id]],
-          enabled: p.enabled,
-          onEnabled: (v) => unawaited(
-            ref.read(routingProfilesProvider.notifier).setEnabled(p.id, v),
-          ),
-          menu: IconButton(
-            tooltip: MaterialLocalizations.of(context).showMenuTooltip,
-            icon: Icon(
-              Icons.more_vert_rounded,
-              size: 20,
-              color: AppTheme.textLight(context),
-            ),
-            onPressed: () => _showProfileMenu(context, ref, p),
-          ),
-          expanded: _profileExpanded(expanded, p.id),
-          onToggle: () => _toggleProfile(ref, p.id),
-          body: routeRows(p.id, p.routes, p.finalOutbound),
-        );
+    Widget profileCard(RoutingProfile p) {
+      final isLocked = locked(p);
+      final summary = !p.enabled
+          ? l10n.routingProfileOff
+          : !p.subscriptionIds.any(subNames.containsKey)
+              ? l10n.routingProfileNoSubscriptions
+              : '${l10n.routingProfileRouteCount(p.routes.length)} · '
+                  '${l10n.routingProfileFinal(_finalLabel(l10n, p.finalOutbound))}';
+      return _ProfileCard(
+        key: ValueKey('routing-profile-${p.id}'),
+        title: p.name,
+        summary: isLocked
+            ? '${l10n.routingProfileFromProvider} · $summary'
+            : summary,
+        chips: [for (final id in p.subscriptionIds) ?subNames[id]],
+        enabled: isLocked ? null : p.enabled,
+        onEnabled: (v) => unawaited(
+          ref.read(routingProfilesProvider.notifier).setEnabled(p.id, v),
+        ),
+        menu: !isLocked
+            ? IconButton(
+                tooltip: MaterialLocalizations.of(context).showMenuTooltip,
+                icon: Icon(
+                  Icons.more_vert_rounded,
+                  size: 20,
+                  color: AppTheme.textLight(context),
+                ),
+                onPressed: () => _showProfileMenu(context, ref, p),
+              )
+            : IconButton(
+                tooltip: l10n.routingProfileFromProvider,
+                icon: Icon(
+                  Icons.lock_rounded,
+                  size: 20,
+                  color: AppTheme.textLight(context),
+                ),
+                onPressed: () => AppSnack.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      l10n.routingProfileLockedHint(
+                        l10n.routingIgnoreProviderRules,
+                      ),
+                    ),
+                    backgroundColor: AppTheme.accent(context),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(ExpressiveShape.medium),
+                    ),
+                  ),
+                ),
+              ),
+        expanded: _profileExpanded(expanded, p.id),
+        onToggle: () => _toggleProfile(ref, p.id),
+        body: routeRows(p.id, p.routes, p.finalOutbound, locked: isLocked),
+      );
+    }
 
     return ExpressivePage(
       title: l10n.settingsRoutingTitle,
@@ -459,6 +499,35 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         builder: (_) => _RouteEditorScreen(initial: route, profileId: profileId),
       ),
     );
+  }
+
+  static void _showRouteEntries(BuildContext context, TrafficRoute route) {
+    final l10n = AppLocalizations.of(context)!;
+    unawaited(_showChoiceSheet<void>(
+      context,
+      title: switch (route.target) {
+        RouteTarget.direct => l10n.routeToDirect,
+        RouteTarget.block => l10n.routeToBlock,
+        _ => l10n.routeToVpn,
+      },
+      children: (ctx) => [
+        ExpressiveGroup(children: [
+          for (final e in routingEntries(route.sites))
+            ExpressiveGroupTile(
+              child: SizedBox(
+                width: double.infinity,
+                child: Text(
+                  ltrIsolate(e),
+                  style: Theme.of(ctx)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(color: AppTheme.text(ctx)),
+                ),
+              ),
+            ),
+        ]),
+      ],
+    ));
   }
 
   static Future<void> _pickFinalTarget(
@@ -623,7 +692,7 @@ class _FinalRouteTile extends StatelessWidget {
   });
 
   final RouteTarget target;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Color? background;
 
   @override
@@ -640,6 +709,7 @@ class _FinalRouteTile extends StatelessWidget {
           foreground: scheme.onSurfaceVariant,
         ),
         title: Text(l10n.settingsRoutingFinalTitle),
+        chevron: onTap != null,
         subtitle: Text.rich(
           TextSpan(
             children: [

@@ -60,6 +60,7 @@ import '../utils/mihomo_config_gen.dart';
 import '../utils/owner_guard.dart';
 import '../utils/proxy_chain.dart';
 import '../utils/route_servers.dart';
+import '../utils/provider_routing.dart';
 import '../utils/routing_profiles.dart';
 import '../utils/traffic_routes.dart';
 import '../utils/rule_lists.dart';

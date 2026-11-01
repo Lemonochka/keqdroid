@@ -1772,6 +1772,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qrNotSubscriptionLink => 'В QR-коде нет ссылки на подписку';
 
   @override
+  String routingProfileImported(Object name) {
+    return 'Профиль маршрутизации добавлен: $name';
+  }
+
+  @override
+  String get routingProfileFromProvider => 'От провайдера';
+
+  @override
+  String routingProfileLockedHint(Object setting) {
+    return 'Правила присылает провайдер. Чтобы править их, включите «$setting»: профиль станет вашим.';
+  }
+
+  @override
   String get tvReceiveTitle => 'Принять с телефона';
 
   @override

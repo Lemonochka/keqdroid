@@ -7,6 +7,7 @@ import 'package:keqdroid/models/traffic_route.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/services/rule_list_service.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
+import 'package:keqdroid/utils/provider_routing.dart';
 import 'package:keqdroid/utils/routing_profiles.dart';
 
 import '../helpers/test_storage.dart';
@@ -176,6 +177,144 @@ void main() {
     expect(lists.kept, {
       'https://lists.example/main.txt',
       'https://lists.example/profile.txt',
+    });
+  });
+
+  group('профиль от провайдера', () {
+    const rules = ProviderRoutingRules(
+      name: 'Провайдер',
+      finalOutbound: AppSettings.finalOutboundDirect,
+      routes: [
+        TrafficRoute(id: 'provider-proxy', sites: 'geosite:youtube'),
+      ],
+    );
+
+    test('подписка без профиля получает профиль провайдера', () {
+      final next = withProviderRouting(
+        const [_games],
+        subscriptionId: 'sub-x',
+        fallbackName: 'Подписка',
+        routing: rules,
+      );
+      expect(next.map((p) => p.id), ['games', 'provider-sub-x']);
+      final p = next.last;
+      expect(p.name, 'Провайдер');
+      expect(p.subscriptionIds, ['sub-x']);
+      expect(p.providerSubscriptionId, 'sub-x');
+      expect(p.finalOutbound, AppSettings.finalOutboundDirect);
+      expect(p.routes.single.sites, 'geosite:youtube');
+    });
+
+    test('без имени профиль зовётся как подписка', () {
+      final next = withProviderRouting(
+        const [],
+        subscriptionId: 'sub-x',
+        fallbackName: 'Подписка',
+        routing: const ProviderRoutingRules(
+          name: null,
+          finalOutbound: AppSettings.finalOutboundProxy,
+          routes: [],
+        ),
+      );
+      expect(next.single.name, 'Подписка');
+    });
+
+    test('обновление меняет профиль на месте', () {
+      const old = RoutingProfile(
+        id: 'provider-sub-x',
+        name: 'Старое',
+        subscriptionIds: ['sub-x'],
+        providerSubscriptionId: 'sub-x',
+      );
+      final next = withProviderRouting(
+        const [old, _games],
+        subscriptionId: 'sub-x',
+        fallbackName: 'Подписка',
+        routing: rules,
+      );
+      expect(next.map((p) => p.id), ['provider-sub-x', 'games']);
+      expect(next.first.name, 'Провайдер');
+    });
+
+    test('свой профиль подписки провайдер не трогает, а свой профиль провайдера уходит', () {
+      const orphan = RoutingProfile(
+        id: 'provider-sub-a',
+        name: 'Провайдер',
+        providerSubscriptionId: 'sub-a',
+      );
+      final next = withProviderRouting(
+        const [_games, orphan],
+        subscriptionId: 'sub-a',
+        fallbackName: 'Подписка',
+        routing: rules,
+      );
+      expect(next.map((p) => p.id), ['games']);
+      expect(next.single.subscriptionIds, ['sub-a', 'sub-b']);
+    });
+
+    test('off убирает профиль провайдера и только его', () {
+      const provider = RoutingProfile(
+        id: 'provider-sub-x',
+        name: 'Провайдер',
+        subscriptionIds: ['sub-x'],
+        providerSubscriptionId: 'sub-x',
+      );
+      final next = withProviderRouting(
+        const [_games, provider, _work],
+        subscriptionId: 'sub-x',
+        fallbackName: 'Подписка',
+        routing: const ProviderRoutingOff(),
+      );
+      expect(next.map((p) => p.id), ['games', 'work']);
+      expect(
+        withoutProviderProfileOf(const [_games, provider], 'sub-x').map((p) => p.id),
+        ['games'],
+      );
+    });
+
+    test('метка провайдера переживает сохранение, правка её снимает', () {
+      const provider = RoutingProfile(
+        id: 'provider-sub-x',
+        name: 'Провайдер',
+        subscriptionIds: ['sub-x'],
+        providerSubscriptionId: 'sub-x',
+      );
+      final restored = RoutingProfile.fromJson(provider.toJson());
+      expect(restored.providerSubscriptionId, 'sub-x');
+      expect(provider.copyWith(name: 'x').providerSubscriptionId, 'sub-x');
+      expect(provider.asOwn().providerSubscriptionId, isNull);
+      expect(_games.toJson().containsKey('providerSubscription'), isFalse);
+    });
+
+    test('правка через хранилище делает профиль провайдера своим', () async {
+      const provider = RoutingProfile(
+        id: 'provider-sub-x',
+        name: 'Провайдер',
+        subscriptionIds: ['sub-x'],
+        providerSubscriptionId: 'sub-x',
+      );
+      final storage = await buildStorageService();
+      await storage.saveRoutingProfiles(const [provider, _games]);
+      final container = ProviderContainer(
+        overrides: [storageProvider.overrideWithValue(storage)],
+      );
+      addTearDown(container.dispose);
+      final notifier = container.read(routingProfilesProvider.notifier);
+      await container.read(routingProfilesProvider.future);
+
+      await notifier.rename('provider-sub-x', 'Моё');
+      final profiles = await storage.getRoutingProfiles();
+      expect(profiles.first.name, 'Моё');
+      expect(profiles.first.providerSubscriptionId, isNull);
+      expect(profiles.last.providerSubscriptionId, isNull);
+
+      await storage.saveRoutingProfiles(const [provider, _games]);
+      container.invalidate(routingProfilesProvider);
+      await container.read(routingProfilesProvider.future);
+      await container
+          .read(routingProfilesProvider.notifier)
+          .dropProviderProfileOf('sub-x');
+      expect((await storage.getRoutingProfiles()).map((p) => p.id), ['games']);
     });
   });
 }

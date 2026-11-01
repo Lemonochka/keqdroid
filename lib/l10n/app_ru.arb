@@ -924,6 +924,19 @@
     }
   },
   "qrNotSubscriptionLink": "В QR-коде нет ссылки на подписку",
+  "routingProfileImported": "Профиль маршрутизации добавлен: {name}",
+  "routingProfileFromProvider": "От провайдера",
+  "routingProfileLockedHint": "Правила присылает провайдер. Чтобы править их, включите «{setting}»: профиль станет вашим.",
+  "@routingProfileLockedHint": {
+    "placeholders": {
+      "setting": {}
+    }
+  },
+  "@routingProfileImported": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "tvReceiveTitle": "Принять с телефона",
   "tvReceiveSubtitle": "Подписка с телефона по Wi-Fi",
   "tvReceiveHint": "Отсканируйте код в keqdroid на телефоне. Телефон и телевизор должны быть в одной сети Wi-Fi.",

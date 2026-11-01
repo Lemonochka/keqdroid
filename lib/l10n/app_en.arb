@@ -982,6 +982,19 @@
     }
   },
   "qrNotSubscriptionLink": "QR code doesn't contain a subscription link",
+  "routingProfileImported": "Routing profile added: {name}",
+  "routingProfileFromProvider": "From the provider",
+  "routingProfileLockedHint": "The provider sends these rules. To edit them, turn on “{setting}”: the profile becomes yours.",
+  "@routingProfileLockedHint": {
+    "placeholders": {
+      "setting": {}
+    }
+  },
+  "@routingProfileImported": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "tvReceiveTitle": "Receive from phone",
   "tvReceiveSubtitle": "A subscription from your phone over Wi-Fi",
   "tvReceiveHint": "Scan the code in keqdroid on your phone. The phone and the TV must be on the same Wi-Fi network.",

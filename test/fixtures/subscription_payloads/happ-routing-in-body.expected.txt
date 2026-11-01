@@ -1,0 +1,2 @@
+vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443?type=tcp&security=reality&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome#Node%20One
+trojan://password@198.51.100.12:443?type=grpc&security=tls&sni=grpc.example&serviceName=svc#Node Three

@@ -8,6 +8,7 @@ import '../models/subscription.dart';
 import '../providers/providers.dart';
 import 'error_messages.dart';
 import 'import_payload.dart';
+import 'provider_routing.dart';
 import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
 Future<void> pasteSubscriptionFromClipboard(
@@ -47,7 +48,11 @@ Future<void> pasteLinksFromClipboard(
   final raw = data?.text?.trim() ?? '';
   if (raw.isEmpty || !context.mounted) return;
   final l10n = AppLocalizations.of(context)!;
-  final result = await importPastedLinksInto(ref, raw);
+  final result = await importPastedLinksInto(
+    ref,
+    raw,
+    routingFallbackName: l10n.routingProfileNew,
+  );
   if (!context.mounted) return;
   final error = result.firstError;
   final lines = [
@@ -59,26 +64,31 @@ Future<void> pasteLinksFromClipboard(
 
 class PastedLinksResult {
   final List<String> subscriptionHosts;
+  final List<String> routingProfiles;
   final int serversAdded;
   final int serversTotal;
   final Object? firstError;
 
   const PastedLinksResult({
     required this.subscriptionHosts,
+    this.routingProfiles = const [],
     required this.serversAdded,
     required this.serversTotal,
     required this.firstError,
   });
 
-  int get added => subscriptionHosts.length + serversAdded;
+  int get added =>
+      subscriptionHosts.length + routingProfiles.length + serversAdded;
 }
 
 Future<PastedLinksResult> importPastedLinks(
   String raw, {
   required Future<void> Function(String url) addSubscription,
   required Future<void> Function(String config) addServer,
+  Future<String?> Function(String link)? addRoutingProfile,
 }) async {
   final hosts = <String>[];
+  final profiles = <String>[];
   var serversAdded = 0;
   var serversTotal = 0;
   Object? firstError;
@@ -88,6 +98,9 @@ Future<PastedLinksResult> importPastedLinks(
       if (url != null) {
         await addSubscription(url);
         hosts.add(Uri.parse(url).host);
+      } else if (addRoutingProfile != null && isRoutingLink(part)) {
+        final name = await addRoutingProfile(part);
+        if (name != null) profiles.add(name);
       } else {
         serversTotal++;
         await addServer(part);
@@ -99,26 +112,52 @@ Future<PastedLinksResult> importPastedLinks(
   }
   return PastedLinksResult(
     subscriptionHosts: hosts,
+    routingProfiles: profiles,
     serversAdded: serversAdded,
     serversTotal: serversTotal,
     firstError: firstError,
   );
 }
 
-Future<PastedLinksResult> importPastedLinksInto(WidgetRef ref, String raw) {
+Future<PastedLinksResult> importPastedLinksInto(
+  WidgetRef ref,
+  String raw, {
+  required String routingFallbackName,
+}) {
   return importPastedLinks(
     raw,
     addSubscription: (url) => ref.read(subscriptionsProvider.notifier).add(
       Subscription.create(name: Uri.parse(url).host, url: url, nameIsAuto: true),
     ),
     addServer: (config) => ref.read(serversProvider.notifier).addManual(config),
+    addRoutingProfile: (link) =>
+        importRoutingLink(ref, link, fallbackName: routingFallbackName),
   );
+}
+
+// routing/off во вставке выключать нечего: такую ссылку шлёт подписка, а не человек
+Future<String?> importRoutingLink(
+  WidgetRef ref,
+  String link, {
+  required String fallbackName,
+}) async {
+  final parsed = parseProviderRouting(link);
+  if (parsed is ProviderRoutingOff) return null;
+  if (parsed is! ProviderRoutingRules) {
+    throw const FormatException('Routing profile link is broken');
+  }
+  final profile = await ref
+      .read(routingProfilesProvider.notifier)
+      .addFromRules(parsed, fallbackName);
+  return profile.name;
 }
 
 String? pastedLinksSummary(AppLocalizations l10n, PastedLinksResult result) {
   final lines = [
     if (result.subscriptionHosts.isNotEmpty)
       l10n.qrSubscriptionAdded(result.subscriptionHosts.join(', ')),
+    if (result.routingProfiles.isNotEmpty)
+      l10n.routingProfileImported(result.routingProfiles.join(', ')),
     if (result.serversTotal > 0)
       l10n.serversImportedSummary(result.serversAdded, result.serversTotal),
   ];

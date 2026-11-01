@@ -1758,6 +1758,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get qrNotSubscriptionLink => '二维码不包含订阅链接';
 
   @override
+  String routingProfileImported(Object name) {
+    return '已添加路由方案：$name';
+  }
+
+  @override
+  String get routingProfileFromProvider => '来自订阅';
+
+  @override
+  String routingProfileLockedHint(Object setting) {
+    return '这些规则随订阅下发。要编辑，请开启“$setting”：方案将改由您管理。';
+  }
+
+  @override
   String get tvReceiveTitle => '从手机接收';
 
   @override

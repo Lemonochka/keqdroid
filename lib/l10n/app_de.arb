@@ -922,6 +922,19 @@
     }
   },
   "qrNotSubscriptionLink": "Der QR-Code enthält keinen Abonnement-Link",
+  "routingProfileImported": "Routing-Profil hinzugefügt: {name}",
+  "routingProfileFromProvider": "Vom Anbieter",
+  "routingProfileLockedHint": "Diese Regeln schickt der Anbieter. Zum Bearbeiten schalte „{setting}“ ein: Das Profil gehört dann dir.",
+  "@routingProfileLockedHint": {
+    "placeholders": {
+      "setting": {}
+    }
+  },
+  "@routingProfileImported": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "tvReceiveTitle": "Vom Smartphone empfangen",
   "tvReceiveSubtitle": "Abonnement vom Smartphone über WLAN",
   "tvReceiveHint": "Scanne den Code mit keqdroid auf dem Smartphone. Smartphone und Fernseher müssen im selben WLAN sein.",

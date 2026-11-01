@@ -33,11 +33,12 @@ class RoutingProfilesNotifier extends AsyncNotifier<List<RoutingProfile>> {
     await ref.read(storageProvider).saveRoutingProfiles(profiles);
   }
 
+  // правленый профиль провайдера становится своим, иначе следующее обновление подписки затёрло бы правку
   Future<void> _update(
     String id,
     RoutingProfile Function(RoutingProfile p) change,
   ) async =>
-      _save([for (final p in await future) p.id == id ? change(p) : p]);
+      _save([for (final p in await future) p.id == id ? change(p).asOwn() : p]);
 
   Future<void> add(RoutingProfile profile) async => _save(
         withSubscriptions(
@@ -46,6 +47,20 @@ class RoutingProfilesNotifier extends AsyncNotifier<List<RoutingProfile>> {
           profile.subscriptionIds,
         ),
       );
+
+  // профиль из вставленной ссылки свой: правится сразу, подписки к нему человек привяжет сам
+  Future<RoutingProfile> addFromRules(
+    ProviderRoutingRules rules,
+    String fallbackName,
+  ) async {
+    final profile = RoutingProfile.create(
+      name: rules.name ?? fallbackName,
+      finalOutbound: rules.finalOutbound,
+      routes: rules.routes,
+    );
+    await add(profile);
+    return profile;
+  }
 
   Future<void> remove(String id) async =>
       _save([for (final p in await future) if (p.id != id) p]);
@@ -57,7 +72,16 @@ class RoutingProfilesNotifier extends AsyncNotifier<List<RoutingProfile>> {
       _update(id, (p) => p.copyWith(enabled: enabled));
 
   Future<void> setSubscriptions(String id, List<String> subscriptionIds) async =>
-      _save(withSubscriptions(await future, id, subscriptionIds));
+      _save([
+        for (final p in withSubscriptions(await future, id, subscriptionIds))
+          p.id == id ? p.asOwn() : p,
+      ]);
+
+  Future<void> dropProviderProfileOf(String subscriptionId) async {
+    final profiles = await future;
+    final next = withoutProviderProfileOf(profiles, subscriptionId);
+    if (next.length != profiles.length) await _save(next);
+  }
 
   Future<void> setFinalOutbound(String id, String value) =>
       _update(id, (p) => p.copyWith(finalOutbound: value));

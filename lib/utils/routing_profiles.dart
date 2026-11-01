@@ -1,6 +1,7 @@
 import '../models/routing_profile.dart';
 import '../models/server_item.dart';
 import '../models/traffic_route.dart';
+import 'provider_routing.dart';
 
 // null значит «Основной»: свои серверы, подписки без профиля и выключенные профили
 RoutingProfile? profileForServer(
@@ -35,6 +36,46 @@ List<RoutingProfile> withSubscriptions(
             for (final s in p.subscriptionIds)
               if (!subscriptionIds.contains(s)) s,
           ]),
+    ];
+
+// свой профиль у подписки провайдеру не уступает: его профиль тогда не нужен и уходит
+List<RoutingProfile> withProviderRouting(
+  List<RoutingProfile> profiles, {
+  required String subscriptionId,
+  required String fallbackName,
+  required ProviderRouting routing,
+}) {
+  final rest = withoutProviderProfileOf(profiles, subscriptionId);
+  final hasOwn = rest.any((p) => p.subscriptionIds.contains(subscriptionId));
+  if (hasOwn || routing is! ProviderRoutingRules) return rest;
+  final profile = RoutingProfile(
+    id: 'provider-$subscriptionId',
+    name: routing.name ?? fallbackName,
+    subscriptionIds: [subscriptionId],
+    finalOutbound: routing.finalOutbound,
+    routes: routing.routes,
+    providerSubscriptionId: subscriptionId,
+  );
+  final at = profiles.indexWhere(
+    (p) => p.providerSubscriptionId == subscriptionId,
+  );
+  if (at < 0) return [...rest, profile];
+  return [
+    for (var i = 0; i < profiles.length; i++)
+      if (i == at)
+        profile
+      else if (profiles[i].providerSubscriptionId != subscriptionId)
+        profiles[i],
+  ];
+}
+
+List<RoutingProfile> withoutProviderProfileOf(
+  List<RoutingProfile> profiles,
+  String subscriptionId,
+) =>
+    [
+      for (final p in profiles)
+        if (p.providerSubscriptionId != subscriptionId) p,
     ];
 
 List<TrafficRoute> withRoute(List<TrafficRoute> routes, TrafficRoute route) {

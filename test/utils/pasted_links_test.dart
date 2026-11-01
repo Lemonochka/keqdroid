@@ -12,6 +12,7 @@ const _trojan = 'trojan://pass@nl.example.com:8443?sni=nl.example.com#NL';
 class _Sink {
   final subscriptions = <String>[];
   final servers = <String>[];
+  final routingLinks = <String>[];
   Object? failSubscription;
 
   Future<PastedLinksResult> paste(String raw) => importPastedLinks(
@@ -21,8 +22,14 @@ class _Sink {
           subscriptions.add(url);
         },
         addServer: (config) async => servers.add(config),
+        addRoutingProfile: (link) async {
+          routingLinks.add(link);
+          return 'Профиль';
+        },
       );
 }
+
+const _routing = 'happ://routing/onadd/eyJOYW1lIjoiUlUifQ==';
 
 void main() {
   group('subscriptionUrlFromPastedLine', () {
@@ -95,6 +102,37 @@ void main() {
       expect(result.subscriptionHosts, isEmpty);
       expect(result.serversAdded, 1);
       expect(result.firstError, isA<Exception>());
+    });
+  });
+
+  group('ссылка на профиль маршрутизации', () {
+    test('уходит в профили, а не в серверы', () async {
+      final sink = _Sink();
+      final result = await sink.paste('$_routing\n$_vless');
+      expect(sink.routingLinks, [_routing]);
+      expect(sink.servers, [_vless]);
+      expect(result.routingProfiles, ['Профиль']);
+      expect(result.added, 2);
+    });
+
+    test('без обработчика профилей идёт по-старому', () async {
+      final servers = <String>[];
+      final result = await importPastedLinks(
+        _routing,
+        addSubscription: (_) async {},
+        addServer: (config) async => servers.add(config),
+      );
+      expect(servers, [_routing]);
+      expect(result.routingProfiles, isEmpty);
+    });
+
+    test('сводка называет профиль', () async {
+      final l10n = lookupAppLocalizations(const Locale('ru'));
+      final result = await _Sink().paste(_routing);
+      expect(
+        pastedLinksSummary(l10n, result),
+        'Профиль маршрутизации добавлен: Профиль',
+      );
     });
   });
 

@@ -53,6 +53,8 @@ void main() {
     _golden('mixed-links-and-config');
     _golden('fragment-with-spaces');
     _golden('wss-in-html');
+    // тело по документации Happ: строки #profile-* и ссылка happ://routing серверами не становятся
+    _golden('happ-routing-in-body');
     _golden('singbox-outbounds');
     // WARP в обоих видах (endpoints с 1.11 и старый аутбаунд), socks и http: ссылки нет только у WireGuard и http
     _golden('singbox-wireguard');

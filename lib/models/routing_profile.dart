@@ -12,6 +12,7 @@ class RoutingProfile {
     this.subscriptionIds = const [],
     this.finalOutbound = AppSettings.finalOutboundProxy,
     this.routes = const [],
+    this.providerSubscriptionId,
   });
 
   factory RoutingProfile.create({
@@ -35,6 +36,9 @@ class RoutingProfile {
   final String finalOutbound;
   final List<TrafficRoute> routes;
 
+  // профиль принесла эта подписка: обновляется с ней и правится, только пока правила провайдера не слушаем
+  final String? providerSubscriptionId;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -42,6 +46,7 @@ class RoutingProfile {
         'subscriptionIds': subscriptionIds,
         'finalOutbound': finalOutbound,
         'routes': [for (final r in routes) r.toJson()],
+        if (providerSubscriptionId != null) 'providerSubscription': providerSubscriptionId,
       };
 
   factory RoutingProfile.fromJson(Map<String, dynamic> json) => RoutingProfile(
@@ -58,6 +63,7 @@ class RoutingProfile {
           for (final r in (json['routes'] as List? ?? const []))
             TrafficRoute.fromJson(r as Map<String, dynamic>),
         ],
+        providerSubscriptionId: json['providerSubscription'] as String?,
       );
 
   RoutingProfile copyWith({
@@ -74,5 +80,15 @@ class RoutingProfile {
         subscriptionIds: subscriptionIds ?? this.subscriptionIds,
         finalOutbound: finalOutbound ?? this.finalOutbound,
         routes: routes ?? this.routes,
+        providerSubscriptionId: providerSubscriptionId,
+      );
+
+  RoutingProfile asOwn() => RoutingProfile(
+        id: id,
+        name: name,
+        enabled: enabled,
+        subscriptionIds: subscriptionIds,
+        finalOutbound: finalOutbound,
+        routes: routes,
       );
 }

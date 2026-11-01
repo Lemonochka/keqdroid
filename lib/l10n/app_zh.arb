@@ -922,6 +922,19 @@
     }
   },
   "qrNotSubscriptionLink": "二维码不包含订阅链接",
+  "routingProfileImported": "已添加路由方案：{name}",
+  "routingProfileFromProvider": "来自订阅",
+  "routingProfileLockedHint": "这些规则随订阅下发。要编辑，请开启“{setting}”：方案将改由您管理。",
+  "@routingProfileLockedHint": {
+    "placeholders": {
+      "setting": {}
+    }
+  },
+  "@routingProfileImported": {
+    "placeholders": {
+      "name": {}
+    }
+  },
   "tvReceiveTitle": "从手机接收",
   "tvReceiveSubtitle": "通过 Wi-Fi 接收手机上的订阅",
   "tvReceiveHint": "在手机上的 keqdroid 中扫描此二维码。手机和电视需连接同一 Wi-Fi 网络。",

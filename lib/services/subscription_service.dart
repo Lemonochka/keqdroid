@@ -19,7 +19,9 @@ import '../utils/hysteria_uri.dart';
 import '../utils/identity_presets.dart';
 import '../utils/mieru_uri.dart';
 import '../utils/mihomo_config_gen.dart';
+import '../utils/provider_routing.dart';
 import '../utils/raw_share_uri.dart';
+import '../utils/routing_profiles.dart';
 import '../utils/singbox_outbounds.dart';
 import '../utils/socks_uri.dart';
 import '../utils/ssr_uri.dart';
@@ -61,6 +63,8 @@ class SubscriptionFetchResult {
 
   final SubscriptionProfileHeaders profile;
 
+  final ProviderRouting? routing;
+
   const SubscriptionFetchResult({
     required this.configs,
     required this.usedBytes,
@@ -68,6 +72,7 @@ class SubscriptionFetchResult {
     required this.expiresAt,
     required this.usedUserAgent,
     required this.profile,
+    this.routing,
   });
 }
 
@@ -77,11 +82,14 @@ class UpdateResult {
   final String? error;
   final Subscription subscription;
 
+  final bool routingChanged;
+
   const UpdateResult({
     required this.success,
     this.serverCount = 0,
     this.error,
     required this.subscription,
+    this.routingChanged = false,
   });
 }
 
@@ -309,6 +317,7 @@ class SubscriptionService {
         expiresAt: result.expiresAt,
         usedUserAgent: result.usedUserAgent,
         profile: result.profile,
+        routing: result.routing,
       );
     } on Object catch (e, st) {
       AppLogger.instance.warn(
@@ -455,6 +464,7 @@ class SubscriptionService {
         expiresAt: expiresAt,
         usedUserAgent: usedUserAgent,
         profile: profile,
+        routing: _routingOf(response.headers, effectiveBody),
       );
     } on DioException catch (e) {
       // бывает не-200 (502), а в теле уже валидный payload
@@ -560,6 +570,7 @@ class SubscriptionService {
         expiresAt: headerMeta.expiresAt,
         usedUserAgent: null,
         profile: _parseProfileHeaders(response.headers),
+        routing: _routingOf(response.headers, body),
       );
     } on Object {
       return null;
@@ -610,6 +621,7 @@ class SubscriptionService {
       expiresAt: headerMeta.expiresAt ?? bodyMeta.expiresAt,
       usedUserAgent: response.requestOptions.headers['User-Agent'] as String?,
       profile: _parseProfileHeaders(response.headers),
+      routing: _routingOf(response.headers, body),
     );
   }
 
@@ -712,6 +724,7 @@ class SubscriptionService {
           expiresAt: headerMeta.expiresAt ?? bodyMeta.expiresAt,
           usedUserAgent: null,
           profile: _parseProfileHeaders(dioLikeHeaders),
+          routing: _routingOf(dioLikeHeaders, body),
         );
       } on Object catch (e, st) {
         if (e is FormatException) {
@@ -951,6 +964,11 @@ class SubscriptionService {
   @visibleForTesting
   static SubscriptionProfileHeaders parseProfileHeadersForTest(Headers headers) =>
       _parseProfileHeaders(headers);
+
+  // в теле сильнее, чем в заголовке, как у остальных метаданных Happ
+  static ProviderRouting? _routingOf(Headers headers, String body) =>
+      providerRoutingInBody(body) ??
+      providerRoutingFromHeaders((name) => headers.value(name));
 
   static SubscriptionProfileHeaders _parseProfileHeaders(Headers headers) {
     String? pick(List<String> names) {
@@ -2734,11 +2752,13 @@ class SubscriptionService {
                 wasFirstFetch ? result.profile.updateIntervalHours : null,
           );
       await _storage.upsertSubscription(updated);
+      final routingChanged = await _applyProviderRouting(updated, result.routing);
 
       return UpdateResult(
         success: true,
         serverCount: servers.length,
         subscription: updated,
+        routingChanged: routingChanged,
       );
     } catch (e, st) {
       // только хост: в полном URL секретный токен
@@ -2753,6 +2773,35 @@ class SubscriptionService {
         error: e.toString(),
         subscription: sub,
       );
+    }
+  }
+
+  Future<bool> _applyProviderRouting(
+    Subscription sub,
+    ProviderRouting? routing,
+  ) async {
+    if (routing == null) return false;
+    // серверы уже записаны: сбой с профилем не должен выдать обновление за неудачное
+    try {
+      final settings = await _storage.getSettings();
+      if (settings.ignoreProviderRules) return false;
+      final profiles = await _storage.getRoutingProfiles();
+      final next = withProviderRouting(
+        profiles,
+        subscriptionId: sub.id,
+        fallbackName: sub.name,
+        routing: routing,
+      );
+      if (jsonEncode(next) == jsonEncode(profiles)) return false;
+      await _storage.saveRoutingProfiles(next);
+      return true;
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Provider routing profile not saved',
+        error: e,
+        stackTrace: st,
+      );
+      return false;
     }
   }
 
