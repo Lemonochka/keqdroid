@@ -59,6 +59,7 @@ class MainActivity : FlutterFragmentActivity() {
         // отдельно от FlutterSharedPreferences: читаем в onCreate, до подъёма Flutter
         private const val PREFS_WINDOW = "keqdis_window"
         private const val KEY_WINDOW_BACKGROUND = "window_background"
+        private const val KEY_LAUNCH_LINK = "launch_link"
         private const val DEFAULT_SPEED_TEST_URL =
             "https://speed.cloudflare.com/__down?bytes=2000000"
 
@@ -166,7 +167,17 @@ class MainActivity : FlutterFragmentActivity() {
         // фон окна цвета приложения, а не системы: NormalTheme переключается тёмной темой системы,
         // и на HyperOS под панелью навигации торчала белая полоска. запомненный цвет нужен до первого кадра
         rememberedWindowBackground()?.let { applyWindowBackground(it) }
-        pendingDeepLink = deepLinkFrom(intent)
+        pendingDeepLink = deepLinkFrom(intent)?.takeIf { isNewLaunchLink(it) }
+    }
+
+    // задача помнит интент, которым её открыли, и после смерти процесса или обновления окно встаёт с ним снова:
+    // профиль маршрутизации по ссылке добавлялся второй раз (1.11.2026, Pixel 6a)
+    private fun isNewLaunchLink(url: String): Boolean {
+        val prefs = getSharedPreferences(PREFS_WINDOW, Context.MODE_PRIVATE)
+        val mark = "$taskId:${url.hashCode()}"
+        if (prefs.getString(KEY_LAUNCH_LINK, null) == mark) return false
+        prefs.edit().putString(KEY_LAUNCH_LINK, mark).apply()
+        return true
     }
 
     private fun applyWindowBackground(color: Int) {
