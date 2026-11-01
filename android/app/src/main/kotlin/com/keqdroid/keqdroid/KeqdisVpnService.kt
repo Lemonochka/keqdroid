@@ -1538,7 +1538,7 @@ class KeqdisVpnService : VpnService() {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID_CONTROL)
             .setContentTitle(title)
             .setContentText(text)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(contentIntent)
             .setOngoing(isConnected)
             .setAutoCancel(!isConnected)

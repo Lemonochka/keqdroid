@@ -99,7 +99,8 @@ Future<void> _showUpdateNotification({
 }) async {
   final plugin = FlutterLocalNotificationsPlugin();
 
-  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const androidInit =
+      AndroidInitializationSettings('@drawable/ic_notification');
   await plugin.initialize(settings: const InitializationSettings(android: androidInit));
 
   String title;
@@ -127,7 +128,7 @@ Future<void> _showUpdateNotification({
         channelDescription: 'Background subscription refresh results',
         importance: Importance.low,
         priority: Priority.low,
-        icon: '@mipmap/ic_launcher',
+        icon: '@drawable/ic_notification',
         playSound: false,
         enableVibration: false,
       ),

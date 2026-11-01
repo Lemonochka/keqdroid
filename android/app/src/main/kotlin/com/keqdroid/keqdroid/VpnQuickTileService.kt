@@ -21,8 +21,9 @@ import androidx.core.content.ContextCompat
 class VpnQuickTileService : TileService() {
 
     companion object {
-        // монохромный: плитки тонируют иконку, и цветной логотип становится белым кружком. тот же ресурс в манифесте для редактора плиток
-        private val TILE_ICON_RES = R.drawable.ic_launcher_monochrome
+        // глиф строки состояния: плитка тонирует иконку, цветной логотип там белый кружок, а ic_launcher_monochrome с полями адаптивной иконки мелкий.
+        // тот же ресурс в манифесте для редактора плиток
+        private val TILE_ICON_RES = R.drawable.ic_notification
 
         // connecting не случайно: плитка на нём нажимается, см. updateTileFromPrefs
         private val ACTIVE_STATUSES = setOf("connected", "running", "connecting", "starting")

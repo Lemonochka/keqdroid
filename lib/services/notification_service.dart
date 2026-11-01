@@ -26,7 +26,8 @@ class NotificationService {
     if (ns._initialized) return;
 
     final plugin = FlutterLocalNotificationsPlugin();
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit =
+        AndroidInitializationSettings('@drawable/ic_notification');
     await plugin.initialize(
       settings: const InitializationSettings(android: androidInit),
       onDidReceiveNotificationResponse: _onNotificationTap,
@@ -60,7 +61,7 @@ class NotificationService {
       channelDescription: 'VPN connection control and status',
       importance: Importance.low,
       priority: Priority.low,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       ongoing: isConnected,
       autoCancel: !isConnected,
       playSound: false,
@@ -102,7 +103,8 @@ class NotificationService {
     required String body,
   }) async {
     final plugin = FlutterLocalNotificationsPlugin();
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit =
+        AndroidInitializationSettings('@drawable/ic_notification');
     await plugin.initialize(
       settings: const InitializationSettings(android: androidInit),
     );
@@ -121,7 +123,7 @@ class NotificationService {
       channelDescription: 'Subscription expiry and quota warnings',
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/ic_notification',
       autoCancel: true,
       styleInformation: BigTextStyleInformation(body),
     );

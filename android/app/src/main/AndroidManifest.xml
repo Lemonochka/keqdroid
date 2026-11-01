@@ -139,7 +139,7 @@
         <service
             android:name=".VpnQuickTileService"
             android:label="Keqdis"
-            android:icon="@drawable/ic_launcher_monochrome"
+            android:icon="@drawable/ic_notification"
             android:exported="true"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
