@@ -55,6 +55,7 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 - proxy chains: traffic passes through several servers in the order you set
 - **Auto** for a subscription: picks a steady server, moves on when it stops answering and goes back once it answers again; if the whole subscription goes silent while the one above or below it answers, moves there until its own answers again
 - per-subscription device identity sent to the provider's panel
+- when the provider moves a subscription to a new address, it follows and keeps its name, picture and servers; if the address stops answering, servers come from the provider's backup address; a reminder three days before the subscription ends, if the provider asks for one (Android)
 - checks: TCP, HTTP, ICMP, speed test; sorting by ping, name or speed
 
 **Routing and tunnel**
@@ -284,6 +285,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 - цепочки прокси: трафик проходит через несколько серверов в заданном порядке
 - **Auto** у подписки: выбирает стабильный сервер, уходит с него, когда он перестаёт отвечать, и возвращается, когда он снова отвечает; если молчит вся подписка, а соседняя выше или ниже отвечает, переходит туда, пока своя снова не ответит
 - отдельные данные устройства для каждой подписки (их видит панель провайдера)
+- если провайдер перенёс подписку на новый адрес, она переезжает туда с прежними именем, картинкой и серверами; если адрес не отвечает, серверы берутся с запасного адреса провайдера; за три дня до конца подписки приходит напоминание, если провайдер его просит (Android)
 - проверки: TCP, HTTP, ICMP, тест скорости; сортировка по пингу, имени или скорости
 
 **Маршрутизация и туннель**

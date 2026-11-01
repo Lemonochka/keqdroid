@@ -2448,6 +2448,14 @@ class AppLocalizationsFa extends AppLocalizations {
   String get subscriptionsExpiredHint => 'سرویس‌دهنده دیگر فهرست سرورها را به‌روز نمی‌کند. برای ادامهٔ کار اشتراک را تمدید کنید.';
 
   @override
+  String get subscriptionsExpiringNotifTitle => 'اشتراک به‌زودی تمام می‌شود';
+
+  @override
+  String subscriptionsExpiringNotifBody(String name, String date) {
+    return '«$name» در $date منقضی می‌شود. برای اینکه سرورها کار کنند تمدیدش کنید.';
+  }
+
+  @override
   String get subscriptionsExpiredNotifTitle => 'اشتراک منقضی شد';
 
   @override

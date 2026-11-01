@@ -63,4 +63,50 @@ void main() {
       );
     });
   });
+
+  group('movedSubscriptionUrl', () {
+    const current = 'https://old.example:2096/sub/abc?fmt=v2ray';
+
+    test('new-url заменяет адрес целиком', () {
+      expect(
+        movedSubscriptionUrl(current, newUrl: 'https://new.example/s/xyz'),
+        'https://new.example/s/xyz',
+      );
+    });
+
+    test('new-domain меняет только хост, остальное как было', () {
+      expect(
+        movedSubscriptionUrl(current, newDomain: 'mirror.example'),
+        'https://mirror.example:2096/sub/abc?fmt=v2ray',
+      );
+      expect(
+        movedSubscriptionUrl(current, newDomain: 'mirror.example:8443'),
+        'https://mirror.example:8443/sub/abc?fmt=v2ray',
+      );
+      expect(
+        movedSubscriptionUrl(current, newDomain: 'https://mirror.example/x'),
+        'https://mirror.example:2096/sub/abc?fmt=v2ray',
+      );
+    });
+
+    test('new-url сильнее new-domain', () {
+      expect(
+        movedSubscriptionUrl(
+          current,
+          newUrl: 'https://a.example/s',
+          newDomain: 'b.example',
+        ),
+        'https://a.example/s',
+      );
+    });
+
+    test('с https на http, на тот же адрес и на мусор не переезжаем', () {
+      expect(movedSubscriptionUrl(current, newUrl: 'http://new.example/s'), isNull);
+      expect(movedSubscriptionUrl(current, newUrl: 'https://OLD.example:2096/sub/abc?fmt=v2ray'), isNull);
+      expect(movedSubscriptionUrl(current, newUrl: 'vless://x@y:1'), isNull);
+      expect(movedSubscriptionUrl(current, newDomain: 'not a domain'), isNull);
+      expect(movedSubscriptionUrl(current, newDomain: 'localhost'), isNull);
+      expect(movedSubscriptionUrl(current), isNull);
+    });
+  });
 }

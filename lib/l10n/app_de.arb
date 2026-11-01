@@ -1198,6 +1198,14 @@
     }
   },
   "subscriptionsExpiredHint": "Der Anbieter aktualisiert die Serverliste nicht mehr. Verlängere das Abonnement, damit es weiter funktioniert.",
+  "subscriptionsExpiringNotifTitle": "Abonnement läuft bald ab",
+  "subscriptionsExpiringNotifBody": "„{name}“ läuft am {date} ab. Verlängere das Abonnement, damit die Server weiter funktionieren.",
+  "@subscriptionsExpiringNotifBody": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "date": {"type": "String"}
+    }
+  },
   "subscriptionsExpiredNotifTitle": "Abonnement abgelaufen",
   "subscriptionsExpiredNotifBody": "„{name}“ ist am {date} abgelaufen. Der Anbieter aktualisiert die Serverliste nicht mehr. Verlängere das Abonnement, damit die Server weiter funktionieren.",
   "@subscriptionsExpiredNotifBody": {

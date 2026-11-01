@@ -23,6 +23,7 @@ import '../utils/provider_routing.dart';
 import '../utils/raw_share_uri.dart';
 import '../utils/routing_profiles.dart';
 import '../utils/singbox_outbounds.dart';
+import '../utils/subscription_url.dart';
 import '../utils/socks_uri.dart';
 import '../utils/ssr_uri.dart';
 import '../utils/vmess_json_link.dart';
@@ -34,6 +35,10 @@ class SubscriptionProfileHeaders {
   final String? supportUrl;
   final String? webPageUrl;
   final int? updateIntervalHours;
+  final String? newUrl;
+  final String? newDomain;
+  final String? fallbackUrl;
+  final bool remindExpiry;
 
   const SubscriptionProfileHeaders({
     this.title,
@@ -41,6 +46,10 @@ class SubscriptionProfileHeaders {
     this.supportUrl,
     this.webPageUrl,
     this.updateIntervalHours,
+    this.newUrl,
+    this.newDomain,
+    this.fallbackUrl,
+    this.remindExpiry = false,
   });
 
   static const empty = SubscriptionProfileHeaders();
@@ -50,7 +59,43 @@ class SubscriptionProfileHeaders {
       announce == null &&
       supportUrl == null &&
       webPageUrl == null &&
-      updateIntervalHours == null;
+      updateIntervalHours == null &&
+      newUrl == null &&
+      newDomain == null &&
+      fallbackUrl == null &&
+      !remindExpiry;
+
+  static final _bodyLine = RegExp(
+    r'^#\s*(new-url|new-domain|fallback-url|notification-subs-expire)\s*:?\s*(\S+)\s*$',
+    caseSensitive: false,
+    multiLine: true,
+  );
+
+  // Happ пишет их и в тело строкой #new-url ..., так шлют подписки без своих заголовков; тело сильнее заголовка
+  SubscriptionProfileHeaders withBody(String body) {
+    final found = <String, String>{};
+    final decoded = SubscriptionService._tryDecodeBase64Flexible(body.trim());
+    for (final text in [body, ?decoded]) {
+      for (final m in _bodyLine.allMatches(text)) {
+        found.putIfAbsent(m.group(1)!.toLowerCase(), () => m.group(2)!);
+      }
+    }
+    if (found.isEmpty) return this;
+    final remind = found['notification-subs-expire'];
+    return SubscriptionProfileHeaders(
+      title: title,
+      announce: announce,
+      supportUrl: supportUrl,
+      webPageUrl: webPageUrl,
+      updateIntervalHours: updateIntervalHours,
+      newUrl: SubscriptionService._sanitizeUrl(found['new-url']) ?? newUrl,
+      newDomain: found['new-domain'] ?? newDomain,
+      fallbackUrl:
+          SubscriptionService._sanitizeUrl(found['fallback-url']) ?? fallbackUrl,
+      remindExpiry:
+          remind == null ? remindExpiry : SubscriptionService._isOn(remind),
+    );
+  }
 }
 
 class SubscriptionFetchResult {
@@ -463,7 +508,7 @@ class SubscriptionService {
         totalBytes: totalBytes,
         expiresAt: expiresAt,
         usedUserAgent: usedUserAgent,
-        profile: profile,
+        profile: profile.withBody(effectiveBody),
         routing: _routingOf(response.headers, effectiveBody),
       );
     } on DioException catch (e) {
@@ -569,7 +614,7 @@ class SubscriptionService {
         totalBytes: headerMeta.totalBytes,
         expiresAt: headerMeta.expiresAt,
         usedUserAgent: null,
-        profile: _parseProfileHeaders(response.headers),
+        profile: _parseProfileHeaders(response.headers).withBody(body),
         routing: _routingOf(response.headers, body),
       );
     } on Object {
@@ -620,7 +665,7 @@ class SubscriptionService {
       totalBytes: headerMeta.totalBytes ?? bodyMeta.totalBytes,
       expiresAt: headerMeta.expiresAt ?? bodyMeta.expiresAt,
       usedUserAgent: response.requestOptions.headers['User-Agent'] as String?,
-      profile: _parseProfileHeaders(response.headers),
+      profile: _parseProfileHeaders(response.headers).withBody(body),
       routing: _routingOf(response.headers, body),
     );
   }
@@ -723,7 +768,7 @@ class SubscriptionService {
           totalBytes: headerMeta.totalBytes ?? bodyMeta.totalBytes,
           expiresAt: headerMeta.expiresAt ?? bodyMeta.expiresAt,
           usedUserAgent: null,
-          profile: _parseProfileHeaders(dioLikeHeaders),
+          profile: _parseProfileHeaders(dioLikeHeaders).withBody(body),
           routing: _routingOf(dioLikeHeaders, body),
         );
       } on Object catch (e, st) {
@@ -989,7 +1034,17 @@ class SubscriptionService {
       supportUrl: _sanitizeUrl(pick(['support-url', 'profile-support-url'])),
       webPageUrl: _sanitizeUrl(pick(['profile-web-page-url', 'profile-webpage-url'])),
       updateIntervalHours: (interval != null && interval > 0) ? interval : null,
+      newUrl: _sanitizeUrl(pick(['new-url'])),
+      newDomain: pick(['new-domain']),
+      fallbackUrl: _sanitizeUrl(pick(['fallback-url'])),
+      remindExpiry: _isOn(pick(['notification-subs-expire'])),
     );
+  }
+
+  // у Happ включает true или 1, любое другое значение выключает
+  static bool _isOn(String? raw) {
+    final v = raw?.trim().toLowerCase();
+    return v == '1' || v == 'true';
   }
 
   // голый base64 только если раскодировался в осмысленный текст: Announce тоже валидный base64
@@ -2633,15 +2688,81 @@ class SubscriptionService {
         });
   }
 
-  Future<UpdateResult> _update(Subscription sub,
-      {CancelToken? cancelToken}) async {
-    try {
-      final result = await fetchRaw(
-        sub.url,
+  Future<SubscriptionFetchResult> _fetchFor(
+    Subscription sub,
+    String url,
+    CancelToken? cancelToken,
+  ) =>
+      fetchRaw(
+        url,
         cancelToken: cancelToken,
         userAgent: sub.userAgent,
         identity: sub.fetchIdentity,
       );
+
+  // запасной адрес провайдера только читаем: основной остаётся прежним, вдруг он вернётся
+  Future<SubscriptionFetchResult> _fetchOrFallback(
+    Subscription sub,
+    CancelToken? cancelToken,
+  ) async {
+    try {
+      return await _fetchFor(sub, sub.url, cancelToken);
+    } catch (e, st) {
+      final fallback = sub.fallbackUrl;
+      if (fallback == null ||
+          fallback == sub.url ||
+          (cancelToken?.isCancelled ?? false)) {
+        rethrow;
+      }
+      AppLogger.instance.warn(
+        'Subscription main address failed, trying the fallback one '
+        '(${Uri.tryParse(fallback)?.host ?? '?'})',
+      );
+      try {
+        return await _fetchFor(sub, fallback, cancelToken);
+      } catch (_) {
+        Error.throwWithStackTrace(e, st);
+      }
+    }
+  }
+
+  // переезд по new-url и new-domain: та же подписка с тем же id, меняется только адрес, поэтому карточка,
+  // серверы, профиль и HWID остаются. новый адрес сперва проверяем: сломанный переезд не уводит подписку в никуда
+  Future<({SubscriptionFetchResult result, String url})> _followMove(
+    Subscription sub,
+    SubscriptionFetchResult result,
+    CancelToken? cancelToken,
+  ) async {
+    final target = movedSubscriptionUrl(
+      sub.url,
+      newUrl: result.profile.newUrl,
+      newDomain: result.profile.newDomain,
+    );
+    if (target == null) return (result: result, url: sub.url);
+    final key = normalizeSubscriptionUrl(target);
+    final taken = (await _storage.getSubscriptions())
+        .any((s) => s.id != sub.id && normalizeSubscriptionUrl(s.url) == key);
+    final host = Uri.tryParse(target)?.host ?? '?';
+    if (taken) {
+      AppLogger.instance.warn('Subscription move to $host skipped: already added');
+      return (result: result, url: sub.url);
+    }
+    try {
+      final moved = await _fetchFor(sub, target, cancelToken);
+      AppLogger.instance.info('Subscription moved to $host');
+      return (result: moved, url: target);
+    } catch (e) {
+      AppLogger.instance.warn('Subscription move to $host failed, staying: $e');
+      return (result: result, url: sub.url);
+    }
+  }
+
+  Future<UpdateResult> _update(Subscription sub,
+      {CancelToken? cancelToken}) async {
+    try {
+      final fetched = await _fetchOrFallback(sub, cancelToken);
+      final move = await _followMove(sub, fetched, cancelToken);
+      final result = move.result;
 
       final activeId = _storage.getActiveServerId();
       final oldServers = (await _storage.getServers())
@@ -2732,6 +2853,7 @@ class SubscriptionService {
       final wasFirstFetch = sub.lastUpdatedAt == null;
       final updated = sub
           .copyWith(
+            url: move.url,
             lastUpdatedAt: DateTime.now(),
             usedBytes: result.usedBytes,
             totalBytes: result.totalBytes,
@@ -2750,6 +2872,8 @@ class SubscriptionService {
             // интервал панели только при первой загрузке, дальше это выбор человека
             updateIntervalHours:
                 wasFirstFetch ? result.profile.updateIntervalHours : null,
+            fallbackUrl: result.profile.fallbackUrl,
+            remindExpiry: result.profile.remindExpiry,
           );
       await _storage.upsertSubscription(updated);
       final routingChanged = await _applyProviderRouting(updated, result.routing);

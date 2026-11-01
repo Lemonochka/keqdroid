@@ -91,7 +91,30 @@ class NotificationService {
   }) async {
     final ns = instance;
     if (!ns._initialized || ns._plugin == null) return;
+    await _showSubscriptionNotice(ns._plugin!, subscriptionId, title, body);
+  }
 
+  // фоновый изолят: свой плагин без запроса разрешения, окна для него нет. канал и номер те же,
+  // напоминание и «истекла» заменяют друг друга
+  static Future<void> showSubscriptionNoticeInBackground({
+    required String subscriptionId,
+    required String title,
+    required String body,
+  }) async {
+    final plugin = FlutterLocalNotificationsPlugin();
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    await plugin.initialize(
+      settings: const InitializationSettings(android: androidInit),
+    );
+    await _showSubscriptionNotice(plugin, subscriptionId, title, body);
+  }
+
+  static Future<void> _showSubscriptionNotice(
+    FlutterLocalNotificationsPlugin plugin,
+    String subscriptionId,
+    String title,
+    String body,
+  ) async {
     final details = AndroidNotificationDetails(
       _subsChannelId,
       _subsChannelName,
@@ -103,7 +126,7 @@ class NotificationService {
       styleInformation: BigTextStyleInformation(body),
     );
 
-    await ns._plugin!.show(
+    await plugin.show(
       id: _subsNotifIdBase + (subscriptionId.hashCode.abs() % 100),
       title: title,
       body: body,

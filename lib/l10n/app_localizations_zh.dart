@@ -2447,6 +2447,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subscriptionsExpiredHint => '服务商已不再更新服务器列表。请续订以继续使用。';
 
   @override
+  String get subscriptionsExpiringNotifTitle => '订阅即将到期';
+
+  @override
+  String subscriptionsExpiringNotifBody(String name, String date) {
+    return '“$name”将于 $date 到期，请续订以保持服务器可用。';
+  }
+
+  @override
   String get subscriptionsExpiredNotifTitle => '订阅已到期';
 
   @override

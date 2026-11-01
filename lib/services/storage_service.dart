@@ -32,6 +32,7 @@ class StorageService {
   static const _kWindowBounds  = 'keqdis_window_bounds';
   static const _kSortModes     = 'keqdis_server_sort_modes';
   static const _kExpiryNotified = 'keqdis_subscription_expiry_notified';
+  static const _kExpiryReminded = 'keqdis_subscription_expiry_reminded';
 
   final SharedPreferences _prefs;
   StorageService(this._prefs);
@@ -400,8 +401,18 @@ class StorageService {
   Future<void> setServerSortModes(Map<String, String> modes) =>
       _serial(() => _prefs.setString(_kSortModes, jsonEncode(modes)));
 
-  Map<String, String> getExpiryNotified() {
-    final raw = _prefs.getString(_kExpiryNotified);
+  Map<String, String> getExpiryNotified() => _stringMap(_kExpiryNotified);
+
+  Future<void> setExpiryNotified(Map<String, String> byId) =>
+      _serial(() => _prefs.setString(_kExpiryNotified, jsonEncode(byId)));
+
+  Map<String, String> getExpiryReminded() => _stringMap(_kExpiryReminded);
+
+  Future<void> setExpiryReminded(Map<String, String> byId) =>
+      _serial(() => _prefs.setString(_kExpiryReminded, jsonEncode(byId)));
+
+  Map<String, String> _stringMap(String key) {
+    final raw = _prefs.getString(key);
     if (raw == null) return {};
     try {
       final decoded = jsonDecode(raw);
@@ -411,7 +422,4 @@ class StorageService {
       return {};
     }
   }
-
-  Future<void> setExpiryNotified(Map<String, String> byId) =>
-      _serial(() => _prefs.setString(_kExpiryNotified, jsonEncode(byId)));
 }

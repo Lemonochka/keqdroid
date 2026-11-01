@@ -318,4 +318,77 @@ void main() {
       expect(Subscription.fromJson(s.toJson()).nameIsAuto, isTrue);
     });
   });
+
+  group('переезд, запасной адрес и напоминание', () {
+    test('заголовки Happ разбираются', () {
+      final p = SubscriptionService.parseProfileHeadersForTest(
+        _headers({
+          'new-url': 'https://new.example/s/1',
+          'new-domain': 'mirror.example',
+          'fallback-url': 'https://backup.example/s/1',
+          'notification-subs-expire': '1',
+        }),
+      );
+      expect(p.newUrl, 'https://new.example/s/1');
+      expect(p.newDomain, 'mirror.example');
+      expect(p.fallbackUrl, 'https://backup.example/s/1');
+      expect(p.remindExpiry, isTrue);
+    });
+
+    test('не ссылка не принимается, напоминание включает только 1 или true', () {
+      final p = SubscriptionService.parseProfileHeadersForTest(
+        _headers({
+          'new-url': 'vless://x@y:1',
+          'fallback-url': 'backup.example',
+          'notification-subs-expire': '0',
+        }),
+      );
+      expect(p.newUrl, isNull);
+      expect(p.fallbackUrl, isNull);
+      expect(p.remindExpiry, isFalse);
+      expect(
+        SubscriptionService.parseProfileHeadersForTest(_headers({})).remindExpiry,
+        isFalse,
+      );
+    });
+
+    test('строки в теле, как в документации Happ, и тело сильнее заголовка', () {
+      const body = '#new-url https://new.example/s/2\n'
+          '#fallback-url: https://backup.example/s/2\n'
+          '#notification-subs-expire: true\n'
+          'vless://u@198.51.100.1:443#A\n';
+      final fromHeaders = SubscriptionService.parseProfileHeadersForTest(
+        _headers({'new-url': 'https://header.example/s'}),
+      );
+      for (final b in [body, base64.encode(utf8.encode(body))]) {
+        final p = fromHeaders.withBody(b);
+        expect(p.newUrl, 'https://new.example/s/2');
+        expect(p.fallbackUrl, 'https://backup.example/s/2');
+        expect(p.remindExpiry, isTrue);
+      }
+      expect(fromHeaders.withBody('vless://u@198.51.100.1:443#A').newUrl,
+          'https://header.example/s');
+    });
+
+    test('запасной адрес переживает ответ без него, напоминание нет', () {
+      const sub = Subscription(
+        id: 's',
+        name: 'S',
+        url: 'https://a.example/s',
+        fallbackUrl: 'https://b.example/s',
+        remindExpiry: true,
+      );
+      final next = sub.withProfileHeaders(
+        title: null,
+        announce: null,
+        supportUrl: null,
+        webPageUrl: null,
+      );
+      expect(next.fallbackUrl, 'https://b.example/s');
+      expect(next.remindExpiry, isFalse);
+      final restored = Subscription.fromJson(sub.toJson());
+      expect(restored.fallbackUrl, 'https://b.example/s');
+      expect(restored.remindExpiry, isTrue);
+    });
+  });
 }

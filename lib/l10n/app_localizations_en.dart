@@ -2452,6 +2452,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subscriptionsExpiredHint => 'The provider no longer updates the server list. Renew the subscription to keep it working.';
 
   @override
+  String get subscriptionsExpiringNotifTitle => 'Subscription ends soon';
+
+  @override
+  String subscriptionsExpiringNotifBody(String name, String date) {
+    return '\"$name\" ends on $date. Renew it to keep the servers working.';
+  }
+
+  @override
   String get subscriptionsExpiredNotifTitle => 'Subscription expired';
 
   @override

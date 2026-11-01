@@ -8,6 +8,8 @@ import 'package:workmanager/workmanager.dart';
 import '../core/app_logger.dart';
 import '../utils/local_vpn_proxy.dart';
 import '../utils/socks5_credentials.dart';
+import 'expiry_reminder.dart';
+import 'notification_service.dart';
 import 'storage_service.dart';
 import 'subscription_service.dart';
 
@@ -45,27 +47,37 @@ void callbackDispatcher() {
       final due = await service.getDueForUpdate(
         defaultInterval: const Duration(hours: 1),
       );
-      if (due.isEmpty) {
-        return true;
-      }
-
-      final results = await Future.wait(
-        due.map(service.updateSubscription),
-        eagerError: false,
-      );
-
-      final ok      = results.where((r) => r.success).length;
-      final failed  = results.length - ok;
-      final total   = results.fold(0, (sum, r) => sum + r.serverCount);
-
-      final settings = await storage.getSettings();
-      if (settings.notifySubscriptionUpdates) {
-        await _showUpdateNotification(
-          ok: ok,
-          failed: failed,
-          totalServers: total,
+      if (due.isNotEmpty) {
+        final results = await Future.wait(
+          due.map(service.updateSubscription),
+          eagerError: false,
         );
+
+        final ok      = results.where((r) => r.success).length;
+        final failed  = results.length - ok;
+        final total   = results.fold(0, (sum, r) => sum + r.serverCount);
+
+        final settings = await storage.getSettings();
+        if (settings.notifySubscriptionUpdates) {
+          await _showUpdateNotification(
+            ok: ok,
+            failed: failed,
+            totalServers: total,
+          );
+        }
       }
+
+      await remindExpiringSubscriptions(
+        storage,
+        await storage.getSubscriptions(),
+        now: DateTime.now(),
+        show: (sub, title, body) =>
+            NotificationService.showSubscriptionNoticeInBackground(
+          subscriptionId: sub.id,
+          title: title,
+          body: body,
+        ),
+      );
 
       return true;
     } catch (e, st) {

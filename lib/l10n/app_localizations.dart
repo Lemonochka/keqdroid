@@ -4631,6 +4631,18 @@ abstract class AppLocalizations {
   /// **'The provider no longer updates the server list. Renew the subscription to keep it working.'**
   String get subscriptionsExpiredHint;
 
+  /// No description provided for @subscriptionsExpiringNotifTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription ends soon'**
+  String get subscriptionsExpiringNotifTitle;
+
+  /// No description provided for @subscriptionsExpiringNotifBody.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" ends on {date}. Renew it to keep the servers working.'**
+  String subscriptionsExpiringNotifBody(String name, String date);
+
   /// No description provided for @subscriptionsExpiredNotifTitle.
   ///
   /// In en, this message translates to:

@@ -1200,6 +1200,14 @@
     }
   },
   "subscriptionsExpiredHint": "Провайдер больше не обновляет список серверов. Продлите подписку, чтобы она продолжала работать.",
+  "subscriptionsExpiringNotifTitle": "Подписка скоро закончится",
+  "subscriptionsExpiringNotifBody": "«{name}» закончится {date}. Продлите подписку, чтобы серверы продолжали работать.",
+  "@subscriptionsExpiringNotifBody": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "date": {"type": "String"}
+    }
+  },
   "subscriptionsExpiredNotifTitle": "Подписка истекла",
   "subscriptionsExpiredNotifBody": "«{name}» истекла {date}. Провайдер перестал обновлять список серверов. Продлите подписку, чтобы серверы продолжали работать.",
   "@subscriptionsExpiredNotifBody": {

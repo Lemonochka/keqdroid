@@ -1198,6 +1198,14 @@
     }
   },
   "subscriptionsExpiredHint": "服务商已不再更新服务器列表。请续订以继续使用。",
+  "subscriptionsExpiringNotifTitle": "订阅即将到期",
+  "subscriptionsExpiringNotifBody": "“{name}”将于 {date} 到期，请续订以保持服务器可用。",
+  "@subscriptionsExpiringNotifBody": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "date": {"type": "String"}
+    }
+  },
   "subscriptionsExpiredNotifTitle": "订阅已到期",
   "subscriptionsExpiredNotifBody": "“{name}”已于 {date} 到期。服务商已停止更新服务器列表，请续订以保持服务器可用。",
   "@subscriptionsExpiredNotifBody": {

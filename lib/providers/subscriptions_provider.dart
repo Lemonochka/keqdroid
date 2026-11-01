@@ -80,6 +80,16 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
   }
 
   Future<void> notifyExpired(List<Subscription> subs) async {
+    await remindExpiringSubscriptions(
+      ref.read(storageProvider),
+      subs,
+      now: DateTime.now(),
+      show: (sub, title, body) => NotificationService.showSubscriptionExpired(
+        subscriptionId: sub.id,
+        title: title,
+        body: body,
+      ),
+    );
     final expired = subs
         .where((s) => s.expiresAt != null && s.isExpired)
         .toList();

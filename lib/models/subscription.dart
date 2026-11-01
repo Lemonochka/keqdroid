@@ -117,6 +117,12 @@ class Subscription {
 
   final bool autoSelect;
 
+  // запасной адрес от провайдера: читается, когда основной не отвечает, сам адрес подписки не меняет
+  final String? fallbackUrl;
+
+  // провайдер просит напоминать за 3 дня до конца
+  final bool remindExpiry;
+
 
   const Subscription({
     required this.id,
@@ -142,6 +148,8 @@ class Subscription {
     this.cardVeil = CardVeil.medium,
     this.autoSelectVisible = false,
     this.autoSelect = false,
+    this.fallbackUrl,
+    this.remindExpiry = false,
   });
 
   factory Subscription.create({
@@ -191,6 +199,8 @@ class Subscription {
     cardVeil: CardVeil.byName(json['cardVeil'] as String?),
     autoSelectVisible: json['autoSelectVisible'] as bool? ?? false,
     autoSelect: json['autoSelect'] as bool? ?? false,
+    fallbackUrl: json['fallbackUrl'] as String?,
+    remindExpiry: json['remindExpiry'] as bool? ?? false,
     fetchIdentity: json['fetchIdentity'] is Map
         ? SubscriptionFetchIdentity.fromJson(
             (json['fetchIdentity'] as Map).cast<String, dynamic>(),
@@ -224,6 +234,8 @@ class Subscription {
     if (cardVeil != CardVeil.medium) 'cardVeil': cardVeil.name,
     if (autoSelectVisible) 'autoSelectVisible': true,
     if (autoSelect) 'autoSelect': true,
+    if (fallbackUrl != null) 'fallbackUrl': fallbackUrl,
+    if (remindExpiry) 'remindExpiry': true,
     if (fetchIdentity.enabled || fetchIdentity.hasCustomFields)
       'fetchIdentity': fetchIdentity.toJson(),
   };
@@ -252,6 +264,8 @@ class Subscription {
     bool? autoSelectVisible,
     bool? autoSelect,
     SubscriptionFetchIdentity? fetchIdentity,
+    String? fallbackUrl,
+    bool? remindExpiry,
   }) =>
       Subscription(
         id: id ?? this.id,
@@ -277,6 +291,8 @@ class Subscription {
         autoSelectVisible: autoSelectVisible ?? this.autoSelectVisible,
         autoSelect: autoSelect ?? this.autoSelect,
         fetchIdentity: fetchIdentity ?? this.fetchIdentity,
+        fallbackUrl: fallbackUrl ?? this.fallbackUrl,
+        remindExpiry: remindExpiry ?? this.remindExpiry,
       );
 
   // новое поле модели добавлять и сюда, иначе оно слетает при каждом обновлении подписки
@@ -287,6 +303,8 @@ class Subscription {
     required String? supportUrl,
     required String? webPageUrl,
     int? updateIntervalHours,
+    String? fallbackUrl,
+    bool remindExpiry = false,
   }) {
     final cleanTitle = title?.trim();
     final adoptTitle =
@@ -315,6 +333,9 @@ class Subscription {
       cardVeil: cardVeil,
       autoSelectVisible: autoSelectVisible,
       autoSelect: autoSelect,
+      // запасной адрес приходит не в каждом ответе: со старым ничего не теряется, а отказ основного без него глухой
+      fallbackUrl: fallbackUrl ?? this.fallbackUrl,
+      remindExpiry: remindExpiry,
     );
   }
 

@@ -2464,6 +2464,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get subscriptionsExpiredHint => 'Провайдер больше не обновляет список серверов. Продлите подписку, чтобы она продолжала работать.';
 
   @override
+  String get subscriptionsExpiringNotifTitle => 'Подписка скоро закончится';
+
+  @override
+  String subscriptionsExpiringNotifBody(String name, String date) {
+    return '«$name» закончится $date. Продлите подписку, чтобы серверы продолжали работать.';
+  }
+
+  @override
   String get subscriptionsExpiredNotifTitle => 'Подписка истекла';
 
   @override
