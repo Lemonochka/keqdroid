@@ -13,6 +13,7 @@ import 'package:material_color_utilities/material_color_utilities.dart' as mcu;
 import '../models/app_font.dart';
 import '../models/app_settings.dart';
 import '../models/icon_shape.dart';
+import '../platform/home_widget_sync.dart';
 import '../platform/platform_bootstrap.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../providers/providers.dart';
@@ -370,6 +371,7 @@ class KeqdisApp extends ConsumerWidget {
     final fallbackSeed = systemAccent ?? kSeedFallback;
     // держит провайдер живым: списки по ссылкам обновляются раз в сутки и без открытого экрана
     ref.listen(ruleListsProvider, (_, _) {});
+    ref.listen(homeWidgetSyncProvider, (_, _) {});
 
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
@@ -408,6 +410,16 @@ void _syncAndroidWindowBackground(Color surface) {
   );
 }
 
+ColorScheme? _lastHomeWidgetScheme;
+
+void _syncHomeWidgetPalette(ColorScheme scheme) {
+  if (!Platform.isAndroid || scheme == _lastHomeWidgetScheme) return;
+  _lastHomeWidgetScheme = scheme;
+  scheduleMicrotask(
+    () => VpnNativeBridge.updateHomeWidget(colors: homeWidgetColors(scheme)),
+  );
+}
+
 class _ThemedApp extends ConsumerWidget {
   final ColorScheme lightScheme;
   final ColorScheme darkScheme;
@@ -441,11 +453,11 @@ class _ThemedApp extends ConsumerWidget {
 
     final locale = localeFromSettings(settings);
 
-    _syncAndroidWindowBackground(
-      settings.darkTheme
-          ? dark(useSystem ? darkScheme : customDark).surface
-          : (useSystem ? lightScheme : customLight).surface,
-    );
+    final activeScheme = settings.darkTheme
+        ? dark(useSystem ? darkScheme : customDark)
+        : (useSystem ? lightScheme : customLight);
+    _syncAndroidWindowBackground(activeScheme.surface);
+    _syncHomeWidgetPalette(activeScheme);
 
     return MaterialApp(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,

@@ -42,6 +42,21 @@ class VpnNativeBridge {
     }
   }
 
+  static Future<void> updateHomeWidget({
+    Map<String, int>? colors,
+    Map<String, Object?>? server,
+  }) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await channel.invokeMethod<void>('updateHomeWidget', {
+        'colors': ?colors,
+        'server': ?server,
+      });
+    } on PlatformException {
+      // виджет останется с прежними цветами и сервером
+    }
+  }
+
   static Future<String?> getPendingDeepLink() async {
     if (!supportsDeepLinks) return null;
     return channel.invokeMethod<String>('getPendingDeepLink');

@@ -8,4 +8,9 @@
     <string name="tile_error_start">Das VPN konnte nicht über die Schnelleinstellungen gestartet werden. Öffne Keqdis.</string>
     <string name="tile_error_open_app">Keqdis konnte nicht geöffnet werden. Starte die App manuell.</string>
     <string name="tile_error_blocked">Das System hat den VPN-Start über die Schnelleinstellungen blockiert. Tippe noch einmal auf die Kachel.</string>
+    <string name="widget_description">Mit einem Tippen verbinden</string>
+    <string name="widget_status_off">Getrennt</string>
+    <string name="widget_status_connecting">Verbinden…</string>
+    <string name="widget_status_error">Fehler</string>
+    <string name="widget_clock_format">Verbunden · %s</string>
 </resources>

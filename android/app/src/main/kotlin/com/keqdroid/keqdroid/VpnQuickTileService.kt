@@ -12,7 +12,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.net.VpnService
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.widget.Toast
@@ -24,9 +23,6 @@ class VpnQuickTileService : TileService() {
         // глиф строки состояния: плитка тонирует иконку, цветной логотип там белый кружок, а ic_launcher_monochrome с полями адаптивной иконки мелкий.
         // тот же ресурс в манифесте для редактора плиток
         private val TILE_ICON_RES = R.drawable.ic_notification
-
-        // connecting не случайно: плитка на нём нажимается, см. updateTileFromPrefs
-        private val ACTIVE_STATUSES = setOf("connected", "running", "connecting", "starting")
     }
 
     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -134,60 +130,26 @@ class VpnQuickTileService : TileService() {
     }
 
     private fun handleClick() {
-        val prefs = getSharedPreferences(KeqdisVpnService.PREFS_QS, MODE_PRIVATE)
-        val status = (prefs.getString(KeqdisVpnService.KEY_QS_STATUS, "disconnected")
-            ?: "disconnected").lowercase()
-        NativeLog.i("KEQDIS_QS", "onClick: status=$status")
+        NativeLog.i("KEQDIS_QS", "onClick: status=${QuickConnect.persistedStatus(this)}")
 
-        // запись в prefs переживает смерть процесса, туннель нет: на MIUI в qs_status оставался connected,
-        // и плитка слала стоп в мёртвый сервис. liveStatus после перезапуска disconnected, расхождение значит запись протухла
-        val live = KeqdisVpnService.liveStatus.lowercase()
-        if (status in ACTIVE_STATUSES && live !in ACTIVE_STATUSES) {
-            NativeLog.w(
-                "KEQDIS_QS",
-                "onClick: stale persisted status '$status' (live='$live') → healing and connecting",
-            )
-            getSharedPreferences(KeqdisVpnService.PREFS_QS, MODE_PRIVATE)
-                .edit()
-                .putString(KeqdisVpnService.KEY_QS_STATUS, "disconnected")
-                .apply()
-        } else if (status in ACTIVE_STATUSES) {
+        when (val tap = QuickConnect.decide(this, "KEQDIS_QS")) {
             // работает или залип на connecting: глушим напрямую, без toggle
-            startService(Intent(this, KeqdisVpnService::class.java).apply {
-                action = KeqdisVpnService.ACTION_STOP
-            })
-            return
+            QuickConnect.Tap.Stop -> startService(QuickConnect.stopIntent(this))
+            QuickConnect.Tap.OpenApp -> openAppForConnect()
+            QuickConnect.Tap.Window -> openQuickConnect()
+            is QuickConnect.Tap.Start -> {
+                try {
+                    if (Build.VERSION.SDK_INT >= 26) startForegroundService(tap.intent) else startService(tap.intent)
+                } catch (e: Exception) {
+                    // Android 12+: фоновый старт отняли (ограничение фоновой активности, выключенный автозапуск). из окна старт разрешён всегда
+                    NativeLog.e("KEQDIS_QS", "onClick: service start refused by system: $e")
+                    QuickConnect.rememberDirectStartBlocked(this)
+                    openQuickConnect()
+                    return
+                }
+                verifyStarted()
+            }
         }
-
-        val start = KeqdisVpnService.snapshotStartIntent(this)
-        if (start == null) {
-            NativeLog.i("KEQDIS_QS", "onClick: no usable server snapshot → opening app")
-            openAppForConnect()
-            return
-        }
-
-        // согласие спрашивает только окно, невидимое окно спросит и само подключит
-        if (KeqdisVpnService.startsTunnel(start) && VpnService.prepare(this) != null) {
-            NativeLog.i("KEQDIS_QS", "onClick: no VPN consent → quick connect window")
-            openQuickConnect()
-            return
-        }
-        if (directStartBlocked()) {
-            NativeLog.i("KEQDIS_QS", "onClick: this firmware blocks the tile → quick connect window")
-            openQuickConnect()
-            return
-        }
-
-        try {
-            if (Build.VERSION.SDK_INT >= 26) startForegroundService(start) else startService(start)
-        } catch (e: Exception) {
-            // Android 12+: фоновый старт отняли (ограничение фоновой активности, выключенный автозапуск). из окна старт разрешён всегда
-            NativeLog.e("KEQDIS_QS", "onClick: service start refused by system: $e")
-            rememberDirectStartBlocked()
-            openQuickConnect()
-            return
-        }
-        verifyStarted()
     }
 
     // отказ бывает без исключения: прошивки с Автозапуском старт молча глотают. сверяемся с liveStatus, его ставят прямо в onStartCommand,
@@ -195,38 +157,23 @@ class VpnQuickTileService : TileService() {
     // меньше секунды не хватает здоровому старту, больше рискует закрытой шторкой
     private fun verifyStarted() {
         android.os.Handler(mainLooper).postDelayed({
-            val live = KeqdisVpnService.liveStatus.lowercase()
-            if (live !in ACTIVE_STATUSES) {
+            if (!QuickConnect.liveActive()) {
                 NativeLog.e(
                     "KEQDIS_QS",
-                    "onClick: service did not come up (live='$live') — likely blocked by the OEM",
+                    "onClick: service did not come up (live='${KeqdisVpnService.liveStatus.lowercase()}') — likely blocked by the OEM",
                 )
-                rememberDirectStartBlocked()
+                QuickConnect.rememberDirectStartBlocked(this)
                 openQuickConnect(retryHelps = true)
             }
         }, 2500)
     }
 
-    // запомненный отказ ведёт сразу в окно, без 2,5 с ожидания. помним до обновления системы
-    private fun directStartBlocked(): Boolean =
-        getSharedPreferences(KeqdisVpnService.PREFS_QS, MODE_PRIVATE)
-            .getString(KeqdisVpnService.KEY_QS_DIRECT_START_BLOCKED_ON, null) == Build.FINGERPRINT
-
-    private fun rememberDirectStartBlocked() {
-        getSharedPreferences(KeqdisVpnService.PREFS_QS, MODE_PRIVATE)
-            .edit()
-            .putString(KeqdisVpnService.KEY_QS_DIRECT_START_BLOCKED_ON, Build.FINGERPRINT)
-            .apply()
-    }
-
     // окно из шторки открывается, только пока она открыта: на Android 14+ SystemUI без жетона нажатия пропускает запуск молча
     private fun openQuickConnect(retryHelps: Boolean = false) {
-        val intent = Intent(this, QuickConnectActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
-        launchActivity(intent) { launchedAt ->
+        launchActivity(QuickConnect.quickConnectIntent(this)) { launchedAt ->
             android.os.Handler(mainLooper).postDelayed({
                 if (QuickConnectActivity.openedAt >= launchedAt) return@postDelayed
-                if (KeqdisVpnService.liveStatus.lowercase() in ACTIVE_STATUSES) return@postDelayed
+                if (QuickConnect.liveActive()) return@postDelayed
                 NativeLog.w("KEQDIS_QS", "quick connect window did not open")
                 toast(if (retryHelps) R.string.tile_error_blocked else R.string.tile_error_open_app)
             }, 2000)
@@ -234,14 +181,7 @@ class VpnQuickTileService : TileService() {
     }
 
     private fun openAppForConnect() {
-        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-            ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            ?.putExtra("action", "connect_from_notification")
-            ?: Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                putExtra("action", "connect_from_notification")
-            }
-        launchActivity(launchIntent)
+        launchActivity(QuickConnect.openAppIntent(this, connect = true))
     }
 
     private fun launchActivity(launchIntent: Intent, onLaunched: ((Long) -> Unit)? = null) {
@@ -282,22 +222,13 @@ class VpnQuickTileService : TileService() {
     }
 
     private fun updateTileFromPrefs() {
-        val persisted = getSharedPreferences(KeqdisVpnService.PREFS_QS, MODE_PRIVATE)
-            .getString(KeqdisVpnService.KEY_QS_STATUS, "disconnected")
-            ?.lowercase()
-            ?: "disconnected"
-
         // та же сверка, что в handleClick, иначе плитка горит включённой при выключенном VPN
-        val live = KeqdisVpnService.liveStatus.lowercase()
-        val status = if (persisted in ACTIVE_STATUSES && live !in ACTIVE_STATUSES) {
-            "disconnected"
-        } else {
-            persisted
-        }
+        val status = QuickConnect.effectiveStatus(this)
 
         NativeLog.d(
             "KEQDIS_QS",
-            "updateTileFromPrefs: status=$status (persisted=$persisted, live=$live)",
+            "updateTileFromPrefs: status=$status (persisted=${QuickConnect.persistedStatus(this)}, " +
+                "live=${KeqdisVpnService.liveStatus.lowercase()})",
         )
 
         val tileObj = qsTile

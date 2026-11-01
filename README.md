@@ -137,7 +137,7 @@ A ready-made config can also be the server of a route: an Xray JSON when the con
 | **VPN** | Everything on the device goes through the tunnel. VPN permission on first connect. |
 | **Proxy** | SOCKS and HTTP on `127.0.0.1`. Set it as the proxy in an app or in the Wi-Fi settings. |
 
-Per-app routing and DNS interception work in VPN mode only. Connect and disconnect from the notification, the Quick Settings tile or launcher shortcuts. Subscriptions update in the background. A VPN that was on comes back after an app update or a phone restart.
+Per-app routing and DNS interception work in VPN mode only. Connect and disconnect from the notification, the Quick Settings tile, the home screen widget or launcher shortcuts. Subscriptions update in the background. A VPN that was on comes back after an app update or a phone restart.
 
 On Android TV the app is driven by the remote. A subscription gets to the TV from keqdroid on a phone: the TV shows a QR code, the phone scans it and sends the subscription over the home Wi-Fi.
 
@@ -367,7 +367,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 | **VPN** | Через туннель идёт всё устройство. При первом подключении — разрешение VPN. |
 | **Proxy** | SOCKS и HTTP на `127.0.0.1`. Прокси нужно указать в программе или в настройках Wi-Fi. |
 
-Маршрутизация по приложениям и перехват DNS работают только в режиме VPN. Подключаться и отключаться можно из уведомления, плитки в быстрых настройках и ярлыков на значке приложения. Подписки обновляются в фоне. Если VPN был включён, после обновления приложения или перезагрузки телефона он поднимается сам.
+Маршрутизация по приложениям и перехват DNS работают только в режиме VPN. Подключаться и отключаться можно из уведомления, плитки в быстрых настройках, виджета на рабочем столе и ярлыков на значке приложения. Подписки обновляются в фоне. Если VPN был включён, после обновления приложения или перезагрузки телефона он поднимается сам.
 
 На Android TV приложением управляют пультом. Подписка попадает на телевизор из keqdroid на телефоне: телевизор показывает QR-код, телефон сканирует его и отправляет подписку по домашнему Wi-Fi.
 

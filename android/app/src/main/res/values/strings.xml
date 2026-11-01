@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only launcher-shortcut labels and Quick Settings tile texts live here: the
-     app label stays hardcoded in AndroidManifest.xml, and every other
-     user-facing string comes from Flutter l10n (lib/l10n). Static shortcuts and
-     the tile run without a Flutter engine, so they cannot reuse the Dart
-     translations. -->
+<!-- Only launcher-shortcut labels, Quick Settings tile and home screen widget
+     texts live here: the app label stays hardcoded in AndroidManifest.xml, and
+     every other user-facing string comes from Flutter l10n (lib/l10n). Static
+     shortcuts, the tile and the widget run without a Flutter engine, so they
+     cannot reuse the Dart translations. -->
 <resources>
     <string name="shortcut_connect_short">Connect</string>
     <string name="shortcut_connect_long">Connect to VPN</string>
@@ -13,4 +13,9 @@
     <string name="tile_error_start">Couldn\'t start the VPN from Quick Settings — open Keqdis</string>
     <string name="tile_error_open_app">Couldn\'t open Keqdis — launch it manually to connect</string>
     <string name="tile_error_blocked">The system blocked starting the VPN from Quick Settings. Tap the tile again.</string>
+    <string name="widget_description">Connect with one tap</string>
+    <string name="widget_status_off">Disconnected</string>
+    <string name="widget_status_connecting">Connecting…</string>
+    <string name="widget_status_error">Error</string>
+    <string name="widget_clock_format">Connected · %s</string>
 </resources>

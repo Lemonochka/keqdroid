@@ -358,6 +358,15 @@ class MainActivity : FlutterFragmentActivity() {
                             }
                         }
 
+                        "updateHomeWidget" -> {
+                            HomeWidget.store(
+                                applicationContext,
+                                call.argument<Map<*, *>>("colors"),
+                                call.argument<Map<*, *>>("server"),
+                            )
+                            result.success(null)
+                        }
+
                         "startVpn" -> {
                             val backend = call.argument<String>("vpnBackend") ?: "xray"
                             val socksPort       = call.argument<Int>("socksPort") ?: 2080

@@ -93,6 +93,12 @@ class KeqdisVpnService : VpnService() {
         var liveStatus: String = "disconnected"
             private set
 
+        // часы виджета идут от этой отметки сами, без обновлений. elapsedRealtime: Chronometer считает по нему
+        @JvmStatic
+        @Volatile
+        var connectedSince: Long = 0L
+            private set
+
         // для сторожа автовыбора: -1 пока сеть не слушаем. по счётчику смен он узнаёт новую сеть и кончает паузу
         @JvmStatic
         @Volatile
@@ -593,6 +599,7 @@ class KeqdisVpnService : VpnService() {
             }
 
             startTime = System.currentTimeMillis()
+            connectedSince = android.os.SystemClock.elapsedRealtime()
             setStatus(VpnRunStatus.RUNNING)
             // в режиме прокси ключика VPN в статусбаре нет, без подписи непонятно, работает ли что-то
             showControlNotification(
@@ -673,6 +680,7 @@ class KeqdisVpnService : VpnService() {
 
         // креды не сбрасываем: с ними дозавершается запущенное ядро, живут до следующего старта
         startTime = 0L
+        connectedSince = 0L
         uploadTotal.set(0); downloadTotal.set(0)
         uploadSpeed.set(0); downloadSpeed.set(0)
     }
@@ -1500,6 +1508,8 @@ class KeqdisVpnService : VpnService() {
         }.onFailure { ex ->
             NativeLog.w("KEQDIS", "broadcastStatusChange failed: ${ex.message}")
         }
+
+        HomeWidget.refresh(this)
     }
 
     private fun buildControlNotification(

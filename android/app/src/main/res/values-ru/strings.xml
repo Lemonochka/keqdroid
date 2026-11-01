@@ -8,4 +8,9 @@
     <string name="tile_error_start">Не удалось запустить VPN из шторки — откройте Keqdis</string>
     <string name="tile_error_open_app">Не удалось открыть Keqdis — запустите приложение вручную</string>
     <string name="tile_error_blocked">Система не дала включить VPN из шторки. Нажмите на плитку ещё раз.</string>
+    <string name="widget_description">Подключение одним нажатием</string>
+    <string name="widget_status_off">Отключено</string>
+    <string name="widget_status_connecting">Подключение…</string>
+    <string name="widget_status_error">Ошибка</string>
+    <string name="widget_clock_format">Подключено · %s</string>
 </resources>

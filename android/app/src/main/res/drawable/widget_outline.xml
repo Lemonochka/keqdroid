@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- только контур для clipToOutline: по нему вода обрезается в скруглённых углах -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/widget_radius" />
+    <solid android:color="#00000000" />
+</shape>

@@ -8,4 +8,9 @@
     <string name="tile_error_start">无法从快捷设置启动 VPN，请打开 Keqdis</string>
     <string name="tile_error_open_app">无法打开 Keqdis，请手动启动应用</string>
     <string name="tile_error_blocked">系统阻止了从快捷设置启动 VPN。请再点按一次该功能块。</string>
+    <string name="widget_description">一键连接</string>
+    <string name="widget_status_off">未连接</string>
+    <string name="widget_status_connecting">正在连接…</string>
+    <string name="widget_status_error">错误</string>
+    <string name="widget_clock_format">已连接 · %s</string>
 </resources>
