@@ -168,13 +168,24 @@ class CardImageService {
     final path = await resolvePath(themeId);
     if (path == null || p.extension(path).toLowerCase() != '.gif') return null;
     final dir = await _directory();
+    // неудачу помним: иначе каждый холодный старт заново читал все кадры с GPU, пока человек смотрит на экран
+    final tried = File(p.join(dir.path, _gifTriedDir, p.basename(path)));
+    if (tried.existsSync()) return null;
     final video = await _gifToVideo(
       path,
       dir.path,
       '$subscriptionId-${DateTime.now().millisecondsSinceEpoch}.mp4',
     );
+    if (video == null) {
+      try {
+        await tried.create(recursive: true);
+      } catch (_) {}
+    }
     return video?.id;
   }
+
+  // подкаталог: rescan и prune берут только файлы верхнего уровня
+  static const _gifTriedDir = 'gif_no_video';
 
   static Future<void> _register(String dir, String videoName) async {
     SubscriptionCardTheme.customFiles
