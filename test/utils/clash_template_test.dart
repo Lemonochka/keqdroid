@@ -98,6 +98,31 @@ rules:
         isNull,
       );
     });
+
+    // ссылка несёт имя обрезанным, и при общем адресе узлов по адресу сервер тоже не узнать
+    test('пробел по краю имени узла не мешает узнать сервер-ссылку', () {
+      const yaml = '''
+proxies:
+  - {name: " DE", type: trojan, server: one.example, port: 443, password: a, sni: de.example}
+  - {name: "FI ", type: trojan, server: one.example, port: 443, password: b, sni: fi.example}
+  - {name: NL, type: trojan, server: one.example, port: 443, password: c, sni: nl.example}
+proxy-groups:
+  - {name: Main, type: select, proxies: [" DE", "FI ", NL]}
+  - {name: Media, type: select, proxies: [" DE", "FI ", NL]}
+rules:
+  - MATCH,Main
+''';
+      final template = ClashTemplate.fromBody(yaml)!;
+      final servers = [
+        for (final c in SubscriptionService.parseBodyForTest(yaml))
+          ServerItem.fromRaw(c),
+      ];
+      expect([for (final s in servers) s.protocol], everyElement('trojan'));
+      expect(
+        [for (final s in servers) template.nodeFor(s)],
+        [' DE', 'FI ', 'NL'],
+      );
+    });
   });
 
   group('чем подключать сервер', () {

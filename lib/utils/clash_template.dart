@@ -251,6 +251,12 @@ class ClashTemplate {
         : null;
     final own = single != null ? single['name']?.toString() : server.derivedName;
     if (own != null && names.contains(own)) return own;
+    // ссылка несёт имя обрезанным, а у провайдера бывает пробел по краю (Германия, 02.11.2026)
+    final trimmed = [
+      for (final name in names)
+        if (own != null && name.trim() == own.trim()) name,
+    ];
+    if (trimmed.length == 1) return trimmed.single;
     final byAddress = [
       for (final p in config.proxies)
         if (CustomClashConfig.serverOf(p).address == server.address &&
