@@ -227,6 +227,8 @@ final geoAssetIndexProvider = FutureProvider<GeoAssetIndex>((ref) async {
   return GeoAssetService.index();
 });
 
+// без retry riverpod повторял бы упавшую проверку до 10 раз подряд: лимит GitHub 60 запросов в час,
+// а карточка версии всё это время висела бы в проверке
 final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
   final timer = Timer(_updateRecheckInterval, ref.invalidateSelf);
   ref.onDispose(timer.cancel);
@@ -253,5 +255,5 @@ final updateInfoProvider = FutureProvider<UpdateInfo?>((ref) async {
     // порт сессии: если настроенный был занят, ядро слушает другой
     httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),
   );
-});
+}, retry: (_, _) => null);
 

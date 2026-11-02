@@ -49,6 +49,7 @@ Future<void> autoPromptForUpdate(
   UpdateInfo info, {
   required int days,
 }) async {
+  if (await UpdateService.isSkipped(info.latestVersion)) return;
   if (!await UpdatePrompt.autoPromptDue(days)) return;
   if (!context.mounted) return;
   await UpdatePrompt.markAutoPrompted();

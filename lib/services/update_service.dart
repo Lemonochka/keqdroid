@@ -73,9 +73,25 @@ class UpdateService {
   // найденное обновление не затираем null-ом, иначе бейдж в настройках пропадает после переключения VPN
   static UpdateInfo? _cachedAutoResult;
   static DateTime? _lastAutoCheckAt;
-  static const _minAutoCheckGap = Duration(minutes: 30);
+  static Future<UpdateInfo?>? _autoCheckInFlight;
+
+  @visibleForTesting
+  static Duration minAutoCheckGap = const Duration(minutes: 30);
 
   static DateTime? get lastAutoCheckAt => _lastAutoCheckAt;
+
+  @visibleForTesting
+  static Future<UpdateInfo?> Function({
+    required bool viaLocalProxy,
+    required int httpPort,
+  }) fetchUpdate = _fetchUpdate;
+
+  @visibleForTesting
+  static void resetAutoCheck() {
+    _cachedAutoResult = null;
+    _lastAutoCheckAt = null;
+    _autoCheckInFlight = null;
+  }
 
   // при включённом VPN через локальный HTTP-инбаунд: пакет приложения исключён из TUN,
   // а release-assets.githubusercontent.com заблокирован
@@ -96,66 +112,77 @@ class UpdateService {
     return dio;
   }
 
+  // пропущенную версию отдаёт тоже: пропуск гасит только само всплывающее окно
   static Future<UpdateInfo?> checkForUpdate({
     bool force = false,
     bool viaLocalProxy = false,
     int httpPort = 2081,
   }) async {
-    if (!force) {
-      final last = _lastAutoCheckAt;
-      if (last != null &&
-          DateTime.now().difference(last) < _minAutoCheckGap) {
-        return _cachedResultRespectingSkip();
-      }
-      // отмечаем до сети, чтобы параллельные ре-раны не прошли гейт вдвоём
-      _lastAutoCheckAt = DateTime.now();
+    if (force) {
+      return _checkLogged(
+        viaLocalProxy: viaLocalProxy,
+        httpPort: httpPort,
+        force: true,
+      );
     }
+    final last = _lastAutoCheckAt;
+    if (last != null && DateTime.now().difference(last) < minAutoCheckGap) {
+      return _cachedAutoResult;
+    }
+    return _autoCheckInFlight ??=
+        _autoCheck(viaLocalProxy: viaLocalProxy, httpPort: httpPort)
+            .whenComplete(() => _autoCheckInFlight = null);
+  }
 
-    final dio = _buildDio(viaLocalProxy: viaLocalProxy, httpPort: httpPort);
+  static Future<UpdateInfo?> _autoCheck({
+    required bool viaLocalProxy,
+    required int httpPort,
+  }) async {
     try {
-      final currentVersion = await _getCurrentVersion();
-      final linuxKind = Platform.isLinux ? await LinuxInstall.detect() : null;
-      final releases = await fetchReleases(dio);
-      if (releases.isEmpty) {
-        if (force) {
-          throw StateError('Could not fetch releases from GitHub');
-        }
-        // сеть или лимит: попытку не считаем, следующий ре-ран перепроверит сразу
-        _lastAutoCheckAt = null;
-        return _cachedResultRespectingSkip();
-      }
-
-      final result =
-          buildUpdateInfo(releases, currentVersion, linuxKind: linuxKind);
-      _lastAutoCheckAt = DateTime.now();
+      final result = await _checkLogged(
+        viaLocalProxy: viaLocalProxy,
+        httpPort: httpPort,
+        force: false,
+      );
       _cachedAutoResult = result;
-
-      if (result == null) return null;
-      if (!force) {
-        final prefs = await SharedPreferences.getInstance();
-        if (prefs.getString(_prefSkipVersion) == result.latestVersion) {
-          return null;
-        }
-      }
+      _lastAutoCheckAt = DateTime.now();
       return result;
+    } catch (_) {
+      // до первой удачной проверки пустой ответ карточка показала бы как актуальную версию
+      if (_lastAutoCheckAt == null) rethrow;
+      return _cachedAutoResult;
+    }
+  }
+
+  static Future<UpdateInfo?> _checkLogged({
+    required bool viaLocalProxy,
+    required int httpPort,
+    required bool force,
+  }) async {
+    try {
+      return await fetchUpdate(viaLocalProxy: viaLocalProxy, httpPort: httpPort);
     } catch (e) {
       AppLogger.instance.warn(
         'Update check failed '
         '(${viaLocalProxy ? 'via local proxy 127.0.0.1:$httpPort' : 'direct'}, '
         '${force ? 'manual' : 'auto'}): $e',
       );
-      if (force) rethrow;
-      _lastAutoCheckAt = null;
-      return _cachedResultRespectingSkip();
+      rethrow;
     }
   }
 
-  static Future<UpdateInfo?> _cachedResultRespectingSkip() async {
-    final cached = _cachedAutoResult;
-    if (cached == null) return null;
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getString(_prefSkipVersion) == cached.latestVersion) return null;
-    return cached;
+  static Future<UpdateInfo?> _fetchUpdate({
+    required bool viaLocalProxy,
+    required int httpPort,
+  }) async {
+    final dio = _buildDio(viaLocalProxy: viaLocalProxy, httpPort: httpPort);
+    final currentVersion = await _getCurrentVersion();
+    final linuxKind = Platform.isLinux ? await LinuxInstall.detect() : null;
+    final releases = await fetchReleases(dio);
+    if (releases.isEmpty) {
+      throw StateError('Could not fetch releases from GitHub');
+    }
+    return buildUpdateInfo(releases, currentVersion, linuxKind: linuxKind);
   }
 
   @visibleForTesting
@@ -489,6 +516,11 @@ class UpdateService {
   static Future<void> skipVersion(String version) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefSkipVersion, version);
+  }
+
+  static Future<bool> isSkipped(String version) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_prefSkipVersion) == version;
   }
 
   static Future<bool> downloadAndInstall(

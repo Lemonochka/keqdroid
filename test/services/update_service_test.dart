@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -5,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/services/linux_install.dart';
 import 'package:keqdroid/services/update_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Сетевой слой по сценарию: каждый ответ — либо исключение, которое бросил бы
 /// dart:io, либо HTTP-ответ.
@@ -102,6 +104,120 @@ void main() {
         throwsA(isA<DioException>()),
       );
       expect(adapter.calls, 1);
+    });
+  });
+
+  group('фоновая проверка', () {
+    final realFetch = UpdateService.fetchUpdate;
+    final realGap = UpdateService.minAutoCheckGap;
+    final offline = DioException(
+      requestOptions: RequestOptions(),
+      type: DioExceptionType.connectionError,
+    );
+    UpdateInfo info(String version) => UpdateInfo(
+          currentVersion: '0.26.0',
+          latestVersion: version,
+          downloadUrl: 'https://example.invalid/keqdroid.apk',
+          apkSize: 1,
+        );
+    late int calls;
+
+    void answer(List<Object?> script) {
+      UpdateService.fetchUpdate = ({
+        required bool viaLocalProxy,
+        required int httpPort,
+      }) async {
+        final step = script[calls++];
+        if (step is Exception) throw step;
+        return step as UpdateInfo?;
+      };
+    }
+
+    setUp(() {
+      calls = 0;
+      UpdateService.resetAutoCheck();
+      SharedPreferences.setMockInitialValues({});
+    });
+    tearDown(() {
+      UpdateService.fetchUpdate = realFetch;
+      UpdateService.minAutoCheckGap = realGap;
+      UpdateService.resetAutoCheck();
+    });
+
+    test('GitHub не ответил и удачной проверки не было: ошибка, а не актуальная версия',
+        () async {
+      answer([offline, offline]);
+
+      await expectLater(UpdateService.checkForUpdate(), throwsA(offline));
+      // неудача паузу между проверками не включает
+      await expectLater(UpdateService.checkForUpdate(), throwsA(offline));
+      expect(calls, 2);
+    });
+
+    test('после удачной проверки «обновлений нет» сбой не поднимает тревогу',
+        () async {
+      UpdateService.minAutoCheckGap = Duration.zero;
+      answer([null, offline]);
+
+      expect(await UpdateService.checkForUpdate(), isNull);
+      expect(await UpdateService.checkForUpdate(), isNull);
+      expect(calls, 2);
+    });
+
+    test('после удачной проверки с обновлением сбой оставляет обновление',
+        () async {
+      UpdateService.minAutoCheckGap = Duration.zero;
+      answer([info('0.27.0'), offline]);
+
+      await UpdateService.checkForUpdate();
+      final again = await UpdateService.checkForUpdate();
+      expect(again?.latestVersion, '0.27.0');
+      expect(calls, 2);
+    });
+
+    test('пропущенная версия остаётся в ответе, окно гасит сам показ', () async {
+      SharedPreferences.setMockInitialValues({
+        'skip_update_version': '0.27.0',
+      });
+      answer([info('0.27.0')]);
+
+      final found = await UpdateService.checkForUpdate();
+      expect(found?.latestVersion, '0.27.0');
+      expect(await UpdateService.isSkipped('0.27.0'), isTrue);
+      expect(await UpdateService.isSkipped('0.28.0'), isFalse);
+      // и из кэша между проверками тоже
+      expect((await UpdateService.checkForUpdate())?.latestVersion, '0.27.0');
+      expect(calls, 1);
+    });
+
+    test('переключение VPN посреди первой проверки ждёт её, а не отвечает пустым',
+        () async {
+      final reply = Completer<UpdateInfo?>();
+      UpdateService.fetchUpdate = ({
+        required bool viaLocalProxy,
+        required int httpPort,
+      }) {
+        calls++;
+        return reply.future;
+      };
+
+      final first = UpdateService.checkForUpdate();
+      final second = UpdateService.checkForUpdate(viaLocalProxy: true);
+      reply.complete(info('0.27.0'));
+
+      expect((await first)?.latestVersion, '0.27.0');
+      expect((await second)?.latestVersion, '0.27.0');
+      expect(calls, 1);
+    });
+
+    test('ручная проверка ошибку показывает всегда, даже после удачной', () async {
+      answer([null, offline]);
+
+      await UpdateService.checkForUpdate();
+      await expectLater(
+        UpdateService.checkForUpdate(force: true),
+        throwsA(offline),
+      );
     });
   });
 
