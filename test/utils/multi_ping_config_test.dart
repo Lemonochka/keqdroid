@@ -247,6 +247,30 @@ rules:
       });
     });
 
+    // 02.11.2026: узлы Clash-подписки с пробелом по краю имени не пинговались, проба искала их без пробела
+    test('узел с пробелом по краю имени пробу строит', () {
+      for (final name in [' DE', 'DE ']) {
+        final spaced = single.replaceFirst('"proxies":[{"name":"DE"', '"proxies":[{"name":"$name"');
+        final config = jsonDecode(probe(spaced, 3001)) as Map<String, dynamic>;
+        final proxy = (config['proxies'] as List).single as Map;
+        expect(proxy['name'], MihomoConfigGen.proxyName, reason: '[$name]');
+        expect(proxy['server'], '198.51.100.90');
+        expect(config['rules'], ['MATCH,${MihomoConfigGen.proxyName}']);
+      }
+    });
+
+    test('группа ведёт мимо конфига: причина не про proxy-providers', () {
+      final broken = profile.replaceFirst('[NL, FI]', '[NL, Missing]');
+      expect(
+        () => probe(broken, 3001),
+        throwsA(isA<ArgumentError>().having(
+          (e) => e.message,
+          'message',
+          isNot(contains('proxy-providers')),
+        )),
+      );
+    });
+
     test('узлы из proxy-providers до подключения не известны: причина названа', () {
       const providers = '''
 proxy-providers:

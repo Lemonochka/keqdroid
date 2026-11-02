@@ -512,8 +512,11 @@ class MihomoConfigGen {
     final nodes = clash?.routeNodes(proxyName);
     if (clash != null && nodes == null) {
       throw ArgumentError(
-        'mihomo: this Clash config takes its servers from proxy-providers, '
-        'they are known only after connecting',
+        clash.usesProviders
+            ? 'mihomo: this Clash config takes its servers from proxy-providers, '
+                'they are known only after connecting'
+            : 'mihomo: groups of this Clash config are filled by the core '
+                'or point outside the config',
       );
     }
     final proxies = nodes?.proxies ?? buildProxies(input.trim());

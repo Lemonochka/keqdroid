@@ -233,17 +233,23 @@ class CustomClashConfig {
 
   // на группу, а не на узел: узлы переключают внутри неё, и правило должно ехать за выбором
   String get primaryTarget {
+    final name = _primaryName?.trim() ?? '';
+    return name.isEmpty ? 'DIRECT' : name;
+  }
+
+  // без обрезки: в списках и группах узел зовут по точному имени, обрезанное годится только правилу
+  String? get _primaryName {
     final groups = map['proxy-groups'];
     if (groups is List) {
       for (final group in groups) {
         if (group is! Map) continue;
-        final name = group['name']?.toString().trim() ?? '';
-        if (name.isNotEmpty) return name;
+        final name = group['name']?.toString() ?? '';
+        if (name.trim().isNotEmpty) return name;
       }
     }
     final first = proxies.isEmpty ? null : proxies.first;
-    final name = first?['name']?.toString().trim() ?? '';
-    return name.isEmpty ? 'DIRECT' : name;
+    final name = first?['name']?.toString() ?? '';
+    return name.trim().isEmpty ? null : name;
   }
 
   static const _builtinTargets = {
@@ -286,7 +292,7 @@ class CustomClashConfig {
             group['name'].toString(): group.cast<String, dynamic>(),
     };
 
-    final start = primaryTarget;
+    final start = _primaryName ?? '';
     if (!proxyByName.containsKey(start) && !groupByName.containsKey(start)) {
       return null;
     }
@@ -444,7 +450,35 @@ class CustomClashConfig {
     }
 
     out.addAll(extra);
-    return _aliasCommaTargets(out);
+    return _aliasCommaTargets(_aliasTrimmedTarget(out));
+  }
+
+  // ядро срезает пробелы у цели правила (trimArr в rules/common/base.go), а у имени узла нет.
+  // наши правила ведут на обрезанное имя, ему группа-двойник
+  Map<String, dynamic> _aliasTrimmedTarget(Map<String, dynamic> out) {
+    final raw = _primaryName;
+    final target = primaryTarget;
+    if (raw == null || raw == target) return out;
+    final authorGroups = out['proxy-groups'];
+    final taken = {
+      ..._builtinTargets,
+      for (final proxy in proxiesOf(out)) proxy['name']?.toString(),
+      if (authorGroups is List)
+        for (final group in authorGroups)
+          if (group is Map) group['name']?.toString(),
+    };
+    if (taken.contains(target)) return out;
+    return {
+      ...out,
+      'proxy-groups': [
+        if (authorGroups is List) ...authorGroups,
+        {
+          'name': target,
+          'type': 'select',
+          'proxies': [raw],
+        },
+      ],
+    };
   }
 
   // ядро режет правило по запятым без экранирования (rules/common/base.go), узел с запятой в имени правилом не найти.

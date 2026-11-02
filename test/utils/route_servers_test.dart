@@ -83,6 +83,16 @@ void main() {
       final unknown = _clashYaml.replaceFirst('[NL]', '[NL, Missing]');
       expect(routeServerSupported(unknown, VpnBackend.mihomo), isFalse);
     });
+
+    test('сервер из Clash-подписки с пробелом по краю имени узла — да', () {
+      for (final name in [' NL', 'NL ']) {
+        final single = '{"name":"NL","proxies":[{"name":"$name","type":"trojan",'
+            '"server":"nl.example","port":443,"password":"password"}],'
+            '"rules":["MATCH,NL"]}';
+        expect(routeServerSupported(single, VpnBackend.mihomo), isTrue,
+            reason: '[$name]');
+      }
+    });
   });
 
   group('выходы', () {

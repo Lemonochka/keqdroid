@@ -80,6 +80,44 @@ rules:
   - MATCH,Proxy
 ''';
 
+// так строку правила режет ядро (rules/common/base.go, ParseRulePayload): по запятым без экранирования,
+// и у каждой части срезает пробелы, только их (trimArr)
+String _coreTarget(String rule) {
+  final item = [
+    for (final part in rule.split(',')) part.replaceAll(RegExp(r'^ +| +$'), ''),
+  ];
+  if (item.length < 2) return '';
+  return switch (item.first.toUpperCase()) {
+    'MATCH' => item[1],
+    'NOT' || 'OR' || 'AND' || 'SUB-RULE' || 'DOMAIN-REGEX' ||
+    'PROCESS-NAME-REGEX' || 'PROCESS-PATH-REGEX' =>
+      item.last,
+    _ => item.length > 2 ? item[2] : '',
+  };
+}
+
+void _expectRulesResolve(Map<String, dynamic> config) {
+  final names = {
+    'DIRECT', 'REJECT', 'REJECT-DROP', 'PASS', 'COMPATIBLE',
+    for (final p in config['proxies'] as List) (p as Map)['name'],
+    for (final g in config['proxy-groups'] as List? ?? const []) (g as Map)['name'],
+  };
+  final subRules = (config['sub-rules'] as Map? ?? const {}).keys.toSet();
+  final lines = [
+    ...(config['rules'] as List).cast<String>(),
+    for (final set in (config['sub-rules'] as Map? ?? const {}).values)
+      ...(set as List).cast<String>(),
+  ];
+  for (final rule in lines) {
+    final target = _coreTarget(rule);
+    expect(
+      names.contains(target) || subRules.contains(target),
+      isTrue,
+      reason: '$rule -> $target',
+    );
+  }
+}
+
 void main() {
   setUp(() => Socks5Credentials().init('user', 'pass'));
 
@@ -105,6 +143,40 @@ void main() {
       final reparsed = CustomClashConfig.tryParse(asJson)!;
       expect(reparsed.address, 'nl.example');
       expect(reparsed.primaryTarget, '🚀 Proxy');
+    });
+
+    test('цель правил: первая названная группа, без групп первый узел, без имени DIRECT', () {
+      String target(Object config) =>
+          CustomClashConfig.tryParse(jsonEncode(config))!.primaryTarget;
+      const node = {'name': ' DE ', 'type': 'trojan', 'server': 'de.example'};
+      expect(
+        target({
+          'proxies': [node],
+          'proxy-groups': [
+            {'name': '  ', 'type': 'select', 'proxies': [' DE ']},
+            {'name': ' Main ', 'type': 'select', 'proxies': [' DE ']},
+          ],
+        }),
+        'Main',
+      );
+      expect(target({'proxies': [node]}), 'DE');
+      expect(
+        target({
+          'proxies': [
+            {'type': 'trojan', 'server': 'x.example'},
+            node,
+          ],
+        }),
+        'DIRECT',
+      );
+      expect(
+        target({
+          'proxies': [
+            {...node, 'name': '   '},
+          ],
+        }),
+        'DIRECT',
+      );
     });
 
     test('узлы на якорях получают общий блок, свои поля сильнее', () {
@@ -401,19 +473,6 @@ rules:
   - MATCH,Select
 ''';
 
-    // так строку правила режет ядро (rules/common/base.go, ParseRulePayload): по запятым, без экранирования
-    String coreTarget(String rule) {
-      final item = [for (final part in rule.split(',')) part.trim()];
-      if (item.length < 2) return '';
-      return switch (item.first.toUpperCase()) {
-        'MATCH' => item[1],
-        'NOT' || 'OR' || 'AND' || 'SUB-RULE' || 'DOMAIN-REGEX' ||
-        'PROCESS-NAME-REGEX' || 'PROCESS-PATH-REGEX' =>
-          item.last,
-        _ => item.length > 2 ? item[2] : '',
-      };
-    }
-
     Map<String, dynamic> session() {
       final node = SubscriptionService.clashNodeConfigs(yaml).single;
       return MihomoConfigGen.build(
@@ -433,26 +492,7 @@ rules:
     }
 
     test('каждое правило ведёт туда, что ядро найдёт по имени', () {
-      final config = session();
-      final names = {
-        'DIRECT', 'REJECT', 'REJECT-DROP', 'PASS', 'COMPATIBLE',
-        for (final p in config['proxies'] as List) (p as Map)['name'],
-        for (final g in config['proxy-groups'] as List? ?? const []) (g as Map)['name'],
-      };
-      final subRules = (config['sub-rules'] as Map? ?? const {}).keys.toSet();
-      final lines = [
-        ...(config['rules'] as List).cast<String>(),
-        for (final set in (config['sub-rules'] as Map? ?? const {}).values)
-          ...(set as List).cast<String>(),
-      ];
-      for (final rule in lines) {
-        final target = coreTarget(rule);
-        expect(
-          names.contains(target) || subRules.contains(target),
-          isTrue,
-          reason: '$rule -> $target',
-        );
-      }
+      _expectRulesResolve(session());
     });
 
     test('трафик идёт на этот узел, имя на экране соединений прежнее', () {
@@ -461,9 +501,75 @@ rules:
             (r) => r.startsWith('MATCH'),
           );
       final groups = (config['proxy-groups'] as List).cast<Map>();
-      final target = groups.firstWhere((g) => g['name'] == coreTarget(match));
+      final target = groups.firstWhere((g) => g['name'] == _coreTarget(match));
       expect(target['proxies'], [name]);
       expect(((config['proxies'] as List).single as Map)['name'], name);
+    });
+  });
+
+  // 02.11.2026: у провайдера имя узла начиналось или кончалось пробелом (Германия, Россия Москва).
+  // без шаблона такой сервер ядро не запускало: proxy [🇩🇪 ⚡ Германия] not found
+  group('пробел по краю имени узла', () {
+    String node(String name) => SubscriptionService.clashNodeConfigs('''
+proxies:
+  - name: "$name"
+    type: vless
+    server: de.example
+    port: 8443
+    uuid: 716e3485-d4f9-4471-9660-fb4b0b838100
+    network: tcp
+    udp: true
+    packet-encoding: xudp
+    tls: true
+    servername: de.example
+    client-fingerprint: firefox
+    reality-opts:
+      public-key: oYXosxG2YU6_mQkkPTS8JUnoRxqvaBaG5mH-y0pc2nA
+      short-id: 9f2c
+    smux: {enabled: true, padding: true, protocol: smux, max-connections: 3}
+    serverDescription: x2 10 Gbit/s
+''').single;
+
+    Map<String, dynamic> session(String name, {bool ignoreProviderRules = false}) =>
+        MihomoConfigGen.build(
+          node(name),
+          AppSettings(
+            lanSharing: true,
+            directRules: 'vk.com',
+            proxyRules: 'youtube.com',
+            ignoreProviderRules: ignoreProviderRules,
+          ),
+          socksPort: 2080,
+          tun: const MihomoTunOptions(
+            stack: 'gvisor',
+            autoRoute: false,
+            fromFileDescriptor: true,
+          ),
+        );
+
+    for (final name in [' 🇩🇪 ⚡ Германия', '🇷🇺 ⚡ Россия Москва ']) {
+      test('каждое правило ведёт туда, что ядро найдёт по имени [$name]', () {
+        expect(node(name), startsWith('{'), reason: 'узел должен остаться Clash');
+        _expectRulesResolve(session(name));
+        _expectRulesResolve(session(name, ignoreProviderRules: true));
+      });
+
+      test('трафик идёт на этот узел, имя на экране соединений прежнее [$name]', () {
+        final config = session(name);
+        final match = (config['rules'] as List).cast<String>().lastWhere(
+              (r) => r.startsWith('MATCH'),
+            );
+        final groups = (config['proxy-groups'] as List).cast<Map>();
+        final target = groups.firstWhere((g) => g['name'] == _coreTarget(match));
+        expect(target['proxies'], [name]);
+        expect(((config['proxies'] as List).single as Map)['name'], name);
+      });
+    }
+
+    test('имя без пробела по краю конфиг не меняет', () {
+      final config = session('🇫🇷 ⚡ Франция');
+      expect(config.containsKey('proxy-groups'), isFalse);
+      _expectRulesResolve(config);
     });
   });
 
