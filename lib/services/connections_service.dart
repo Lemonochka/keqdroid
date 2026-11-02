@@ -214,6 +214,8 @@ class ConnectionsService {
     final meta = json['metadata'];
     if (meta is! Map) return null;
     final m = meta.cast<String, dynamic>();
+    // звено dialer-proxy из Clash зовётся по-авторски, без нашего префикса, но ядро помечает его Inner (proxydialer.go)
+    if (m['type'] == 'Inner') return null;
 
     String str(String key) => m[key]?.toString().trim() ?? '';
     final destIp = str('destinationIP');

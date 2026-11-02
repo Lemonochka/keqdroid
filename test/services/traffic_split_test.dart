@@ -74,6 +74,16 @@ void main() {
       expect(snapshot.coreUpload, 2);
     });
 
+    test('соединение звена цепочки не считается: тот же трафик второй раз', () {
+      final snapshot = TrafficSplitSource.parseSnapshot('''
+{"connections":[
+  {"id":"a","chains":["DE"],"download":100,"metadata":{"type":"Tun"}},
+  {"id":"b","chains":["RU"],"download":110,"metadata":{"type":"Inner"}}
+]}
+''');
+      expect([for (final c in snapshot!.connections) c.id], ['a']);
+    });
+
     test('соединение без идентификатора пропускаем: свести его не с чем', () {
       final snapshot = TrafficSplitSource.parseSnapshot(
         '{"connections":[{"chains":["proxy"],"download":1}]}',

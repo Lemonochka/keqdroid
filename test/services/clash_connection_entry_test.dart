@@ -74,4 +74,15 @@ void main() {
     expect(ConnectionsService.entryFromClashJson(hop), isNull);
     expect(ConnectionsService.entryFromClashJson(conn(rule: '')), isNotNull);
   });
+
+  // у Clash-узла с dialer-proxy звено зовётся по-авторски, префикса нет
+  test('соединение звена из Clash-конфига не показывается', () {
+    final base = conn(rule: '');
+    final hop = {
+      ...base,
+      'chains': ['🇷🇺 Вход'],
+      'metadata': {...base['metadata'] as Map, 'type': 'Inner'},
+    };
+    expect(ConnectionsService.entryFromClashJson(hop), isNull);
+  });
 }

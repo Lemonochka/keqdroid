@@ -109,6 +109,9 @@ class TrafficSplitSource {
       if (item is! Map) continue;
       final id = item['id']?.toString() ?? '';
       if (id.isEmpty) continue;
+      // соединение звена цепочки везёт тот же трафик второй раз
+      final meta = item['metadata'];
+      if (meta is Map && meta['type'] == 'Inner') continue;
       final chains = item['chains'];
       out.add(ConnectionTraffic(
         id: id,
