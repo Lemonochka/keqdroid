@@ -1785,6 +1785,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String routingShareSkipped(int count) {
+    return 'В ссылку не попадут маршруты по приложениям, через другой сервер и списки по ссылке: $count';
+  }
+
+  @override
   String get tvReceiveTitle => 'Принять с телефона';
 
   @override

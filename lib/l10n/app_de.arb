@@ -925,6 +925,14 @@
   "routingProfileImported": "Routing-Profil hinzugefügt: {name}",
   "routingProfileFromProvider": "Vom Anbieter",
   "routingProfileLockedHint": "Diese Regeln schickt der Anbieter. Zum Bearbeiten schalte „{setting}“ ein: Das Profil gehört dann dir.",
+  "routingShareSkipped": "Routen für einzelne Apps, über einen anderen Server und mit Links zu Listen kommen nicht in den Link: {count}",
+  "@routingShareSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "@routingProfileLockedHint": {
     "placeholders": {
       "setting": {}

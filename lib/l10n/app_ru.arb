@@ -927,6 +927,14 @@
   "routingProfileImported": "Профиль маршрутизации добавлен: {name}",
   "routingProfileFromProvider": "От провайдера",
   "routingProfileLockedHint": "Правила присылает провайдер. Чтобы править их, включите «{setting}»: профиль станет вашим.",
+  "routingShareSkipped": "В ссылку не попадут маршруты по приложениям, через другой сервер и списки по ссылке: {count}",
+  "@routingShareSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "@routingProfileLockedHint": {
     "placeholders": {
       "setting": {}

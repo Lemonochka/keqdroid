@@ -537,6 +537,7 @@
   "routingProfileImported": "پروفایل مسیریابی اضافه شد: {name}",
   "routingProfileFromProvider": "از ارائه‌دهنده",
   "routingProfileLockedHint": "این قوانین را ارائه‌دهنده می‌فرستد. برای ویرایش، «{setting}» را روشن کنید: پروفایل مال شما می‌شود.",
+  "routingShareSkipped": "مسیرهای برنامه‌های مشخص، مسیرهای سرور دیگر و فهرست‌های لینکی در لینک نمی‌آیند: {count}",
   "tvReceiveTitle": "دریافت از گوشی",
   "tvReceiveSubtitle": "اشتراک از گوشی از طریق Wi-Fi",
   "tvReceiveHint": "این کد را در keqdroid روی گوشی اسکن کنید. گوشی و تلویزیون باید به یک شبکهٔ Wi-Fi وصل باشند.",

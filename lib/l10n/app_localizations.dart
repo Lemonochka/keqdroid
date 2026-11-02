@@ -3323,6 +3323,12 @@ abstract class AppLocalizations {
   /// **'The provider sends these rules. To edit them, turn on “{setting}”: the profile becomes yours.'**
   String routingProfileLockedHint(Object setting);
 
+  /// No description provided for @routingShareSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Routes for chosen apps, through another server and with links to lists won\'t go into the link: {count}'**
+  String routingShareSkipped(int count);
+
   /// No description provided for @tvReceiveTitle.
   ///
   /// In en, this message translates to:

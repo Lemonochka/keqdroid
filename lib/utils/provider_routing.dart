@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import '../models/app_settings.dart';
 import '../models/traffic_route.dart';
+import 'rule_lists.dart';
+import 'traffic_routes.dart';
 
 // профиль Happ: ссылка <схема>://routing/add|onadd/<base64 json> или routing/off, тот же формат у Incy и у нас.
 // v2RayTun шлёт в заголовке routing правила xray в base64
@@ -240,4 +242,48 @@ String? _decodeText(String input) {
   } on Object {
     return null;
   }
+}
+
+final _ipEntry = RegExp(
+  r'^(geoip:|\d{1,3}(\.\d{1,3}){3}(/\d{1,2})?$|[0-9a-f]*:[0-9a-f:]+(/\d{1,3})?$)',
+  caseSensitive: false,
+);
+
+// формат Happ не передаёт маршрут по приложениям, через другой сервер, список по ссылке и остальное в блок: они в skipped.
+// записи отсеиваются те же, что выбросит разбор у получателя
+({String link, int skipped}) routingLinkOf({
+  required String name,
+  required String finalOutbound,
+  required List<TrafficRoute> routes,
+}) {
+  final sites = <RouteTarget, List<String>>{};
+  final ips = <RouteTarget, List<String>>{};
+  var skipped = finalOutbound == AppSettings.finalOutboundBlock ? 1 : 0;
+  for (final route in routes) {
+    if (!route.enabled) continue;
+    final all = route.allApps && route.target != RouteTarget.server
+        ? routingEntries(routeEntriesText(route))
+        : const <String>[];
+    final kept = [for (final e in all) if (_entry(e) != null) e];
+    if (kept.isEmpty || kept.length < all.length) skipped++;
+    for (final e in kept) {
+      (_ipEntry.hasMatch(e) ? ips : sites).putIfAbsent(route.target, () => []).add(e);
+    }
+  }
+  List<String> of(Map<RouteTarget, List<String>> m, RouteTarget t) => m[t] ?? const [];
+  final json = {
+    'Name': name,
+    'GlobalProxy':
+        finalOutbound == AppSettings.finalOutboundDirect ? 'false' : 'true',
+    'BlockSites': of(sites, RouteTarget.block),
+    'BlockIp': of(ips, RouteTarget.block),
+    'DirectSites': of(sites, RouteTarget.direct),
+    'DirectIp': of(ips, RouteTarget.direct),
+    'ProxySites': of(sites, RouteTarget.vpn),
+    'ProxyIp': of(ips, RouteTarget.vpn),
+  };
+  return (
+    link: 'keqdroid://routing/add/${base64.encode(utf8.encode(jsonEncode(json)))}',
+    skipped: skipped,
+  );
 }

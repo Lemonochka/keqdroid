@@ -195,4 +195,82 @@ void main() {
       expect(providerRoutingFromHeaders(headers({})), isNull);
     });
   });
+
+  group('профиль ссылкой', () {
+    test('получатель разбирает ту же ссылку в те же маршруты', () {
+      final share = routingLinkOf(
+        name: 'Для друзей',
+        finalOutbound: AppSettings.finalOutboundProxy,
+        routes: const [
+          TrafficRoute(
+            id: 'a',
+            content: RouteContent.preset,
+            presetId: 'ru',
+            target: RouteTarget.direct,
+          ),
+          TrafficRoute(
+            id: 'b',
+            sites: 'gosuslugi.ru, 10.0.0.0/8\nru\ngeoip:by\n2001:db8::/32',
+            target: RouteTarget.direct,
+          ),
+          TrafficRoute(id: 'c', sites: 'youtube.com', target: RouteTarget.vpn),
+          TrafficRoute(id: 'd', sites: 'doubleclick.net', target: RouteTarget.block),
+        ],
+      );
+      expect(share.skipped, 0);
+      expect(share.link, startsWith('keqdroid://routing/add/'));
+      expect(isRoutingLink(share.link), isTrue);
+
+      final rules = _rules(parseProviderRouting(share.link));
+      expect(rules.name, 'Для друзей');
+      expect(rules.finalOutbound, AppSettings.finalOutboundProxy);
+      expect(
+        {for (final r in rules.routes) r.target: r.sites},
+        {
+          RouteTarget.block: 'doubleclick.net',
+          RouteTarget.direct:
+              'geosite:category-ru\ngosuslugi.ru\nru\n10.0.0.0/8\ngeoip:by\n2001:db8::/32',
+          RouteTarget.vpn: 'youtube.com',
+        },
+      );
+    });
+
+    test('чего формат не передаёт, считается, а выключенное молча остаётся дома', () {
+      final share = routingLinkOf(
+        name: 'Основной',
+        finalOutbound: AppSettings.finalOutboundBlock,
+        routes: const [
+          TrafficRoute(
+            id: 'app',
+            apps: ['org.telegram.messenger'],
+            content: RouteContent.allTraffic,
+          ),
+          TrafficRoute(id: 'srv', sites: 'netflix.com', target: RouteTarget.server, serverId: 's1'),
+          TrafficRoute(id: 'list', sites: 'https://example.com/ads.txt', target: RouteTarget.block),
+          TrafficRoute(
+            id: 'mixed',
+            sites: 'vk.com\nhttps://example.com/ru.txt',
+            target: RouteTarget.direct,
+          ),
+          TrafficRoute(id: 'off', enabled: false, sites: 'mail.ru', target: RouteTarget.direct),
+        ],
+      );
+      // приложение, сервер, список, частично список и остальное в блок
+      expect(share.skipped, 5);
+      final rules = _rules(parseProviderRouting(share.link));
+      expect(rules.routes.single.sites, 'vk.com');
+    });
+
+    test('всё остальное напрямую доезжает', () {
+      final share = routingLinkOf(
+        name: 'x',
+        finalOutbound: AppSettings.finalOutboundDirect,
+        routes: const [],
+      );
+      expect(
+        _rules(parseProviderRouting(share.link)).finalOutbound,
+        AppSettings.finalOutboundDirect,
+      );
+    });
+  });
 }

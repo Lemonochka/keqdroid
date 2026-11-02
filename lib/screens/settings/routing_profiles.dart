@@ -306,6 +306,20 @@ void _showProfileMenu(BuildContext context, WidgetRef ref, RoutingProfile p) {
                     unawaited(_showProfileSheet(context, ref, editing: p));
                   },
                 ),
+                ExpressiveActionTile(
+                  icon: Icons.qr_code_2_rounded,
+                  title: l10n.subscriptionsShareButton,
+                  accent: ExpressiveAccent.secondary,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showRoutingShareSheet(
+                      context,
+                      name: p.name,
+                      finalOutbound: p.finalOutbound,
+                      routes: p.routes,
+                    );
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -594,4 +608,122 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
       ),
     );
   }
+}
+
+const _maxShareQrVersion = 20;
+
+void _showRoutingShareSheet(
+  BuildContext context, {
+  required String name,
+  required String finalOutbound,
+  required List<TrafficRoute> routes,
+}) {
+  final l10n = AppLocalizations.of(context)!;
+  final share = routingLinkOf(
+    name: name,
+    finalOutbound: finalOutbound,
+    routes: routes,
+  );
+  final qr = QrValidator.validate(
+    data: share.link,
+    errorCorrectionLevel: QrErrorCorrectLevel.M,
+  ).qrCode;
+  final showQr = qr != null && qr.typeNumber <= _maxShareQrVersion;
+  unawaited(showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) => Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(ctx)
+                .textTheme
+                .emphasized(Theme.of(ctx).textTheme.titleMedium)
+                ?.copyWith(color: AppTheme.text(ctx)),
+          ),
+          const SizedBox(height: 16),
+          if (showQr)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(ExpressiveShape.large),
+              child: Container(
+                padding: const EdgeInsets.all(18),
+                color: Colors.white,
+                child: QrImageView.withQr(
+                  qr: qr,
+                  size: 220,
+                  backgroundColor: Colors.white,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.circle,
+                    color: Colors.black,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.circle,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          if (share.skipped > 0) ...[
+            const SizedBox(height: 12),
+            ExpressiveNotice(
+              color: AppTheme.orange(ctx),
+              icon: Icons.info_outline_rounded,
+              text: l10n.routingShareSkipped(share.skipped),
+            ),
+          ],
+          const SizedBox(height: 12),
+          SelectableText(
+            share.link,
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            style: Theme.of(ctx)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppTheme.textLight(ctx)),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentContainer(ctx),
+                foregroundColor: AppTheme.onAccentContainer(ctx),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(ExpressiveShape.large),
+                ),
+              ),
+              icon: Icon(
+                Platform.isAndroid ? Icons.share_rounded : Icons.copy_rounded,
+                size: 18,
+              ),
+              label: Text(
+                Platform.isAndroid
+                    ? l10n.subscriptionsShareAction
+                    : l10n.subscriptionsCopyUrl,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              onPressed: () async {
+                if (Platform.isAndroid) {
+                  await SharePlus.instance.share(ShareParams(text: share.link));
+                  return;
+                }
+                await Clipboard.setData(ClipboardData(text: share.link));
+                if (!ctx.mounted) return;
+                AppSnack.of(ctx).showSnackBar(
+                  SnackBar(content: Text(l10n.subscriptionsUrlCopied)),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    ),
+  ));
 }

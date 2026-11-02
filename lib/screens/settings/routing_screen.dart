@@ -463,6 +463,20 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                   : '$mainScope\n${l10n.routingProfileRouteCount(routes.length)}',
               expanded: mainExpanded,
               onToggle: () => _toggleProfile(ref, _mainProfileKey),
+              menu: IconButton(
+                tooltip: l10n.subscriptionsShareButton,
+                icon: Icon(
+                  Icons.qr_code_2_rounded,
+                  size: 20,
+                  color: AppTheme.textLight(context),
+                ),
+                onPressed: () => _showRoutingShareSheet(
+                  context,
+                  name: l10n.routingProfileMain,
+                  finalOutbound: mainFinal,
+                  routes: routes,
+                ),
+              ),
               body: routeRows(null, routes, mainFinal),
             ),
           ),

@@ -91,6 +91,9 @@ import 'package:keqdroid/tunnel/local_port_plan.dart';
 import 'package:keqdroid/ui/responsive/desktop_page_layout.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:keqdroid/shared/ui/liquid_toast.dart';
+import 'package:keqdroid/utils/provider_routing.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 part 'settings/advanced_settings.dart';
 part 'settings/app_internals.dart';

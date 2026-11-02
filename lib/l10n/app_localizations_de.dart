@@ -1775,6 +1775,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String routingShareSkipped(int count) {
+    return 'Routen für einzelne Apps, über einen anderen Server und mit Links zu Listen kommen nicht in den Link: $count';
+  }
+
+  @override
   String get tvReceiveTitle => 'Vom Smartphone empfangen';
 
   @override

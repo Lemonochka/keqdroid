@@ -20,6 +20,8 @@ import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/tunnel/vpn_backend.dart';
+import 'package:keqdroid/utils/provider_routing.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
@@ -1234,6 +1236,117 @@ void main() {
         settings: const AppSettings(ignoreProviderRules: true),
       );
       expect(find.text('Не учитывать правила провайдера'), findsOneWidget);
+    });
+  });
+
+  group('поделиться профилем', () {
+    const friends = RoutingProfile(
+      id: 'friends',
+      name: 'Для друзей',
+      routes: [
+        TrafficRoute(id: 'yt', sites: 'youtube.com', target: RouteTarget.vpn),
+      ],
+    );
+
+    String sharedLink(WidgetTester tester) => tester
+        .widget<SelectableText>(find.byType(SelectableText))
+        .data!;
+
+    testWidgets('из меню профиля: QR и ссылка, которую разберёт получатель',
+        (tester) async {
+      await _pump(tester, routes: const [_direct], profiles: const [friends]);
+      await tester.tap(find.byIcon(Icons.more_vert_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Поделиться (QR + ссылка)'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(QrImageView), findsOneWidget);
+      expect(find.byType(ExpressiveNotice), findsNothing);
+      final rules =
+          parseProviderRouting(sharedLink(tester))! as ProviderRoutingRules;
+      expect(rules.name, 'Для друзей');
+      expect(rules.routes.single.sites, 'youtube.com');
+    });
+
+    testWidgets('«Основной» значком в шапке; что не передать, сосчитано',
+        (tester) async {
+      await _pump(tester, routes: const [
+        _direct,
+        TrafficRoute(
+          id: 'tg',
+          apps: ['org.telegram.messenger'],
+          content: RouteContent.allTraffic,
+        ),
+      ]);
+      await tester.tap(find.byIcon(Icons.qr_code_2_rounded));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('В ссылку не попадут маршруты по приложениям, через другой '
+            'сервер и списки по ссылке: 1'),
+        findsOneWidget,
+      );
+      final rules = parseProviderRouting(sharedLink(tester))! as ProviderRoutingRules;
+      expect(rules.name, 'Основной');
+      expect(rules.routes.single.target, RouteTarget.direct);
+    });
+
+    testWidgets('длинный список: без QR и без плашки, ссылка копируется',
+        (tester) async {
+      final copied = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied.add((call.arguments as Map)['text'] as String);
+          }
+          return null;
+        },
+      );
+      addTearDown(() => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null));
+      final big = [
+        for (var i = 0; i < 90; i++) 'site-number-$i.example.com',
+      ].join('\n');
+      await _pump(tester, routes: const [_direct], profiles: [
+        RoutingProfile(
+          id: 'big',
+          name: 'Большой',
+          routes: [TrafficRoute(id: 'b', sites: big, target: RouteTarget.vpn)],
+        ),
+      ]);
+      await tester.tap(find.byIcon(Icons.more_vert_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Поделиться (QR + ссылка)'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(QrImageView), findsNothing);
+      expect(find.byType(ExpressiveNotice), findsNothing);
+      // тесты гоняются на ПК: там кнопка копирует
+      await tester.tap(find.text('Копировать URL'));
+      await tester.pumpAndSettle();
+      expect(copied, [sharedLink(tester)]);
+    });
+
+    testWidgets('у профиля провайдера поделиться нечем: вместо меню замок',
+        (tester) async {
+      await _pump(
+        tester,
+        routes: const [_direct],
+        profiles: const [
+          RoutingProfile(
+            id: 'provider-sub-1',
+            name: 'От провайдера',
+            subscriptionIds: ['sub-1'],
+            providerSubscriptionId: 'sub-1',
+          ),
+        ],
+        subs: const [
+          Subscription(id: 'sub-1', name: 'VPN', url: 'https://a.example'),
+        ],
+      );
+      expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.more_vert_rounded), findsNothing);
     });
   });
 }

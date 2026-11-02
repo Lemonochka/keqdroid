@@ -62,7 +62,7 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 - routes: block, direct, through the VPN or through another server, for all apps or chosen ones
 - a route covers sites, IPs, ready-made lists (Russian sites, Iranian sites, ads and trackers, Re-filter, Russian mobile whitelists) or links to AdBlock and hosts lists, refreshed daily
 - routing profiles: their own routes and Everything else for chosen subscriptions
-- a subscription can bring its provider's routing profile: it works as sent and can be viewed but not edited; with "Ignore provider rules" on, a new one isn't taken and the one already there is yours to edit. A Happ or Incy routing link (`happ://routing/...`, `incy://routing/...`) or the same `keqdroid://routing/...` adds a profile too
+- a subscription can bring its provider's routing profile: it works as sent and can be viewed but not edited; with "Ignore provider rules" on, a new one isn't taken and the one already there is yours to edit. A Happ or Incy routing link (`happ://routing/...`, `incy://routing/...`) or the same `keqdroid://routing/...` adds a profile too; your own profile, Main included, can be shared as such a link and a QR code (routes for chosen apps, through another server and with links to lists stay behind)
 - split tunnel: per-app on Android, per-program on Windows and Linux (TUN mode)
 - **Connections**: active connections and the rule that matched each one
 - after connecting, the flag of the country sites see you from; tap it for the exit IP
@@ -292,7 +292,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 - маршруты: блокировать, напрямую, через VPN или через другой сервер, для всех приложений или выбранных
 - маршрут охватывает сайты, IP, готовые списки («Российские сайты», «Иранские сайты», «Реклама и трекеры», Re-filter, «Белые списки мобильной связи») или ссылки на списки AdBlock и hosts, которые обновляются раз в сутки
 - профили маршрутизации: свои маршруты и «Всё остальное» для выбранных подписок
-- подписка может принести профиль маршрутизации от провайдера: он работает как прислан, его можно посмотреть, но не править; с «Не учитывать правила провайдера» новый не берётся, а уже пришедший становится вашим и правится. Ссылка маршрутизации Happ или Incy (`happ://routing/...`, `incy://routing/...`) или такая же `keqdroid://routing/...` тоже добавляет профиль
+- подписка может принести профиль маршрутизации от провайдера: он работает как прислан, его можно посмотреть, но не править; с «Не учитывать правила провайдера» новый не берётся, а уже пришедший становится вашим и правится. Ссылка маршрутизации Happ или Incy (`happ://routing/...`, `incy://routing/...`) или такая же `keqdroid://routing/...` тоже добавляет профиль; своим профилем, и «Основным» тоже, можно поделиться такой ссылкой и QR-кодом (маршруты по приложениям, через другой сервер и списки по ссылке в неё не попадают)
 - split tunnel: на Android по приложениям, на Windows и Linux по программам (режим TUN)
 - **Соединения**: активные соединения и правило, которое сработало для каждого
 - после подключения флаг страны, из которой вас видят сайты; по нажатию IP выхода

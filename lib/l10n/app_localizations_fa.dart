@@ -1771,6 +1771,11 @@ class AppLocalizationsFa extends AppLocalizations {
   }
 
   @override
+  String routingShareSkipped(int count) {
+    return 'مسیرهای برنامه‌های مشخص، مسیرهای سرور دیگر و فهرست‌های لینکی در لینک نمی‌آیند: $count';
+  }
+
+  @override
   String get tvReceiveTitle => 'دریافت از گوشی';
 
   @override

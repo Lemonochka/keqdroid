@@ -925,6 +925,14 @@
   "routingProfileImported": "已添加路由方案：{name}",
   "routingProfileFromProvider": "来自订阅",
   "routingProfileLockedHint": "这些规则随订阅下发。要编辑，请开启“{setting}”：方案将改由您管理。",
+  "routingShareSkipped": "按应用、经其他服务器的路由和链接列表不会写入链接：{count}",
+  "@routingShareSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "@routingProfileLockedHint": {
     "placeholders": {
       "setting": {}

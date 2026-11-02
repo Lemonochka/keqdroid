@@ -1771,6 +1771,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String routingShareSkipped(int count) {
+    return '按应用、经其他服务器的路由和链接列表不会写入链接：$count';
+  }
+
+  @override
   String get tvReceiveTitle => '从手机接收';
 
   @override
