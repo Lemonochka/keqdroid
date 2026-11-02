@@ -12,6 +12,7 @@ import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/servers_tab.dart';
 import 'package:keqdroid/services/subscription_service.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
+import 'package:keqdroid/tunnel/vpn_backend.dart';
 import 'package:keqdroid/utils/clash_template.dart';
 
 import '../helpers/fake_tunnel_backend.dart';
@@ -150,8 +151,28 @@ void main() {
     expect(find.text('Germany'), findsWidgets);
   });
 
-  testWidgets('на xray карточка как раньше', (tester) async {
+  // шаблон исполняет mihomo при любом ядре в настройках, выбирать mihomo ради групп не нужно
+  testWidgets('на xray группы тоже есть', (tester) async {
     await _pump(tester, settings: const AppSettings());
+    expect(find.text('Группы · 2'), findsOneWidget);
+  });
+
+  // по ядру прячутся настройки: активный сервер шаблона на xray-настройках обязан считаться mihomo
+  testWidgets('активный сервер шаблона идёт через mihomo и для настроек', (tester) async {
+    final onXray = await _pump(tester, settings: const AppSettings());
+    expect(onXray.read(activeVpnBackendProvider), VpnBackend.mihomo);
+  });
+
+  testWidgets('без шаблона ядро снова из настроек', (tester) async {
+    final ignored = await _pump(
+      tester,
+      settings: const AppSettings(ignoreProviderRules: true),
+    );
+    expect(ignored.read(activeVpnBackendProvider), VpnBackend.xray);
+  });
+
+  testWidgets('с «Не учитывать правила провайдера» карточка как раньше', (tester) async {
+    await _pump(tester, settings: const AppSettings(ignoreProviderRules: true));
     expect(find.textContaining('Группы'), findsNothing);
     expect(find.text('Germany'), findsWidgets);
   });

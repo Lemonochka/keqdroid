@@ -30,6 +30,17 @@ void main() {
       );
     });
 
+    test('сервер подписки с шаблоном mihomo меряется mihomo при любом ядре', () {
+      expect(
+        PingService.pingCoreFor(
+          link,
+          const AppSettings(vpnCore: AppSettings.vpnCoreXray),
+          viaTemplate: true,
+        ),
+        VpnBackend.mihomo,
+      );
+    });
+
     test('по умолчанию на ссылке xray, как и на подключении', () {
       // Не «замер решает сам»: он повторяет решение подключения, иначе снова
       // мерил бы не то ядро.

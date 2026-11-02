@@ -473,6 +473,11 @@ class ServersNotifier extends Notifier<ServersState> {
         vpnConnected: vpnConnected,
         testUrl: testUrl,
         resolveServerIp: (anyUrl || anySpeed) ? resolveServerIp : null,
+        templateServers: templateServerIds(
+          servers,
+          settings,
+          ref.read(storageProvider).getClashTemplate,
+        ),
         onResult: (result) {
           results.add(result);
           pending[result.serverId] = (
@@ -587,6 +592,11 @@ class ServersNotifier extends Notifier<ServersState> {
         testUrl: PingTestConfig.resolveTestUrl(settings),
         vpnConnected: vpnConnected,
         resolvedServerIp: serverIp,
+        templateServers: templateServerIds(
+          [server],
+          settings,
+          ref.read(storageProvider).getClashTemplate,
+        ),
       );
       await updatePingResults({
         serverId: (

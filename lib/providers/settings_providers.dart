@@ -175,9 +175,12 @@ final activeVpnBackendProvider = Provider<VpnBackend>((ref) {
         ? VpnBackend.mihomo
         : VpnBackend.xray;
   }
-  return resolveVpnBackend(
-    config: server.config,
+  final sub = server.subscriptionId;
+  final template =
+      sub == null ? null : ref.watch(subscriptionTemplateProvider(sub));
+  return serverBackendChoice(
+    server,
     preference: preference,
-    mihomoAvailable: mihomoShipsHere,
+    viaTemplate: template?.nodeFor(server) != null,
   ).backend;
 });

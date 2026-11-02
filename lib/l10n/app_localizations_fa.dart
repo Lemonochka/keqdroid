@@ -2650,6 +2650,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsCoreSkipClash => 'سرور فعال یک کانفیگ آمادهٔ Clash است — صرف‌نظر از هستهٔ انتخاب‌شده تنها mihomo آن را اجرا می‌کند.';
 
   @override
+  String get settingsCoreSkipClashTemplate => 'اشتراک سرور فعال با گروه‌هایی برای mihomo آمده است: تا وقتی «نادیده گرفتن قوانین ارائه‌دهنده» روشن نشده، سرورهای آن صرف‌نظر از هستهٔ انتخاب‌شده با mihomo اجرا می‌شوند.';
+
+  @override
   String get settingsCoreSkipCustom => 'سرور فعال یک کانفیگ آمادهٔ JSON برای Xray است، پس صرف‌نظر از هستهٔ انتخابی با libxray اجرا می‌شود. mihomo به اشتراکی با لینک‌های معمولی نیاز دارد.';
 
   @override

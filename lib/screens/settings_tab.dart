@@ -83,6 +83,7 @@ import 'package:keqdroid/utils/rule_lists.dart';
 import 'package:keqdroid/utils/split_tunneling_entries.dart';
 import 'package:keqdroid/utils/time_ago.dart';
 import 'package:keqdroid/services/rule_list_service.dart';
+import 'package:keqdroid/utils/clash_template.dart';
 import 'package:keqdroid/utils/vpn_core_support.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/screens/split_tunneling_screen.dart';

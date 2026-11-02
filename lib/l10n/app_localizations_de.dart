@@ -2654,6 +2654,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsCoreSkipClash => 'Der aktive Server ist eine fertige Clash-Konfiguration – sie läuft unabhängig von der Kernauswahl nur auf mihomo.';
 
   @override
+  String get settingsCoreSkipClashTemplate => 'Das Abonnement des aktiven Servers bringt Gruppen für mihomo mit: Seine Server laufen unabhängig von der Kernauswahl auf mihomo, bis „Regeln des Anbieters ignorieren“ an ist.';
+
+  @override
   String get settingsCoreSkipCustom => 'Der aktive Server ist eine fertige Xray-JSON-Konfiguration und läuft daher unabhängig vom gewählten Kern über libxray. mihomo braucht ein Abonnement mit normalen Links.';
 
   @override

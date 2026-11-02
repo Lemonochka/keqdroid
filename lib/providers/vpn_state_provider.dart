@@ -435,11 +435,19 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
       // готовый конфиг исполняет ядро его языка, настройка решает только для обычной ссылки.
       // выбираем до свёртки маршрутов: от ядра зависит, какие другие серверы встанут в конфиг
-      final choice = resolveVpnBackend(
+      final resolved = resolveVpnBackend(
         config: runConfig,
         preference: stored.vpnCore,
         mihomoAvailable: mihomoShipsHere,
       );
+      final choice = templated != null &&
+              resolved.skip == VpnCoreSkip.clashConfig
+          ? (
+              backend: resolved.backend,
+              format: resolved.format,
+              skip: VpnCoreSkip.clashTemplate,
+            )
+          : resolved;
       // режим сохранённый: если автозапуск откатится в прокси, генератор без туннеля правил по процессам и так не напишет
       final appsRun = appRoutesRun(TunnelSessionBuilder.resolveMode(stored));
       final routeServers = await _prepareRouteServers(
@@ -1017,6 +1025,11 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           testUrl: await _autoSelectTestUrl(),
           timeoutSeconds: AutoSelectWatchdog.judgeTimeoutSeconds,
           onResult: (r) => measure.add(entry(r)),
+          templateServers: templateServerIds(
+            servers,
+            settings,
+            ref.read(storageProvider).getClashTemplate,
+          ),
         );
         for (final r in results) {
           measure.results[r.serverId] = entry(r);

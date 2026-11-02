@@ -8,6 +8,8 @@ import 'package:keqdroid/utils/clash_template.dart';
 import 'package:keqdroid/utils/custom_clash_config.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/tunnel/vpn_backend.dart';
+import 'package:keqdroid/utils/vpn_core_support.dart';
 
 String _fixture(String name) =>
     File('test/fixtures/subscription_payloads/$name').readAsStringSync();
@@ -142,14 +144,49 @@ rules:
       );
     });
 
-    test('на xray шаблон не включается: ядро из настроек не подменяется', () {
+    // шаблон написан для mihomo: показывать группы и не исполнять их было бы мёртвой настройкой
+    test('на xray шаблон тоже включается, его исполняет mihomo', () {
+      const xray = AppSettings(vpnCore: AppSettings.vpnCoreXray);
       expect(
-        templatedSessionConfig(
-          server: servers[0],
-          template: template,
-          settings: const AppSettings(vpnCore: AppSettings.vpnCoreXray),
-        ),
+        templatedSessionConfig(server: servers[0], template: template, settings: xray),
+        isNotNull,
+      );
+      final choice = serverBackendChoice(
+        servers[0],
+        preference: xray.vpnCore,
+        viaTemplate: true,
+      );
+      expect(choice.backend, VpnBackend.mihomo);
+      expect(choice.skip, VpnCoreSkip.clashTemplate,
+          reason: 'в настройках объясняем, почему ядро не то, что выбрано');
+      expect(
+        serverBackendChoice(servers[0], preference: mihomo.vpnCore, viaTemplate: true).skip,
         isNull,
+      );
+    });
+
+    test('пинг и настройки узнают серверы шаблона так же, как подключение', () {
+      final other = ServerItem.fromRaw(
+        'trojan://p@203.0.113.9:443?security=tls#Other',
+        subscriptionId: 's2',
+      );
+      String? templateOf(String id) => id == 's1' ? template : null;
+      expect(
+        templateServerIds([...servers, other], const AppSettings(), templateOf),
+        {for (final s in servers) s.id},
+      );
+      expect(
+        templateServerIds(
+          servers,
+          const AppSettings(ignoreProviderRules: true),
+          templateOf,
+        ),
+        isEmpty,
+        reason: '«Не учитывать правила провайдера» возвращает ядро из настроек',
+      );
+      expect(
+        serverBackendChoice(servers[0], preference: 'xray', viaTemplate: false).backend,
+        VpnBackend.xray,
       );
     });
   });

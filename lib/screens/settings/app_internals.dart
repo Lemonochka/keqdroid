@@ -655,10 +655,13 @@ VpnCoreSkip? _coreMismatch(WidgetRef ref) {
       (a) => a.value?.vpnCore ?? AppSettings.vpnCoreXray,
     ),
   );
-  return resolveVpnBackend(
-    config: server.config,
+  final sub = server.subscriptionId;
+  final template =
+      sub == null ? null : ref.watch(subscriptionTemplateProvider(sub));
+  return serverBackendChoice(
+    server,
     preference: core,
-    mihomoAvailable: mihomoShipsHere,
+    viaTemplate: template?.nodeFor(server) != null,
   ).skip;
 }
 
@@ -669,6 +672,7 @@ String _coreMismatchText(AppLocalizations l10n, VpnCoreSkip skip) =>
       VpnCoreSkip.chainMihomoOnly => l10n.settingsCoreSkipChainMihomoOnly,
       VpnCoreSkip.amneziaWg => l10n.settingsCoreSkipAwg,
       VpnCoreSkip.clashConfig => l10n.settingsCoreSkipClash,
+      VpnCoreSkip.clashTemplate => l10n.settingsCoreSkipClashTemplate,
       VpnCoreSkip.linkXrayOnly => l10n.settingsCoreSkipLinkXrayOnly,
       VpnCoreSkip.linkMihomoOnly => l10n.settingsCoreSkipLinkMihomoOnly,
       VpnCoreSkip.platform => l10n.settingsCoreSkipPlatform,

@@ -401,12 +401,14 @@ class PingService {
     String testUrl = kDefaultPingTestUrl,
     int timeoutSeconds = 15,
     String? resolvedServerIp,
+    Set<String> templateServers = const {},
   }) async {
     final results = await pingUrlBatch(
       [server],
       settings,
       testUrl: testUrl,
       timeoutSeconds: timeoutSeconds,
+      templateServers: templateServers,
       resolvedIps: resolvedServerIp != null
           ? {server.id: resolvedServerIp}
           : null,
@@ -426,6 +428,7 @@ class PingService {
     Map<String, String>? resolvedIps,
     void Function(PingResult)? onResult,
     int? concurrency,
+    Set<String> templateServers = const {},
   }) async {
     if (servers.isEmpty) return [];
     final workers = concurrency ?? urlPingConcurrency;
@@ -439,7 +442,16 @@ class PingService {
       final singles = <ServerItem>[];
       for (final server in servers) {
         if (mergeableForMultiPing(server.config)) {
-          byCore.putIfAbsent(pingCoreFor(server.config, settings), () => []).add(server);
+          byCore
+              .putIfAbsent(
+                pingCoreFor(
+                  server.config,
+                  settings,
+                  viaTemplate: templateServers.contains(server.id),
+                ),
+                () => [],
+              )
+              .add(server);
         } else {
           singles.add(server);
         }
@@ -470,6 +482,7 @@ class PingService {
             takenPorts: takenPorts,
             outboundInterface: outboundInterface,
             onResult: onResult,
+            templateServers: templateServers,
           ),
         );
         for (final list in measured) {
@@ -486,6 +499,7 @@ class PingService {
             resolvedIp: ips[server.id],
             takenPorts: takenPorts,
             outboundInterface: outboundInterface,
+            viaTemplate: templateServers.contains(server.id),
           );
           onResult?.call(result);
           return result;
@@ -516,6 +530,7 @@ class PingService {
         resolvedIp: ips[server.id],
         takenPorts: takenPorts,
         outboundInterface: outboundInterface,
+        viaTemplate: templateServers.contains(server.id),
       );
       onResult?.call(result);
       return result;
@@ -557,6 +572,7 @@ class PingService {
     required Set<int> takenPorts,
     required String? outboundInterface,
     void Function(PingResult)? onResult,
+    Set<String> templateServers = const {},
   }) async {
     if (servers.isEmpty) return [];
     if (servers.length == 1) {
@@ -568,6 +584,7 @@ class PingService {
         resolvedIp: ips[servers.first.id],
         takenPorts: takenPorts,
         outboundInterface: outboundInterface,
+        viaTemplate: templateServers.contains(servers.first.id),
       );
       onResult?.call(result);
       return [result];
@@ -655,6 +672,7 @@ class PingService {
         takenPorts: takenPorts,
         outboundInterface: outboundInterface,
         onResult: onResult,
+        templateServers: templateServers,
       );
       final right = await _pingUrlMulti(
         measured.sublist(half),
@@ -666,6 +684,7 @@ class PingService {
         takenPorts: takenPorts,
         outboundInterface: outboundInterface,
         onResult: onResult,
+        templateServers: templateServers,
       );
       return [...failed, ...left, ...right];
     }
@@ -681,7 +700,13 @@ class PingService {
     return [...failed, ...results];
   }
 
-  static VpnBackend pingCoreFor(String serverConfig, AppSettings settings) {
+  // сервер, взятый шаблоном подписки, подключение исполнит на mihomo: мерить тем же ядром
+  static VpnBackend pingCoreFor(
+    String serverConfig,
+    AppSettings settings, {
+    bool viaTemplate = false,
+  }) {
+    if (viaTemplate) return VpnBackend.mihomo;
     final choice = resolveVpnBackend(
       config: serverConfig,
       preference: settings.vpnCore,
@@ -750,12 +775,13 @@ class PingService {
     String? resolvedIp,
     Set<int>? takenPorts,
     required String? outboundInterface,
+    bool viaTemplate = false,
   }) async {
     // порт на каждый замер: с общим проба уходила в чужое ядро и мерила не тот сервер
     final socksPort = await _freePort(avoid: takenPorts);
     // внутри try: исключение генератора иначе роняло бы весь батч
     try {
-      final core = pingCoreFor(server.config, settings);
+      final core = pingCoreFor(server.config, settings, viaTemplate: viaTemplate);
       final config = _pingConfigFor(
         core,
         server.config,
@@ -797,6 +823,7 @@ class PingService {
     int timeoutSeconds = 20,
     Map<String, String>? resolvedIps,
     void Function(PingResult)? onResult,
+    Set<String> templateServers = const {},
   }) async {
     if (servers.isEmpty) return [];
 
@@ -809,7 +836,11 @@ class PingService {
       final socksPort = await _freePort();
       PingResult result;
       try {
-        final core = pingCoreFor(s.config, settings);
+        final core = pingCoreFor(
+          s.config,
+          settings,
+          viaTemplate: templateServers.contains(s.id),
+        );
         final config = _pingConfigFor(
           core,
           s.config,
@@ -992,6 +1023,7 @@ class PingService {
     String? testUrl,
     String? resolvedServerIp,
     bool vpnConnected = false,
+    Set<String> templateServers = const {},
   }) async {
     final url = testUrl ?? testUrlFromSettings(settings);
     final effectiveType = effectivePingType(server, type);
@@ -1009,6 +1041,7 @@ class PingService {
         resolvedIps: resolvedServerIp != null
             ? {server.id: resolvedServerIp}
             : null,
+        templateServers: templateServers,
       );
       return results.first;
     }
@@ -1019,6 +1052,7 @@ class PingService {
       testUrl: url,
       timeoutSeconds: timeoutSeconds,
       resolvedServerIp: resolvedServerIp,
+      templateServers: templateServers,
     );
   }
 
@@ -1033,6 +1067,7 @@ class PingService {
     bool vpnConnected = false,
     Future<String?> Function(ServerItem server)? resolveServerIp,
     void Function(PingResult)? onResult,
+    Set<String> templateServers = const {},
   }) async {
     final url = testUrl ?? testUrlFromSettings(settings);
     final resultById = <String, PingResult>{};
@@ -1067,6 +1102,7 @@ class PingService {
         timeoutSeconds: timeoutSeconds,
         resolvedIps: ips,
         onResult: onResult,
+        templateServers: templateServers,
       );
       for (final r in speedResults) {
         resultById[r.serverId] = r;
@@ -1091,6 +1127,7 @@ class PingService {
         timeoutSeconds: timeoutSeconds,
         resolvedIps: ips,
         onResult: onResult,
+        templateServers: templateServers,
       );
       for (final r in urlResults) {
         resultById[r.serverId] = r;

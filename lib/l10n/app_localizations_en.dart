@@ -2654,6 +2654,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCoreSkipClash => 'The active server is a ready-made Clash config, and only mihomo can run it, no matter which core is selected.';
 
   @override
+  String get settingsCoreSkipClashTemplate => 'The active server\'s subscription came with groups for mihomo: its servers run on mihomo whichever core is selected, until Ignore provider rules is on.';
+
+  @override
   String get settingsCoreSkipCustom => 'The active server is a ready-made Xray JSON config, so it runs on libxray whatever core you pick. mihomo needs a subscription with plain links.';
 
   @override

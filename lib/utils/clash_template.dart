@@ -8,11 +8,53 @@ import 'vpn_core_support.dart';
 
 enum ClashMemberKind { node, group, direct, block, other }
 
-// на xray подписка остаётся списком серверов, иначе выбор ядра в настройках молча перестал бы работать.
-// «Не учитывать правила провайдера» выключает шаблон целиком, как и профиль от провайдера
+// шаблон написан для mihomo: его серверы исполняет mihomo при любом ядре в настройках, как готовый конфиг Clash.
+// «Не учитывать правила провайдера» выключает шаблон целиком, как и профиль от провайдера, и ядро снова из настроек
 bool clashTemplateApplies(AppSettings settings) =>
-    !settings.ignoreProviderRules &&
-    preferredBackend(settings.vpnCore) == VpnBackend.mihomo;
+    !settings.ignoreProviderRules && mihomoShipsHere;
+
+// серверы, которые подключение отдаст шаблону: пинг и показ настроек обязаны решать ядро так же
+Set<String> templateServerIds(
+  Iterable<ServerItem> servers,
+  AppSettings settings,
+  String? Function(String subscriptionId) templateOf,
+) {
+  if (!clashTemplateApplies(settings)) return const {};
+  final parsed = <String, ClashTemplate?>{};
+  final ids = <String>{};
+  for (final server in servers) {
+    final sub = server.subscriptionId;
+    if (sub == null) continue;
+    final template = parsed.putIfAbsent(sub, () {
+      final raw = templateOf(sub);
+      return raw == null ? null : ClashTemplate.fromBody(raw);
+    });
+    if (template?.nodeFor(server) != null) ids.add(server.id);
+  }
+  return ids;
+}
+
+// ядро сервера так, как его решит подключение: сервер, взятый шаблоном, идёт через mihomo
+VpnBackendChoice serverBackendChoice(
+  ServerItem server, {
+  required String preference,
+  required bool viaTemplate,
+}) {
+  if (!viaTemplate) {
+    return resolveVpnBackend(
+      config: server.config,
+      preference: preference,
+      mihomoAvailable: mihomoShipsHere,
+    );
+  }
+  return (
+    backend: VpnBackend.mihomo,
+    format: ServerFormat.clashYaml,
+    skip: preferredBackend(preference) == VpnBackend.mihomo
+        ? null
+        : VpnCoreSkip.clashTemplate,
+  );
+}
 
 String? templatedSessionConfig({
   required ServerItem server,

@@ -1315,6 +1315,7 @@
   "settingsTunnelModeProxySubtitle": "仅本地代理，不启用系统 VPN",
   "settingsTunnelModeHint": "代理模式在 127.0.0.1 上启动 SOCKS 和 HTTP，把应用或 Wi-Fi 指过去即可。该代理对设备上任何应用开放。分应用路由和 DNS 拦截仅在 VPN 模式下可用。",
   "settingsCoreSkipClash": "当前服务器是现成的 Clash 配置，无论选择哪个内核，都只能由 mihomo 运行。",
+  "settingsCoreSkipClashTemplate": "当前服务器的订阅带有 mihomo 分组：在开启“忽略订阅自带的规则”之前，无论选择哪个内核，其服务器都由 mihomo 运行。",
   "settingsCoreSkipCustom": "当前服务器是现成的 Xray JSON 配置，因此无论选择哪个内核都由 libxray 运行。mihomo 需要普通链接的订阅。",
   "settingsCoreSkipChainXrayOnly": "当前服务器是代理链，其中部分节点 mihomo 无法串联，无论选择哪个内核，都由 Xray 运行。",
   "settingsCoreSkipChainMihomoOnly": "当前服务器是代理链，其中有只能由 mihomo 串联的节点（例如 AmneziaWG 配置），无论选择哪个内核，都由 mihomo 运行。",

@@ -2668,6 +2668,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsCoreSkipClash => 'У активного сервера готовый конфиг Clash: его исполняет только mihomo, при любом выборе ядра.';
 
   @override
+  String get settingsCoreSkipClashTemplate => 'Подписка активного сервера пришла с группами для mihomo: её серверы идут через mihomo при любом выборе ядра, пока не включено «Не учитывать правила провайдера».';
+
+  @override
   String get settingsCoreSkipCustom => 'У активного сервера готовый JSON-конфиг Xray: он идёт через libxray при любом выборе ядра. Для mihomo нужна подписка с обычными ссылками.';
 
   @override

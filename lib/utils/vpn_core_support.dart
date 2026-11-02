@@ -34,6 +34,8 @@ enum VpnCoreSkip {
 
   clashConfig,
 
+  clashTemplate,
+
   linkXrayOnly,
 
   linkMihomoOnly,
@@ -282,6 +284,8 @@ String vpnCoreSkipLogReason(VpnCoreSkip skip) => switch (skip) {
         'this proxy chain has a node only mihomo can link',
       VpnCoreSkip.amneziaWg => 'the server is an AmneziaWG profile',
       VpnCoreSkip.clashConfig => 'the server is a ready-made Clash config',
+      VpnCoreSkip.clashTemplate =>
+        'its subscription brought a mihomo template with groups',
       VpnCoreSkip.linkXrayOnly => 'mihomo has no such transport for this '
           'protocol',
       VpnCoreSkip.linkMihomoOnly => 'Xray 26 does not support this link',

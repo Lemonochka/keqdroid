@@ -2648,6 +2648,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsCoreSkipClash => '当前服务器是现成的 Clash 配置，无论选择哪个内核，都只能由 mihomo 运行。';
 
   @override
+  String get settingsCoreSkipClashTemplate => '当前服务器的订阅带有 mihomo 分组：在开启“忽略订阅自带的规则”之前，无论选择哪个内核，其服务器都由 mihomo 运行。';
+
+  @override
   String get settingsCoreSkipCustom => '当前服务器是现成的 Xray JSON 配置，因此无论选择哪个内核都由 libxray 运行。mihomo 需要普通链接的订阅。';
 
   @override

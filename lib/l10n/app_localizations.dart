@@ -4985,6 +4985,12 @@ abstract class AppLocalizations {
   /// **'The active server is a ready-made Clash config, and only mihomo can run it, no matter which core is selected.'**
   String get settingsCoreSkipClash;
 
+  /// No description provided for @settingsCoreSkipClashTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'The active server\'s subscription came with groups for mihomo: its servers run on mihomo whichever core is selected, until Ignore provider rules is on.'**
+  String get settingsCoreSkipClashTemplate;
+
   /// No description provided for @settingsCoreSkipCustom.
   ///
   /// In en, this message translates to:
