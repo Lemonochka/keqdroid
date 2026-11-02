@@ -12,6 +12,8 @@ import 'package:uuid/uuid.dart';
 import '../core/app_logger.dart';
 import '../models/server_item.dart';
 import '../models/subscription.dart';
+import '../services/auto_select_home.dart';
+import '../services/auto_server_select.dart';
 import '../services/storage_service.dart';
 import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
@@ -2846,7 +2848,9 @@ class SubscriptionService {
         final wasInThisSub = oldServers.any((s) => s.id == activeId);
         final stillExists  = servers.any((s) => s.id == activeId);
         if (wasInThisSub && !stillExists) {
-          await _storage.setActiveServerId(null);
+          await _storage.setActiveServerId(
+            await _autoSelectReplacement(sub, activeId, oldServers, servers),
+          );
         }
       }
 
@@ -2897,6 +2901,52 @@ class SubscriptionService {
         error: e.toString(),
         subscription: sub,
       );
+    }
+  }
+
+  // в режиме авто пустой выбор выключил бы и сам автовыбор: сторож ведёт только выбранный сервер
+  Future<String?> _autoSelectReplacement(
+    Subscription sub,
+    String goneId,
+    List<ServerItem> oldServers,
+    List<ServerItem> servers,
+  ) async {
+    try {
+      final owner = (await _storage.getSubscriptions())
+          .where((s) => s.autoSelect)
+          .firstOrNull;
+      if (owner == null) return null;
+      final home = await AutoSelectHomeStore.load();
+      final ledHere = home != null &&
+          home.subscriptionId == owner.id &&
+          home.pickedId == goneId;
+      if (owner.id != sub.id && !ledHere) return null;
+      final pick = AutoServerSelect.pick(servers, subscriptionId: sub.id);
+      if (pick == null) return null;
+      if (ledHere) {
+        await AutoSelectHomeStore.save(
+          AutoSelectHome.afterNeighbourFailover(
+            home,
+            subscriptionId: owner.id,
+            fromId: goneId,
+            toId: pick.id,
+          ),
+        );
+      }
+      await AutoSelectFollowStore.save(pick.id);
+      final gone = oldServers.firstWhere((s) => s.id == goneId);
+      AppLogger.instance.info(
+        'Auto select: ${gone.displayName} left the subscription, '
+        'picked ${pick.displayName}',
+      );
+      return pick.id;
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Auto select replacement failed',
+        error: e,
+        stackTrace: st,
+      );
+      return null;
     }
   }
 

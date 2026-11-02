@@ -124,3 +124,20 @@ abstract final class AutoSelectHomeStore {
     }
   }
 }
+
+// сервер, который обновление подписки подставило вместо пропавшего: туннель ещё на прежнем
+abstract final class AutoSelectFollowStore {
+  static const _key = 'auto_select_follow';
+
+  static Future<void> save(String serverId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, serverId);
+  }
+
+  static Future<String?> take() async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getString(_key);
+    if (id != null) await prefs.remove(_key);
+    return id;
+  }
+}

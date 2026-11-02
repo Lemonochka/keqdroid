@@ -34,6 +34,8 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
 
     final subs = await ref.read(storageProvider).getSubscriptions();
     unawaited(notifyExpired(subs));
+    // на Android подписка могла обновиться в фоне, пока интерфейс был выгружен, а туннель работал
+    unawaited(Future(_followAutoSelect));
     if (Platform.isAndroid) unawaited(Future(_migrateCardGifs));
     return subs;
   }
@@ -65,7 +67,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     if (current == null) return;
     if (_hasSubscriptionsChanged(current, latest)) {
       state = AsyncData(latest);
-      await ref.read(serversProvider.notifier).reloadPreservingActive();
+      await _reloadServers();
       // фоновый воркер мог записать и профиль провайдера
       ref.invalidate(routingProfilesProvider);
       // обновил фоновый воркер: пингуем то, что он принёс
@@ -166,7 +168,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
 
       final latest = await ref.read(storageProvider).getSubscriptions();
       state = AsyncData(latest);
-      await ref.read(serversProvider.notifier).reloadPreservingActive();
+      await _reloadServers();
       if (results.any((r) => r.routingChanged)) {
         ref.invalidate(routingProfilesProvider);
       }
@@ -176,6 +178,34 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       await notifyExpired(latest);
     } finally {
       _autoUpdateRunning = false;
+    }
+  }
+
+  Future<void> _reloadServers() async {
+    await ref.read(serversProvider.notifier).reloadPreservingActive();
+    unawaited(_followAutoSelect());
+  }
+
+  // выбранный сервер пропал из подписки и автовыбор подставил другой: туннель переезжает за ним,
+  // иначе на экране один сервер, а трафик и замеры сторожа идут через прежний
+  Future<void> _followAutoSelect() async {
+    try {
+      final id = await AutoSelectFollowStore.take();
+      if (id == null || !ref.mounted) return;
+      await ref.read(serversProvider.notifier)._initialLoad;
+      if (!ref.mounted) return;
+      final vpn = await ref.read(vpnStateProvider.future);
+      if (!ref.mounted || vpn.status != VpnStatus.connected) return;
+      if (ref.read(serversProvider).activeServerId != id) return;
+      AppLogger.instance.info('Auto select: the tunnel follows the server '
+          'picked by the subscription update');
+      await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Auto select: following the subscription update failed',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -231,7 +261,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
           .map((s) => s.id == sub.id ? result.subscription : s)
           .toList();
       state = AsyncData(subs);
-      await ref.read(serversProvider.notifier).reloadPreservingActive();
+      await _reloadServers();
       if (result.routingChanged) ref.invalidate(routingProfilesProvider);
       _autoPing(sub.id);
       await notifyExpired(subs);
