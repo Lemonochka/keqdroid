@@ -413,6 +413,116 @@ void main() {
     });
   });
 
+  group('протокол', () {
+    const quic = TrafficRoute(
+      id: 'quic',
+      sites: 'youtube.com, googlevideo.com',
+      target: RouteTarget.block,
+      network: RouteNetwork.udp,
+      ports: '443',
+    );
+
+    testWidgets('у нового маршрута любой протокол, в списке подписи нет',
+        (tester) async {
+      await _pump(tester, routes: const [_direct]);
+      expect(_texts(tester), contains('→ напрямую'));
+      await tester.tap(find.text('Новый маршрут'));
+      await tester.pumpAndSettle();
+      expect(find.text('Протокол'), findsOneWidget);
+      expect(find.text('Любой'), findsOneWidget);
+    });
+
+    testWidgets('сеть и порт видны в редакторе и в подписи списка',
+        (tester) async {
+      await _pump(tester, routes: const [quic]);
+      expect(_texts(tester), contains('→ блокировать · UDP 443'));
+      await tester.tap(find.text('youtube.com, googlevideo.com'));
+      await tester.pumpAndSettle();
+      expect(_texts(tester), contains('UDP · порт 443'));
+    });
+
+    testWidgets('сеть и порт выбираются в одной шторке и сохраняются',
+        (tester) async {
+      await _pump(tester, routes: const [_direct]);
+      await tester.tap(find.text('ru, yandex.ru, vk.com'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Протокол'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('UDP'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextField, 'Все порты'), '27000-27050, 3478');
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(_texts(tester), contains('UDP · порты 27000-27050, 3478'));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      final saved = (await _storage.getRoutes()).single;
+      expect(saved.network, RouteNetwork.udp);
+      expect(saved.ports, '27000-27050, 3478');
+    });
+
+    testWidgets('один порт это порт, диапазон из 21 порта это порты', (tester) async {
+      await _pump(tester, routes: const [
+        TrafficRoute(
+          id: 'one',
+          sites: 'youtube.com',
+          target: RouteTarget.block,
+          ports: '443',
+        ),
+        TrafficRoute(
+          id: 'range',
+          sites: 'example.org',
+          target: RouteTarget.block,
+          ports: '1000-1020',
+        ),
+      ]);
+      expect(_texts(tester), contains('→ блокировать · порт 443'));
+      expect(_texts(tester), contains('→ блокировать · порты 1000-1020'));
+    });
+
+    testWidgets('неверный порт назван и в шторке, и на карточке', (tester) async {
+      await _pump(tester, routes: [quic.copyWith(ports: '70000')]);
+      expect(
+        _texts(tester).any((t) => t.contains('порт не число от 1 до 65535')),
+        isTrue,
+      );
+      await tester.tap(find.text('youtube.com, googlevideo.com'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Протокол'));
+      await tester.pumpAndSettle();
+      expect(
+        _texts(tester).where((t) => t.contains('порт не число от 1 до 65535')),
+        hasLength(2),
+        reason: 'карточка редактора под шторкой и поле в шторке',
+      );
+    });
+
+    // весь трафик всех приложений без протокола это «Всё остальное», с протоколом уже нет
+    testWidgets('весь трафик для всех приложений есть, только когда задан протокол',
+        (tester) async {
+      await _pump(tester, routes: const [_direct, quic]);
+      await tester.tap(find.text('ru, yandex.ru, vk.com'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Что'));
+      await tester.pumpAndSettle();
+      expect(find.text('Весь трафик'), findsNothing);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('youtube.com, googlevideo.com'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Что'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Весь трафик'));
+      await tester.pumpAndSettle();
+      final saved = (await _storage.getRoutes()).firstWhere((r) => r.id == 'quic');
+      expect(saved.content, RouteContent.allTraffic);
+    });
+  });
+
   group('другой сервер', () {
     final active = ServerItem(
       id: 'nl',
@@ -1303,7 +1413,7 @@ void main() {
 
       expect(
         find.text('В ссылку не попадут маршруты по приложениям, через другой '
-            'сервер и списки по ссылке: 1'),
+            'сервер, с протоколом или портом и списки по ссылке: 1'),
         findsOneWidget,
       );
       final rules = parseProviderRouting(sharedLink(tester))! as ProviderRoutingRules;

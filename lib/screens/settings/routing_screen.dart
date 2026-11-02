@@ -92,6 +92,12 @@ String? _routeIssue(
   SplitTunnelingState split,
   List<AppInfo> installed,
 ) {
+  if (routePortRanges(route.ports) == null) return l10n.routePortsInvalid;
+  if (route.allApps &&
+      route.content == RouteContent.allTraffic &&
+      !routeHasProtocol(route)) {
+    return l10n.routeAllTrafficNeedsProtocol;
+  }
   if (!route.allApps) {
     if (!caps.apps) {
       if (!caps.appsNeedTun) return l10n.routeAppsUnsupported;
@@ -116,6 +122,47 @@ String? _routeIssue(
     }
   }
   return null;
+}
+
+String? _networkName(RouteNetwork network) => switch (network) {
+      RouteNetwork.any => null,
+      RouteNetwork.tcp => 'TCP',
+      RouteNetwork.udp => 'UDP',
+    };
+
+// неверные порты показываем как набраны: ошибку рядом называет _routeIssue
+String? _portsText(TrafficRoute route) {
+  final raw = route.ports.trim();
+  if (raw.isEmpty) return null;
+  final ranges = routePortRanges(raw);
+  if (ranges == null) return raw;
+  return [for (final (from, to) in ranges) from == to ? '$from' : '$from-$to']
+      .join(', ');
+}
+
+// не plural: gen-l10n сводит =1 и русское one в один вариант, и диапазон из 21 порта стал бы «порт»
+String _portsLabel(AppLocalizations l10n, TrafficRoute route, String ports) {
+  final count = (routePortRanges(route.ports) ?? const [])
+      .fold(0, (sum, r) => sum + r.$2 - r.$1 + 1);
+  return count == 1
+      ? l10n.routePortValue(ltrIsolate(ports))
+      : l10n.routePortsValue(ltrIsolate(ports));
+}
+
+String _protocolValue(AppLocalizations l10n, TrafficRoute route) {
+  final ports = _portsText(route);
+  final network = _networkName(route.network) ??
+      (ports == null ? null : l10n.routeProtocolAnySubtitle);
+  if (network == null) return l10n.routeProtocolAny;
+  return '$network · ${ports == null ? l10n.routePortsAll : _portsLabel(l10n, route, ports)}';
+}
+
+String? _protocolShort(AppLocalizations l10n, TrafficRoute route) {
+  final ports = _portsText(route);
+  final network = _networkName(route.network);
+  if (ports == null) return network;
+  if (network == null) return _portsLabel(l10n, route, ports);
+  return ltrIsolate('$network $ports');
 }
 
 ServerItem? _routeServer(TrafficRoute route, List<ServerItem> servers) =>
@@ -674,6 +721,7 @@ class _RouteTile extends StatelessWidget {
         : route.apps.map((a) => _appLabel(a, installed)).join(', ');
     final details = [
       if (!route.allApps) _contentLabel(l10n, route),
+      ?_protocolShort(l10n, route),
       if (!route.enabled) l10n.routeDisabledShort,
     ];
     return ExpressiveGroupTile(

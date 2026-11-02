@@ -695,6 +695,90 @@ abstract class AppLocalizations {
   /// **'the current core can\'t use this server, goes via VPN'**
   String get routeServerUnsupported;
 
+  /// No description provided for @routeProtocol.
+  ///
+  /// In en, this message translates to:
+  /// **'Protocol'**
+  String get routeProtocol;
+
+  /// No description provided for @routeProtocolAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any'**
+  String get routeProtocolAny;
+
+  /// No description provided for @routeProtocolAnySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'TCP and UDP'**
+  String get routeProtocolAnySubtitle;
+
+  /// No description provided for @routeProtocolTcpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Websites, apps, downloads'**
+  String get routeProtocolTcpSubtitle;
+
+  /// No description provided for @routeProtocolUdpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Calls, games, QUIC'**
+  String get routeProtocolUdpSubtitle;
+
+  /// No description provided for @routePort.
+  ///
+  /// In en, this message translates to:
+  /// **'Port'**
+  String get routePort;
+
+  /// No description provided for @routePortHint.
+  ///
+  /// In en, this message translates to:
+  /// **'All ports'**
+  String get routePortHint;
+
+  /// No description provided for @routePortHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty means all ports. One, several or a range: 443, 80, 27000-27050'**
+  String get routePortHelp;
+
+  /// No description provided for @routePortsAll.
+  ///
+  /// In en, this message translates to:
+  /// **'all ports'**
+  String get routePortsAll;
+
+  /// No description provided for @routePortValue.
+  ///
+  /// In en, this message translates to:
+  /// **'port {port}'**
+  String routePortValue(String port);
+
+  /// No description provided for @routePortsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'ports {ports}'**
+  String routePortsValue(String ports);
+
+  /// No description provided for @routePortsInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'the port is not a number from 1 to 65535, the route does nothing'**
+  String get routePortsInvalid;
+
+  /// No description provided for @routeAllTrafficNeedsProtocol.
+  ///
+  /// In en, this message translates to:
+  /// **'all traffic of all apps already goes by Everything else, pick a protocol or a port'**
+  String get routeAllTrafficNeedsProtocol;
+
+  /// No description provided for @routeWhatAllProtocolSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Any site, only over the chosen protocol'**
+  String get routeWhatAllProtocolSubtitle;
+
   /// No description provided for @routeAppsUnsupported.
   ///
   /// In en, this message translates to:
@@ -3404,7 +3488,7 @@ abstract class AppLocalizations {
   /// No description provided for @routingShareSkipped.
   ///
   /// In en, this message translates to:
-  /// **'Routes for chosen apps, through another server and with links to lists won\'t go into the link: {count}'**
+  /// **'Routes for chosen apps, through another server, with a protocol or a port and with links to lists won\'t go into the link: {count}'**
   String routingShareSkipped(int count);
 
   /// No description provided for @tvReceiveTitle.

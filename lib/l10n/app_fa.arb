@@ -99,6 +99,34 @@
   "routeDeleteConfirm": "این مسیر حذف شود؟",
   "routeServerMissing": "سرور دیگر نیست، از پروکسی می‌رود",
   "routeServerUnsupported": "هستهٔ فعلی این سرور را نمی‌پذیرد، از پروکسی می‌رود",
+  "routeProtocol": "پروتکل",
+  "routeProtocolAny": "هر کدام",
+  "routeProtocolAnySubtitle": "TCP و UDP",
+  "routeProtocolTcpSubtitle": "وب‌سایت‌ها، برنامه‌ها، دانلودها",
+  "routeProtocolUdpSubtitle": "تماس‌ها، بازی‌ها، QUIC",
+  "routePort": "پورت",
+  "routePortHint": "همهٔ پورت‌ها",
+  "routePortHelp": "خالی یعنی همهٔ پورت‌ها. یک، چند یا یک بازه: ‎443, 80, 27000-27050‎",
+  "routePortsAll": "همهٔ پورت‌ها",
+  "routePortValue": "پورت {port}",
+  "@routePortValue": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
+  "routePortsValue": "پورت {ports}",
+  "@routePortsValue": {
+    "placeholders": {
+      "ports": {
+        "type": "String"
+      }
+    }
+  },
+  "routePortsInvalid": "پورت عددی بین 1 تا 65535 نیست، مسیر کار نمی‌کند",
+  "routeAllTrafficNeedsProtocol": "همهٔ ترافیک همهٔ برنامه‌ها همین حالا از «بقیهٔ ترافیک» می‌رود، پروتکل یا پورت را انتخاب کنید",
+  "routeWhatAllProtocolSubtitle": "هر سایتی، فقط با پروتکل انتخاب‌شده",
   "routeAppsUnsupported": "هستهٔ فعلی برنامه‌ها را تشخیص نمی‌دهد، مسیر کار نمی‌کند",
   "routeAppsNeedTun": "فقط در حالت TUN کار می‌کند",
   "routeAppsNeedVpn": "فقط در حالت VPN کار می‌کند",
@@ -550,7 +578,7 @@
   "routingProfileImported": "پروفایل مسیریابی اضافه شد: {name}",
   "routingProfileFromProvider": "از ارائه‌دهنده",
   "routingProfileLockedHint": "این قوانین را ارائه‌دهنده می‌فرستد. برای ویرایش، «{setting}» را روشن کنید: پروفایل مال شما می‌شود.",
-  "routingShareSkipped": "مسیرهای برنامه‌های مشخص، مسیرهای سرور دیگر و فهرست‌های لینکی در لینک نمی‌آیند: {count}",
+  "routingShareSkipped": "مسیرهای برنامه‌های مشخص، مسیرهای سرور دیگر، مسیرهای با پروتکل یا پورت و فهرست‌های لینکی در لینک نمی‌آیند: {count}",
   "tvReceiveTitle": "دریافت از گوشی",
   "tvReceiveSubtitle": "اشتراک از گوشی از طریق Wi-Fi",
   "tvReceiveHint": "این کد را در keqdroid روی گوشی اسکن کنید. گوشی و تلویزیون باید به یک شبکهٔ Wi-Fi وصل باشند.",

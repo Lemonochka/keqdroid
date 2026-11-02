@@ -459,11 +459,15 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           withApps: appsRun,
         ),
       );
-      final appRoutes = appsRun
-          ? await _prepareAppRoutes(
-              routeAppRules(routes: routes, outbounds: routeServers),
-            )
-          : const <RouteAppRules>[];
+      final appRoutes = [
+        if (appsRun)
+          ...await _prepareAppRoutes(
+            routeAppRules(routes: routes, outbounds: routeServers),
+          ),
+        ...await _prepareAppRoutes(
+          routeProtocolRules(routes: routes, outbounds: routeServers),
+        ),
+      ];
 
       // маршрут на сервер без своего выхода (пропал, совпал с активным, не встаёт в ядро) уходит через VPN.
       // неизвестные geo-коды выбрасываем: xray на них падает целиком (SOCKS port not ready)

@@ -17,10 +17,13 @@ class RouteAppRules {
     this.allTraffic = false,
     this.entries = '',
     this.listDomains = const [],
+    this.network = RouteNetwork.any,
+    this.ports = const [],
   });
 
   final String tag;
 
+  // пусто у маршрута с протоколом для всех приложений (routeProtocolRules): ни TUN, ни поиска процесса ему не надо
   final List<String> apps;
 
   final RouteTarget target;
@@ -34,6 +37,12 @@ class RouteAppRules {
 
   final List<String> listDomains;
 
+  final RouteNetwork network;
+
+  final List<(int, int)> ports;
+
+  bool get forAllApps => apps.isEmpty;
+
   RouteAppRules copyWith({String? entries, List<String>? listDomains}) =>
       RouteAppRules(
         tag: tag,
@@ -43,7 +52,36 @@ class RouteAppRules {
         allTraffic: allTraffic,
         entries: entries ?? this.entries,
         listDomains: listDomains ?? this.listDomains,
+        network: network,
+        ports: ports,
       );
+}
+
+// маршрут с неверными портами в ядро не идёт: ошибку показывает его карточка
+List<RouteAppRules> routeProtocolRules({
+  required List<TrafficRoute> routes,
+  required List<RouteServerOutbound> outbounds,
+}) {
+  final tagOf = {for (final o in outbounds) o.serverId: o.tag};
+  final out = <RouteAppRules>[];
+  for (final route in orderedRoutes(routes)) {
+    if (!route.enabled || !route.allApps || !routeHasProtocol(route)) continue;
+    final ports = routePortRanges(route.ports);
+    if (ports == null || routeIsEmpty(route)) continue;
+    out.add(RouteAppRules(
+      tag: 'keq-proto-${out.length}',
+      apps: const [],
+      target: route.target,
+      serverTag: route.target == RouteTarget.server
+          ? tagOf[route.serverId] ?? ''
+          : '',
+      allTraffic: route.content == RouteContent.allTraffic,
+      entries: routeEntriesText(route).trim(),
+      network: route.network,
+      ports: ports,
+    ));
+  }
+  return out;
 }
 
 List<RouteAppRules> routeAppRules({
@@ -55,6 +93,8 @@ List<RouteAppRules> routeAppRules({
   final out = <RouteAppRules>[];
   for (final route in orderedRoutes(routes)) {
     if (!route.enabled || route.allApps || routeIsEmpty(route)) continue;
+    final ports = routePortRanges(route.ports);
+    if (ports == null) continue;
     // повторы без учёта регистра: так сравнивает и ядро
     final seen = <String>{};
     final apps = [
@@ -74,6 +114,8 @@ List<RouteAppRules> routeAppRules({
           : '',
       allTraffic: route.content == RouteContent.allTraffic,
       entries: routeEntriesText(route).trim(),
+      network: route.network,
+      ports: ports,
     ));
   }
   return out;

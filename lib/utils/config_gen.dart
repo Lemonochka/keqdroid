@@ -655,9 +655,16 @@ class ConfigGeneratorV2 {
         for (final route in routes)
           ...() {
             Map<String, dynamic> fields([Map<String, dynamic> what = const {}]) => {
-                  'inboundTag': [_tunInboundTag],
+                  if (!route.forAllApps) 'inboundTag': [_tunInboundTag],
                   ...what,
-                  'process': route.apps,
+                  if (route.network != RouteNetwork.any)
+                    'network': route.network.name,
+                  if (route.ports.isNotEmpty)
+                    'port': [
+                      for (final (from, to) in route.ports)
+                        from == to ? '$from' : '$from-$to',
+                    ].join(','),
+                  if (!route.forAllApps) 'process': route.apps,
                   'outboundTag': target(route),
                 };
             if (route.allTraffic) return [rule(route.tag, fields())];
@@ -674,6 +681,13 @@ class ConfigGeneratorV2 {
             ];
           }(),
       ];
+
+  // владельца xray узнаёт только на туннеле из VpnService, маршруту с протоколом для всех приложений он не нужен
+  static List<RouteAppRules> _appRoutesForInbound(
+    List<RouteAppRules> routes, {
+    required bool nativeTunInbound,
+  }) =>
+      nativeTunInbound ? routes : [for (final r in routes) if (r.forAllApps) r];
 
   static String Function(RouteAppRules route) _appRouteTarget({
     required String proxyTag,
@@ -934,7 +948,10 @@ class ConfigGeneratorV2 {
       proxyTag: custom.primaryOutboundTag,
       blockTag: blockTag ?? _customBlockTag,
       routeServers: routeServers,
-      appRoutes: nativeTunInbound ? appRoutes : const [],
+      appRoutes: _appRoutesForInbound(
+        appRoutes,
+        nativeTunInbound: nativeTunInbound,
+      ),
     );
 
     // перехват DNS автора висел на его dns-in, который мы заменили, без этого правила DNS падает в final.
@@ -1186,12 +1203,20 @@ class ConfigGeneratorV2 {
     );
     final appBlock = [
       for (final r in appRoutes)
-        if (r.target == RouteTarget.block) r,
+        if (!r.forAllApps && r.target == RouteTarget.block) r,
     ];
     final appOther = [
       for (final r in appRoutes)
-        if (r.target != RouteTarget.block) r,
+        if (!r.forAllApps && r.target != RouteTarget.block) r,
     ];
+    List<Map<String, dynamic>> protocol(RouteTarget target) => _appRouteRules(
+          [
+            for (final r in appRoutes)
+              if (r.forAllApps && r.target == target) r,
+          ],
+          appTarget,
+          rule,
+        );
 
     void addGroup(String source, String outboundTag, String tagPrefix) {
       final split = splitDomainsAndIps(_parseRuleList(source));
@@ -1228,7 +1253,9 @@ class ConfigGeneratorV2 {
     }
 
     addGroup(settings.blockedRules, blockTag, 'user-block');
-    rules.addAll(_appRouteRules(appBlock, appTarget, rule));
+    rules
+      ..addAll(_appRouteRules(appBlock, appTarget, rule))
+      ..addAll(protocol(RouteTarget.block));
     if (appOther.isNotEmpty) {
       rules.add(rule('app-private', {
         'ip': [...kBasePrivateRanges],
@@ -1236,8 +1263,12 @@ class ConfigGeneratorV2 {
       }));
       rules.addAll(_appRouteRules(appOther, appTarget, rule));
     }
+    rules.addAll(protocol(RouteTarget.direct));
     addGroup(settings.directRules, directTag, 'user-direct');
-    rules.addAll(_routeServerRules(routeServers, rule));
+    rules
+      ..addAll(protocol(RouteTarget.server))
+      ..addAll(_routeServerRules(routeServers, rule))
+      ..addAll(protocol(RouteTarget.vpn));
     addGroup(settings.proxyRules, proxyTag, 'user-proxy');
     return rules;
   }
@@ -1889,16 +1920,16 @@ class ConfigGeneratorV2 {
     final isPingMode = pingSocksPort != null;
     // пинг меряет один сервер, маршрутам там места нет
     final routes = isPingMode ? const <RouteServerOutbound>[] : routeServers;
-    final apps = isPingMode || !nativeTunInbound
+    final apps = isPingMode
         ? const <RouteAppRules>[]
-        : appRoutes;
+        : _appRoutesForInbound(appRoutes, nativeTunInbound: nativeTunInbound);
     final appBlock = [
       for (final r in apps)
-        if (r.target == RouteTarget.block) r,
+        if (!r.forAllApps && r.target == RouteTarget.block) r,
     ];
     final appOther = [
       for (final r in apps)
-        if (r.target != RouteTarget.block) r,
+        if (!r.forAllApps && r.target != RouteTarget.block) r,
     ];
     final appTarget = _appRouteTarget(
       proxyTag: 'proxy',
@@ -1986,6 +2017,15 @@ class ConfigGeneratorV2 {
           ...fields,
           if (!isPingMode) 'ruleTag': tag,
         };
+    // маршрут с протоколом стоит на ступени своей цели, как такой же без протокола (routesIn)
+    List<Map<String, dynamic>> protocol(RouteTarget target) => _appRouteRules(
+          [
+            for (final r in apps)
+              if (r.forAllApps && r.target == target) r,
+          ],
+          appTarget,
+          rule,
+        );
 
     if (desktopTun != null) {
       rules.addAll(_desktopTunHeadRules(
@@ -2077,7 +2117,9 @@ class ConfigGeneratorV2 {
     if (blockedIps.isNotEmpty) {
       rules.add(rule('block-ips', {'ip': blockedIps, 'outboundTag': 'block'}));
     }
-    rules.addAll(_appRouteRules(appBlock, appTarget, rule));
+    rules
+      ..addAll(_appRouteRules(appBlock, appTarget, rule))
+      ..addAll(protocol(RouteTarget.block));
     final isServerIp = _isIpLiteral(serverAddress);
     if (isServerIp) {
       rules.add(rule('server-ip',
@@ -2102,6 +2144,7 @@ class ConfigGeneratorV2 {
       }));
       rules.addAll(_appRouteRules(appOther, appTarget, rule));
     }
+    rules.addAll(protocol(RouteTarget.direct));
     if (directDomains.isNotEmpty) {
       rules.add(rule('direct-domains',
           {'domain': directDomains, 'outboundTag': 'direct'}));
@@ -2120,7 +2163,9 @@ class ConfigGeneratorV2 {
       'outboundTag': 'direct',
     }));
     // между обходом и через VPN, как в разделе всех приложений (routesIn)
-    rules.addAll(_routeServerRules(routes, rule));
+    rules
+      ..addAll(protocol(RouteTarget.server))
+      ..addAll(_routeServerRules(routes, rule));
     // vision отвергает UDP/443 только после полного TCP+TLS до сервера, и каждый QUIC-ретрай стоил рукопожатия.
     // только при глобал-прокси, вариант -udp443 не трогаем
     if (settings.finalOutbound == AppSettings.finalOutboundProxy &&
@@ -2131,6 +2176,7 @@ class ConfigGeneratorV2 {
         'outboundTag': 'block',
       }));
     }
+    rules.addAll(protocol(RouteTarget.vpn));
     if (proxyDomains.isNotEmpty) {
       rules.add(rule('proxy-domains',
           {'domain': proxyDomains, 'outboundTag': 'proxy'}));

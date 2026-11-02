@@ -207,6 +207,46 @@
   "@routeServerMissing": {},
   "routeServerUnsupported": "текущее ядро не возьмёт этот сервер, идёт через VPN",
   "@routeServerUnsupported": {},
+  "routeProtocol": "Протокол",
+  "@routeProtocol": {},
+  "routeProtocolAny": "Любой",
+  "@routeProtocolAny": {},
+  "routeProtocolAnySubtitle": "TCP и UDP",
+  "@routeProtocolAnySubtitle": {},
+  "routeProtocolTcpSubtitle": "Сайты, приложения, загрузки",
+  "@routeProtocolTcpSubtitle": {},
+  "routeProtocolUdpSubtitle": "Звонки, игры, QUIC",
+  "@routeProtocolUdpSubtitle": {},
+  "routePort": "Порт",
+  "@routePort": {},
+  "routePortHint": "Все порты",
+  "@routePortHint": {},
+  "routePortHelp": "Пусто значит все порты. Один, несколько или диапазон: 443, 80, 27000-27050",
+  "@routePortHelp": {},
+  "routePortsAll": "все порты",
+  "@routePortsAll": {},
+  "routePortValue": "порт {port}",
+  "@routePortValue": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
+  "routePortsValue": "порты {ports}",
+  "@routePortsValue": {
+    "placeholders": {
+      "ports": {
+        "type": "String"
+      }
+    }
+  },
+  "routePortsInvalid": "порт не число от 1 до 65535, маршрут не действует",
+  "@routePortsInvalid": {},
+  "routeAllTrafficNeedsProtocol": "весь трафик всех приложений и так идёт по «Всё остальное», выберите протокол или порт",
+  "@routeAllTrafficNeedsProtocol": {},
+  "routeWhatAllProtocolSubtitle": "Любые сайты, но только по выбранному протоколу",
+  "@routeWhatAllProtocolSubtitle": {},
   "routeAppsUnsupported": "текущее ядро не различает приложения, маршрут не работает",
   "@routeAppsUnsupported": {},
   "routeAppsNeedTun": "работает только в режиме TUN",
@@ -954,7 +994,7 @@
   "routingProfileImported": "Профиль маршрутизации добавлен: {name}",
   "routingProfileFromProvider": "От провайдера",
   "routingProfileLockedHint": "Правила присылает провайдер. Чтобы править их, включите «{setting}»: профиль станет вашим.",
-  "routingShareSkipped": "В ссылку не попадут маршруты по приложениям, через другой сервер и списки по ссылке: {count}",
+  "routingShareSkipped": "В ссылку не попадут маршруты по приложениям, через другой сервер, с протоколом или портом и списки по ссылке: {count}",
   "@routingShareSkipped": {
     "placeholders": {
       "count": {

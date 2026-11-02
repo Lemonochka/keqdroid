@@ -47,10 +47,13 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
     super.dispose();
   }
 
-  // все приложения и весь трафик это и есть всё остальное
+  // все приложения и весь трафик без протокола это и есть всё остальное
   bool get _savable =>
-      !(_route.allApps && _route.content == RouteContent.allTraffic) &&
-      (_stored || !routeIsEmpty(_route));
+      _stored ||
+      (!(_route.allApps &&
+              _route.content == RouteContent.allTraffic &&
+              !routeHasProtocol(_route)) &&
+          !routeIsEmpty(_route));
 
   void _change(TrafficRoute next, {bool typing = false}) {
     setState(() => _route = next);
@@ -145,6 +148,7 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
             children: [
               if (caps.appsOffered || !_route.allApps) _whoTile(l10n),
               _whatTile(l10n),
+              _protocolTile(l10n),
               _whereTile(l10n, servers),
             ],
           ),
@@ -208,7 +212,9 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
     if (apps == null || !mounted) return;
     _change(_route.copyWith(
       apps: apps,
-      content: apps.isEmpty && _route.content == RouteContent.allTraffic
+      content: apps.isEmpty &&
+              _route.content == RouteContent.allTraffic &&
+              !routeHasProtocol(_route)
           ? RouteContent.sites
           : _route.content,
     ));
@@ -255,11 +261,13 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
       children: (ctx) => [
         ExpressiveGroup(
           children: [
-            if (!_route.allApps)
+            if (!_route.allApps || routeHasProtocol(_route))
               ExpressiveActionTile(
                 icon: Icons.all_inclusive_rounded,
                 title: l10n.routeWhatAll,
-                subtitle: l10n.routeWhatAllSubtitle,
+                subtitle: _route.allApps
+                    ? l10n.routeWhatAllProtocolSubtitle
+                    : l10n.routeWhatAllSubtitle,
                 selected: _route.content == RouteContent.allTraffic,
                 onTap: () => Navigator.pop(
                   ctx,
@@ -343,6 +351,27 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
       SnackBar(content: Text(l10n.routeRefilterUnmatched)),
     );
   }
+
+  Widget _protocolTile(AppLocalizations l10n) => ExpressiveGroupTile(
+        onTap: () => unawaited(_pickProtocol()),
+        child: _RouteRowContent(
+          badge: const ExpressiveIconBadge(icon: Icons.cable_rounded),
+          title: Text(l10n.routeProtocol),
+          subtitle: Text(_protocolValue(l10n, _route)),
+        ),
+      );
+
+  Future<void> _pickProtocol() => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (_) => _ProtocolSheet(
+          initial: _route,
+          onNetwork: (network) => _change(_route.copyWith(network: network)),
+          onPorts: (ports) =>
+              _change(_route.copyWith(ports: ports), typing: true),
+        ),
+      );
 
   Widget _whereTile(AppLocalizations l10n, List<ServerItem> servers) {
     final color = _targetColor(context, _route.target);
@@ -646,6 +675,129 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ProtocolSheet extends StatefulWidget {
+  const _ProtocolSheet({
+    required this.initial,
+    required this.onNetwork,
+    required this.onPorts,
+  });
+
+  final TrafficRoute initial;
+  final ValueChanged<RouteNetwork> onNetwork;
+  final ValueChanged<String> onPorts;
+
+  @override
+  State<_ProtocolSheet> createState() => _ProtocolSheetState();
+}
+
+class _ProtocolSheetState extends State<_ProtocolSheet> {
+  late RouteNetwork _network = widget.initial.network;
+  late final TextEditingController _ports =
+      TextEditingController(text: widget.initial.ports);
+
+  @override
+  void dispose() {
+    _ports.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final radius = ExpressiveShape.radius(ExpressiveShape.large);
+    final valid = routePortRanges(_ports.text) != null;
+    Widget tile(RouteNetwork network, IconData icon, String title, String sub) =>
+        ExpressiveActionTile(
+          icon: icon,
+          title: title,
+          subtitle: sub,
+          selected: _network == network,
+          onTap: () {
+            setState(() => _network = network);
+            widget.onNetwork(network);
+          },
+        );
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                  child: Text(
+                    l10n.routeProtocol,
+                    style: theme.textTheme
+                        .emphasized(theme.textTheme.titleMedium)
+                        ?.copyWith(color: AppTheme.text(context)),
+                  ),
+                ),
+                ExpressiveGroup(
+                  children: [
+                    tile(RouteNetwork.any, Icons.all_inclusive_rounded,
+                        l10n.routeProtocolAny, l10n.routeProtocolAnySubtitle),
+                    tile(RouteNetwork.tcp, Icons.swap_horiz_rounded, 'TCP',
+                        l10n.routeProtocolTcpSubtitle),
+                    tile(RouteNetwork.udp, Icons.graphic_eq_rounded, 'UDP',
+                        l10n.routeProtocolUdpSubtitle),
+                  ],
+                ),
+                ExpressiveSectionHeader(l10n.routePort),
+                TextField(
+                  controller: _ports,
+                  textDirection: technicalInputDirection,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: scheme.onSurface),
+                  decoration: InputDecoration(
+                    hintText: l10n.routePortHint,
+                    errorText: valid ? null : l10n.routePortsInvalid,
+                    filled: true,
+                    fillColor: scheme.surfaceContainerLowest,
+                    border: OutlineInputBorder(
+                      borderRadius: radius,
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: radius,
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: radius,
+                      borderSide: BorderSide(color: scheme.primary, width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                  ),
+                  onChanged: (text) {
+                    setState(() {});
+                    widget.onPorts(text);
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                  child: Text(
+                    l10n.routePortHelp,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: AppTheme.textLight(context)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

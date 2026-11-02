@@ -129,11 +129,14 @@ class MihomoConfigGen {
     // сплит по процессам только на десктопном TUN: на Android его исполняет VpnService
     final processRules = tun != null && !tun.fromFileDescriptor;
     // на Android владельца ядро спрашивает у приложения (mihomo-android-uid-owner.patch)
-    final appRules = tun != null ? appRoutes : const <RouteAppRules>[];
+    final appRules = tun != null
+        ? appRoutes
+        : [for (final r in appRoutes) if (r.forAllApps) r];
     final guard =
         tun != null && tun.fromFileDescriptor ? ownerGuard : OwnerGuard.off;
-    final findProcess =
-        processRules || appRules.isNotEmpty || guard != OwnerGuard.off;
+    final findProcess = processRules ||
+        appRules.any((r) => !r.forAllApps) ||
+        guard != OwnerGuard.off;
 
     // без правил по процессам режим только выбранные держит финал DIRECT, и в DIRECT уходило всё.
     // там, где процесс не найти, верный режим один: весь трафик
@@ -344,7 +347,9 @@ class MihomoConfigGen {
             ...buildHosts(settings.xrayCore),
           },
         if (settings.xrayCore.concurrentDial) 'tcp-concurrent': true,
-        if (processRules || appRoutes.isNotEmpty || ownerGuard != OwnerGuard.off)
+        if (processRules ||
+            appRoutes.any((r) => !r.forAllApps) ||
+            ownerGuard != OwnerGuard.off)
           'find-process-mode': 'strict',
         if (settings.xrayCore.udpPerAddress) udpPerExitKey: true,
         if (ownerGuard != OwnerGuard.off) ownerGuardKey: ownerGuard.name,
@@ -2019,10 +2024,38 @@ class MihomoConfigGen {
     );
   }
 
-  // тип входа проверяется первым, у остальных процесс не ищется вовсе
+  // тип входа проверяется первым, у остальных процесс не ищется вовсе.
+  // порты через «/»: запятая разрезала бы правило на поля (ParseRulePayload)
   static String _appRouteCondition(RouteAppRules route) {
-    final any = _processAlternatives(route.apps);
-    return 'AND,((IN-TYPE,TUN),(${any.type},^(?:${any.alts})\$))';
+    final parts = [
+      if (!route.forAllApps) ...[
+        'IN-TYPE,TUN',
+        () {
+          final any = _processAlternatives(route.apps);
+          return '${any.type},^(?:${any.alts})\$';
+        }(),
+      ],
+      if (route.network != RouteNetwork.any)
+        'NETWORK,${route.network.name.toUpperCase()}',
+      if (route.ports.isNotEmpty) _portCondition(route.ports),
+    ];
+    if (parts.length == 1) return parts.single;
+    return 'AND,(${parts.map((p) => '($p)').join(',')})';
+  }
+
+  // больше 28 диапазонов в одном DST-PORT ядро не берёт и роняет весь конфиг (newIntRanges)
+  static const _maxPortRanges = 28;
+
+  static String _portCondition(List<(int, int)> ports) {
+    final chunks = [
+      for (var i = 0; i < ports.length; i += _maxPortRanges)
+        'DST-PORT,${[
+          for (final (from, to) in ports.skip(i).take(_maxPortRanges))
+            from == to ? '$from' : '$from-$to',
+        ].join('/')}',
+    ];
+    if (chunks.length == 1) return chunks.single;
+    return 'OR,(${chunks.map((c) => '($c)').join(',')})';
   }
 
   static String _appRouteTarget(RouteAppRules route, String proxyTarget) =>
@@ -2141,12 +2174,21 @@ class MihomoConfigGen {
     final inPlace = _ipSuffix(strategy);
     final appBlock = [
       for (final r in appRoutes)
-        if (r.target == RouteTarget.block) r,
+        if (!r.forAllApps && r.target == RouteTarget.block) r,
     ];
     final appOther = [
       for (final r in appRoutes)
-        if (r.target != RouteTarget.block) r,
+        if (!r.forAllApps && r.target != RouteTarget.block) r,
     ];
+    // маршрут с протоколом стоит на ступени своей цели, как такой же без протокола (routesIn)
+    List<RouteAppRules> protocol(RouteTarget target) => [
+          for (final r in appRoutes)
+            if (r.forAllApps && r.target == target) r,
+        ];
+    final protoBlock = protocol(RouteTarget.block);
+    final protoDirect = protocol(RouteTarget.direct);
+    final protoServer = protocol(RouteTarget.server);
+    final protoVpn = protocol(RouteTarget.vpn);
     List<String> appRules(List<RouteAppRules> routes) =>
         _appRouteRules(routes, proxyTarget, inPlace);
 
@@ -2161,7 +2203,9 @@ class MihomoConfigGen {
     // блокировка действует во всех приложениях, и в тех, у кого свой маршрут
     if (!skipBlocked) {
       addGroup(settings.blockedRules, 'REJECT', blockListSet, ruleLists.blocked);
-      rules.addAll(appRules(appBlock));
+      rules
+        ..addAll(appRules(appBlock))
+        ..addAll(appRules(protoBlock));
     }
     if (blockedOnly) return rules;
 
@@ -2174,9 +2218,11 @@ class MihomoConfigGen {
         ..addAll(privateRanges)
         ..addAll(appRules(appOther));
     }
+    rules.addAll(appRules(protoDirect));
     addGroup(settings.directRules, 'DIRECT', directListSet, ruleLists.direct);
     if (appOther.isEmpty) rules.addAll(privateRanges);
     // между обходом и через VPN, как в разделе всех приложений (routesIn)
+    rules.addAll(appRules(protoServer));
     for (final server in routeServers) {
       addGroup(
         server.entries,
@@ -2185,23 +2231,30 @@ class MihomoConfigGen {
         server.listDomains,
       );
     }
+    rules.addAll(appRules(protoVpn));
     addGroup(settings.proxyRules, proxyTarget, proxyListSet, ruleLists.proxy);
 
     if (strategy == 'IPIfNonMatch') {
-      rules.addAll(_ipRules(settings.blockedRules, 'REJECT', ''));
       // хвост с резолвом у маршрутов приложений своими наборами, за тем же условием
-      for (final route in [...appBlock, ...appOther]) {
-        if (route.allTraffic) continue;
-        final target = _appRouteTarget(route, proxyTarget);
-        if (_ipRules(route.entries, target, '').isEmpty) continue;
-        rules.add(
-          'SUB-RULE,(${_appRouteCondition(route)}),${_appRouteIpSet(route)}',
-        );
+      void ipTail(List<RouteAppRules> routes) {
+        for (final route in routes) {
+          if (route.allTraffic) continue;
+          final target = _appRouteTarget(route, proxyTarget);
+          if (_ipRules(route.entries, target, '').isEmpty) continue;
+          rules.add(
+            'SUB-RULE,(${_appRouteCondition(route)}),${_appRouteIpSet(route)}',
+          );
+        }
       }
+
+      rules.addAll(_ipRules(settings.blockedRules, 'REJECT', ''));
+      ipTail([...appBlock, ...protoBlock, ...appOther, ...protoDirect]);
       rules.addAll(_ipRules(settings.directRules, 'DIRECT', ''));
+      ipTail(protoServer);
       for (final server in routeServers) {
         rules.addAll(_ipRules(server.entries, server.tag, ''));
       }
+      ipTail(protoVpn);
       rules.addAll(_ipRules(settings.proxyRules, proxyTarget, ''));
     }
     return rules;

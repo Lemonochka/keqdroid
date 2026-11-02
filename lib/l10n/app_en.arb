@@ -207,6 +207,46 @@
   "@routeServerMissing": {},
   "routeServerUnsupported": "the current core can't use this server, goes via VPN",
   "@routeServerUnsupported": {},
+  "routeProtocol": "Protocol",
+  "@routeProtocol": {},
+  "routeProtocolAny": "Any",
+  "@routeProtocolAny": {},
+  "routeProtocolAnySubtitle": "TCP and UDP",
+  "@routeProtocolAnySubtitle": {},
+  "routeProtocolTcpSubtitle": "Websites, apps, downloads",
+  "@routeProtocolTcpSubtitle": {},
+  "routeProtocolUdpSubtitle": "Calls, games, QUIC",
+  "@routeProtocolUdpSubtitle": {},
+  "routePort": "Port",
+  "@routePort": {},
+  "routePortHint": "All ports",
+  "@routePortHint": {},
+  "routePortHelp": "Empty means all ports. One, several or a range: 443, 80, 27000-27050",
+  "@routePortHelp": {},
+  "routePortsAll": "all ports",
+  "@routePortsAll": {},
+  "routePortValue": "port {port}",
+  "@routePortValue": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
+  "routePortsValue": "ports {ports}",
+  "@routePortsValue": {
+    "placeholders": {
+      "ports": {
+        "type": "String"
+      }
+    }
+  },
+  "routePortsInvalid": "the port is not a number from 1 to 65535, the route does nothing",
+  "@routePortsInvalid": {},
+  "routeAllTrafficNeedsProtocol": "all traffic of all apps already goes by Everything else, pick a protocol or a port",
+  "@routeAllTrafficNeedsProtocol": {},
+  "routeWhatAllProtocolSubtitle": "Any site, only over the chosen protocol",
+  "@routeWhatAllProtocolSubtitle": {},
   "routeAppsUnsupported": "the current core can't tell apps apart, the route does nothing",
   "@routeAppsUnsupported": {},
   "routeAppsNeedTun": "works only in TUN mode",
@@ -1012,7 +1052,7 @@
   "routingProfileImported": "Routing profile added: {name}",
   "routingProfileFromProvider": "From the provider",
   "routingProfileLockedHint": "The provider sends these rules. To edit them, turn on “{setting}”: the profile becomes yours.",
-  "routingShareSkipped": "Routes for chosen apps, through another server and with links to lists won't go into the link: {count}",
+  "routingShareSkipped": "Routes for chosen apps, through another server, with a protocol or a port and with links to lists won't go into the link: {count}",
   "@routingShareSkipped": {
     "placeholders": {
       "count": {

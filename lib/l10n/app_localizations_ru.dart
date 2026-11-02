@@ -348,6 +348,52 @@ class AppLocalizationsRu extends AppLocalizations {
   String get routeServerUnsupported => 'текущее ядро не возьмёт этот сервер, идёт через VPN';
 
   @override
+  String get routeProtocol => 'Протокол';
+
+  @override
+  String get routeProtocolAny => 'Любой';
+
+  @override
+  String get routeProtocolAnySubtitle => 'TCP и UDP';
+
+  @override
+  String get routeProtocolTcpSubtitle => 'Сайты, приложения, загрузки';
+
+  @override
+  String get routeProtocolUdpSubtitle => 'Звонки, игры, QUIC';
+
+  @override
+  String get routePort => 'Порт';
+
+  @override
+  String get routePortHint => 'Все порты';
+
+  @override
+  String get routePortHelp => 'Пусто значит все порты. Один, несколько или диапазон: 443, 80, 27000-27050';
+
+  @override
+  String get routePortsAll => 'все порты';
+
+  @override
+  String routePortValue(String port) {
+    return 'порт $port';
+  }
+
+  @override
+  String routePortsValue(String ports) {
+    return 'порты $ports';
+  }
+
+  @override
+  String get routePortsInvalid => 'порт не число от 1 до 65535, маршрут не действует';
+
+  @override
+  String get routeAllTrafficNeedsProtocol => 'весь трафик всех приложений и так идёт по «Всё остальное», выберите протокол или порт';
+
+  @override
+  String get routeWhatAllProtocolSubtitle => 'Любые сайты, но только по выбранному протоколу';
+
+  @override
   String get routeAppsUnsupported => 'текущее ядро не различает приложения, маршрут не работает';
 
   @override
@@ -1829,7 +1875,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String routingShareSkipped(int count) {
-    return 'В ссылку не попадут маршруты по приложениям, через другой сервер и списки по ссылке: $count';
+    return 'В ссылку не попадут маршруты по приложениям, через другой сервер, с протоколом или портом и списки по ссылке: $count';
   }
 
   @override

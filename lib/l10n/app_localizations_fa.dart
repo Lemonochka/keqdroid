@@ -343,6 +343,52 @@ class AppLocalizationsFa extends AppLocalizations {
   String get routeServerUnsupported => 'هستهٔ فعلی این سرور را نمی‌پذیرد، از پروکسی می‌رود';
 
   @override
+  String get routeProtocol => 'پروتکل';
+
+  @override
+  String get routeProtocolAny => 'هر کدام';
+
+  @override
+  String get routeProtocolAnySubtitle => 'TCP و UDP';
+
+  @override
+  String get routeProtocolTcpSubtitle => 'وب‌سایت‌ها، برنامه‌ها، دانلودها';
+
+  @override
+  String get routeProtocolUdpSubtitle => 'تماس‌ها، بازی‌ها، QUIC';
+
+  @override
+  String get routePort => 'پورت';
+
+  @override
+  String get routePortHint => 'همهٔ پورت‌ها';
+
+  @override
+  String get routePortHelp => 'خالی یعنی همهٔ پورت‌ها. یک، چند یا یک بازه: ‎443, 80, 27000-27050‎';
+
+  @override
+  String get routePortsAll => 'همهٔ پورت‌ها';
+
+  @override
+  String routePortValue(String port) {
+    return 'پورت $port';
+  }
+
+  @override
+  String routePortsValue(String ports) {
+    return 'پورت $ports';
+  }
+
+  @override
+  String get routePortsInvalid => 'پورت عددی بین 1 تا 65535 نیست، مسیر کار نمی‌کند';
+
+  @override
+  String get routeAllTrafficNeedsProtocol => 'همهٔ ترافیک همهٔ برنامه‌ها همین حالا از «بقیهٔ ترافیک» می‌رود، پروتکل یا پورت را انتخاب کنید';
+
+  @override
+  String get routeWhatAllProtocolSubtitle => 'هر سایتی، فقط با پروتکل انتخاب‌شده';
+
+  @override
   String get routeAppsUnsupported => 'هستهٔ فعلی برنامه‌ها را تشخیص نمی‌دهد، مسیر کار نمی‌کند';
 
   @override
@@ -1815,7 +1861,7 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String routingShareSkipped(int count) {
-    return 'مسیرهای برنامه‌های مشخص، مسیرهای سرور دیگر و فهرست‌های لینکی در لینک نمی‌آیند: $count';
+    return 'مسیرهای برنامه‌های مشخص، مسیرهای سرور دیگر، مسیرهای با پروتکل یا پورت و فهرست‌های لینکی در لینک نمی‌آیند: $count';
   }
 
   @override

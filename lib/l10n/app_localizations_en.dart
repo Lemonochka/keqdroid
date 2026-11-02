@@ -344,6 +344,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routeServerUnsupported => 'the current core can\'t use this server, goes via VPN';
 
   @override
+  String get routeProtocol => 'Protocol';
+
+  @override
+  String get routeProtocolAny => 'Any';
+
+  @override
+  String get routeProtocolAnySubtitle => 'TCP and UDP';
+
+  @override
+  String get routeProtocolTcpSubtitle => 'Websites, apps, downloads';
+
+  @override
+  String get routeProtocolUdpSubtitle => 'Calls, games, QUIC';
+
+  @override
+  String get routePort => 'Port';
+
+  @override
+  String get routePortHint => 'All ports';
+
+  @override
+  String get routePortHelp => 'Empty means all ports. One, several or a range: 443, 80, 27000-27050';
+
+  @override
+  String get routePortsAll => 'all ports';
+
+  @override
+  String routePortValue(String port) {
+    return 'port $port';
+  }
+
+  @override
+  String routePortsValue(String ports) {
+    return 'ports $ports';
+  }
+
+  @override
+  String get routePortsInvalid => 'the port is not a number from 1 to 65535, the route does nothing';
+
+  @override
+  String get routeAllTrafficNeedsProtocol => 'all traffic of all apps already goes by Everything else, pick a protocol or a port';
+
+  @override
+  String get routeWhatAllProtocolSubtitle => 'Any site, only over the chosen protocol';
+
+  @override
   String get routeAppsUnsupported => 'the current core can\'t tell apps apart, the route does nothing';
 
   @override
@@ -1819,7 +1865,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String routingShareSkipped(int count) {
-    return 'Routes for chosen apps, through another server and with links to lists won\'t go into the link: $count';
+    return 'Routes for chosen apps, through another server, with a protocol or a port and with links to lists won\'t go into the link: $count';
   }
 
   @override

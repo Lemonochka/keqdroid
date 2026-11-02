@@ -207,6 +207,46 @@
   "@routeServerMissing": {},
   "routeServerUnsupported": "der aktuelle Kern kann diesen Server nicht nutzen, läuft über das VPN",
   "@routeServerUnsupported": {},
+  "routeProtocol": "Protokoll",
+  "@routeProtocol": {},
+  "routeProtocolAny": "Beliebig",
+  "@routeProtocolAny": {},
+  "routeProtocolAnySubtitle": "TCP und UDP",
+  "@routeProtocolAnySubtitle": {},
+  "routeProtocolTcpSubtitle": "Websites, Apps, Downloads",
+  "@routeProtocolTcpSubtitle": {},
+  "routeProtocolUdpSubtitle": "Anrufe, Spiele, QUIC",
+  "@routeProtocolUdpSubtitle": {},
+  "routePort": "Port",
+  "@routePort": {},
+  "routePortHint": "Alle Ports",
+  "@routePortHint": {},
+  "routePortHelp": "Leer bedeutet alle Ports. Einer, mehrere oder ein Bereich: 443, 80, 27000-27050",
+  "@routePortHelp": {},
+  "routePortsAll": "alle Ports",
+  "@routePortsAll": {},
+  "routePortValue": "Port {port}",
+  "@routePortValue": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
+  "routePortsValue": "Ports {ports}",
+  "@routePortsValue": {
+    "placeholders": {
+      "ports": {
+        "type": "String"
+      }
+    }
+  },
+  "routePortsInvalid": "der Port ist keine Zahl von 1 bis 65535, die Route wirkt nicht",
+  "@routePortsInvalid": {},
+  "routeAllTrafficNeedsProtocol": "den gesamten Datenverkehr aller Apps regelt schon „Alles andere“, wähle ein Protokoll oder einen Port",
+  "@routeAllTrafficNeedsProtocol": {},
+  "routeWhatAllProtocolSubtitle": "Beliebige Websites, nur über das gewählte Protokoll",
+  "@routeWhatAllProtocolSubtitle": {},
   "routeAppsUnsupported": "der aktuelle Kern unterscheidet keine Apps, die Route wirkt nicht",
   "@routeAppsUnsupported": {},
   "routeAppsNeedTun": "wirkt nur im TUN-Modus",
@@ -952,7 +992,7 @@
   "routingProfileImported": "Routing-Profil hinzugefügt: {name}",
   "routingProfileFromProvider": "Vom Anbieter",
   "routingProfileLockedHint": "Diese Regeln schickt der Anbieter. Zum Bearbeiten schalte „{setting}“ ein: Das Profil gehört dann dir.",
-  "routingShareSkipped": "Routen für einzelne Apps, über einen anderen Server und mit Links zu Listen kommen nicht in den Link: {count}",
+  "routingShareSkipped": "Routen für einzelne Apps, über einen anderen Server, mit Protokoll oder Port und mit Links zu Listen kommen nicht in den Link: {count}",
   "@routingShareSkipped": {
     "placeholders": {
       "count": {

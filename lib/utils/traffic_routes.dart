@@ -74,6 +74,28 @@ bool routeIsEmpty(TrafficRoute route) =>
     route.content != RouteContent.allTraffic &&
     routingEntries(routeEntriesText(route)).isEmpty;
 
+// null, если набранное не порты: 0, больше 65535, перевёрнутый диапазон, буквы. пусто значит все порты
+List<(int, int)>? routePortRanges(String text) {
+  final out = <(int, int)>[];
+  for (final part in text.split(RegExp(r'[\s,;/]+'))) {
+    if (part.isEmpty) continue;
+    final m = RegExp(r'^(\d{1,5})(?:-(\d{1,5}))?$').firstMatch(part);
+    if (m == null) return null;
+    final from = int.parse(m.group(1)!);
+    final to = int.parse(m.group(2) ?? m.group(1)!);
+    if (from < 1 || to > 65535 || from > to) return null;
+    out.add((from, to));
+  }
+  return out;
+}
+
+bool routeHasProtocol(TrafficRoute route) =>
+    route.network != RouteNetwork.any || route.ports.trim().isNotEmpty;
+
+// маршрут с протоколом в общие списки не сворачивается: там у правила нет ни сети, ни порта
+bool _foldable(TrafficRoute route) =>
+    route.enabled && route.allApps && !routeHasProtocol(route);
+
 // маршруты отдельных приложений сюда не попадают: в общих списках их сайты достались бы всем.
 // не едет на свой сервер, значит через VPN: связь важнее, причину покажет карточка
 AppSettings foldRoutes(
@@ -85,7 +107,7 @@ AppSettings foldRoutes(
   final proxy = <String>[];
   final blocked = <String>[];
   for (final route in orderedRoutes(routes)) {
-    if (!route.enabled || !route.allApps) continue;
+    if (!_foldable(route)) continue;
     final text = routeEntriesText(route).trim();
     if (text.isEmpty) continue;
     switch (route.target) {

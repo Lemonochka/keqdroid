@@ -343,6 +343,52 @@ class AppLocalizationsZh extends AppLocalizations {
   String get routeServerUnsupported => '当前内核无法使用此服务器，改走代理';
 
   @override
+  String get routeProtocol => '协议';
+
+  @override
+  String get routeProtocolAny => '任意';
+
+  @override
+  String get routeProtocolAnySubtitle => 'TCP 和 UDP';
+
+  @override
+  String get routeProtocolTcpSubtitle => '网站、应用、下载';
+
+  @override
+  String get routeProtocolUdpSubtitle => '通话、游戏、QUIC';
+
+  @override
+  String get routePort => '端口';
+
+  @override
+  String get routePortHint => '所有端口';
+
+  @override
+  String get routePortHelp => '留空表示所有端口。可填一个、多个或范围：443, 80, 27000-27050';
+
+  @override
+  String get routePortsAll => '所有端口';
+
+  @override
+  String routePortValue(String port) {
+    return '端口 $port';
+  }
+
+  @override
+  String routePortsValue(String ports) {
+    return '端口 $ports';
+  }
+
+  @override
+  String get routePortsInvalid => '端口不是 1 到 65535 之间的数字，此路由不生效';
+
+  @override
+  String get routeAllTrafficNeedsProtocol => '所有应用的全部流量本来就走“其他所有”，请选择协议或端口';
+
+  @override
+  String get routeWhatAllProtocolSubtitle => '任意网站，但仅限所选协议';
+
+  @override
   String get routeAppsUnsupported => '当前内核无法区分应用，此路由不生效';
 
   @override
@@ -1815,7 +1861,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String routingShareSkipped(int count) {
-    return '按应用、经其他服务器的路由和链接列表不会写入链接：$count';
+    return '按应用、经其他服务器、限定协议或端口的路由和链接列表不会写入链接：$count';
   }
 
   @override

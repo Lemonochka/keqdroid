@@ -207,6 +207,46 @@
   "@routeServerMissing": {},
   "routeServerUnsupported": "当前内核无法使用此服务器，改走代理",
   "@routeServerUnsupported": {},
+  "routeProtocol": "协议",
+  "@routeProtocol": {},
+  "routeProtocolAny": "任意",
+  "@routeProtocolAny": {},
+  "routeProtocolAnySubtitle": "TCP 和 UDP",
+  "@routeProtocolAnySubtitle": {},
+  "routeProtocolTcpSubtitle": "网站、应用、下载",
+  "@routeProtocolTcpSubtitle": {},
+  "routeProtocolUdpSubtitle": "通话、游戏、QUIC",
+  "@routeProtocolUdpSubtitle": {},
+  "routePort": "端口",
+  "@routePort": {},
+  "routePortHint": "所有端口",
+  "@routePortHint": {},
+  "routePortHelp": "留空表示所有端口。可填一个、多个或范围：443, 80, 27000-27050",
+  "@routePortHelp": {},
+  "routePortsAll": "所有端口",
+  "@routePortsAll": {},
+  "routePortValue": "端口 {port}",
+  "@routePortValue": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
+  "routePortsValue": "端口 {ports}",
+  "@routePortsValue": {
+    "placeholders": {
+      "ports": {
+        "type": "String"
+      }
+    }
+  },
+  "routePortsInvalid": "端口不是 1 到 65535 之间的数字，此路由不生效",
+  "@routePortsInvalid": {},
+  "routeAllTrafficNeedsProtocol": "所有应用的全部流量本来就走“其他所有”，请选择协议或端口",
+  "@routeAllTrafficNeedsProtocol": {},
+  "routeWhatAllProtocolSubtitle": "任意网站，但仅限所选协议",
+  "@routeWhatAllProtocolSubtitle": {},
   "routeAppsUnsupported": "当前内核无法区分应用，此路由不生效",
   "@routeAppsUnsupported": {},
   "routeAppsNeedTun": "仅在 TUN 模式下生效",
@@ -952,7 +992,7 @@
   "routingProfileImported": "已添加路由方案：{name}",
   "routingProfileFromProvider": "来自订阅",
   "routingProfileLockedHint": "这些规则随订阅下发。要编辑，请开启“{setting}”：方案将改由您管理。",
-  "routingShareSkipped": "按应用、经其他服务器的路由和链接列表不会写入链接：{count}",
+  "routingShareSkipped": "按应用、经其他服务器、限定协议或端口的路由和链接列表不会写入链接：{count}",
   "@routingShareSkipped": {
     "placeholders": {
       "count": {

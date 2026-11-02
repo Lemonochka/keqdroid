@@ -261,7 +261,10 @@ final _ipEntry = RegExp(
   var skipped = finalOutbound == AppSettings.finalOutboundBlock ? 1 : 0;
   for (final route in routes) {
     if (!route.enabled) continue;
-    final all = route.allApps && route.target != RouteTarget.server
+    // протокола в этом формате нет: блок QUIC у YouTube уехал бы блоком всего YouTube
+    final all = route.allApps &&
+            route.target != RouteTarget.server &&
+            !routeHasProtocol(route)
         ? routingEntries(routeEntriesText(route))
         : const <String>[];
     final kept = [for (final e in all) if (_entry(e) != null) e];

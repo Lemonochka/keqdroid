@@ -77,7 +77,10 @@ List<RouteServerOutbound> routeServerOutbounds({
     final server = byId[route.serverId];
     if (server == null || server.id == activeServerId) continue;
     if (!routeServerSupported(server.config, core)) continue;
-    if (route.allApps) {
+    // сайты маршрута с протоколом едут своим правилом (routeProtocolRules), отсюда нужен только выход
+    if (route.allApps && routeHasProtocol(route)) {
+      if (!routeIsEmpty(route)) entries.putIfAbsent(server.id, () => []);
+    } else if (route.allApps) {
       final text = routeEntriesText(route).trim();
       if (text.isEmpty) continue;
       entries.putIfAbsent(server.id, () => []).add(text);
