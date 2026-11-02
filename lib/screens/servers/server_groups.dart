@@ -922,14 +922,18 @@ class _AutoSkipPickRow extends ConsumerWidget {
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  l10n.serversAutoSkipHint,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelLarge
-                      ?.copyWith(color: AppTheme.textLight(context)),
+                // на 320 dp с крупным шрифтом и в фарси на 360 dp многоточие съедало смысл, мельче лучше
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    l10n.serversAutoSkipHint,
+                    maxLines: 1,
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelLarge
+                        ?.copyWith(color: AppTheme.textLight(context)),
+                  ),
                 ),
               ),
               const SizedBox(width: ExpressiveSpacing.small),

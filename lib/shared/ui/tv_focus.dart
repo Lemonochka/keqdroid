@@ -1,4 +1,8 @@
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
@@ -115,6 +119,69 @@ class TvTappable extends StatelessWidget {
       ),
     );
   }
+}
+
+// у кнопок Flutter OK пульта только нажимает, и на каждом повторе клавиши заново (Flutter 3.44).
+// долгое решается по отпусканию: посреди удержания повторы нажали бы то, что встало на место кнопки
+class TvLongPress extends StatefulWidget {
+  const TvLongPress({
+    super.key,
+    required this.onPressed,
+    required this.onLongPress,
+    required this.child,
+  });
+
+  final VoidCallback onPressed;
+  final VoidCallback onLongPress;
+  final Widget child;
+
+  @override
+  State<TvLongPress> createState() => _TvLongPressState();
+}
+
+class _TvLongPressState extends State<TvLongPress> {
+  static final _keys = {
+    LogicalKeyboardKey.select,
+    LogicalKeyboardKey.enter,
+    LogicalKeyboardKey.numpadEnter,
+    LogicalKeyboardKey.space,
+    LogicalKeyboardKey.gameButtonA,
+  };
+
+  Timer? _hold;
+  bool? _long;
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (!_keys.contains(event.logicalKey)) return KeyEventResult.ignored;
+    switch (event) {
+      case KeyDownEvent():
+        _long = false;
+        _hold?.cancel();
+        _hold = Timer(kLongPressTimeout, () => _long = true);
+      case KeyUpEvent():
+        final long = _long;
+        _hold?.cancel();
+        _long = null;
+        if (long == null) return KeyEventResult.ignored;
+        long ? widget.onLongPress() : widget.onPressed();
+      default:
+    }
+    return KeyEventResult.handled;
+  }
+
+  @override
+  void dispose() {
+    _hold?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: _onKey,
+        child: widget.child,
+      );
 }
 
 class TvFocusHighlight extends StatefulWidget {

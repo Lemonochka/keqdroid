@@ -904,7 +904,7 @@
   "exitIpLabel": "网站看到的 IP",
   "serversAutoSelect": "自动",
   "serversAutoSelectTooltip": "由应用选择该订阅中的服务器，并在其不可用时切换",
-  "serversAutoSkipHint": "自动选择会跳过已标记的服务器",
+  "serversAutoSkipHint": "自动选择跳过已标记的",
   "serversAutoSkipDone": "完成",
   "serversAutoSkipKeepOne": "自动选择至少需要一个服务器",
   "serversManualGroup": "手动添加的服务器",

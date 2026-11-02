@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
@@ -120,6 +122,64 @@ void main() {
 
     expect(_container.read(autoSkipPickingProvider), isNull);
     expect(find.text('Auto skips the marked ones'), findsNothing);
+  });
+
+  group('пульт ТВ и мышь', () {
+    Future<void> focusAuto(WidgetTester tester) async {
+      Focus.of(tester.element(find.text('Auto'))).requestFocus();
+      await tester.pump();
+    }
+
+    bool autoOn() => _container.read(subscriptionsProvider).value!.single.autoSelect;
+
+    testWidgets('удержанный OK включает выделение по отпусканию, Авто не щёлкает',
+        (tester) async {
+      _auto = false;
+      await _pump(tester);
+      await focusAuto(tester);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+      }
+      expect(_container.read(autoSkipPickingProvider), isNull,
+          reason: 'посреди удержания повторы нажали бы то, что встанет на место Авто');
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+      await _settle(tester);
+
+      expect(_container.read(autoSkipPickingProvider), 's1');
+      expect(autoOn(), isFalse);
+    });
+
+    testWidgets('короткий OK с повторами клавиши щёлкает Авто один раз',
+        (tester) async {
+      _auto = false;
+      await _pump(tester);
+      await focusAuto(tester);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await _settle(tester);
+
+      expect(autoOn(), isTrue);
+      expect(_container.read(autoSkipPickingProvider), isNull);
+    });
+
+    testWidgets('правая кнопка мыши на Авто включает выделение', (tester) async {
+      _auto = false;
+      await _pump(tester);
+
+      await tester.tap(find.text('Auto'), buttons: kSecondaryMouseButton);
+      await _settle(tester);
+
+      expect(_container.read(autoSkipPickingProvider), 's1');
+      expect(autoOn(), isFalse);
+    });
   });
 
   testWidgets(

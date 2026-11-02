@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'expressive.dart';
 import 'haptics.dart';
+import 'tv_focus.dart';
 
 class ExpressiveToggleButton extends StatefulWidget {
   const ExpressiveToggleButton({
@@ -103,59 +104,67 @@ class _ExpressiveToggleButtonState extends State<ExpressiveToggleButton>
     super.dispose();
   }
 
+  void _activate() {
+    AppHaptics.selection();
+    widget.onPressed();
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final labelStyle = Theme.of(context).textTheme.labelLarge;
+    final longPress = widget.onLongPress;
+    Widget button = AnimatedBuilder(
+      animation: Listenable.merge([_shape, _tint, _press]),
+      builder: (context, _) {
+        final tint = _tint.value.clamp(0.0, 1.0);
+        final corner = ExpressiveToggleButton.cornerAt(
+          selected: _shape.value,
+          pressed: _press.value,
+        );
+        return FilledButton(
+          onPressed: _activate,
+          onLongPress: longPress,
+          statesController: _states,
+          style: FilledButton.styleFrom(
+            backgroundColor: Color.lerp(
+              scheme.surfaceContainerHighest,
+              scheme.primary,
+              tint,
+            ),
+            foregroundColor: Color.lerp(
+              scheme.onSurfaceVariant,
+              scheme.onPrimary,
+              tint,
+            ),
+            textStyle: labelStyle,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(corner),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: ExpressiveToggleButton.sidePadding,
+            ),
+            minimumSize: const Size(0, ExpressiveToggleButton.height),
+            fixedSize: const Size.fromHeight(ExpressiveToggleButton.height),
+            tapTargetSize: MaterialTapTargetSize.padded,
+            // плотность десктопа ужала бы кнопку на 8dp
+            visualDensity: VisualDensity.standard,
+            // форму и цвет ведут пружины покадрово, неявная анимация Material перезапускалась бы
+            animationDuration: Duration.zero,
+          ),
+          child: Text(widget.label, maxLines: 1),
+        );
+      },
+    );
+    if (longPress != null) {
+      button = TvLongPress(
+        onPressed: _activate,
+        onLongPress: longPress,
+        child: GestureDetector(onSecondaryTap: longPress, child: button),
+      );
+    }
     return MergeSemantics(
-      child: Semantics(
-        toggled: widget.selected,
-        child: AnimatedBuilder(
-          animation: Listenable.merge([_shape, _tint, _press]),
-          builder: (context, _) {
-            final tint = _tint.value.clamp(0.0, 1.0);
-            final corner = ExpressiveToggleButton.cornerAt(
-              selected: _shape.value,
-              pressed: _press.value,
-            );
-            return FilledButton(
-              onPressed: () {
-                AppHaptics.selection();
-                widget.onPressed();
-              },
-              onLongPress: widget.onLongPress,
-              statesController: _states,
-              style: FilledButton.styleFrom(
-                backgroundColor: Color.lerp(
-                  scheme.surfaceContainerHighest,
-                  scheme.primary,
-                  tint,
-                ),
-                foregroundColor: Color.lerp(
-                  scheme.onSurfaceVariant,
-                  scheme.onPrimary,
-                  tint,
-                ),
-                textStyle: labelStyle,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(corner),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: ExpressiveToggleButton.sidePadding,
-                ),
-                minimumSize: const Size(0, ExpressiveToggleButton.height),
-                fixedSize: const Size.fromHeight(ExpressiveToggleButton.height),
-                tapTargetSize: MaterialTapTargetSize.padded,
-                // плотность десктопа ужала бы кнопку на 8dp
-                visualDensity: VisualDensity.standard,
-                // форму и цвет ведут пружины покадрово, неявная анимация Material перезапускалась бы
-                animationDuration: Duration.zero,
-              ),
-              child: Text(widget.label, maxLines: 1),
-            );
-          },
-        ),
-      ),
+      child: Semantics(toggled: widget.selected, child: button),
     );
   }
 }

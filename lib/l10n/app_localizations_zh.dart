@@ -1717,7 +1717,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversAutoSelectTooltip => '由应用选择该订阅中的服务器，并在其不可用时切换';
 
   @override
-  String get serversAutoSkipHint => '自动选择会跳过已标记的服务器';
+  String get serversAutoSkipHint => '自动选择跳过已标记的';
 
   @override
   String get serversAutoSkipDone => '完成';
