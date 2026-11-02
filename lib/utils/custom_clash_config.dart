@@ -742,6 +742,17 @@ class CustomClashConfig {
     if (type == 'MATCH') {
       return (type: type, payload: '', target: rest.split(',').first.trim());
     }
+    // в регулярке свои запятые ({1,3}), ядро берёт цель последней (ParseRulePayload)
+    if (const {'DOMAIN-REGEX', 'PROCESS-NAME-REGEX', 'PROCESS-PATH-REGEX'}
+        .contains(type)) {
+      final last = rest.lastIndexOf(',');
+      if (last < 0) return null;
+      return (
+        type: type,
+        payload: rest.substring(0, last),
+        target: rest.substring(last + 1).trim(),
+      );
+    }
     final String payload;
     if (rest.startsWith('(')) {
       var depth = 0;

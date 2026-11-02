@@ -117,6 +117,22 @@ ${rules.map((r) => '  - "$r"').join('\n')}
       );
     });
 
+    // в регулярке свои запятые, ядро берёт цель последней (ParseRulePayload в rules/common/base.go)
+    test('регулярка с запятой в DIRECT и REJECT уходит, к его группе остаётся', () {
+      expect(
+        kept([
+          r'DOMAIN-REGEX,^ads[0-9]{1,3}[.]example$,REJECT',
+          r'DOMAIN-REGEX,^(cdn|img){1,2}[.]ru$,DIRECT',
+          r'DOMAIN-REGEX,^v{1,3}[.]example$,Proxy',
+        ]),
+        [r'DOMAIN-REGEX,^v{1,3}[.]example$,Proxy'],
+      );
+      expect(
+        config([r'DOMAIN-REGEX,^ads[0-9]{1,3}[.]example$,REJECT']).hasProviderRules,
+        isTrue,
+      );
+    });
+
     test('к его группам и технические остаются', () {
       final rules = [
         'DOMAIN-SUFFIX,video.example,Proxy',
