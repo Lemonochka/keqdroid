@@ -2886,10 +2886,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subscriptionCardVeilStrong => 'Heavy';
 
   @override
-  String get subscriptionCardAutoSelect => 'Auto toggle in the server list';
+  String get subscriptionCardAutoSelect => 'Auto button';
 
   @override
-  String get subscriptionCardAutoSelectHint => 'Adds an «Auto» switch to the group header. With it on, the app picks the server itself and moves to another one when the current stops working.';
+  String get subscriptionCardAutoSelectHint => 'The app picks and switches the server itself';
 
   @override
   String get subscriptionCardContentTitle => 'What to show';

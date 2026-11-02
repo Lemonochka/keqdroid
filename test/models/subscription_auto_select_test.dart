@@ -14,6 +14,13 @@ void main() {
     expect(plain.toJson().containsKey('autoSelect'), isFalse);
   });
 
+  test('новая подписка приходит с кнопкой «Авто», но не нажатой', () {
+    final added = Subscription.create(name: 'n', url: 'https://a.example/sub');
+    expect(added.autoSelectVisible, isTrue);
+    expect(added.autoSelect, isFalse);
+    expect(Subscription.fromJson(added.toJson()).autoSelectVisible, isTrue);
+  });
+
   test('оба флага переживают запись и чтение', () {
     const sub = Subscription(
       id: 'a',

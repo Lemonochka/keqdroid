@@ -164,6 +164,7 @@ class Subscription {
         url: url,
         nameIsAuto: nameIsAuto,
         fetchIdentity: fetchIdentity,
+        autoSelectVisible: true,
       );
 
   factory Subscription.fromJson(Map<String, dynamic> json) {

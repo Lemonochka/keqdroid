@@ -2886,10 +2886,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get subscriptionCardVeilStrong => 'Stark';
 
   @override
-  String get subscriptionCardAutoSelect => 'Auto-Schalter in der Serverliste';
+  String get subscriptionCardAutoSelect => 'Taste „Auto“ anzeigen';
 
   @override
-  String get subscriptionCardAutoSelectHint => 'Fügt der Gruppenkopfzeile einen Schalter „Auto“ hinzu. Ist er an, wählt die App den Server selbst und wechselt, sobald der aktuelle nicht mehr funktioniert.';
+  String get subscriptionCardAutoSelectHint => 'Die App wählt und wechselt den Server selbst';
 
   @override
   String get subscriptionCardContentTitle => 'Was angezeigt wird';

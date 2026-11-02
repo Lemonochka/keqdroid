@@ -2902,10 +2902,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get subscriptionCardVeilStrong => 'Плотное';
 
   @override
-  String get subscriptionCardAutoSelect => 'Переключатель «Авто» в списке серверов';
+  String get subscriptionCardAutoSelect => 'Показывать кнопку «Авто»';
 
   @override
-  String get subscriptionCardAutoSelectHint => 'Добавляет в шапку группы переключатель. Включённый — сервер выбирает приложение и само переезжает на другой, когда текущий перестаёт работать.';
+  String get subscriptionCardAutoSelectHint => 'Приложение само выбирает и меняет сервер';
 
   @override
   String get subscriptionCardContentTitle => 'Что показывать';

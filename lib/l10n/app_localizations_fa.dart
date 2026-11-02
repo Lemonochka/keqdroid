@@ -2881,10 +2881,10 @@ class AppLocalizationsFa extends AppLocalizations {
   String get subscriptionCardVeilStrong => 'زیاد';
 
   @override
-  String get subscriptionCardAutoSelect => 'کلید «خودکار» در فهرست سرورها';
+  String get subscriptionCardAutoSelect => 'نمایش دکمهٔ «خودکار»';
 
   @override
-  String get subscriptionCardAutoSelectHint => 'کلید «خودکار» را به سرتیتر گروه اضافه می‌کند. وقتی روشن باشد، برنامه خودش سرور را انتخاب می‌کند و وقتی سرور فعلی از کار بیفتد، به سرور دیگری می‌رود.';
+  String get subscriptionCardAutoSelectHint => 'برنامه خودش سرور را انتخاب و عوض می‌کند';
 
   @override
   String get subscriptionCardContentTitle => 'چه چیزی نمایش داده شود';

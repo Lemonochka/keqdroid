@@ -2879,10 +2879,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subscriptionCardVeilStrong => '重';
 
   @override
-  String get subscriptionCardAutoSelect => '服务器列表中的“自动”开关';
+  String get subscriptionCardAutoSelect => '显示“自动”按钮';
 
   @override
-  String get subscriptionCardAutoSelectHint => '在分组标题中加入“自动”开关。开启后由应用选择服务器，并在当前服务器不可用时自动切换。';
+  String get subscriptionCardAutoSelectHint => '由应用自动选择和切换服务器';
 
   @override
   String get subscriptionCardContentTitle => '显示内容';

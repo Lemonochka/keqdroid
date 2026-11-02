@@ -5438,13 +5438,13 @@ abstract class AppLocalizations {
   /// No description provided for @subscriptionCardAutoSelect.
   ///
   /// In en, this message translates to:
-  /// **'Auto toggle in the server list'**
+  /// **'Auto button'**
   String get subscriptionCardAutoSelect;
 
   /// No description provided for @subscriptionCardAutoSelectHint.
   ///
   /// In en, this message translates to:
-  /// **'Adds an «Auto» switch to the group header. With it on, the app picks the server itself and moves to another one when the current stops working.'**
+  /// **'The app picks and switches the server itself'**
   String get subscriptionCardAutoSelectHint;
 
   /// No description provided for @subscriptionCardContentTitle.

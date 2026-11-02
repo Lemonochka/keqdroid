@@ -160,7 +160,6 @@ class _CardLookSheet extends ConsumerWidget {
                   l10n.subscriptionCardAutoSelectHint,
                   style: theme.textTheme.bodySmall,
                 ),
-                isThreeLine: true,
                 onChanged: (v) => _apply(ref, autoSelectVisible: v),
               ),
                   ],
