@@ -119,7 +119,8 @@ if (-not $AllowUnmerged) {
       if ($dirty.Count -gt 0) { $left += "  $path : $($dirty.Count) uncommitted change(s)" }
     } elseif ($line.StartsWith('branch refs/heads/')) {
       $branch = $line.Substring(18)
-      $ahead = [int](git rev-list --count "HEAD..refs/heads/$branch")
+      # by content, not hash: a commit cherry-picked into this checkout counts as in
+      $ahead = @(git cherry HEAD "refs/heads/$branch" | Where-Object { $_.StartsWith('+') }).Count
       if ($ahead -gt 0) { $left += "  $branch : $ahead commit(s) not in this checkout ($path)" }
     }
   }
