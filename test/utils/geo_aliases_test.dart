@@ -92,5 +92,26 @@ rules:
       expect(result.dropped, isEmpty);
       expect(result.config.map['rules'], hasLength(7));
     });
+
+    test('IP-ASN выбрасывается всегда: базы нет, а за ней ядро полезло бы на GitHub', () {
+      const asn = '''
+proxies:
+  - {name: A, type: socks5, server: a.example, port: 1080}
+rules:
+  - IP-ASN,62041,A,no-resolve
+  - SRC-IP-ASN,13335,DIRECT
+  - OR,((IP-ASN,44907),(DOMAIN,t.me)),A
+  - DOMAIN-SUFFIX,telegram.org,A
+  - MATCH,DIRECT
+''';
+      for (final index in [_index, GeoAssetIndex.empty]) {
+        final result = CustomClashConfig.tryParse(asn)!.withKnownGeo(index);
+        expect(result.config.map['rules'], [
+          'DOMAIN-SUFFIX,telegram.org,A',
+          'MATCH,DIRECT',
+        ]);
+        expect(result.dropped, ['ip-asn:62041', 'ip-asn:13335', 'ip-asn:44907']);
+      }
+    });
   });
 }

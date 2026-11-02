@@ -483,12 +483,16 @@ class CustomClashConfig {
     GeoAssetIndex index,
   ) {
     final dropped = <String>[];
-    if (index.isEmpty) return (config: this, dropped: dropped);
     List<Object?> clean(List<Object?> rules) {
       final out = <Object?>[];
       for (final rule in rules) {
         final text = rule.toString();
-        final unknown = _unknownGeoIn(text, index);
+        final asn = _asnCondition.firstMatch(text);
+        if (asn != null) {
+          dropped.add('ip-asn:${asn.group(1)}');
+          continue;
+        }
+        final unknown = index.isEmpty ? null : _unknownGeoIn(text, index);
         if (unknown == null) {
           out.add(rule);
           continue;
@@ -517,6 +521,9 @@ class CustomClashConfig {
     }
     return (config: CustomClashConfig._(out), dropped: dropped);
   }
+
+  // базы ASN мы не возим, а без неё ядро до подъёма туннеля качает её с GitHub и на отказе не берёт весь конфиг (geodata.InitASN)
+  static final _asnCondition = RegExp(r'(?:^|\()\s*(?:SRC-)?IP-ASN\s*,\s*([^,)\s]+)', caseSensitive: false);
 
   static final _geoCondition = RegExp(r'(?:^|\()\s*(GEOSITE|GEOIP)\s*,\s*([^,)\s]+)', caseSensitive: false);
 
