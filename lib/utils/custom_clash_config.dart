@@ -356,6 +356,26 @@ class CustomClashConfig {
   String get address => endpoint.address;
   int get port => endpoint.port;
 
+  // DNS автора только включённый: с выключенным ядро идёт в системный резолвер, а на Android его нет
+  bool get _authorDnsEnabled {
+    final dns = map['dns'];
+    return dns is Map &&
+        dns['enable'] == true &&
+        (dns['nameserver'] as List?)?.isNotEmpty == true;
+  }
+
+  // адрес своего tun ядро берёт из dns.fake-ip-range с маской /30, даже без fake-ip (parseTun)
+  String? get tunRange {
+    final dns = map['dns'];
+    if (!_authorDnsEnabled || dns is! Map) return null;
+    final range = dns['fake-ip-range']?.toString() ?? '';
+    final octets = range.split('/').first.split('.').map(int.tryParse).toList();
+    if (octets.length != 4 || octets.any((o) => o == null || o < 0 || o > 255)) {
+      return null;
+    }
+    return '${octets[0]}.${octets[1]}.${octets[2]}.${octets[3]! & ~3}/30';
+  }
+
   // наши списки перед авторским MATCH: после catch-all правило не сработает никогда
   Map<String, dynamic> buildSessionConfig({
     required Map<String, dynamic> inbound,
@@ -377,6 +397,8 @@ class CustomClashConfig {
     }
 
     out.addAll(inbound);
+    // global и direct ядро исполняет мимо правил, а с ними мимо защиты от утечки и сплита
+    out['mode'] = 'rule';
     out['log-level'] = logLevel;
     out['sniffer'] = sniffer;
     out['geodata-mode'] = true;
@@ -384,12 +406,7 @@ class CustomClashConfig {
     // с off ядро не ищет процесс вовсе, и правила автора по приложениям молча не срабатывают (tunnel.go)
     out['find-process-mode'] = _hasProcessRules(out) ? 'strict' : 'off';
 
-    // DNS автора только включённый: с выключенным ядро идёт в системный резолвер, а на Android его нет
-    final authorDns = out['dns'];
-    final authorDnsEnabled =
-        authorDns is Map && authorDns['enable'] == true &&
-            (authorDns['nameserver'] as List?)?.isNotEmpty == true;
-    if (!authorDnsEnabled && dns != null) out['dns'] = dns;
+    if (!_authorDnsEnabled && dns != null) out['dns'] = dns;
     // свой DNS-сервер на устройстве не нужен, перехват туннеля идёт в резолвер ядра напрямую
     final keptDns = out['dns'];
     if (keptDns is Map && keptDns.containsKey('listen')) {

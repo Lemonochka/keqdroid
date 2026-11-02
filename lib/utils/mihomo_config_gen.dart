@@ -308,7 +308,8 @@ class MihomoConfigGen {
           resolvedServerIp: resolvedServerIp,
         ),
         ...routeServerDirectRules(routeServers),
-        if (tun != null) 'IP-CIDR,$tunInterfaceRange,DIRECT,no-resolve',
+        if (tun != null)
+          'IP-CIDR,${clash.tunRange ?? tunInterfaceRange},DIRECT,no-resolve',
       ],
       appendRules: [
         ...buildUserRules(
@@ -334,9 +335,14 @@ class MihomoConfigGen {
             ...buildRouteServerProviders(routeServers),
             ...buildAppRouteProviders(appRoutes),
           },
-        if (!clash.map.containsKey('hosts') &&
-            buildHosts(settings.xrayCore).isNotEmpty)
-          'hosts': buildHosts(settings.xrayCore),
+        // включённое человеком конфиг провайдера не перебивает
+        if (buildHosts(settings.xrayCore).isNotEmpty)
+          'hosts': {
+            if (clash.map['hosts'] is Map)
+              ...(clash.map['hosts'] as Map).cast<String, dynamic>(),
+            ...buildHosts(settings.xrayCore),
+          },
+        if (settings.xrayCore.concurrentDial) 'tcp-concurrent': true,
         if (processRules || appRoutes.isNotEmpty || ownerGuard != OwnerGuard.off)
           'find-process-mode': 'strict',
         if (settings.xrayCore.udpPerAddress) udpPerExitKey: true,

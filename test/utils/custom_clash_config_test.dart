@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/models/server_item.dart';
+import 'package:keqdroid/models/xray_core_settings.dart';
 import 'package:keqdroid/services/subscription_service.dart';
 import 'package:keqdroid/utils/custom_clash_config.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
@@ -231,6 +232,53 @@ dns:
         'enable': true,
         'nameserver': ['https://1.1.1.1/dns-query'],
       }, reason: 'DNS автора остаётся, без своего сервера на устройстве');
+    });
+
+    group('наше поверх провайдерского', () {
+      final authored = '''
+${_yaml.replaceFirst('mode: rule', 'mode: global')}
+hosts:
+  provider.example: 10.0.0.1
+  shared.example: 10.0.0.2
+dns:
+  enable: true
+  fake-ip-range: 28.0.0.1/8
+  nameserver: [https://dns.provider.example/dns-query]
+''';
+      const tun = MihomoTunOptions(device: 'tun-keqdis', stack: 'gvisor');
+      Map<String, dynamic> session(AppSettings settings) => MihomoConfigGen.build(
+            authored,
+            settings,
+            socksPort: 2080,
+            tun: tun,
+          );
+
+      test('режим всегда по правилам: global обошёл бы защиту и сплит', () {
+        expect(session(const AppSettings())['mode'], 'rule');
+      });
+
+      test('адрес туннеля по диапазону fake-ip провайдера', () {
+        expect(session(const AppSettings())['rules'],
+            contains('IP-CIDR,28.0.0.0/30,DIRECT,no-resolve'));
+      });
+
+      test('hosts человека поверх hosts провайдера, параллельное подключение его', () {
+        final config = session(const AppSettings(
+          xrayCore: XrayCoreSettings(
+            dnsHosts: 'shared.example 10.9.9.9',
+            concurrentDial: true,
+          ),
+        ));
+        expect(config['hosts'], {
+          'provider.example': '10.0.0.1',
+          'shared.example': '10.9.9.9',
+        });
+        expect(config['tcp-concurrent'], isTrue);
+        expect(session(const AppSettings())['hosts'], {
+          'provider.example': '10.0.0.1',
+          'shared.example': '10.0.0.2',
+        });
+      });
     });
 
     test('правила автора по приложениям включают поиск процесса, без них он выключен', () {
