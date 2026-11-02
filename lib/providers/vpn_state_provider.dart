@@ -1369,10 +1369,10 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       final waiting = home.stillWaiting(
         activeId: target.server.id,
         autoSubscriptionId: target.ownerId,
-        homeExists: ref
-            .read(serversProvider)
-            .servers
-            .any((s) => s.id == home!.homeId),
+        homeExists: AutoServerSelect.canPick(
+          ref.read(serversProvider).servers,
+          home.homeId,
+        ),
       );
       if (waiting == null) await AutoSelectHomeStore.save(null);
       home = waiting;

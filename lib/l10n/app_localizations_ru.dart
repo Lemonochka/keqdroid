@@ -1731,6 +1731,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversAutoSelectTooltip => 'Сервер в этой подписке выбирает приложение и меняет его, когда текущий перестаёт работать';
 
   @override
+  String get serversAutoSkipHint => 'Авто не берёт отмеченные';
+
+  @override
+  String get serversAutoSkipDone => 'Готово';
+
+  @override
+  String get serversAutoSkipKeepOne => 'Авто нужен хотя бы один сервер';
+
+  @override
   String get serversManualGroup => 'Ручные серверы';
 
   @override

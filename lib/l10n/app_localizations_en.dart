@@ -1721,6 +1721,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversAutoSelectTooltip => 'The app picks the server in this subscription and switches when it stops working';
 
   @override
+  String get serversAutoSkipHint => 'Auto skips the marked ones';
+
+  @override
+  String get serversAutoSkipDone => 'Done';
+
+  @override
+  String get serversAutoSkipKeepOne => 'Auto needs at least one server';
+
+  @override
   String get serversManualGroup => 'Manual servers';
 
   @override

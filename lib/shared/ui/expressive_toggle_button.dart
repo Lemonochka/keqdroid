@@ -11,11 +11,13 @@ class ExpressiveToggleButton extends StatefulWidget {
     required this.selected,
     required this.label,
     required this.onPressed,
+    this.onLongPress,
   });
 
   final bool selected;
   final String label;
   final VoidCallback onPressed;
+  final VoidCallback? onLongPress;
 
   static const double height = 32;
   static const double squareCorner = ExpressiveShape.medium;
@@ -121,6 +123,7 @@ class _ExpressiveToggleButtonState extends State<ExpressiveToggleButton>
                 AppHaptics.selection();
                 widget.onPressed();
               },
+              onLongPress: widget.onLongPress,
               statesController: _states,
               style: FilledButton.styleFrom(
                 backgroundColor: Color.lerp(

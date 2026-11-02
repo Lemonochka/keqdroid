@@ -3227,6 +3227,24 @@ abstract class AppLocalizations {
   /// **'The app picks the server in this subscription and switches when it stops working'**
   String get serversAutoSelectTooltip;
 
+  /// No description provided for @serversAutoSkipHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto skips the marked ones'**
+  String get serversAutoSkipHint;
+
+  /// No description provided for @serversAutoSkipDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get serversAutoSkipDone;
+
+  /// No description provided for @serversAutoSkipKeepOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto needs at least one server'**
+  String get serversAutoSkipKeepOne;
+
   /// No description provided for @serversManualGroup.
   ///
   /// In en, this message translates to:

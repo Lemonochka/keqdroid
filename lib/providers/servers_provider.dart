@@ -207,6 +207,10 @@ class ServersNotifier extends Notifier<ServersState> {
     );
   }
 
+  Future<void> toggleAutoSkip(String id) async {
+    await _updateServer(id, (s) => s.copyWith(autoSkip: !s.autoSkip));
+  }
+
   Future<void> updateConfig(String id, String rawConfig) async {
     final config = normalizeImportedConfig(rawConfig);
     final validationError = validateServerConfig(config);

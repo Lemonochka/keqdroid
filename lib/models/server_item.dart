@@ -27,6 +27,7 @@ class ServerItem {
   final String? customName;
   final DateTime? pinnedAt;
   final bool configOverridden;
+  final bool autoSkip;
   final int? pingMs;
   final DateTime? lastTestedAt;
   final String? lastPingType;
@@ -56,6 +57,7 @@ class ServerItem {
     this.customName,
     this.pinnedAt,
     this.configOverridden = false,
+    this.autoSkip = false,
     this.pingMs,
     this.lastTestedAt,
     this.lastPingType,
@@ -94,6 +96,7 @@ class ServerItem {
         ? DateTime.tryParse(json['pinnedAt'] as String)
         : null,
     configOverridden: json['configOverridden'] as bool? ?? false,
+    autoSkip: json['autoSkip'] as bool? ?? false,
     pingMs: json['pingMs'] as int?,
     lastTestedAt: json['lastTestedAt'] != null
         ? DateTime.parse(json['lastTestedAt'] as String)
@@ -115,6 +118,7 @@ class ServerItem {
     if (customName != null) 'customName': customName,
     if (pinnedAt != null) 'pinnedAt': pinnedAt!.toIso8601String(),
     if (configOverridden) 'configOverridden': configOverridden,
+    if (autoSkip) 'autoSkip': true,
     if (pingMs != null) 'pingMs': pingMs,
     if (lastTestedAt != null) 'lastTestedAt': lastTestedAt!.toIso8601String(),
     if (lastPingType != null) 'lastPingType': lastPingType,
@@ -132,6 +136,7 @@ class ServerItem {
     Object? customName = _sentinel,
     Object? pinnedAt = _sentinel,
     bool? configOverridden,
+    bool? autoSkip,
     Object? pingMs = _sentinel,
     Object? lastTestedAt = _sentinel,
     Object? lastPingType = _sentinel,
@@ -149,6 +154,7 @@ class ServerItem {
         pinnedAt:
             pinnedAt == _sentinel ? this.pinnedAt : pinnedAt as DateTime?,
         configOverridden: configOverridden ?? this.configOverridden,
+        autoSkip: autoSkip ?? this.autoSkip,
         pingMs: pingMs == _sentinel ? this.pingMs : pingMs as int?,
         lastTestedAt: lastTestedAt == _sentinel
             ? this.lastTestedAt

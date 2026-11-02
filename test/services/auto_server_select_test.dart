@@ -385,6 +385,83 @@ void main() {
     });
   });
 
+  // долгое нажатие на Авто: отмеченные серверы автовыбор не берёт, руками их выбрать можно
+  group('отмеченные мимо Авто', () {
+    ServerItem skipped(String id, {required String sub, int? ping}) =>
+        _server(id, sub: sub, ping: ping, tested: tested)
+            .copyWith(autoSkip: true);
+
+    test('лучший по замеру, но отмеченный, не берётся', () {
+      final servers = [
+        skipped('fast', sub: 's1', ping: 20),
+        _server('slow', sub: 's1', ping: 150, tested: tested),
+      ];
+
+      expect(AutoServerSelect.pick(servers, subscriptionId: 's1')?.id, 'slow');
+    });
+
+    test('отмечены все: берётся лучший из них, а не пустота', () {
+      final servers = [
+        skipped('a', sub: 's1', ping: 120),
+        skipped('b', sub: 's1', ping: 40),
+        _server('other', sub: 's2', ping: 10, tested: tested),
+      ];
+
+      expect(AutoServerSelect.pick(servers, subscriptionId: 's1')?.id, 'b');
+    });
+
+    test('в замер сторожа отмеченные не идут, текущий идёт', () {
+      final current = skipped('cur', sub: 's1', ping: 300);
+      final servers = [
+        current,
+        skipped('fast', sub: 's1', ping: 10),
+        _server('ok', sub: 's1', ping: 80, tested: tested),
+      ];
+
+      final picked = AutoServerSelect.candidatesToMeasure(
+        servers,
+        subscriptionId: 's1',
+        current: current,
+      );
+
+      expect(picked.map((s) => s.id), ['cur', 'ok']);
+    });
+
+    test('контроль в соседней подписке отмеченных не берёт', () {
+      final servers = [
+        skipped('t1', sub: 'top', ping: 10),
+        _server('t2', sub: 'top', ping: 100, tested: tested),
+        _server('t3', sub: 'top', ping: 200, tested: tested),
+      ];
+
+      final picked = AutoServerSelect.controls(
+        servers,
+        subscriptionIds: const ['top'],
+        perSubscription: 2,
+      );
+
+      expect(picked.map((s) => s.id), ['t2', 't3']);
+    });
+
+    test('на отмеченный свой сервер из соседней подписки не возвращаемся', () {
+      final servers = [
+        skipped('home', sub: 'own', ping: 40),
+        _server('other', sub: 'own', ping: 90, tested: tested),
+      ];
+
+      expect(AutoServerSelect.canPick(servers, 'home'), isFalse);
+      expect(AutoServerSelect.canPick(servers, 'other'), isTrue);
+      expect(AutoServerSelect.canPick(servers, 'gone'), isFalse);
+      expect(
+        AutoServerSelect.canPick(
+          [...servers, skipped('only', sub: 'all-skipped')],
+          'only',
+        ),
+        isTrue,
+      );
+    });
+  });
+
   group('на кого переезжать', () {
     final now = DateTime(2026, 10, 28, 12);
     List<PingSample> history(List<int?> values) => [

@@ -2,6 +2,24 @@ part of '../servers_tab.dart';
 
 const _trailingSlotSize = 32.0;
 
+class _AutoSkipBadge extends StatelessWidget {
+  const _AutoSkipBadge({required this.ring});
+
+  final Color ring;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 18,
+        height: 18,
+        decoration: BoxDecoration(
+          color: AppTheme.red(context),
+          shape: BoxShape.circle,
+          border: Border.all(color: ring, width: 1.5),
+        ),
+        child: const Icon(Icons.remove_rounded, size: 13, color: Colors.white),
+      );
+}
+
 class _ServerTile extends ConsumerWidget {
   final ServerItem server;
   final bool isActive;
@@ -14,6 +32,8 @@ class _ServerTile extends ConsumerWidget {
   final double height;
 
   final SubscriptionAccent? accent;
+  final bool picking;
+  final bool autoSkipShown;
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final Future<void> Function() onPing;
@@ -27,6 +47,8 @@ class _ServerTile extends ConsumerWidget {
     required this.layout,
     required this.height,
     this.accent,
+    this.picking = false,
+    this.autoSkipShown = false,
     required this.onTap,
     required this.onDelete,
     required this.onPing,
@@ -98,6 +120,10 @@ class _ServerTile extends ConsumerWidget {
         opaqueBadge: isActive,
         emphasizeTitle: isActive,
         layout: layout,
+        muted: autoSkipShown && picking,
+        avatarBadge: autoSkipShown
+            ? _AutoSkipBadge(ring: isActive ? selectedColor : tileColor)
+            : null,
         trailing: layout == ServerRowLayout.inline
             ? _buildTrailing(
                 context,

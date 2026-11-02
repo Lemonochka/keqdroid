@@ -60,11 +60,14 @@ void main() {
         customName: 'Renamed',
         pinnedAt: DateTime(2026, 7, 17, 12, 30),
         configOverridden: true,
+        autoSkip: true,
       );
       final restored = ServerItem.fromJson(s.toJson());
       expect(restored.customName, 'Renamed');
       expect(restored.pinnedAt, DateTime(2026, 7, 17, 12, 30));
       expect(restored.configOverridden, isTrue);
+      expect(restored.autoSkip, isTrue);
+      expect(restored.copyWith(pingMs: 40).autoSkip, isTrue);
     });
 
     test('old json without new fields loads with defaults', () {
@@ -78,6 +81,7 @@ void main() {
       expect(restored.pinnedAt, isNull);
       expect(restored.configOverridden, isFalse);
       expect(restored.isPinned, isFalse);
+      expect(restored.autoSkip, isFalse);
     });
   });
 

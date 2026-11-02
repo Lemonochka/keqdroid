@@ -31,6 +31,9 @@ class ServerRow extends StatelessWidget {
 
   final ServerRowLayout layout;
 
+  final bool muted;
+  final Widget? avatarBadge;
+
   final Widget? trailing;
 
   final Widget? status;
@@ -45,6 +48,8 @@ class ServerRow extends StatelessWidget {
     this.opaqueBadge = false,
     this.emphasizeTitle = false,
     this.layout = ServerRowLayout.inline,
+    this.muted = false,
+    this.avatarBadge,
     this.trailing,
     this.status,
   });
@@ -121,11 +126,25 @@ class ServerRow extends StatelessWidget {
         ? AppTheme.card(context)
         : protocolColor.withValues(alpha: 0.15);
 
-    final avatar = ServerAvatar(
+    Widget avatar = ServerAvatar(
       flag: server.flag,
       protocol: server.protocol,
       chainHops: isChain ? server.chainConfig!.hops.length : null,
     );
+    if (muted) avatar = Opacity(opacity: 0.4, child: avatar);
+    if (avatarBadge != null) {
+      avatar = SizedBox.square(
+        dimension: _avatarSize,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(child: avatar),
+            PositionedDirectional(bottom: -3, end: -3, child: avatarBadge!),
+          ],
+        ),
+      );
+    }
+    final textOpacity = muted ? 0.45 : 1.0;
 
     final name = ServerNameUtils.formatForDisplay(
       ServerNameUtils.cleanDisplayName(server.displayName),
@@ -179,39 +198,42 @@ class ServerRow extends StatelessWidget {
             avatar,
             const SizedBox(width: ExpressiveSpacing.medium),
             Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text.rich(
-                    TextSpan(
+              child: Opacity(
+                opacity: textOpacity,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          if (pin != null)
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: pin,
+                            ),
+                          TextSpan(text: name),
+                        ],
+                      ),
+                      style: nameStyle,
+                      textDirection: nameDirection,
+                      textAlign: nameAlign,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: ExpressiveSpacing.hairline),
+                    Row(
                       children: [
-                        if (pin != null)
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: pin,
-                          ),
-                        TextSpan(text: name),
+                        if (status != null) ...[
+                          status!,
+                          const SizedBox(width: ExpressiveSpacing.extraSmall),
+                        ],
+                        Flexible(child: ping),
                       ],
                     ),
-                    style: nameStyle,
-                    textDirection: nameDirection,
-                    textAlign: nameAlign,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: ExpressiveSpacing.hairline),
-                  Row(
-                    children: [
-                      if (status != null) ...[
-                        status!,
-                        const SizedBox(width: ExpressiveSpacing.extraSmall),
-                      ],
-                      Flexible(child: ping),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -283,15 +305,18 @@ class ServerRow extends StatelessWidget {
           avatar,
           const SizedBox(width: ExpressiveSpacing.medium),
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                title,
-                const SizedBox(height: ExpressiveSpacing.hairline),
-                details,
-              ],
+            child: Opacity(
+              opacity: textOpacity,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  title,
+                  const SizedBox(height: ExpressiveSpacing.hairline),
+                  details,
+                ],
+              ),
             ),
           ),
           if (trailing != null) ...[

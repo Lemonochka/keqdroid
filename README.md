@@ -53,7 +53,7 @@ The app **does not provide servers**. Bring your own subscription or configs. Co
 - subscription URLs with scheduled auto-update; `keqdroid://` and `keqdis://` deep links from provider panels
 - manual entry, config import, QR code scan (Android)
 - proxy chains: traffic passes through several servers in the order you set
-- **Auto** for a subscription: picks a steady server, moves on when it stops answering and goes back once it answers again; if the whole subscription goes silent while the one above or below it answers, moves there until its own answers again
+- **Auto** for a subscription: picks a steady server, moves on when it stops answering and goes back once it answers again; if the whole subscription goes silent while the one above or below it answers, moves there until its own answers again. Hold the button to mark servers Auto never picks
 - per-subscription device identity sent to the provider's panel
 - when the provider moves a subscription to a new address, it follows and keeps its name, picture and servers; if the address stops answering, servers come from the provider's backup address; a reminder three days before the subscription ends, if the provider asks for one (Android)
 - checks: TCP, HTTP, ICMP, speed test; sorting by ping, name or speed
@@ -283,7 +283,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 - подписки по URL с автообновлением по расписанию; deep-ссылки `keqdroid://` и `keqdis://` из панелей провайдеров
 - ручное добавление, импорт конфигов, сканирование QR-кодов (Android)
 - цепочки прокси: трафик проходит через несколько серверов в заданном порядке
-- **Auto** у подписки: выбирает стабильный сервер, уходит с него, когда он перестаёт отвечать, и возвращается, когда он снова отвечает; если молчит вся подписка, а соседняя выше или ниже отвечает, переходит туда, пока своя снова не ответит
+- **Auto** у подписки: выбирает стабильный сервер, уходит с него, когда он перестаёт отвечать, и возвращается, когда он снова отвечает; если молчит вся подписка, а соседняя выше или ниже отвечает, переходит туда, пока своя снова не ответит. Если зажать кнопку, можно отметить серверы, которые Auto не берёт
 - отдельные данные устройства для каждой подписки (их видит панель провайдера)
 - если провайдер перенёс подписку на новый адрес, она переезжает туда с прежними именем, картинкой и серверами; если адрес не отвечает, серверы берутся с запасного адреса провайдера; за три дня до конца подписки приходит напоминание, если провайдер его просит (Android)
 - проверки: TCP, HTTP, ICMP, тест скорости; сортировка по пингу, имени или скорости

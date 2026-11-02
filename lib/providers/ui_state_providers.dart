@@ -38,6 +38,13 @@ class ExpandedRoutingProfilesNotifier extends StringBoolMapNotifier {}
 
 class ServerGroupsTabNotifier extends StringBoolMapNotifier {}
 
+class AutoSkipPickingNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void set(String? subscriptionId) => state = subscriptionId;
+}
+
 class SubscriptionReorderInProgressNotifier extends Notifier<bool> {
   @override
   bool build() => false;
@@ -106,6 +113,11 @@ final collapsedSubscriptionCardsProvider =
 final serverGroupsTabProvider =
     NotifierProvider<ServerGroupsTabNotifier, Map<String, bool>>(
   ServerGroupsTabNotifier.new,
+);
+
+final autoSkipPickingProvider =
+    NotifierProvider<AutoSkipPickingNotifier, String?>(
+  AutoSkipPickingNotifier.new,
 );
 
 final expandedRoutingProfilesProvider =

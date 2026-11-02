@@ -54,6 +54,24 @@ abstract final class AutoServerSelect {
     return [for (final (_, s) in indexed) s];
   }
 
+  // отмеченные не берутся, пока в подписке есть неотмеченный: отметить последний не даёт экран,
+  // а если обновление подписки оставило одних отмеченных, пустой выбор выключил бы и сам автовыбор
+  static List<ServerItem> eligible(Iterable<ServerItem> group) {
+    final allowed = [
+      for (final server in group)
+        if (!server.autoSkip) server,
+    ];
+    return allowed.isEmpty ? group.toList() : allowed;
+  }
+
+  static bool canPick(List<ServerItem> servers, String id) {
+    final server = servers.where((s) => s.id == id).firstOrNull;
+    if (server == null) return false;
+    return eligible(
+      servers.where((s) => s.subscriptionId == server.subscriptionId),
+    ).any((s) => s.id == id);
+  }
+
   static ServerItem? pick(
     List<ServerItem> servers, {
     required String subscriptionId,
@@ -61,10 +79,9 @@ abstract final class AutoServerSelect {
     String? excludeHost,
     DateTime? now,
   }) {
-    final group = [
-      for (final server in servers)
-        if (server.subscriptionId == subscriptionId) server,
-    ];
+    final group = eligible(
+      servers.where((server) => server.subscriptionId == subscriptionId),
+    );
     if (group.isEmpty) return null;
 
     final host = excludeHost?.trim().toLowerCase();
@@ -96,9 +113,10 @@ abstract final class AutoServerSelect {
     DateTime? now,
   }) {
     final group = [
-      for (final server in servers)
-        if (server.subscriptionId == subscriptionId && server.id != current.id)
-          server,
+      for (final server in eligible(
+        servers.where((s) => s.subscriptionId == subscriptionId),
+      ))
+        if (server.id != current.id) server,
     ];
     // свой сервер может ждать в соседней подписке, поэтому из всех
     final forced = [
@@ -123,7 +141,8 @@ abstract final class AutoServerSelect {
     return [
       for (final id in subscriptionIds)
         ..._ranked(
-          servers.where((s) => s.subscriptionId == id && !skip.contains(s.id)),
+          eligible(servers.where((s) => s.subscriptionId == id))
+              .where((s) => !skip.contains(s.id)),
           at,
         ).take(perSubscription),
     ];

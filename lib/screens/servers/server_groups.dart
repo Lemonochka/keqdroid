@@ -522,6 +522,8 @@ class _ServerGroupHeader extends ConsumerWidget {
             : context.l10n.serversManualGroup);
     final template =
         sub == null ? null : ref.watch(subscriptionTemplateProvider(sub.id));
+    final picking =
+        sub != null && ref.watch(autoSkipPickingProvider) == sub.id;
     return ServerGroupAnchor(
         groupKey: collapseKey,
         child: RepaintBoundary(
@@ -562,7 +564,9 @@ class _ServerGroupHeader extends ConsumerWidget {
                             child: Transform.scale(
                               scale: 0.85 + 0.15 * auto,
                               alignment: AlignmentDirectional.centerStart,
-                              child: template != null
+                              child: picking
+                                  ? _AutoSkipPickRow(subscription: sub)
+                                  : template != null
                                   ? _SubscriptionTabsRow(
                                       subscription: sub,
                                       groups: template.groups.length,
@@ -849,22 +853,7 @@ class _AutoSelectButton extends ConsumerWidget {
       return;
     }
     await subs.handAutoSelectTo(subscription.id);
-
-    final servers = ref.read(serversProvider).servers;
-    final pick = AutoServerSelect.pick(
-      servers,
-      subscriptionId: subscription.id,
-    );
-    if (pick == null) return;
-    final active = ref.read(serversProvider).activeServer;
-    if (pick.id == active?.id) return;
-    await ref.read(serversProvider.notifier).setActive(pick);
-
-    final status = ref.read(vpnStateProvider).value?.status;
-    if (status != VpnStatus.connected && status != VpnStatus.connecting) return;
-    try {
-      await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
-    } catch (_) {}
+    await _autoSelectNow(ref, subscription.id);
   }
 
   @override
@@ -876,6 +865,82 @@ class _AutoSelectButton extends ConsumerWidget {
         selected: subscription.autoSelect,
         label: l10n.serversAutoSelect,
         onPressed: () => unawaited(_toggle(ref, context)),
+        onLongPress: () {
+          HapticFeedback.mediumImpact();
+          ref.read(autoSkipPickingProvider.notifier).set(subscription.id);
+        },
+      ),
+    );
+  }
+}
+
+Future<void> _autoSelectNow(WidgetRef ref, String subscriptionId) async {
+  final pick = AutoServerSelect.pick(
+    ref.read(serversProvider).servers,
+    subscriptionId: subscriptionId,
+  );
+  if (pick == null) return;
+  final active = ref.read(serversProvider).activeServer;
+  if (pick.id == active?.id) return;
+  await ref.read(serversProvider.notifier).setActive(pick);
+
+  final status = ref.read(vpnStateProvider).value?.status;
+  if (status != VpnStatus.connected && status != VpnStatus.connecting) return;
+  try {
+    await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
+  } catch (_) {}
+}
+
+class _AutoSkipPickRow extends ConsumerWidget {
+  const _AutoSkipPickRow({required this.subscription});
+
+  final Subscription subscription;
+
+  void _done(WidgetRef ref) {
+    ref.read(autoSkipPickingProvider.notifier).set(null);
+    final active = ref.read(serversProvider).activeServer;
+    if (subscription.autoSelect &&
+        active != null &&
+        active.subscriptionId == subscription.id &&
+        active.autoSkip) {
+      unawaited(_autoSelectNow(ref, subscription.id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _done(ref);
+      },
+      child: SizedBox(
+        height: _GroupHeaderBackground.autoRowHeight,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.serversAutoSkipHint,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.copyWith(color: AppTheme.textLight(context)),
+                ),
+              ),
+              const SizedBox(width: ExpressiveSpacing.small),
+              ExpressiveToggleButton(
+                selected: true,
+                label: l10n.serversAutoSkipDone,
+                onPressed: () => _done(ref),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1024,7 +1089,10 @@ class _SubCardState extends ConsumerState<_SubCard>
 
     final template =
         sub == null ? null : ref.watch(subscriptionTemplateProvider(sub.id));
+    final picking =
+        sub != null && ref.watch(autoSkipPickingProvider) == sub.id;
     final groupsOpen = template != null &&
+        !picking &&
         ref.watch(serverGroupsTabProvider.select((m) => m[sub!.id] ?? false));
 
     final activeIndex = activeServerId == null
@@ -1098,6 +1166,8 @@ class _SubCardState extends ConsumerState<_SubCard>
                     activeServerId: activeServerId,
                     textLightColor: textLightColor,
                     accent: accent,
+                    picking: picking,
+                    autoOn: sub?.autoSelect ?? false,
                   ),
                 SliverToBoxAdapter(
                   child: SizedBox(height: widget.layout.gap / 2),
@@ -1119,11 +1189,25 @@ class _SubCardState extends ConsumerState<_SubCard>
     );
   }
 
+  void _toggleAutoSkip(ServerItem server, List<ServerItem> group) {
+    final last = !server.autoSkip &&
+        group.every((s) => s.id == server.id || s.autoSkip);
+    if (last) {
+      AppSnack.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.serversAutoSkipKeepOne)),
+      );
+      return;
+    }
+    unawaited(ref.read(serversProvider.notifier).toggleAutoSkip(server.id));
+  }
+
   Widget _buildExpandedServerList({
     required List<ServerItem> servers,
     required String? activeServerId,
     required Color textLightColor,
     required SubscriptionAccent? accent,
+    required bool picking,
+    required bool autoOn,
   }) {
     if (servers.isEmpty) {
       return SliverToBoxAdapter(
@@ -1163,7 +1247,11 @@ class _SubCardState extends ConsumerState<_SubCard>
           columns: columns,
           spacing: layout.gap,
         ).resolve(direction),
-        onTap: () => widget.onSelectServer(server),
+        picking: picking,
+        autoSkipShown: server.autoSkip && (picking || autoOn),
+        onTap: picking
+            ? () => _toggleAutoSkip(server, servers)
+            : () => widget.onSelectServer(server),
         onDelete: () => ref.read(serversProvider.notifier).delete(server.id),
         onPing: () => ref.read(serversProvider.notifier).pingSingle(server.id),
       );

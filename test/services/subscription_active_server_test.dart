@@ -195,6 +195,51 @@ void main() {
 
       expect(storage.getActiveServerId(), isNull);
     });
+
+    test('выбранный пропал: отмеченный мимо Авто не подставляется, '
+        'даже самый быстрый', () async {
+      final gone = _server('a', '198.51.100.10', 'Old', ping: 60);
+      final storage = await _seed(
+        subs: [_sub('a', auto: true)],
+        servers: [
+          gone,
+          _server('a', '198.51.100.20', 'Fast', ping: 30)
+              .copyWith(autoSkip: true),
+          _server('a', '198.51.100.30', 'Slow', ping: 150),
+        ],
+        activeId: gone.id,
+      );
+
+      await _update(storage, _sub('a', auto: true), [
+        _vless('198.51.100.11', 'Renamed'),
+        _vless('198.51.100.20', 'Fast'),
+        _vless('198.51.100.30', 'Slow'),
+      ]);
+
+      expect((await _active(storage))?.displayName, 'Slow');
+    });
+  });
+
+  test('пометка мимо Авто переживает обновление подписки', () async {
+    final same = _server('a', '198.51.100.20', 'Same').copyWith(autoSkip: true);
+    final renamed =
+        _server('a', '198.51.100.30', 'Before').copyWith(autoSkip: true);
+    final storage = await _seed(
+      subs: [_sub('a')],
+      servers: [same, renamed, _server('a', '198.51.100.40', 'Plain')],
+      activeId: null,
+    );
+
+    await _update(storage, _sub('a'), [
+      _vless('198.51.100.20', 'Same'),
+      _vless('198.51.100.30', 'After'),
+      _vless('198.51.100.40', 'Plain'),
+    ]);
+
+    final byName = {
+      for (final s in await storage.getServers()) s.displayName: s.autoSkip,
+    };
+    expect(byName, {'Same': true, 'After': true, 'Plain': false});
   });
 }
 

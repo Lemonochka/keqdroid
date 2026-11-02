@@ -1717,6 +1717,15 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversAutoSelectTooltip => 'برنامه سرور این اشتراک را خودش انتخاب می‌کند و وقتی از کار بیفتد، سرور دیگری را جایگزین می‌کند';
 
   @override
+  String get serversAutoSkipHint => 'خودکار سرورهای علامت‌خورده را انتخاب نمی‌کند';
+
+  @override
+  String get serversAutoSkipDone => 'تمام';
+
+  @override
+  String get serversAutoSkipKeepOne => 'حالت خودکار دست‌کم به یک سرور نیاز دارد';
+
+  @override
   String get serversManualGroup => 'سرورهای دستی';
 
   @override
