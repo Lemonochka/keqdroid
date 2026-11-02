@@ -191,6 +191,60 @@ proxies:
       expect(config['allow-lan'], isFalse);
     });
 
+    test('серверы, проброс портов и правка системы из конфига автора не доходят до ядра', () {
+      final authored = '''
+$_yaml
+ss-config: ss://aes-128-gcm:pass@:8388
+vmess-config: vmess://aes-128-gcm:11111111-2222-3333-4444-555555555555@:8389
+tuic-server:
+  enable: true
+  listen: 0.0.0.0:10443
+tunnels:
+  - tcp/udp,0.0.0.0:6553,8.8.8.8:53,DE WS
+iptables:
+  enable: true
+ntp:
+  enable: true
+  server: time.apple.com
+  write-to-system: true
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  nameserver: [https://1.1.1.1/dns-query]
+''';
+      final config = MihomoConfigGen.build(
+        authored,
+        const AppSettings(),
+        socksPort: 2080,
+      );
+      for (final key in [
+        'ss-config',
+        'vmess-config',
+        'tuic-server',
+        'tunnels',
+        'iptables',
+      ]) {
+        expect(config.containsKey(key), isFalse, reason: key);
+      }
+      expect(config['ntp'], {'enable': true, 'server': 'time.apple.com'});
+      expect(config['dns'], {
+        'enable': true,
+        'nameserver': ['https://1.1.1.1/dns-query'],
+      }, reason: 'DNS автора остаётся, без своего сервера на устройстве');
+    });
+
+    test('правила автора по приложениям включают поиск процесса, без них он выключен', () {
+      expect(build()['find-process-mode'], 'off');
+      final withProcess = _yaml.replaceFirst(
+        '  - DOMAIN-SUFFIX,author.example,DIRECT',
+        '  - AND,((PROCESS-NAME,org.telegram.messenger),(NETWORK,UDP)),DE WS',
+      );
+      expect(
+        MihomoConfigGen.build(withProcess, const AppSettings(), socksPort: 2080)['find-process-mode'],
+        'strict',
+      );
+    });
+
     test('tun автора удалён — туннель держит VpnService', () {
       // С авторским `tun.enable` ядро полезет поднимать СВОЁ устройство
       // поверх нашего, и сессия умрёт на старте.

@@ -41,6 +41,12 @@ class CustomClashConfig {
     'tls',
     'interface-name',
     'routing-mark',
+    // те же входы, что listeners, только мимо allow-lan: ss, vmess и tuic сервер, проброс портов (hub/executor)
+    'ss-config',
+    'vmess-config',
+    'tuic-server',
+    'tunnels',
+    'iptables',
     // автообновление geo это поход в сеть до того, как поднялся туннель
     'geo-auto-update',
     'geo-update-interval',
@@ -375,7 +381,8 @@ class CustomClashConfig {
     out['sniffer'] = sniffer;
     out['geodata-mode'] = true;
     out['geo-auto-update'] = false;
-    out['find-process-mode'] = 'off';
+    // с off ядро не ищет процесс вовсе, и правила автора по приложениям молча не срабатывают (tunnel.go)
+    out['find-process-mode'] = _hasProcessRules(out) ? 'strict' : 'off';
 
     // DNS автора только включённый: с выключенным ядро идёт в системный резолвер, а на Android его нет
     final authorDns = out['dns'];
@@ -383,6 +390,16 @@ class CustomClashConfig {
         authorDns is Map && authorDns['enable'] == true &&
             (authorDns['nameserver'] as List?)?.isNotEmpty == true;
     if (!authorDnsEnabled && dns != null) out['dns'] = dns;
+    // свой DNS-сервер на устройстве не нужен, перехват туннеля идёт в резолвер ядра напрямую
+    final keptDns = out['dns'];
+    if (keptDns is Map && keptDns.containsKey('listen')) {
+      out['dns'] = {...keptDns}..remove('listen');
+    }
+    // ядро с правами переводило бы системные часы
+    final ntp = out['ntp'];
+    if (ntp is Map && ntp.containsKey('write-to-system')) {
+      out['ntp'] = {...ntp}..remove('write-to-system');
+    }
 
     out['rules'] = _mergeRules(
       authorRules: _rulesOf(out),
@@ -605,6 +622,19 @@ class CustomClashConfig {
       rest = rest.substring(next + 1);
     }
     return (type: type, payload: payload, target: rest.split(',').first.trim());
+  }
+
+  static final _processCondition =
+      RegExp(r'(?:^|\()\s*(?:PROCESS-[A-Z-]+|UID)\s*,', caseSensitive: false);
+
+  static bool _hasProcessRules(Map<String, dynamic> map) {
+    final subRules = map['sub-rules'];
+    return [
+      ..._rulesOf(map),
+      if (subRules is Map)
+        for (final list in subRules.values)
+          if (list is List) ...list.map((r) => r.toString()),
+    ].any(_processCondition.hasMatch);
   }
 
   static List<String> _rulesOf(Map<String, dynamic> map) {

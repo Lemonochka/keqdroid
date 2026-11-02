@@ -103,7 +103,7 @@
   },
   "geodata-mode": true,
   "geo-auto-update": false,
-  "find-process-mode": "off",
+  "find-process-mode": "strict",
   "dns": {
     "enable": true,
     "ipv6": false,
