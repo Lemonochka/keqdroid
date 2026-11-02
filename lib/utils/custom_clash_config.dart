@@ -241,15 +241,52 @@ class CustomClashConfig {
   String? get _primaryName {
     final groups = map['proxy-groups'];
     if (groups is List) {
+      final hops = _hopGroups;
       for (final group in groups) {
         if (group is! Map) continue;
         final name = group['name']?.toString() ?? '';
-        if (name.trim().isNotEmpty) return name;
+        if (name.trim().isNotEmpty && !hops.contains(name)) return name;
       }
     }
     final first = proxies.isEmpty ? null : proxies.first;
     final name = first?['name']?.toString() ?? '';
     return name.trim().isEmpty ? null : name;
+  }
+
+  // группа, до которой доходят только по dialer-proxy, звено цепочки: правило на неё вело бы мимо самого узла
+  Set<String> get _hopGroups {
+    final raw = map['proxy-groups'];
+    final groups = <String, Map>{
+      if (raw is List)
+        for (final group in raw)
+          if (group is Map && group['name'] != null) group['name'].toString(): group,
+    };
+    Set<String> reachable(Iterable<Object?> starts) {
+      final out = <String>{};
+      final queue = [for (final s in starts) s?.toString() ?? ''];
+      while (queue.isNotEmpty) {
+        final name = queue.removeLast();
+        final group = groups[name];
+        if (group == null || !out.add(name)) continue;
+        final members = group['proxies'];
+        if (members is List) queue.addAll([for (final m in members) m.toString()]);
+      }
+      return out;
+    }
+
+    final viaDialer = reachable([for (final p in proxies) p['dialer-proxy']]);
+    if (viaDialer.isEmpty) return const {};
+    final subRules = map['sub-rules'];
+    return viaDialer.difference(reachable([
+      ...groups.keys.where((name) => !viaDialer.contains(name)),
+      for (final rule in [
+        ..._rulesOf(map),
+        if (subRules is Map)
+          for (final list in subRules.values)
+            if (list is List) ...list.map((r) => r.toString()),
+      ])
+        _parseRule(rule)?.target,
+    ]));
   }
 
   static const _builtinTargets = {
@@ -260,6 +297,58 @@ class CustomClashConfig {
     'PASS',
     'PASS-RULE',
   };
+
+  // узел со звеньями dialer-proxy, без них ядро его не соберёт. звеном бывает и группа (BasicOption в base.go), тогда едет её состав.
+  // null, если звена нет в конфиге или состав группы набирает ядро
+  static ({List<Map<String, dynamic>> proxies, List<Map<String, dynamic>> groups})?
+      withHops(
+    Map<String, dynamic> node,
+    List<Map<String, dynamic>> proxies,
+    List<Map<String, dynamic>> groups,
+  ) {
+    final proxyByName = {
+      for (final proxy in proxies)
+        if ((proxy['name']?.toString() ?? '').isNotEmpty)
+          proxy['name'].toString(): proxy,
+    };
+    final groupByName = {
+      for (final group in groups)
+        if ((group['name']?.toString() ?? '').isNotEmpty)
+          group['name'].toString(): group,
+    };
+    final seen = {node['name']?.toString() ?? ''};
+    final outProxies = [node];
+    final outGroups = <Map<String, dynamic>>[];
+    bool reach(Object? ref) {
+      final name = ref?.toString() ?? '';
+      if (name.isEmpty || _builtinTargets.contains(name) || !seen.add(name)) {
+        return true;
+      }
+      if (proxyByName[name] case final proxy?) {
+        outProxies.add(proxy);
+        return true;
+      }
+      if (groupByName[name] case final group?) {
+        outGroups.add(group);
+        return true;
+      }
+      return false;
+    }
+
+    for (var p = 0, g = 0; p < outProxies.length || g < outGroups.length;) {
+      if (p < outProxies.length) {
+        if (!reach(outProxies[p++]['dialer-proxy'])) return null;
+        continue;
+      }
+      final group = outGroups[g++];
+      final members = group['proxies'];
+      if (_coreFillsGroup(group) || members is! List || members.isEmpty) {
+        return null;
+      }
+      if (!members.every(reach) || !reach(group['empty-fallback'])) return null;
+    }
+    return (proxies: outProxies, groups: outGroups);
+  }
 
   // exclude-filter ядро сверяет с именами и у явного списка (groupbase.go), а имена мы меняем
   static bool _coreFillsGroup(Map<String, dynamic> group) {

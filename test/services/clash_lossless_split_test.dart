@@ -108,6 +108,80 @@ void main() {
     expect(jsonEncode(session['proxies']), contains('sspw'));
   });
 
+  // dialer-proxy бывает и группой (BasicOption в base.go mihomo): wireguard такой пропадал из подписки,
+  // а узел со ссылкой становился ссылкой без цепочки и шёл к выходу напрямую
+  group('звено цепочки группой', () {
+    const yaml = '''
+proxies:
+  - {name: RU1, type: trojan, server: ru1.example, port: 443, password: a}
+  - {name: RU2, type: trojan, server: ru2.example, port: 443, password: b}
+  - name: WG
+    type: wireguard
+    server: 162.159.192.1
+    port: 2408
+    ip: 172.16.0.2
+    private-key: eCtXsJZ27+4PbhDkHnB923tkUn2Gj59wZw5wFA75MnU=
+    public-key: bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
+    dialer-proxy: Entry
+  - {name: DE, type: trojan, server: de.example, port: 443, password: c, dialer-proxy: Entry}
+proxy-groups:
+  - {name: Main, type: select, proxies: [WG, DE, RU1]}
+  - {name: Entry, type: url-test, proxies: [RU1, Auto]}
+  - {name: Auto, type: fallback, proxies: [RU2, DIRECT]}
+rules:
+  - MATCH,Main
+''';
+
+    CustomClashConfig entryOf(String name) => CustomClashConfig.tryParse(
+          SubscriptionService.parseBodyForTest(yaml)
+              .firstWhere((e) => e.contains('"name":"$name"')),
+        )!;
+
+    test('узел едет с группой-звеном и её составом', () {
+      expect(SubscriptionService.unsupportedClashNodes(yaml), isEmpty);
+      for (final name in ['WG', 'DE']) {
+        final clash = entryOf(name);
+        expect([for (final p in clash.proxies) p['name']], [name, 'RU1', 'RU2'],
+            reason: name);
+        expect(
+          [for (final g in clash.map['proxy-groups'] as List) g['name']],
+          ['Entry', 'Auto'],
+          reason: name,
+        );
+      }
+    });
+
+    test('трафик идёт в сам узел, а не в группу-звено, и пинг его строит', () {
+      for (final name in ['WG', 'DE']) {
+        final clash = entryOf(name);
+        expect(clash.primaryTarget, name);
+        final session = MihomoConfigGen.build(clash.encode(), const AppSettings(), socksPort: 2080);
+        expect((session['rules'] as List).last, 'MATCH,$name');
+        final probe = jsonDecode(MihomoConfigGen.generatePingConfig(
+          clash.encode(),
+          const AppSettings(),
+          socksPort: 3001,
+        )) as Map<String, dynamic>;
+        final main = (probe['proxies'] as List)
+            .cast<Map>()
+            .firstWhere((p) => p['name'] == MihomoConfigGen.proxyName);
+        expect(main['dialer-proxy'], isNot(MihomoConfigGen.proxyName));
+        expect(
+          [for (final g in probe['proxy-groups'] as List) g['name']],
+          contains(main['dialer-proxy']),
+        );
+      }
+    });
+
+    test('звена нет в конфиге: узел как раньше, ссылкой', () {
+      final broken = yaml.replaceFirst('dialer-proxy: Entry}', 'dialer-proxy: Missing}');
+      final entries = SubscriptionService.parseBodyForTest(broken);
+      expect(entries.where((e) => e.contains('"name":"DE"')), isEmpty);
+      expect(entries.where((e) => e.startsWith('trojan://') && e.contains('de.example')),
+          hasLength(1));
+    });
+  });
+
   test('метода у vmess-json нет: POST едет целиком, без метода — ссылкой', () {
     const yaml = '''
 proxies:

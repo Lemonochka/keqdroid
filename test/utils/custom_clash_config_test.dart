@@ -179,6 +179,53 @@ void main() {
       );
     });
 
+    test('группа, которая только звено dialer-proxy, целью правил не становится', () {
+      String target(Map<String, dynamic> config) =>
+          CustomClashConfig.tryParse(jsonEncode(config))!.primaryTarget;
+      Map<String, dynamic> node(String name, [String? via]) => {
+            'name': name,
+            'type': 'trojan',
+            'server': '$name.example',
+            'dialer-proxy': ?via,
+          };
+      // одноузловой из подписки: группа-звено первая и единственная
+      expect(
+        target({
+          'proxies': [node('DE', 'Entry'), node('RU')],
+          'proxy-groups': [
+            {'name': 'Entry', 'type': 'url-test', 'proxies': ['RU']},
+          ],
+          'rules': ['MATCH,DE'],
+        }),
+        'DE',
+      );
+      final relayFirst = {
+        'proxies': [node('DE', 'Relay'), node('RU'), node('NL')],
+        'proxy-groups': [
+          {'name': 'Relay', 'type': 'select', 'proxies': ['RU']},
+          {'name': 'Proxy', 'type': 'select', 'proxies': ['DE', 'NL']},
+        ],
+        'rules': ['MATCH,Proxy'],
+      };
+      expect(target(relayFirst), 'Proxy');
+      // звено, на которое ведут и правила или другая группа, остаётся целью, с правилами провайдера и без
+      final sharedAuto = {
+        'proxies': [node('DE', 'Auto'), node('RU'), node('NL')],
+        'proxy-groups': [
+          {'name': 'Auto', 'type': 'url-test', 'proxies': ['RU', 'NL']},
+          {'name': 'Proxy', 'type': 'select', 'proxies': ['Auto', 'DE']},
+        ],
+        'rules': ['MATCH,Auto'],
+      };
+      expect(target(sharedAuto), 'Auto');
+      expect(
+        CustomClashConfig.tryParse(jsonEncode(sharedAuto))!
+            .withoutProviderRules()
+            .primaryTarget,
+        'Auto',
+      );
+    });
+
     test('узлы на якорях получают общий блок, свои поля сильнее', () {
       final clash = CustomClashConfig.tryParse(_anchors)!;
       expect(clash.proxies, hasLength(2));

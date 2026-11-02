@@ -1445,9 +1445,14 @@ class SubscriptionService {
       }
     }
 
-    final (:proxies, :standalone) = _extractYamlLikeProxies(content);
+    final (:proxies, :groups, :standalone) = _extractYamlLikeProxies(content);
     for (final proxy in proxies) {
-      final config = _clashNodeConfig(proxy, proxies, standalone: standalone);
+      final config = _clashNodeConfig(
+        proxy,
+        proxies,
+        groups: groups,
+        standalone: standalone,
+      );
       if (config != null) found.add(config);
     }
 
@@ -1461,9 +1466,10 @@ class SubscriptionService {
       return const [];
     }
     final proxies = clash.proxies;
+    final groups = _groupsOf(clash.map);
     return {
       for (final proxy in proxies)
-        ?_clashNodeConfig(proxy, proxies, standalone: true),
+        ?_clashNodeConfig(proxy, proxies, groups: groups, standalone: true),
     }.toList();
   }
 
@@ -1486,18 +1492,30 @@ class SubscriptionService {
   static String? _clashNodeConfig(
     Map<String, dynamic> node,
     List<Map<String, dynamic>> all, {
+    List<Map<String, dynamic>> groups = const [],
     required bool standalone,
   }) {
     final uri = _proxyMapToUri(node);
     if (uri != null) {
       if (_isMetadataConfig(uri)) return null;
-      return _linkKeepsNode(node, uri) ? uri : _singleNodeClash(node, all) ?? uri;
+      return _linkKeepsNode(node, uri)
+          ? uri
+          : _singleNodeClash(node, all, groups) ?? uri;
     }
     if (!standalone) return null;
     final type = node['type']?.toString().trim().toLowerCase() ?? '';
     if (!_mihomoOnlyTypes.contains(type)) return null;
     if (CustomClashConfig.serverOf(node).address.isEmpty) return null;
-    return _singleNodeClash(node, all);
+    return _singleNodeClash(node, all, groups);
+  }
+
+  static List<Map<String, dynamic>> _groupsOf(Map<String, dynamic> map) {
+    final raw = map['proxy-groups'];
+    return [
+      if (raw is List)
+        for (final group in raw)
+          if (group is Map) group.cast<String, dynamic>(),
+    ];
   }
 
   // skip-cert-verify ссылка не несёт намеренно (_applyTransport), name и udp генератор пишет свои
@@ -1549,29 +1567,20 @@ class SubscriptionService {
     return want.toString() == got?.toString();
   }
 
-  // так узел исполняет mihomo целиком, как v2rayN, FlClash и Clash Verge исполняют Clash.
-  // звенья dialer-proxy едут с ним, без них ядро не соберёт узел
+  // так узел исполняет mihomo целиком, как v2rayN, FlClash и Clash Verge исполняют Clash
   static String? _singleNodeClash(
     Map<String, dynamic> node,
     List<Map<String, dynamic>> all,
+    List<Map<String, dynamic>> groups,
   ) {
     final name = node['name']?.toString().trim() ?? '';
     if (name.isEmpty) return null;
-    final byName = {
-      for (final p in all)
-        if ((p['name']?.toString() ?? '').isNotEmpty) p['name'].toString(): p,
-    };
-    final picked = [node];
-    for (var i = 0; i < picked.length; i++) {
-      final hop = picked[i]['dialer-proxy']?.toString() ?? '';
-      if (hop.isEmpty || picked.any((p) => p['name'] == hop)) continue;
-      final next = byName[hop];
-      if (next == null) return null;
-      picked.add(next);
-    }
+    final hops = CustomClashConfig.withHops(node, all, groups);
+    if (hops == null) return null;
     return jsonEncode({
       'name': name,
-      'proxies': picked,
+      'proxies': hops.proxies,
+      if (hops.groups.isNotEmpty) 'proxy-groups': hops.groups,
       'rules': ['MATCH,$name'],
     });
   }
@@ -1670,10 +1679,16 @@ class SubscriptionService {
   @visibleForTesting
   static Map<String, int> unsupportedClashNodes(String content) {
     final counts = <String, int>{};
-    final (:proxies, :standalone) = _extractYamlLikeProxies(content);
+    final (:proxies, :groups, :standalone) = _extractYamlLikeProxies(content);
     for (final proxy in proxies) {
       if (_proxyMapToUri(proxy) != null) continue;
-      if (_clashNodeConfig(proxy, proxies, standalone: standalone) != null) {
+      if (_clashNodeConfig(
+            proxy,
+            proxies,
+            groups: groups,
+            standalone: standalone,
+          ) !=
+          null) {
         continue;
       }
       final type = (proxy['type'] ?? proxy['protocol'] ?? '')
@@ -1695,16 +1710,24 @@ class SubscriptionService {
 
   // standalone: узел без ссылки можно отдать mihomo одного. строчный разбор теряет вложенные карты (amnezia-wg-option),
   // а у профиля на proxy-providers вынутый socks5 заслонил бы узлы провайдера, и профиль целиком уже не собрался бы
-  static ({List<Map<String, dynamic>> proxies, bool standalone})
-      _extractYamlLikeProxies(String content) {
+  static ({
+    List<Map<String, dynamic>> proxies,
+    List<Map<String, dynamic>> groups,
+    bool standalone,
+  }) _extractYamlLikeProxies(String content) {
     final parsed = CustomClashConfig.tryParse(content);
     if (parsed != null && parsed.proxies.isNotEmpty) {
       return (
         proxies: parsed.proxies,
+        groups: _groupsOf(parsed.map),
         standalone: !CustomClashConfig.usesProviderNodes(parsed.map),
       );
     }
-    return (proxies: _scanYamlLikeProxies(content), standalone: false);
+    return (
+      proxies: _scanYamlLikeProxies(content),
+      groups: const [],
+      standalone: false,
+    );
   }
 
   static List<Map<String, dynamic>> _scanYamlLikeProxies(String content) {
