@@ -254,7 +254,7 @@ class _HeaderLiquid extends ConsumerWidget {
     this.overhang = 0,
   });
 
-  final AnimationController clock;
+  final PacedClock clock;
   final bool panel;
   final double shapesTop;
   final double overhang;

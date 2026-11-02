@@ -6,6 +6,7 @@ import 'package:androidx_graphics_shapes/material_shapes.dart';
 import 'package:androidx_graphics_shapes/shapes.dart';
 import 'package:flutter/material.dart';
 
+import 'paced_clock.dart';
 import 'smooth_fade.dart';
 
 enum LiquidPhase { idle, busy, active }
@@ -257,7 +258,7 @@ class LiquidWave extends StatefulWidget {
   });
 
   // тикает, пока шапка анимируется: волна стоит вместе с ней
-  final AnimationController clock;
+  final PacedClock clock;
   final LiquidPhase phase;
   final LiquidLevels levels;
   final double load;

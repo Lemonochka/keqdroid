@@ -9,7 +9,7 @@ class _ModernConnectPanel extends ConsumerWidget {
     required this.buttonKey,
   });
 
-  final AnimationController waveCtrl;
+  final PacedClock waveCtrl;
 
   final void Function(VpnStatus) onToggle;
   final VoidCallback onJumpToActive;

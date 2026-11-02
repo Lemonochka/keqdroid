@@ -22,6 +22,7 @@ import 'package:keqdroid/shared/ui/halloween/pumpkin_button.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';
 import 'package:keqdroid/shared/ui/liquid_bud.dart';
 import 'package:keqdroid/shared/ui/liquid_wave.dart';
+import 'package:keqdroid/shared/ui/paced_clock.dart';
 import 'package:keqdroid/shared/ui/server_group_anchors.dart';
 import 'package:keqdroid/shared/ui/scroll_hidden_fab.dart';
 import 'package:keqdroid/shared/ui/scroll_jump_overlay.dart';
@@ -132,7 +133,7 @@ class _ConnectHeader extends ConsumerWidget {
     required this.buttonKey,
   });
 
-  final AnimationController waveCtrl;
+  final PacedClock waveCtrl;
 
   final void Function(VpnStatus) onToggle;
   final VoidCallback onJumpToActive;
@@ -299,7 +300,7 @@ class ServersTab extends ConsumerStatefulWidget {
 
 class _ServersTabState extends ConsumerState<ServersTab>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  late final AnimationController _waveCtrl;
+  late final PacedClock _waveCtrl;
   late final AnimationController _stateCtrl;
 
   static const _waveSettleGrace = Duration(seconds: 2);
@@ -320,10 +321,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     VpnNativeBridge.registerLaunchHandler(_onNativeMethodCall);
-    _waveCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat();
+    _waveCtrl = PacedClock()..repeat();
     _stateCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -361,6 +359,12 @@ class _ServersTabState extends ConsumerState<ServersTab>
     _waveCtrl.dispose();
     _stateCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _waveCtrl.muted = !TickerMode.valuesOf(context).enabled;
   }
 
   @override

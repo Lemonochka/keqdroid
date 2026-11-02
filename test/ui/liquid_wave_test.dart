@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -7,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/shared/ui/liquid_wave.dart';
+import 'package:keqdroid/shared/ui/paced_clock.dart';
 import 'package:keqdroid/shared/ui/smooth_fade.dart';
 
 const _frame = 1 / 60;
@@ -143,10 +143,7 @@ void main() {
     });
 
     testWidgets('кнопка справа, а в RTL слева', (tester) async {
-      final clock = AnimationController(
-        vsync: const TestVSync(),
-        duration: const Duration(seconds: 2),
-      );
+      final clock = PacedClock();
       addTearDown(clock.dispose);
       for (final (direction, expected) in [
         (TextDirection.ltr, closeTo(0.76, 0.01)),
@@ -220,10 +217,7 @@ void main() {
     tester,
   ) async {
     await tester.runAsync(SmoothFade.load);
-    final clock = AnimationController(
-      vsync: const TestVSync(),
-      duration: const Duration(seconds: 2),
-    );
+    final clock = PacedClock();
     addTearDown(clock.dispose);
     const legacy = LiquidLevels(idle: 0.08, busy: 0.36, quiet: 0.3, loud: 0.36);
 
@@ -282,10 +276,7 @@ void main() {
     tester,
   ) async {
     await tester.runAsync(LiquidWave.loadShaders);
-    final clock = AnimationController(
-      vsync: const TestVSync(),
-      duration: const Duration(seconds: 2),
-    );
+    final clock = PacedClock();
     addTearDown(clock.dispose);
     const legacy = LiquidLevels(idle: 0.08, busy: 0.36, quiet: 0.3, loud: 0.36);
     final key = GlobalKey();
@@ -348,10 +339,7 @@ void main() {
   testWidgets(
       'после отключения фигурки сбавляют ход до остановки часов, '
       'у воды тонут под метриками и всплывают', (tester) async {
-    final clock = AnimationController(
-      vsync: const TestVSync(),
-      duration: const Duration(seconds: 2),
-    );
+    final clock = PacedClock();
     addTearDown(clock.dispose);
     Widget wave(LiquidPhase phase, {bool lowZoneFree = true}) => MaterialApp(
           home: SizedBox(
@@ -378,7 +366,7 @@ void main() {
     await tester.pumpWidget(wave(LiquidPhase.active));
     final state = tester.state<LiquidWaveState>(find.byType(LiquidWave));
     expect(state.shapeLife, 1);
-    unawaited(clock.repeat());
+    clock.repeat();
     await tester.pumpWidget(wave(LiquidPhase.active, lowZoneFree: false));
     await run(1000);
     expect(state.lowShown, lessThan(0.05));
@@ -394,10 +382,7 @@ void main() {
   });
 
   testWidgets('наборы фигур сменяются раз в полминуты', (tester) async {
-    final clock = AnimationController(
-      vsync: const TestVSync(),
-      duration: const Duration(seconds: 2),
-    );
+    final clock = PacedClock();
     addTearDown(clock.dispose);
     final presets = [
       [
