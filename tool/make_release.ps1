@@ -52,6 +52,10 @@
 .PARAMETER NotesFile
   Markdown file used as the release body when -Publish is set.
 
+.PARAMETER AllowUnmerged
+  Build even though a worktree holds commits this checkout lacks or has
+  uncommitted changes. Without it the script stops and lists them.
+
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
   # build everything + SHA256SUMS, no upload
@@ -67,7 +71,8 @@ param(
   [switch]$NoClean,
   [string]$WslDistro = 'Ubuntu-22.04',
   [switch]$Publish,
-  [string]$NotesFile
+  [string]$NotesFile,
+  [switch]$AllowUnmerged
 )
 
 $ErrorActionPreference = 'Stop'
@@ -98,6 +103,32 @@ function Repair-PubCacheEnv {
 Repair-PubCacheEnv
 
 function Write-Step($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
+
+# --- Work left in other worktrees -------------------------------------------
+# A feature finished in a Claude worktree stays on its own branch until it is
+# merged, and a release built here ships without it: 0.34.0 went out without
+# the home screen widget that was committed on claude/eloquent-euclid-1538b7.
+# flutter regenerates the plugin registrants on every run, they do not count.
+if (-not $AllowUnmerged) {
+  $left = @()
+  $path = $null
+  foreach ($line in (git worktree list --porcelain)) {
+    if ($line.StartsWith('worktree ')) {
+      $path = $line.Substring(9)
+      $dirty = @(git -C $path status --porcelain | Where-Object { $_ -notmatch '/flutter/generated_plugin' })
+      if ($dirty.Count -gt 0) { $left += "  $path : $($dirty.Count) uncommitted change(s)" }
+    } elseif ($line.StartsWith('branch refs/heads/')) {
+      $branch = $line.Substring(18)
+      $ahead = [int](git rev-list --count "HEAD..refs/heads/$branch")
+      if ($ahead -gt 0) { $left += "  $branch : $ahead commit(s) not in this checkout ($path)" }
+    }
+  }
+  if ($left.Count -gt 0) {
+    Write-Host "Work that this release would not contain:" -ForegroundColor Yellow
+    $left | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
+    throw "Merge or commit it first, or rerun with -AllowUnmerged if it is meant to stay out."
+  }
+}
 
 # ASCII, no BOM, LF (see the note in the header).
 function Write-AsciiLf([string]$path, [string[]]$lines) {
