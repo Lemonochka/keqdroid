@@ -1,0 +1,51 @@
+mixed-port: 7890
+mode: rule
+profile:
+  store-selected: true
+
+proxies:
+  - name: "🇩🇪 Germany"
+    type: trojan
+    server: de.example.com
+    port: 443
+    password: p1
+    sni: de.example.com
+  - name: "🇫🇮 Finland"
+    type: trojan
+    server: fi.example.com
+    port: 443
+    password: p2
+    sni: fi.example.com
+  - name: "🇱🇻 Latvia"
+    type: trojan
+    server: lv.example.com
+    port: 443
+    password: p3
+    sni: lv.example.com
+
+proxy-groups:
+  - name: Любой доступный
+    type: fallback
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    proxies: ["🇩🇪 Germany", "🇫🇮 Finland", "🇱🇻 Latvia"]
+  - name: Недоступные сайты
+    type: select
+    proxies: [Любой доступный, DIRECT, "🇩🇪 Germany", "🇫🇮 Finland", "🇱🇻 Latvia"]
+  - name: YouTube
+    type: select
+    include-all: true
+    filter: "Germany|Finland"
+  - name: Служебная
+    type: select
+    hidden: true
+    proxies: [DIRECT, REJECT]
+  - name: Основной
+    type: select
+    proxies: ["🇩🇪 Germany", "🇫🇮 Finland", "🇱🇻 Latvia"]
+
+rules:
+  - DOMAIN-SUFFIX,youtube.com,YouTube
+  - DOMAIN-SUFFIX,rutracker.org,Недоступные сайты
+  - GEOIP,ru,DIRECT
+  - MATCH,Основной

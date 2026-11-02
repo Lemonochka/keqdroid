@@ -44,6 +44,8 @@ void main() {
     _golden('clash-wireguard-peers');
     // Uri не берёт @ # / ? [ ] в userInfo: trojan с таким паролем падал вместе со всей подпиской
     _golden('clash-yaml-password-chars');
+    // шаблон с группами: серверами остаются узлы, сам шаблон хранится рядом (clash_template.dart)
+    _golden('clash-template-groups');
     _golden('html-pre');
     _golden('html-js-var');
     _golden('xray-json-object');

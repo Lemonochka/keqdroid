@@ -1712,6 +1712,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversManualGroup => 'Manual servers';
 
   @override
+  String get serversTabServers => 'Servers';
+
+  @override
+  String serversTabGroups(int count) {
+    return 'Groups · $count';
+  }
+
+  @override
+  String get serverGroupsInactive => 'Work while a server of this subscription is selected';
+
+  @override
+  String get serverGroupPickHint => 'Only for these sites, everything else stays as it is';
+
+  @override
+  String serverGroupNow(String name) {
+    return 'now $name';
+  }
+
+  @override
+  String get serverGroupAuto => 'picks by itself';
+
+  @override
   String get serversEmptyGroupHint => 'No servers in this subscription';
 
   @override

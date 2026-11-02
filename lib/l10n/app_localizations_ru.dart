@@ -1722,6 +1722,28 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversManualGroup => 'Ручные серверы';
 
   @override
+  String get serversTabServers => 'Серверы';
+
+  @override
+  String serversTabGroups(int count) {
+    return 'Группы · $count';
+  }
+
+  @override
+  String get serverGroupsInactive => 'Действуют, когда выбран сервер этой подписки';
+
+  @override
+  String get serverGroupPickHint => 'Только для этих сайтов, остальное не меняется';
+
+  @override
+  String serverGroupNow(String name) {
+    return 'сейчас $name';
+  }
+
+  @override
+  String get serverGroupAuto => 'выбирает сам';
+
+  @override
   String get serversEmptyGroupHint => 'В этой подписке нет серверов';
 
   @override

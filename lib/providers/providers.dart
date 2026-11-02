@@ -30,6 +30,7 @@ import '../services/core_dial_failures.dart';
 import '../services/exit_ip_service.dart';
 import '../services/geo_asset_service.dart';
 import '../services/expiry_reminder.dart';
+import '../services/mihomo_groups_api.dart';
 import '../services/notification_service.dart';
 import '../services/ping_service.dart';
 import '../services/rule_list_service.dart';
@@ -46,6 +47,7 @@ import '../utils/app_locale.dart';
 import '../utils/app_routes.dart';
 import '../utils/awg_profile.dart';
 import '../utils/awg_uri.dart';
+import '../utils/clash_template.dart';
 import '../utils/config_gen.dart';
 import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
@@ -84,6 +86,7 @@ part 'rule_lists_provider.dart';
 part 'servers_provider.dart';
 part 'settings_providers.dart';
 part 'subscriptions_provider.dart';
+part 'template_groups_provider.dart';
 part 'vpn_state_provider.dart';
 
 Future<String?> _resolveFirstAddress(String host) async {

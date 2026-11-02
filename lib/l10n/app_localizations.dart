@@ -3209,6 +3209,42 @@ abstract class AppLocalizations {
   /// **'Manual servers'**
   String get serversManualGroup;
 
+  /// No description provided for @serversTabServers.
+  ///
+  /// In en, this message translates to:
+  /// **'Servers'**
+  String get serversTabServers;
+
+  /// No description provided for @serversTabGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'Groups · {count}'**
+  String serversTabGroups(int count);
+
+  /// No description provided for @serverGroupsInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Work while a server of this subscription is selected'**
+  String get serverGroupsInactive;
+
+  /// No description provided for @serverGroupPickHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only for these sites, everything else stays as it is'**
+  String get serverGroupPickHint;
+
+  /// No description provided for @serverGroupNow.
+  ///
+  /// In en, this message translates to:
+  /// **'now {name}'**
+  String serverGroupNow(String name);
+
+  /// No description provided for @serverGroupAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'picks by itself'**
+  String get serverGroupAuto;
+
   /// No description provided for @serversEmptyGroupHint.
   ///
   /// In en, this message translates to:

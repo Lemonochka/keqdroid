@@ -427,6 +427,26 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       unawaited(refreshTracked(updated).catchError((_) {}));
     }
   }
+
+  // выбор ложится в конфиг при каждом подключении, а в идущую сессию уходит через API ядра
+  Future<void> chooseInGroup(String id, String group, String member) async {
+    final subs = state.value ?? [];
+    final idx = subs.indexWhere((s) => s.id == id);
+    if (idx == -1) return;
+    final updated = subs[idx].copyWith(
+      groupChoices: {...subs[idx].groupChoices, group: member},
+    );
+    await ref.read(storageProvider).upsertSubscription(updated);
+    state = AsyncData([...subs]..[idx] = updated);
+
+    final live = ref.read(vpnStateProvider).value?.status == VpnStatus.connected &&
+        ref.read(serversProvider).activeServer?.subscriptionId == id;
+    if (!live) return;
+    if (!await MihomoGroupsApi.select(group, member)) {
+      AppLogger.instance.warn('Template group switch not applied live: $group');
+    }
+    ref.invalidate(liveTemplateGroupsProvider(id));
+  }
 }
 
 final subscriptionsProvider =

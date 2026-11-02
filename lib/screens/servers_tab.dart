@@ -27,6 +27,8 @@ import 'package:keqdroid/shared/ui/server_group_anchors.dart';
 import 'package:keqdroid/shared/ui/scroll_hidden_fab.dart';
 import 'package:keqdroid/shared/ui/scroll_jump_overlay.dart';
 import 'package:keqdroid/shared/ui/server_row.dart';
+import 'package:keqdroid/shared/ui/server_avatar.dart';
+import 'package:keqdroid/shared/ui/expressive_elements.dart';
 import 'package:keqdroid/shared/ui/shape_morph.dart';
 import 'package:keqdroid/shared/ui/sliver_reveal.dart';
 import 'package:keqdroid/shared/ui/smooth_fade.dart';
@@ -51,6 +53,7 @@ import '../providers/traffic_split_provider.dart';
 import '../services/auto_server_select.dart';
 import '../services/exit_ip_service.dart';
 import '../services/file_dialog_service.dart';
+import '../services/mihomo_groups_api.dart';
 import '../services/ping_service.dart';
 import '../services/subscription_accent_service.dart';
 import '../services/tv_handoff.dart';
@@ -63,6 +66,7 @@ import '../utils/clipboard_import.dart';
 import '../utils/provider_routing.dart';
 import '../utils/subscription_deep_link.dart';
 import '../utils/bidi.dart';
+import '../utils/clash_template.dart';
 import '../utils/error_messages.dart';
 import '../utils/import_payload.dart';
 import '../utils/vpn_core_support.dart';
@@ -80,6 +84,7 @@ part 'servers/connection_stats.dart';
 part 'servers/connect_button.dart';
 part 'servers/connect_panel.dart';
 part 'servers/server_plaque.dart';
+part 'servers/template_groups.dart';
 
 // с выбранным сервером состояние показывает плашка, сюда доходят ошибка и «нет сервера»
 Widget _serversStatusText(

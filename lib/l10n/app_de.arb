@@ -901,6 +901,26 @@
   "serversAutoSelect": "Auto",
   "serversAutoSelectTooltip": "Die App wählt den Server in diesem Abonnement selbst und wechselt, wenn er nicht mehr funktioniert",
   "serversManualGroup": "Manuelle Server",
+  "serversTabServers": "Server",
+  "serversTabGroups": "Gruppen · {count}",
+  "@serversTabGroups": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serverGroupsInactive": "Gelten, solange ein Server dieses Abonnements gewählt ist",
+  "serverGroupPickHint": "Nur für diese Seiten, alles andere bleibt, wie es ist",
+  "serverGroupNow": "jetzt {name}",
+  "@serverGroupNow": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serverGroupAuto": "wählt selbst",
   "serversEmptyGroupHint": "Keine Server in diesem Abonnement",
   "statsInLabel": "Empfangen",
   "statsTimeLabel": "Zeit",

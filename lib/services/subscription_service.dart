@@ -15,6 +15,7 @@ import '../models/subscription.dart';
 import '../services/auto_select_home.dart';
 import '../services/auto_server_select.dart';
 import '../services/storage_service.dart';
+import '../utils/clash_template.dart';
 import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
 import '../utils/hysteria_uri.dart';
@@ -112,6 +113,8 @@ class SubscriptionFetchResult {
 
   final ProviderRouting? routing;
 
+  final String? clashTemplate;
+
   const SubscriptionFetchResult({
     required this.configs,
     required this.usedBytes,
@@ -120,6 +123,7 @@ class SubscriptionFetchResult {
     required this.usedUserAgent,
     required this.profile,
     this.routing,
+    this.clashTemplate,
   });
 }
 
@@ -365,6 +369,7 @@ class SubscriptionService {
         usedUserAgent: result.usedUserAgent,
         profile: result.profile,
         routing: result.routing,
+        clashTemplate: result.clashTemplate,
       );
     } on Object catch (e, st) {
       AppLogger.instance.warn(
@@ -512,6 +517,7 @@ class SubscriptionService {
         usedUserAgent: usedUserAgent,
         profile: profile.withBody(effectiveBody),
         routing: _routingOf(response.headers, effectiveBody),
+        clashTemplate: await _templateOffThread(effectiveBody),
       );
     } on DioException catch (e) {
       // бывает не-200 (502), а в теле уже валидный payload
@@ -618,6 +624,7 @@ class SubscriptionService {
         usedUserAgent: null,
         profile: _parseProfileHeaders(response.headers).withBody(body),
         routing: _routingOf(response.headers, body),
+        clashTemplate: _templateOf(body),
       );
     } on Object {
       return null;
@@ -669,6 +676,7 @@ class SubscriptionService {
       usedUserAgent: response.requestOptions.headers['User-Agent'] as String?,
       profile: _parseProfileHeaders(response.headers).withBody(body),
       routing: _routingOf(response.headers, body),
+      clashTemplate: _templateOf(body),
     );
   }
 
@@ -772,6 +780,7 @@ class SubscriptionService {
           usedUserAgent: null,
           profile: _parseProfileHeaders(dioLikeHeaders).withBody(body),
           routing: _routingOf(dioLikeHeaders, body),
+          clashTemplate: _templateOf(body),
         );
       } on Object catch (e, st) {
         if (e is FormatException) {
@@ -1178,6 +1187,29 @@ class SubscriptionService {
 
   static Future<List<String>> _parseBodyOffThread(String content) =>
       compute(_parseBody, content);
+
+  static String? _encodeTemplate(String body) =>
+      ClashTemplate.fromBody(body)?.encode();
+
+  // шаблон довесок к серверам: его ошибка не должна ронять обновление подписки
+  static String? _templateOf(String body) {
+    try {
+      return _encodeTemplate(body);
+    } catch (e) {
+      AppLogger.instance.warn('Clash template not parsed: $e');
+      return null;
+    }
+  }
+
+  static Future<String?> _templateOffThread(String body) async {
+    if (!CustomClashConfig.looksLikeClash(body)) return null;
+    try {
+      return await compute(_encodeTemplate, body);
+    } catch (e) {
+      AppLogger.instance.warn('Clash template not parsed: $e');
+      return null;
+    }
+  }
 
   static List<String> _parseBody(String content) {
     final original = content.trim();
@@ -2843,6 +2875,12 @@ class SubscriptionService {
       );
 
       await _storage.replaceServersBySubscription(sub.id, servers);
+      // серверы уже записаны: без шаблона они работают узлами, как раньше
+      try {
+        await _storage.setClashTemplate(sub.id, result.clashTemplate);
+      } catch (e, st) {
+        AppLogger.instance.warn('Clash template not saved', error: e, stackTrace: st);
+      }
 
       if (activeId != null) {
         final wasInThisSub = oldServers.any((s) => s.id == activeId);

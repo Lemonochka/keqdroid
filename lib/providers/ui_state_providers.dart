@@ -36,6 +36,8 @@ class CollapsedSubscriptionCardsNotifier extends StringBoolMapNotifier {}
 
 class ExpandedRoutingProfilesNotifier extends StringBoolMapNotifier {}
 
+class ServerGroupsTabNotifier extends StringBoolMapNotifier {}
+
 class SubscriptionReorderInProgressNotifier extends Notifier<bool> {
   @override
   bool build() => false;
@@ -99,6 +101,11 @@ final collapsedServerGroupsProvider =
 final collapsedSubscriptionCardsProvider =
     NotifierProvider<CollapsedSubscriptionCardsNotifier, Map<String, bool>>(
   CollapsedSubscriptionCardsNotifier.new,
+);
+
+final serverGroupsTabProvider =
+    NotifierProvider<ServerGroupsTabNotifier, Map<String, bool>>(
+  ServerGroupsTabNotifier.new,
 );
 
 final expandedRoutingProfilesProvider =

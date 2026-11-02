@@ -961,6 +961,26 @@
   "serversAutoSelect": "Auto",
   "serversAutoSelectTooltip": "The app picks the server in this subscription and switches when it stops working",
   "serversManualGroup": "Manual servers",
+  "serversTabServers": "Servers",
+  "serversTabGroups": "Groups · {count}",
+  "@serversTabGroups": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serverGroupsInactive": "Work while a server of this subscription is selected",
+  "serverGroupPickHint": "Only for these sites, everything else stays as it is",
+  "serverGroupNow": "now {name}",
+  "@serverGroupNow": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serverGroupAuto": "picks by itself",
   "serversEmptyGroupHint": "No servers in this subscription",
   "statsInLabel": "In",
   "statsTimeLabel": "Time",

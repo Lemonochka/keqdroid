@@ -1708,6 +1708,28 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversManualGroup => 'سرورهای دستی';
 
   @override
+  String get serversTabServers => 'سرورها';
+
+  @override
+  String serversTabGroups(int count) {
+    return 'گروه‌ها · $count';
+  }
+
+  @override
+  String get serverGroupsInactive => 'وقتی سروری از این اشتراک انتخاب شده باشد فعال‌اند';
+
+  @override
+  String get serverGroupPickHint => 'فقط برای این سایت‌ها؛ بقیه تغییر نمی‌کند';
+
+  @override
+  String serverGroupNow(String name) {
+    return 'اکنون $name';
+  }
+
+  @override
+  String get serverGroupAuto => 'خودش انتخاب می‌کند';
+
+  @override
   String get serversEmptyGroupHint => 'این اشتراک سروری ندارد';
 
   @override

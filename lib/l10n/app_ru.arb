@@ -903,6 +903,26 @@
   "serversAutoSelect": "Авто",
   "serversAutoSelectTooltip": "Сервер в этой подписке выбирает приложение и меняет его, когда текущий перестаёт работать",
   "serversManualGroup": "Ручные серверы",
+  "serversTabServers": "Серверы",
+  "serversTabGroups": "Группы · {count}",
+  "@serversTabGroups": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serverGroupsInactive": "Действуют, когда выбран сервер этой подписки",
+  "serverGroupPickHint": "Только для этих сайтов, остальное не меняется",
+  "serverGroupNow": "сейчас {name}",
+  "@serverGroupNow": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serverGroupAuto": "выбирает сам",
   "serversEmptyGroupHint": "В этой подписке нет серверов",
   "statsInLabel": "Вх",
   "statsTimeLabel": "Время",

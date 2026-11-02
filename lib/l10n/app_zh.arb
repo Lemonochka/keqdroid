@@ -901,6 +901,26 @@
   "serversAutoSelect": "自动",
   "serversAutoSelectTooltip": "由应用选择该订阅中的服务器，并在其不可用时切换",
   "serversManualGroup": "手动添加的服务器",
+  "serversTabServers": "服务器",
+  "serversTabGroups": "策略组 · {count}",
+  "@serversTabGroups": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serverGroupsInactive": "选中此订阅的服务器时生效",
+  "serverGroupPickHint": "仅用于这些网站，其余不变",
+  "serverGroupNow": "当前 {name}",
+  "@serverGroupNow": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serverGroupAuto": "自动选择",
   "serversEmptyGroupHint": "此订阅中没有服务器",
   "statsInLabel": "已下载",
   "statsTimeLabel": "时长",

@@ -123,6 +123,8 @@ class Subscription {
   // провайдер просит напоминать за 3 дня до конца
   final bool remindExpiry;
 
+  // группа шаблона mihomo и выбранный в ней пункт, сам шаблон в StorageService.getClashTemplate
+  final Map<String, String> groupChoices;
 
   const Subscription({
     required this.id,
@@ -150,6 +152,7 @@ class Subscription {
     this.autoSelect = false,
     this.fallbackUrl,
     this.remindExpiry = false,
+    this.groupChoices = const {},
   });
 
   factory Subscription.create({
@@ -202,6 +205,13 @@ class Subscription {
     autoSelect: json['autoSelect'] as bool? ?? false,
     fallbackUrl: json['fallbackUrl'] as String?,
     remindExpiry: json['remindExpiry'] as bool? ?? false,
+    groupChoices: json['groupChoices'] is Map
+        ? {
+            for (final MapEntry(:key, :value)
+                in (json['groupChoices'] as Map).entries)
+              key.toString(): value.toString(),
+          }
+        : const {},
     fetchIdentity: json['fetchIdentity'] is Map
         ? SubscriptionFetchIdentity.fromJson(
             (json['fetchIdentity'] as Map).cast<String, dynamic>(),
@@ -237,6 +247,7 @@ class Subscription {
     if (autoSelect) 'autoSelect': true,
     if (fallbackUrl != null) 'fallbackUrl': fallbackUrl,
     if (remindExpiry) 'remindExpiry': true,
+    if (groupChoices.isNotEmpty) 'groupChoices': groupChoices,
     if (fetchIdentity.enabled || fetchIdentity.hasCustomFields)
       'fetchIdentity': fetchIdentity.toJson(),
   };
@@ -267,6 +278,7 @@ class Subscription {
     SubscriptionFetchIdentity? fetchIdentity,
     String? fallbackUrl,
     bool? remindExpiry,
+    Map<String, String>? groupChoices,
   }) =>
       Subscription(
         id: id ?? this.id,
@@ -294,6 +306,7 @@ class Subscription {
         fetchIdentity: fetchIdentity ?? this.fetchIdentity,
         fallbackUrl: fallbackUrl ?? this.fallbackUrl,
         remindExpiry: remindExpiry ?? this.remindExpiry,
+        groupChoices: groupChoices ?? this.groupChoices,
       );
 
   // новое поле модели добавлять и сюда, иначе оно слетает при каждом обновлении подписки
@@ -337,6 +350,7 @@ class Subscription {
       // запасной адрес приходит не в каждом ответе: со старым ничего не теряется, а отказ основного без него глухой
       fallbackUrl: fallbackUrl ?? this.fallbackUrl,
       remindExpiry: remindExpiry,
+      groupChoices: groupChoices,
     );
   }
 

@@ -56,24 +56,24 @@ class ConnectionsService {
   }
 
   static String _sessionToken(ConnectionsSnapshot snapshot) =>
-      '${snapshot.source.name}:${_activeClashPort() ?? ''}';
+      '${snapshot.source.name}:${activeClashPort() ?? ''}';
 
   static bool get supportsProcessNames =>
       Platform.isWindows || Platform.isLinux || Platform.isAndroid;
 
-  static int? _activeClashPort() {
+  static int? activeClashPort() {
     if (Platform.isWindows) return WindowsTunnelBackend.activeInstance?.clashApiPort;
     if (Platform.isLinux) return LinuxTunnelBackend.activeInstance?.clashApiPort;
     if (Platform.isAndroid) return MihomoApiSession().port;
     return null;
   }
 
-  static String _activeClashSecret() => Platform.isLinux
+  static String activeClashSecret() => Platform.isLinux
       ? LinuxTunnelBackend.activeInstance?.clashApiSecret ?? ''
       : MihomoApiSession().secret;
 
   static Future<ConnectionsSnapshot> _fromClashApi() async {
-    final port = _activeClashPort();
+    final port = activeClashPort();
     if (port == null) {
       return const ConnectionsSnapshot(
         entries: [],
@@ -90,7 +90,7 @@ class ConnectionsService {
       final req = await _http
           .get('127.0.0.1', port, '/connections')
           .timeout(const Duration(seconds: 3));
-      final secret = _activeClashSecret();
+      final secret = activeClashSecret();
       if (secret.isNotEmpty) {
         req.headers.set(HttpHeaders.authorizationHeader, 'Bearer $secret');
       }

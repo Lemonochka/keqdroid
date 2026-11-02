@@ -141,10 +141,13 @@ class _GroupHeaderBackground extends StatelessWidget {
     required this.subscription,
     required this.surface,
     required this.open,
+    required this.groups,
     required this.child,
   });
 
   final Subscription? subscription;
+
+  final bool groups;
 
   final Color surface;
 
@@ -154,13 +157,21 @@ class _GroupHeaderBackground extends StatelessWidget {
 
   static const fadeHeight = 26.0;
 
-  static double heightFor(Subscription? subscription, {required bool collapsed}) =>
-      heightAt(subscription, collapsed ? 0 : 1);
+  static double heightFor(
+    Subscription? subscription, {
+    required bool collapsed,
+    bool groups = false,
+  }) =>
+      heightAt(subscription, collapsed ? 0 : 1, groups: groups);
 
-  static double heightAt(Subscription? subscription, double open) {
+  static double heightAt(
+    Subscription? subscription,
+    double open, {
+    bool groups = false,
+  }) {
     final below = [
       if (_showsImage(subscription)) fadeHeight,
-      if (subscription?.autoSelectVisible == true) autoRowHeight,
+      if (subscription?.autoSelectVisible == true || groups) autoRowHeight,
       0.0,
     ].reduce((a, b) => a > b ? a : b);
     return _subCardRowHeight + below * open;
@@ -229,7 +240,7 @@ class _GroupHeaderBackground extends StatelessWidget {
             alignment: Alignment.topCenter,
             // высота вместе со строкой Авто: иначе кнопку видно, но нажатия до неё не доходят
             child: SizedBox(
-              height: heightAt(sub, open),
+              height: heightAt(sub, open, groups: groups),
               child: child,
             ),
           ),
@@ -509,6 +520,8 @@ class _ServerGroupHeader extends ConsumerWidget {
         (sub != null
             ? '${sub.name}  |  ${ltrIsolate(sub.usageLabel)}'
             : context.l10n.serversManualGroup);
+    final template =
+        sub == null ? null : ref.watch(subscriptionTemplateProvider(sub.id));
     return ServerGroupAnchor(
         groupKey: collapseKey,
         child: RepaintBoundary(
@@ -521,11 +534,17 @@ class _ServerGroupHeader extends ConsumerWidget {
             // Авто тает в первой половине сворачивания, а не уезжает за край
             final auto = ((open - 0.4) / 0.6).clamp(0.0, 1.0);
             return SizedBox(
-              height: _GroupHeaderBackground.heightAt(sub, open) + squash,
+              height: _GroupHeaderBackground.heightAt(
+                    sub,
+                    open,
+                    groups: template != null,
+                  ) +
+                  squash,
               child: _GroupHeaderBackground(
                 subscription: sub,
                 surface: groupColor,
                 open: open,
+                groups: template != null,
                 child: ClipRect(
                   child: OverflowBox(
                     alignment: Alignment.topCenter,
@@ -535,13 +554,20 @@ class _ServerGroupHeader extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         row!,
-                        if (sub != null && sub.autoSelectVisible && auto > 0)
+                        if (sub != null &&
+                            (template != null || sub.autoSelectVisible) &&
+                            auto > 0)
                           Opacity(
                             opacity: auto,
                             child: Transform.scale(
                               scale: 0.85 + 0.15 * auto,
                               alignment: AlignmentDirectional.centerStart,
-                              child: _AutoSelectRow(subscription: sub),
+                              child: template != null
+                                  ? _SubscriptionTabsRow(
+                                      subscription: sub,
+                                      groups: template.groups.length,
+                                    )
+                                  : _AutoSelectRow(subscription: sub),
                             ),
                           ),
                       ],
@@ -792,8 +818,26 @@ class _ServerGroupHeader extends ConsumerWidget {
   }
 }
 
-class _AutoSelectRow extends ConsumerWidget {
+class _AutoSelectRow extends StatelessWidget {
   const _AutoSelectRow({required this.subscription});
+
+  final Subscription subscription;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: _GroupHeaderBackground.autoRowHeight,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: _AutoSelectButton(subscription: subscription),
+          ),
+        ),
+      );
+}
+
+class _AutoSelectButton extends ConsumerWidget {
+  const _AutoSelectButton({required this.subscription});
 
   final Subscription subscription;
 
@@ -826,21 +870,12 @@ class _AutoSelectRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    return SizedBox(
-      height: _GroupHeaderBackground.autoRowHeight,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
-        child: Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: Tooltip(
-            message: l10n.serversAutoSelectTooltip,
-            child: ExpressiveToggleButton(
-              selected: subscription.autoSelect,
-              label: l10n.serversAutoSelect,
-              onPressed: () => unawaited(_toggle(ref, context)),
-            ),
-          ),
-        ),
+    return Tooltip(
+      message: l10n.serversAutoSelectTooltip,
+      child: ExpressiveToggleButton(
+        selected: subscription.autoSelect,
+        label: l10n.serversAutoSelect,
+        onPressed: () => unawaited(_toggle(ref, context)),
       ),
     );
   }
@@ -987,6 +1022,11 @@ class _SubCardState extends ConsumerState<_SubCard>
       serversProvider.select((s) => s.activeServerId),
     );
 
+    final template =
+        sub == null ? null : ref.watch(subscriptionTemplateProvider(sub.id));
+    final groupsOpen = template != null &&
+        ref.watch(serverGroupsTabProvider.select((m) => m[sub!.id] ?? false));
+
     final activeIndex = activeServerId == null
         ? -1
         : sortedServers.indexWhere((s) => s.id == activeServerId);
@@ -995,9 +1035,13 @@ class _SubCardState extends ConsumerState<_SubCard>
       ServerGroupAnchors.instance.registerActiveServer(
         serverId: activeServerId!,
         groupKey: collapseKey,
-        offsetInGroup: collapsed
+        offsetInGroup: collapsed || groupsOpen
             ? null
-            : _GroupHeaderBackground.heightFor(sub, collapsed: false) +
+            : _GroupHeaderBackground.heightFor(
+                  sub,
+                  collapsed: false,
+                  groups: template != null,
+                ) +
                 widget.layout.gap / 2 +
                 row * widget.rowExtent,
       );
@@ -1039,12 +1083,22 @@ class _SubCardState extends ConsumerState<_SubCard>
                 SliverToBoxAdapter(
                   child: SizedBox(height: widget.layout.gap / 2),
                 ),
-                _buildExpandedServerList(
-                  servers: sortedServers,
-                  activeServerId: activeServerId,
-                  textLightColor: textLightColor,
-                  accent: accent,
-                ),
+                if (groupsOpen)
+                  _TemplateGroupsSliver(
+                    subscription: sub!,
+                    template: template,
+                    servers: widget.servers,
+                    rowExtent: widget.rowExtent,
+                    gap: widget.layout.gap,
+                    accent: accent,
+                  )
+                else
+                  _buildExpandedServerList(
+                    servers: sortedServers,
+                    activeServerId: activeServerId,
+                    textLightColor: textLightColor,
+                    accent: accent,
+                  ),
                 SliverToBoxAdapter(
                   child: SizedBox(height: widget.layout.gap / 2),
                 ),

@@ -33,6 +33,8 @@ class StorageService {
   static const _kSortModes     = 'keqdis_server_sort_modes';
   static const _kExpiryNotified = 'keqdis_subscription_expiry_notified';
   static const _kExpiryReminded = 'keqdis_subscription_expiry_reminded';
+  // отдельным ключом: шаблон с правилами бывает в сотни КБ, а список подписок разбирается при каждом чтении
+  static const _kClashTemplatePrefix = 'keqdis_clash_template_';
 
   final SharedPreferences _prefs;
   StorageService(this._prefs);
@@ -209,10 +211,24 @@ class StorageService {
         await _writeSubscriptions(subs);
       });
 
+  String? getClashTemplate(String subscriptionId) =>
+      _prefs.getString('$_kClashTemplatePrefix$subscriptionId');
+
+  Future<void> setClashTemplate(String subscriptionId, String? template) =>
+      _serial(() async {
+        final key = '$_kClashTemplatePrefix$subscriptionId';
+        if (template == null) {
+          await _prefs.remove(key);
+        } else {
+          await _prefs.setString(key, template);
+        }
+      });
+
   Future<void> deleteSubscription(String id) => _serial(() async {
         final subs = await getSubscriptions();
         subs.removeWhere((s) => s.id == id);
         await _writeSubscriptions(subs);
+        await _prefs.remove('$_kClashTemplatePrefix$id');
         final all = await getServers();
         await _writeServers(
           all.where((s) => s.subscriptionId != id).toList(),

@@ -407,10 +407,36 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         AppLogger.instance.info('Routing profile: ${profile.name}');
       }
 
+      final subId = server.subscriptionId;
+      final template = subId == null ? null : storage.getClashTemplate(subId);
+      String? templated;
+      if (template != null) {
+        final choices = (await storage.getSubscriptions())
+                .where((s) => s.id == subId)
+                .firstOrNull
+                ?.groupChoices ??
+            const <String, String>{};
+        // кривой шаблон не повод не подключаться: сервер работает узлом, как без шаблона
+        try {
+          templated = templatedSessionConfig(
+            server: server,
+            template: template,
+            settings: stored,
+            choices: choices,
+          );
+        } catch (e, st) {
+          AppLogger.instance.warn('Provider template skipped', error: e, stackTrace: st);
+        }
+      }
+      if (templated != null) {
+        AppLogger.instance.info('Provider template: mihomo runs it whole');
+      }
+      final runConfig = templated ?? server.config;
+
       // готовый конфиг исполняет ядро его языка, настройка решает только для обычной ссылки.
       // выбираем до свёртки маршрутов: от ядра зависит, какие другие серверы встанут в конфиг
       final choice = resolveVpnBackend(
-        config: server.config,
+        config: runConfig,
         preference: stored.vpnCore,
         mihomoAvailable: mihomoShipsHere,
       );
@@ -598,11 +624,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         mihomoTun = null;
       }
 
-      final clashGeoIndex = mihomoPicked && server.protocol == 'clash'
-          ? await GeoAssetService.index()
-          : null;
+      final clashGeoIndex =
+          mihomoPicked && (server.protocol == 'clash' || templated != null)
+              ? await GeoAssetService.index()
+              : null;
       if (clashGeoIndex != null) {
-        final dropped = CustomClashConfig.tryParse(server.config)
+        final dropped = CustomClashConfig.tryParse(runConfig)
                 ?.withKnownGeo(clashGeoIndex)
                 .dropped ??
             const <String>[];
@@ -618,7 +645,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
       final mihomoConfig = mihomoPicked
           ? MihomoConfigGen.generate(
-              server.config,
+              runConfig,
               settings,
               socksPort: settings.localPort,
               // Dart HttpClient не умеет SOCKS, а пакет приложения исключён из TUN, так что http-порт нужен и тут

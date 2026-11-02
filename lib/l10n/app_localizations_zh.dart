@@ -1708,6 +1708,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversManualGroup => '手动添加的服务器';
 
   @override
+  String get serversTabServers => '服务器';
+
+  @override
+  String serversTabGroups(int count) {
+    return '策略组 · $count';
+  }
+
+  @override
+  String get serverGroupsInactive => '选中此订阅的服务器时生效';
+
+  @override
+  String get serverGroupPickHint => '仅用于这些网站，其余不变';
+
+  @override
+  String serverGroupNow(String name) {
+    return '当前 $name';
+  }
+
+  @override
+  String get serverGroupAuto => '自动选择';
+
+  @override
   String get serversEmptyGroupHint => '此订阅中没有服务器';
 
   @override
