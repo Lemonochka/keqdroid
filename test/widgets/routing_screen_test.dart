@@ -1206,36 +1206,56 @@ void main() {
       config: 'trojan://pw@de.example:443?security=tls&sni=de.example#Germany',
     );
 
-    testWidgets('без серверов со своими правилами строки нет', (tester) async {
+    final providerDns = ServerItem(
+      id: 'provider-dns',
+      type: ServerItemType.manual,
+      config: '{"remarks":"Provider DNS","dns":{"servers":["https://dns.provider.example/dns-query"]},'
+          '"outbounds":[{"tag":"proxy","protocol":"vless",'
+          '"settings":{"vnext":[{"address":"198.51.100.51","port":443,'
+          '"users":[{"id":"00000000-0000-4000-8000-000000000000"}]}]}}]}',
+    );
+
+    testWidgets('без серверов со своими правилами и DNS плитки нет', (tester) async {
       await _pump(tester, servers: [plain]);
-      expect(find.text('Не учитывать правила провайдера'), findsNothing);
+      expect(find.text('Не учитывать от провайдера'), findsNothing);
     });
 
-    testWidgets('есть такой сервер: строка первой, выключена, включается',
+    testWidgets('есть сервер со своими правилами: плитка первой, только «Правила», включается',
         (tester) async {
       final container = await _pump(tester, servers: [plain, provider]);
-      final row = find.text('Не учитывать правила провайдера');
-      expect(row, findsOneWidget);
-      expect(find.text('Работают только ваши маршруты'), findsOneWidget);
-      expect(tester.getRect(row).top,
+      final title = find.text('Не учитывать от провайдера');
+      expect(title, findsOneWidget);
+      expect(find.text('DNS'), findsNothing);
+      expect(tester.getRect(title).top,
           lessThan(tester.getRect(find.text('Основной')).top));
 
-      await tester.tap(row);
+      await tester.tap(find.text('Правила'));
       await tester.pumpAndSettle();
-      expect(
-        container.read(settingsNotifierProvider).value?.ignoreProviderRules,
-        isTrue,
-      );
+      final settings = container.read(settingsNotifierProvider).value!;
+      expect(settings.ignoreProviderRules, isTrue);
+      expect(settings.ignoreProviderDns, isFalse);
     });
 
-    testWidgets('включённую строку не прячем, даже если таких серверов не осталось',
+    testWidgets('сервер со своим DNS: «DNS» включается отдельно от правил',
+        (tester) async {
+      final container = await _pump(tester, servers: [plain, providerDns]);
+      expect(find.text('Правила'), findsNothing);
+      await tester.tap(find.text('DNS'));
+      await tester.pumpAndSettle();
+      final settings = container.read(settingsNotifierProvider).value!;
+      expect(settings.ignoreProviderDns, isTrue);
+      expect(settings.ignoreProviderRules, isFalse);
+    });
+
+    testWidgets('включённую кнопку не прячем, даже если таких серверов не осталось',
         (tester) async {
       await _pump(
         tester,
         servers: [plain],
         settings: const AppSettings(ignoreProviderRules: true),
       );
-      expect(find.text('Не учитывать правила провайдера'), findsOneWidget);
+      expect(find.text('Правила'), findsOneWidget);
+      expect(find.text('DNS'), findsNothing);
     });
   });
 

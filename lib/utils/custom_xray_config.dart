@@ -267,6 +267,7 @@ class CustomXrayConfig {
     required List<Map<String, dynamic>> inbounds,
     required String logLevel,
     Map<String, dynamic>? dns,
+    bool ownDns = false,
     List<Map<String, dynamic>> prependRules = const [],
     List<Map<String, dynamic>> appendRules = const [],
     GeoAssetIndex? geoIndex,
@@ -284,7 +285,7 @@ class CustomXrayConfig {
 
     out['inbounds'] = inbounds;
 
-    final mergedDns = mergeDns(authorDns, dns);
+    final mergedDns = ownDns ? dns : mergeDns(authorDns, dns);
     if (mergedDns != null) out['dns'] = mergedDns;
 
     if (prependRules.isNotEmpty || appendRules.isNotEmpty) {
@@ -355,6 +356,8 @@ class CustomXrayConfig {
       },
     });
   }
+
+  bool get hasProviderDns => authorDns != null;
 
   bool get hasProviderRules {
     final routing = json['routing'];

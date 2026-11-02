@@ -362,6 +362,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get routingIgnoreProviderRulesHint => 'Only your routes apply';
 
   @override
+  String get routingIgnoreFromProvider => 'Ignore from provider';
+
+  @override
+  String get routingIgnoreProviderRulesChip => 'Rules';
+
+  @override
+  String get routingIgnoreProviderDnsChip => 'DNS';
+
+  @override
+  String get routingIgnoreProviderDnsHint => 'The DNS from the app settings applies';
+
+  @override
   String get routingProfileScopeAll => 'All subscriptions and your own servers';
 
   @override

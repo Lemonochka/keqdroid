@@ -361,6 +361,18 @@ class AppLocalizationsFa extends AppLocalizations {
   String get routingIgnoreProviderRulesHint => 'فقط مسیرهای خودتان اعمال می‌شود';
 
   @override
+  String get routingIgnoreFromProvider => 'نادیده گرفتن موارد ارائه‌دهنده';
+
+  @override
+  String get routingIgnoreProviderRulesChip => 'قوانین';
+
+  @override
+  String get routingIgnoreProviderDnsChip => 'DNS';
+
+  @override
+  String get routingIgnoreProviderDnsHint => 'DNS تنظیمات برنامه اعمال می‌شود';
+
+  @override
   String get routingProfileScopeAll => 'همهٔ اشتراک‌ها و سرورهای خودتان';
 
   @override

@@ -290,8 +290,9 @@ class MihomoConfigGen {
       ),
       sniffer: buildSniffer(settings.xrayCore),
       logLevel: _logLevel(settings.xrayCore.logLevel),
-      // наш DNS только если у автора своего нет
+      // наш DNS, если у автора своего нет или человек поставил наш поверх
       dns: buildDns(settings, fakeIp: fakeIp),
+      ownDns: settings.ignoreProviderDns,
       // правила по процессам раньше авторских: это решение человека о своей машине
       prependRules: [
         ?outsideVpnRule(ownerGuard),
@@ -309,7 +310,7 @@ class MihomoConfigGen {
         ),
         ...routeServerDirectRules(routeServers),
         if (tun != null)
-          'IP-CIDR,${clash.tunRange ?? tunInterfaceRange},DIRECT,no-resolve',
+          'IP-CIDR,${clash.tunRange(ownDns: settings.ignoreProviderDns) ?? tunInterfaceRange},DIRECT,no-resolve',
       ],
       appendRules: [
         ...buildUserRules(

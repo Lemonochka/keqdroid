@@ -410,6 +410,18 @@ void main() {
       expect(config.containsKey('remarks'), isFalse);
     });
 
+    test('«DNS» в «Не учитывать от провайдера» ставит только наш DNS', () {
+      final config = _decode(
+        ConfigGeneratorV2.generateConfig(
+          _customConfig,
+          settings.copyWith(ignoreProviderDns: true),
+        ),
+      );
+      final servers = ((config['dns'] as Map)['servers'] as List).toString();
+      expect(servers, isNot(contains('1.0.0.1')));
+      expect(servers, contains('1.1.1.1'));
+    });
+
     test('strips geo codes missing from the bundled databases', () {
       final config = _decode(
         ConfigGeneratorV2.generateConfig(

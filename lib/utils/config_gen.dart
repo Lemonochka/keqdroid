@@ -949,11 +949,13 @@ class ConfigGeneratorV2 {
       ],
       proxiedDoh: settings.finalOutbound == AppSettings.finalOutboundProxy,
     );
-    final effectiveDns =
-        CustomXrayConfig.mergeDns(custom.authorDns, fallbackDns) ?? fallbackDns;
+    final ownDns = settings.ignoreProviderDns;
+    final effectiveDns = ownDns
+        ? fallbackDns
+        : CustomXrayConfig.mergeDns(custom.authorDns, fallbackDns) ?? fallbackDns;
 
     // с fakedns перехват всё ломает: домен из фейкового адреса достаёт только снифер с fakedns, а у нас его нет
-    final usesFakeDns = custom.json.containsKey('fakedns') ||
+    final usesFakeDns = (!ownDns && custom.json.containsKey('fakedns')) ||
         _dnsUsesFakeIp(effectiveDns);
 
     final dnsOutTag = _existingOutboundTag(custom, 'dns') ?? _customDnsTag;
@@ -1063,6 +1065,7 @@ class ConfigGeneratorV2 {
       logLevel: settings.xrayCore.logLevel,
       // дефолт dns-аутбаунда localhost на Android не резолвит ничего
       dns: fallbackDns,
+      ownDns: ownDns,
       // LAN-правила раньше авторских: иначе запрос снаружи уехал бы в туннель до запрета, и прокси стал бы открытым
       prependRules: [
         ...desktopHead,

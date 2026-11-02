@@ -249,12 +249,24 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     final ignoreProviderRules = ref.watch(
       settingsNotifierProvider.select((a) => a.value?.ignoreProviderRules ?? false),
     );
-    // выключать нечего, пока ни один сервер не принёс своих правил; включённую строку не прячем
+    final ignoreProviderDns = ref.watch(
+      settingsNotifierProvider.select((a) => a.value?.ignoreProviderDns ?? false),
+    );
+    final templates = [
+      for (final s in subs) ?ref.watch(subscriptionTemplateProvider(s.id)),
+    ];
+    // выключать нечего, пока ни один сервер не принёс своего; включённую кнопку не прячем
     final showProviderRules = ignoreProviderRules ||
+        templates.isNotEmpty ||
         profiles.any((p) => p.providerSubscriptionId != null) ||
         servers.any((s) =>
             (s.customConfig?.hasProviderRules ?? false) ||
             (s.clashConfig?.hasProviderRules ?? false));
+    final showProviderDns = ignoreProviderDns ||
+        templates.any((t) => t.config.hasProviderDns) ||
+        servers.any((s) =>
+            (s.customConfig?.hasProviderDns ?? false) ||
+            (s.clashConfig?.hasProviderDns ?? false));
     // профиль провайдера только смотрят, пока его правила слушают
     bool locked(RoutingProfile p) =>
         p.providerSubscriptionId != null && !ignoreProviderRules;
@@ -369,7 +381,8 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
                   SnackBar(
                     content: Text(
                       l10n.routingProfileLockedHint(
-                        l10n.routingIgnoreProviderRules,
+                        '${l10n.routingIgnoreFromProvider}: '
+                        '${l10n.routingIgnoreProviderRulesChip}',
                       ),
                     ),
                     backgroundColor: AppTheme.accent(context),
@@ -439,14 +452,13 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
         if (tunnelActive || hint)
           const SizedBox(height: ExpressiveSpacing.large),
         if (loaded) ...[
-          if (showProviderRules) ...[
+          if (showProviderRules || showProviderDns) ...[
             ExpressiveGroup(children: [
-              _AppearanceSwitchTile(
-                icon: Icons.playlist_remove_rounded,
-                title: l10n.routingIgnoreProviderRules,
-                subtitle: l10n.routingIgnoreProviderRulesHint,
-                value: ignoreProviderRules,
-                onChanged: (v) => unawaited(_saveIgnoreProviderRules(ref, v)),
+              _ProviderOverridesTile(
+                rules: showProviderRules ? ignoreProviderRules : null,
+                dns: showProviderDns ? ignoreProviderDns : null,
+                onRules: (v) => unawaited(_saveProviderOverrides(ref, rules: v)),
+                onDns: (v) => unawaited(_saveProviderOverrides(ref, dns: v)),
               ),
             ]),
             const SizedBox(height: ExpressiveSpacing.large),
@@ -490,10 +502,16 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
     );
   }
 
-  static Future<void> _saveIgnoreProviderRules(WidgetRef ref, bool value) async {
+  static Future<void> _saveProviderOverrides(
+    WidgetRef ref, {
+    bool? rules,
+    bool? dns,
+  }) async {
     final notifier = ref.read(settingsNotifierProvider.notifier);
     final settings = ref.read(settingsNotifierProvider).value ?? const AppSettings();
-    await notifier.save(settings.copyWith(ignoreProviderRules: value));
+    await notifier.save(
+      settings.copyWith(ignoreProviderRules: rules, ignoreProviderDns: dns),
+    );
   }
 
   static Future<void> _reconnect(WidgetRef ref) async {
@@ -880,4 +898,75 @@ List<Widget> _cheatLines(BuildContext context, String body) {
     ));
   }
   return out;
+}
+
+// одна плитка на всё, что можно не брать у провайдера: две строки с подписями занимали пол экрана
+class _ProviderOverridesTile extends StatelessWidget {
+  const _ProviderOverridesTile({
+    required this.rules,
+    required this.dns,
+    required this.onRules,
+    required this.onDns,
+  });
+
+  final bool? rules;
+  final bool? dns;
+  final ValueChanged<bool> onRules;
+  final ValueChanged<bool> onDns;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
+    final on = (rules ?? false) || (dns ?? false);
+    return ExpressiveGroupTile(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          ExpressiveIconBadge(
+            icon: Icons.playlist_remove_rounded,
+            accent: on ? ExpressiveAccent.tertiary : ExpressiveAccent.secondary,
+          ),
+          const SizedBox(width: ExpressiveSpacing.large),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.routingIgnoreFromProvider,
+                  style: textTheme.titleMedium
+                      ?.copyWith(color: AppTheme.text(context)),
+                ),
+                const SizedBox(height: ExpressiveSpacing.small),
+                Wrap(
+                  spacing: ExpressiveSpacing.small,
+                  runSpacing: ExpressiveSpacing.small,
+                  children: [
+                    if (rules case final value?)
+                      Tooltip(
+                        message: l10n.routingIgnoreProviderRulesHint,
+                        child: ExpressiveToggleButton(
+                          selected: value,
+                          label: l10n.routingIgnoreProviderRulesChip,
+                          onPressed: () => onRules(!value),
+                        ),
+                      ),
+                    if (dns case final value?)
+                      Tooltip(
+                        message: l10n.routingIgnoreProviderDnsHint,
+                        child: ExpressiveToggleButton(
+                          selected: value,
+                          label: l10n.routingIgnoreProviderDnsChip,
+                          onPressed: () => onDns(!value),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

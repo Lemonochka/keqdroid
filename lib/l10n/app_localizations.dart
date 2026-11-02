@@ -731,6 +731,30 @@ abstract class AppLocalizations {
   /// **'Only your routes apply'**
   String get routingIgnoreProviderRulesHint;
 
+  /// No description provided for @routingIgnoreFromProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Ignore from provider'**
+  String get routingIgnoreFromProvider;
+
+  /// No description provided for @routingIgnoreProviderRulesChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules'**
+  String get routingIgnoreProviderRulesChip;
+
+  /// No description provided for @routingIgnoreProviderDnsChip.
+  ///
+  /// In en, this message translates to:
+  /// **'DNS'**
+  String get routingIgnoreProviderDnsChip;
+
+  /// No description provided for @routingIgnoreProviderDnsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The DNS from the app settings applies'**
+  String get routingIgnoreProviderDnsHint;
+
   /// No description provided for @routingProfileScopeAll.
   ///
   /// In en, this message translates to:

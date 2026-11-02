@@ -257,9 +257,20 @@ dns:
         expect(session(const AppSettings())['mode'], 'rule');
       });
 
-      test('адрес туннеля по диапазону fake-ip провайдера', () {
+      test('адрес туннеля по диапазону fake-ip провайдера, с нашим DNS по нашему', () {
         expect(session(const AppSettings())['rules'],
             contains('IP-CIDR,28.0.0.0/30,DIRECT,no-resolve'));
+        expect(
+          session(const AppSettings(ignoreProviderDns: true))['rules'],
+          contains('IP-CIDR,${MihomoConfigGen.tunInterfaceRange},DIRECT,no-resolve'),
+        );
+      });
+
+      test('DNS провайдера по умолчанию, наш только когда человек его поставил', () {
+        expect((session(const AppSettings())['dns'] as Map)['nameserver'],
+            ['https://dns.provider.example/dns-query']);
+        final own = session(const AppSettings(ignoreProviderDns: true))['dns'] as Map;
+        expect(own['nameserver'], isNot(contains('https://dns.provider.example/dns-query')));
       });
 
       test('hosts человека поверх hosts провайдера, параллельное подключение его', () {

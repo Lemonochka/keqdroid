@@ -364,10 +364,12 @@ class CustomClashConfig {
         (dns['nameserver'] as List?)?.isNotEmpty == true;
   }
 
+  bool get hasProviderDns => _authorDnsEnabled;
+
   // адрес своего tun ядро берёт из dns.fake-ip-range с маской /30, даже без fake-ip (parseTun)
-  String? get tunRange {
+  String? tunRange({required bool ownDns}) {
     final dns = map['dns'];
-    if (!_authorDnsEnabled || dns is! Map) return null;
+    if (ownDns || !_authorDnsEnabled || dns is! Map) return null;
     final range = dns['fake-ip-range']?.toString() ?? '';
     final octets = range.split('/').first.split('.').map(int.tryParse).toList();
     if (octets.length != 4 || octets.any((o) => o == null || o < 0 || o > 255)) {
@@ -382,6 +384,7 @@ class CustomClashConfig {
     required Map<String, dynamic> sniffer,
     required String logLevel,
     Map<String, dynamic>? dns,
+    bool ownDns = false,
     List<String> prependRules = const [],
     List<String> appendRules = const [],
     List<Map<String, dynamic>> extraProxies = const [],
@@ -406,7 +409,7 @@ class CustomClashConfig {
     // с off ядро не ищет процесс вовсе, и правила автора по приложениям молча не срабатывают (tunnel.go)
     out['find-process-mode'] = _hasProcessRules(out) ? 'strict' : 'off';
 
-    if (!_authorDnsEnabled && dns != null) out['dns'] = dns;
+    if ((ownDns || !_authorDnsEnabled) && dns != null) out['dns'] = dns;
     // свой DNS-сервер на устройстве не нужен, перехват туннеля идёт в резолвер ядра напрямую
     final keptDns = out['dns'];
     if (keptDns is Map && keptDns.containsKey('listen')) {

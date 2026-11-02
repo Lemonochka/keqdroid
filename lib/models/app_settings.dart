@@ -14,6 +14,7 @@ class AppSettings {
   final String blockedRules;
   final String finalOutbound;
   final bool ignoreProviderRules;
+  final bool ignoreProviderDns;
   final bool autoConnectLastServer;
   final String pingType;
   final String pingTestTarget;
@@ -107,6 +108,7 @@ class AppSettings {
     this.blockedRules = RoutingPresets.defaultBlockedRules,
     this.finalOutbound = finalOutboundProxy,
     this.ignoreProviderRules = false,
+    this.ignoreProviderDns = false,
     this.autoConnectLastServer = false,
     this.pingType = 'url',
     this.pingTestTarget = PingTestConfig.targetGstatic,
@@ -172,6 +174,7 @@ class AppSettings {
     'blockedRules': blockedRules,
     'finalOutbound': finalOutbound,
     'ignoreProviderRules': ignoreProviderRules,
+    'ignoreProviderDns': ignoreProviderDns,
     'autoConnectLastServer': autoConnectLastServer,
     'pingType': pingType,
     'pingTestTarget': pingTestTarget,
@@ -257,6 +260,7 @@ class AppSettings {
       ),
       finalOutbound: normalizeFinalOutbound(json['finalOutbound'] as String?),
       ignoreProviderRules: json['ignoreProviderRules'] as bool? ?? false,
+      ignoreProviderDns: json['ignoreProviderDns'] as bool? ?? false,
       autoConnectLastServer: json['autoConnectLastServer'] as bool? ?? false,
       pingType: _normalizePingType(json['pingType'] as String?),
       pingTestTarget: PingTestConfig.normalizeTarget(
@@ -435,6 +439,7 @@ class AppSettings {
     String? blockedRules,
     String? finalOutbound,
     bool? ignoreProviderRules,
+    bool? ignoreProviderDns,
     bool? autoConnectLastServer,
     String? pingType,
     String? pingTestTarget,
@@ -499,6 +504,7 @@ class AppSettings {
         blockedRules: blockedRules ?? this.blockedRules,
         finalOutbound: finalOutbound ?? this.finalOutbound,
         ignoreProviderRules: ignoreProviderRules ?? this.ignoreProviderRules,
+        ignoreProviderDns: ignoreProviderDns ?? this.ignoreProviderDns,
         autoConnectLastServer: autoConnectLastServer ?? this.autoConnectLastServer,
         pingType: pingType ?? this.pingType,
         pingTestTarget: pingTestTarget ?? this.pingTestTarget,
@@ -585,6 +591,7 @@ class AppSettings {
               blockedRules == other.blockedRules &&
               finalOutbound == other.finalOutbound &&
               ignoreProviderRules == other.ignoreProviderRules &&
+              ignoreProviderDns == other.ignoreProviderDns &&
               autoConnectLastServer == other.autoConnectLastServer &&
               pingType == other.pingType &&
               pingTestTarget == other.pingTestTarget &&
@@ -659,6 +666,7 @@ class AppSettings {
     blockedRules,
     finalOutbound,
     ignoreProviderRules,
+    ignoreProviderDns,
     autoConnectLastServer,
     pingType,
     pingTestTarget,

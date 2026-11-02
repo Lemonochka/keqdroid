@@ -50,6 +50,7 @@ import 'package:keqdroid/shared/ui/floating_bar.dart';
 import 'package:keqdroid/shared/ui/smooth_fade.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
+import 'package:keqdroid/shared/ui/expressive_toggle_button.dart';
 import 'package:keqdroid/shared/ui/expressive_button_group.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/expressive_page.dart';

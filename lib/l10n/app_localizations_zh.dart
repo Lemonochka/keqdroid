@@ -361,6 +361,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get routingIgnoreProviderRulesHint => '仅使用自己的路由';
 
   @override
+  String get routingIgnoreFromProvider => '忽略订阅自带的';
+
+  @override
+  String get routingIgnoreProviderRulesChip => '规则';
+
+  @override
+  String get routingIgnoreProviderDnsChip => 'DNS';
+
+  @override
+  String get routingIgnoreProviderDnsHint => '使用应用设置中的 DNS';
+
+  @override
   String get routingProfileScopeAll => '所有订阅和手动添加的服务器';
 
   @override
