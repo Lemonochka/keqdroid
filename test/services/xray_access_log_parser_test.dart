@@ -86,6 +86,35 @@ void main() {
       expect(_byHost(XrayAccessLogParser.parse(_log), 'vk.com').process, '');
     });
 
+    // системный прокси на ПК: HTTP-вход пишет в access-строку URL запроса
+    // (proxy/http/server.go), у CONNECT это //хост:порт без схемы
+    test('reads HTTP inbound lines written as a request URL', () {
+      final snapshot = XrayAccessLogParser.parse('''
+2026/11/04 12:00:00.000000 [Info] [101] app/dispatcher: Hit route rule: [proxy-geosite] so taking detour [proxy] for [tcp:www.google.com:443]
+2026/11/04 12:00:00.100000 from 127.0.0.1:54321 accepted //www.google.com:443 [http-in -> proxy] process: C:/Program Files/Google/Chrome/Application/chrome.exe
+2026/11/04 12:00:01.000000 from 127.0.0.1:54322 accepted http://example.com/index.html?a=1:2 [http-in -> direct]
+2026/11/04 12:00:02.000000 from 127.0.0.1:54323 accepted http://example.org:8080/ [http-in -> direct]
+2026/11/04 12:00:03.000000 from 127.0.0.1:54324 accepted //[2001:db8::1]:443 [http-in -> proxy]
+''');
+      expect(snapshot.entries.length, 4);
+
+      final google = _byHost(snapshot, 'www.google.com');
+      expect(google.network, 'tcp');
+      expect(google.destPort, 443);
+      expect(google.source, '127.0.0.1:54321');
+      expect(google.inbound, 'http-in');
+      expect(google.outbound, 'proxy');
+      expect(google.rule, 'proxy-geosite');
+      expect(google.process,
+          'C:/Program Files/Google/Chrome/Application/chrome.exe');
+
+      final plain = _byHost(snapshot, 'example.com');
+      expect(plain.destPort, 80);
+      expect(plain.outbound, 'direct');
+      expect(_byHost(snapshot, 'example.org').destPort, 8080);
+      expect(_byHost(snapshot, '[2001:db8::1]').destPort, 443);
+    });
+
     test('newest connection comes first', () {
       final entries = XrayAccessLogParser.parse(_log).entries;
       expect(entries.first.host, 'doubleclick.net');

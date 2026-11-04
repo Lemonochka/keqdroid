@@ -372,6 +372,13 @@ class XrayAccessLogParser {
     caseSensitive: false,
   );
 
+  // HTTP-вход пишет URL запроса (proxy/http/server.go), у CONNECT без схемы: //хост:порт
+  static final _accessUrl = RegExp(
+    r'from\s+(\S+)\s+(accepted|rejected)\s+(?:([a-z]+):)?//([^/?#\s]+)\S*'
+    r'(?:\s+\[([^\]]*)\])?',
+    caseSensitive: false,
+  );
+
   // tool/patches/xray-desktop-process.patch, последним: в пути бывают пробелы
   static final _process = RegExp(r'\sprocess:\s(.+)$');
 
@@ -528,17 +535,12 @@ class XrayAccessLogParser {
 
     final entries = <String, ConnectionEntry>{};
     for (final line in lines) {
-      final m = _access.firstMatch(line);
-      if (m == null) continue;
-
-      final source = m.group(1)!.trim();
-      final rejected = m.group(2)!.toLowerCase() == 'rejected';
-      final network = m.group(3)!.toLowerCase();
-      final host = m.group(4)!.trim();
-      final port = int.tryParse(m.group(5)!) ?? 0;
+      final access = _accessLine(line);
+      if (access == null) continue;
+      final (:source, :rejected, :network, :host, :port, :detourField) =
+          access;
       if (host.isEmpty) continue;
 
-      final detourField = m.group(6)?.trim() ?? '';
       final (inbound, outbound) = _splitDetour(detourField);
       final target = _targetKey(network, host, '$port');
       final trace = byClient[source.toLowerCase()] ??
@@ -578,6 +580,44 @@ class XrayAccessLogParser {
       entries: list,
       source: ConnectionsSource.coreLog,
       ruleInfoAvailable: sawRoutingLines,
+    );
+  }
+
+  static ({
+    String source,
+    bool rejected,
+    String network,
+    String host,
+    int port,
+    String detourField,
+  })? _accessLine(String line) {
+    final url = _accessUrl.firstMatch(line);
+    if (url != null) {
+      final authority = url.group(4)!;
+      final hostPort = authority.substring(authority.lastIndexOf('@') + 1);
+      final colon = hostPort.lastIndexOf(':');
+      final hasPort = colon > hostPort.lastIndexOf(']');
+      final defaultPort = url.group(3)?.toLowerCase() == 'https' ? 443 : 80;
+      return (
+        source: url.group(1)!.trim(),
+        rejected: url.group(2)!.toLowerCase() == 'rejected',
+        network: 'tcp',
+        host: hasPort ? hostPort.substring(0, colon) : hostPort,
+        port: hasPort
+            ? int.tryParse(hostPort.substring(colon + 1)) ?? 0
+            : defaultPort,
+        detourField: url.group(5)?.trim() ?? '',
+      );
+    }
+    final m = _access.firstMatch(line);
+    if (m == null) return null;
+    return (
+      source: m.group(1)!.trim(),
+      rejected: m.group(2)!.toLowerCase() == 'rejected',
+      network: m.group(3)!.toLowerCase(),
+      host: m.group(4)!.trim(),
+      port: int.tryParse(m.group(5)!) ?? 0,
+      detourField: m.group(6)?.trim() ?? '',
     );
   }
 
