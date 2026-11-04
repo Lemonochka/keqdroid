@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../services/core_dial_failures.dart';
+import '../services/xray_connection_lines.dart';
 import '../services/xray_route_decisions.dart';
 import '../utils/xray_session_log.dart';
 import '../services/ephemeral_xray_ping.dart';
@@ -53,6 +54,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   @override
   ConnectionMode? get activeMode => _activeMode;
   final StringBuffer _xrayLog = StringBuffer();
+  final _connectionLines = XrayConnectionLines();
   final StringBuffer _rootLog = StringBuffer();
 
   int? _xrayMetricsPort;
@@ -110,6 +112,8 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     return _tail(combined, maxLines: maxLines);
   }
 
+  String exportConnectionLines() => _connectionLines.text;
+
   // не в общий /tmp: там адреса серверов и посещённые сайты
   Future<void> _dumpLogsToFile() async {
     try {
@@ -138,6 +142,7 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     _activeMode = request.mode;
     _xrayLog.clear();
     _rootLog.clear();
+    _connectionLines.clear();
     XrayRouteDecisions.reset();
 
     try {
@@ -1216,6 +1221,7 @@ $run''';
     if (!_xrayStarted && _xrayStartedLine.hasMatch(line)) _xrayStarted = true;
     CoreDialFailures.observe(line);
     XrayRouteDecisions.observe(line);
+    _connectionLines.add(line);
     if (!XraySessionLog.keep(line, _xrayLogThreshold)) return;
     buffer.writeln(line);
     if (buffer.length > 64 * 1024) {

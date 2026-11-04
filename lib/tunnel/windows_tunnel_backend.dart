@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../services/core_dial_failures.dart';
+import '../services/xray_connection_lines.dart';
 import '../services/xray_route_decisions.dart';
 import '../utils/xray_session_log.dart';
 import '../services/debug_log_service.dart';
@@ -65,6 +66,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   @override
   ConnectionMode? get activeMode => _activeMode;
   final StringBuffer _xrayLog = StringBuffer();
+  final _connectionLines = XrayConnectionLines();
 
   // до фильтра уровня: при loglevel error строка Warning в буфер не попадает
   bool _xrayStarted = false;
@@ -94,6 +96,8 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   String exportSessionLogs({int maxLines = 400}) {
     return _tail(_xrayLog, maxLines: maxLines);
   }
+
+  String exportConnectionLines() => _connectionLines.text;
 
   // на null попытку не блокируем, пусть ядро скажет своё
   Future<bool?> _isElevated() async {
@@ -127,6 +131,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     emit(VpnState(status: VpnStatus.connecting, activeMode: request.mode));
     _activeMode = request.mode;
     _xrayLog.clear();
+    _connectionLines.clear();
     XrayRouteDecisions.reset();
 
     try {
@@ -278,6 +283,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     _xrayMetricsPort = null;
     await WindowsDesktopService.clearSessionCoreProcesses();
     _xrayLog.clear();
+    _connectionLines.clear();
     _xrayStarted = false;
   }
 
@@ -778,6 +784,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       }
       CoreDialFailures.observe(line);
       XrayRouteDecisions.observe(line);
+      _connectionLines.add(line);
       if (!XraySessionLog.keep(line, _xrayLogThreshold)) return;
       buffer.writeln(line);
       if (buffer.length > 64 * 1024) {

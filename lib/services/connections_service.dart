@@ -259,7 +259,8 @@ class ConnectionsService {
   }
 
   static Future<ConnectionsSnapshot> _fromAccessLog() async {
-    final text = await DebugLogService.getXrayLogs(maxLines: _androidLogLines);
+    final text = _desktopConnectionLines() ??
+        await DebugLogService.getXrayLogs(maxLines: _androidLogLines);
     if (text.trim().isEmpty) {
       return const ConnectionsSnapshot(
         entries: [],
@@ -270,6 +271,16 @@ class ConnectionsService {
     final snapshot = XrayAccessLogParser.parse(text);
     if (!Platform.isAndroid) return snapshot;
     return _withAndroidAppNamesFromSource(snapshot);
+  }
+
+  static String? _desktopConnectionLines() {
+    if (Platform.isWindows) {
+      return WindowsTunnelBackend.activeInstance?.exportConnectionLines();
+    }
+    if (Platform.isLinux) {
+      return LinuxTunnelBackend.activeInstance?.exportConnectionLines();
+    }
+    return null;
   }
 
   static Future<ConnectionsSnapshot> _withAndroidAppNamesFromSource(
@@ -429,6 +440,23 @@ class XrayAccessLogParser {
     r'connection ends',
     caseSensitive: false,
   );
+
+  // всё, что читает parse: новый образец разбора добавлять и сюда
+  static bool isConnectionLine(String line) =>
+      line.contains(' accepted ') ||
+      line.contains(' rejected ') ||
+      line.contains('taking detour') ||
+      line.contains('default route for') ||
+      _sessionMarkers.any(line.contains);
+
+  static const _sessionMarkers = [
+    'processing from',
+    'sniffed domain',
+    'connection ends',
+    'client UDP connection from',
+    'TCP Connect request to',
+    'establishing new connection for',
+  ];
 
   static Map<String, XrayRouteDecision> parseRouteDecisions(String log) {
     final byTarget = <String, XrayRouteDecision>{};
