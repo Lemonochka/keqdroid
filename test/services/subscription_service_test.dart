@@ -276,6 +276,28 @@ void main() {
       // новый рабочий UA перезаписал сохранённый
       expect(result.subscription.userAgent, 'v2rayNG/2.2.6');
     });
+
+    test('saved own UA of an older version is replaced by the current one',
+        () async {
+      // Regression: подписка, добавленная на 0.8.7, после обновлений
+      // продолжала слать панели keqdroid/0.8.7
+      final current = await SubscriptionService.appUserAgent();
+      service = buildService((ua) => ua.startsWith(appUaPrefix));
+
+      final result = await service.updateSubscription(
+        const Subscription(
+          id: 's1',
+          name: 'S',
+          url: 'https://example.com/sub',
+          userAgent: 'keqdroid/0.8.7',
+        ),
+      );
+
+      expect(result.error, isNull);
+      expect(result.success, isTrue);
+      expect(adapter.requestedUserAgents, [current]);
+      expect(result.subscription.userAgent, current);
+    });
   });
 
   group('SubscriptionService._parseBody name extraction', () {

@@ -407,8 +407,11 @@ class SubscriptionService {
   }) async {
     String? usedUserAgent;
     var profile = SubscriptionProfileHeaders.empty;
+    // свой UA из сохранённого не берём: в нём версия с первой загрузки, панель видела keqdroid/0.8.7 на 0.34.1
+    final ownSaved = savedUserAgent == 'keqdroid' ||
+        (savedUserAgent?.startsWith('keqdroid/') ?? false);
     final initialUa = pinnedUserAgent ??
-        ((savedUserAgent != null && savedUserAgent.isNotEmpty)
+        ((savedUserAgent != null && savedUserAgent.isNotEmpty && !ownSaved)
             ? savedUserAgent
             : await appUserAgent());
     try {
