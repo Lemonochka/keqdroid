@@ -59,6 +59,34 @@ Map<String, ServerItem> _serversByNode(
       for (final s in servers) ?template.nodeFor(s): s,
     };
 
+// флагов стран в эмодзи-шрифте Windows нет, он печатает буквы: флаг рисуется картинкой слева, как у серверов
+String _plainName(String name) {
+  final plain = stripFlags(name).trim();
+  return plain.isEmpty ? name : plain;
+}
+
+// флаг сервера, через который группа идёт сейчас; без подключения флаг из её имени
+ServerFlag? _groupFlag(
+  ClashTemplate template,
+  String group,
+  Map<String, ServerItem> byNode,
+  Map<String, MihomoGroupState>? live,
+) {
+  var at = group;
+  for (var hop = 0; hop < 8; hop++) {
+    final now = live?[at]?.now;
+    if (now == null) break;
+    final server = byNode[now];
+    if (server != null) return server.flag;
+    at = now;
+  }
+  if (const {ClashMemberKind.direct, ClashMemberKind.block}
+      .contains(template.kindOf(at))) {
+    return null;
+  }
+  return firstFlagIn(at) ?? firstFlagIn(group);
+}
+
 String? _groupNow(
   ClashTemplate template,
   ClashTemplateGroup group,
@@ -99,13 +127,22 @@ Widget _memberAvatar(
   BuildContext context,
   ClashTemplate template,
   String member,
-  ServerItem? server,
+  Map<String, ServerItem> byNode,
+  Map<String, MihomoGroupState>? live,
 ) {
   final scheme = Theme.of(context).colorScheme;
+  final server = byNode[member];
   if (server != null) {
     return ServerAvatar(flag: server.flag, protocol: server.protocol);
   }
-  return switch (template.kindOf(member)) {
+  final kind = template.kindOf(member);
+  final flag = switch (kind) {
+    ClashMemberKind.group => _groupFlag(template, member, byNode, live),
+    ClashMemberKind.node || ClashMemberKind.other => firstFlagIn(member),
+    _ => null,
+  };
+  if (flag != null) return ServerAvatar(flag: flag, protocol: '');
+  return switch (kind) {
     ClashMemberKind.direct => _GroupBadge(
         icon: Icons.call_made_rounded,
         background: AppTheme.green(context).withValues(alpha: 0.2),
@@ -163,14 +200,14 @@ String _memberLabel(
           ? (template.groupType(member) == 'select' ? null : l10n.serverGroupAuto)
           : l10n.serverGroupNow(
               nowServer == null
-                  ? now
+                  ? _plainName(now)
                   : ServerNameUtils.formatForDisplay(
                       ServerNameUtils.cleanDisplayName(nowServer.displayName),
                     ),
             );
-      return [if (withName) member, ?detail].join(' · ');
+      return [if (withName) _plainName(member), ?detail].join(' · ');
     case ClashMemberKind.node || ClashMemberKind.other:
-      return withName ? member : '';
+      return withName ? _plainName(member) : '';
   }
 }
 
@@ -234,7 +271,7 @@ class _TemplateGroupsSliver extends ConsumerWidget {
                 child: Row(
                   children: [
                     if (now != null)
-                      _memberAvatar(context, template, now, byNode[now]),
+                      _memberAvatar(context, template, now, byNode, live),
                     const SizedBox(width: ExpressiveSpacing.medium),
                     Expanded(
                       child: Column(
@@ -243,7 +280,7 @@ class _TemplateGroupsSliver extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            group.name,
+                            _plainName(group.name),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: textTheme.bodyLarge
@@ -376,7 +413,7 @@ class _GroupPickSheet extends ConsumerWidget {
       );
       final title = switch (template.kindOf(member)) {
         ClashMemberKind.direct || ClashMemberKind.block => detail,
-        _ => member,
+        _ => _plainName(member),
       };
       final subtitle = title == detail ? '' : detail;
       return ExpressiveGroupTile(
@@ -384,7 +421,7 @@ class _GroupPickSheet extends ConsumerWidget {
         color: selected ? scheme.secondaryContainer : null,
         child: Row(
           children: [
-            _memberAvatar(context, template, member, null),
+            _memberAvatar(context, template, member, byNode, live),
             const SizedBox(width: ExpressiveSpacing.large),
             Expanded(
               child: Column(
@@ -427,7 +464,7 @@ class _GroupPickSheet extends ConsumerWidget {
               child: Column(
                 children: [
                   Text(
-                    group.name,
+                    _plainName(group.name),
                     textAlign: TextAlign.center,
                     style: textTheme
                         .emphasized(textTheme.titleLarge)

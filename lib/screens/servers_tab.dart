@@ -41,6 +41,7 @@ import 'package:keqdroid/shared/ui/update_interval_sheet.dart';
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
 import '../models/app_settings.dart';
+import '../models/server_flag.dart';
 import '../models/server_group.dart';
 import '../models/server_item.dart';
 import '../models/server_name_utils.dart';
