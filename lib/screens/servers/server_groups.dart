@@ -14,7 +14,9 @@ class _ServersListPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final serversState = ref.watch(serversProvider);
+    // пометку «Авто» плитка ловит сама, весь список на неё не перестраивается
+    ref.watch(serversProvider.select((s) => s.shape));
+    final serversState = ref.read(serversProvider);
     final subs = ref.watch(subscriptionsProvider).value ?? [];
 
     if (serversState.isLoading) {
@@ -908,6 +910,7 @@ class _AutoSkipPickRow extends ConsumerWidget {
 
   void _done(WidgetRef ref) {
     ref.read(autoSkipPickingProvider.notifier).set(null);
+    unawaited(ref.read(serversProvider.notifier).flushAutoSkip());
     final active = ref.read(serversProvider).activeServer;
     if (subscription.autoSelect &&
         active != null &&
@@ -1591,15 +1594,18 @@ class _SubCardState extends ConsumerState<_SubCard>
   }
 
   void _toggleAutoSkip(ServerItem server, List<ServerItem> group) {
-    final last = !server.autoSkip &&
-        group.every((s) => s.id == server.id || s.autoSkip);
+    // пометки в group старые: на них список не перестраивается
+    final now = ref.read(serversProvider).byId;
+    bool skipped(ServerItem s) => now[s.id]?.autoSkip ?? s.autoSkip;
+    final last = !skipped(server) &&
+        group.every((s) => s.id == server.id || skipped(s));
     if (last) {
       AppSnack.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.serversAutoSkipKeepOne)),
       );
       return;
     }
-    unawaited(ref.read(serversProvider.notifier).toggleAutoSkip(server.id));
+    ref.read(serversProvider.notifier).toggleAutoSkip(server.id);
   }
 
   Widget _buildExpandedServerList({
@@ -1649,7 +1655,7 @@ class _SubCardState extends ConsumerState<_SubCard>
           spacing: layout.gap,
         ).resolve(direction),
         picking: picking,
-        autoSkipShown: server.autoSkip && (picking || autoOn),
+        autoOn: autoOn,
         onTap: picking
             ? () => _toggleAutoSkip(server, servers)
             : () => widget.onSelectServer(server),

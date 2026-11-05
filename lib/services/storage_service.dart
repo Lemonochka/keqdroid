@@ -123,6 +123,20 @@ class StorageService {
         await _writeServers(servers);
       });
 
+  Future<void> upsertServers(Iterable<ServerItem> changed) =>
+      _serial(() async {
+        final servers = await getServers();
+        for (final server in changed) {
+          final idx = servers.indexWhere((s) => s.id == server.id);
+          if (idx == -1) {
+            servers.add(server);
+          } else {
+            servers[idx] = server;
+          }
+        }
+        await _writeServers(servers);
+      });
+
   Future<void> deleteServer(String id) => _serial(() async {
         final servers = await getServers();
         servers.removeWhere((s) => s.id == id);

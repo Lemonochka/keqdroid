@@ -197,7 +197,7 @@ class _ServerTile extends ConsumerWidget {
 
   final SubscriptionAccent? accent;
   final bool picking;
-  final bool autoSkipShown;
+  final bool autoOn;
   final VoidCallback onTap;
   final VoidCallback onDelete;
   final Future<void> Function() onPing;
@@ -212,7 +212,7 @@ class _ServerTile extends ConsumerWidget {
     required this.height,
     this.accent,
     this.picking = false,
-    this.autoSkipShown = false,
+    this.autoOn = false,
     required this.onTap,
     required this.onDelete,
     required this.onPing,
@@ -223,6 +223,10 @@ class _ServerTile extends ConsumerWidget {
     final isPinging = ref.watch(
       pingingServerIdsProvider.select((ids) => ids.contains(server.id)),
     );
+    final autoSkip = ref.watch(
+      serversProvider.select((s) => s.byId[server.id]?.autoSkip ?? server.autoSkip),
+    );
+    final autoSkipShown = autoSkip && (picking || autoOn);
     final (pingMs, lastTestedAt, lastPingType) = ref.watch(
       serversProvider.select((s) {
         final item = s.byId[server.id];

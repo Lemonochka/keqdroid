@@ -8,12 +8,19 @@ class ServersState {
 
   final Map<String, ServerItem> byId;
 
+  // новое на любую перемену, кроме пометки «Авто»: на ней список не перестраивается целиком,
+  // на Pixel 6a это стоило 17–36 мс на нажатие при бюджете кадра 16,7
+  final int shape;
+  static int _shapes = 0;
+
   ServersState({
     this.servers = const [],
     this.activeServerId,
     this.isLoading = false,
     this.error,
-  }) : byId = {for (final s in servers) s.id: s};
+    int? shape,
+  })  : byId = {for (final s in servers) s.id: s},
+        shape = shape ?? ++_shapes;
 
   ServerItem? get activeServer => byId[activeServerId];
 
@@ -24,6 +31,7 @@ class ServersState {
     Object? activeServerId = _sentinel,
     bool? isLoading,
     String? error,
+    bool keepShape = false,
   }) =>
       ServersState(
         servers: servers ?? this.servers,
@@ -32,15 +40,19 @@ class ServersState {
             : activeServerId as String?,
         isLoading: isLoading ?? this.isLoading,
         error: error,
+        shape: keepShape ? shape : null,
       );
 }
 
 class ServersNotifier extends Notifier<ServersState> {
   Future<void>? _initialLoad;
   DateTime? _lastAutoPing;
+  Timer? _autoSkipSave;
+  final _autoSkipBefore = <String, bool>{};
 
   @override
   ServersState build() {
+    ref.onDispose(() => _autoSkipSave?.cancel());
     _initialLoad = _load();
     return ServersState(isLoading: true);
   }
@@ -207,8 +219,46 @@ class ServersNotifier extends Notifier<ServersState> {
     );
   }
 
-  Future<void> toggleAutoSkip(String id) async {
-    await _updateServer(id, (s) => s.copyWith(autoSkip: !s.autoSkip));
+  // пометка видна сразу, а на диск уходит одной записью, когда нажатия стихнут: запись
+  // переписывает все серверы (у неё 156, 190 КБ JSON, на Pixel 6a 40–80 мс), и каждое
+  // нажатие туда-обратно дёргало анимацию
+  void toggleAutoSkip(String id) {
+    final idx = state.servers.indexWhere((s) => s.id == id);
+    if (idx == -1) return;
+    final server = state.servers[idx];
+    _autoSkipBefore.putIfAbsent(id, () => server.autoSkip);
+    state = state.copyWith(
+      servers: [...state.servers]
+        ..[idx] = server.copyWith(autoSkip: !server.autoSkip),
+      keepShape: true,
+    );
+    _autoSkipSave?.cancel();
+    _autoSkipSave = Timer(
+      const Duration(milliseconds: 600),
+      () => unawaited(flushAutoSkip()),
+    );
+  }
+
+  Future<void> flushAutoSkip() async {
+    _autoSkipSave?.cancel();
+    _autoSkipSave = null;
+    if (_autoSkipBefore.isEmpty) return;
+    final before = {..._autoSkipBefore};
+    _autoSkipBefore.clear();
+    final changed = [for (final id in before.keys) ?state.byId[id]];
+    try {
+      await ref.read(storageProvider).upsertServers(changed);
+    } catch (_) {
+      var list = state.servers;
+      for (final saved in changed) {
+        final i = list.indexWhere((s) => s.id == saved.id);
+        if (i != -1 && identical(list[i], saved)) {
+          list = [...list]..[i] = saved.copyWith(autoSkip: before[saved.id]);
+        }
+      }
+      state = state.copyWith(servers: list);
+      rethrow;
+    }
   }
 
   Future<void> updateConfig(String id, String rawConfig) async {
