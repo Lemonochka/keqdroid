@@ -24,8 +24,8 @@ MAINTAINER="Lemonochka <noreply@users.noreply.github.com>"
 ARCH_DEB=amd64
 ARCH_AI=x86_64
 PKGDESC="KEQDIS proxy/VPN client (Xray, mihomo, sing-box; proxy + TUN)"
-# У -bin-пакета лицензий больше своей: внутри лежат ядра, а у Xray она MPL.
-LICENSES=(GPL-3.0-only MPL-2.0)
+# у -bin-пакета лицензий больше своей: внутри лежат ядра, у Xray MPL, у mihomo GPL
+LICENSES=(AGPL-3.0-only GPL-3.0-only MPL-2.0)
 
 log() { echo ""; echo "==> $*"; }
 
@@ -233,7 +233,7 @@ Name:           $APP
 Version:        $VERSION
 Release:        1
 Summary:        KEQDIS proxy/VPN client
-License:        GPL-3.0-only AND MPL-2.0
+License:        AGPL-3.0-only AND GPL-3.0-only AND MPL-2.0
 URL:            https://github.com/$GH_OWNER/$GH_REPO
 BuildArch:      $ARCH_AI
 AutoReqProv:    no
