@@ -3371,6 +3371,36 @@ abstract class AppLocalizations {
   /// **'picks by itself'**
   String get serverGroupAuto;
 
+  /// No description provided for @serverGroupMainHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything not sent to other groups goes here'**
+  String get serverGroupMainHint;
+
+  /// No description provided for @serverGroupViaHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Works when chosen in {name}'**
+  String serverGroupViaHint(String name);
+
+  /// No description provided for @serverGroupServersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Picks the fastest by itself. Pick a server to stay on it'**
+  String get serverGroupServersHint;
+
+  /// No description provided for @serverGroupAutomatically.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically'**
+  String get serverGroupAutomatically;
+
+  /// No description provided for @serverGroupPinned.
+  ///
+  /// In en, this message translates to:
+  /// **'pinned {name}'**
+  String serverGroupPinned(String name);
+
   /// No description provided for @serversEmptyGroupHint.
   ///
   /// In en, this message translates to:

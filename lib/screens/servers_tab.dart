@@ -1216,6 +1216,8 @@ class _ServersTabState extends ConsumerState<ServersTab>
     final vpnStatus = ref.read(vpnStateProvider).value?.status;
     final tunnelActive =
         vpnStatus == VpnStatus.connected || vpnStatus == VpnStatus.connecting;
+    // до проверки на тот же сервер: нажатие на него возвращает ему главную группу шаблона
+    await ref.read(subscriptionsProvider.notifier).releaseMainGroup(server);
     if (tunnelActive &&
         server.id == ref.read(serversProvider).activeServer?.id) {
       return;

@@ -968,6 +968,25 @@
     }
   },
   "serverGroupAuto": "自动选择",
+  "serverGroupMainHint": "未分到其他策略组的流量都走这里",
+  "serverGroupViaHint": "在 {name} 中选中时生效",
+  "@serverGroupViaHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serverGroupServersHint": "自动选择最快的。选中一台服务器即可固定使用",
+  "serverGroupAutomatically": "自动",
+  "serverGroupPinned": "已固定 {name}",
+  "@serverGroupPinned": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "serversEmptyGroupHint": "此订阅中没有服务器",
   "statsInLabel": "已下载",
   "statsTimeLabel": "时长",

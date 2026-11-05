@@ -1811,6 +1811,25 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serverGroupAuto => 'выбирает сам';
 
   @override
+  String get serverGroupMainHint => 'Сюда идёт всё, что не ушло в другие группы';
+
+  @override
+  String serverGroupViaHint(String name) {
+    return 'Действует, когда выбрана в $name';
+  }
+
+  @override
+  String get serverGroupServersHint => 'Сама выбирает самый быстрый. Выбери сервер, чтобы остаться на нём';
+
+  @override
+  String get serverGroupAutomatically => 'Автоматически';
+
+  @override
+  String serverGroupPinned(String name) {
+    return 'закреплён $name';
+  }
+
+  @override
   String get serversEmptyGroupHint => 'В этой подписке нет серверов';
 
   @override

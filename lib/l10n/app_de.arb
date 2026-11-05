@@ -968,6 +968,25 @@
     }
   },
   "serverGroupAuto": "wählt selbst",
+  "serverGroupMainHint": "Hierher geht alles, was nicht in andere Gruppen geht",
+  "serverGroupViaHint": "Wirkt, wenn in {name} gewählt",
+  "@serverGroupViaHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serverGroupServersHint": "Wählt selbst den schnellsten. Wähle einen Server, um bei ihm zu bleiben",
+  "serverGroupAutomatically": "Automatisch",
+  "serverGroupPinned": "fixiert {name}",
+  "@serverGroupPinned": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "serversEmptyGroupHint": "Keine Server in diesem Abonnement",
   "statsInLabel": "Empfangen",
   "statsTimeLabel": "Zeit",

@@ -75,6 +75,35 @@ rules:
       expect(ClashTemplate.fromBody('vless://x@a.example.com:443#a'), isNull);
     });
 
+    // Moondrop 05.11.2026: Trial и Public лежали в главной, а выбрать их было негде
+    test('главная с группами внутри встаёт первой строкой, с одними серверами нет', () {
+      final template =
+          ClashTemplate.fromBody(_fixture('clash-template-main-groups.txt'))!;
+      expect(template.mainGroup, '🌙 Main');
+      expect([for (final g in template.groups) g.name], ['🌙 Main', '🌏 Public']);
+      expect(template.groups.first.members,
+          ['💎 Trial', '🌏 Public', '🇩🇪 Germany #1', '🇳🇱 Netherlands #1']);
+      expect(ClashTemplate.fromBody(body)!.groups.map((g) => g.name),
+          isNot(contains('Основной')));
+    });
+
+    test('куда ведут правила и где группу выбирают', () {
+      final template =
+          ClashTemplate.fromBody(_fixture('clash-template-main-groups.txt'))!;
+      expect(template.isRuleTarget('🌙 Main'), isTrue);
+      expect(template.isRuleTarget('REJECT'), isTrue,
+          reason: 'запятые внутри скобок AND цель не сдвигают');
+      expect(template.isRuleTarget('🌏 Public'), isFalse);
+      expect(template.parentOf('🌏 Public'), '🌙 Main');
+      expect(template.parentOf('🇩🇪 Germany | 🇳🇱 Netherlands'), '🌏 Public');
+      expect(template.pinnable('⚡ Auto'), isTrue);
+      expect(template.pinnable('💎 Trial'), isTrue);
+      expect(template.pinnable('🌏 Public'), isFalse);
+      expect(template.mainChoice({'🌙 Main': '🌏 Public'}), '🌏 Public');
+      expect(template.currentOf(template.groups.first, const {}), isNull,
+          reason: 'без выбора в главной стоит нажатый сервер, а не первый пункт автора');
+    });
+
     test('сохранённый шаблон читается обратно тем же', () {
       final template = ClashTemplate.fromBody(body)!;
       final again = ClashTemplate.fromBody(template.encode())!;
@@ -256,6 +285,41 @@ rules:
           .cast<String, dynamic>();
       expect(_group(session, 'Основной')['type'], 'select');
       expect(_group(session, 'Основной')['proxies'].first, '🇱🇻 Latvia');
+    });
+
+    test('группа, выбранная в главной, встаёт первой вместо сервера, узел сервера остаётся первым', () {
+      final template = ClashTemplate.fromBody(_fixture('clash-template-main-groups.txt'))!;
+      final session = (jsonDecode(template.sessionConfig(
+        node: '🇳🇱 Netherlands #1',
+        choices: {'🌙 Main': '🌏 Public', '🌏 Public': '🇩🇪 Germany | 🇳🇱 Netherlands'},
+      )) as Map).cast<String, dynamic>();
+      expect((session['proxies'] as List).first['name'], '🇳🇱 Netherlands #1');
+      expect(_group(session, '🌙 Main')['proxies'].first, '🌏 Public');
+      expect(_group(session, '🌏 Public')['proxies'].first,
+          '🇩🇪 Germany | 🇳🇱 Netherlands');
+    });
+
+    test('закрепление в url-test в конфиг не пишется: у ядра нет такого поля, его шлём через API', () {
+      final template = ClashTemplate.fromBody(_fixture('clash-template-main-groups.txt'))!;
+      final session = (jsonDecode(template.sessionConfig(
+        node: '🇩🇪 Germany #1',
+        choices: {'🇩🇪 Germany | 🇳🇱 Netherlands': '🇩🇪 DE • Scan #1754AD'},
+      )) as Map).cast<String, dynamic>();
+      final group = _group(session, '🇩🇪 Germany | 🇳🇱 Netherlands');
+      expect(group['type'], 'url-test');
+      expect(group['proxies'], isNull);
+      expect(_group(session, '🌙 Main')['proxies'].first, '🇩🇪 Germany #1');
+    });
+
+    test('сервер в главной как выбор не считается: главную ведёт нажатый сервер', () {
+      final template = ClashTemplate.fromBody(_fixture('clash-template-main-groups.txt'))!;
+      expect(template.mainChoice({'🌙 Main': '🇩🇪 Germany #1'}), isNull);
+      expect(template.mainChoice({'🌙 Main': 'чужая группа'}), isNull);
+      final session = (jsonDecode(template.sessionConfig(
+        node: '🇳🇱 Netherlands #1',
+        choices: {'🌙 Main': '🇩🇪 Germany #1'},
+      )) as Map).cast<String, dynamic>();
+      expect(_group(session, '🌙 Main')['proxies'].first, '🇳🇱 Netherlands #1');
     });
 
     test('mihomo получает шаблон целиком с нашими входами и без его портов', () {

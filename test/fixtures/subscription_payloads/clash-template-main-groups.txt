@@ -1,0 +1,53 @@
+mixed-port: 7890
+mode: rule
+
+proxies:
+  - name: "🇩🇪 Germany #1"
+    type: trojan
+    server: de1.example.com
+    port: 443
+    password: p1
+    sni: de1.example.com
+  - name: "🇳🇱 Netherlands #1"
+    type: trojan
+    server: nl1.example.com
+    port: 443
+    password: p2
+    sni: nl1.example.com
+
+proxy-providers:
+  public:
+    type: http
+    url: https://example.com/public/provider.txt
+    interval: 3600
+    path: ./proxy_providers/public.yaml
+
+proxy-groups:
+  - name: "🌙 Main"
+    type: select
+    proxies: ["💎 Trial", "🌏 Public", "🇩🇪 Germany #1", "🇳🇱 Netherlands #1"]
+  - name: "💎 Trial"
+    type: fallback
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+    proxies: ["🇩🇪 Germany #1", "🇳🇱 Netherlands #1"]
+  - name: "🌏 Public"
+    type: select
+    proxies: ["⚡ Auto", "🇩🇪 Germany | 🇳🇱 Netherlands"]
+  - name: "⚡ Auto"
+    type: url-test
+    use: [public]
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+  - name: "🇩🇪 Germany | 🇳🇱 Netherlands"
+    type: url-test
+    use: [public]
+    filter: "^(?:🇩🇪 DE|🇳🇱 NL) "
+    url: https://www.gstatic.com/generate_204
+    interval: 300
+
+rules:
+  - DOMAIN-SUFFIX,example.ru,DIRECT
+  - AND,((NETWORK,UDP),(DST-PORT,443)),REJECT
+  - GEOIP,RU,DIRECT
+  - MATCH,🌙 Main

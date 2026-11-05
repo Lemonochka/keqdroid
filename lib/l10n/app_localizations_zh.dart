@@ -1797,6 +1797,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serverGroupAuto => '自动选择';
 
   @override
+  String get serverGroupMainHint => '未分到其他策略组的流量都走这里';
+
+  @override
+  String serverGroupViaHint(String name) {
+    return '在 $name 中选中时生效';
+  }
+
+  @override
+  String get serverGroupServersHint => '自动选择最快的。选中一台服务器即可固定使用';
+
+  @override
+  String get serverGroupAutomatically => '自动';
+
+  @override
+  String serverGroupPinned(String name) {
+    return '已固定 $name';
+  }
+
+  @override
   String get serversEmptyGroupHint => '此订阅中没有服务器';
 
   @override

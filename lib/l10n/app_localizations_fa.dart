@@ -1797,6 +1797,25 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serverGroupAuto => 'خودش انتخاب می‌کند';
 
   @override
+  String get serverGroupMainHint => 'هر چه به گروه‌های دیگر نرود از اینجا می‌رود';
+
+  @override
+  String serverGroupViaHint(String name) {
+    return 'وقتی در $name انتخاب شود کار می‌کند';
+  }
+
+  @override
+  String get serverGroupServersHint => 'خودش سریع‌ترین را انتخاب می‌کند. سروری را انتخاب کن تا روی آن بمانی';
+
+  @override
+  String get serverGroupAutomatically => 'خودکار';
+
+  @override
+  String serverGroupPinned(String name) {
+    return 'ثابت $name';
+  }
+
+  @override
   String get serversEmptyGroupHint => 'این اشتراک سروری ندارد';
 
   @override

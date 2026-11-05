@@ -430,23 +430,67 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
 
   // выбор ложится в конфиг при каждом подключении, а в идущую сессию уходит через API ядра
   Future<void> chooseInGroup(String id, String group, String member) async {
-    final subs = state.value ?? [];
-    final idx = subs.indexWhere((s) => s.id == id);
-    if (idx == -1) return;
-    final updated = subs[idx].copyWith(
-      groupChoices: {...subs[idx].groupChoices, group: member},
-    );
-    await ref.read(storageProvider).upsertSubscription(updated);
-    state = AsyncData([...subs]..[idx] = updated);
-
-    final live = ref.read(vpnStateProvider).value?.status == VpnStatus.connected &&
-        ref.read(serversProvider).activeServer?.subscriptionId == id;
-    if (!live) return;
+    if (!await _saveGroupChoice(id, group, member)) return;
+    if (!_templateRunsLive(id)) return;
     if (!await MihomoGroupsApi.select(group, member)) {
       AppLogger.instance.warn('Template group switch not applied live: $group');
     }
     ref.invalidate(liveTemplateGroupsProvider(id));
   }
+
+  // «Automatically» в url-test: закрепление снимается и в ядре, иначе оно держалось бы до переподключения
+  Future<void> unpinGroup(String id, String group) async {
+    if (!await _saveGroupChoice(id, group, null)) return;
+    if (!_templateRunsLive(id)) return;
+    if (!await MihomoGroupsApi.unfix(group)) {
+      AppLogger.instance.warn('Template group unpin not applied live: $group');
+    }
+    ref.invalidate(liveTemplateGroupsProvider(id));
+  }
+
+  // нажатый сервер снова ведёт главную группу: Public и прочие группы в ней отпускаем
+  Future<bool> releaseMainGroup(ServerItem server) async {
+    final id = server.subscriptionId;
+    if (id == null) return false;
+    // subscriptionTemplateProvider следит за этим же провайдером: через него было бы кольцо
+    final settings = ref.read(settingsNotifierProvider).value;
+    final raw = ref.read(storageProvider).getClashTemplate(id);
+    final template = settings == null || raw == null || !clashTemplateApplies(settings)
+        ? null
+        : ClashTemplate.fromBody(raw);
+    final sub = state.value?.where((s) => s.id == id).firstOrNull;
+    if (template == null || sub == null) return false;
+    if (template.mainChoice(sub.groupChoices) == null) return false;
+    await _saveGroupChoice(id, template.mainGroup, null);
+    final node = template.nodeFor(server);
+    if (node != null &&
+        _templateRunsLive(id) &&
+        ref.read(serversProvider).activeServer?.id == server.id) {
+      await MihomoGroupsApi.select(template.mainGroup, node);
+      ref.invalidate(liveTemplateGroupsProvider(id));
+    }
+    return true;
+  }
+
+  Future<bool> _saveGroupChoice(String id, String group, String? member) async {
+    final subs = state.value ?? [];
+    final idx = subs.indexWhere((s) => s.id == id);
+    if (idx == -1) return false;
+    final choices = {...subs[idx].groupChoices};
+    if (member == null) {
+      choices.remove(group);
+    } else {
+      choices[group] = member;
+    }
+    final updated = subs[idx].copyWith(groupChoices: choices);
+    await ref.read(storageProvider).upsertSubscription(updated);
+    state = AsyncData([...subs]..[idx] = updated);
+    return true;
+  }
+
+  bool _templateRunsLive(String id) =>
+      ref.read(vpnStateProvider).value?.status == VpnStatus.connected &&
+      ref.read(serversProvider).activeServer?.subscriptionId == id;
 }
 
 final subscriptionsProvider =

@@ -196,6 +196,7 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       _showHotkeySnack((l10n) => l10n.hotkeyNoPingData);
       return;
     }
+    await ref.read(subscriptionsProvider.notifier).releaseMainGroup(best);
     if (best.id != serversState.activeServerId) {
       await ref.read(serversProvider.notifier).setActive(best);
     }

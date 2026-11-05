@@ -342,6 +342,7 @@ class WindowsTrayMenu with TrayListener {
           }
         }
         if (server == null) return;
+        await _ref.read(subscriptionsProvider.notifier).releaseMainGroup(server);
         final status =
             _ref.read(vpnStateProvider).value?.status ?? VpnStatus.disconnected;
         final tunnelActive = status == VpnStatus.connected ||

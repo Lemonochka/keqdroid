@@ -218,6 +218,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       NeighbourHomePace.every,
       (_) => unawaited(_autoSelectRecheckTick()),
     );
+    listenSelf((previous, next) {
+      if (previous?.value?.status != VpnStatus.connected &&
+          next.value?.status == VpnStatus.connected) {
+        unawaited(_applyTemplatePins());
+      }
+    });
     ref.onDispose(() {
       _autoSelectTimer?.cancel();
       _autoSelectListenTimer?.cancel();
@@ -243,6 +249,36 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     } catch (_) {
       return VpnState.disconnected;
     }
+  }
+
+  // в конфиге mihomo закрепить узел в url-test нечем, а store-selected выключен: шлём после каждого подключения.
+  // список proxy-providers ядро может ещё качать, тогда Set отвечает proxy not exist
+  Future<void> _applyTemplatePins() async {
+    final server = ref.read(serversProvider).activeServer;
+    final subId = server?.subscriptionId;
+    if (server == null || subId == null) return;
+    final template = ref.read(subscriptionTemplateProvider(subId));
+    if (template == null || template.nodeFor(server) == null) return;
+    final choices = (ref.read(subscriptionsProvider).value ?? const <Subscription>[])
+            .where((s) => s.id == subId)
+            .firstOrNull
+            ?.groupChoices ??
+        const <String, String>{};
+    final pins = {
+      for (final MapEntry(:key, :value) in choices.entries)
+        if (template.pinnable(key)) key: value,
+    };
+    for (var attempt = 0; pins.isNotEmpty && attempt < 5; attempt++) {
+      if (attempt > 0) await Future<void>.delayed(const Duration(seconds: 2));
+      if (!ref.mounted || state.value?.status != VpnStatus.connected) return;
+      for (final group in [...pins.keys]) {
+        if (await MihomoGroupsApi.select(group, pins[group]!)) pins.remove(group);
+      }
+    }
+    if (pins.isNotEmpty) {
+      AppLogger.instance.warn('Template pins not applied: ${pins.keys.join(', ')}');
+    }
+    if (ref.mounted) ref.invalidate(liveTemplateGroupsProvider(subId));
   }
 
   Future<void> syncFromNative() async {

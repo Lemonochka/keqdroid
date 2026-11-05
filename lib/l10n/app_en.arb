@@ -1028,6 +1028,25 @@
     }
   },
   "serverGroupAuto": "picks by itself",
+  "serverGroupMainHint": "Everything not sent to other groups goes here",
+  "serverGroupViaHint": "Works when chosen in {name}",
+  "@serverGroupViaHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serverGroupServersHint": "Picks the fastest by itself. Pick a server to stay on it",
+  "serverGroupAutomatically": "Automatically",
+  "serverGroupPinned": "pinned {name}",
+  "@serverGroupPinned": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "serversEmptyGroupHint": "No servers in this subscription",
   "statsInLabel": "In",
   "statsTimeLabel": "Time",

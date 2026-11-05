@@ -155,6 +155,21 @@ class ClashTemplate {
       ));
     }
     if (groups.isEmpty) return null;
+    // нажатый сервер ставится в главную сам, но группы в ней (Public у Moondrop) иначе не выбрать ничем
+    final mainGroup = byName[main]!;
+    final mainMembers = _members(mainGroup, allProxies);
+    if (mainMembers.any((m) => m != main && byName.containsKey(m))) {
+      groups.insert(
+        0,
+        ClashTemplateGroup(
+          name: main,
+          members: mainMembers,
+          fromProviders: _isSet(mainGroup['use']) ||
+              _isSet(mainGroup['include-all']) ||
+              _isSet(mainGroup['include-all-providers']),
+        ),
+      );
+    }
     return ClashTemplate._(config, main, groups);
   }
 
@@ -231,7 +246,67 @@ class ClashTemplate {
     return null;
   }
 
+  // url-test и fallback ядро умеет держать на одном узле (URLTest.Set), пока тот жив
+  bool pinnable(String group) =>
+      const {'url-test', 'fallback'}.contains(groupType(group));
+
+  // группа (или DIRECT автора), которую выбрали в главной вместо нажатого сервера
+  String? mainChoice(Map<String, String> choices) {
+    final chosen = choices[mainGroup];
+    if (chosen == null || chosen == mainGroup) return null;
+    if (const {ClashMemberKind.node, ClashMemberKind.other}
+        .contains(kindOf(chosen))) {
+      return null;
+    }
+    final main = groups.where((g) => g.name == mainGroup).firstOrNull;
+    return main != null && main.members.contains(chosen) ? chosen : null;
+  }
+
+  bool isRuleTarget(String group) {
+    final subRules = config.map['sub-rules'];
+    final lists = [
+      config.map['rules'],
+      if (subRules is Map) ...subRules.values,
+    ];
+    for (final list in lists) {
+      if (list is! List) continue;
+      for (final rule in list) {
+        if (_ruleTarget(rule.toString()) == group) return true;
+      }
+    }
+    return false;
+  }
+
+  // AND,((NETWORK,UDP),(DST-PORT,443)),REJECT: запятые внутри скобок цель не делят
+  static String? _ruleTarget(String rule) {
+    final parts = <String>[];
+    var depth = 0;
+    var start = 0;
+    for (var i = 0; i < rule.length; i++) {
+      final c = rule[i];
+      if (c == '(') depth++;
+      if (c == ')') depth--;
+      if (c == ',' && depth == 0) {
+        parts.add(rule.substring(start, i).trim());
+        start = i + 1;
+      }
+    }
+    parts.add(rule.substring(start).trim());
+    if (parts.length < 2) return null;
+    if (parts.first.toUpperCase() == 'MATCH') return parts[1];
+    return parts.length >= 3 ? parts[2] : null;
+  }
+
+  // в какой группе её выбирают, если правила на неё не ведут
+  String? parentOf(String group) {
+    for (final g in groups) {
+      if (g.name != group && g.members.contains(group)) return g.name;
+    }
+    return null;
+  }
+
   String? currentOf(ClashTemplateGroup group, Map<String, String> choices) {
+    if (group.name == mainGroup) return mainChoice(choices);
     final chosen = choices[group.name];
     if (chosen != null && (group.members.contains(chosen) || group.fromProviders)) {
       return chosen;
@@ -302,7 +377,7 @@ class ClashTemplate {
     final main = groups.firstWhere((g) => g['name']?.toString() == mainGroup);
     // всё остальное идёт через сервер, который выбрали, даже если у автора тут автовыбор
     main['type'] = 'select';
-    prefer(main, node);
+    prefer(main, mainChoice(choices) ?? node);
     for (final MapEntry(key: name, value: member) in choices.entries) {
       if (name == mainGroup) continue;
       for (final g in groups) {

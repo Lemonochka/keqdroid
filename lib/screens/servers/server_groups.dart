@@ -885,6 +885,7 @@ Future<void> _autoSelectNow(WidgetRef ref, String subscriptionId) async {
     subscriptionId: subscriptionId,
   );
   if (pick == null) return;
+  await ref.read(subscriptionsProvider.notifier).releaseMainGroup(pick);
   final active = ref.read(serversProvider).activeServer;
   if (pick.id == active?.id) return;
   await ref.read(serversProvider.notifier).setActive(pick);
@@ -1563,11 +1564,16 @@ class _SubCardState extends ConsumerState<_SubCard>
                     rowExtent: widget.rowExtent,
                     gap: widget.layout.gap,
                     accent: accent,
+                    onSelectServer: widget.onSelectServer,
                   )
                 else
                   _buildExpandedServerList(
                     servers: sortedServers,
-                    activeServerId: activeServerId,
+                    // всё остальное идёт через группу шаблона, а не через нажатый сервер
+                    activeServerId:
+                        template?.mainChoice(sub!.groupChoices) != null
+                            ? null
+                            : activeServerId,
                     textLightColor: textLightColor,
                     accent: accent,
                     picking: picking,

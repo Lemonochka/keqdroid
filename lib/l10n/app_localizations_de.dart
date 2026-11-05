@@ -1801,6 +1801,25 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serverGroupAuto => 'wählt selbst';
 
   @override
+  String get serverGroupMainHint => 'Hierher geht alles, was nicht in andere Gruppen geht';
+
+  @override
+  String serverGroupViaHint(String name) {
+    return 'Wirkt, wenn in $name gewählt';
+  }
+
+  @override
+  String get serverGroupServersHint => 'Wählt selbst den schnellsten. Wähle einen Server, um bei ihm zu bleiben';
+
+  @override
+  String get serverGroupAutomatically => 'Automatisch';
+
+  @override
+  String serverGroupPinned(String name) {
+    return 'fixiert $name';
+  }
+
+  @override
   String get serversEmptyGroupHint => 'Keine Server in diesem Abonnement';
 
   @override

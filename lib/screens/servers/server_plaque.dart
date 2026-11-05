@@ -54,12 +54,14 @@ Widget _plaqueServerSegment(
   required VoidCallback onJumpToActive,
   required BorderRadius radius,
   required int maxLines,
+  ({String label, ServerFlag? flag})? route,
 }) {
   final scheme = Theme.of(context).colorScheme;
   final textTheme = Theme.of(context).textTheme;
-  final name = ServerNameUtils.formatForDisplay(
-    ServerNameUtils.cleanDisplayName(server.displayName),
-  );
+  final name = route?.label ??
+      ServerNameUtils.formatForDisplay(
+        ServerNameUtils.cleanDisplayName(server.displayName),
+      );
   return ConnectedStatusChip(
     label: name,
     exit: connected ? exit : null,
@@ -70,8 +72,8 @@ Widget _plaqueServerSegment(
     color: connected ? scheme.secondaryContainer : scheme.surfaceContainerHighest,
     foregroundColor:
         connected ? scheme.onSecondaryContainer : scheme.onSurface,
-    fallbackFlag: server.flag,
-    fallbackProtocol: server.protocol,
+    fallbackFlag: route == null ? server.flag : route.flag,
+    fallbackProtocol: route == null ? server.protocol : '',
     maxLines: maxLines,
     minHeight: _plaqueHeight,
     textAlign: TextAlign.start,
@@ -98,6 +100,24 @@ class _ServerPingPlaque extends ConsumerWidget {
     );
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final route = _mainGroupRoute(context, ref, server);
+    // пинг нажатого сервера тут ни при чём: всё остальное идёт через группу
+    if (route != null) {
+      return Padding(
+        padding:
+            const EdgeInsets.symmetric(vertical: ExpressiveSpacing.extraSmall),
+        child: _plaqueServerSegment(
+          context,
+          server: server,
+          connected: connected,
+          exit: exit,
+          onJumpToActive: onJumpToActive,
+          radius: BorderRadius.all(_plaqueOuter),
+          maxLines: 2,
+          route: route,
+        ),
+      );
+    }
     final pingMs = server.pingMs;
     final pingType = PingService.pingColorTypeForServer(server, settings);
     final pingText = pingMs != null
@@ -224,17 +244,20 @@ class _StatusServerPlaque extends StatelessWidget {
             Flexible(
               child: KeyedSubtree(
                 key: serverKey,
-                child: _plaqueServerSegment(
-                  context,
-                  server: server,
-                  connected: connected,
-                  exit: exit,
-                  onJumpToActive: onJumpToActive,
-                  radius: const BorderRadiusDirectional.horizontal(
-                    start: _plaqueInner,
-                    end: _plaqueOuter,
-                  ).resolve(direction),
-                  maxLines: 1,
+                child: Consumer(
+                  builder: (context, ref, _) => _plaqueServerSegment(
+                    context,
+                    server: server,
+                    connected: connected,
+                    exit: exit,
+                    onJumpToActive: onJumpToActive,
+                    radius: const BorderRadiusDirectional.horizontal(
+                      start: _plaqueInner,
+                      end: _plaqueOuter,
+                    ).resolve(direction),
+                    maxLines: 1,
+                    route: _mainGroupRoute(context, ref, server),
+                  ),
                 ),
               ),
             ),

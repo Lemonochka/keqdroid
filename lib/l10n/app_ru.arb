@@ -970,6 +970,25 @@
     }
   },
   "serverGroupAuto": "выбирает сам",
+  "serverGroupMainHint": "Сюда идёт всё, что не ушло в другие группы",
+  "serverGroupViaHint": "Действует, когда выбрана в {name}",
+  "@serverGroupViaHint": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "serverGroupServersHint": "Сама выбирает самый быстрый. Выбери сервер, чтобы остаться на нём",
+  "serverGroupAutomatically": "Автоматически",
+  "serverGroupPinned": "закреплён {name}",
+  "@serverGroupPinned": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "serversEmptyGroupHint": "В этой подписке нет серверов",
   "statsInLabel": "Вх",
   "statsTimeLabel": "Время",

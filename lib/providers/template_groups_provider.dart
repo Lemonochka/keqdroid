@@ -23,3 +23,10 @@ final liveTemplateGroupsProvider = FutureProvider.autoDispose
   return MihomoGroupsApi.fetch();
 });
 
+final liveTemplateDelaysProvider = FutureProvider.autoDispose
+    .family<Map<String, int?>, String>((ref, subscriptionId) async {
+  final groups = await ref.watch(liveTemplateGroupsProvider(subscriptionId).future);
+  if (groups == null) return const {};
+  return MihomoGroupsApi.delays();
+});
+
