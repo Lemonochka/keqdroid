@@ -131,7 +131,7 @@ class ServerRow extends StatelessWidget {
       protocol: server.protocol,
       chainHops: isChain ? server.chainConfig!.hops.length : null,
     );
-    if (muted) avatar = Opacity(opacity: 0.4, child: avatar);
+    avatar = _MuteFade(muted: muted, opacity: 0.4, child: avatar);
     if (avatarBadge != null) {
       avatar = SizedBox.square(
         dimension: _avatarSize,
@@ -144,7 +144,6 @@ class ServerRow extends StatelessWidget {
         ),
       );
     }
-    final textOpacity = muted ? 0.45 : 1.0;
 
     final name = ServerNameUtils.formatForDisplay(
       ServerNameUtils.cleanDisplayName(server.displayName),
@@ -198,8 +197,9 @@ class ServerRow extends StatelessWidget {
             avatar,
             const SizedBox(width: ExpressiveSpacing.medium),
             Expanded(
-              child: Opacity(
-                opacity: textOpacity,
+              child: _MuteFade(
+                muted: muted,
+                opacity: 0.45,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,8 +305,9 @@ class ServerRow extends StatelessWidget {
           avatar,
           const SizedBox(width: ExpressiveSpacing.medium),
           Expanded(
-            child: Opacity(
-              opacity: textOpacity,
+            child: _MuteFade(
+              muted: muted,
+              opacity: 0.45,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,4 +394,26 @@ class ChainRouteStrip extends StatelessWidget {
     }
     return ServerAvatar(flag: flag, protocol: hop.protocol, size: dotSize);
   }
+}
+
+class _MuteFade extends StatelessWidget {
+  const _MuteFade({
+    required this.muted,
+    required this.opacity,
+    required this.child,
+  });
+
+  final bool muted;
+  final double opacity;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+        tween: Tween(end: muted ? opacity : 1.0),
+        duration: ExpressiveMotion.durationDefault,
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) =>
+            Opacity(opacity: value, child: child),
+        child: child,
+      );
 }

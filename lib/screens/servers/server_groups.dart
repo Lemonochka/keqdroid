@@ -564,14 +564,11 @@ class _ServerGroupHeader extends ConsumerWidget {
                             child: Transform.scale(
                               scale: 0.85 + 0.15 * auto,
                               alignment: AlignmentDirectional.centerStart,
-                              child: picking
-                                  ? _AutoSkipPickRow(subscription: sub)
-                                  : template != null
-                                  ? _SubscriptionTabsRow(
-                                      subscription: sub,
-                                      groups: template.groups.length,
-                                    )
-                                  : _AutoSelectRow(subscription: sub),
+                              child: _AutoRowMorph(
+                                subscription: sub,
+                                picking: picking,
+                                groups: template?.groups.length,
+                              ),
                             ),
                           ),
                       ],
@@ -823,9 +820,10 @@ class _ServerGroupHeader extends ConsumerWidget {
 }
 
 class _AutoSelectRow extends StatelessWidget {
-  const _AutoSelectRow({required this.subscription});
+  const _AutoSelectRow({required this.subscription, this.buttonKey});
 
   final Subscription subscription;
+  final Key? buttonKey;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -834,16 +832,20 @@ class _AutoSelectRow extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
           child: Align(
             alignment: AlignmentDirectional.centerStart,
-            child: _AutoSelectButton(subscription: subscription),
+            child: _AutoSelectButton(
+              subscription: subscription,
+              buttonKey: buttonKey,
+            ),
           ),
         ),
       );
 }
 
 class _AutoSelectButton extends ConsumerWidget {
-  const _AutoSelectButton({required this.subscription});
+  const _AutoSelectButton({required this.subscription, this.buttonKey});
 
   final Subscription subscription;
+  final Key? buttonKey;
 
   Future<void> _toggle(WidgetRef ref, BuildContext context) async {
     final on = subscription.autoSelect;
@@ -862,6 +864,7 @@ class _AutoSelectButton extends ConsumerWidget {
     return Tooltip(
       message: l10n.serversAutoSelectTooltip,
       child: ExpressiveToggleButton(
+        key: buttonKey,
         selected: subscription.autoSelect,
         label: l10n.serversAutoSelect,
         onPressed: () => unawaited(_toggle(ref, context)),
@@ -892,9 +895,16 @@ Future<void> _autoSelectNow(WidgetRef ref, String subscriptionId) async {
 }
 
 class _AutoSkipPickRow extends ConsumerWidget {
-  const _AutoSkipPickRow({required this.subscription});
+  const _AutoSkipPickRow({
+    required this.subscription,
+    required this.picking,
+    this.doneKey,
+  });
 
   final Subscription subscription;
+  // на обратном пути строка ещё видна, но Назад уже не держит
+  final bool picking;
+  final Key? doneKey;
 
   void _done(WidgetRef ref) {
     ref.read(autoSkipPickingProvider.notifier).set(null);
@@ -911,9 +921,9 @@ class _AutoSkipPickRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     return PopScope(
-      canPop: false,
+      canPop: !picking,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _done(ref);
+        if (!didPop && picking) _done(ref);
       },
       child: SizedBox(
         height: _GroupHeaderBackground.autoRowHeight,
@@ -938,6 +948,7 @@ class _AutoSkipPickRow extends ConsumerWidget {
               ),
               const SizedBox(width: ExpressiveSpacing.small),
               ExpressiveToggleButton(
+                key: doneKey,
                 selected: true,
                 label: l10n.serversAutoSkipDone,
                 onPressed: () => _done(ref),
@@ -948,6 +959,392 @@ class _AutoSkipPickRow extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _AutoRowMorph extends StatefulWidget {
+  const _AutoRowMorph({
+    required this.subscription,
+    required this.picking,
+    required this.groups,
+  });
+
+  final Subscription subscription;
+  final bool picking;
+  final int? groups;
+
+  @override
+  State<_AutoRowMorph> createState() => _AutoRowMorphState();
+}
+
+class _AutoRowMorphState extends State<_AutoRowMorph>
+    with SingleTickerProviderStateMixin {
+  static const _lead = Interval(0, 0.6, curve: Curves.easeInOutCubic);
+  static const _lag = Interval(0.3, 1, curve: Cubic(0.34, 1.3, 0.64, 1));
+  static const _flood = Curves.easeInOutCubic;
+  static const _drain = Cubic(0.34, 1.3, 0.64, 1);
+  static const _tint = Interval(0.2, 0.7);
+  static const _release = Interval(0, 0.15);
+
+  // без пары кнопка просто едет через строку: 700 мс, хорошие с группами, тут тянулись
+  static Duration _there(int? groups) =>
+      Duration(milliseconds: groups == null ? 450 : 700);
+  static Duration _back(int? groups) =>
+      Duration(milliseconds: groups == null ? 400 : 600);
+
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: _there(widget.groups),
+    reverseDuration: _back(widget.groups),
+    value: widget.picking ? 1 : 0,
+  );
+  final _auto = GlobalKey();
+  final _done = GlobalKey();
+  bool _ltr = true;
+
+  @override
+  void didUpdateWidget(_AutoRowMorph oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _c
+      ..duration = _there(widget.groups)
+      ..reverseDuration = _back(widget.groups);
+    if (oldWidget.picking == widget.picking) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _c.value = widget.picking ? 1 : 0;
+    } else if (widget.picking) {
+      _c.forward();
+    } else {
+      _c.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  Rect? _buttonRect(GlobalKey key, RenderBox self) {
+    final box = key.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.attached || !box.hasSize) return null;
+    final r = MatrixUtils.transformRect(
+      box.getTransformTo(self),
+      Offset.zero & box.size,
+    );
+    return Rect.fromCenter(
+      center: r.center,
+      width: r.width,
+      height: ExpressiveToggleButton.height,
+    );
+  }
+
+  // от начала строки: в фарси начало справа
+  _MorphPill? _pillAt(double t) {
+    final self = context.findRenderObject();
+    if (self is! RenderBox || !self.hasSize) return null;
+    final from = _buttonRect(_auto, self);
+    final to = _buttonRect(_done, self);
+    if (from == null || to == null) return null;
+    final width = self.size.width;
+    final ltr = _ltr;
+    double start(Rect r) => ltr ? r.left : width - r.right;
+    double end(Rect r) => ltr ? r.right : width - r.left;
+
+    final double s0;
+    final double s1;
+    if (widget.groups == null) {
+      s1 = ui.lerpDouble(end(from), end(to), _lead.transform(t))!;
+      s0 = ui.lerpDouble(start(from), start(to), _lag.transform(t))!;
+    } else {
+      final edge = ltr ? 16.0 : 14.0;
+      s0 = t < 0.5
+          ? ui.lerpDouble(start(from), edge, _flood.transform(t * 2))!
+          : ui.lerpDouble(edge, start(to), _drain.transform(t * 2 - 1))!;
+      s1 = ui.lerpDouble(end(from), end(to), t)!;
+    }
+    final restWidth = ui.lerpDouble(from.width, to.width, t)!;
+    final stretched = ((s1 - s0 - restWidth) / (width / 8)).clamp(0.0, 1.0);
+    final tint = _tint.transform(t);
+    // долгое нажатие срабатывает под пальцем: Авто ещё нажата, иначе вспыхнула бы светлее
+    final pressed =
+        _c.status == AnimationStatus.forward ? 1 - _release.transform(t) : 0.0;
+    final restCorner = ui.lerpDouble(
+      ui.lerpDouble(
+        widget.subscription.autoSelect
+            ? ExpressiveToggleButton.squareCorner
+            : ExpressiveToggleButton.pillCorner,
+        ExpressiveToggleButton.squareCorner,
+        tint,
+      )!,
+      ExpressiveToggleButton.pressedCorner,
+      pressed,
+    )!;
+    final left = ltr ? s0 : width - s1;
+    final right = ltr ? s1 : width - s0;
+    return _MorphPill(
+      rect: Rect.fromLTRB(
+        left,
+        from.top,
+        max(right, left + ExpressiveToggleButton.height),
+        from.bottom,
+      ),
+      startEdge: s0,
+      fromStart: start(from),
+      toStart: start(to),
+      fromWidth: from.width,
+      toWidth: to.width,
+      ltr: ltr,
+      tint: tint,
+      pressed: pressed,
+      // квадратные концы с глубокой талией выходили косточкой
+      corner: ui.lerpDouble(restCorner, from.height / 2, stretched)!,
+      neck: 2.5 * stretched,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = widget.subscription;
+    final groups = widget.groups;
+    final from = groups != null
+        ? _SubscriptionTabsRow(
+            subscription: sub,
+            groups: groups,
+            autoKey: _auto,
+          )
+        : _AutoSelectRow(subscription: sub, buttonKey: _auto);
+    final to = _AutoSkipPickRow(
+      subscription: sub,
+      picking: widget.picking,
+      doneKey: _done,
+    );
+    final scheme = Theme.of(context).colorScheme;
+    final label = Theme.of(context).textTheme.labelLarge;
+    final l10n = context.l10n;
+    final textScaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    _ltr = direction == TextDirection.ltr;
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) {
+        final t = _c.value;
+        // и в кадре переключения, пока контроллер ещё не сдвинулся
+        final moving = widget.picking ? t < 1 : t > 0;
+        final fromShown = groups != null && t < 0.5;
+        // обе строки в дереве всю дорогу: Назад посреди перехода ловит PopScope строки выбора
+        Widget side(Widget row, bool shown, bool isFrom) => KeyedSubtree(
+          key: ValueKey(isFrom),
+          child: ClipPath(
+            clipper: moving ? _MorphSideClip(this, t, shown, isFrom) : null,
+            clipBehavior: moving ? Clip.antiAlias : Clip.none,
+            // спрятанная Авто не держит фокус пульта: OK посреди перехода щёлкнул бы её невидимо
+            child: IgnorePointer(
+              ignoring: moving,
+              child: ExcludeFocus(excluding: moving, child: row),
+            ),
+          ),
+        );
+        return Stack(
+          children: [
+            if (moving || !widget.picking) side(from, fromShown, true),
+            if (moving || widget.picking) side(to, !fromShown, false),
+            if (moving)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _MorphPainter(
+                      state: this,
+                      t: t,
+                      fromFill: sub.autoSelect
+                          ? scheme.primary
+                          : scheme.surfaceContainerHighest,
+                      fromInk: sub.autoSelect
+                          ? scheme.onPrimary
+                          : scheme.onSurfaceVariant,
+                      toFill: scheme.primary,
+                      toInk: scheme.onPrimary,
+                      fromLabel: l10n.serversAutoSelect,
+                      toLabel: l10n.serversAutoSkipDone,
+                      style: label,
+                      textScaler: textScaler,
+                      textDirection: direction,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MorphPill {
+  const _MorphPill({
+    required this.rect,
+    required this.startEdge,
+    required this.fromStart,
+    required this.toStart,
+    required this.fromWidth,
+    required this.toWidth,
+    required this.ltr,
+    required this.tint,
+    required this.pressed,
+    required this.corner,
+    required this.neck,
+  });
+
+  final Rect rect;
+  final double startEdge;
+  final double fromStart;
+  final double toStart;
+  final double fromWidth;
+  final double toWidth;
+  final bool ltr;
+  final double tint;
+  final double pressed;
+  final double corner;
+  final double neck;
+}
+
+class _MorphSideClip extends CustomClipper<Path> {
+  _MorphSideClip(this.state, this.t, this.shown, this.isFrom);
+
+  final _AutoRowMorphState state;
+  final double t;
+  final bool shown;
+  final bool isFrom;
+
+  @override
+  Path getClip(Size size) {
+    final all = Path()..addRect(Offset.zero & size);
+    if (!shown) return Path();
+    final pill = state._pillAt(t);
+    if (pill == null) return all;
+    // пару прячет контур кнопки целиком: под тонкой серединой иначе проглядывала бы Авто,
+    // а прямой обрез срезал бы пару у круглого конца
+    if (isFrom) {
+      return Path.combine(
+        PathOperation.difference,
+        all,
+        Path()
+          ..addRRect(
+            RRect.fromRectAndRadius(pill.rect, Radius.circular(pill.corner)),
+          ),
+      );
+    }
+    // настоящая Готово не выглядывает, когда задний край на отскоке заходит за неё
+    final edge = min(pill.startEdge + 1, pill.toStart - 1);
+    return Path()
+      ..addRect(
+        pill.ltr
+            ? Rect.fromLTRB(0, 0, edge, size.height)
+            : Rect.fromLTRB(size.width - edge, 0, size.width, size.height),
+      );
+  }
+
+  @override
+  bool shouldReclip(_MorphSideClip oldClipper) => true;
+}
+
+class _MorphPainter extends CustomPainter {
+  _MorphPainter({
+    required this.state,
+    required this.t,
+    required this.fromFill,
+    required this.fromInk,
+    required this.toFill,
+    required this.toInk,
+    required this.fromLabel,
+    required this.toLabel,
+    required this.style,
+    required this.textScaler,
+    required this.textDirection,
+  });
+
+  final _AutoRowMorphState state;
+  final double t;
+  final Color fromFill;
+  final Color fromInk;
+  final Color toFill;
+  final Color toInk;
+  final String fromLabel;
+  final String toLabel;
+  final TextStyle? style;
+  final TextScaler textScaler;
+  final TextDirection textDirection;
+
+  static const _fromText = Interval(0.15, 0.5);
+  static const _toText = Interval(0.35, 0.7);
+
+  Path _shape(Rect r, double corner, double neck) {
+    final k = min(corner, min(r.width, r.height) / 2);
+    final mid = r.center.dx;
+    final a = r.left + k;
+    final b = r.right - k;
+    final q = (b - a) / 4;
+    return Path()
+      ..moveTo(a, r.top)
+      ..cubicTo(a + q, r.top, mid - q, r.top + neck, mid, r.top + neck)
+      ..cubicTo(mid + q, r.top + neck, b - q, r.top, b, r.top)
+      ..arcToPoint(Offset(r.right, r.top + k), radius: Radius.circular(k))
+      ..lineTo(r.right, r.bottom - k)
+      ..arcToPoint(Offset(b, r.bottom), radius: Radius.circular(k))
+      ..cubicTo(b - q, r.bottom, mid + q, r.bottom - neck, mid, r.bottom - neck)
+      ..cubicTo(mid - q, r.bottom - neck, a + q, r.bottom, a, r.bottom)
+      ..arcToPoint(Offset(r.left, r.bottom - k), radius: Radius.circular(k))
+      ..lineTo(r.left, r.top + k)
+      ..arcToPoint(Offset(a, r.top), radius: Radius.circular(k))
+      ..close();
+  }
+
+  void _label(
+    Canvas canvas,
+    Offset at,
+    String text,
+    Color color,
+    double alpha,
+  ) {
+    if (alpha <= 0) return;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: style?.copyWith(color: color.withValues(alpha: color.a * alpha)),
+      ),
+      textDirection: textDirection,
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    painter.paint(canvas, at - Offset(painter.width / 2, painter.height / 2));
+    painter.dispose();
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pill = state._pillAt(t);
+    if (pill == null) return;
+    final r = pill.rect;
+    final path = _shape(r, pill.corner, pill.neck);
+    final ink = Color.lerp(fromInk, toInk, pill.tint)!;
+    final fill = Color.alphaBlend(
+      ink.withValues(alpha: 0.1 * pill.pressed),
+      Color.lerp(fromFill, toFill, pill.tint)!,
+    );
+    canvas.drawPath(path, Paint()..color = fill);
+    canvas
+      ..save()
+      ..clipPath(path);
+    // старая надпись уходит с задним краем, новая встаёт у переднего: посередине не слипаются
+    final y = r.center.dy;
+    final fromX =
+        pill.ltr ? r.left + pill.fromWidth / 2 : r.right - pill.fromWidth / 2;
+    final toX = pill.ltr ? r.right - pill.toWidth / 2 : r.left + pill.toWidth / 2;
+    _label(canvas, Offset(fromX, y), fromLabel, ink, 1 - _fromText.transform(t));
+    _label(canvas, Offset(toX, y), toLabel, ink, _toText.transform(t));
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_MorphPainter oldDelegate) => true;
 }
 
 class _SubCard extends ConsumerStatefulWidget {

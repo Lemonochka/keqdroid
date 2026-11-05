@@ -2,22 +2,186 @@ part of '../servers_tab.dart';
 
 const _trailingSlotSize = 32.0;
 
-class _AutoSkipBadge extends StatelessWidget {
-  const _AutoSkipBadge({required this.ring});
+// кружок выдавливается каплей из угла флага, а уходит в край флага на месте: обратный путь
+// показывал точку, которая ползла по флагу к середине
+class _AutoSkipBadge extends StatefulWidget {
+  const _AutoSkipBadge({required this.shown, required this.ring});
 
+  final bool shown;
+  final Color ring;
+
+  static const size = 18.0;
+
+  @override
+  State<_AutoSkipBadge> createState() => _AutoSkipBadgeState();
+}
+
+class _AutoSkipBadgeState extends State<_AutoSkipBadge>
+    with SingleTickerProviderStateMixin {
+  static final _out = SpringDescription.withDampingRatio(
+    mass: 1,
+    stiffness: 420,
+    ratio: 0.6,
+  );
+
+  late final AnimationController _c = AnimationController.unbounded(
+    vsync: this,
+    value: widget.shown ? 1 : 0,
+  );
+
+  // глубину выбирает старт почти из покоя, по положению: пружина ещё 0,8 с дрожит в долях
+  // пикселя и считается в пути. смена глубины посреди пути дёргала кружок
+  double _depth = 7;
+
+  @override
+  void didUpdateWidget(_AutoSkipBadge oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.shown == widget.shown) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _c.value = widget.shown ? 1 : 0;
+      return;
+    }
+    final v = _c.value;
+    if (widget.shown && v < 0.05) _depth = 7;
+    if (!widget.shown && v > 0.85) _depth = 2;
+    if (widget.shown) {
+      ExpressiveMotion.springTo(_c, 1, spring: _out, snapToEnd: true);
+    } else {
+      // 220 мс на easeIn, одобренные на гифке, на телефоне ей показались медленными
+      _c.animateTo(
+        0,
+        duration: Duration(milliseconds: (150 * v.clamp(0.3, 1.0)).round()),
+        curve: Curves.easeInQuad,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  Widget _icon(double scale) => Icon(
+        Icons.remove_rounded,
+        size: 13 * scale,
+        color: Colors.white,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final red = AppTheme.red(context);
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) {
+        if (!_c.isAnimating) {
+          if (!widget.shown) {
+            return const SizedBox.square(dimension: _AutoSkipBadge.size);
+          }
+          return Container(
+            width: _AutoSkipBadge.size,
+            height: _AutoSkipBadge.size,
+            decoration: BoxDecoration(
+              color: red,
+              shape: BoxShape.circle,
+              border: Border.all(color: widget.ring, width: 1.5),
+            ),
+            child: _icon(1),
+          );
+        }
+        final v = _c.value;
+        final shallow = _depth < 7;
+        final drop = _DropGeometry(v, rtl: rtl, depth: _depth);
+        final icon = shallow ? const Interval(0.35, 0.8) : const Interval(0.6, 1);
+        return SizedBox.square(
+          dimension: _AutoSkipBadge.size,
+          child: CustomPaint(
+            painter: _DropPainter(drop, red: red, ring: widget.ring),
+            child: Transform.translate(
+              offset: drop.center - _DropGeometry.home,
+              child: Opacity(
+                opacity: icon.transform(v.clamp(0.0, 1.0)),
+                child: Center(child: _icon(drop.scale)),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DropGeometry {
+  _DropGeometry(this.v, {required bool rtl, required double depth})
+      : origin = home + Offset(rtl ? depth : -depth, -depth);
+
+  final double v;
+  final Offset origin;
+
+  static const home = Offset(_AutoSkipBadge.size / 2, _AutoSkipBadge.size / 2);
+
+  double get scale =>
+      max(0.0, ui.lerpDouble(0.3, 1, v)!) * (v / 0.15).clamp(0.0, 1.0);
+  Offset get center => Offset.lerp(origin, home, v)!;
+  double get outer => _AutoSkipBadge.size / 2 * scale;
+  double get inner => outer - 1.5 * scale;
+
+  Offset get tail {
+    final off = ((v.clamp(0.0, 1.0) - 0.65) / 0.25).clamp(0.0, 1.0);
+    return Offset.lerp(origin, center, off)!;
+  }
+}
+
+class _DropPainter extends CustomPainter {
+  _DropPainter(this.drop, {required this.red, required this.ring});
+
+  final _DropGeometry drop;
+  final Color red;
   final Color ring;
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: 18,
-        height: 18,
-        decoration: BoxDecoration(
-          color: AppTheme.red(context),
-          shape: BoxShape.circle,
-          border: Border.all(color: ring, width: 1.5),
-        ),
-        child: const Icon(Icons.remove_rounded, size: 13, color: Colors.white),
+  void paint(Canvas canvas, Size size) {
+    final c = drop.center;
+    final r = drop.inner;
+    if (drop.outer <= 0) return;
+    canvas.drawCircle(c, drop.outer, Paint()..color = ring);
+    final tip = drop.tail;
+    final along = c - tip;
+    final length = along.distance;
+    final fill = Paint()..color = red;
+    if (r > 0 && length > r * 0.5) {
+      final u = along / length;
+      final n = Offset(-u.dy, u.dx);
+      final w = r * 0.75;
+      final waist = c - u * (length * 0.55);
+      canvas.drawPath(
+        Path()
+          ..moveTo((c + n * w).dx, (c + n * w).dy)
+          ..quadraticBezierTo(
+            (waist + n * w * 0.3).dx,
+            (waist + n * w * 0.3).dy,
+            tip.dx,
+            tip.dy,
+          )
+          ..quadraticBezierTo(
+            (waist - n * w * 0.3).dx,
+            (waist - n * w * 0.3).dy,
+            (c - n * w).dx,
+            (c - n * w).dy,
+          )
+          ..close(),
+        fill,
       );
+    }
+    if (r > 0) canvas.drawCircle(c, r, fill);
+  }
+
+  @override
+  bool shouldRepaint(_DropPainter oldDelegate) =>
+      oldDelegate.drop.v != drop.v ||
+      oldDelegate.red != red ||
+      oldDelegate.ring != ring;
 }
 
 class _ServerTile extends ConsumerWidget {
@@ -121,9 +285,10 @@ class _ServerTile extends ConsumerWidget {
         emphasizeTitle: isActive,
         layout: layout,
         muted: autoSkipShown && picking,
-        avatarBadge: autoSkipShown
-            ? _AutoSkipBadge(ring: isActive ? selectedColor : tileColor)
-            : null,
+        avatarBadge: _AutoSkipBadge(
+          shown: autoSkipShown,
+          ring: isActive ? selectedColor : tileColor,
+        ),
         trailing: layout == ServerRowLayout.inline
             ? _buildTrailing(
                 context,

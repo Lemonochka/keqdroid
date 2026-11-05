@@ -170,6 +170,28 @@ void main() {
       expect(_container.read(autoSkipPickingProvider), isNull);
     });
 
+    testWidgets('OK посреди перехода в выделение не щёлкает спрятанное Авто',
+        (tester) async {
+      _auto = false;
+      await _pump(tester);
+      await focusAuto(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.select);
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.sendKeyRepeatEvent(LogicalKeyboardKey.select);
+      }
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.select);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(_container.read(autoSkipPickingProvider), 's1');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.select);
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await _settle(tester);
+
+      expect(autoOn(), isFalse);
+      expect(_container.read(autoSkipPickingProvider), 's1');
+    });
+
     testWidgets('правая кнопка мыши на Авто включает выделение', (tester) async {
       _auto = false;
       await _pump(tester);
@@ -252,6 +274,47 @@ void main() {
     await _settle(tester);
 
     expect(_container.read(autoSkipPickingProvider), isNull);
+  });
+
+  group('Назад, пока Авто перетекает в Готово и обратно', () {
+    RoutePopDisposition disposition(WidgetTester tester) =>
+        ModalRoute.of(tester.element(find.byType(ServersTab)))!.popDisposition;
+
+    testWidgets('на пути в выделение выходит из него', (tester) async {
+      await _pump(tester);
+      await tester.longPress(find.text('Auto'));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(_container.read(autoSkipPickingProvider), 's1');
+      expect(disposition(tester), RoutePopDisposition.doNotPop);
+
+      await tester.binding.handlePopRoute();
+      await _settle(tester);
+
+      expect(_container.read(autoSkipPickingProvider), isNull);
+      expect(find.text('Auto skips the marked ones'), findsNothing);
+      expect(find.text('Auto'), findsOneWidget);
+    });
+
+    testWidgets('на обратном пути уже не держит', (tester) async {
+      await _pump(tester);
+      expect(disposition(tester), RoutePopDisposition.bubble);
+      await tester.longPress(find.text('Auto'));
+      await _settle(tester);
+      expect(disposition(tester), RoutePopDisposition.doNotPop);
+
+      await tester.tap(find.text('Done'));
+      for (var i = 0;
+          i < 10 && _container.read(autoSkipPickingProvider) != null;
+          i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(_container.read(autoSkipPickingProvider), isNull);
+      expect(find.text('Auto skips the marked ones'), findsOneWidget,
+          reason: 'строка выбора ещё уезжает');
+      expect(disposition(tester), RoutePopDisposition.bubble);
+    });
   });
 
   testWidgets('вне выделения пометку видно, только пока Авто включено',

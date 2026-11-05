@@ -1,10 +1,15 @@
 part of '../servers_tab.dart';
 
 class _SubscriptionTabsRow extends ConsumerWidget {
-  const _SubscriptionTabsRow({required this.subscription, required this.groups});
+  const _SubscriptionTabsRow({
+    required this.subscription,
+    required this.groups,
+    this.autoKey,
+  });
 
   final Subscription subscription;
   final int groups;
+  final Key? autoKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,7 +40,10 @@ class _SubscriptionTabsRow extends ConsumerWidget {
             // Авто справа: пара не прыгает, когда его включают в виде карточки
             if (subscription.autoSelectVisible) ...[
               const Spacer(),
-              _AutoSelectButton(subscription: subscription),
+              _AutoSelectButton(
+                subscription: subscription,
+                buttonKey: autoKey,
+              ),
             ],
           ],
         ),
