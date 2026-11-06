@@ -996,7 +996,8 @@ void main() {
       final map = jsonDecode(config) as Map<String, dynamic>;
       expect((map['log'] as Map)['loglevel'], 'debug');
       final dns = map['dns'] as Map<String, dynamic>;
-      expect(dns['queryStrategy'], 'PreferIPv4');
+      // PreferIPv4 xray в DNS не знает и молча читает как UseIP (resolveQueryStrategy в infra/conf/dns.go)
+      expect(dns['queryStrategy'], 'UseIP');
       final servers = (dns['servers'] as List).cast<Map<String, dynamic>>();
       // Первым идёт bootstrap на адрес сервера: его нельзя резолвить ничем, что
       // само требует туннеля, — отсюда `+local`. Открытым UDP-53 его тоже не

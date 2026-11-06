@@ -645,7 +645,9 @@ class XrayCoreSettings {
     return {
       if (hosts.isNotEmpty) 'hosts': hosts,
       'servers': [for (final server in servers) _withDnsLimits(server)],
-      'queryStrategy': dnsQueryStrategy,
+      'queryStrategy': dnsQueryStrategy.startsWith('Prefer')
+          ? 'UseIP'
+          : dnsQueryStrategy,
       if (dnsDisableCache) 'disableCache': true,
     };
   }

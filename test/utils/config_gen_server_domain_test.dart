@@ -63,6 +63,25 @@ void main() {
     );
   });
 
+  // Prefer* xray понимает только при дозвоне, и там это UseIPv4v6 и UseIPv6v4
+  // (infra/conf/transport_sockopt.go). В DNS это обычный UseIP: спросить оба семейства.
+  for (final (choice, dial) in [
+    ('PreferIPv4', 'UseIPv4v6'),
+    ('PreferIPv6', 'UseIPv6v4'),
+  ]) {
+    test('$choice: при дозвоне $dial, в DNS оба семейства', () {
+      final config = _generate(
+        _domainServer,
+        AppSettings(xrayCore: XrayCoreSettings(dnsQueryStrategy: choice)),
+      );
+      expect(
+        _sockoptOf(_outboundByTag(config, 'proxy'))?['domainStrategy'],
+        dial,
+      );
+      expect((config['dns'] as Map<String, dynamic>)['queryStrategy'], 'UseIP');
+    });
+  }
+
   test('в цепочке стратегия только у входного узла', () {
     final link = ProxyChainConfig(
       name: 'chain',

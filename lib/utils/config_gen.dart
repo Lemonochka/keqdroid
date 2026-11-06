@@ -422,11 +422,7 @@ class ConfigGeneratorV2 {
     final sockopt = Map<String, dynamic>.from(
       (stream['sockopt'] as Map<String, dynamic>?) ?? const <String, dynamic>{},
     );
-    sockopt['domainStrategy'] = switch (core.dnsQueryStrategy) {
-      'UseIPv4' => 'UseIPv4',
-      'UseIPv6' => 'UseIPv6',
-      _ => 'UseIP',
-    };
+    sockopt['domainStrategy'] = _dialStrategy(core);
     final happy = _happyEyeballs(core);
     if (happy != null) sockopt['happyEyeballs'] = happy;
     stream['sockopt'] = sockopt;
@@ -723,9 +719,15 @@ class ConfigGeneratorV2 {
       ];
 
   static String _freedomDomainStrategy(XrayCoreSettings core) =>
+      _dialStrategy(core);
+
+  // Prefer* xray в DNS не знает, а при дозвоне это UseIPv4v6 и UseIPv6v4 (infra/conf/transport_sockopt.go, freedom.go)
+  static String _dialStrategy(XrayCoreSettings core) =>
       switch (core.dnsQueryStrategy) {
         'UseIPv4' => 'UseIPv4',
         'UseIPv6' => 'UseIPv6',
+        'PreferIPv4' => 'UseIPv4v6',
+        'PreferIPv6' => 'UseIPv6v4',
         _ => 'UseIP',
       };
 
