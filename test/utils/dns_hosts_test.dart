@@ -45,6 +45,25 @@ void main() {
       expect(parsed.entries['b.example.com'], ['3.3.3.3']);
     });
 
+    test('IPv6 в любом порядке и записи, двоеточия в адресе не делят строку', () {
+      final parsed = XrayCoreSettings.parseDnsHosts(
+        'a.example.com fd00::10\n'
+        '[fd00::11] b.example.com\n'
+        'c.example.com: [fd00::12], 10.0.0.1\n'
+        'd.example.com:fd00::13\n'
+        'e.example.com:10.0.0.2',
+      );
+
+      expect(parsed.entries, {
+        'a.example.com': ['fd00::10'],
+        'b.example.com': ['fd00::11'],
+        'c.example.com': ['fd00::12', '10.0.0.1'],
+        'd.example.com': ['fd00::13'],
+        'e.example.com': ['10.0.0.2'],
+      });
+      expect(parsed.dropped, isEmpty);
+    });
+
     test('псевдоним: вместо адреса другой домен', () {
       final parsed = XrayCoreSettings.parseDnsHosts('old.example.com new.example.com');
 
@@ -88,6 +107,24 @@ void main() {
       final hosts = config['hosts'] as Map<String, dynamic>;
       expect(hosts['example.com'], '10.0.0.5');
       expect(hosts['+.lan.example.com'], '10.0.0.6');
+    });
+
+    test('IPv6 доходит до обоих ядер без скобок', () {
+      final xray = jsonDecode(
+        ConfigGeneratorV2.generateConfig(_vless, _withHosts('nas.home [fd00::10]')),
+      ) as Map<String, dynamic>;
+      final mihomo = MihomoConfigGen.build(
+        _vless,
+        _withHosts('nas.home [fd00::10]'),
+        socksPort: 2080,
+      );
+
+      expect(
+        ((xray['dns'] as Map<String, dynamic>)['hosts']
+            as Map<String, dynamic>)['nas.home'],
+        'fd00::10',
+      );
+      expect((mihomo['hosts'] as Map<String, dynamic>)['nas.home'], 'fd00::10');
     });
 
     test('пустое поле не добавляет ключей', () {

@@ -347,11 +347,7 @@ class XrayCoreSettings {
     for (final line in raw.split(RegExp(r'[\n;]+'))) {
       final trimmed = line.trim();
       if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
-      final parts = trimmed
-          .split(RegExp(r'[\s:=]+'))
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList();
+      final parts = _hostsTokens(trimmed);
       if (parts.length < 2) {
         dropped.add(trimmed);
         continue;
@@ -364,7 +360,10 @@ class XrayCoreSettings {
       final values = <String>[];
       for (final chunk in rest) {
         values.addAll(
-          chunk.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty),
+          chunk
+              .split(',')
+              .map((e) => _unbracketed(e.trim()))
+              .where((e) => e.isNotEmpty),
         );
       }
       final domainKey = key.toLowerCase();
@@ -419,6 +418,29 @@ class XrayCoreSettings {
     }
     return (entries: entries, dropped: dropped);
   }
+
+  // двоеточие стоит внутри IPv6, поэтому делит только запись без пробела, имя:адрес
+  static List<String> _hostsTokens(String line) {
+    final parts = line
+        .split(RegExp(r'[\s=]+'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (parts.length == 1) {
+      final at = parts.single.indexOf(':');
+      if (at <= 0) return parts;
+      return [parts.single.substring(0, at), parts.single.substring(at + 1)];
+    }
+    if (parts.first.endsWith(':')) {
+      parts[0] = parts.first.substring(0, parts.first.length - 1);
+    }
+    return parts;
+  }
+
+  static String _unbracketed(String value) =>
+      value.startsWith('[') && value.endsWith(']')
+          ? value.substring(1, value.length - 1)
+          : value;
 
   static bool _isIpAddress(String value) {
     final bare = value.startsWith('[') && value.endsWith(']')
