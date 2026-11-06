@@ -2,7 +2,8 @@ library;
 
 import '../models/app_settings.dart';
 
-final _separators = RegExp(r'[\r\n,]+');
+// пробел тоже: в домене и адресе его не бывает, а записи через пробел склеивались в одну мёртвую
+final _separators = RegExp(r'[\s,]+');
 
 List<String> routingEntries(String field) => field
     .split(_separators)

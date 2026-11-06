@@ -1,5 +1,6 @@
 import '../models/app_settings.dart';
 import 'geo_asset_index.dart';
+import 'rule_lists.dart';
 
 typedef GeoSanitizeResult = ({AppSettings settings, List<String> dropped});
 
@@ -33,9 +34,7 @@ GeoSanitizeResult stripUnknownGeoTokens(
   final kept = <String>[];
   final dropped = <String>[];
   var replaced = false;
-  for (final token in raw.split(RegExp(r'[\r\n,]+'))) {
-    final trimmed = token.trim();
-    if (trimmed.isEmpty) continue;
+  for (final trimmed in routingEntries(raw)) {
     if (isKnownGeoToken(trimmed, index)) {
       kept.add(trimmed);
     } else if (geoSubstitutes(trimmed, index) case final subs?) {
@@ -53,9 +52,7 @@ List<String> unknownGeoTokens(String raw, GeoAssetIndex index) {
   if (index.isEmpty) return const [];
   final seen = <String>{};
   final unknown = <String>[];
-  for (final token in raw.split(RegExp(r'[\r\n,]+'))) {
-    final trimmed = token.trim();
-    if (trimmed.isEmpty) continue;
+  for (final trimmed in routingEntries(raw)) {
     if (isKnownGeoToken(trimmed, index)) continue;
     if (seen.add(trimmed.toLowerCase())) unknown.add(trimmed);
   }

@@ -770,12 +770,8 @@ class ConfigGeneratorV2 {
     return const {'hysteria', 'kcp', 'mkcp', 'quic'}.contains(network);
   }
 
-  // и запятая, и перевод строки: UI обещает оба, а сплит по запятой склеивал строки в один токен
-  static List<String> _parseRuleList(String s) => s
-      .split(RegExp(r'[\r\n,]+'))
-      .map((e) => e.trim())
-      .where((e) => e.isNotEmpty && !isRuleListUrl(e))
-      .toList();
+  static List<String> _parseRuleList(String s) =>
+      routingEntries(s).where((e) => !isRuleListUrl(e)).toList();
 
   // цена правила без условия на вход: для этого хоста правила пользователя в xray не действуют
   static Map<String, dynamic> _exitIpProbeFields(String outboundTag) => {
@@ -793,6 +789,8 @@ class ConfigGeneratorV2 {
           return c;
         }
         if (!c.contains('.')) return 'regexp:.*\\.$c\$';
+        // звёздочку xray сравнивает буквально (strmatcher), *.vk.com не совпадало ни с чем
+        if (c.startsWith('*.')) return 'domain:${c.substring(2)}';
         if (c.startsWith('.')) return 'domain:${c.substring(1)}';
         return 'domain:$c';
       }).toList();

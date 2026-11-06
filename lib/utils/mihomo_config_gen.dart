@@ -1731,7 +1731,7 @@ class MihomoConfigGen {
       .toList();
 
   static List<String> _parseRuleList(String s) =>
-      _parseList(s).where((e) => !isRuleListUrl(e)).toList();
+      routingEntries(s).where((e) => !isRuleListUrl(e)).toList();
 
   // раньше правил пользователя и автора готового конфига. трафик туннеля к этому хосту идёт по общим правилам:
   // адрес сервера за CDN бывает ровно им
@@ -2328,6 +2328,8 @@ class MihomoConfigGen {
     if (lower.startsWith('regexp:')) {
       return 'DOMAIN-REGEX,${v.substring('regexp:'.length)}';
     }
+    // звёздочку DOMAIN-SUFFIX сравнивает буквально (rules/common/domain_suffix.go)
+    if (v.startsWith('*.')) return 'DOMAIN-SUFFIX,${v.substring(2)}';
     if (v.startsWith('.')) return 'DOMAIN-SUFFIX,${v.substring(1)}';
     return 'DOMAIN-SUFFIX,$v';
   }
