@@ -206,7 +206,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get routingCheatSheetTitle => '怎么写规则';
 
   @override
-  String get routingCheatSheetBody => '路由读作“对象 → 内容 → 去向”。在“自定义网站”中，每一行写一个域名、IP、地理标签或列表链接，去向由路由本身选择：直连、代理或阻止。\n\n## 域名\nvk.com — 这个域名本身及其所有子域名\nru — 所有以 .ru 结尾的域名（只写这个词，不带点）\n.example.com — 只匹配子域名，不含域名本身\nfull:example.com — 只匹配这一个主机，不含子域名\nregexp:… — 正则表达式，确实需要复杂匹配时再用\n\n## IP 地址\n1.2.3.4 — 单个地址\n10.0.0.0/8 — 一整段地址（CIDR）\n\n## GeoIP：按国家\ngeoip:ru — 所有俄罗斯 IP。把 ru 换成任意国家代码：us、de、cn、ua、kz……\n另有现成的集合：geoip:private（局域网）、geoip:telegram、geoip:google。\n要按国家分流？就用它，geoip 认得所有国家。\n\n## GeoSite：现成的列表\ngeosite:google、geosite:netflix、geosite:telegram、geosite:category-ads-all……\n这些不是国家，而是别人已经整理好的服务分类。\n这里几乎没有国家（只有 geolocation-cn 和 geolocation-!cn），所以按国家还是要用 geoip。\n\n## 在电脑上\n地理规则和手机上一样生效。只需让 geoip.dat 和 geosite.dat 与 keqdroid.exe 放在同一目录，正式版里已经放好了。如果地理规则似乎没有生效，请先检查这两个文件。\n\n## 顺序\n与屏幕一致，从上到下：阻止、指定应用、所有应用。所有应用中先检查直连，再检查代理。您的服务器始终最先直连，否则会形成回环。不匹配任何路由的流量按“其他所有”这一行处理。';
+  String get routingCheatSheetBody => '路由读作“对象 → 内容 → 去向”。在“自定义网站”中，每一行写一个域名、IP、地理标签或列表链接，去向由路由本身选择：直连、代理或阻止。\n\n## 域名\nvk.com — 这个域名本身及其所有子域名\nru — 所有以 .ru 结尾的域名（只写这个词，不带点）\n.example.com 和 *.example.com — 与 example.com 相同\nfull:example.com — 只匹配这一个主机，不含子域名\nregexp:… — 正则表达式，确实需要复杂匹配时再用\n\n## IP 地址\n1.2.3.4 — 单个地址\n10.0.0.0/8 — 一整段地址（CIDR）\n\n## GeoIP：按国家\ngeoip:ru — 所有俄罗斯 IP。把 ru 换成任意国家代码：us、de、cn、ua、kz……\n另有现成的集合：geoip:private（局域网）、geoip:telegram、geoip:google。\n要按国家分流？就用它，geoip 认得所有国家。\n\n## GeoSite：现成的列表\ngeosite:google、geosite:netflix、geosite:telegram、geosite:category-ads-all……\n这些不是国家，而是别人已经整理好的服务分类。\n这里几乎没有国家（只有 geolocation-cn 和 geolocation-!cn），所以按国家还是要用 geoip。\n\n## 在电脑上\n地理规则和手机上一样生效。只需让 geoip.dat 和 geosite.dat 与 keqdroid.exe 放在同一目录，正式版里已经放好了。如果地理规则似乎没有生效，请先检查这两个文件。\n\n## 顺序\n与屏幕一致，从上到下：阻止、指定应用、所有应用。所有应用中先检查直连，再检查代理。您的服务器始终最先直连，否则会形成回环。不匹配任何路由的流量按“其他所有”这一行处理。';
 
   @override
   String settingsRoutingItemCount(int count) {
@@ -2707,7 +2707,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunnelModeProxySubtitle => '仅本地代理，不启用系统 VPN';
 
   @override
-  String get settingsTunnelModeHint => '代理模式在 127.0.0.1 上启动 SOCKS 和 HTTP，把应用或 Wi-Fi 指过去即可。该代理对设备上任何应用开放。分应用路由和 DNS 拦截仅在 VPN 模式下可用。';
+  String get settingsTunnelModeHint => '代理模式在 127.0.0.1 上启动 SOCKS 和 HTTP，把应用或 Wi-Fi 指过去即可。不设密码时，该代理对设备上任何应用开放。分应用路由和 DNS 拦截仅在 VPN 模式下可用。';
 
   @override
   String get settingsCoreSkipClash => '当前服务器是现成的 Clash 配置，无论选择哪个内核，都只能由 mihomo 运行。';
