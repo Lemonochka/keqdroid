@@ -406,7 +406,7 @@ class XrayCoreSettings {
         for (final value in chunk.split(',')) {
           final address = value.trim();
           if (address.isEmpty) continue;
-          if (xrayDnsEntry(address) == null) continue;
+          if (!_dnsAddressForAnyCore(address)) continue;
           servers.add(address);
         }
       }
@@ -441,6 +441,12 @@ class XrayCoreSettings {
       value.startsWith('[') && value.endsWith(']')
           ? value.substring(1, value.length - 1)
           : value;
+
+  // tls:// и dhcp:// понимает только mihomo, Xray пропускает их, собирая свой список
+  static bool _dnsAddressForAnyCore(String address) =>
+      xrayDnsEntry(address) != null ||
+      RegExp(r'^(tls|dhcp)(\+local)?://', caseSensitive: false)
+          .hasMatch(address.trim());
 
   static bool _isIpAddress(String value) {
     final bare = value.startsWith('[') && value.endsWith(']')

@@ -515,15 +515,19 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         ),
       );
       if (settings.xrayCore.dnsUseCustom) {
-        final dropped =
-            XrayCoreSettings.xrayDnsServers(settings.xrayCore.dnsServers)
+        final onMihomo = choice.backend == VpnBackend.mihomo;
+        final dropped = onMihomo
+            ? MihomoConfigGen.droppedDnsServers(settings.xrayCore.dnsServers)
+            : XrayCoreSettings.xrayDnsServers(settings.xrayCore.dnsServers)
                 .dropped;
         if (dropped.isNotEmpty) {
           AppLogger.instance.warn(
             'Custom DNS: ${dropped.length} address(es) dropped — the core '
-            'cannot run them: ${dropped.join(', ')}. Supported: plain ip[:port], '
-            'https+local://, https://, h2c://, tcp://, quic+local://, '
-            'localhost, fakedns.',
+            'cannot run them: ${dropped.join(', ')}. Supported: '
+            '${onMihomo ? 'plain ip[:port], udp://, tcp://, https://, tls://, '
+                'quic://, dhcp://, localhost' : 'plain ip[:port], '
+                'https+local://, https://, h2c://, tcp://, quic+local://, '
+                'localhost, fakedns'}.',
           );
         }
       }

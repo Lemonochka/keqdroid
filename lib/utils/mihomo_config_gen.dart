@@ -611,6 +611,11 @@ class MihomoConfigGen {
     return out.isEmpty ? fallback : out;
   }
 
+  static List<String> droppedDnsServers(String raw) => [
+        for (final entry in _parseList(raw))
+          if (_dnsAddress(entry) == null) entry,
+      ];
+
   // по нему ядро ходит напрямую, и провайдер видит содержимое: берём свои серверы с IP вместе со схемой,
   // голый 9.9.9.9 отдал бы запрос открытым
   static List<String> bootstrapNameservers(XrayCoreSettings core) {

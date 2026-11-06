@@ -43,13 +43,22 @@ void main() {
       expect(parsed.dropped, isEmpty);
     });
 
-    test('адрес, который ядро не поднимет, не считается', () {
-      // `sdns://` и `tls://` у xray молча становятся мёртвым UDP-резолвером —
-      // строка без единого годного адреса не должна выглядеть настроенной.
+    test('адрес, который не поднимет ни одно ядро, не считается', () {
+      // строка без единого годного адреса не должна выглядеть настроенной
       final parsed = XrayCoreSettings.parseDnsPolicy('home.lan sdns://whatever');
 
       expect(parsed.entries, isEmpty);
       expect(parsed.dropped, ['home.lan sdns://whatever']);
+    });
+
+    test('tls:// и dhcp:// остаются в поле: их понимает mihomo', () {
+      final parsed = XrayCoreSettings.parseDnsPolicy(
+        'corp.example tls://1.1.1.1\nhome.lan dhcp://en0',
+      );
+
+      expect(parsed.entries['corp.example'], ['tls://1.1.1.1']);
+      expect(parsed.entries['home.lan'], ['dhcp://en0']);
+      expect(parsed.dropped, isEmpty);
     });
   });
 
@@ -91,6 +100,22 @@ void main() {
       final policy = dns['nameserver-policy'] as Map<String, dynamic>;
       expect(policy['home.lan'], ['192.168.1.1']);
       expect(policy['+.work.example.com'], ['https://9.9.9.9/dns-query']);
+    });
+
+    test('DoT: в nameserver-policy mihomo есть, в DNS xray нет', () {
+      final settings = _withPolicy('corp.example tls://1.1.1.1');
+      final config = MihomoConfigGen.build(_vless, settings, socksPort: 2080);
+      final policy = (config['dns'] as Map<String, dynamic>)['nameserver-policy']
+          as Map<String, dynamic>;
+
+      expect(policy['corp.example'], ['tls://1.1.1.1']);
+      // у xray DoT нет: запись не попадает в его список, а не становится мёртвым UDP
+      expect(
+        _xrayServers(settings).any(
+          (s) => (s['domains'] as List?)?.contains('full:corp.example') == true,
+        ),
+        isFalse,
+      );
     });
 
     test('пустое поле ничего не добавляет', () {
