@@ -83,11 +83,7 @@ class QuickConnectActivity : ComponentActivity() {
 
     private fun openApp() {
         runCatching {
-            startActivity(
-                Intent(this, MainActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    .putExtra(MainActivity.EXTRA_LAUNCH_ACTION, MainActivity.LAUNCH_ACTION_CONNECT),
-            )
+            startActivity(MainActivity.launchActionIntent(this, MainActivity.LAUNCH_ACTION_CONNECT))
         }
     }
 }

@@ -55,6 +55,15 @@ class MainActivity : FlutterFragmentActivity() {
             LAUNCH_ACTION_CONNECT,
             LAUNCH_ACTION_DISCONNECT,
         )
+        // окно открыто наружу, extra может прислать любое приложение; закрытый алиас запускают только мы и лаунчер
+        private const val LAUNCH_ALIAS = "com.keqdroid.keqdroid.LaunchAction"
+
+        fun launchActionIntent(context: Context, action: String): Intent =
+            Intent(Intent.ACTION_MAIN)
+                .setClassName(context.packageName, LAUNCH_ALIAS)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .putExtra(EXTRA_LAUNCH_ACTION, action)
+
         private const val ICON_SIZE_PX   = 96
         // отдельно от FlutterSharedPreferences: читаем в onCreate, до подъёма Flutter
         private const val PREFS_WINDOW = "keqdis_window"
@@ -541,10 +550,7 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                         // отдаём все источники, выбирает Dart: отбраковке неперекрашенной палитры AOSP нужен счёт тонов, библиотека только там
                         "getSystemAccentColor" -> result.success(collectAccentCandidates())
-                        "getLaunchAction" -> {
-                            val action = intent?.getStringExtra(EXTRA_LAUNCH_ACTION)
-                            result.success(action)
-                        }
+                        "getLaunchAction" -> result.success(trustedLaunchAction())
                         "clearLaunchAction" -> {
                             intent?.removeExtra(EXTRA_LAUNCH_ACTION)
                             result.success(null)
@@ -941,9 +947,13 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
+    private fun trustedLaunchAction(): String? =
+        intent?.takeIf { it.component?.className == LAUNCH_ALIAS }
+            ?.getStringExtra(EXTRA_LAUNCH_ACTION)
+            ?.takeIf { it in LAUNCH_ACTIONS }
+
     private fun notifyLaunchActionIfNeeded() {
-        val action = intent?.getStringExtra(EXTRA_LAUNCH_ACTION) ?: return
-        if (action !in LAUNCH_ACTIONS) return
+        val action = trustedLaunchAction() ?: return
         mainScope.launch {
             methodChannel?.invokeMethod("onLaunchAction", mapOf("action" to action))
         }

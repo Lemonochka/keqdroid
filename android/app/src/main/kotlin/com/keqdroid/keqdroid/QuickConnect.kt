@@ -86,11 +86,12 @@ internal object QuickConnect {
     }
 
     fun openAppIntent(context: Context, connect: Boolean): Intent {
+        if (connect) {
+            return MainActivity.launchActionIntent(context, MainActivity.LAUNCH_ACTION_CONNECT)
+        }
         val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
             ?: Intent(context, MainActivity::class.java)
-        return launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).apply {
-            if (connect) putExtra("action", "connect_from_notification")
-        }
+        return launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
     fun quickConnectIntent(context: Context): Intent =

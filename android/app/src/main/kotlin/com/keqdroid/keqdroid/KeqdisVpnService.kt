@@ -279,10 +279,9 @@ class KeqdisVpnService : VpnService() {
                     serviceScope.launch { stopVpn(startId) }
                 } else if (status == VpnRunStatus.STOPPED || status == VpnRunStatus.ERROR) {
                     // конфиг собирает Dart, поэтому открываем приложение
-                    val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-                    launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    launchIntent?.putExtra("action", "connect_from_notification")
-                    startActivity(launchIntent)
+                    startActivity(
+                        MainActivity.launchActionIntent(this, MainActivity.LAUNCH_ACTION_CONNECT),
+                    )
                 }
                 return START_NOT_STICKY
             }

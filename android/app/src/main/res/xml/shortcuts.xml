@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Статические ярлыки долгого тапа по иконке приложения. Оба открывают
-     MainActivity с EXTRA_LAUNCH_ACTION ("action"), который разбирает Dart
-     (servers_tab._checkLaunchAction): подключение требует диалога согласия
-     VpnService, так что запускать сервис в обход активности всё равно нельзя. -->
+<!-- цель закрытый алиас: лаунчер запускает ярлык от имени приложения, а MainActivity с таким extra открыть может кто угодно -->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
 
     <shortcut
@@ -14,7 +11,7 @@
         <intent
             android:action="android.intent.action.MAIN"
             android:targetPackage="com.keqdroid.keqdroid"
-            android:targetClass="com.keqdroid.keqdroid.MainActivity">
+            android:targetClass="com.keqdroid.keqdroid.LaunchAction">
             <extra
                 android:name="action"
                 android:value="connect_from_notification" />
@@ -30,7 +27,7 @@
         <intent
             android:action="android.intent.action.MAIN"
             android:targetPackage="com.keqdroid.keqdroid"
-            android:targetClass="com.keqdroid.keqdroid.MainActivity">
+            android:targetClass="com.keqdroid.keqdroid.LaunchAction">
             <extra
                 android:name="action"
                 android:value="disconnect_from_shortcut" />

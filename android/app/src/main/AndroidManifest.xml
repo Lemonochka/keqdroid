@@ -104,6 +104,12 @@
             </intent-filter>
         </activity>
 
+        <!-- вход для команд подключить и отключить, MainActivity верит им только отсюда -->
+        <activity-alias
+            android:name=".LaunchAction"
+            android:targetActivity=".MainActivity"
+            android:exported="false" />
+
         <!-- Невидимое окно, через которое плитка подключает, когда прошивка
              не даёт поднять сервис из шторки. Своя пустая taskAffinity: с
              общей окно встало бы в задачу приложения и вытащило бы его
