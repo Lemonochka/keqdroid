@@ -9,7 +9,7 @@ import '../models/hotkey_config.dart';
 class HotkeyService {
   HotkeyService._();
 
-  static const _channel = MethodChannel('keqdis_vpn_channel');
+  static const _channel = MethodChannel('keqdroid_vpn_channel');
 
   static bool get isSupported => Platform.isWindows || Platform.isLinux;
 

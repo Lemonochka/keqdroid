@@ -36,7 +36,7 @@ class ConnectionOwnerServer(private val context: Context) {
     private var outside = 0L
 
     init {
-        Thread({ acceptLoop() }, "keqdis-owner").apply { isDaemon = true }.start()
+        Thread({ acceptLoop() }, "keqdroid-owner").apply { isDaemon = true }.start()
     }
 
     fun close() {

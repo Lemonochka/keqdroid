@@ -151,7 +151,7 @@ class SubscriptionService {
   final LocalProxyPortResolver? _localProxyPort;
   String? _cachedHwid;
   String? _cachedDeviceModel;
-  static const MethodChannel _platform = MethodChannel('keqdis_vpn_channel');
+  static const MethodChannel _platform = MethodChannel('keqdroid_vpn_channel');
 
   static const browserUserAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';

@@ -44,9 +44,9 @@ import java.net.Socket
 class MainActivity : FlutterFragmentActivity() {
 
     companion object {
-        const val METHOD_CHANNEL         = "keqdis_vpn_channel"
-        const val EVENT_CHANNEL          = "keqdis_vpn_status"
-        const val PING_PROGRESS_CHANNEL  = "keqdis_ping_progress"
+        const val METHOD_CHANNEL         = "keqdroid_vpn_channel"
+        const val EVENT_CHANNEL          = "keqdroid_vpn_status"
+        const val PING_PROGRESS_CHANNEL  = "keqdroid_ping_progress"
         const val EXTRA_LAUNCH_ACTION    = "action"
         // те же строки в res/xml/shortcuts.xml и в servers_tab на стороне Dart
         const val LAUNCH_ACTION_CONNECT    = "connect_from_notification"

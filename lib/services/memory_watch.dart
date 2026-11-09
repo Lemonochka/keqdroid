@@ -14,7 +14,7 @@ class MemoryWatch {
 
   static final instance = MemoryWatch._();
 
-  static const _channel = MethodChannel('keqdis_vpn_channel');
+  static const _channel = MethodChannel('keqdroid_vpn_channel');
 
   final _schedule = MemoryWatchSchedule();
   Timer? _timer;

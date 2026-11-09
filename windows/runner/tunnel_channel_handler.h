@@ -5,22 +5,22 @@
 
 #include <string>
 
-void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine);
+void RegisterKeqdroidTunnelChannel(flutter::FlutterEngine* engine);
 
 // второй экземпляр с --autostart пересылает подключение
-void KeqdisRequestAutostartConnect();
+void KeqdroidRequestAutostartConnect();
 
 // до движка, Dart заберёт через getPendingDeepLink
-void KeqdisSetPendingDeepLink(const std::string& url);
+void KeqdroidSetPendingDeepLink(const std::string& url);
 
-void KeqdisRequestDeepLink(const std::string& url);
+void KeqdroidRequestDeepLink(const std::string& url);
 
-void KeqdisNotifyHotkeyPressed(const std::string& action);
+void KeqdroidNotifyHotkeyPressed(const std::string& action);
 
 // Dart по нему ставит на паузу анимацию и опрос трафика: жизненный цикл Flutter отдаёт SW_HIDE как inactive, не hidden
-void KeqdisNotifyWindowVisibility(bool visible);
+void KeqdroidNotifyWindowVisibility(bool visible);
 
 // чтобы после перезагрузки интернет был до запуска keqdroid
-void KeqdisClearSystemProxyOnSessionEnd();
+void KeqdroidClearSystemProxyOnSessionEnd();
 
 #endif  // RUNNER_TUNNEL_CHANNEL_HANDLER_H_

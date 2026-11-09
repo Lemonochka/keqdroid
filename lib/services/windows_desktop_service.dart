@@ -7,7 +7,7 @@ import '../models/app_settings.dart';
 class WindowsDesktopService {
   WindowsDesktopService._();
 
-  static const _channel = MethodChannel('keqdis_vpn_channel');
+  static const _channel = MethodChannel('keqdroid_vpn_channel');
 
   static Future<bool> isAutostartLaunch() async {
     if (!Platform.isWindows) return false;

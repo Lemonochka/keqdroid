@@ -263,7 +263,7 @@ class NotificationService {
 
   static Future<void> _handleConnect() async {
     try {
-      const channel = MethodChannel('keqdis_vpn_channel');
+      const channel = MethodChannel('keqdroid_vpn_channel');
       await channel.invokeMethod('toggleVpn');
       AppLogger.instance.debug('VPN connect action from notification');
     } catch (e, st) {
@@ -273,7 +273,7 @@ class NotificationService {
 
   static Future<void> _handleDisconnect() async {
     try {
-      const channel = MethodChannel('keqdis_vpn_channel');
+      const channel = MethodChannel('keqdroid_vpn_channel');
       await channel.invokeMethod('stopVpn');
       AppLogger.instance.debug('VPN disconnect action from notification');
     } catch (e, st) {

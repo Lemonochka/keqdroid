@@ -10,7 +10,7 @@ namespace {
 
 HANDLE g_core_job = nullptr;
 
-std::wstring KeqdisDataDir() {
+std::wstring KeqdroidDataDir() {
   wchar_t appdata[MAX_PATH] = {};
   if (FAILED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, appdata))) {
     return L"";
@@ -19,7 +19,7 @@ std::wstring KeqdisDataDir() {
 }
 
 std::wstring CorePidFilePath() {
-  const std::wstring dir = KeqdisDataDir();
+  const std::wstring dir = KeqdroidDataDir();
   if (dir.empty()) {
     return L"";
   }
@@ -27,7 +27,7 @@ std::wstring CorePidFilePath() {
 }
 
 void EnsureDataDir() {
-  const std::wstring dir = KeqdisDataDir();
+  const std::wstring dir = KeqdroidDataDir();
   if (dir.empty()) {
     return;
   }
@@ -78,7 +78,7 @@ bool EndsWithIgnoreCase(const std::wstring& value, const std::wstring& suffix) {
   return _wcsicmp(tail.c_str(), suffix.c_str()) == 0;
 }
 
-bool IsKeqdisCoreProcess(DWORD pid) {
+bool IsKeqdroidCoreProcess(DWORD pid) {
   HANDLE process = ::OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
   if (process == nullptr) {
     return false;
@@ -160,7 +160,7 @@ int KillOrphanCoresFromPidFile() {
   std::vector<DWORD> survivors;
   for (const DWORD pid : pids) {
     // pid могли отдать чужому процессу, TerminateProcess по нему был бы диверсией
-    if (!IsKeqdisCoreProcess(pid)) {
+    if (!IsKeqdroidCoreProcess(pid)) {
       continue;  // мёртв или уже не наш, забываем
     }
     if (TerminatePid(pid)) {
@@ -181,16 +181,16 @@ int KillOrphanCoresFromPidFile() {
 
 }  // namespace
 
-void KeqdisInitCoreProcessGuard() {
+void KeqdroidInitCoreProcessGuard() {
   EnsureCoreJobObject();
   KillOrphanCoresFromPidFile();
 }
 
-void KeqdisAttachCoreProcess(DWORD pid) {
+void KeqdroidAttachCoreProcess(DWORD pid) {
   AttachProcessToCoreJob(pid);
 }
 
-void KeqdisRegisterSessionCoreProcesses(DWORD xray_pid, DWORD singbox_pid) {
+void KeqdroidRegisterSessionCoreProcesses(DWORD xray_pid, DWORD singbox_pid) {
   EnsureCoreJobObject();
   if (xray_pid != 0) {
     AttachProcessToCoreJob(xray_pid);
@@ -201,6 +201,6 @@ void KeqdisRegisterSessionCoreProcesses(DWORD xray_pid, DWORD singbox_pid) {
   WritePidFile({xray_pid, singbox_pid});
 }
 
-void KeqdisClearSessionCoreProcesses() {
+void KeqdroidClearSessionCoreProcesses() {
   ClearPidFile();
 }

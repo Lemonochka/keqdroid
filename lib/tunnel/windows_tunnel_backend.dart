@@ -33,7 +33,7 @@ import 'wintun_retry.dart';
 import 'xray_desktop_config.dart';
 
 class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
-  static const _method = MethodChannel('keqdis_vpn_channel');
+  static const _method = MethodChannel('keqdroid_vpn_channel');
 
   static WindowsTunnelBackend? activeInstance;
 

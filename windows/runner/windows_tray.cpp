@@ -17,7 +17,7 @@ void HideWindowToTray(HWND hwnd) {
   g_window_hidden_in_tray = true;
   ::ShowWindow(hwnd, SW_HIDE);
   // жизненный цикл Flutter отдаёт SW_HIDE как inactive, и в трее шла бы отрисовка 60 кадров
-  KeqdisNotifyWindowVisibility(false);
+  KeqdroidNotifyWindowVisibility(false);
 }
 
 }  // namespace
@@ -42,7 +42,7 @@ bool WindowsTrayActivateMainWindow() {
   if (g_tray_hwnd == nullptr || !::IsWindow(g_tray_hwnd)) {
     return false;
   }
-  KeqdisNotifyWindowVisibility(true);
+  KeqdroidNotifyWindowVisibility(true);
   g_window_hidden_in_tray = false;
   if (g_first_show_command != 0) {
     ::ShowWindow(g_tray_hwnd, g_first_show_command);

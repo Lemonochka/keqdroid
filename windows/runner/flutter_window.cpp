@@ -67,7 +67,7 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
-  RegisterKeqdisTunnelChannel(flutter_controller_->engine());
+  RegisterKeqdroidTunnelChannel(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -121,7 +121,7 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               LPARAM const lparam) noexcept {
   // до Flutter и плагинов: любой может ответить сам, и прокси повис бы. на WM_QUERYENDSESSION рано, выключение ещё отменят
   if (message == WM_ENDSESSION && wparam) {
-    KeqdisClearSystemProxyOnSessionEnd();
+    KeqdroidClearSystemProxyOnSessionEnd();
   }
   // тоже до плагинов: window_manager отвечает на WM_GETMINMAXINFO сам и дальше не пускает
   if (message == WM_GETMINMAXINFO) {
@@ -147,14 +147,14 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
 
   switch (message) {
     case kAutostartConnectMsg:
-      KeqdisRequestAutostartConnect();
+      KeqdroidRequestAutostartConnect();
       return 0;
     case WM_COPYDATA: {
       std::string url;
       if (KeqdroidDeepLinkFromCopyData(lparam, &url)) {
         // из трея поднимаемся сами: только этот процесс знает, спрятано ли окно, а итог импорта должно быть видно
         WindowsTrayActivateMainWindow();
-        KeqdisRequestDeepLink(url);
+        KeqdroidRequestDeepLink(url);
         return TRUE;
       }
       break;
@@ -163,7 +163,7 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
       const std::string action =
           KeqdroidHotkeyActionForId(static_cast<int>(wparam));
       if (!action.empty()) {
-        KeqdisNotifyHotkeyPressed(action);
+        KeqdroidNotifyHotkeyPressed(action);
         return 0;
       }
       break;

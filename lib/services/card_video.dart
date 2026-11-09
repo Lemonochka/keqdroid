@@ -11,7 +11,7 @@ import '../models/subscription_card_theme.dart';
 class CardVideo {
   CardVideo._();
 
-  static const _channel = MethodChannel('keqdis_media');
+  static const _channel = MethodChannel('keqdroid_media');
 
   // у video_player нет реализации для Windows и Linux: там гифка остаётся гифкой
   static bool get supported => Platform.isAndroid;

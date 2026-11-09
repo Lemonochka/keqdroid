@@ -42,7 +42,7 @@
 
 namespace {
 
-constexpr char kChannel[] = "keqdis_vpn_channel";
+constexpr char kChannel[] = "keqdroid_vpn_channel";
 
 static const wchar_t kProxyBypass[] = L"127.0.0.1;<local>;::1;localhost";
 // per-connection API WinINet отвергает <local> с 0x57
@@ -356,7 +356,7 @@ bool SetPerConnectionProxy(bool enabled,
   list.pOptions = options;
 
   // до инициализации модуля WinINet может отвергать per-connection
-  HINTERNET session = InternetOpenW(L"KeqdisProxy", INTERNET_OPEN_TYPE_PRECONFIG,
+  HINTERNET session = InternetOpenW(L"KeqdroidProxy", INTERNET_OPEN_TYPE_PRECONFIG,
                                     nullptr, nullptr, 0);
   if (session == nullptr) {
     if (out_error != nullptr) {
@@ -882,7 +882,7 @@ void EnsureMarshalWindow() {
   WNDCLASSW wc = {};
   wc.lpfnWndProc = MarshalWndProc;
   wc.hInstance = GetModuleHandleW(nullptr);
-  wc.lpszClassName = L"KeqdisProxyMarshalWindow";
+  wc.lpszClassName = L"KeqdroidProxyMarshalWindow";
   RegisterClassW(&wc);
   g_marshal_window =
       CreateWindowExW(0, wc.lpszClassName, L"", 0, 0, 0, 0, 0, HWND_MESSAGE,
@@ -965,32 +965,32 @@ void DispatchWindowVisibilityToDart(bool visible) {
 
 }  // namespace
 
-void KeqdisRequestAutostartConnect() {
+void KeqdroidRequestAutostartConnect() {
   PostToPlatformThread([]() { DispatchAutostartConnectToDart(); });
 }
 
-void KeqdisSetPendingDeepLink(const std::string& url) {
+void KeqdroidSetPendingDeepLink(const std::string& url) {
   g_pending_deep_link = url;
 }
 
-void KeqdisRequestDeepLink(const std::string& url) {
+void KeqdroidRequestDeepLink(const std::string& url) {
   PostToPlatformThread([url]() {
     g_pending_deep_link = url;
     DispatchDeepLinkToDart();
   });
 }
 
-void KeqdisNotifyHotkeyPressed(const std::string& action) {
+void KeqdroidNotifyHotkeyPressed(const std::string& action) {
   PostToPlatformThread([action]() { DispatchHotkeyToDart(action); });
 }
 
-void KeqdisNotifyWindowVisibility(bool visible) {
+void KeqdroidNotifyWindowVisibility(bool visible) {
   PostToPlatformThread([visible]() { DispatchWindowVisibilityToDart(visible); });
 }
 
 // без WM_SETTINGCHANGE: сеанс кончается, а две рассылки по закрывающимся окнам съели бы до десяти секунд на выход.
 // без этого после перезагрузки системный трафик шёл в мёртвый порт до открытия приложения
-void KeqdisClearSystemProxyOnSessionEnd() {
+void KeqdroidClearSystemProxyOnSessionEnd() {
   std::wstring server;
   if (!OurSystemProxyActive(&server)) {
     return;
@@ -1004,12 +1004,12 @@ void KeqdisClearSystemProxyOnSessionEnd() {
   SetWinHttpProxy(false, L"");
 }
 
-void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
+void RegisterKeqdroidTunnelChannel(flutter::FlutterEngine* engine) {
   if (engine == nullptr) {
     return;
   }
 
-  KeqdisInitCoreProcessGuard();
+  KeqdroidInitCoreProcessGuard();
   // сироты ядер убиты выше, а их системный прокси снимаем здесь
   CleanupStaleSystemProxy();
 
@@ -1375,7 +1375,7 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
         }
 
         if (call.method_name() == "initCoreProcessGuard") {
-          KeqdisInitCoreProcessGuard();
+          KeqdroidInitCoreProcessGuard();
           result->Success();
           return;
         }
@@ -1389,7 +1389,7 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
               pid = static_cast<int32_t>(std::get<int32_t>(it->second));
             }
           }
-          KeqdisAttachCoreProcess(static_cast<DWORD>(pid));
+          KeqdroidAttachCoreProcess(static_cast<DWORD>(pid));
           result->Success();
           return;
         }
@@ -1408,14 +1408,14 @@ void RegisterKeqdisTunnelChannel(flutter::FlutterEngine* engine) {
               singbox_pid = static_cast<int32_t>(std::get<int32_t>(sing_it->second));
             }
           }
-          KeqdisRegisterSessionCoreProcesses(static_cast<DWORD>(xray_pid),
+          KeqdroidRegisterSessionCoreProcesses(static_cast<DWORD>(xray_pid),
                                              static_cast<DWORD>(singbox_pid));
           result->Success();
           return;
         }
 
         if (call.method_name() == "clearSessionCoreProcesses") {
-          KeqdisClearSessionCoreProcesses();
+          KeqdroidClearSessionCoreProcesses();
           result->Success();
           return;
         }

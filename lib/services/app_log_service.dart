@@ -28,7 +28,7 @@ class LogEntry {
 class AppLogService {
   AppLogService._();
 
-  static const _channel = MethodChannel('keqdis_vpn_channel');
+  static const _channel = MethodChannel('keqdroid_vpn_channel');
 
   static List<AppLogSource> get sources => [
         AppLogSource.app,

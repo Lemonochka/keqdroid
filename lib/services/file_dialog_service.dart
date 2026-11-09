@@ -11,7 +11,7 @@ import '../core/exceptions.dart';
 // портал без backend'а отвечает отменой мгновенно, рукой за 400 мс диалог не закрыть,
 // поэтому быстрый null считаем поломкой и идём в zenity/qarma/kdialog
 abstract final class AppFileDialogs {
-  static const _nativeChannel = MethodChannel('keqdis_vpn_channel');
+  static const _nativeChannel = MethodChannel('keqdroid_vpn_channel');
 
   static const _silentFailureWindow = Duration(milliseconds: 400);
 

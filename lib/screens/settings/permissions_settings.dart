@@ -9,7 +9,7 @@ class _PermissionsScreen extends ConsumerStatefulWidget {
 
 class _PermissionsScreenState extends ConsumerState<_PermissionsScreen>
     with WidgetsBindingObserver {
-  static const _channel = MethodChannel('keqdis_vpn_channel');
+  static const _channel = MethodChannel('keqdroid_vpn_channel');
   bool? _notifEnabled;
   bool? _batteryUnrestricted;
 

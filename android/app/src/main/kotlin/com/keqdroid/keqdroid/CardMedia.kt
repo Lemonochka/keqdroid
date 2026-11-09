@@ -182,7 +182,7 @@ class CardMedia(private val context: Context, messenger: BinaryMessenger) :
     }
 
     companion object {
-        const val CHANNEL = "keqdis_media"
+        const val CHANNEL = "keqdroid_media"
     }
 }
 

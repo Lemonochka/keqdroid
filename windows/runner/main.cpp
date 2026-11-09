@@ -159,7 +159,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // на каждом старте: приложение портативное и обновляет себя на месте, путь иначе никто не поправит
   KeqdroidRegisterUrlProtocols();
   if (!deep_link.empty()) {
-    KeqdisSetPendingDeepLink(deep_link);
+    KeqdroidSetPendingDeepLink(deep_link);
   }
 
   FlutterWindow window(project);

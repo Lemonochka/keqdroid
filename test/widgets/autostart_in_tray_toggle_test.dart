@@ -18,7 +18,7 @@ import '../helpers/test_storage.dart';
 /// «Запускать в трее, без окна» на экране Windows: раннер решает, показывать
 /// ли окно, до первого кадра, поэтому флаг обязан доехать до нативной части
 /// сразу, а без автозапуска переключать его нечего.
-const _channel = MethodChannel('keqdis_vpn_channel');
+const _channel = MethodChannel('keqdroid_vpn_channel');
 const _title = 'Start in the tray, without a window';
 
 Future<void> _frames(WidgetTester tester) async {
