@@ -1,6 +1,6 @@
 import 'dart:collection';
 
-import 'connections_service.dart';
+import 'xray_access_log_parser.dart';
 
 // мимо фильтра уровня: при Warning в видимом журнале нет Info-строк, а правило, домен и закрытие xray пишет только ими
 class XrayConnectionLines {

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/connection_entry.dart';
-import 'package:keqdroid/services/connections_service.dart';
+import 'package:keqdroid/services/xray_access_log_parser.dart';
 import 'package:keqdroid/services/xray_route_decisions.dart';
 
 /// Как ядро печатает решения, когда работает встроенным движком за sing-box:

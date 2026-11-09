@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/connection_entry.dart';
-import 'package:keqdroid/services/connections_service.dart';
+import 'package:keqdroid/services/xray_access_log_parser.dart';
 import 'package:keqdroid/shared/ui/accent_edge_card.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';

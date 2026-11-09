@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/connection_entry.dart';
 import 'package:keqdroid/services/connections_service.dart';
+import 'package:keqdroid/services/xray_access_log_parser.dart';
 
 /// Живой лог xray 26.7.11 с Android (сокращён, домены настоящие).
 ///
