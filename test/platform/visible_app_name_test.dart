@@ -40,7 +40,7 @@ void main() {
   test('saved files carry the new name', () {
     expect(read('lib/screens/settings/backup_restore.dart'),
         contains(r"'keqdroid-backup-$stamp.json'"));
-    expect(read('lib/screens/subscriptions_tab.dart'),
+    expect(read('lib/screens/subscriptions/share_sheet.dart'),
         contains(r"'keqdroid_sub_${safe"));
   });
 
