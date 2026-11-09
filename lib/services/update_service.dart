@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'linux_appimage_updater.dart';
 import 'linux_install.dart';
+import 'release_signature.dart';
 import 'windows_zip_updater.dart';
 import '../core/app_logger.dart';
 import '../utils/local_vpn_proxy.dart';
@@ -29,6 +30,8 @@ class UpdateInfo {
 
   final String? checksumUrl;
 
+  final String? signatureUrl;
+
   UpdateInfo({
     required this.currentVersion,
     required this.latestVersion,
@@ -38,6 +41,7 @@ class UpdateInfo {
     this.openInBrowser = false,
     this.assetName = '',
     this.checksumUrl,
+    this.signatureUrl,
   });
 
   String get formattedSize {
@@ -215,7 +219,9 @@ class UpdateService {
     if (asset == null) return null;
 
     final assetName = (asset['name'] ?? '').toString();
-    final checksumAsset = _findChecksumAsset(assets, assetName);
+    final checksumAsset = ReleaseSignature.sumsAsset(assets) ??
+        _findChecksumAsset(assets, assetName);
+    final signatureAsset = ReleaseSignature.signatureAsset(assets);
 
     return UpdateInfo(
       currentVersion: currentVersion,
@@ -232,6 +238,7 @@ class UpdateService {
           (Platform.isWindows && _shouldOpenDesktopAssetInBrowser(asset)),
       assetName: assetName,
       checksumUrl: checksumAsset?['browser_download_url'] as String?,
+      signatureUrl: signatureAsset?['browser_download_url'] as String?,
     );
   }
 
@@ -638,30 +645,29 @@ class UpdateService {
     );
   }
 
-  // без проверенного хеша не ставим
-  static const bool _requireChecksum = true;
-
   static Future<void> _verifyDownloadedFile(
     File file,
     UpdateInfo info,
     Dio dio,
   ) async {
     final checksumUrl = info.checksumUrl;
-    if (checksumUrl == null || checksumUrl.isEmpty) {
-      if (_requireChecksum) {
-        throw StateError(
-          'No SHA-256 checksum published for ${info.assetName.isEmpty ? 'this update' : info.assetName}; '
-          'refusing to install an unverified build.',
-        );
-      }
-      return;
+    final signatureUrl = info.signatureUrl;
+    if (checksumUrl == null ||
+        checksumUrl.isEmpty ||
+        signatureUrl == null ||
+        signatureUrl.isEmpty) {
+      throw StateError(
+        'No signed SHA-256 checksum published for ${info.assetName.isEmpty ? 'this update' : info.assetName}; '
+        'refusing to install an unverified build.',
+      );
     }
 
-    final expected = await _fetchExpectedSha256(
-      checksumUrl,
-      info.assetName,
+    final manifest = await ReleaseSignature.fetchVerifiedSums(
       dio,
+      sumsUrl: checksumUrl,
+      signatureUrl: signatureUrl,
     );
+    final expected = _parseSha256(manifest, info.assetName);
     if (expected == null) {
       throw StateError(
         'Could not read the SHA-256 checksum for ${info.assetName}; aborting update.',
@@ -680,20 +686,6 @@ class UpdateService {
   static Future<String> _sha256OfFile(File file) async {
     final digest = await sha256.bind(file.openRead()).first;
     return digest.toString();
-  }
-
-  static Future<String?> _fetchExpectedSha256(
-    String url,
-    String assetName,
-    Dio dio,
-  ) async {
-    try {
-      final response = await dio.get<String>(url);
-      if (response.statusCode != 200) return null;
-      return _parseSha256(response.data ?? '', assetName);
-    } catch (_) {
-      return null;
-    }
   }
 
   static String? extractSha256(String manifest, String assetName) =>

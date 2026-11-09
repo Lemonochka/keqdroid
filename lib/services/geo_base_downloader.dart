@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../core/app_logger.dart';
 import '../utils/geo_asset_index.dart';
 import 'geo_asset_service.dart';
+import 'release_signature.dart';
 import 'update_service.dart';
 
 class GeoBaseDownloader {
@@ -32,7 +33,7 @@ class GeoBaseDownloader {
     }
 
     final dio = client ?? Dio();
-    final (url, shaUrl) = await _resolveUrls(dio);
+    final (url, sumsUrl, signatureUrl) = await _resolveUrls(dio);
 
     // во временный файл рядом: под работающим ядром базу не подменить, а rename в каталоге атомарный
     final target = File(p.join(dir, assetName));
@@ -48,7 +49,7 @@ class GeoBaseDownloader {
         },
       );
 
-      final expected = await _expectedSha256(dio, shaUrl);
+      final expected = await _expectedSha256(dio, sumsUrl, signatureUrl);
       final actual = (await sha256.bind(temp.openRead()).first).toString();
       if (expected.toLowerCase() != actual.toLowerCase()) {
         throw GeoBaseDownloadException(
@@ -74,7 +75,7 @@ class GeoBaseDownloader {
     }
   }
 
-  static Future<(String, String)> _resolveUrls(Dio dio) async {
+  static Future<(String, String, String)> _resolveUrls(Dio dio) async {
     final Response<dynamic> res;
     try {
       res = await dio.get<dynamic>(
@@ -93,14 +94,14 @@ class GeoBaseDownloader {
     final urls = urlsFromAssets(assets);
     if (urls == null) {
       throw const GeoBaseDownloadException(
-        'the latest release does not carry geoip.dat with its checksum',
+        'the latest release does not carry geoip.dat with a signed checksum',
       );
     }
     return urls;
   }
 
   @visibleForTesting
-  static (String, String)? urlsFromAssets(List<dynamic> assets) {
+  static (String, String, String)? urlsFromAssets(List<dynamic> assets) {
     String? urlOf(Object? asset) {
       if (asset is! Map) return null;
       final url = asset['browser_download_url'];
@@ -111,23 +112,25 @@ class GeoBaseDownloader {
     for (final a in assets) {
       if (a is Map && a['name'] == assetName) baseUrl = urlOf(a);
     }
-    final checksumUrl = urlOf(UpdateService.checksumAssetFor(
-      [
-        for (final a in assets)
-          if (a is Map) Map<String, dynamic>.from(a),
-      ],
-      assetName,
-    ));
-    if (baseUrl == null || checksumUrl == null) return null;
-    return (baseUrl, checksumUrl);
+    final sumsUrl = urlOf(ReleaseSignature.sumsAsset(assets));
+    final signatureUrl = urlOf(ReleaseSignature.signatureAsset(assets));
+    if (baseUrl == null || sumsUrl == null || signatureUrl == null) {
+      return null;
+    }
+    return (baseUrl, sumsUrl, signatureUrl);
   }
 
-  static Future<String> _expectedSha256(Dio dio, String url) async {
-    final res = await dio.get<String>(
-      url,
-      options: Options(responseType: ResponseType.plain),
+  static Future<String> _expectedSha256(
+    Dio dio,
+    String sumsUrl,
+    String signatureUrl,
+  ) async {
+    final manifest = await ReleaseSignature.fetchVerifiedSums(
+      dio,
+      sumsUrl: sumsUrl,
+      signatureUrl: signatureUrl,
     );
-    final hash = UpdateService.extractSha256(res.data ?? '', assetName);
+    final hash = UpdateService.extractSha256(manifest, assetName);
     if (hash == null) {
       throw const GeoBaseDownloadException('checksum file is unreadable');
     }
