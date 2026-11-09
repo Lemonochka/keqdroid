@@ -152,7 +152,7 @@ function Assert-ApkAbi([string]$apk, [string]$abi) {
   if ($abis.Count -ne 1 -or $abis[0] -ne $abi) {
     throw "APK for $abi must carry only lib/$abi, found: $($abis -join ', ')"
   }
-  foreach ($so in @('libflutter.so', 'libapp.so', 'libxray.so', 'libmihomo.so', 'libkeqdis_native.so')) {
+  foreach ($so in @('libflutter.so', 'libapp.so', 'libxray.so', 'libmihomo.so', 'libkeqdroid_native.so')) {
     if ($libs -notcontains "lib/$abi/$so") { throw "APK for $abi lacks lib/$abi/$so" }
   }
   Write-Host "    lib/$abi only, all native code present"

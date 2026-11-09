@@ -4,7 +4,7 @@ import java.io.File
 import java.util.Collections
 
 object NativeHelper {
-    init { System.loadLibrary("keqdis_native") }
+    init { System.loadLibrary("keqdroid_native") }
 
     private const val TAG = "KEQDIS"
 
