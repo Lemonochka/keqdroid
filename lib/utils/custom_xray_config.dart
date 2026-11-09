@@ -21,6 +21,21 @@ class CustomXrayConfig {
 
   static const _remarkKeys = ['remarks', 'remark', 'ps', 'name', 'label'];
 
+  // остальное ядро исполняет на устройстве: api и metrics открывают порты, env меняет окружение ядра,
+  // geodata по расписанию перезаписывает файлы в каталоге геобаз, а на Windows это каталог программы
+  static const _providerKeys = {
+    'dns',
+    'routing',
+    'outbounds',
+    'policy',
+    'stats',
+    'fakedns',
+    'fakeDns',
+    'observatory',
+    'burstObservatory',
+    'version',
+  };
+
   static bool looksLikeJson(String raw) => raw.trimLeft().startsWith('{');
 
   static CustomXrayConfig? tryParse(String raw) {
@@ -184,7 +199,9 @@ class CustomXrayConfig {
 
     final out = <Map<String, dynamic>>[];
     for (var i = 0; i < picked.length; i++) {
-      final copy = (jsonDecode(jsonEncode(picked[i])) as Map).cast<String, dynamic>();
+      final copy = _withoutReverse(
+        (jsonDecode(jsonEncode(picked[i])) as Map).cast<String, dynamic>(),
+      );
       copy['tag'] = i == 0 ? tag : tags[picked[i]['tag'].toString()];
       final sockopt = (copy['streamSettings'] as Map?)?['sockopt'];
       final dialer = _dialerProxyOf(copy);
@@ -194,6 +211,32 @@ class CustomXrayConfig {
     final wrapped = <String, dynamic>{'outbounds': out};
     stripRemovedTlsFields(wrapped);
     migrateDeprecatedXrayFields(wrapped);
+    return out;
+  }
+
+  // обратный прокси VLESS: сервер сам открывает соединения к человеку, и direct-private пускает их в локальную сеть
+  static Map<String, dynamic> _withoutReverse(Map<String, dynamic> outbound) {
+    final settings = outbound['settings'];
+    if (outbound['protocol']?.toString().toLowerCase() != 'vless' ||
+        settings is! Map ||
+        !settings.containsKey('reverse')) {
+      return outbound;
+    }
+    return {...outbound, 'settings': _asStringMap(settings)..remove('reverse')};
+  }
+
+  // script это Lua со стандартными библиотеками, то есть с os.execute; webhook шлёт сведения о соединениях на чужой адрес
+  static Map<String, dynamic> _routingForCore(Map<dynamic, dynamic> routing) {
+    final out = _asStringMap(routing)..remove('script');
+    final rules = out['rules'];
+    if (rules is List) {
+      out['rules'] = [
+        for (final rule in rules)
+          rule is Map && rule.containsKey('webhook')
+              ? (_asStringMap(rule)..remove('webhook'))
+              : rule,
+      ];
+    }
     return out;
   }
 
@@ -272,18 +315,25 @@ class CustomXrayConfig {
     List<Map<String, dynamic>> appendRules = const [],
     GeoAssetIndex? geoIndex,
   }) {
-    final out = Map<String, dynamic>.from(json);
-    for (final key in _remarkKeys) {
-      out.remove(key);
-    }
-
-    final log = Map<String, dynamic>.from(
-      (out['log'] as Map?)?.cast<String, dynamic>() ?? const {},
-    );
-    log['loglevel'] = logLevel;
-    out['log'] = log;
-
+    final out = <String, dynamic>{
+      for (final entry in _deepCopy(json).entries)
+        if (_providerKeys.contains(entry.key) ||
+            entry.key == 'log' ||
+            entry.key == 'inbounds')
+          entry.key: entry.value,
+    };
+    // по путям из журнала автора ядро писало бы в любой файл, на Windows в TUN от администратора
+    out['log'] = {'loglevel': logLevel};
     out['inbounds'] = inbounds;
+    if (out['routing'] is Map) {
+      out['routing'] = _routingForCore(out['routing'] as Map);
+    }
+    if (out['outbounds'] is List) {
+      out['outbounds'] = [
+        for (final outbound in out['outbounds'] as List)
+          outbound is Map ? _withoutReverse(_asStringMap(outbound)) : outbound,
+      ];
+    }
 
     final mergedDns = ownDns ? dns : mergeDns(authorDns, dns);
     if (mergedDns != null) out['dns'] = mergedDns;
@@ -312,7 +362,9 @@ class CustomXrayConfig {
     required List<Map<String, dynamic>> inbounds,
     required List<Map<String, dynamic>> rules,
   }) {
-    final outbounds = _outboundsOf(json);
+    final outbounds = [
+      for (final o in _outboundsOf(_deepCopy(json))) _withoutReverse(o),
+    ];
     final out = <String, dynamic>{
       'log': {'loglevel': 'none'},
       'dns': {
@@ -390,6 +442,10 @@ class CustomXrayConfig {
     final port = rule['port']?.toString().replaceAll(' ', '');
     return port == '0-65535' || port == '1-65535';
   }
+
+  // перевод устаревших полей правит карты на месте: без копии второй сбор того же конфига терял поля
+  static Map<String, dynamic> _deepCopy(Map<String, dynamic> map) =>
+      jsonDecode(jsonEncode(map)) as Map<String, dynamic>;
 
   static Map<String, dynamic> _asStringMap(Map<dynamic, dynamic> raw) =>
       <String, dynamic>{for (final e in raw.entries) e.key.toString(): e.value};
