@@ -38,6 +38,8 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $go = (Get-Command go -ErrorAction SilentlyContinue)
 if (-not $go) { Write-Error "go not found. Install Go: https://go.dev/dl/" }
+# pinned: without it the go line in keqrnel's go.mod picks the oldest 1.27.x, security fixes included or not
+$env:GOTOOLCHAIN = "go1.27.3"
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     Write-Error "git not found (tools/patchxray applies the patches with it)."
 }

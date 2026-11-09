@@ -61,6 +61,8 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $go = (Get-Command go -ErrorAction SilentlyContinue)
 if (-not $go) { Write-Error "go not found. Install Go: https://go.dev/dl/" }
+# pinned: the machine's Go shipped 1.25.6 long after that branch lost security fixes. 1.26 is what mihomo releases use
+$env:GOTOOLCHAIN = "go1.26.10"
 $git = (Get-Command git -ErrorAction SilentlyContinue)
 if (-not $git) { Write-Error "git not found (needed to apply tool/patches)." }
 
