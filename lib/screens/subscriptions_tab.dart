@@ -48,6 +48,7 @@ import '../utils/time_ago.dart';
 import 'package:keqdroid/shared/ui/liquid_toast.dart';
 
 part 'subscriptions/card_look_sheet.dart';
+part 'subscriptions/card_menu.dart';
 part 'subscriptions/edit_sheet.dart';
 part 'subscriptions/identity_sheet.dart';
 part 'subscriptions/share_sheet.dart';
@@ -1234,8 +1235,6 @@ class _SubItem extends ConsumerStatefulWidget {
 }
 
 class _SubItemState extends ConsumerState<_SubItem> {
-  AppLocalizations get l10n => AppLocalizations.of(context)!;
-
   Future<void> _switchToHttps() async {
     final httpsUrl = widget.sub.url
         .trim()
@@ -1332,81 +1331,13 @@ class _SubItemState extends ConsumerState<_SubItem> {
   void _showEditDialog(BuildContext context) =>
       _showSubscriptionEditSheet(context, ref, widget.sub);
 
-  void _showCardMenu(BuildContext context) {
-    final sub = widget.sub;
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  sub.name,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(ctx).textTheme
-                      .emphasized(Theme.of(ctx).textTheme.titleLarge)
-                      ?.copyWith(color: AppTheme.text(ctx)),
-                ),
-              ),
-              ExpressiveGroup(
-                children: [
-                  ExpressiveActionTile(
-                    icon: Icons.edit_rounded,
-                    title: l10n.subscriptionsEditSubscription,
-                    accent: ExpressiveAccent.primary,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _showEditDialog(context);
-                    },
-                  ),
-                  ExpressiveActionTile(
-                    icon: Icons.style_rounded,
-                    title: l10n.subscriptionCardLookTitle,
-                    accent: ExpressiveAccent.tertiary,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _showCardLookSheet(context, sub);
-                    },
-                  ),
-                  ExpressiveActionTile(
-                    icon: Icons.qr_code_2_rounded,
-                    title: l10n.subscriptionsShareButton,
-                    accent: ExpressiveAccent.secondary,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _showShareSheet(context);
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ExpressiveGroup(
-                children: [
-                  ExpressiveActionTile(
-                    icon: Icons.delete_outline_rounded,
-                    title: l10n.subscriptionsDelete,
-                    danger: true,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _showDeleteConfirmation(context);
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  void _showCardMenu(BuildContext context) => _showSubscriptionCardMenu(
+        context,
+        sub: widget.sub,
+        onEdit: () => _showEditDialog(context),
+        onShare: () => _showShareSheet(context),
+        onDelete: () => _showDeleteConfirmation(context),
+      );
 
   void _showShareSheet(BuildContext context) => _showSubscriptionShareSheet(
         context,
@@ -1415,64 +1346,12 @@ class _SubItemState extends ConsumerState<_SubItem> {
       );
 
 
-  void _showDeleteConfirmation(BuildContext context) {
-    final sub = widget.sub;
-    final cardColor = AppTheme.card(context);
-    final textColor = AppTheme.text(context);
-    final textLightColor = AppTheme.textLight(context);
-    final redColor = AppTheme.red(context);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: cardColor,
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: redColor, size: 28),
-            const SizedBox(width: 12),
-            Text(
-              l10n.subscriptionsDeleteSubscription,
-              style: Theme.of(ctx)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(color: textColor),
-            ),
-          ],
-        ),
-        content: Text(
-          l10n.subscriptionsDeleteConfirm(sub.name),
-          style: TextStyle(color: textLightColor, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              l10n.subscriptionsCancel,
-              style: TextStyle(color: textLightColor),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: redColor,
-              foregroundColor: AppTheme.onRed(context),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(ExpressiveShape.medium),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              widget.onDelete();
-            },
-            child: Text(
-              l10n.subscriptionsDelete,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  void _showDeleteConfirmation(BuildContext context) =>
+      _showSubscriptionDeleteDialog(
+        context,
+        sub: widget.sub,
+        onConfirmed: () => widget.onDelete(),
+      );
 
 }
 
