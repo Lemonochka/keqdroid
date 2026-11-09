@@ -885,16 +885,3 @@ class _CopyableAddress extends StatelessWidget {
   }
 }
 
-String _vpnErrorStatusLabel(String? errorMessage, BuildContext context) {
-  final l10n = AppLocalizations.of(context)!;
-  final details = explainErrorLocalized(errorMessage ?? 'unknown', l10n);
-  return switch (details.kind) {
-    UiErrorKind.permission => l10n.errorConnectionPermission,
-    UiErrorKind.network => l10n.errorConnectionNetwork,
-    UiErrorKind.config => l10n.errorConnectionConfig,
-    UiErrorKind.auth => l10n.errorConnectionAuth,
-    UiErrorKind.providerConfig => l10n.errorProviderConfigTitle,
-    UiErrorKind.unknown => l10n.errorConnectionGeneric,
-  };
-}
-

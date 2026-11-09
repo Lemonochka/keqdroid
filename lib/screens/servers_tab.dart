@@ -106,7 +106,7 @@ Widget _serversStatusText(
   final label = switch (status) {
     VpnStatus.connecting => l10n.vpnConnecting,
     VpnStatus.disconnecting => l10n.vpnDisconnecting,
-    VpnStatus.error => _vpnErrorStatusLabel(errorMessage, context),
+    VpnStatus.error => vpnErrorStatusLabel(errorMessage, context),
     VpnStatus.connected => l10n.vpnConnectedGeneric,
     _ =>
       activeServer != null
