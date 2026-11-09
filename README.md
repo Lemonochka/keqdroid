@@ -34,7 +34,7 @@
 ## Download
 
 Pre-built binaries are on [Releases](https://github.com/Lemonochka/keqdroid/releases).  
-`SHA256SUMS` lists the hash of every file in the release; the built-in updater checks it before installing.
+`SHA256SUMS` lists the hash of every file in the release and `SHA256SUMS.sig` is its signature; the built-in updater checks both before installing. See also the [code signing policy](#code-signing-policy).
 
 | Platform | Files in release |
 |----------|------------------|
@@ -44,6 +44,28 @@ Pre-built binaries are on [Releases](https://github.com/Lemonochka/keqdroid/rele
 | **Linux** x64 | `keqdroid-<version>-x86_64.AppImage` · `keqdroid_<version>_amd64.deb` · `keqdroid-<version>-1.x86_64.rpm` · `keqdroid-<version>-linux-x64.tar.gz` · `PKGBUILD` for Arch |
 
 The app **does not provide servers**. Bring your own subscription or configs. Comply with the laws of your country.
+
+---
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org). The application is under review; until it is accepted, Windows builds are not signed.
+
+- Committers and reviewers: [Lemonochka](https://github.com/Lemonochka)
+- Approvers: [Lemonochka](https://github.com/Lemonochka)
+
+Releases after 0.35.0 are built from this repository by [GitHub Actions](.github/workflows/release.yml). `gh attestation verify <file> --repo Lemonochka/keqdroid` confirms that a file came from that build. Signing covers `keqdroid.exe`; the bundled `xray.exe` and `mihomo.exe` are builds of the upstream Xray-core and mihomo.
+
+## Privacy
+
+keqdroid has no servers of its own and collects no usage statistics. It connects to:
+
+- **the subscriptions, servers and rule lists you add.** A subscription request carries a device ID, the OS name and version and the device model, which subscription panels use to limit devices. Turn it off in Settings → *Share device HWID*;
+- **GitHub** (`api.github.com`, `github.com`): update checks when the app starts or comes back to the foreground, update downloads, and the full geo database on Android when you ask for it;
+- **`www.cloudflare.com/cdn-cgi/trace`**, through the connected server, to show the country of the exit;
+- **the latency test address** when servers are tested: `connectivitycheck.gstatic.com` by default, changeable in the settings; **`speed.cloudflare.com`** when you run a speed test.
+
+On Android, crash reports go to Google Firebase Crashlytics: the error with links, keys and tokens cut out, the stack trace and the device, OS and app version that Crashlytics attaches. The Windows and Linux builds do not include Firebase.
 
 ---
 
@@ -200,15 +222,7 @@ The prebuilt cores are already in the repository: `assets/bin/windows/`, `assets
 
 ### Releases
 
-```powershell
-# Android + Windows + Linux (that part runs in WSL), SHA256SUMS, output to release\<version>\
-powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
-
-# same + publish GitHub Release (requires gh CLI)
-powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
-```
-
-Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, include `SHA256SUMS`, otherwise the updater won't install the update.
+Releases are built on GitHub: Actions → **release** → Run workflow. It builds every package, signs `SHA256SUMS` and leaves a draft release to publish. Version and tag `vX.Y.Z` come from `pubspec.yaml`. A release without a valid `SHA256SUMS.sig` is refused by the updater. Details and the local build are in [`docs/BUILD.md`](docs/BUILD.md).
 
 ---
 
@@ -265,7 +279,7 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 ## Скачать
 
 Готовые сборки — в [Releases](https://github.com/Lemonochka/keqdroid/releases).  
-Хеши всех файлов релиза лежат в `SHA256SUMS`, встроенный апдейтер сверяет их перед установкой.
+Хеши всех файлов релиза лежат в `SHA256SUMS`, его подпись в `SHA256SUMS.sig`, встроенный апдейтер сверяет и то и другое перед установкой. См. также [подпись кода](#подпись-кода).
 
 | Платформа | Файлы в релизе |
 |-----------|----------------|
@@ -275,6 +289,28 @@ Version and tag `vX.Y.Z` come from `pubspec.yaml`. When uploading manually, incl
 | **Linux** x64 | `keqdroid-<версия>-x86_64.AppImage` · `keqdroid_<версия>_amd64.deb` · `keqdroid-<версия>-1.x86_64.rpm` · `keqdroid-<версия>-linux-x64.tar.gz` · `PKGBUILD` для Arch |
 
 Приложение **не раздаёт серверы** — нужна своя подписка или конфиги. Соблюдайте законы вашей страны.
+
+---
+
+## Подпись кода
+
+Бесплатную подпись кода предоставляет [SignPath.io](https://signpath.io), сертификат выдан [SignPath Foundation](https://signpath.org). Заявка на рассмотрении; пока её не одобрят, сборки для Windows не подписаны.
+
+- Авторы и ревьюеры: [Lemonochka](https://github.com/Lemonochka)
+- Подтверждает подпись: [Lemonochka](https://github.com/Lemonochka)
+
+Релизы после 0.35.0 собирает из этого репозитория [GitHub Actions](.github/workflows/release.yml). `gh attestation verify <файл> --repo Lemonochka/keqdroid` подтверждает, что файл получен этой сборкой. Подписывается `keqdroid.exe`; вложенные `xray.exe` и `mihomo.exe` собраны из исходников Xray-core и mihomo.
+
+## Приватность
+
+У keqdroid нет своих серверов, статистику использования он не собирает. Приложение обращается:
+
+- **к подпискам, серверам и спискам правил, которые вы добавили.** Запрос подписки несёт идентификатор устройства, название и версию ОС и модель устройства: по ним панели подписок ограничивают число устройств. Отключается в настройках: *Отдавать HWID устройства*;
+- **к GitHub** (`api.github.com`, `github.com`): проверка обновлений при запуске и возвращении в приложение, загрузка обновлений и полной geo-базы на Android по вашему запросу;
+- **к `www.cloudflare.com/cdn-cgi/trace`** через подключённый сервер, чтобы показать страну выхода;
+- **к адресу проверки задержки**, когда серверы проверяются: по умолчанию `connectivitycheck.gstatic.com`, меняется в настройках; **к `speed.cloudflare.com`**, когда вы запускаете замер скорости.
+
+На Android отчёты о падениях уходят в Google Firebase Crashlytics: ошибка без ссылок, ключей и токенов, стек вызовов и сведения об устройстве, ОС и версии приложения, которые добавляет Crashlytics. В сборках для Windows и Linux Firebase нет.
 
 ---
 
@@ -431,15 +467,7 @@ wsl -e bash /mnt/c/.../keqdroid/tool/build_linux_wsl.sh
 
 ### Релизы
 
-```powershell
-# Android + Windows + Linux (эта часть — в WSL), SHA256SUMS, папка release\<версия>\
-powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
-
-# то же + GitHub Release (нужен gh CLI)
-powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
-```
-
-Версия и тег `vX.Y.Z` берутся из `pubspec.yaml`. При ручной загрузке добавьте `SHA256SUMS`, иначе апдейтер не установит обновление.
+Релизы собирает GitHub: Actions → **release** → Run workflow. Он собирает все пакеты, подписывает `SHA256SUMS` и оставляет черновик релиза для публикации. Версия и тег `vX.Y.Z` берутся из `pubspec.yaml`. Релиз без верного `SHA256SUMS.sig` апдейтер не примет. Подробности и локальная сборка в [`docs/BUILD.md`](docs/BUILD.md#русский).
 
 ---
 
