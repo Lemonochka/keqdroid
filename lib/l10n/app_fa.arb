@@ -1,6 +1,6 @@
 {
   "@@locale": "fa",
-  "appTitle": "KEQDIS",
+  "appTitle": "keqdroid",
   "vpnConnectedTo": "متصل به: {serverName}",
   "vpnConnecting": "در حال اتصال...",
   "vpnDisconnecting": "در حال قطع اتصال...",

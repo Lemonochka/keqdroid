@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'KEQDIS';
+  String get appTitle => 'keqdroid';
 
   @override
   String vpnConnectedTo(Object serverName) {

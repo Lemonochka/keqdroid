@@ -249,7 +249,7 @@ class VpnQuickTileService : TileService() {
         retryCount = 0
         retryHandler?.removeCallbacks(retryRunnable)
 
-        tileObj.label = "Keqdis"
+        tileObj.label = "keqdroid"
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             tileObj.icon = android.graphics.drawable.Icon.createWithResource(this, TILE_ICON_RES)

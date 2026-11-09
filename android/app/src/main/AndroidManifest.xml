@@ -35,7 +35,7 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <application
-        android:label="Keqdis"
+        android:label="keqdroid"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:banner="@drawable/tv_banner"
@@ -144,7 +144,7 @@
         <!-- Quick Settings tile (Android 7.0+) -->
         <service
             android:name=".VpnQuickTileService"
-            android:label="Keqdis"
+            android:label="keqdroid"
             android:icon="@drawable/ic_notification"
             android:exported="true"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
@@ -169,7 +169,7 @@
         <receiver
             android:name=".HomeWidgetProvider"
             android:exported="true"
-            android:label="Keqdis">
+            android:label="keqdroid">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

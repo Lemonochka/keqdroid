@@ -1685,7 +1685,7 @@ class _SubItemState extends ConsumerState<_SubItem> {
 
   String get _qrFileName {
     final safe = widget.sub.name.replaceAll(RegExp(r'[^\w\-]+'), '_');
-    return 'keqdis_sub_${safe.isEmpty ? 'qr' : safe}.png';
+    return 'keqdroid_sub_${safe.isEmpty ? 'qr' : safe}.png';
   }
 
   // на Linux share_plus файлы не передаёт и кидает исключение, поэтому сохраняем

@@ -43,7 +43,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       final jsonText = backup.toJsonString(pretty: true);
 
       final stamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
-      final fileName = 'keqdis-backup-$stamp.json';
+      final fileName = 'keqdroid-backup-$stamp.json';
 
       final savedPath = await AppFileDialogs.saveFile(
         dialogTitle: l10n.settingsSelectLocation,

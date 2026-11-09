@@ -10,8 +10,8 @@
     <string name="shortcut_disconnect_short">Disconnect</string>
     <string name="shortcut_disconnect_long">Disconnect VPN</string>
     <string name="tile_connecting">Connecting…</string>
-    <string name="tile_error_start">Couldn\'t start the VPN from Quick Settings — open Keqdis</string>
-    <string name="tile_error_open_app">Couldn\'t open Keqdis — launch it manually to connect</string>
+    <string name="tile_error_start">Couldn\'t start the VPN from Quick Settings — open keqdroid</string>
+    <string name="tile_error_open_app">Couldn\'t open keqdroid — launch it manually to connect</string>
     <string name="tile_error_blocked">The system blocked starting the VPN from Quick Settings. Tap the tile again.</string>
     <string name="widget_description">Connect with one tap</string>
     <string name="widget_status_off">Disconnected</string>

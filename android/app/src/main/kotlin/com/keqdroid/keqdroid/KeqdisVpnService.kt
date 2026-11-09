@@ -865,7 +865,7 @@ class KeqdisVpnService : VpnService() {
             // пустышка из нашей /30, не публичный резолвер. с 8.8.8.8 Private DNS в режиме Автоматически находил DoT на 853,
             // а перехват ловит только 53, и весь системный DNS уходил мимо. здесь на 853 отвечать некому
             .addDnsServer(TUN_DNS_ADDRESS)
-            .setSession("KEQDIS")
+            .setSession("keqdroid")
             .setBlocking(false)
 
         // без этого VPN с target 10+ считается лимитной сетью даже на домашнем Wi-Fi. false: признак берётся у сети под туннелем

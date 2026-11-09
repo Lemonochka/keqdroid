@@ -9,7 +9,7 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
-  String get appTitle => 'KEQDIS';
+  String get appTitle => 'keqdroid';
 
   @override
   String vpnConnectedTo(Object serverName) {

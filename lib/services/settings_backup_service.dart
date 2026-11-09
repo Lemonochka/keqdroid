@@ -106,7 +106,7 @@ class KeqdroidBackup {
   static KeqdroidBackup fromJson(Map<String, dynamic> json) {
     final format = json['format'];
     if (format != 'keqdis_backup') {
-      throw FormatException('Not a Keqdis backup file');
+      throw FormatException('Not a keqdroid backup file');
     }
     final version = (json['version'] as num?)?.toInt() ?? 0;
     if (version <= 0) {

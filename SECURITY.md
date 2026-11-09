@@ -10,4 +10,4 @@ Details stay private until a fixed release is out. Only the latest release is
 supported — no backports.
 
 Bugs in the bundled cores (Xray, mihomo, sing-box) belong upstream; report
-them here only if the problem is in how KEQDIS configures or ships them.
+them here only if the problem is in how keqdroid configures or ships them.

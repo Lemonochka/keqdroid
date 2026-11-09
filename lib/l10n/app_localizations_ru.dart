@@ -9,7 +9,7 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
-  String get appTitle => 'KEQDIS';
+  String get appTitle => 'keqdroid';
 
   @override
   String vpnConnectedTo(Object serverName) {

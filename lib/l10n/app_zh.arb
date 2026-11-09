@@ -1,6 +1,6 @@
 {
   "@@locale": "zh",
-  "appTitle": "KEQDIS",
+  "appTitle": "keqdroid",
   "vpnConnectedTo": "已连接到：{serverName}",
   "@vpnConnectedTo": {
     "placeholders": {

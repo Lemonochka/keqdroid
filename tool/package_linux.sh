@@ -23,7 +23,7 @@ GH_REPO=keqdroid
 MAINTAINER="Lemonochka <noreply@users.noreply.github.com>"
 ARCH_DEB=amd64
 ARCH_AI=x86_64
-PKGDESC="KEQDIS proxy/VPN client (Xray, mihomo, sing-box; proxy + TUN)"
+PKGDESC="keqdroid proxy/VPN client (Xray, mihomo, sing-box; proxy + TUN)"
 # у -bin-пакета лицензий больше своей: внутри лежат ядра, у Xray MPL, у mihomo GPL
 LICENSES=(AGPL-3.0-only GPL-3.0-only MPL-2.0)
 
@@ -145,7 +145,7 @@ write_desktop() { # $1 = exec name, $2 = dest file
 [Desktop Entry]
 Type=Application
 Name=KeqDroid
-Comment=KEQDIS proxy/VPN client
+Comment=keqdroid proxy/VPN client
 Exec=$1
 Icon=$APP
 Categories=Network;
@@ -193,7 +193,7 @@ Maintainer: $MAINTAINER
 Installed-Size: $INSTALLED_KB
 Depends: libgtk-3-0, libglib2.0-0, libstdc++6, zlib1g, libayatana-appindicator3-1
 Recommends: polkit-1 | policykit-1, gnome-shell-extension-appindicator, xdg-desktop-portal-gtk | xdg-desktop-portal-kde | xdg-desktop-portal-gnome | zenity
-Description: KEQDIS proxy/VPN client
+Description: keqdroid proxy/VPN client
  Xray, mihomo and sing-box client with proxy and TUN modes.
  TUN mode requests root via pkexec (polkit) at connect time, so polkit and a
  polkit authentication agent have to be installed for it.
@@ -232,7 +232,7 @@ cat > "$RPMTOP/SPECS/$APP.spec" <<EOF
 Name:           $APP
 Version:        $VERSION
 Release:        1
-Summary:        KEQDIS proxy/VPN client
+Summary:        keqdroid proxy/VPN client
 License:        AGPL-3.0-only AND GPL-3.0-only AND MPL-2.0
 URL:            https://github.com/$GH_OWNER/$GH_REPO
 BuildArch:      $ARCH_AI
@@ -363,7 +363,7 @@ package() {
 [Desktop Entry]
 Type=Application
 Name=KeqDroid
-Comment=KEQDIS proxy/VPN client
+Comment=keqdroid proxy/VPN client
 Exec=$APP
 Icon=$APP
 Categories=Network;

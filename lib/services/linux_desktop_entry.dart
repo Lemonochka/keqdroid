@@ -74,7 +74,7 @@ class LinuxDesktopEntry {
       '[Desktop Entry]',
       'Type=Application',
       'Name=KeqDroid',
-      'Comment=KEQDIS proxy/VPN client',
+      'Comment=keqdroid proxy/VPN client',
       'Exec=${execArgument(appImage)}',
       'TryExec=${appImage.replaceAll(r'\', r'\\')}',
       'Icon=keqdroid',

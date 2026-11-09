@@ -5,8 +5,8 @@
     <string name="shortcut_disconnect_short">قطع اتصال</string>
     <string name="shortcut_disconnect_long">قطع اتصال VPN</string>
     <string name="tile_connecting">در حال اتصال…</string>
-    <string name="tile_error_start">روشن کردن VPN از تنظیمات سریع ممکن نشد. Keqdis را باز کنید.</string>
-    <string name="tile_error_open_app">باز کردن Keqdis ممکن نشد. برنامه را دستی اجرا کنید.</string>
+    <string name="tile_error_start">روشن کردن VPN از تنظیمات سریع ممکن نشد. keqdroid را باز کنید.</string>
+    <string name="tile_error_open_app">باز کردن keqdroid ممکن نشد. برنامه را دستی اجرا کنید.</string>
     <string name="tile_error_blocked">سیستم اجازهٔ روشن کردن VPN از تنظیمات سریع را نداد. دوباره روی کاشی ضربه بزنید.</string>
     <string name="widget_description">اتصال با یک لمس</string>
     <string name="widget_status_off">قطع شده</string>
