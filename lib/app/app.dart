@@ -359,9 +359,9 @@ ThemeData _buildAppTheme(
   );
 }
 
-class KeqdisApp extends ConsumerWidget {
+class KeqdroidApp extends ConsumerWidget {
   final Widget home;
-  const KeqdisApp({super.key, required this.home});
+  const KeqdroidApp({super.key, required this.home});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

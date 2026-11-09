@@ -17,7 +17,7 @@ Future<SystemUiOverlayStyle?> _styleFor(WidgetTester tester, {required bool dark
       ));
   await tester.pumpWidget(ProviderScope(
     overrides: [storageProvider.overrideWithValue(storage!)],
-    child: const KeqdisApp(home: Scaffold(body: SizedBox.expand())),
+    child: const KeqdroidApp(home: Scaffold(body: SizedBox.expand())),
   ));
   await tester.pumpAndSettle();
   return SystemChrome.latestStyle;

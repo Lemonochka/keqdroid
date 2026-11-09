@@ -80,7 +80,7 @@ Future<Map<String, Set<String>>> sweepDesktopScreens(
           VpnEngine.withBackend(FakeTunnelBackend()),
         ),
       ],
-      child: const KeqdisApp(home: DesktopHomeScreen()),
+      child: const KeqdroidApp(home: DesktopHomeScreen()),
     ));
     await _frames(tester, 20);
 

@@ -26,7 +26,7 @@ Future<FocusNode> _focusScaleSlider(
   final tab = appearanceGeneralTabForTest(settings, onSave: onSave);
   await tester.pumpWidget(ProviderScope(
     overrides: [storageProvider.overrideWithValue(storage!)],
-    child: KeqdisApp(
+    child: KeqdroidApp(
       // кнопка сверху вместо вкладок экрана
       home: Scaffold(
         body: tabsAbove

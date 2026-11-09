@@ -32,7 +32,7 @@ Future<void> _pump(
       ));
   await tester.pumpWidget(ProviderScope(
     overrides: [storageProvider.overrideWithValue(storage!)],
-    child: KeqdisApp(
+    child: KeqdroidApp(
       home: Scaffold(body: appearanceGeneralTabForTest(settings)),
     ),
   ));

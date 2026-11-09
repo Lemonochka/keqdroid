@@ -57,7 +57,7 @@ Future<void> _pumpApp(
       ));
   await tester.pumpWidget(ProviderScope(
     overrides: [storageProvider.overrideWithValue(storage!)],
-    child: KeqdisApp(home: home),
+    child: KeqdroidApp(home: home),
   ));
   await tester.pumpAndSettle();
 }

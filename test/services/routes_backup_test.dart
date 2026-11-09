@@ -37,7 +37,7 @@ void main() {
       from,
       sections: {BackupSection.appSettings},
     );
-    final backup = KeqdisBackup.fromJson(
+    final backup = KeqdroidBackup.fromJson(
       jsonDecode(built.toJsonString()) as Map<String, dynamic>,
     );
 
@@ -66,7 +66,7 @@ void main() {
       from,
       sections: {BackupSection.appSettings},
     );
-    final backup = KeqdisBackup.fromJson(
+    final backup = KeqdroidBackup.fromJson(
       jsonDecode(built.toJsonString()) as Map<String, dynamic>,
     );
 
@@ -87,7 +87,7 @@ void main() {
     await to.saveRoutingProfiles(const [RoutingProfile(id: 'p', name: 'P')]);
     await SettingsBackupService.applyBackup(
       to,
-      backup: KeqdisBackup(
+      backup: KeqdroidBackup(
         version: 1,
         exportedAt: DateTime(2026, 10),
         data: {
@@ -102,7 +102,7 @@ void main() {
 
   test('копия до маршрутов: списки становятся маршрутами, свои остаются',
       () async {
-    final backup = KeqdisBackup(
+    final backup = KeqdroidBackup(
       version: 1,
       exportedAt: DateTime(2026, 9),
       data: {
@@ -137,7 +137,7 @@ void main() {
   });
 
   test('копия без списков маршрутов не трогает', () async {
-    final backup = KeqdisBackup(
+    final backup = KeqdroidBackup(
       version: 1,
       exportedAt: DateTime(2026, 9),
       data: {

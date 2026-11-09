@@ -52,7 +52,7 @@ void main() {
             VpnEngine.withBackend(FakeTunnelBackend()),
           ),
         ],
-        child: const KeqdisApp(home: VpnHomeScreen()),
+        child: const KeqdroidApp(home: VpnHomeScreen()),
       ),
     );
     for (var i = 0; i < 10; i++) {

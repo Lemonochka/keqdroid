@@ -119,7 +119,7 @@ Future<void> main() async {
     runApp(
       ProviderScope(
         overrides: [storageProvider.overrideWithValue(storage)],
-        child: KeqdisApp(home: home),
+        child: KeqdroidApp(home: home),
       ),
     );
 

@@ -25,7 +25,7 @@ Future<StorageService> _pump(WidgetTester tester, Widget home,
       ));
   await tester.pumpWidget(ProviderScope(
     overrides: [storageProvider.overrideWithValue(storage!)],
-    child: KeqdisApp(home: Scaffold(body: home)),
+    child: KeqdroidApp(home: Scaffold(body: home)),
   ));
   await tester.pumpAndSettle();
   return storage;
@@ -103,7 +103,7 @@ void main() {
         ));
     await tester.pumpWidget(ProviderScope(
       overrides: [storageProvider.overrideWithValue(storage!)],
-      child: KeqdisApp(home: Scaffold(body: behaviourSettingsScreenForTest())),
+      child: KeqdroidApp(home: Scaffold(body: behaviourSettingsScreenForTest())),
     ));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

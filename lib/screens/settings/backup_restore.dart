@@ -87,7 +87,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       );
       if (res == null) return;
 
-      final backup = KeqdisBackup.parse(await res.readAsBytes());
+      final backup = KeqdroidBackup.parse(await res.readAsBytes());
       final available = SettingsBackupService.detectSections(backup);
       if (available.isEmpty) {
         throw const FormatException('No supported sections found in backup');

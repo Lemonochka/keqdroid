@@ -18,12 +18,12 @@ enum BackupSection {
   appSettings,
 }
 
-class KeqdisBackup {
+class KeqdroidBackup {
   final int version;
   final DateTime exportedAt;
   final Map<String, dynamic> data;
 
-  const KeqdisBackup({
+  const KeqdroidBackup({
     required this.version,
     required this.exportedAt,
     required this.data,
@@ -45,7 +45,7 @@ class KeqdisBackup {
 
   // после первого объекта бывает хвост старого файла: экспорт на Android раньше не обрезал файл.
   // режем до декодирования UTF-8, граница хвоста бывает посреди буквы
-  static KeqdisBackup parse(List<int> bytes) {
+  static KeqdroidBackup parse(List<int> bytes) {
     Object? parsed;
     try {
       parsed = jsonDecode(utf8.decode(bytes));
@@ -103,7 +103,7 @@ class KeqdisBackup {
     return null;
   }
 
-  static KeqdisBackup fromJson(Map<String, dynamic> json) {
+  static KeqdroidBackup fromJson(Map<String, dynamic> json) {
     final format = json['format'];
     if (format != 'keqdis_backup') {
       throw FormatException('Not a Keqdis backup file');
@@ -117,7 +117,7 @@ class KeqdisBackup {
     if (exportedAt == null || data is! Map<String, dynamic>) {
       throw FormatException('Invalid backup payload');
     }
-    return KeqdisBackup(version: version, exportedAt: exportedAt, data: data);
+    return KeqdroidBackup(version: version, exportedAt: exportedAt, data: data);
   }
 }
 
@@ -170,7 +170,7 @@ class SettingsBackupService {
     'appLanguageCode',
   };
 
-  static Future<KeqdisBackup> buildBackup(
+  static Future<KeqdroidBackup> buildBackup(
     StorageService storage, {
     required Set<BackupSection> sections,
   }) async {
@@ -212,14 +212,14 @@ class SettingsBackupService {
       ];
     }
 
-    return KeqdisBackup(
+    return KeqdroidBackup(
       version: currentVersion,
       exportedAt: DateTime.now(),
       data: data,
     );
   }
 
-  static Set<BackupSection> detectSections(KeqdisBackup backup) {
+  static Set<BackupSection> detectSections(KeqdroidBackup backup) {
     final s = <BackupSection>{};
     if (backup.data['splitTunneling'] is Map) s.add(BackupSection.splitTunneling);
     if (backup.data['subscriptions'] is List) s.add(BackupSection.subscriptions);
@@ -230,7 +230,7 @@ class SettingsBackupService {
 
   static Future<void> applyBackup(
     StorageService storage, {
-    required KeqdisBackup backup,
+    required KeqdroidBackup backup,
     required Set<BackupSection> sections,
   }) async {
     if (sections.contains(BackupSection.splitTunneling)) {

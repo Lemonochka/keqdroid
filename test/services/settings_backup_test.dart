@@ -122,7 +122,7 @@ void main() {
         isNot(contains('hunter2')),
         reason: 'пароль LAN не должен попадать в файл, которым делятся',
       );
-      final backup = KeqdisBackup.fromJson(
+      final backup = KeqdroidBackup.fromJson(
         jsonDecode(text) as Map<String, dynamic>,
       );
       expect(
@@ -190,7 +190,7 @@ void main() {
       when(() => to.saveRoutingProfiles(any())).thenAnswer((_) async {});
       await SettingsBackupService.applyBackup(
         to,
-        backup: KeqdisBackup.fromJson(json),
+        backup: KeqdroidBackup.fromJson(json),
         sections: {BackupSection.appSettings},
       );
 
@@ -228,7 +228,7 @@ void main() {
         from,
         sections: {BackupSection.subscriptions},
       );
-      final backup = KeqdisBackup.fromJson(
+      final backup = KeqdroidBackup.fromJson(
         jsonDecode(built.toJsonString()) as Map<String, dynamic>,
       );
 
@@ -270,7 +270,7 @@ void main() {
         from,
         sections: {BackupSection.subscriptions},
       );
-      final backup = KeqdisBackup.fromJson(
+      final backup = KeqdroidBackup.fromJson(
         jsonDecode(built.toJsonString()) as Map<String, dynamic>,
       );
 
@@ -308,7 +308,7 @@ void main() {
     });
 
     test('бэкап без картинок читается — старые файлы никуда не делись', () async {
-      final backup = KeqdisBackup.fromJson(jsonDecode(jsonEncode({
+      final backup = KeqdroidBackup.fromJson(jsonDecode(jsonEncode({
         'format': 'keqdis_backup',
         'version': 1,
         'exportedAt': DateTime.utc(2026, 1, 1).toIso8601String(),
@@ -394,7 +394,7 @@ void main() {
     // Правила маршрутизации лежат в бэкапе строкой с JSON внутри — отсюда
     // экранированные кавычки и скобки внутри строк, как на жалобе
     // («}omain:rshb.ru\",\n …»).
-    KeqdisBackup backupWithRules(List<String> rules) => KeqdisBackup(
+    KeqdroidBackup backupWithRules(List<String> rules) => KeqdroidBackup(
           version: 1,
           exportedAt: DateTime.utc(2026, 9, 28),
           data: {
@@ -402,7 +402,7 @@ void main() {
           },
         );
 
-    List<int> bytesOf(KeqdisBackup backup) => utf8.encode(backup.toJsonString());
+    List<int> bytesOf(KeqdroidBackup backup) => utf8.encode(backup.toJsonString());
 
     // Ровно то, что оставляет запись без обрезки: новый файл с начала, дальше
     // конец старого с того же байта.
@@ -411,7 +411,7 @@ void main() {
 
     test('целый файл читается как раньше', () {
       final text = backupWithRules(['domain:rt.ru']).toJsonString();
-      final backup = KeqdisBackup.parse(utf8.encode(text));
+      final backup = KeqdroidBackup.parse(utf8.encode(text));
       expect(backup.data, jsonDecode(text)['data']);
     });
 
@@ -425,7 +425,7 @@ void main() {
       final onDisk = overwritten(bytesOf(fresh), old);
       expect(() => jsonDecode(utf8.decode(onDisk)), throwsFormatException);
 
-      expect(KeqdisBackup.parse(onDisk).data, fresh.data);
+      expect(KeqdroidBackup.parse(onDisk).data, fresh.data);
     });
 
     test('хвост, начатый с середины русской буквы, тоже отрезается', () {
@@ -434,7 +434,7 @@ void main() {
       ]));
       // Подбираем длину нового так, чтобы граница пришлась на второй байт
       // кириллической буквы старого файла.
-      late KeqdisBackup fresh;
+      late KeqdroidBackup fresh;
       late List<int> freshBytes;
       for (var pad = 0;; pad++) {
         fresh = backupWithRules(['domain:${'x' * pad}.ru']);
@@ -445,13 +445,13 @@ void main() {
       final onDisk = overwritten(freshBytes, old);
       expect(() => utf8.decode(onDisk), throwsFormatException);
 
-      expect(KeqdisBackup.parse(onDisk).data, fresh.data);
+      expect(KeqdroidBackup.parse(onDisk).data, fresh.data);
     });
 
     test('оборванный файл по-прежнему не читается', () {
       final bytes = bytesOf(backupWithRules(['domain:rt.ru']));
       expect(
-        () => KeqdisBackup.parse(bytes.sublist(0, bytes.length - 10)),
+        () => KeqdroidBackup.parse(bytes.sublist(0, bytes.length - 10)),
         throwsFormatException,
       );
     });
@@ -461,14 +461,14 @@ void main() {
           .toJsonString()
           .replaceFirst('"version"', 'version');
       expect(
-        () => KeqdisBackup.parse(utf8.encode('$text tail')),
+        () => KeqdroidBackup.parse(utf8.encode('$text tail')),
         throwsFormatException,
       );
     });
 
     test('не объект — не бэкап', () {
       expect(
-        () => KeqdisBackup.parse(utf8.encode('[1, 2]')),
+        () => KeqdroidBackup.parse(utf8.encode('[1, 2]')),
         throwsFormatException,
       );
     });

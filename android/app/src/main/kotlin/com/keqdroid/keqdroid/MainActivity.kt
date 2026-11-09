@@ -914,7 +914,7 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     // file_picker пишет в w, а обрезать файл провайдер не обязан: от старого бэкапа оставался хвост.
-    // провайдер без wt получит w, хвост после JSON отрежет импорт (KeqdisBackup.parse)
+    // провайдер без wt получит w, хвост после JSON отрежет импорт (KeqdroidBackup.parse)
     private fun writeDocument(uri: android.net.Uri, bytes: ByteArray) {
         val stream = try {
             contentResolver.openOutputStream(uri, "wt")
