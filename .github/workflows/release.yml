@@ -1,0 +1,247 @@
+# Builds every release file on GitHub runners, signs SHA256SUMS and leaves a
+# draft release for a human to publish. Started by hand: Actions -> release ->
+# Run workflow. The version comes from pubspec.yaml of the chosen branch.
+#
+# Secrets (Settings -> Secrets and variables -> Actions):
+#   ANDROID_KEYSTORE_BASE64  the APK signing keystore, base64
+#   ANDROID_KEY_PROPERTIES   android/key.properties as is (storeFile is replaced)
+#   GOOGLE_SERVICES_JSON     android/app/google-services.json
+#   UPDATE_SIGNING_KEY       Ed25519 PEM for tool/sign_sums.sh; the app checks
+#                            its public half (lib/services/release_signature.dart)
+# Optional Windows code signing through SignPath Foundation, off until these
+# variables exist: SIGNPATH_ORGANIZATION_ID, SIGNPATH_PROJECT_SLUG,
+# SIGNPATH_SIGNING_POLICY_SLUG, and the secret SIGNPATH_API_TOKEN.
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: Create a draft release (off = only build, files stay in this run)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  # the same as ci.yml and the local SDK
+  FLUTTER_VERSION: '3.44.4'
+
+jobs:
+  windows-android:
+    runs-on: windows-2025
+    timeout-minutes: 150
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      zip-artifact-id: ${{ steps.zip.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: version
+        shell: pwsh
+        run: |
+          $m = [regex]::Match((Get-Content pubspec.yaml -Raw), '(?m)^\s*version:\s*([0-9]+\.[0-9]+(?:\.[0-9]+)?)')
+          if (-not $m.Success) { throw 'no version in pubspec.yaml' }
+          "version=$($m.Groups[1].Value)" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: APK signing key and Firebase config
+        shell: pwsh
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_PROPERTIES: ${{ secrets.ANDROID_KEY_PROPERTIES }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          foreach ($n in 'ANDROID_KEYSTORE_BASE64', 'ANDROID_KEY_PROPERTIES', 'GOOGLE_SERVICES_JSON') {
+            if (-not [Environment]::GetEnvironmentVariable($n)) { throw "secret $n is not set" }
+          }
+          [IO.File]::WriteAllBytes("$PWD/android/app/upload-keystore.jks",
+            [Convert]::FromBase64String(($env:ANDROID_KEYSTORE_BASE64 -replace '\s', '')))
+          $props = @($env:ANDROID_KEY_PROPERTIES -split "`r?`n" |
+            Where-Object { $_ -and $_ -notmatch '^\s*storeFile\s*=' }) + 'storeFile=upload-keystore.jks'
+          [IO.File]::WriteAllText("$PWD/android/key.properties", ($props -join "`n") + "`n")
+          [IO.File]::WriteAllText("$PWD/android/app/google-services.json", $env:GOOGLE_SERVICES_JSON)
+
+      - name: Build Android and Windows
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -SkipLinux
+
+      - name: Drop the partial SHA256SUMS
+        shell: pwsh
+        run: Remove-Item "release/${{ steps.version.outputs.version }}/SHA256SUMS*" -ErrorAction SilentlyContinue
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-android
+          path: release/${{ steps.version.outputs.version }}/
+          if-no-files-found: error
+
+      # a single file artifact, the form SignPath takes
+      - id: zip
+        uses: actions/upload-artifact@v7
+        with:
+          path: release/${{ steps.version.outputs.version }}/keqdroid-windows-x64-${{ steps.version.outputs.version }}.zip
+          archive: false
+          if-no-files-found: error
+
+  linux:
+    # the oldest supported GLib: a build made on a newer one does not start on
+    # Ubuntu 22.04 or Debian 12 (tool/package_linux.sh refuses to package it)
+    runs-on: ubuntu-24.04
+    container: ubuntu:22.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Build tools
+        run: |
+          apt-get update -y
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            git curl ca-certificates unzip xz-utils zip file \
+            build-essential clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libayatana-appindicator3-dev \
+            patchelf rpm squashfs-tools
+
+      - uses: actions/checkout@v7
+
+      - name: Flutter
+        run: git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git /opt/flutter
+
+      - name: Build and package
+        env:
+          FLUTTER_HOME: /opt/flutter
+        run: |
+          bash tool/build_linux_wsl.sh
+          bash tool/package_linux.sh
+
+      - name: Collect
+        run: |
+          VER="$(grep -E '^version:' pubspec.yaml | sed -E 's/^version:[[:space:]]*([0-9]+\.[0-9]+(\.[0-9]+)?).*/\1/')"
+          mkdir -p dist-linux
+          cp "release/$VER/keqdroid-$VER-x86_64.AppImage" \
+             "release/$VER/keqdroid_${VER}_amd64.deb" \
+             "release/$VER/keqdroid-$VER-1.x86_64.rpm" \
+             "release/$VER/keqdroid-$VER-linux-x64.tar.gz" \
+             "release/$VER/PKGBUILD" dist-linux/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: dist-linux/
+          if-no-files-found: error
+
+  sign-windows:
+    needs: windows-android
+    if: vars.SIGNPATH_ORGANIZATION_ID != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      # SignPath Foundation wants every signing approved by hand on signpath.io
+      - uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ needs.windows-android.outputs.zip-artifact-id }}
+          skip-decompress: true
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 13800
+          output-artifact-directory: signed
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-signed
+          path: signed/
+          if-no-files-found: error
+
+  release:
+    needs: [windows-android, linux, sign-windows]
+    if: >-
+      always() &&
+      needs.windows-android.result == 'success' &&
+      needs.linux.result == 'success' &&
+      (needs.sign-windows.result == 'success' || needs.sign-windows.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    env:
+      VER: ${{ needs.windows-android.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: windows-android
+          path: dist
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: linux
+          path: dist
+
+      - if: needs.sign-windows.result == 'success'
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-signed
+          path: signed
+
+      - name: Take the signed Windows zip
+        if: needs.sign-windows.result == 'success'
+        run: |
+          f="keqdroid-windows-x64-$VER.zip"
+          [ -f "signed/$f" ] || { echo "SignPath returned no $f"; ls -la signed; exit 1; }
+          cp -f "signed/$f" "dist/$f"
+
+      - name: SHA256SUMS
+        shell: pwsh
+        run: ./tool/write_sha256sums.ps1 -Dir dist
+
+      - name: Sign SHA256SUMS
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: bash tool/sign_sums.sh dist/SHA256SUMS -
+
+      - uses: actions/attest@v4
+        with:
+          subject-checksums: dist/SHA256SUMS
+
+      - name: Draft release
+        if: inputs.draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          gh release create "v$VER" dist/* \
+            --draft --target "$GITHUB_SHA" --title "v$VER" \
+            --notes "Built by ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} from ${GITHUB_SHA}."
+
+      - name: Files of this run, without a release
+        if: ${{ !inputs.draft }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-files
+          path: dist/

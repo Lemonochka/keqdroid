@@ -16,17 +16,18 @@
     aur\PKGBUILD, aur\.SRCINFO                  (what tool/publish_aur.sh pushes)
     geoip.dat, geoip.dat.sha256                 (full geo database for Android)
     SHA256SUMS                                  (sha256sum format, every asset)
+    SHA256SUMS.sig                              (only with -SigningKey)
 
-  The in-app updater refuses any asset it cannot verify. Every version since
-  0.5.0 reads the hash from a release-wide SHA256SUMS, so assets no longer need
-  a .sha256 of their own. The one exception is geoip.dat.sha256: the full geo
-  base download in 0.15.0 - 0.18.0 fetches it from the LATEST release and asks
-  for exactly that name.
+  Releases are normally built by .github/workflows/release.yml, which also
+  signs SHA256SUMS. This script is the local twin: same packages, same
+  checks, signed only with -SigningKey. The app refuses an update or geo base
+  whose SHA256SUMS lacks a valid SHA256SUMS.sig.
+
+  Every version since 0.5.0 reads the hash from a release-wide SHA256SUMS
+  (tool/write_sha256sums.ps1). The one sidecar left is geoip.dat.sha256: the
+  full geo base download in 0.15.0 - 0.18.0 asks for exactly that name.
 
   Linux is built inside WSL by tool/build_linux_native.sh.
-
-  Checksum files are ASCII without BOM and with LF line ends: Windows
-  PowerShell 5.1 otherwise writes UTF-16 or a BOM, and `sha256sum -c` wants LF.
 
 .PARAMETER SkipAndroid
   Do not build/package the APK.
@@ -47,7 +48,11 @@
   tool/package_linux.sh refuses to package one.
 
 .PARAMETER Publish
-  Create the GitHub release via the `gh` CLI and upload all assets.
+  Create the GitHub release via the `gh` CLI and upload all assets. Needs
+  -SigningKey.
+
+.PARAMETER SigningKey
+  Update signing key (Ed25519 PEM) for tool/sign_sums.sh, run in Git Bash.
 
 .PARAMETER NotesFile
   Markdown file used as the release body when -Publish is set.
@@ -72,6 +77,7 @@ param(
   [string]$WslDistro = 'Ubuntu-22.04',
   [switch]$Publish,
   [string]$NotesFile,
+  [string]$SigningKey,
   [switch]$AllowUnmerged
 )
 
@@ -129,16 +135,6 @@ if (-not $AllowUnmerged) {
     $left | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
     throw "Merge or commit it first, or rerun with -AllowUnmerged if it is meant to stay out."
   }
-}
-
-# ASCII, no BOM, LF (see the note in the header).
-function Write-AsciiLf([string]$path, [string[]]$lines) {
-  $text = ($lines -join "`n") + "`n"
-  [System.IO.File]::WriteAllText($path, $text, (New-Object System.Text.ASCIIEncoding))
-}
-
-function Get-Sha256([string]$path) {
-  (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLower()
 }
 
 # An APK carries native code for exactly one ABI, and all of it. A second ABI
@@ -342,31 +338,24 @@ $geoSrc = Join-Path $repoRoot 'assets\bin\windows\geoip.dat'
 if (-not (Test-Path -LiteralPath $geoSrc)) { throw "full geoip.dat not found at $geoSrc" }
 $geoOut = Join-Path $outDir 'geoip.dat'
 Copy-Item -LiteralPath $geoSrc -Destination $geoOut -Force
-Write-AsciiLf "$geoOut.sha256" @(Get-Sha256 $geoOut)
 Write-Host ("    geoip.dat OK ({0} MB)" -f [math]::Round((Get-Item -LiteralPath $geoOut).Length / 1MB, 1))
 
 # --- SHA256SUMS --------------------------------------------------------------
+# One script for this and for .github/workflows/release.yml.
 Write-Step "Writing SHA256SUMS"
-$sumsPath = Join-Path $outDir 'SHA256SUMS'
-$assets = Get-ChildItem -LiteralPath $outDir -File |
-  Where-Object { $_.Name -ne 'SHA256SUMS' -and $_.Extension -ne '.sha256' } |
-  Sort-Object Name
-Write-AsciiLf $sumsPath @($assets | ForEach-Object { '{0}  {1}' -f (Get-Sha256 $_.FullName), $_.Name })
+powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'write_sha256sums.ps1') -Dir $outDir
+if ($LASTEXITCODE -ne 0) { throw "write_sha256sums.ps1 failed" }
 
-Write-Step "Verifying checksums"
-$sumLines = Get-Content -LiteralPath $sumsPath
-foreach ($line in $sumLines) {
-  $hash, $name = $line -split '  ', 2
-  if ((Get-Sha256 (Join-Path $outDir $name)) -ne $hash) { throw "SHA256SUMS mismatch for $name" }
-  # Every updater so far takes the first line that CONTAINS the asset name. A
-  # name that is part of another line would hand it someone else's hash.
-  $hits = @($sumLines | Where-Object { $_.ToLower().Contains($name.ToLower()) })
-  if ($hits.Count -ne 1) { throw "Asset name $name appears in $($hits.Count) lines of SHA256SUMS" }
+if ($SigningKey) {
+  Write-Step "Signing SHA256SUMS"
+  # Git Bash, not the bash on PATH: that one may be WSL, which sees other paths
+  $gitBash = Join-Path $env:ProgramFiles 'Git\bin\bash.exe'
+  if (-not (Test-Path -LiteralPath $gitBash)) { throw "Git Bash not found at $gitBash" }
+  & $gitBash (Join-Path $PSScriptRoot 'sign_sums.sh').Replace('\', '/') `
+    (Join-Path $outDir 'SHA256SUMS').Replace('\', '/') `
+    (Resolve-Path -LiteralPath $SigningKey).Path.Replace('\', '/')
+  if ($LASTEXITCODE -ne 0) { throw "sign_sums.sh failed" }
 }
-if ((Get-Content -LiteralPath "$geoOut.sha256" -Raw).Trim() -ne (Get-Sha256 $geoOut)) {
-  throw "geoip.dat.sha256 mismatch"
-}
-Write-Host "    $($sumLines.Count) assets OK"
 
 Write-Host ""
 Write-Step "Artifacts in $outDir"
@@ -374,6 +363,9 @@ Get-ChildItem -LiteralPath $outDir -File | Select-Object Name, Length | Format-T
 
 # --- Publish ---------------------------------------------------------------
 if ($Publish) {
+  if (-not (Test-Path -LiteralPath (Join-Path $outDir 'SHA256SUMS.sig'))) {
+    throw "SHA256SUMS is not signed (pass -SigningKey): the app would refuse this release."
+  }
   $gh = Get-Command gh -ErrorAction SilentlyContinue
   if (-not $gh) { throw "gh CLI not found on PATH; install it or upload manually." }
 

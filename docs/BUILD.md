@@ -174,18 +174,42 @@ Generation runs during `flutter pub get` / `flutter run` (or `flutter gen-l10n`)
 
 ## 7. Release
 
+Releases are built on GitHub: Actions → **release** → Run workflow.
+`.github/workflows/release.yml` builds the APKs and the Windows zip on a Windows runner
+(`tool/make_release.ps1 -SkipLinux`), the Linux packages in an Ubuntu 22.04 container
+(`tool/build_linux_wsl.sh`, `tool/package_linux.sh`), writes `SHA256SUMS`
+(`tool/write_sha256sums.ps1`), signs it (`tool/sign_sums.sh` → `SHA256SUMS.sig`), attests
+every file and leaves a **draft** release. Write the notes into the draft and publish it.
+With "draft" unticked the run only builds, and the files stay in its `release-files`
+artifact. The secrets it needs are listed at the top of the workflow.
+
+The same packages locally, for comparison or when GitHub is not an option:
+
 ```powershell
 # Android + Windows + Linux (that part in WSL) + SHA256SUMS → release\<version>\
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
 
-# the same plus publishing a GitHub release (needs the gh CLI)
-powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
+# the same, signed, plus publishing a GitHub release (needs the gh CLI)
+powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -SigningKey <key.pem> -Publish -NotesFile notes.md
 
 # after the release is up: push PKGBUILD + .SRCINFO to the AUR
 wsl -e bash /mnt/c/Users/<you>/StudioProjects/keqdroid/tool/publish_aur.sh
 ```
 
+Checking a downloaded file by hand:
+
+```bash
+gh attestation verify <file> --repo Lemonochka/keqdroid   # built by this repository's workflow
+sha256sum -c --ignore-missing SHA256SUMS
+```
+
 Rules:
+
+- `SHA256SUMS.sig` is base64 of an Ed25519 signature over `SHA256SUMS` byte for byte. The
+  app (`lib/services/release_signature.dart`) knows two public keys: the main one, whose
+  private half is the `UPDATE_SIGNING_KEY` secret, and a reserve one kept off GitHub.
+  Versions after 0.35.0 install no update and no full geo base without a valid signature,
+  so a release published without `SHA256SUMS.sig` breaks updates for all of them;
 
 - the version and the `vX.Y.Z` tag come from `version:` in `pubspec.yaml`;
 - the release has one `SHA256SUMS` (ASCII, no BOM, LF, `sha256sum` format), and the updater
@@ -203,6 +227,26 @@ Rules:
   `keqdroid-<version>-x86_64.AppImage`, `keqdroid-<version>-1.x86_64.rpm`;
 - when building by hand, check the APK version with `aapt dump badging | grep versionName`
   before uploading: a failed build leaves the previous APK in `build/`.
+
+Windows code signing through SignPath Foundation is wired in but off. Once the project is
+accepted, give it this artifact configuration on signpath.io (the workflow sends the
+release zip itself, so the zip is the root):
+
+```xml
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="keqdroid.exe" product-name="keqdroid">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
+```
+
+then add the repository variables `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`,
+`SIGNPATH_SIGNING_POLICY_SLUG` and the secret `SIGNPATH_API_TOKEN`. From then on the
+`sign-windows` job sends the zip for signing and waits until the request is approved on
+signpath.io. Only `keqdroid.exe` is signed: `xray.exe` and `mihomo.exe` are upstream
+builds, which SignPath Foundation does not sign.
 
 ---
 
@@ -383,18 +427,43 @@ AmneziaWG работает на mihomo: amneziawg-go встроен, профи�
 
 ## 7. Релиз
 
+Релизы собирает GitHub: Actions → **release** → Run workflow.
+`.github/workflows/release.yml` собирает APK и архив для Windows на Windows-раннере
+(`tool/make_release.ps1 -SkipLinux`), пакеты Linux в контейнере Ubuntu 22.04
+(`tool/build_linux_wsl.sh`, `tool/package_linux.sh`), пишет `SHA256SUMS`
+(`tool/write_sha256sums.ps1`), подписывает его (`tool/sign_sums.sh` → `SHA256SUMS.sig`),
+прикладывает к каждому файлу подтверждение сборки и оставляет **черновик** релиза. Заметки
+пишутся в черновике, публикуется он вручную. Со снятой галочкой «draft» прогон только
+собирает, файлы остаются в его артефакте `release-files`. Нужные секреты перечислены в
+начале workflow.
+
+Те же пакеты локально, для сравнения или когда GitHub не вариант:
+
 ```powershell
-# Android + Windows + Linux (эта часть — в WSL) + SHA256SUMS → release\<версия>\
+# Android + Windows + Linux (эта часть в WSL) + SHA256SUMS → release\<версия>\
 powershell -ExecutionPolicy Bypass -File tool\make_release.ps1
 
-# то же + публикация GitHub-релиза (нужен gh CLI)
-powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -Publish -NotesFile notes.md
+# то же с подписью + публикация GitHub-релиза (нужен gh CLI)
+powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -SigningKey <key.pem> -Publish -NotesFile notes.md
 
 # когда релиз уже опубликован: PKGBUILD + .SRCINFO уезжают на AUR
 wsl -e bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/tool/publish_aur.sh
 ```
 
+Проверить скачанный файл вручную:
+
+```bash
+gh attestation verify <файл> --repo Lemonochka/keqdroid   # собран workflow этого репозитория
+sha256sum -c --ignore-missing SHA256SUMS
+```
+
 Правила:
+
+- `SHA256SUMS.sig` это base64 подписи Ed25519 над `SHA256SUMS` байт в байт. Приложение
+  (`lib/services/release_signature.dart`) знает два открытых ключа: основной, закрытая
+  половина которого лежит в секрете `UPDATE_SIGNING_KEY`, и запасной, который хранится не
+  на GitHub. Версии после 0.35.0 без верной подписи не ставят ни обновление, ни полную
+  geo-базу, поэтому релиз без `SHA256SUMS.sig` ломает обновления им всем;
 
 - версия и тег `vX.Y.Z` берутся из `version:` в `pubspec.yaml`;
 - на весь релиз один `SHA256SUMS` (ASCII без BOM, LF, формат `sha256sum`), и без
@@ -412,3 +481,23 @@ wsl -e bash /mnt/c/Users/<ты>/StudioProjects/keqdroid/tool/publish_aur.sh
   `keqdroid-<версия>-x86_64.AppImage`, `keqdroid-<версия>-1.x86_64.rpm`;
 - при ручной сборке проверяй версию APK через `aapt dump badging | grep versionName`
   перед загрузкой: после упавшей сборки в `build/` остаётся прошлый APK.
+
+Подпись exe для Windows через SignPath Foundation встроена, но выключена. Когда проект
+примут, на signpath.io ему задаётся такая конфигурация артефакта (workflow отправляет сам
+архив релиза, поэтому корень у неё архив):
+
+```xml
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="keqdroid.exe" product-name="keqdroid">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
+```
+
+потом в репозитории заводятся переменные `SIGNPATH_ORGANIZATION_ID`,
+`SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG` и секрет `SIGNPATH_API_TOKEN`.
+С этого момента задача `sign-windows` отправляет архив на подпись и ждёт, пока запрос
+одобрят на signpath.io. Подписывается только `keqdroid.exe`: `xray.exe` и `mihomo.exe`
+собраны из чужих исходников, их SignPath Foundation не подписывает.
