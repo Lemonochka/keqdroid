@@ -56,6 +56,7 @@ import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/shared/ui/expressive_page.dart';
 import 'package:keqdroid/shared/ui/halloween/halloween_season.dart';
 import 'package:keqdroid/shared/ui/horizontal_mouse_scroll.dart';
+import 'package:keqdroid/shared/ui/reorder_zoom_fix.dart';
 import 'package:keqdroid/shared/ui/scrolled_under.dart';
 import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/haptics.dart';

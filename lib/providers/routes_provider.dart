@@ -15,6 +15,9 @@ class RoutesNotifier extends AsyncNotifier<List<TrafficRoute>> {
 
   Future<void> remove(String id) async => _save(withoutRoute(await future, id));
 
+  Future<void> moveInAllApps(int from, int to) async =>
+      _save(withAllAppsMoved(await future, from, to));
+
   Future<void> replaceAll(List<TrafficRoute> routes) => _save(routes);
 }
 
@@ -91,6 +94,11 @@ class RoutingProfilesNotifier extends AsyncNotifier<List<RoutingProfile>> {
 
   Future<void> removeRoute(String id, String routeId) =>
       _update(id, (p) => p.copyWith(routes: withoutRoute(p.routes, routeId)));
+
+  Future<void> moveRouteInAllApps(String id, int from, int to) => _update(
+        id,
+        (p) => p.copyWith(routes: withAllAppsMoved(p.routes, from, to)),
+      );
 }
 
 final routingProfilesProvider =

@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +24,7 @@ import 'package:keqdroid/shared/ui/expressive_elements.dart';
 import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:keqdroid/tunnel/vpn_backend.dart';
 import 'package:keqdroid/utils/provider_routing.dart';
+import 'package:keqdroid/utils/traffic_routes.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../helpers/fake_tunnel_backend.dart';
@@ -86,8 +90,11 @@ Future<ProviderContainer> _pump(
   List<String> splitInclude = const [],
   List<RoutingProfile> profiles = const [],
   List<Subscription> subs = const [],
+  Size view = const Size(1080, 2400),
+  double? zoom,
+  Key? shot,
 }) async {
-  tester.view.physicalSize = const Size(1080, 2400);
+  tester.view.physicalSize = view;
   tester.view.devicePixelRatio = 2.625;
   addTearDown(tester.view.reset);
 
@@ -121,19 +128,35 @@ Future<ProviderContainer> _pump(
   );
   addTearDown(container.dispose);
   await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(
-        theme: buildAppTheme(
-          ColorScheme.fromSeed(
-            seedColor: const Color(0xFF6750A4),
-            brightness: Brightness.dark,
+    RepaintBoundary(
+      key: shot,
+      child: UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: buildAppTheme(
+            ColorScheme.fromSeed(
+              seedColor: const Color(0xFF6750A4),
+              brightness: Brightness.dark,
+            ),
           ),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('ru'),
+          // как _UiZoom в app.dart: всё приложение рисуется крупнее и сжимается
+          builder: zoom == null
+              ? null
+              : (context, child) => LayoutBuilder(
+                    builder: (context, constraints) => FittedBox(
+                      fit: BoxFit.fill,
+                      alignment: Alignment.topLeft,
+                      child: SizedBox.fromSize(
+                        size: constraints.biggest / zoom,
+                        child: child,
+                      ),
+                    ),
+                  ),
+          home: routingScreen(),
         ),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('ru'),
-        home: routingScreen(),
       ),
     ),
   );
@@ -166,7 +189,272 @@ const _vpnOff = TrafficRoute(
   enabled: false,
 );
 
+const _site = TrafficRoute(id: 'site', sites: 'example.ru');
+
+// зажать строку и провести: как палец, с ожиданием долгого нажатия
+Future<void> _drag(
+  WidgetTester tester,
+  Finder what,
+  Offset by, {
+  int steps = 6,
+}) async {
+  final gesture = await tester.startGesture(tester.getCenter(what));
+  await tester.pump(const Duration(milliseconds: 700));
+  for (var i = 0; i < steps; i++) {
+    await gesture.moveBy(by / steps.toDouble());
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+  await gesture.up();
+  await tester.pumpAndSettle();
+}
+
 void main() {
+  group('перенос маршрутов', () {
+    testWidgets('зажать и перетащить выше: порядок меняется и сохраняется',
+        (tester) async {
+      await _pump(tester, routes: const [_direct, _site]);
+      var texts = _texts(tester);
+      expect(
+        texts.indexOf('ru, yandex.ru, vk.com'),
+        lessThan(texts.indexOf('example.ru')),
+        reason: 'без перетаскивания напрямую стоит выше',
+      );
+
+      final up = tester.getCenter(find.text('ru, yandex.ru, vk.com')).dy -
+          tester.getCenter(find.text('example.ru')).dy;
+      await _drag(tester, find.text('example.ru'), Offset(0, up - 10));
+
+      texts = _texts(tester);
+      expect(
+        texts.indexOf('example.ru'),
+        lessThan(texts.indexOf('ru, yandex.ru, vk.com')),
+      );
+      expect(
+        texts.indexOf('ru, yandex.ru, vk.com'),
+        lessThan(texts.indexOf('Всё остальное')),
+      );
+      final saved = await _storage.getRoutes();
+      expect(
+        routesIn(RouteSection.allApps, saved).map((r) => r.id),
+        ['site', 'direct'],
+      );
+      expect(saved.map((r) => r.order), everyElement(isNotNull));
+    });
+
+    testWidgets('пока строку тащат, вставшая наверх получает верхние углы группы',
+        (tester) async {
+      await _pump(tester, routes: const [_direct, _site, _vpnOff]);
+      int segmentOf(String text) => tester
+          .widget<ExpressiveGroupSegment>(find.ancestor(
+            of: find.text(text),
+            matching: find.byType(ExpressiveGroupSegment),
+          ).first)
+          .index;
+      expect(segmentOf('example.ru'), 1);
+
+      final gesture = await tester
+          .startGesture(tester.getCenter(find.text('ru, yandex.ru, vk.com')));
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(segmentOf('example.ru'), 0);
+      expect(segmentOf('geosite:telegram'), 1);
+
+      // отпустили на том же месте: перестановки нет, края прежние
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(segmentOf('ru, yandex.ru, vk.com'), 0);
+      expect(segmentOf('example.ru'), 1);
+      expect(
+        (await _storage.getRoutes()).map((r) => r.order),
+        everyElement(isNull),
+      );
+    });
+
+    testWidgets('короткое нажатие по-прежнему открывает маршрут',
+        (tester) async {
+      await _pump(tester, routes: const [_direct, _site]);
+      await tester.tap(find.text('example.ru'));
+      await tester.pumpAndSettle();
+      expect(find.text('Куда'), findsOneWidget);
+    });
+
+    testWidgets('«Всё остальное» и «Новый маршрут» не переносятся',
+        (tester) async {
+      await _pump(tester, routes: const [_direct, _site]);
+      for (final fixed in ['Всё остальное', 'Новый маршрут']) {
+        await _drag(tester, find.text(fixed), const Offset(0, -200));
+        // долгое нажатие могло открыть шторку или редактор: порядок от этого не меняется
+        expect(
+          (await _storage.getRoutes()).map((r) => r.order),
+          everyElement(isNull),
+          reason: fixed,
+        );
+        if (find.text('Все приложения').evaluate().isEmpty) {
+          await tester.binding.handlePopRoute();
+          await tester.pumpAndSettle();
+        }
+      }
+    });
+
+    testWidgets('блокировку и единственный маршрут переносить некуда',
+        (tester) async {
+      await _pump(tester, routes: const [_block, _direct]);
+      expect(find.byType(ReorderableDelayedDragStartListener), findsNothing);
+    });
+
+    testWidgets('в своём профиле порядок свой, основной не трогается',
+        (tester) async {
+      await _pump(
+        tester,
+        // оба раскрытых профиля на экране целиком
+        view: const Size(1080, 4200),
+        routes: const [_direct, _site],
+        profiles: const [
+          RoutingProfile(
+            id: 'games',
+            name: 'Игры',
+            subscriptionIds: ['sub-1'],
+            routes: [
+              TrafficRoute(id: 'p-direct', sites: 'steam.example', target: RouteTarget.direct),
+              TrafficRoute(id: 'p-vpn', sites: 'store.steam.example'),
+            ],
+          ),
+        ],
+        subs: const [
+          Subscription(id: 'sub-1', name: 'VPN', url: 'https://a.example'),
+        ],
+      );
+      await tester.tap(find.text('Игры'));
+      await tester.pumpAndSettle();
+      final up = tester.getCenter(find.text('steam.example')).dy -
+          tester.getCenter(find.text('store.steam.example')).dy;
+      await _drag(tester, find.text('store.steam.example'), Offset(0, up - 10));
+
+      final profile = (await _storage.getRoutingProfiles()).single;
+      expect(
+        routesIn(RouteSection.allApps, profile.routes).map((r) => r.id),
+        ['p-vpn', 'p-direct'],
+      );
+      expect(
+        (await _storage.getRoutes()).map((r) => r.order),
+        everyElement(isNull),
+      );
+    });
+
+    testWidgets('профиль провайдера под замком не переставляется',
+        (tester) async {
+      await _pump(
+        tester,
+        routes: const [_direct],
+        profiles: const [
+          RoutingProfile(
+            id: 'provider-sub-1',
+            name: 'От провайдера',
+            subscriptionIds: ['sub-1'],
+            providerSubscriptionId: 'sub-1',
+            routes: [
+              TrafficRoute(id: 'p-direct', sites: 'a.example', target: RouteTarget.direct),
+              TrafficRoute(id: 'p-vpn', sites: 'b.example'),
+            ],
+          ),
+        ],
+        subs: const [
+          Subscription(id: 'sub-1', name: 'VPN', url: 'https://a.example'),
+        ],
+      );
+      await tester.tap(find.text('От провайдера'));
+      await tester.pumpAndSettle();
+      expect(find.text('b.example'), findsOneWidget);
+      expect(find.byType(ReorderableDelayedDragStartListener), findsNothing);
+    });
+
+    testWidgets('у края экрана страница листается за строкой', (tester) async {
+      await _pump(
+        tester,
+        view: const Size(1080, 1500),
+        routes: [
+          _direct,
+          for (var i = 0; i < 8; i++)
+            TrafficRoute(id: 'r$i', sites: 'site$i.example'),
+        ],
+      );
+      final last = find.text('site7.example');
+      await tester.ensureVisible(last);
+      await tester.pumpAndSettle();
+      final scroll = Scrollable.of(tester.element(last)).position;
+      final before = scroll.pixels;
+      expect(before, greaterThan(0));
+
+      final gesture = await tester.startGesture(tester.getCenter(last));
+      await tester.pump(const Duration(milliseconds: 700));
+      final toTop = -tester.getCenter(last).dy + 8;
+      for (var i = 0; i < 6; i++) {
+        await gesture.moveBy(Offset(0, toTop / 6));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      // палец стоит у верхнего края, страница едет сама
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(scroll.pixels, lessThan(before));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      final saved = await _storage.getRoutes();
+      final shown = [
+        for (final r in routesIn(RouteSection.allApps, saved)) r.id,
+      ];
+      expect(shown.indexOf('r7'), lessThan(shown.indexOf('r6')));
+    });
+
+    testWidgets('под масштабом интерфейса поднятая строка не съезжает вбок',
+        (tester) async {
+      final shot = GlobalKey();
+      await _pump(
+        tester,
+        routes: const [_direct, _site],
+        zoom: 0.85,
+        shot: shot,
+      );
+      final title = find.text('ru, yandex.ru, vk.com');
+      final rest = tester.getRect(title);
+      final gesture = await tester.startGesture(tester.getCenter(title));
+      await tester.pump(const Duration(milliseconds: 700));
+      for (var i = 0; i < 4; i++) {
+        await gesture.moveBy(const Offset(0, 6));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      final boundary =
+          shot.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final (bytes, width) = (await tester.runAsync(() async {
+        final image = await boundary.toImage();
+        final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+        final w = image.width;
+        image.dispose();
+        return (data!, w);
+      }))!;
+      int luma(Offset p) {
+        final i = (p.dy.round() * width + p.dx.round()) * 4;
+        return (bytes.getUint8(i) + bytes.getUint8(i + 1) + bytes.getUint8(i + 2)) ~/ 3;
+      }
+
+      // строка ушла за пальцем на 24 вниз: начало названия там, левее него фон строки
+      final y = rest.center.dy + 24;
+      expect(
+        (luma(Offset(rest.left + 3, y)) - luma(Offset(rest.left - 6, y))).abs(),
+        greaterThan(40),
+      );
+
+      await gesture.moveBy(const Offset(0, -24));
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+  });
+
   group('главный экран', () {
     testWidgets('разделы по порядку проверки, пустые не показываются',
         (tester) async {

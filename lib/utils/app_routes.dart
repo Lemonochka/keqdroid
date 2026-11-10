@@ -19,11 +19,12 @@ class RouteAppRules {
     this.listDomains = const [],
     this.network = RouteNetwork.any,
     this.ports = const [],
+    this.ownOrder = false,
   });
 
   final String tag;
 
-  // пусто у маршрута с протоколом для всех приложений (routeProtocolRules): ни TUN, ни поиска процесса ему не надо
+  // пусто у маршрута всех приложений (routeProtocolRules): ни TUN, ни поиска процесса ему не надо
   final List<String> apps;
 
   final RouteTarget target;
@@ -41,7 +42,12 @@ class RouteAppRules {
 
   final List<(int, int)> ports;
 
+  // генератор ставит такое правило по месту в списке, а не на ступень его цели
+  final bool ownOrder;
+
   bool get forAllApps => apps.isEmpty;
+
+  bool get hasProtocol => network != RouteNetwork.any || ports.isNotEmpty;
 
   RouteAppRules copyWith({String? entries, List<String>? listDomains}) =>
       RouteAppRules(
@@ -54,31 +60,42 @@ class RouteAppRules {
         listDomains: listDomains ?? this.listDomains,
         network: network,
         ports: ports,
+        ownOrder: ownOrder,
       );
 }
 
-// маршрут с неверными портами в ядро не идёт: ошибку показывает его карточка
+// маршрут всех приложений, который едет своим правилом, а не в трёх списках: с протоколом, а при своём
+// порядке любой, кроме блокировки. с неверными портами в ядро не идёт: ошибку показывает его карточка
 List<RouteAppRules> routeProtocolRules({
   required List<TrafficRoute> routes,
   required List<RouteServerOutbound> outbounds,
 }) {
   final tagOf = {for (final o in outbounds) o.serverId: o.tag};
+  final ownOrder = routesHaveOwnOrder(routes);
   final out = <RouteAppRules>[];
   for (final route in orderedRoutes(routes)) {
-    if (!route.enabled || !route.allApps || !routeHasProtocol(route)) continue;
+    if (!route.enabled || !route.allApps) continue;
+    final placed = ownOrder && route.target != RouteTarget.block;
+    if (!placed && !routeHasProtocol(route)) continue;
     final ports = routePortRanges(route.ports);
     if (ports == null || routeIsEmpty(route)) continue;
+    final allTraffic = route.content == RouteContent.allTraffic;
+    // весь трафик без протокола это строка «Всё остальное», маршрутом он ничего не значит
+    if (allTraffic && !routeHasProtocol(route)) continue;
     out.add(RouteAppRules(
-      tag: 'keq-proto-${out.length}',
+      tag: routeHasProtocol(route)
+          ? 'keq-proto-${out.length}'
+          : 'keq-route-${out.length}',
       apps: const [],
       target: route.target,
       serverTag: route.target == RouteTarget.server
           ? tagOf[route.serverId] ?? ''
           : '',
-      allTraffic: route.content == RouteContent.allTraffic,
+      allTraffic: allTraffic,
       entries: routeEntriesText(route).trim(),
       network: route.network,
       ports: ports,
+      ownOrder: placed,
     ));
   }
   return out;

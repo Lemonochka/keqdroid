@@ -51,20 +51,47 @@ class ExpressiveGroup extends StatelessWidget {
       children: [
         for (var i = 0; i < count; i++) ...[
           if (i > 0) SizedBox(height: spacing),
-          Builder(builder: (context) {
-            final radius = segmentRadius(
-              index: i,
-              count: count,
-              outerCorner: outerCorner,
-              innerCorner: innerCorner,
-            );
-            return _ExpressiveGroupScope(
-              radius: radius,
-              child: TvFocusHighlight(radius: radius, child: children[i]),
-            );
-          }),
+          ExpressiveGroupSegment(
+            index: i,
+            count: count,
+            outerCorner: outerCorner,
+            innerCorner: innerCorner,
+            child: children[i],
+          ),
         ],
       ],
+    );
+  }
+}
+
+// строка группы там, где саму группу одним Column не собрать: в списке с переносом
+class ExpressiveGroupSegment extends StatelessWidget {
+  const ExpressiveGroupSegment({
+    super.key,
+    required this.index,
+    required this.count,
+    required this.child,
+    this.outerCorner = ExpressiveShape.extraLarge,
+    this.innerCorner = ExpressiveShape.extraSmall,
+  });
+
+  final int index;
+  final int count;
+  final Widget child;
+  final double outerCorner;
+  final double innerCorner;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = ExpressiveGroup.segmentRadius(
+      index: index,
+      count: count,
+      outerCorner: outerCorner,
+      innerCorner: innerCorner,
+    );
+    return _ExpressiveGroupScope(
+      radius: radius,
+      child: TvFocusHighlight(radius: radius, child: child),
     );
   }
 }

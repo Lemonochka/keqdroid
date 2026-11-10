@@ -678,6 +678,60 @@ class ConfigGeneratorV2 {
           }(),
       ];
 
+  // перетащенные на экране маршруты всех приложений: в правила встают по месту в списке, а не по цели
+  static List<RouteAppRules> _placedRoutes(List<RouteAppRules> routes) =>
+      [for (final r in routes) if (r.forAllApps && r.ownOrder) r];
+
+  // обход со своим местом лежит в правилах маршрутов, а не в directRules, DNS берёт его отсюда.
+  // lifted: домены маршрутов выше обхода, иначе сплит отдал бы их системному резолверу вместе с зоной из обхода
+  static ({List<String> direct, List<String> lifted}) _placedDnsDomains(
+    List<RouteAppRules> placed,
+  ) {
+    final direct = <String>[];
+    final lifted = <String>[];
+    var above = <String>[];
+    for (final route in placed) {
+      if (route.hasProtocol) continue;
+      final domains = _entriesMatch(route.entries, route.listDomains).domains;
+      if (route.target != RouteTarget.direct) {
+        above.addAll(domains);
+      } else if (domains.isNotEmpty) {
+        direct.addAll(domains);
+        lifted.addAll(above);
+        above = [];
+      }
+    }
+    return (direct: direct, lifted: lifted);
+  }
+
+  // приватные сети в обходе своими IP-правилами не считаем и у маршрута со своим местом
+  static bool _presetPrivate(RouteAppRules route, String ip) =>
+      route.forAllApps &&
+      !route.hasProtocol &&
+      route.target == RouteTarget.direct &&
+      kBasePrivateRanges.contains(ip.trim());
+
+  // то же правило, но только QUIC и в блок. null, если правило UDP на 443 и так не ловит
+  static Map<String, dynamic>? _quicBlock(Map<String, dynamic> rule) {
+    final network = rule['network'];
+    if (network is String && !network.split(',').contains('udp')) return null;
+    final port = rule['port'];
+    if (port is String &&
+        !port.split(',').any((part) {
+          final range = part.split('-');
+          return int.parse(range.first) <= 443 && 443 <= int.parse(range.last);
+        })) {
+      return null;
+    }
+    return {
+      ...rule,
+      'network': 'udp',
+      'port': '443',
+      'outboundTag': 'block',
+      if (rule['ruleTag'] != null) 'ruleTag': '${rule['ruleTag']}-quic',
+    };
+  }
+
   // владельца xray узнаёт только на туннеле из VpnService, маршруту с протоколом для всех приложений он не нужен
   static List<RouteAppRules> _appRoutesForInbound(
     List<RouteAppRules> routes, {
@@ -953,13 +1007,18 @@ class ConfigGeneratorV2 {
         nativeTunInbound: nativeTunInbound,
       ),
     );
+    final placedDns = _placedDnsDomains(_placedRoutes(appRoutes));
 
     // перехват DNS автора висел на его dns-in, который мы заменили, без этого правила DNS падает в final.
     // inboundTag обязателен: иначе dns-аутбаунд поймает запросы самого ядра и ответит сам себе по кругу
     final fallbackDns = settings.xrayCore.buildDnsBlock(
-      directDomains: _normalizeDomains(
-        splitDomainsAndIps(_parseRuleList(settings.directRules)).domains,
-      ),
+      directDomains: [
+        ..._normalizeDomains(
+          splitDomainsAndIps(_parseRuleList(settings.directRules)).domains,
+        ),
+        ...placedDns.direct,
+      ],
+      liftedDomains: placedDns.lifted,
       bootstrapDomains: [
         if (custom.address.trim().isNotEmpty && !_isIpLiteral(custom.address))
           'full:${custom.address.trim()}',
@@ -1212,7 +1271,7 @@ class ConfigGeneratorV2 {
     List<Map<String, dynamic>> protocol(RouteTarget target) => _appRouteRules(
           [
             for (final r in appRoutes)
-              if (r.forAllApps && r.target == target) r,
+              if (r.forAllApps && !r.ownOrder && r.target == target) r,
           ],
           appTarget,
           rule,
@@ -1266,6 +1325,7 @@ class ConfigGeneratorV2 {
     rules.addAll(protocol(RouteTarget.direct));
     addGroup(settings.directRules, directTag, 'user-direct');
     rules
+      ..addAll(_appRouteRules(_placedRoutes(appRoutes), appTarget, rule))
       ..addAll(protocol(RouteTarget.server))
       ..addAll(_routeServerRules(routeServers, rule))
       ..addAll(protocol(RouteTarget.vpn));
@@ -1975,7 +2035,11 @@ class ConfigGeneratorV2 {
         proxyIps.isNotEmpty ||
         blockedIps.isNotEmpty ||
         routes.any((r) => _routeServerMatch(r).ips.isNotEmpty) ||
-        apps.any((r) => _entriesMatch(r.entries, const []).ips.isNotEmpty);
+        apps.any((r) => _entriesMatch(r.entries, const [])
+            .ips
+            .any((ip) => !_presetPrivate(r, ip)));
+    final placed = _placedRoutes(apps);
+    final placedDns = _placedDnsDomains(placed);
     final effectiveDomainStrategy =
         (!isPingMode && hasUserIpRules && core.routingDomainStrategy == 'AsIs')
             ? 'IPIfNonMatch'
@@ -2002,7 +2066,8 @@ class ConfigGeneratorV2 {
             'queryStrategy': 'UseIPv4',
           }
         : core.buildDnsBlock(
-            directDomains: directDomains,
+            directDomains: [...directDomains, ...placedDns.direct],
+            liftedDomains: placedDns.lifted,
             bootstrapDomains: bootstrapDomains,
             proxiedDoh: globalProxy,
           );
@@ -2021,7 +2086,7 @@ class ConfigGeneratorV2 {
     List<Map<String, dynamic>> protocol(RouteTarget target) => _appRouteRules(
           [
             for (final r in apps)
-              if (r.forAllApps && r.target == target) r,
+              if (r.forAllApps && !r.ownOrder && r.target == target) r,
           ],
           appTarget,
           rule,
@@ -2162,14 +2227,24 @@ class ConfigGeneratorV2 {
       ],
       'outboundTag': 'direct',
     }));
+    final quicBlocked =
+        settings.finalOutbound == AppSettings.finalOutboundProxy &&
+            _visionRejectsQuic(proxyOutbounds);
+    // общий block-quic стоит ниже и этих правил уже не увидит, поэтому QUIC режется у каждого, что ведёт в proxy
+    for (final route in placed) {
+      final own = _appRouteRules([route], appTarget, rule);
+      if (quicBlocked && appTarget(route) == 'proxy') {
+        rules.addAll([for (final r in own) ?_quicBlock(r)]);
+      }
+      rules.addAll(own);
+    }
     // между обходом и через VPN, как в разделе всех приложений (routesIn)
     rules
       ..addAll(protocol(RouteTarget.server))
       ..addAll(_routeServerRules(routes, rule));
     // vision отвергает UDP/443 только после полного TCP+TLS до сервера, и каждый QUIC-ретрай стоил рукопожатия.
     // только при глобал-прокси, вариант -udp443 не трогаем
-    if (settings.finalOutbound == AppSettings.finalOutboundProxy &&
-        _visionRejectsQuic(proxyOutbounds)) {
+    if (quicBlocked) {
       rules.add(rule('block-quic', {
         'network': 'udp',
         'port': '443',

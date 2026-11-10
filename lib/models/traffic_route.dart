@@ -7,7 +7,8 @@ enum RouteTarget { vpn, server, direct, block }
 
 enum RouteNetwork { any, tcp, udp }
 
-// порядок не хранится, раздел выводится из самого маршрута: порядок на экране и проверки в ядре не разойдутся
+// раздел выводится из самого маршрута, место хранится только у перетащенных (order):
+// экран и ядро читают один порядок из routesIn и не расходятся
 class TrafficRoute {
   const TrafficRoute({
     required this.id,
@@ -20,6 +21,7 @@ class TrafficRoute {
     this.serverId = '',
     this.network = RouteNetwork.any,
     this.ports = '',
+    this.order,
   });
 
   factory TrafficRoute.create({
@@ -65,6 +67,9 @@ class TrafficRoute {
   // как набрал человек, разбирает routePortRanges
   final String ports;
 
+  // место во всех приложениях после перетаскивания. без него маршрут встаёт по цели
+  final int? order;
+
   bool get allApps => apps.isEmpty;
 
   Map<String, dynamic> toJson() => {
@@ -78,6 +83,7 @@ class TrafficRoute {
         if (serverId.isNotEmpty) 'server': serverId,
         if (network != RouteNetwork.any) 'network': network.name,
         if (ports.isNotEmpty) 'ports': ports,
+        'order': ?order,
       };
 
   factory TrafficRoute.fromJson(Map<String, dynamic> json) => TrafficRoute(
@@ -103,6 +109,7 @@ class TrafficRoute {
           orElse: () => RouteNetwork.any,
         ),
         ports: json['ports'] as String? ?? '',
+        order: json['order'] as int?,
       );
 
   TrafficRoute copyWith({
@@ -115,6 +122,7 @@ class TrafficRoute {
     String? serverId,
     RouteNetwork? network,
     String? ports,
+    int? order,
   }) =>
       TrafficRoute(
         id: id,
@@ -127,6 +135,7 @@ class TrafficRoute {
         serverId: serverId ?? this.serverId,
         network: network ?? this.network,
         ports: ports ?? this.ports,
+        order: order ?? this.order,
       );
 
   @override
@@ -141,7 +150,8 @@ class TrafficRoute {
       other.target == target &&
       other.serverId == serverId &&
       other.network == network &&
-      other.ports == ports;
+      other.ports == ports &&
+      other.order == order;
 
   @override
   int get hashCode => Object.hash(
@@ -155,5 +165,6 @@ class TrafficRoute {
         serverId,
         network,
         ports,
+        order,
       );
 }

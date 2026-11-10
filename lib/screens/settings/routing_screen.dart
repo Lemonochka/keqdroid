@@ -340,6 +340,30 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
       final apps = routesIn(RouteSection.apps, list);
       final allApps = routesIn(RouteSection.allApps, list);
       final target = _finalTarget(finalOutbound);
+      final fixed = [
+        _FinalRouteTile(
+          target: target,
+          background: rowColor,
+          onTap: locked
+              ? null
+              : () => _pickFinalTarget(context, ref, profileId, target),
+        ),
+        if (!locked)
+          ExpressiveGroupTile(
+            onTap: () => _openRouteEditor(context, null, profileId),
+            color: rowColor,
+            child: _RouteRowContent(
+              badge: const ExpressiveIconBadge(icon: Icons.add_rounded),
+              title: Text(l10n.routeNew),
+              subtitle: Text(
+                caps.appsOffered
+                    ? l10n.routeNewSubtitle
+                    : l10n.routeNewSubtitleSites,
+              ),
+              chevron: false,
+            ),
+          ),
+      ];
       return [
         if (block.isNotEmpty) ...[
           _ProfileSectionLabel(l10n.routesSectionBlock),
@@ -350,33 +374,22 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
           ExpressiveGroup(children: [for (final r in apps) tile(r)]),
         ],
         _ProfileSectionLabel(l10n.routesSectionAllApps),
-        ExpressiveGroup(
-          children: [
-            for (final r in allApps) tile(r),
-            _FinalRouteTile(
-              target: target,
-              background: rowColor,
-              onTap: locked
-                  ? null
-                  : () => _pickFinalTarget(context, ref, profileId, target),
+        // переставлять одну строку некуда, а профиль провайдера под замком только смотрят
+        if (locked || allApps.length < 2)
+          ExpressiveGroup(children: [for (final r in allApps) tile(r), ...fixed])
+        else
+          _ReorderableRouteGroup(
+            routes: allApps,
+            tile: tile,
+            fixed: fixed,
+            onMove: (from, to) => unawaited(
+              profileId == null
+                  ? ref.read(routesProvider.notifier).moveInAllApps(from, to)
+                  : ref
+                      .read(routingProfilesProvider.notifier)
+                      .moveRouteInAllApps(profileId, from, to),
             ),
-            if (!locked)
-              ExpressiveGroupTile(
-                onTap: () => _openRouteEditor(context, null, profileId),
-                color: rowColor,
-                child: _RouteRowContent(
-                  badge: const ExpressiveIconBadge(icon: Icons.add_rounded),
-                  title: Text(l10n.routeNew),
-                  subtitle: Text(
-                    caps.appsOffered
-                        ? l10n.routeNewSubtitle
-                        : l10n.routeNewSubtitleSites,
-                  ),
-                  chevron: false,
-                ),
-              ),
-          ],
-        ),
+          ),
       ];
     }
 
@@ -760,6 +773,122 @@ class _RouteTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// маршруты всех приложений с переносом: зажать и тащить. своего Scrollable у списка нет нарочно,
+// SliverReorderableList берёт прокрутку страницы и листает её у края экрана
+class _ReorderableRouteGroup extends StatefulWidget {
+  const _ReorderableRouteGroup({
+    required this.routes,
+    required this.tile,
+    required this.fixed,
+    required this.onMove,
+  });
+
+  final List<TrafficRoute> routes;
+  final Widget Function(TrafficRoute route) tile;
+
+  // «Всё остальное» и «Новый маршрут»: стоят под списком и не переносятся
+  final List<Widget> fixed;
+
+  final void Function(int from, int to) onMove;
+
+  @override
+  State<_ReorderableRouteGroup> createState() => _ReorderableRouteGroupState();
+}
+
+class _ReorderableRouteGroupState extends State<_ReorderableRouteGroup> {
+  static const _spacing = 2.0;
+
+  // поднятая строка выбывает из группы до конца переноса: иначе вставшая наверх оставалась с мелкими верхними углами
+  int? _dragging;
+
+  void _endDrag() {
+    if (_dragging != null) setState(() => _dragging = null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final routes = widget.routes;
+    final fixed = widget.fixed;
+    final tile = widget.tile;
+    final dragging = _dragging;
+    final count = routes.length + fixed.length - (dragging == null ? 0 : 1);
+    int place(int i) => dragging != null && i > dragging ? i - 1 : i;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ReorderZoomFix(
+          builder: (context, fix) => ShrinkWrappingViewport(
+            offset: ViewportOffset.zero(),
+            slivers: [
+              SliverReorderableList(
+                itemCount: routes.length,
+                onReorderStart: (i) => setState(() => _dragging = i),
+                // onReorderItem зовётся только при смене места, а без неё строка просто ложится обратно
+                onReorderEnd: (insert) {
+                  final from = _dragging;
+                  if (from == null || insert == from || insert == from + 1) {
+                    _endDrag();
+                  }
+                },
+                onReorderItem: (from, to) {
+                  _endDrag();
+                  widget.onMove(from, to);
+                },
+                // поднятая строка собирается заново: у неё скруглены все углы, а не как у места в группе
+                proxyDecorator: (child, index, animation) => fix(
+                  AnimatedBuilder(
+                    animation: animation,
+                    builder: (context, child) => Transform.scale(
+                      scale: 1 + 0.02 * Curves.easeOut.transform(animation.value),
+                      child: child,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: _spacing),
+                      child: Material(
+                        color: Colors.transparent,
+                        elevation: 8,
+                        shadowColor: Colors.black26,
+                        borderRadius:
+                            ExpressiveShape.radius(ExpressiveShape.extraLarge),
+                        child: ExpressiveGroupSegment(
+                          index: 0,
+                          count: 1,
+                          child: tile(routes[index]),
+                        ),
+                      ),
+                    ),
+                  ),
+                  animation,
+                ),
+                itemBuilder: (context, i) => ReorderableDelayedDragStartListener(
+                  key: ValueKey('route-row-${routes[i].id}'),
+                  index: i,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: _spacing),
+                    child: ExpressiveGroupSegment(
+                      index: place(i),
+                      count: count,
+                      child: tile(routes[i]),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        for (var i = 0; i < fixed.length; i++) ...[
+          if (i > 0) const SizedBox(height: _spacing),
+          ExpressiveGroupSegment(
+            index: place(routes.length + i),
+            count: count,
+            child: fixed[i],
+          ),
+        ],
+      ],
     );
   }
 }

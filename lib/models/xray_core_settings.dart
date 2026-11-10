@@ -562,8 +562,11 @@ class XrayCoreSettings {
     };
   }
 
+  // liftedDomains: домены маршрутов, поднятых на экране над обходом. их сервер пишется раньше сервера обхода:
+  // совпавшие xray опрашивает в порядке записи (sortClients в app/dns/dns.go)
   Map<String, dynamic> buildDnsBlock({
     required List<String> directDomains,
+    List<String> liftedDomains = const [],
     List<String> bootstrapDomains = const [],
     bool proxiedDoh = false,
   }) {
@@ -609,6 +612,15 @@ class XrayCoreSettings {
     if (custom.isNotEmpty) {
       // length > 1: с одним сервером сплит оставил бы всё, кроме Direct, без резолвера
       if (dnsSplitDirectDomains && directDomains.isNotEmpty && custom.length > 1) {
+        if (liftedDomains.isNotEmpty) {
+          for (final server in custom.skip(1)) {
+            servers.add({
+              ...server,
+              'domains': liftedDomains,
+              'skipFallback': true,
+            });
+          }
+        }
         servers.add({
           ...custom.first,
           'domains': directDomains,
@@ -623,6 +635,15 @@ class XrayCoreSettings {
       if (custom.length == 1) servers.add(custom.single);
     } else {
       if (dnsSplitDirectDomains && directDomains.isNotEmpty) {
+        if (liftedDomains.isNotEmpty) {
+          for (final ip in const ['1.1.1.1', '8.8.8.8']) {
+            servers.add({
+              'address': '$dohScheme://$ip/dns-query',
+              'domains': liftedDomains,
+              'skipFallback': true,
+            });
+          }
+        }
         servers.add({
           // системный резолвер: корпоративных и LAN-зон из Direct публичный DoH не знает
           'address': 'localhost',

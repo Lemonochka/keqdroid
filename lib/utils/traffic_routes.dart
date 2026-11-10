@@ -19,14 +19,10 @@ List<TrafficRoute> routesIn(RouteSection section, List<TrafficRoute> routes) {
     for (final r in routes)
       if (sectionOf(r) == section) r,
   ];
+  if (section == RouteSection.allApps) return _allAppsOrder(inSection);
   int rank(TrafficRoute r) => switch (section) {
-        RouteSection.block => 0,
         RouteSection.apps => r.content == RouteContent.allTraffic ? 1 : 0,
-        RouteSection.allApps => switch (r.target) {
-            RouteTarget.direct => 0,
-            RouteTarget.server => 1,
-            _ => 2,
-          },
+        _ => 0,
       };
   // List.sort устойчивость не обещает, поэтому ступени собираются по очереди
   final ranks = {for (final r in inSection) rank(r)}.toList()..sort();
@@ -34,6 +30,52 @@ List<TrafficRoute> routesIn(RouteSection section, List<TrafficRoute> routes) {
     for (final k in ranks)
       for (final r in inSection)
         if (rank(r) == k) r,
+  ];
+}
+
+int _targetRank(TrafficRoute r) => switch (r.target) {
+      RouteTarget.direct => 0,
+      RouteTarget.server => 1,
+      _ => 2,
+    };
+
+// перетащенные стоят по своим местам, остальные встают за последним маршрутом своей цели или целей выше.
+// без единого места это прежняя сортировка по цели
+List<TrafficRoute> _allAppsOrder(List<TrafficRoute> inSection) {
+  final placed = [
+    for (final r in inSection)
+      if (r.order != null) r,
+  ];
+  final out = <TrafficRoute>[];
+  for (final place in {for (final r in placed) r.order!}.toList()..sort()) {
+    out.addAll(placed.where((r) => r.order == place));
+  }
+  for (final r in inSection) {
+    if (r.order != null) continue;
+    final after = out.lastIndexWhere((o) => _targetRank(o) <= _targetRank(r));
+    out.insert(after + 1, r);
+  }
+  return out;
+}
+
+bool routesHaveOwnOrder(List<TrafficRoute> routes) => routes.any(
+      (r) => r.order != null && sectionOf(r) == RouteSection.allApps,
+    );
+
+// места получают все маршруты раздела: с одним местом у перетащенного соседи остались бы стоять по цели
+List<TrafficRoute> withAllAppsMoved(
+  List<TrafficRoute> routes,
+  int from,
+  int to,
+) {
+  final shown = routesIn(RouteSection.allApps, routes);
+  if (from < 0 || from >= shown.length) return routes;
+  final moved = [...shown];
+  moved.insert(to.clamp(0, shown.length - 1), moved.removeAt(from));
+  final place = {for (var i = 0; i < moved.length; i++) moved[i].id: i};
+  return [
+    for (final r in routes)
+      place.containsKey(r.id) ? r.copyWith(order: place[r.id]) : r,
   ];
 }
 
@@ -97,7 +139,8 @@ bool _foldable(TrafficRoute route) =>
     route.enabled && route.allApps && !routeHasProtocol(route);
 
 // маршруты отдельных приложений сюда не попадают: в общих списках их сайты достались бы всем.
-// не едет на свой сервер, значит через VPN: связь важнее, причину покажет карточка
+// не едет на свой сервер, значит через VPN: связь важнее, причину покажет карточка.
+// при своём порядке сворачивается только блокировка: у трёх списков порядок один, остальные едут правилами (routeProtocolRules)
 AppSettings foldRoutes(
   AppSettings settings,
   List<TrafficRoute> routes, {
@@ -106,8 +149,10 @@ AppSettings foldRoutes(
   final direct = <String>[];
   final proxy = <String>[];
   final blocked = <String>[];
+  final ownOrder = routesHaveOwnOrder(routes);
   for (final route in orderedRoutes(routes)) {
     if (!_foldable(route)) continue;
+    if (ownOrder && route.target != RouteTarget.block) continue;
     final text = routeEntriesText(route).trim();
     if (text.isEmpty) continue;
     switch (route.target) {

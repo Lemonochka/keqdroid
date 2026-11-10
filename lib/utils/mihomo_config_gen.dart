@@ -2077,6 +2077,10 @@ class MihomoConfigGen {
 
   static String _appRouteIpSet(RouteAppRules route) => '${route.tag}-ip';
 
+  // условия у маршрута нет, набор за SUB-RULE ему не нужен: правила встают в общий список как есть
+  static bool _inline(RouteAppRules route) =>
+      route.forAllApps && !route.hasProtocol;
+
   // одним набором за одним условием: условие с процессом на каждый домен проверялось бы заново
   static List<String> _appRouteBody(
     RouteAppRules route,
@@ -2121,7 +2125,7 @@ class MihomoConfigGen {
     final suffix = _ipSuffix(strategy);
     final sets = <String, List<String>>{};
     for (final route in routes) {
-      if (route.allTraffic) continue;
+      if (route.allTraffic || _inline(route)) continue;
       final target = _appRouteTarget(route, proxyTarget);
       final body = _appRouteBody(route, target, suffix);
       if (body.isNotEmpty) sets[route.tag] = body;
@@ -2188,12 +2192,17 @@ class MihomoConfigGen {
     // маршрут с протоколом стоит на ступени своей цели, как такой же без протокола (routesIn)
     List<RouteAppRules> protocol(RouteTarget target) => [
           for (final r in appRoutes)
-            if (r.forAllApps && r.target == target) r,
+            if (r.forAllApps && !r.ownOrder && r.target == target) r,
         ];
     final protoBlock = protocol(RouteTarget.block);
     final protoDirect = protocol(RouteTarget.direct);
     final protoServer = protocol(RouteTarget.server);
     final protoVpn = protocol(RouteTarget.vpn);
+    // перетащенные на экране: по одному правилу на маршрут, в порядке списка
+    final placed = [
+      for (final r in appRoutes)
+        if (r.forAllApps && r.ownOrder) r,
+    ];
     List<String> appRules(List<RouteAppRules> routes) =>
         _appRouteRules(routes, proxyTarget, inPlace);
 
@@ -2226,6 +2235,13 @@ class MihomoConfigGen {
     rules.addAll(appRules(protoDirect));
     addGroup(settings.directRules, 'DIRECT', directListSet, ruleLists.direct);
     if (appOther.isEmpty) rules.addAll(privateRanges);
+    for (final route in placed) {
+      rules.addAll(
+        _inline(route)
+            ? _appRouteBody(route, _appRouteTarget(route, proxyTarget), inPlace)
+            : appRules([route]),
+      );
+    }
     // между обходом и через VPN, как в разделе всех приложений (routesIn)
     rules.addAll(appRules(protoServer));
     for (final server in routeServers) {
@@ -2255,6 +2271,15 @@ class MihomoConfigGen {
       rules.addAll(_ipRules(settings.blockedRules, 'REJECT', ''));
       ipTail([...appBlock, ...protoBlock, ...appOther, ...protoDirect]);
       rules.addAll(_ipRules(settings.directRules, 'DIRECT', ''));
+      for (final route in placed) {
+        if (_inline(route)) {
+          rules.addAll(
+            _ipRules(route.entries, _appRouteTarget(route, proxyTarget), ''),
+          );
+        } else {
+          ipTail([route]);
+        }
+      }
       ipTail(protoServer);
       for (final server in routeServers) {
         rules.addAll(_ipRules(server.entries, server.tag, ''));
@@ -2278,11 +2303,17 @@ class MihomoConfigGen {
     final hasUserIps = ips(settings.blockedRules).isNotEmpty ||
         ips(settings.proxyRules).isNotEmpty ||
         routeServers.any((s) => ips(s.entries).isNotEmpty) ||
-        appRoutes.any((r) => ips(r.entries).isNotEmpty) ||
+        appRoutes.any((r) => ips(r.entries).any((ip) => !_presetPrivate(r, ip))) ||
         ips(settings.directRules)
             .any((ip) => !kBasePrivateRanges.contains(ip.trim()));
     return hasUserIps ? 'IPIfNonMatch' : 'AsIs';
   }
+
+  // тот же обход со своим местом: стратегию он не поднимает, как и в списке
+  static bool _presetPrivate(RouteAppRules route, String ip) =>
+      _inline(route) &&
+      route.target == RouteTarget.direct &&
+      kBasePrivateRanges.contains(ip.trim());
 
   static String _ipSuffix(String strategy) =>
       strategy == 'IPOnDemand' ? '' : ',no-resolve';

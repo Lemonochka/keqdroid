@@ -71,19 +71,21 @@ List<RouteServerOutbound> routeServerOutbounds({
 }) {
   final byId = {for (final s in servers) s.id: s};
   final entries = <String, List<String>>{};
+  final ownOrder = routesHaveOwnOrder(routes);
   for (final route in orderedRoutes(routes)) {
     if (!route.enabled || (!route.allApps && !withApps)) continue;
     if (route.target != RouteTarget.server) continue;
     final server = byId[route.serverId];
     if (server == null || server.id == activeServerId) continue;
     if (!routeServerSupported(server.config, core)) continue;
-    // сайты маршрута с протоколом едут своим правилом (routeProtocolRules), отсюда нужен только выход
+    // сайты маршрута с протоколом или со своим местом едут своим правилом (routeProtocolRules), отсюда нужен только выход
     if (route.allApps && routeHasProtocol(route)) {
       if (!routeIsEmpty(route)) entries.putIfAbsent(server.id, () => []);
     } else if (route.allApps) {
       final text = routeEntriesText(route).trim();
       if (text.isEmpty) continue;
-      entries.putIfAbsent(server.id, () => []).add(text);
+      final sites = entries.putIfAbsent(server.id, () => []);
+      if (!ownOrder) sites.add(text);
     } else if (!routeIsEmpty(route) &&
         route.apps.any((app) => app.trim().isNotEmpty)) {
       entries.putIfAbsent(server.id, () => []);
