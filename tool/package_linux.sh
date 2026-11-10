@@ -13,6 +13,7 @@
 #   wsl -e bash /mnt/c/.../keqdroid/tool/package_linux.sh
 #
 set -euo pipefail
+umask 022
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"
@@ -128,6 +129,22 @@ if [ -f "$PL_LIB/libtray_manager_plugin.so" ]; then
 fi
 echo "  bundled: $(ls "$PL_LIB" 2>/dev/null | grep -E 'ayatana|dbusmenu' | tr '\n' ' ')"
 
+# WSL видит файлы с диска C: как 0777, и cp -a с rsync -a уносили это в пакет: любой
+# пользователь подменял ядро, которое в TUN идёт под root (GHSA-q8fw-hcr5-f8p6)
+normalize_modes() { # $1 = дерево, дальше исполняемые внутри него
+  local root="$1"; shift
+  find "$root" -type d -exec chmod 0755 {} +
+  find "$root" -type f -exec chmod 0644 {} +
+  local f
+  for f in "$@"; do chmod 0755 "$root/$f"; done
+}
+assert_not_writable() { # $1 = имя пакета, stdin = листинг с правами в первом столбце
+  local bad
+  bad="$(awk '$1 !~ /^l/ && (substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w")')"
+  [ -z "$bad" ] || { echo "  ERROR: $1 has group/world-writable entries:"; echo "$bad" | head -20; exit 1; }
+}
+normalize_modes "$PAYLOAD" "$APP" mihomo xray
+
 # --- icon -------------------------------------------------------------------
 ICON_SRC="$REPO_DIR/assets/icon.png"
 [ -f "$ICON_SRC" ] || ICON_SRC=""
@@ -163,6 +180,7 @@ mkdir -p "$TARROOT"
 cp -a "$PAYLOAD/." "$TARROOT/"
 TARBALL="$OUT/$APP-$VERSION-linux-x64.tar.gz"
 ( cd "$WORK" && tar czf "$TARBALL" "$APP" )
+tar tvzf "$TARBALL" | assert_not_writable "$(basename "$TARBALL")"
 echo "  -> $(basename "$TARBALL")"
 
 # ============================================================================
@@ -198,8 +216,18 @@ Description: keqdroid proxy/VPN client
  TUN mode requests root via pkexec (polkit) at connect time, so polkit and a
  polkit authentication agent have to be installed for it.
 EOF
+# 0.35.0 и раньше ставили /opt/keqdroid с 0777, а права существующего каталога dpkg при обновлении не меняет
+cat > "$DEBROOT/DEBIAN/postinst" <<'EOF'
+#!/bin/sh
+set -e
+if [ "$1" = configure ]; then
+  chmod -R go-w "$DPKG_ROOT/opt/keqdroid"
+fi
+EOF
+normalize_modes "$DEBROOT" "opt/$APP/$APP" "opt/$APP/mihomo" "opt/$APP/xray" DEBIAN/postinst
 DEB="$OUT/${APP}_${VERSION}_${ARCH_DEB}.deb"
 dpkg-deb --root-owner-group --build "$DEBROOT" "$DEB" >/dev/null
+dpkg-deb -c "$DEB" | assert_not_writable "$(basename "$DEB")"
 echo "  -> $(basename "$DEB")"
 
 # ============================================================================
@@ -274,6 +302,7 @@ rpmbuild -bb --quiet \
   "$RPMTOP/SPECS/$APP.spec"
 RPM="$OUT/$APP-$VERSION-1.$ARCH_AI.rpm"
 [ -f "$RPM" ] || { echo "  ERROR: rpmbuild did not produce $(basename "$RPM")"; exit 1; }
+rpm -qlvp "$RPM" 2>/dev/null | assert_not_writable "$(basename "$RPM")"
 echo "  -> $(basename "$RPM")"
 
 # ============================================================================
