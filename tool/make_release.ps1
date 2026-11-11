@@ -8,6 +8,7 @@
     keqdroid-<version>-android.apk              (Android, arm64-v8a)
     keqdroid-<version>-armeabi-v7a-android.apk  (Android on a 32-bit firmware)
     keqdroid-windows-x64-<version>.zip          (Windows portable)
+    keqdroid-windows-x64-<version>-setup.exe    (Windows installer)
     keqdroid-<version>-x86_64.AppImage          (Linux)
     keqdroid_<version>_amd64.deb                (Debian / Ubuntu)
     keqdroid-<version>-1.x86_64.rpm             (Fedora / openSUSE)
@@ -33,7 +34,15 @@
   Do not build/package the APK.
 
 .PARAMETER SkipWindows
-  Do not build/package the Windows zip.
+  Do not build/package the Windows zip and installer.
+
+.PARAMETER SkipInstaller
+  Package the Windows zip but not the installer. An installed copy then
+  updates from the zip, and Windows keeps showing its old version.
+
+.PARAMETER Iscc
+  Path to ISCC.exe of Inno Setup 7.1.1. By default the usual install folders
+  of Inno Setup 7 are searched.
 
 .PARAMETER SkipLinux
   Do not build the Linux packages in WSL.
@@ -72,6 +81,8 @@
 param(
   [switch]$SkipAndroid,
   [switch]$SkipWindows,
+  [switch]$SkipInstaller,
+  [string]$Iscc,
   [switch]$SkipLinux,
   [switch]$NoClean,
   [string]$WslDistro = 'Ubuntu-22.04',
@@ -305,6 +316,26 @@ if (-not $SkipWindows) {
   # findPayloadRoot expects keqdroid.exe at root or in a single subfolder).
   Compress-Archive -Path (Join-Path $relDir '*') -DestinationPath $zipOut
   Write-Host "    $(Split-Path $zipOut -Leaf) ($([math]::Round((Get-Item -LiteralPath $zipOut).Length / 1MB, 1)) MB)"
+
+  if (-not $SkipInstaller) {
+    Write-Step "Building the Windows installer"
+    if (-not $Iscc) {
+      $Iscc = @(
+        (Join-Path $env:ProgramFiles 'Inno Setup 7\ISCC.exe'),
+        (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 7\ISCC.exe'),
+        (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 7\ISCC.exe')
+      ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    }
+    if (-not $Iscc -or -not (Test-Path -LiteralPath $Iscc)) {
+      throw "Inno Setup 7 (ISCC.exe) not found. Install Inno Setup 7.1.1, pass -Iscc, or -SkipInstaller."
+    }
+    & $Iscc /Q "/DAppVersion=$version" "/DBuildDir=$relDir" "/DOutputDir=$outDir" `
+      (Join-Path $repoRoot 'windows\installer\keqdroid.iss')
+    if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+    $setupOut = Join-Path $outDir "keqdroid-windows-x64-$version-setup.exe"
+    if (-not (Test-Path -LiteralPath $setupOut)) { throw "ISCC did not produce $setupOut" }
+    Write-Host "    $(Split-Path $setupOut -Leaf) ($([math]::Round((Get-Item -LiteralPath $setupOut).Length / 1MB, 1)) MB)"
+  }
 }
 
 # --- Linux (in WSL) ----------------------------------------------------------

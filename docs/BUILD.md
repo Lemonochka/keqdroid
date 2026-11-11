@@ -13,6 +13,7 @@ How to set up the project, build it for every platform, run the tests and make a
 | **JDK** | 17+ | Gradle's jvmTarget is 17; the JDK shipped with Android Studio (21) works too |
 | **Visual Studio** + "Desktop development with C++" | 2022 or newer | VS 2026 (18.x) builds fine: `windows/CMakeLists.txt` already sets `_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS` for the newer STL |
 | **WSL + Ubuntu** | — | to build the Linux target (the Windows SDK cannot do it) |
+| **Inno Setup** | 7.1.1 | the Windows installer (`windows/installer/keqdroid.iss`); `release.yml` installs the same version |
 | **gh CLI** | — | only for publishing releases |
 
 `flutter doctor` shows what is missing.
@@ -175,7 +176,7 @@ Generation runs during `flutter pub get` / `flutter run` (or `flutter gen-l10n`)
 ## 7. Release
 
 Releases are built on GitHub: Actions → **release** → Run workflow.
-`.github/workflows/release.yml` builds the APKs and the Windows zip on a Windows runner
+`.github/workflows/release.yml` builds the APKs, the Windows zip and installer on a Windows runner
 (`tool/make_release.ps1 -SkipLinux`), the Linux packages in an Ubuntu 22.04 container
 (`tool/build_linux_wsl.sh`, `tool/package_linux.sh`), writes `SHA256SUMS`
 (`tool/write_sha256sums.ps1`), signs it (`tool/sign_sums.sh` → `SHA256SUMS.sig`), attests
@@ -223,6 +224,9 @@ Rules:
   `keqdroid-<version>-armeabi-v7a-android.apk` (must sort after the main APK: older
   updaters take the first `.apk` in GitHub's name-sorted list),
   `keqdroid-windows-x64-<version>.zip` (exactly that word order),
+  `keqdroid-windows-x64-<version>-setup.exe` (the updater of an installed copy looks for
+  the `-setup.exe` ending; the portable one keeps taking the zip, so the zip stays in
+  every release),
   `keqdroid-<version>-linux-x64.tar.gz`, `keqdroid_<version>_amd64.deb`,
   `keqdroid-<version>-x86_64.AppImage`, `keqdroid-<version>-1.x86_64.rpm`;
 - when building by hand, check the APK version with `aapt dump badging | grep versionName`
@@ -248,6 +252,10 @@ then add the repository variables `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_
 signpath.io. Only `keqdroid.exe` is signed: `xray.exe` and `mihomo.exe` are upstream
 builds, which SignPath Foundation does not sign.
 
+The installer is built before that job from the same unsigned files, so it carries an
+unsigned `keqdroid.exe` and is not signed itself. Before turning SignPath on, the workflow
+has to build the installer from the signed files and send `setup.exe` for signing too.
+
 ---
 
 <h2 id="русский">Русский</h2>
@@ -265,6 +273,7 @@ builds, which SignPath Foundation does not sign.
 | **JDK** | 17+ | jvmTarget в Gradle — 17; JDK из Android Studio (21) тоже подходит |
 | **Visual Studio** + «Desktop development with C++» | 2022 или новее | на VS 2026 (18.x) собирается: для новых STL в `windows/CMakeLists.txt` уже стоит `_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS` |
 | **WSL + Ubuntu** | — | сборка Linux-таргета (из Windows-SDK её не сделать) |
+| **Inno Setup** | 7.1.1 | установщик для Windows (`windows/installer/keqdroid.iss`); `release.yml` ставит ту же версию |
 | **gh CLI** | — | только для публикации релизов |
 
 `flutter doctor` покажет, чего не хватает.
@@ -428,7 +437,7 @@ AmneziaWG работает на mihomo: amneziawg-go встроен, профи�
 ## 7. Релиз
 
 Релизы собирает GitHub: Actions → **release** → Run workflow.
-`.github/workflows/release.yml` собирает APK и архив для Windows на Windows-раннере
+`.github/workflows/release.yml` собирает APK, архив и установщик для Windows на Windows-раннере
 (`tool/make_release.ps1 -SkipLinux`), пакеты Linux в контейнере Ubuntu 22.04
 (`tool/build_linux_wsl.sh`, `tool/package_linux.sh`), пишет `SHA256SUMS`
 (`tool/write_sha256sums.ps1`), подписывает его (`tool/sign_sums.sh` → `SHA256SUMS.sig`),
@@ -477,6 +486,8 @@ sha256sum -c --ignore-missing SHA256SUMS
   `keqdroid-<версия>-armeabi-v7a-android.apk` (обязан стоять после основного: старые
   апдейтеры берут первый `.apk` в списке GitHub, отсортированном по имени),
   `keqdroid-windows-x64-<версия>.zip` (именно такой порядок слов),
+  `keqdroid-windows-x64-<версия>-setup.exe` (апдейтер установленной копии ищет окончание
+  `-setup.exe`; портабельная по-прежнему берёт zip, поэтому zip нужен в каждом релизе),
   `keqdroid-<версия>-linux-x64.tar.gz`, `keqdroid_<версия>_amd64.deb`,
   `keqdroid-<версия>-x86_64.AppImage`, `keqdroid-<версия>-1.x86_64.rpm`;
 - при ручной сборке проверяй версию APK через `aapt dump badging | grep versionName`
@@ -501,3 +512,8 @@ sha256sum -c --ignore-missing SHA256SUMS
 С этого момента задача `sign-windows` отправляет архив на подпись и ждёт, пока запрос
 одобрят на signpath.io. Подписывается только `keqdroid.exe`: `xray.exe` и `mihomo.exe`
 собраны из чужих исходников, их SignPath Foundation не подписывает.
+
+Установщик собирается раньше этой задачи из тех же неподписанных файлов, поэтому внутри
+него неподписанный `keqdroid.exe`, и сам он тоже не подписан. Прежде чем включать SignPath,
+workflow надо научить собирать установщик из подписанных файлов и отправлять на подпись
+и `setup.exe`.

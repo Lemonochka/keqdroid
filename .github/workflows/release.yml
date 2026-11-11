@@ -77,9 +77,20 @@ jobs:
           [IO.File]::WriteAllText("$PWD/android/key.properties", ($props -join "`n") + "`n")
           [IO.File]::WriteAllText("$PWD/android/app/google-services.json", $env:GOOGLE_SERVICES_JSON)
 
+      # the image ships Inno Setup 6, where Simplified Chinese is not an official translation yet
+      - name: Inno Setup 7.1.1
+        shell: pwsh
+        run: |
+          $exe = "$env:RUNNER_TEMP\innosetup-7.1.1-x64.exe"
+          Invoke-WebRequest https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe -OutFile $exe
+          $hash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
+          if ($hash -ne '8A5A6711C3766A6E5FB74F280BA0E3551E719CE94538D901FDBD1F8F9920B3F0') { throw "Inno Setup installer hash $hash" }
+          Start-Process -FilePath $exe -Wait -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/DIR=$env:RUNNER_TEMP\InnoSetup7"
+          if (-not (Test-Path -LiteralPath "$env:RUNNER_TEMP\InnoSetup7\ISCC.exe")) { throw 'ISCC.exe not installed' }
+
       - name: Build Android and Windows
         shell: powershell
-        run: powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -SkipLinux
+        run: powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -SkipLinux -Iscc "$env:RUNNER_TEMP\InnoSetup7\ISCC.exe"
 
       - name: Drop the partial SHA256SUMS
         shell: pwsh

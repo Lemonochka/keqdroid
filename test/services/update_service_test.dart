@@ -302,6 +302,26 @@ void main() {
       );
     });
 
+    test('the installed copy takes the installer, the portable one the zip', () {
+      final withSetup = [
+        ...assets,
+        {'name': 'keqdroid-windows-x64-0.5.1-setup.exe'},
+      ];
+      expect(
+        UpdateService.findAssetNameForPlatform(withSetup, 'windows-installed'),
+        'keqdroid-windows-x64-0.5.1-setup.exe',
+      );
+      expect(
+        UpdateService.findAssetNameForPlatform(withSetup, 'windows'),
+        'keqdroid-windows-x64-0.5.1.zip',
+      );
+      // релиз без установщика: установленная копия всё равно обновится
+      expect(
+        UpdateService.findAssetNameForPlatform(assets, 'windows-installed'),
+        'keqdroid-windows-x64-0.5.1.zip',
+      );
+    });
+
     test('selects the AppImage for a Linux AppImage install', () {
       expect(
         UpdateService.findAssetNameForPlatform(assets, 'linux'),
@@ -433,6 +453,7 @@ void main() {
       'keqdroid-0.19.0-linux-x64.tar.gz',
       'keqdroid-0.19.0-x86_64.AppImage',
       'keqdroid-windows-x64-0.19.0.zip',
+      'keqdroid-windows-x64-0.19.0-setup.exe',
       'keqdroid_0.19.0_amd64.deb',
     ];
     String hashOf(int i) => (i + 1).toRadixString(16).padLeft(64, '0');
@@ -445,7 +466,12 @@ void main() {
     ];
 
     test('every platform asset is verified against the manifest', () {
-      for (final platform in ['android', 'windows', 'linux']) {
+      for (final platform in [
+        'android',
+        'windows',
+        'windows-installed',
+        'linux',
+      ]) {
         final name = UpdateService.findAssetNameForPlatform(assets, platform)!;
         expect(
           UpdateService.checksumAssetFor(assets, name)?['name'],

@@ -14,6 +14,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'linux_appimage_updater.dart';
 import 'linux_install.dart';
 import 'release_signature.dart';
+import 'windows_install.dart';
+import 'windows_setup_updater.dart';
 import 'windows_zip_updater.dart';
 import '../core/app_logger.dart';
 import '../utils/local_vpn_proxy.dart';
@@ -182,11 +184,17 @@ class UpdateService {
     final dio = _buildDio(viaLocalProxy: viaLocalProxy, httpPort: httpPort);
     final currentVersion = await _getCurrentVersion();
     final linuxKind = Platform.isLinux ? await LinuxInstall.detect() : null;
+    final windowsInstalled = await WindowsInstall.isInstalledCopy();
     final releases = await fetchReleases(dio);
     if (releases.isEmpty) {
       throw StateError('Could not fetch releases from GitHub');
     }
-    return buildUpdateInfo(releases, currentVersion, linuxKind: linuxKind);
+    return buildUpdateInfo(
+      releases,
+      currentVersion,
+      linuxKind: linuxKind,
+      windowsInstalled: windowsInstalled,
+    );
   }
 
   @visibleForTesting
@@ -194,6 +202,7 @@ class UpdateService {
     List<Map<String, dynamic>> releases,
     String currentVersion, {
     LinuxInstallKind? linuxKind,
+    bool windowsInstalled = false,
   }) {
     final latestRelease = releases.first;
     final latestTag = (latestRelease['tag_name'] ?? '').toString();
@@ -215,7 +224,7 @@ class UpdateService {
     final assets = latestRelease['assets'] as List?;
     final asset = linuxKind != null
         ? _findLinuxAsset(assets, linuxKind)
-        : _findAssetForCurrentPlatform(assets);
+        : _findAssetForCurrentPlatform(assets, windowsInstalled: windowsInstalled);
     if (asset == null) return null;
 
     final assetName = (asset['name'] ?? '').toString();
@@ -356,8 +365,13 @@ class UpdateService {
     return null;
   }
 
-  static Map<String, dynamic>? _findAssetForCurrentPlatform(List? assets) {
-    if (Platform.isWindows) return _findWindowsAsset(assets);
+  static Map<String, dynamic>? _findAssetForCurrentPlatform(
+    List? assets, {
+    bool windowsInstalled = false,
+  }) {
+    if (Platform.isWindows) {
+      return _findWindowsAsset(assets, installed: windowsInstalled);
+    }
     return _findApkAsset(assets, arm32: Abi.current() == Abi.androidArm);
   }
 
@@ -368,6 +382,7 @@ class UpdateService {
   }) {
     final asset = switch (platform) {
       'windows' => _findWindowsAsset(assets),
+      'windows-installed' => _findWindowsAsset(assets, installed: true),
       'linux' => _findLinuxAsset(assets, linuxKind),
       'android' => _findApkAsset(assets, arm32: false),
       'android-arm' => _findApkAsset(assets, arm32: true),
@@ -376,8 +391,18 @@ class UpdateService {
     return asset?['name']?.toString();
   }
 
-  static Map<String, dynamic>? _findWindowsAsset(List? assets) {
+  // без установщика в релизе установленная копия возьмёт zip: обновится, хоть версия в «Приложениях» и отстанет
+  static Map<String, dynamic>? _findWindowsAsset(
+    List? assets, {
+    bool installed = false,
+  }) {
     if (assets == null) return null;
+    if (installed) {
+      for (final asset in assets) {
+        final name = (asset['name'] ?? '').toString().toLowerCase();
+        if (name.endsWith(WindowsInstall.setupSuffix)) return asset;
+      }
+    }
     const preferred = ['.zip', '.msix', '.msi', '.exe'];
     for (final ext in preferred) {
       for (final asset in assets) {
@@ -574,6 +599,15 @@ class UpdateService {
     if (Platform.isWindows && ext == '.zip') {
       return WindowsZipUpdater.applyPortableZipUpdate(
         zipPath: file.path,
+        beforeRestart: beforeRestart,
+      );
+    }
+
+    if (Platform.isWindows &&
+        info.assetName.toLowerCase().endsWith(WindowsInstall.setupSuffix) &&
+        await WindowsInstall.isInstalledCopy()) {
+      return WindowsSetupUpdater.runSilentSetup(
+        setupPath: file.path,
         beforeRestart: beforeRestart,
       );
     }
