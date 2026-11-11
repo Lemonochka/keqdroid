@@ -241,29 +241,54 @@ void main() {
       expect(saved.map((r) => r.order), everyElement(isNotNull));
     });
 
-    testWidgets('пока строку тащат, вставшая наверх получает верхние углы группы',
+    testWidgets('пока строку тащат, края у разрыва скругляются, сомкнутые швы нет',
         (tester) async {
       await _pump(tester, routes: const [_direct, _site, _vpnOff]);
-      int segmentOf(String text) => tester
-          .widget<ExpressiveGroupSegment>(find.ancestor(
-            of: find.text(text),
-            matching: find.byType(ExpressiveGroupSegment),
-          ).first)
-          .index;
-      expect(segmentOf('example.ru'), 1);
+      const outer = Radius.circular(ExpressiveShape.extraLarge);
+      const inner = Radius.circular(ExpressiveShape.extraSmall);
+      // поднятая строка в оверлее тоже с этим текстом: берём ту, что в группе
+      BorderRadius cornersOf(String text) {
+        final segment = tester.widget<ExpressiveGroupSegment>(find.ancestor(
+          of: find.text(text).first,
+          matching: find.byType(ExpressiveGroupSegment),
+        ).first);
+        return segment.radius ??
+            ExpressiveGroup.segmentRadius(
+              index: segment.index,
+              count: segment.count,
+            );
+      }
+
+      expect(cornersOf('example.ru').topLeft, inner);
 
       final gesture = await tester
           .startGesture(tester.getCenter(find.text('ru, yandex.ru, vk.com')));
       await tester.pump(const Duration(milliseconds: 700));
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(segmentOf('example.ru'), 0);
-      expect(segmentOf('geosite:telegram'), 1);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(cornersOf('example.ru').topLeft, outer, reason: 'над ней разрыв');
+      expect(cornersOf('example.ru').bottomLeft, inner);
+      expect(cornersOf('geosite:telegram').topLeft, inner);
 
-      // отпустили на том же месте: перестановки нет, края прежние
+      // разрыв уехал вниз, между example.ru и telegram: скругляются уже эти края
+      final row = tester.getSize(find.byType(ReorderableDelayedDragStartListener).last).height;
+      await gesture.moveBy(Offset(0, row * 0.75));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(cornersOf('example.ru').topLeft, outer, reason: 'теперь первая в группе');
+      expect(cornersOf('example.ru').bottomLeft, outer);
+      expect(cornersOf('geosite:telegram').topLeft, outer);
+      expect(cornersOf('Всё остальное').topLeft, inner);
+
+      // вернули и отпустили на том же месте: перестановки нет, края прежние
+      await gesture.moveBy(Offset(0, -row * 0.75));
+      await tester.pump(const Duration(milliseconds: 300));
       await gesture.up();
       await tester.pumpAndSettle();
-      expect(segmentOf('ru, yandex.ru, vk.com'), 0);
-      expect(segmentOf('example.ru'), 1);
+      expect(cornersOf('ru, yandex.ru, vk.com').topLeft, outer);
+      expect(cornersOf('ru, yandex.ru, vk.com').bottomLeft, inner);
+      expect(cornersOf('example.ru').topLeft, inner);
+      expect(cornersOf('example.ru').bottomLeft, inner);
       expect(
         (await _storage.getRoutes()).map((r) => r.order),
         everyElement(isNull),

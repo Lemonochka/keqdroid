@@ -799,25 +799,232 @@ class _ReorderableRouteGroup extends StatefulWidget {
   State<_ReorderableRouteGroup> createState() => _ReorderableRouteGroupState();
 }
 
-class _ReorderableRouteGroupState extends State<_ReorderableRouteGroup> {
+class _ReorderableRouteGroupState extends State<_ReorderableRouteGroup>
+    with SingleTickerProviderStateMixin {
   static const _spacing = 2.0;
+  static const _inner = Radius.circular(ExpressiveShape.extraSmall);
+  static const _outer = Radius.circular(ExpressiveShape.extraLarge);
 
-  // поднятая строка выбывает из группы до конца переноса: иначе вставшая наверх оставалась с мелкими верхними углами
-  int? _dragging;
+  final _groupKey = GlobalKey();
+  final _proxyKey = GlobalKey();
+  final _rowKeys = <String, GlobalKey>{};
+  final _fixedKeys = <GlobalKey>[];
 
-  void _endDrag() {
-    if (_dragging != null) setState(() => _dragging = null);
+  // соседи разъезжаются своей анимацией внутри списка, без перестройки группы: зазоры меряются каждый кадр
+  Ticker? _ticker;
+
+  String? _draggedId;
+  int? _from;
+  int? _landing;
+  double _rowHeight = 1;
+  Animation<double>? _proxy;
+  Map<Object, Rect> _rects = const {};
+
+  @override
+  void didUpdateWidget(_ReorderableRouteGroup old) {
+    super.didUpdateWidget(old);
+    // строка легла и список уже в новом порядке: места после броска считать больше не от чего
+    if (_landing != null && !_sameOrder(old.routes, widget.routes)) {
+      _from = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ticker?.dispose();
+    super.dispose();
+  }
+
+  static bool _sameOrder(List<TrafficRoute> a, List<TrafficRoute> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+    }
+    return true;
+  }
+
+  GlobalKey _rowKey(String id) => _rowKeys.putIfAbsent(id, GlobalKey.new);
+
+  GlobalKey _fixedKey(int i) {
+    while (_fixedKeys.length <= i) {
+      _fixedKeys.add(GlobalKey());
+    }
+    return _fixedKeys[i];
+  }
+
+  int get _count => widget.routes.length + widget.fixed.length;
+
+  double get _lift => Curves.easeOutCubic.transform(_proxy?.value ?? 0);
+
+  void _measure() {
+    final group = _groupKey.currentContext?.findRenderObject();
+    if (group is! RenderBox || !group.attached) return;
+    Rect? rectOf(GlobalKey key) {
+      final box = key.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.attached || !box.hasSize) return null;
+      return MatrixUtils.transformRect(
+        box.getTransformTo(group),
+        Offset.zero & box.size,
+      );
+    }
+
+    _rects = {
+      for (final r in widget.routes) r.id: ?rectOf(_rowKey(r.id)),
+      for (var i = 0; i < widget.fixed.length; i++)
+        'fixed-$i': ?rectOf(_fixedKey(i)),
+    };
+  }
+
+  void _tick(Duration _) {
+    if (!mounted) return;
+    _measure();
+    // поднятая строка была и пропала: легла или перенос отменён
+    if (_proxy != null && _proxyKey.currentContext == null) {
+      _draggedId = null;
+      _from = null;
+      _landing = null;
+      _proxy = null;
+      _ticker?.stop();
+    }
+    setState(() {});
+  }
+
+  void _start(int index) {
+    _measure();
+    final id = widget.routes[index].id;
+    _rowHeight = _rects[id]?.height ?? 1;
+    _draggedId = id;
+    _from = index;
+    _landing = null;
+    final ticker = _ticker ??= createTicker(_tick);
+    if (!ticker.isActive) ticker.start();
+    setState(() {});
+  }
+
+  void _end(int insert) {
+    final from = _from;
+    if (from == null) return;
+    _landing = insert > from ? insert - 1 : insert;
+  }
+
+  // место строки после броска: пока она летит на место, углы уже те, что будут у неё и у соседей
+  int _restIndex(int i) {
+    final from = _from;
+    final landing = _landing;
+    if (from == null || landing == null || i >= widget.routes.length) return i;
+    if (i == from) return landing;
+    var j = i > from ? i - 1 : i;
+    if (j >= landing) j++;
+    return j;
+  }
+
+  // края у разрыва скругляются ровно настолько, насколько он раскрылся
+  BorderRadius _radiusOf(Object key, int index) {
+    final rest =
+        ExpressiveGroup.segmentRadius(index: _restIndex(index), count: _count);
+    final t = _lift;
+    final mine = _rects[key];
+    if (_draggedId == null || t == 0 || mine == null) return rest;
+    final order = _rects.values.toList()
+      ..sort((a, b) => a.top.compareTo(b.top));
+    final k = order.indexOf(mine);
+    double open(double gap) =>
+        ((gap - _spacing) / _rowHeight).clamp(0.0, 1.0);
+    final top = k <= 0 ? 1.0 : open(mine.top - order[k - 1].bottom);
+    final bottom =
+        k == order.length - 1 ? 1.0 : open(order[k + 1].top - mine.bottom);
+    Radius blend(Radius r, double target) =>
+        Radius.lerp(r, Radius.lerp(_inner, _outer, target), t)!;
+    return BorderRadius.only(
+      topLeft: blend(rest.topLeft, top),
+      topRight: blend(rest.topRight, top),
+      bottomLeft: blend(rest.bottomLeft, bottom),
+      bottomRight: blend(rest.bottomRight, bottom),
+    );
+  }
+
+  Widget _proxyDecorator(
+    int index,
+    Animation<double> animation,
+    ReorderProxyFix fix,
+  ) {
+    _proxy = animation;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return fix(
+      AnimatedBuilder(
+        animation: animation,
+        builder: (context, _) {
+          final v = animation.value;
+          final landing = _landing;
+          final shape = Curves.easeOutCubic.transform(v);
+          final radius = BorderRadius.lerp(
+            ExpressiveGroup.segmentRadius(
+              index: landing ?? index,
+              count: _count,
+            ),
+            const BorderRadius.all(_outer),
+            shape,
+          )!;
+          final scale = 1 +
+              0.035 *
+                  (landing != null
+                      ? Curves.easeInCubic.transform(v)
+                      : Curves.easeOutBack.transform(v));
+          // 0,3 подхватывает затемнение долгого нажатия, которое строка теряет в момент подъёма
+          final veil = landing != null ? 0.06 * shape : 0.3 - 0.24 * shape;
+          return Transform.scale(
+            scale: scale,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: _spacing),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3 * shape),
+                      blurRadius: 20 * shape,
+                      offset: Offset(0, 8 * shape),
+                    ),
+                  ],
+                ),
+                child: KeyedSubtree(
+                  key: _proxyKey,
+                  child: ExpressiveGroupSegment(
+                    index: 0,
+                    count: 1,
+                    radius: radius,
+                    child: Stack(
+                      children: [
+                        widget.tile(widget.routes[index]),
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: ClipRRect(
+                              borderRadius: radius,
+                              child: ColoredBox(
+                                color: onSurface.withValues(alpha: veil),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+      animation,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final routes = widget.routes;
     final fixed = widget.fixed;
-    final tile = widget.tile;
-    final dragging = _dragging;
-    final count = routes.length + fixed.length - (dragging == null ? 0 : 1);
-    int place(int i) => dragging != null && i > dragging ? i - 1 : i;
     return Column(
+      key: _groupKey,
       mainAxisSize: MainAxisSize.min,
       children: [
         ReorderZoomFix(
@@ -826,53 +1033,24 @@ class _ReorderableRouteGroupState extends State<_ReorderableRouteGroup> {
             slivers: [
               SliverReorderableList(
                 itemCount: routes.length,
-                onReorderStart: (i) => setState(() => _dragging = i),
-                // onReorderItem зовётся только при смене места, а без неё строка просто ложится обратно
-                onReorderEnd: (insert) {
-                  final from = _dragging;
-                  if (from == null || insert == from || insert == from + 1) {
-                    _endDrag();
-                  }
-                },
-                onReorderItem: (from, to) {
-                  _endDrag();
-                  widget.onMove(from, to);
-                },
-                // поднятая строка собирается заново: у неё скруглены все углы, а не как у места в группе
-                proxyDecorator: (child, index, animation) => fix(
-                  AnimatedBuilder(
-                    animation: animation,
-                    builder: (context, child) => Transform.scale(
-                      scale: 1 + 0.02 * Curves.easeOut.transform(animation.value),
-                      child: child,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: _spacing),
-                      child: Material(
-                        color: Colors.transparent,
-                        elevation: 8,
-                        shadowColor: Colors.black26,
-                        borderRadius:
-                            ExpressiveShape.radius(ExpressiveShape.extraLarge),
-                        child: ExpressiveGroupSegment(
-                          index: 0,
-                          count: 1,
-                          child: tile(routes[index]),
-                        ),
-                      ),
-                    ),
-                  ),
-                  animation,
-                ),
+                onReorderStart: _start,
+                onReorderEnd: _end,
+                onReorderItem: widget.onMove,
+                proxyDecorator: (child, index, animation) =>
+                    _proxyDecorator(index, animation, fix),
                 itemBuilder: (context, i) => ReorderableDelayedDragStartListener(
                   key: ValueKey('route-row-${routes[i].id}'),
                   index: i,
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: _spacing),
-                    child: ExpressiveGroupSegment(
-                      index: place(i),
-                      count: count,
-                      child: tile(routes[i]),
+                    child: KeyedSubtree(
+                      key: _rowKey(routes[i].id),
+                      child: ExpressiveGroupSegment(
+                        index: i,
+                        count: _count,
+                        radius: _radiusOf(routes[i].id, i),
+                        child: widget.tile(routes[i]),
+                      ),
                     ),
                   ),
                 ),
@@ -882,10 +1060,14 @@ class _ReorderableRouteGroupState extends State<_ReorderableRouteGroup> {
         ),
         for (var i = 0; i < fixed.length; i++) ...[
           if (i > 0) const SizedBox(height: _spacing),
-          ExpressiveGroupSegment(
-            index: place(routes.length + i),
-            count: count,
-            child: fixed[i],
+          KeyedSubtree(
+            key: _fixedKey(i),
+            child: ExpressiveGroupSegment(
+              index: routes.length + i,
+              count: _count,
+              radius: _radiusOf('fixed-$i', routes.length + i),
+              child: fixed[i],
+            ),
           ),
         ],
       ],

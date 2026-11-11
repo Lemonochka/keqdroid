@@ -73,6 +73,7 @@ class ExpressiveGroupSegment extends StatelessWidget {
     required this.child,
     this.outerCorner = ExpressiveShape.extraLarge,
     this.innerCorner = ExpressiveShape.extraSmall,
+    this.radius,
   });
 
   final int index;
@@ -81,9 +82,12 @@ class ExpressiveGroupSegment extends StatelessWidget {
   final double outerCorner;
   final double innerCorner;
 
+  // углы в движении, когда место в группе их уже не задаёт
+  final BorderRadius? radius;
+
   @override
   Widget build(BuildContext context) {
-    final radius = ExpressiveGroup.segmentRadius(
+    final radius = this.radius ?? ExpressiveGroup.segmentRadius(
       index: index,
       count: count,
       outerCorner: outerCorner,
