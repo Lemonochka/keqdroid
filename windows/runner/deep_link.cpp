@@ -99,6 +99,22 @@ void KeqdroidRegisterUrlProtocols() {
   }
 }
 
+void KeqdroidUnregisterUrlProtocols() {
+  const std::wstring exe_path = ExecutablePath();
+  if (exe_path.empty()) {
+    return;
+  }
+  const std::wstring command = L"\"" + exe_path + L"\" \"%1\"";
+  for (const wchar_t* scheme : kSchemes) {
+    const std::wstring base = std::wstring(L"Software\\Classes\\") + scheme;
+    const std::wstring current =
+        ReadDefaultValue(base + L"\\shell\\open\\command");
+    if (_wcsicmp(current.c_str(), command.c_str()) == 0) {
+      ::RegDeleteTreeW(HKEY_CURRENT_USER, base.c_str());
+    }
+  }
+}
+
 std::string KeqdroidDeepLinkFromCommandLine() {
   int argc = 0;
   wchar_t** argv = ::CommandLineToArgvW(::GetCommandLineW(), &argc);

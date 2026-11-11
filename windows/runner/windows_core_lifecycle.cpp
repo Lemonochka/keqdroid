@@ -186,6 +186,10 @@ void KeqdroidInitCoreProcessGuard() {
   KillOrphanCoresFromPidFile();
 }
 
+void KeqdroidKillOrphanCores() {
+  KillOrphanCoresFromPidFile();
+}
+
 void KeqdroidAttachCoreProcess(DWORD pid) {
   AttachProcessToCoreJob(pid);
 }

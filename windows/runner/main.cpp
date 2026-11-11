@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "window_placement.h"
 #include "windows_autostart.h"
+#include "windows_core_lifecycle.h"
 #include "windows_tray.h"
 
 namespace {
@@ -18,6 +19,9 @@ constexpr wchar_t kWindowTitle[] = L"keqdroid";
 constexpr wchar_t kSingleInstanceMutex[] = L"Local\\KeqDroid.SingleInstance";
 constexpr wchar_t kAdminRestartFlag[] = L"--admin-restart";
 constexpr wchar_t kAutostartFlag[] = L"--autostart";
+// зовёт установщик (windows/installer/keqdroid.iss), окно не создаётся
+constexpr wchar_t kUninstallCleanupFlag[] = L"--uninstall-cleanup";
+constexpr wchar_t kAdoptAutostartFlag[] = L"--adopt-autostart";
 constexpr UINT kAutostartConnectMsg = WM_APP + 100;
 
 HANDLE g_instance_mutex = nullptr;
@@ -104,6 +108,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Initialize COM, so that it is available for use in the library and/or
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+
+  if (HasCommandLineFlag(kUninstallCleanupFlag)) {
+    KeqdroidKillOrphanCores();
+    KeqdroidClearStaleSystemProxy();
+    KeqdroidRemoveAutostartOfThisExe();
+    KeqdroidUnregisterUrlProtocols();
+    ::CoUninitialize();
+    return EXIT_SUCCESS;
+  }
+  if (HasCommandLineFlag(kAdoptAutostartFlag)) {
+    KeqdroidAdoptElevatedAutostart();
+    ::CoUninitialize();
+    return EXIT_SUCCESS;
+  }
 
   flutter::DartProject project(L"data");
 

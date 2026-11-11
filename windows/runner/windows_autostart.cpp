@@ -325,7 +325,31 @@ bool TaskMatchesThisExe(const std::wstring& task_exe) {
   return !exe.empty() && _wcsicmp(task_exe.c_str(), exe.c_str()) == 0;
 }
 
+bool RunValueMatchesThisExe() {
+  const std::wstring exe = CurrentExePath();
+  if (exe.empty()) return false;
+  wchar_t value[1024] = {};
+  DWORD size = sizeof(value) - sizeof(wchar_t);
+  if (::RegGetValueW(HKEY_CURRENT_USER, kRunKey, kRunValue, RRF_RT_REG_SZ,
+                     nullptr, value, &size) != ERROR_SUCCESS) {
+    return false;
+  }
+  const std::wstring quoted = L"\"" + exe + L"\"";
+  return _wcsnicmp(value, quoted.c_str(), quoted.size()) == 0;
+}
+
 }  // namespace
+
+void KeqdroidRemoveAutostartOfThisExe() {
+  if (TaskMatchesThisExe(ReadElevatedTask().exe)) DeleteElevatedTask();
+  if (RunValueMatchesThisExe()) SetRunValue(false);
+}
+
+void KeqdroidAdoptElevatedAutostart() {
+  const ElevatedTask task = ReadElevatedTask();
+  if (task.exe.empty() || TaskMatchesThisExe(task.exe)) return;
+  if (CreateElevatedTask()) SetRunValue(false);
+}
 
 bool KeqdroidIsAutostartElevated() {
   return TaskMatchesThisExe(ReadElevatedTask().exe);

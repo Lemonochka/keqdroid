@@ -16,4 +16,10 @@ bool KeqdroidIsAutostartEnabled();
 void KeqdroidSetAutostartInTray(bool enabled);
 bool KeqdroidAutostartInTray();
 
+// автозапуск портабельной копии мог остаться на другом пути, его не трогаем
+void KeqdroidRemoveAutostartOfThisExe();
+
+// задача от портабельной смотрит на её exe, а приложение без UAC её не перепишет
+void KeqdroidAdoptElevatedAutostart();
+
 #endif  // RUNNER_WINDOWS_AUTOSTART_H_

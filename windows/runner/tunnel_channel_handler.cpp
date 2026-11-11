@@ -988,6 +988,10 @@ void KeqdroidNotifyWindowVisibility(bool visible) {
   PostToPlatformThread([visible]() { DispatchWindowVisibilityToDart(visible); });
 }
 
+void KeqdroidClearStaleSystemProxy() {
+  CleanupStaleSystemProxy();
+}
+
 // без WM_SETTINGCHANGE: сеанс кончается, а две рассылки по закрывающимся окнам съели бы до десяти секунд на выход.
 // без этого после перезагрузки системный трафик шёл в мёртвый порт до открытия приложения
 void KeqdroidClearSystemProxyOnSessionEnd() {

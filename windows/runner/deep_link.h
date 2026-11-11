@@ -8,6 +8,9 @@
 // без регистрации кнопка добавить в клиент на странице панели ничего не открывает. HKCU, без админа
 void KeqdroidRegisterUrlProtocols();
 
+// только схемы, ведущие в этот exe: портабельная копия могла перехватить их на себя
+void KeqdroidUnregisterUrlProtocols();
+
 std::string KeqdroidDeepLinkFromCommandLine();
 
 bool KeqdroidForwardDeepLinkToRunningInstance(HWND target,
