@@ -1,10 +1,16 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/custom_clash_config.dart';
 import 'package:keqdroid/utils/custom_xray_config.dart';
 import 'package:keqdroid/utils/geo_asset_index.dart';
 import 'package:keqdroid/utils/geo_rule_sanitizer.dart';
+import 'package:keqdroid/utils/mihomo_config_gen.dart';
+import 'package:keqdroid/utils/provider_routing.dart';
+import 'package:keqdroid/utils/rule_lists.dart';
+import 'package:keqdroid/utils/traffic_routes.dart';
 
 // ru-direct из huzgnm/ru-direct собран из category-ru и российских зон, обе части у нас есть
 const _index = GeoAssetIndex(
@@ -57,6 +63,44 @@ void main() {
           'outboundTag': 'direct',
         },
       ]);
+    });
+  });
+
+  // Ranteis 12.11.2026: профиль Happ с geosite:ru-direct и своей Geositeurl. замена терялась,
+  // когда ничего не выброшено, и mihomo с xray отказывали конфигу целиком
+  group('профиль маршрутизации провайдера с ru-direct', () {
+    final link = 'happ://routing/add/${base64.encode(utf8.encode(jsonEncode({
+          'Name': 'ru-direct',
+          'GlobalProxy': 'true',
+          'Geositeurl': 'https://provider.example/geosite.dat',
+          'DirectSites': ['geosite:private', 'geosite:ru-direct', 'domain:reddit.com'],
+          'DirectIp': ['geoip:private', 'geoip:ru'],
+          'ProxySites': ['domain:ipinfo.io'],
+        })))}';
+    const server = 'trojan://secret@a.example.com:443?sni=a.example.com#A';
+
+    AppSettings sanitized() {
+      final routing = parseProviderRouting(link) as ProviderRoutingRules;
+      final result =
+          stripUnknownGeoTokens(foldRoutes(const AppSettings(), routing.routes), _index);
+      expect(result.dropped, isEmpty);
+      return result.settings;
+    }
+
+    test('в правилах напрямую стоит замена, а не ru-direct', () {
+      final direct = routingEntries(sanitized().directRules);
+      expect(direct, containsAll(['geosite:category-ru', 'geosite:tld-ru', 'domain:reddit.com']));
+      expect(direct, isNot(contains('geosite:ru-direct')));
+    });
+
+    test('до mihomo и xray код не доходит', () {
+      final settings = sanitized();
+      final mihomo = MihomoConfigGen.generate(server, settings, socksPort: 10808);
+      expect(mihomo, isNot(contains('ru-direct')));
+      expect(mihomo, contains('GEOSITE,category-ru,DIRECT'));
+      final xray = ConfigGeneratorV2.generateConfig(server, settings);
+      expect(xray, isNot(contains('ru-direct')));
+      expect(xray, contains('geosite:category-ru'));
     });
   });
 

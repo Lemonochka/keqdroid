@@ -13,8 +13,11 @@ GeoSanitizeResult stripUnknownGeoTokens(
   final proxy = stripUnknownGeoTokensText(settings.proxyRules, index);
   final blocked = stripUnknownGeoTokensText(settings.blockedRules, index);
   final dropped = [...direct.dropped, ...proxy.dropped, ...blocked.dropped];
+  final unchanged = direct.text == settings.directRules &&
+      proxy.text == settings.proxyRules &&
+      blocked.text == settings.blockedRules;
 
-  if (dropped.isEmpty) return (settings: settings, dropped: const []);
+  if (unchanged) return (settings: settings, dropped: const []);
 
   return (
     settings: settings.copyWith(
