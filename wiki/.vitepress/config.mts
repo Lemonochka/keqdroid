@@ -74,10 +74,10 @@ const enSidebar: DefaultTheme.SidebarItem[] = [
 
 export default defineConfig({
   title: 'keqdroid',
-  base: '/keqdroid/',
+  base: '/docs/keqdroid/',
   cleanUrls: true,
   lastUpdated: true,
-  head: [['link', { rel: 'icon', type: 'image/svg+xml', href: '/keqdroid/logo.svg' }]],
+  head: [['link', { rel: 'icon', type: 'image/svg+xml', href: '/docs/keqdroid/logo.svg' }]],
   markdown: { math: true },
 
   themeConfig: {
