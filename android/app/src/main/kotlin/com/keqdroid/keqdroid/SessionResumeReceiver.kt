@@ -11,13 +11,7 @@ import android.os.Build
 class SessionResumeReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val note = when (intent.action) {
-            Intent.ACTION_MY_PACKAGE_REPLACED ->
-                "the app was updated while the VPN was on, reconnecting"
-            Intent.ACTION_BOOT_COMPLETED ->
-                "the phone restarted while the VPN was on, reconnecting"
-            else -> return
-        }
+        val note = resumeNote(intent.action) ?: return
         val prefs = context.getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
         if (!prefs.getBoolean(KeqdisVpnService.KEY_QS_SESSION_WANTED, false)) return
 
@@ -44,4 +38,10 @@ class SessionResumeReceiver : BroadcastReceiver() {
     private companion object {
         const val TAG = "KEQDIS_RESUME"
     }
+}
+
+internal fun resumeNote(action: String?): String? = when (action) {
+    Intent.ACTION_MY_PACKAGE_REPLACED -> "the app was updated while the VPN was on, reconnecting"
+    Intent.ACTION_BOOT_COMPLETED -> "the phone restarted while the VPN was on, reconnecting"
+    else -> null
 }

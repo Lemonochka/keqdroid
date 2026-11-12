@@ -31,14 +31,12 @@ object XrayGeoAssets {
             val fingerprint = fingerprint(context, assetKey)
             current[name] = fingerprint
 
-            if (out.exists() && out.length() > 0L && previous[name] == fingerprint) {
+            if (geoUpToDate(out.lengthIfExists(), previous[name], fingerprint)) {
                 continue
             }
 
-            // базу богаче вшитой не затираем: полная (скачанная или от старой версии) иначе откатилась бы на урезанную.
-            // файл больше ассета значит кодов в нём больше
             val assetSize = assetSize(context, assetKey)
-            if (out.exists() && assetSize > 0L && out.length() > assetSize) {
+            if (keepsRicherBase(out.lengthIfExists(), assetSize)) {
                 NativeLog.i(
                     "KEQDIS",
                     "Keeping richer geo base $name (${out.length()} bytes on disk " +
@@ -69,12 +67,22 @@ object XrayGeoAssets {
         writeStamp(stampFile, current)
     }
 
+    private fun File.lengthIfExists(): Long? = if (exists()) length() else null
+
+    internal fun geoUpToDate(outLength: Long?, previous: String?, fingerprint: String): Boolean =
+        outLength != null && outLength > 0L && previous == fingerprint
+
+    // базу богаче вшитой не затираем: полная (скачанная или от старой версии) иначе откатилась бы на урезанную.
+    // файл больше ассета значит кодов в нём больше
+    internal fun keepsRicherBase(outLength: Long?, assetSize: Long): Boolean =
+        outLength != null && assetSize > 0L && outLength > assetSize
+
+    private fun fingerprint(context: Context, assetKey: String): String =
+        fingerprintOf(assetSize(context, assetKey)) { appVersionCode(context) }
+
     // размер распакованного ассета, иначе versionCode: пересобранная база всегда едет с новой версией
-    private fun fingerprint(context: Context, assetKey: String): String {
-        val size = assetSize(context, assetKey)
-        if (size > 0L) return "size:$size"
-        return "app:${appVersionCode(context)}"
-    }
+    internal fun fingerprintOf(assetSize: Long, versionCode: () -> Long): String =
+        if (assetSize > 0L) "size:$assetSize" else "app:${versionCode()}"
 
     // available() у нетронутого потока это весь файл
     private fun assetSize(context: Context, assetKey: String): Long =
@@ -83,20 +91,20 @@ object XrayGeoAssets {
         }.getOrDefault(-1L)
 
     private fun readStamp(stampFile: File): Map<String, String> =
-        runCatching {
-            stampFile.readLines()
-                .mapNotNull { line ->
-                    val idx = line.indexOf('=')
-                    if (idx <= 0) null else line.substring(0, idx) to line.substring(idx + 1)
-                }
-                .toMap()
-        }.getOrDefault(emptyMap())
+        runCatching { parseStamp(stampFile.readLines()) }.getOrDefault(emptyMap())
 
     private fun writeStamp(stampFile: File, entries: Map<String, String>) {
-        runCatching {
-            stampFile.writeText(entries.entries.joinToString("\n") { "${it.key}=${it.value}" })
-        }
+        runCatching { stampFile.writeText(formatStamp(entries)) }
     }
+
+    internal fun parseStamp(lines: List<String>): Map<String, String> =
+        lines.mapNotNull { line ->
+            val idx = line.indexOf('=')
+            if (idx <= 0) null else line.substring(0, idx) to line.substring(idx + 1)
+        }.toMap()
+
+    internal fun formatStamp(entries: Map<String, String>): String =
+        entries.entries.joinToString("\n") { "${it.key}=${it.value}" }
 
     private fun appVersionCode(context: Context): Long =
         runCatching {

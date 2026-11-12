@@ -51,12 +51,6 @@ class MainActivity : FlutterFragmentActivity() {
         // те же строки в res/xml/shortcuts.xml и в servers_tab на стороне Dart
         const val LAUNCH_ACTION_CONNECT    = "connect_from_notification"
         const val LAUNCH_ACTION_DISCONNECT = "disconnect_from_shortcut"
-        private val LAUNCH_ACTIONS = setOf(
-            LAUNCH_ACTION_CONNECT,
-            LAUNCH_ACTION_DISCONNECT,
-        )
-        // окно открыто наружу, extra может прислать любое приложение; закрытый алиас запускают только мы и лаунчер
-        private const val LAUNCH_ALIAS = "com.keqdroid.keqdroid.LaunchAction"
 
         fun launchActionIntent(context: Context, action: String): Intent =
             Intent(Intent.ACTION_MAIN)
@@ -71,12 +65,6 @@ class MainActivity : FlutterFragmentActivity() {
         private const val KEY_LAUNCH_LINK = "launch_link"
         private const val DEFAULT_SPEED_TEST_URL =
             "https://speed.cloudflare.com/__down?bytes=2000000"
-
-        fun randomToken(length: Int): String {
-            val chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-            val rng   = java.security.SecureRandom()
-            return buildString(length) { repeat(length) { append(chars[rng.nextInt(chars.length)]) } }
-        }
     }
 
     private val mainScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -305,16 +293,6 @@ class MainActivity : FlutterFragmentActivity() {
             .ifBlank { json.optString("android.theme.customization.accent_color") }
         parseThemeHex(hex)
     }.getOrNull()
-
-    private fun parseThemeHex(raw: String?): Int? {
-        val hex = raw?.trim()?.removePrefix("#") ?: return null
-        val value = when (hex.length) {
-            6 -> hex.toLongOrNull(16)?.or(0xFF000000L)
-            8 -> hex.toLongOrNull(16)
-            else -> null
-        } ?: return null
-        return value.toInt()
-    }
 
     // выбирает Dart (system_accent.dart)
     private fun collectAccentCandidates(): Map<String, Any?> = mapOf(
@@ -948,9 +926,7 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun trustedLaunchAction(): String? =
-        intent?.takeIf { it.component?.className == LAUNCH_ALIAS }
-            ?.getStringExtra(EXTRA_LAUNCH_ACTION)
-            ?.takeIf { it in LAUNCH_ACTIONS }
+        launchActionFrom(intent?.component?.className) { intent?.getStringExtra(EXTRA_LAUNCH_ACTION) }
 
     private fun notifyLaunchActionIfNeeded() {
         val action = trustedLaunchAction() ?: return
@@ -1355,10 +1331,10 @@ class MainActivity : FlutterFragmentActivity() {
                     if (!file.isFile) return@runCatching null
 
                     val json = org.json.JSONObject(file.readText(Charsets.UTF_8))
-                    val controller = json.optString("external-controller")
-                    val secret = json.optString("secret")
-                    val port = controller.substringAfterLast(':', "").toIntOrNull() ?: 0
-                    if (port <= 0 || secret.isEmpty()) return@runCatching null
+                    val (port, secret) = mihomoApiOf(
+                        json.optString("external-controller"),
+                        json.optString("secret"),
+                    ) ?: return@runCatching null
 
                     mapOf("port" to port, "secret" to secret)
                 }.getOrNull()
@@ -1407,4 +1383,31 @@ class MainActivity : FlutterFragmentActivity() {
         mainScope.cancel()
         super.onDestroy()
     }
+}
+
+// окно открыто наружу, extra может прислать любое приложение; закрытый алиас запускают только мы и лаунчер
+private const val LAUNCH_ALIAS = "com.keqdroid.keqdroid.LaunchAction"
+private val LAUNCH_ACTIONS = setOf(
+    MainActivity.LAUNCH_ACTION_CONNECT,
+    MainActivity.LAUNCH_ACTION_DISCONNECT,
+)
+
+// extra читаем только у своего алиаса: чужой Bundle может не распаковаться, и getStringExtra упадёт
+internal fun launchActionFrom(className: String?, action: () -> String?): String? =
+    if (className == LAUNCH_ALIAS) action()?.takeIf { it in LAUNCH_ACTIONS } else null
+
+internal fun randomToken(length: Int): String {
+    val chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    val rng   = java.security.SecureRandom()
+    return buildString(length) { repeat(length) { append(chars[rng.nextInt(chars.length)]) } }
+}
+
+internal fun parseThemeHex(raw: String?): Int? {
+    val hex = raw?.trim()?.removePrefix("#") ?: return null
+    val value = when (hex.length) {
+        6 -> hex.toLongOrNull(16)?.or(0xFF000000L)
+        8 -> hex.toLongOrNull(16)
+        else -> null
+    } ?: return null
+    return value.toInt()
 }

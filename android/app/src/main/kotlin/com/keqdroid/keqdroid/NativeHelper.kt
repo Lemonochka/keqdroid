@@ -3,16 +3,23 @@ package com.keqdroid.keqdroid
 import java.io.File
 import java.util.Collections
 
+// по этим же именам ищутся сироты
+private val CORE_BINARIES = setOf(
+    "libxray.so",
+    "libmihomo.so",
+)
+
+// cmdline разделён нулями
+internal fun orphanCoreName(cmdline: ByteArray): String? =
+    cmdline.toString(Charsets.UTF_8)
+        .substringBefore(Char.MIN_VALUE)
+        .substringAfterLast('/')
+        .takeIf { it in CORE_BINARIES }
+
 object NativeHelper {
     init { System.loadLibrary("keqdroid_native") }
 
     private const val TAG = "KEQDIS"
-
-    // по этим же именам ищутся сироты
-    private val coreBinaries = setOf(
-        "libxray.so",
-        "libmihomo.so",
-    )
 
     // только свои: список живёт в памяти процесса и умирает с ним, всё прочее в /proc запущено прошлой жизнью
     private val livePids = Collections.synchronizedSet(mutableSetOf<Int>())
@@ -79,14 +86,8 @@ object NativeHelper {
         for (dir in dirs) {
             val pid = dir.name.toIntOrNull() ?: continue
             if (pid == mine || livePids.contains(pid)) continue
-            // чужой /proc на Android закрыт (hidepid), видим только свой uid. cmdline разделён нулями
-            val argv0 = runCatching {
-                File(dir, "cmdline").readBytes()
-                    .toString(Charsets.UTF_8)
-                    .substringBefore(Char.MIN_VALUE)
-            }.getOrNull() ?: continue
-            val binary = argv0.substringAfterLast('/')
-            if (binary !in coreBinaries) continue
+            // чужой /proc на Android закрыт (hidepid), видим только свой uid
+            val binary = runCatching { orphanCoreName(File(dir, "cmdline").readBytes()) }.getOrNull() ?: continue
             NativeLog.w(TAG, "killOrphans: killing stale $binary pid=$pid")
             runCatching { android.os.Process.killProcess(pid) }
             killed++

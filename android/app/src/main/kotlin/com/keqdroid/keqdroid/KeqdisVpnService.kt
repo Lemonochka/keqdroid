@@ -127,54 +127,35 @@ class KeqdisVpnService : VpnService() {
 
         const val KEY_QS_DIRECT_START_BLOCKED_ON = "qs_direct_start_blocked_on"
 
-        // null, если файл конфига пропал (путь в prefs переживает очистку данных) или запись от старого AWG-ядра
         fun snapshotStartIntent(context: Context): Intent? {
-            val prefs = context.getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE)
-            val backend = prefs.getString(KEY_QS_LAST_BACKEND, VPN_BACKEND_XRAY) ?: VPN_BACKEND_XRAY
-            if (backend != VPN_BACKEND_XRAY && backend != VPN_BACKEND_MIHOMO) return null
-            val config = prefs.getString(KEY_QS_LAST_XRAY_CONFIG, null)
-            val user = prefs.getString(KEY_QS_LAST_SOCKS_USERNAME, null)
-            val pass = prefs.getString(KEY_QS_LAST_SOCKS_PASSWORD, null)
-            if (config.isNullOrBlank() || user.isNullOrBlank() || pass.isNullOrBlank() ||
-                !File(config).exists()
-            ) return null
-            val exclude = prefs.getStringSet(KEY_QS_LAST_EXCLUDE_PACKAGES, emptySet()) ?: emptySet()
-            val include = prefs.getStringSet(KEY_QS_LAST_INCLUDE_PACKAGES, emptySet()) ?: emptySet()
-            val serverName = prefs.getString(KEY_QS_LAST_SERVER_NAME, null)
+            val snapshot = SessionSnapshot.read(
+                context.getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE),
+            ) { File(it).exists() } ?: return null
 
             return Intent(context, KeqdisVpnService::class.java).apply {
                 action = ACTION_START
-                putExtra(EXTRA_VPN_BACKEND, backend)
+                putExtra(EXTRA_VPN_BACKEND, snapshot.backend)
                 // chain явно: иначе всплыл бы keqrnel, сохранённый старыми версиями
                 putExtra(EXTRA_CORE_ENGINE, CORE_ENGINE_CHAIN)
                 // режим тоже явно: иначе из только прокси поднимался бы VPN, на который может не быть разрешения
-                putExtra(
-                    EXTRA_TUNNEL_MODE,
-                    prefs.getString(KEY_QS_LAST_TUNNEL_MODE, TUNNEL_MODE_VPN) ?: TUNNEL_MODE_VPN,
-                )
-                putExtra(EXTRA_XRAY_CONFIG, config)
-                putExtra("socks_port", prefs.getInt(KEY_QS_LAST_SOCKS_PORT, 2080))
-                putStringArrayListExtra("exclude_packages", ArrayList(exclude))
-                putStringArrayListExtra("include_packages", ArrayList(include))
-                putExtra(EXTRA_SOCKS_USERNAME, user)
-                putExtra(EXTRA_SOCKS_PASSWORD, pass)
-                if (!serverName.isNullOrBlank()) putExtra(EXTRA_SERVER_NAME, serverName)
+                putExtra(EXTRA_TUNNEL_MODE, snapshot.tunnelMode)
+                putExtra(EXTRA_XRAY_CONFIG, snapshot.config)
+                putExtra("socks_port", snapshot.socksPort)
+                putStringArrayListExtra("exclude_packages", ArrayList(snapshot.exclude))
+                putStringArrayListExtra("include_packages", ArrayList(snapshot.include))
+                putExtra(EXTRA_SOCKS_USERNAME, snapshot.username)
+                putExtra(EXTRA_SOCKS_PASSWORD, snapshot.password)
+                snapshot.serverName?.let { putExtra(EXTRA_SERVER_NAME, it) }
             }
         }
 
         fun startsTunnel(intent: Intent): Boolean =
-            intent.getStringExtra(EXTRA_TUNNEL_MODE) != TUNNEL_MODE_PROXY
+            sessionTunnelMode(intent.getStringExtra(EXTRA_TUNNEL_MODE)) == TUNNEL_MODE_VPN
 
         // подъём Wi-Fi это три события подряд, и каждое может увести default network. до устойчивого состояния около 2 с
         private const val HANDOVER_DEBOUNCE_MS = 2_000L
 
-        // ядро, прожившее дольше 30 с, поднимаем всегда. трижды подряд умершее сразу сломано само,
-        // круг перезапусков прятал бы это за подключено
-        private const val CORE_QUICK_DEATH_MS = 30_000L
-        private const val CORE_MAX_QUICK_DEATHS = 3
-
         private const val MEMORY_SNAPSHOT_TICKS = 600
-        private const val MEMORY_GROWTH_ALARM = 256L * 1024 * 1024
     }
 
     // креды приходят от MainActivity, так они совпадают с записанными в конфиг ядра
@@ -254,7 +235,7 @@ class KeqdisVpnService : VpnService() {
         val stale = getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE)
             .getString(KEY_QS_STATUS, "disconnected")
             ?.lowercase()
-        if (stale != "disconnected" && stale != "error") {
+        if (statusNeedsHealing(stale)) {
             NativeLog.w("KEQDIS", "onCreate: healing stale persisted status '$stale' → disconnected")
             setStatus(VpnRunStatus.STOPPED)
         }
@@ -308,14 +289,8 @@ class KeqdisVpnService : VpnService() {
         }
 
         val start = snapshotStartIntent(this)
-        val refusal = when {
-            start == null -> "there is no server to reconnect to, connect from the app once"
-            // Постоянный VPN ждёт интерфейс, и система висела бы в подключается
-            alwaysOn && !startsTunnel(start) ->
-                "the last session was a local proxy, and always-on VPN needs a tunnel"
-            startsTunnel(start) && VpnService.prepare(this) != null ->
-                "the VPN permission was taken away"
-            else -> null
+        val refusal = restoreRefusal(start?.let { startsTunnel(it) }, alwaysOn) {
+            VpnService.prepare(this) != null
         }
         if (start == null || refusal != null) {
             NativeLog.w("KEQDIS", "restore (alwaysOn=$alwaysOn): $refusal")
@@ -366,12 +341,7 @@ class KeqdisVpnService : VpnService() {
             if (backend == VPN_BACKEND_MIHOMO) CORE_KIND_MIHOMO else CORE_KIND_XRAY
         lastCoreKind = coreKind
 
-        val tunnelMode =
-            if (intent.getStringExtra(EXTRA_TUNNEL_MODE) == TUNNEL_MODE_PROXY) {
-                TUNNEL_MODE_PROXY
-            } else {
-                TUNNEL_MODE_VPN
-            }
+        val tunnelMode = sessionTunnelMode(intent.getStringExtra(EXTRA_TUNNEL_MODE))
         lastTunnelMode = tunnelMode
 
         NativeLog.i(
@@ -381,19 +351,19 @@ class KeqdisVpnService : VpnService() {
         lastXrayConfigPath = configPath
 
         runCatching {
-            getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE)
-                .edit()
-                .putString(KEY_QS_LAST_BACKEND, backend)
+            SessionSnapshot(
+                backend = backend,
+                tunnelMode = tunnelMode,
+                config = configPath,
+                socksPort = socksPort,
+                exclude = excludePkgs.toSet(),
+                include = includePkgs.toSet(),
+                username = socksUsername,
+                password = socksPassword,
+                serverName = currentServerName,
+            ).writeTo(getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE).edit())
                 .putString(KEY_QS_LAST_CORE_ENGINE, coreEngine)
                 .putString(KEY_QS_LAST_CORE_KIND, coreKind)
-                .putString(KEY_QS_LAST_TUNNEL_MODE, tunnelMode)
-                .putString(KEY_QS_LAST_XRAY_CONFIG, configPath)
-                .putInt(KEY_QS_LAST_SOCKS_PORT, socksPort)
-                .putString(KEY_QS_LAST_SOCKS_USERNAME, socksUsername)
-                .putString(KEY_QS_LAST_SOCKS_PASSWORD, socksPassword)
-                .putString(KEY_QS_LAST_SERVER_NAME, currentServerName)
-                .putStringSet(KEY_QS_LAST_EXCLUDE_PACKAGES, excludePkgs.toSet())
-                .putStringSet(KEY_QS_LAST_INCLUDE_PACKAGES, includePkgs.toSet())
                 .apply()
         }
 
@@ -793,9 +763,7 @@ class KeqdisVpnService : VpnService() {
         val file = File(path)
         if (!file.isFile) return@runCatching null
         val json = org.json.JSONObject(file.readText(Charsets.UTF_8))
-        val port = json.optString("external-controller").substringAfterLast(':', "").toIntOrNull() ?: 0
-        val secret = json.optString("secret")
-        if (port <= 0 || secret.isEmpty()) null else port to secret
+        mihomoApiOf(json.optString("external-controller"), json.optString("secret"))
     }.getOrNull()
 
     private suspend fun restartCoreAfterHandover() = opMutex.withLock {
@@ -925,7 +893,7 @@ class KeqdisVpnService : VpnService() {
 
     // Huawei/Honor: без setUnderlyingNetworks establish() со сплитом не работает
     private fun applyHuaweiUnderlying(b: Builder) {
-        if (!needsExplicitUnderlying()) return
+        if (!needsExplicitUnderlying(Build.MANUFACTURER)) return
         val manufacturer = Build.MANUFACTURER.uppercase()
         try {
             val cm = getSystemService(android.net.ConnectivityManager::class.java)
@@ -940,15 +908,10 @@ class KeqdisVpnService : VpnService() {
         }
     }
 
-    private fun needsExplicitUnderlying(): Boolean {
-        val manufacturer = Build.MANUFACTURER.uppercase()
-        return manufacturer == "HUAWEI" || manufacturer == "HONOR"
-    }
-
     // везде, кроме Huawei/Honor и HyperOS, подложку не трогаем: наш вызов её только ломает, так туннель и стал подложкой себе.
     // где задали руками, обновляем руками, иначе первая сеть сессии залипает
     private fun applyHuaweiUnderlying(network: Network) {
-        if (!needsExplicitUnderlying()) return
+        if (!needsExplicitUnderlying(Build.MANUFACTURER)) return
         if (tunInterface == null) return   // режим прокси: establish() не звался
         runCatching { setUnderlyingNetworks(arrayOf(network)) }
             .onFailure { NativeLog.w("KEQDIS", "handover: setUnderlyingNetworks failed: ${it.message}") }
@@ -964,16 +927,13 @@ class KeqdisVpnService : VpnService() {
             p.waitFor()
             out.lines().map { it.trim() }
         }.getOrDefault(emptyList())
-        val name = props.getOrNull(0).orEmpty()
-        val code = props.getOrNull(1).orEmpty()
-        val build = Build.VERSION.INCREMENTAL.orEmpty()
-        val xiaomi = listOf(Build.MANUFACTURER, Build.BRAND).any { it.orEmpty().lowercase() in setOf("xiaomi", "redmi", "poco") }
-        when {
-            name.isNotEmpty() -> "$name (name)"
-            code.isNotEmpty() -> "code $code"
-            xiaomi && Regex("^OS\\d").containsMatchIn(build) -> "$build (build)"
-            else -> null
-        }
+        hyperOsVersionOf(
+            name = props.getOrNull(0).orEmpty(),
+            code = props.getOrNull(1).orEmpty(),
+            build = Build.VERSION.INCREMENTAL.orEmpty(),
+            manufacturer = Build.MANUFACTURER,
+            brand = Build.BRAND,
+        )
     }
     @Volatile private var hyperOsUnderlyingCallback: ConnectivityManager.NetworkCallback? = null
     @Volatile private var hyperOsUnderlyingNet: Network? = null
@@ -1054,20 +1014,8 @@ class KeqdisVpnService : VpnService() {
         runCatching {
             val file = File(filesDir, CORE_LOG_FILE)
             if (!file.exists() || file.length() == 0L) return@runCatching ""
-            val tail = file.readLines()
-                .filter { it.isNotBlank() }
-                .takeLast(maxLines)
-                .joinToString("\n")
-                .takeLast(maxChars)
-            if (tail.isBlank()) "" else "\n$tail"
+            logTail(file.readLines(), maxLines, maxChars)
         }.getOrDefault("")
-
-    // файл обнуляется по размеру: если он стал короче метки, новое в нём всё
-    private fun coreLogSince(file: File, from: Long): String {
-        val bytes = file.readBytes()
-        val start = if (from in 0..bytes.size.toLong()) from.toInt() else 0
-        return String(bytes, start, bytes.size - start, Charsets.UTF_8)
-    }
 
     // смотрим лог на оба исхода: ошибка ценна, причина в ней уже названа.
     // вышедшее время не отказ: значит, ядро пишет лог мимо нас
@@ -1075,13 +1023,10 @@ class KeqdisVpnService : VpnService() {
         val file = File(filesDir, CORE_LOG_FILE)
         var waited = 0
         while (waited < timeoutMs) {
-            val log = runCatching { coreLogSince(file, from) }.getOrDefault("")
-            val failure = log.lineSequence().lastOrNull { it.contains(MIHOMO_TUN_FAILED) }
+            val log = runCatching { textSince(file.readBytes(), from) }.getOrDefault("")
+            val failure = mihomoTunFailure(log)
             if (failure != null) {
-                throw IllegalStateException(
-                    "mihomo did not take over the tunnel: " +
-                        failure.substringAfter(MIHOMO_TUN_FAILED).trim().take(300)
-                )
+                throw IllegalStateException("mihomo did not take over the tunnel: $failure")
             }
             if (NativeHelper.tunReadyCount() > tunReadyFrom || log.contains(MIHOMO_TUN_READY)) {
                 NativeLog.i("KEQDIS", "mihomo tun adapter is up")
@@ -1093,70 +1038,24 @@ class KeqdisVpnService : VpnService() {
     }
 
     private fun xrayConfigHasTun(configPath: String): Boolean = runCatching {
-        val inbounds = org.json.JSONObject(File(configPath).readText())
-            .optJSONArray("inbounds") ?: return false
-        for (i in 0 until inbounds.length()) {
-            if (inbounds.optJSONObject(i)?.optString("protocol") == "tun") return true
-        }
-        false
+        xrayHasTunInbound(File(configPath).readText())
     }.getOrElse {
         NativeLog.w("KEQDIS", "xrayConfigHasTun: ${it.message}")
         false
     }
 
-    // MTU fd-устройства ядру спросить неоткуда, а расхождение с интерфейсом это пакеты, которые ядро ОС отбросит при записи в tun
     private fun injectXrayTunMtu(configPath: String) {
         val file = File(configPath)
-        val root = org.json.JSONObject(file.readText())
-        val inbounds = root.optJSONArray("inbounds")
-            ?: throw IllegalStateException("xray config has no inbounds")
-        for (i in 0 until inbounds.length()) {
-            val inbound = inbounds.optJSONObject(i) ?: continue
-            if (inbound.optString("protocol") != "tun") continue
-            val settings = inbound.optJSONObject("settings") ?: org.json.JSONObject()
-            settings.put("mtu", TUN_MTU)
-            inbound.put("settings", settings)
-            file.writeText(root.toString())
-            NativeLog.i("KEQDIS", "xray tun: mtu=$TUN_MTU")
-            return
-        }
-        throw IllegalStateException("xray config has no tun inbound")
+        file.writeText(xrayConfigWithTunMtu(file.readText()))
+        NativeLog.i("KEQDIS", "xray tun: mtu=$TUN_MTU")
     }
+
     // дескриптор и MTU знает только сервис, копия в Dart была бы вторым источником для числа, которое обязано совпасть.
     // переписываем на месте: экран Соединения и плитка читают API из этого же файла
     private fun injectTunFd(configPath: String, tunFd: Int) {
         val file = File(configPath)
-        val root = org.json.JSONObject(file.readText())
-        val tun = root.optJSONObject("tun")
-            ?: throw IllegalStateException(
-                "mihomo config has no `tun` section — the core cannot take over " +
-                    "the tunnel without it"
-            )
-        tun.put("file-descriptor", tunFd)
-        tun.put("mtu", TUN_MTU)
-        root.put("tun", tun)
-        file.writeText(yamlSafeJson(root.toString()))
+        file.writeText(mihomoConfigWithTunFd(file.readText(), tunFd))
         NativeLog.i("KEQDIS", "mihomo tun: fd=$tunFd mtu=$TUN_MTU")
-    }
-
-    // JSONStringer экранирует слэш, а такого escape go-yaml не знает (scannerc.go): yaml: found unknown escape character.
-    // слэши есть в любом конфиге, поэтому ломался любой. \\ копируем парой, чтобы следующий слэш не сошёл за экранированный
-    private fun yamlSafeJson(json: String): String {
-        if (!json.contains("\\/")) return json
-        val out = StringBuilder(json.length)
-        var i = 0
-        while (i < json.length) {
-            val c = json[i]
-            if (c == '\\' && i + 1 < json.length) {
-                val next = json[i + 1]
-                if (next == '/') out.append('/') else out.append(c).append(next)
-                i += 2
-                continue
-            }
-            out.append(c)
-            i++
-        }
-        return out.toString()
     }
 
     // система вправе убить ядро, не трогая сервис: с Android 12 дочерние процессы ищутся по cgroup.
@@ -1164,7 +1063,7 @@ class KeqdisVpnService : VpnService() {
     private suspend fun reviveCore(deadPid: Int): Boolean {
         val config = lastXrayConfigPath ?: return false
         val lived = android.os.SystemClock.elapsedRealtime() - coreStartedAt
-        quickCoreDeaths = if (lived < CORE_QUICK_DEATH_MS) quickCoreDeaths + 1 else 0
+        quickCoreDeaths = quickDeathsAfter(quickCoreDeaths, lived)
         if (quickCoreDeaths >= CORE_MAX_QUICK_DEATHS) {
             appendCoreLog("the core keeps dying right after start, closing the session")
             return false
@@ -1186,27 +1085,20 @@ class KeqdisVpnService : VpnService() {
     // и поднятый уровень выдал бы себя за выбор человека
     private fun sessionConfigFor(config: String, coreKind: String): String {
         if (coreKind == CORE_KIND_MIHOMO) return raiseMihomoLogLevel(config)
-        val levels = listOf("debug", "info", "warning", "error", "none")
-        val info = levels.indexOf("info")
         if (coreKind != CORE_KIND_XRAY) {
             NativeHelper.setCoreLogLevel(0)
             return config
         }
         return try {
             val source = File(config)
-            val json = org.json.JSONObject(source.readText())
-            val log = json.optJSONObject("log") ?: org.json.JSONObject().also { json.put("log", it) }
-            // без поля xray пишет с warning
-            val chosen = levels.indexOf(log.optString("loglevel", "warning").lowercase())
-                .let { if (it < 0) levels.indexOf("warning") else it }
-            if (chosen <= info) {
+            val raised = xraySessionLogLevel(source.readText())
+            if (raised == null) {
                 NativeHelper.setCoreLogLevel(0)
                 return config
             }
-            log.put("loglevel", "info")
             val run = File(source.parentFile, "xray_session_run.json")
-            run.writeText(json.toString())
-            NativeHelper.setCoreLogLevel(chosen)
+            run.writeText(raised.config)
+            NativeHelper.setCoreLogLevel(raised.floor)
             run.absolutePath
         } catch (e: Exception) {
             // не разобрали: как есть, без счётчика отказов
@@ -1216,23 +1108,17 @@ class KeqdisVpnService : VpnService() {
         }
     }
 
-    // mihomo строку TUN поднялся пишет на info, и при warning подключение ждало её четыре секунды. без поля он и так на info
     private fun raiseMihomoLogLevel(config: String): String {
-        val levels = listOf("debug", "info", "warning", "error", "silent")
         return try {
             val source = File(config)
-            val text = source.readText()
-            val value = (Regex(""""log-level"\s*:\s*"(\w+)"""").find(text)
-                ?: Regex("""(?m)^log-level:\s*['"]?(\w+)""").find(text))
-                ?.groups?.get(1)
-            val chosen = levels.indexOf(value?.value?.lowercase())
-            if (value == null || chosen <= levels.indexOf("info")) {
+            val raised = mihomoSessionLogLevel(source.readText())
+            if (raised == null) {
                 NativeHelper.setCoreLogLevel(0)
                 return config
             }
             val run = File(source.parentFile, "mihomo_session_run.yaml")
-            run.writeText(text.replaceRange(value.range, "info"))
-            NativeHelper.setCoreLogLevel(chosen)
+            run.writeText(raised.config)
+            NativeHelper.setCoreLogLevel(raised.floor)
             run.absolutePath
         } catch (e: Exception) {
             NativeLog.w("KEQDIS", "session log level left as is: ${e.message}")
@@ -1341,15 +1227,13 @@ class KeqdisVpnService : VpnService() {
                 tick++
                 if (status == VpnRunStatus.RUNNING && tick % 2 == 0 && pm.isInteractive) {
                     val prefs = readNotifBodyPrefs()
-                    val parts = ArrayList<String>(3)
-                    if (prefs.showUptime) {
-                        parts.add(formatUptime(System.currentTimeMillis() - startTime))
-                    }
-                    if (prefs.showSpeed) {
-                        parts.add("↓ ${formatSpeed(downloadSpeed.get())}")
-                        parts.add("↑ ${formatSpeed(uploadSpeed.get())}")
-                    }
-                    val body = if (parts.isEmpty()) "Connected" else parts.joinToString("  ·  ")
+                    val body = notificationBody(
+                        showUptime = prefs.showUptime,
+                        showSpeed = prefs.showSpeed,
+                        uptimeMs = System.currentTimeMillis() - startTime,
+                        downloadSpeed = downloadSpeed.get(),
+                        uploadSpeed = uploadSpeed.get(),
+                    )
                     runCatching {
                         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(
                             NOTIFICATION_ID,
@@ -1361,8 +1245,7 @@ class KeqdisVpnService : VpnService() {
         }
     }
 
-    private var lastMemoryPss = 0L
-    private var nextMemoryThreshold = 1024L * 1024 * 1024
+    private val memoryWatch = MemoryWatch()
 
     // процесс уже разрастался до 2,3 ГБ при VPN, и чем, без чисел по времени не понять. ядро живёт своим процессом и в PSS не входит
     private fun logMemory() {
@@ -1373,55 +1256,21 @@ class KeqdisVpnService : VpnService() {
             val threads = procStatusValue("self", "Threads")
             val files = File("/proc/self/fd").list()?.size
             val core = xrayPid.takeIf { it > 0 }?.let { procStatusValue("$it", "VmRSS") }
-            val line = "memory: pss ${mb(total)} (java ${mb(info.dalvikPss * 1024L)}, " +
-                "native ${mb(info.nativePss * 1024L)}" +
-                (graphics?.let { ", graphics ${mb(it)}" } ?: "") +
+            val line = "memory: pss ${megabytes(total)} (java ${megabytes(info.dalvikPss * 1024L)}, " +
+                "native ${megabytes(info.nativePss * 1024L)}" +
+                (graphics?.let { ", graphics ${megabytes(it)}" } ?: "") +
                 "), threads ${threads ?: "?"}, open files ${files ?: "?"}, " +
-                "core ${core?.let { mb(it * 1024) } ?: "not running"}"
+                "core ${core?.let { megabytes(it * 1024) } ?: "not running"}"
 
-            val alarms = ArrayList<String>(2)
-            if (total >= nextMemoryThreshold) {
-                while (total >= nextMemoryThreshold) nextMemoryThreshold *= 2
-                alarms.add("now above ${mb(nextMemoryThreshold / 2)}")
-            }
-            if (lastMemoryPss > 0 && total - lastMemoryPss >= MEMORY_GROWTH_ALARM) {
-                alarms.add("grew by ${mb(total - lastMemoryPss)} since last time")
-            }
-            lastMemoryPss = total
+            val alarms = memoryWatch.alarms(total)
             if (alarms.isEmpty()) NativeLog.i("KEQDIS", line)
             else NativeLog.w("KEQDIS", "$line; ${alarms.joinToString(", ")}")
         }.onFailure { NativeLog.d("KEQDIS", "memory snapshot failed: ${it.message}") }
     }
 
-    // у VmRSS килобайты, у Threads штуки
     private fun procStatusValue(pid: String, key: String): Long? = runCatching {
-        File("/proc/$pid/status").useLines { lines ->
-            lines.firstOrNull { it.startsWith("$key:") }
-                ?.substringAfter(':')?.trim()?.substringBefore(' ')?.toLongOrNull()
-        }
+        File("/proc/$pid/status").useLines { statusField(it, key) }
     }.getOrNull()
-
-    private fun mb(bytes: Long): String = "${bytes / (1024 * 1024)} MB"
-
-    private fun formatSpeed(bytesPerSec: Long): String = when {
-        bytesPerSec >= 1024 * 1024 ->
-            String.format(java.util.Locale.US, "%.1f MB/s", bytesPerSec / (1024.0 * 1024.0))
-        bytesPerSec >= 1024 ->
-            String.format(java.util.Locale.US, "%.1f KB/s", bytesPerSec / 1024.0)
-        else -> "$bytesPerSec B/s"
-    }
-
-    private fun formatUptime(ms: Long): String {
-        val s = ms / 1000
-        val h = s / 3600
-        val m = (s % 3600) / 60
-        val sec = s % 60
-        return when {
-            h > 0 -> "${h}h ${m}m"
-            m > 0 -> "${m}m ${sec}s"
-            else -> "${sec}s"
-        }
-    }
 
     // читаем прямо из FlutterSharedPreferences (JSON AppSettings под flutter.): так работает любой путь старта без extra в Intent
     private data class NotifBodyPrefs(val showUptime: Boolean, val showSpeed: Boolean)
@@ -1466,12 +1315,7 @@ class KeqdisVpnService : VpnService() {
 
     private fun setStatus(s: VpnRunStatus, e: String? = null) {
         status = s
-        val statusStr = when (s) {
-            VpnRunStatus.STOPPED  -> "disconnected"
-            VpnRunStatus.STARTING -> "connecting"
-            VpnRunStatus.RUNNING  -> "connected"
-            VpnRunStatus.ERROR    -> "error"
-        }
+        val statusStr = statusName(s)
         liveStatus = statusStr
         ProcessExits.noteVpnStatus(this, statusStr)
         // оборвавшуюся ошибкой после смерти процесса не поднимаем: ошибка вернулась бы с ней, и перезапуски пошли бы по кругу

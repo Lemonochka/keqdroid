@@ -124,6 +124,14 @@ android {
             )
         }
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            // Robolectric 4.17 ставит дескриптор файла через SharedSecrets, без этого падает каждый тест на JDK 25
+            all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }
+        }
+    }
 }
 
 kotlin {
@@ -136,6 +144,14 @@ flutter {
     source = "../.."
 }
 
+// copyFlutterAssets докладывает ассеты в вывод mergeAssets, и Gradle 9 роняет упаковку ресурсов для Robolectric,
+// пока она не ждёт эту задачу явно
+tasks.configureEach {
+    val variant = Regex("package(\\w+)UnitTestForUnitTest").matchEntire(name)?.groupValues?.get(1)
+        ?: return@configureEach
+    dependsOn("copyFlutterAssets$variant")
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
@@ -143,4 +159,6 @@ dependencies {
     // та же версия media3, что у video_player_android 2.12.2: две версии в одном APK не уживаются
     implementation("androidx.media3:media3-transformer:1.9.2")
     implementation("androidx.media3:media3-effect:1.9.2")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.17")
 }

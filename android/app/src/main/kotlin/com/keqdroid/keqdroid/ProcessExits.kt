@@ -16,7 +16,7 @@ object ProcessExits {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         runCatching {
             context.getSystemService(ActivityManager::class.java)
-                ?.setProcessStateSummary("$SUMMARY_PREFIX$status".toByteArray(Charsets.UTF_8))
+                ?.setProcessStateSummary(vpnSummary(status))
         }
     }
 
@@ -39,12 +39,23 @@ object ProcessExits {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
         val info = records(context, 1).firstOrNull() ?: return null
         val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date(info.timestamp))
-        val vpn = vpnStatusOf(info)?.let { ", VPN $it" } ?: ""
-        val description = info.description?.takeIf { it.isNotBlank() }?.let { ", \"$it\"" } ?: ""
-        return "$time, ${reasonName(info.reason)}, status ${info.status}$vpn$description"
+        return describe(time, info.reason, info.status, vpnStatusOf(info), info.description)
     }
 
-    private fun reasonName(reason: Int): String = when (reason) {
+    internal fun describe(time: String, reason: Int, status: Int, vpn: String?, description: String?): String {
+        val vpnPart = vpn?.let { ", VPN $it" } ?: ""
+        val descriptionPart = description?.takeIf { it.isNotBlank() }?.let { ", \"$it\"" } ?: ""
+        return "$time, ${reasonName(reason)}, status $status$vpnPart$descriptionPart"
+    }
+
+    internal fun vpnSummary(status: String): ByteArray = "$SUMMARY_PREFIX$status".toByteArray(Charsets.UTF_8)
+
+    internal fun vpnStatusFromSummary(summary: ByteArray?): String? {
+        val raw = summary?.toString(Charsets.UTF_8) ?: return null
+        return raw.removePrefix(SUMMARY_PREFIX).takeIf { raw.startsWith(SUMMARY_PREFIX) }
+    }
+
+    internal fun reasonName(reason: Int): String = when (reason) {
         ApplicationExitInfo.REASON_EXIT_SELF -> "EXIT_SELF"
         ApplicationExitInfo.REASON_SIGNALED -> "SIGNALED"
         ApplicationExitInfo.REASON_LOW_MEMORY -> "LOW_MEMORY"
@@ -74,8 +85,7 @@ object ProcessExits {
 
     private fun vpnStatusOf(info: ApplicationExitInfo): String? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
-        val raw = info.processStateSummary?.toString(Charsets.UTF_8) ?: return null
-        return raw.removePrefix(SUMMARY_PREFIX).takeIf { raw.startsWith(SUMMARY_PREFIX) }
+        return vpnStatusFromSummary(info.processStateSummary)
     }
 
     private const val SUMMARY_PREFIX = "vpn="

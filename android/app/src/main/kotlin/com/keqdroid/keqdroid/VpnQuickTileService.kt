@@ -54,7 +54,7 @@ class VpnQuickTileService : TileService() {
             .getString(KeqdisVpnService.KEY_QS_STATUS, "disconnected")
             ?.lowercase()
             ?: "disconnected"
-        if (status == "disconnected" || status == "error") return
+        if (!statusNeedsHealing(status)) return
         val conn = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {}
             override fun onServiceDisconnected(name: ComponentName?) {}
@@ -255,17 +255,21 @@ class VpnQuickTileService : TileService() {
             tileObj.icon = android.graphics.drawable.Icon.createWithResource(this, TILE_ICON_RES)
         }
         
-        // нажатие по STATE_UNAVAILABLE система не доставляет, и умерший посреди коннекта процесс оставлял плитку мёртвой.
-        // клик на connecting останавливает
-        val connecting = status == "connecting" || status == "starting"
-        tileObj.state = when {
-            status == "connected" || status == "running" || connecting -> Tile.STATE_ACTIVE
-            else -> Tile.STATE_INACTIVE
-        }
+        val look = tileLook(status)
+        tileObj.state = if (look.active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            tileObj.subtitle = if (connecting) getString(R.string.tile_connecting) else null
+            tileObj.subtitle = if (look.connecting) getString(R.string.tile_connecting) else null
         }
         NativeLog.d("KEQDIS_QS", "updateTileFromPrefs: new tile.state=${tileObj.state}")
         tileObj.updateTile()
     }
+}
+
+internal class TileLook(val active: Boolean, val connecting: Boolean)
+
+// нажатие по STATE_UNAVAILABLE система не доставляет, и умерший посреди коннекта процесс оставлял плитку мёртвой.
+// клик на connecting останавливает
+internal fun tileLook(status: String): TileLook {
+    val connecting = status == "connecting" || status == "starting"
+    return TileLook(active = status == "connected" || status == "running" || connecting, connecting = connecting)
 }

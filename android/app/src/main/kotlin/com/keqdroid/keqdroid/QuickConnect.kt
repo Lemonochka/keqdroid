@@ -27,45 +27,71 @@ internal object QuickConnect {
 
     // запись в prefs переживает смерть процесса, туннель нет. liveStatus после перезапуска disconnected,
     // расхождение значит запись протухла
-    fun effectiveStatus(context: Context): String {
-        val persisted = persistedStatus(context)
-        return if (persisted in ACTIVE_STATUSES && !liveActive()) "disconnected" else persisted
+    fun isStale(persisted: String, liveActive: Boolean): Boolean = persisted in ACTIVE_STATUSES && !liveActive
+
+    fun effectiveStatus(persisted: String, liveActive: Boolean): String =
+        if (isStale(persisted, liveActive)) "disconnected" else persisted
+
+    fun effectiveStatus(context: Context): String = effectiveStatus(persistedStatus(context), liveActive())
+
+    enum class Route { STOP, OPEN_APP, CONSENT_WINDOW, BLOCKED_WINDOW, START }
+
+    fun route(
+        persisted: String,
+        liveActive: Boolean,
+        hasSnapshot: () -> Boolean,
+        consentMissing: () -> Boolean,
+        startBlocked: () -> Boolean,
+    ): Route = when {
+        persisted in ACTIVE_STATUSES && liveActive -> Route.STOP
+        !hasSnapshot() -> Route.OPEN_APP
+        // согласие спрашивает только окно, невидимое окно спросит и само подключит
+        consentMissing() -> Route.CONSENT_WINDOW
+        startBlocked() -> Route.BLOCKED_WINDOW
+        else -> Route.START
     }
 
     // click = false для отрисовки: виджет только выбирает, куда вести кнопку, prefs не трогает и не пишет в журнал
     fun decide(context: Context, tag: String, click: Boolean = true): Tap {
         val status = persistedStatus(context)
-        if (status in ACTIVE_STATUSES && !liveActive()) {
-            if (click) {
-                NativeLog.w(
-                    tag,
-                    "onClick: stale persisted status '$status' " +
-                        "(live='${KeqdisVpnService.liveStatus.lowercase()}') → healing and connecting",
-                )
-                context.getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
-                    .edit()
-                    .putString(KeqdisVpnService.KEY_QS_STATUS, "disconnected")
-                    .apply()
-            }
-        } else if (status in ACTIVE_STATUSES) {
-            return Tap.Stop
+        val live = liveActive()
+        if (click && isStale(status, live)) {
+            NativeLog.w(
+                tag,
+                "onClick: stale persisted status '$status' " +
+                    "(live='${KeqdisVpnService.liveStatus.lowercase()}') → healing and connecting",
+            )
+            context.getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KeqdisVpnService.KEY_QS_STATUS, "disconnected")
+                .apply()
         }
 
-        val start = KeqdisVpnService.snapshotStartIntent(context)
-        if (start == null) {
-            if (click) NativeLog.i(tag, "onClick: no usable server snapshot → opening app")
-            return Tap.OpenApp
+        // consentMissing берёт start, который кладёт hasSnapshot: route зовёт их строго по порядку
+        var start: Intent? = null
+        val route = route(
+            status,
+            live,
+            hasSnapshot = { KeqdisVpnService.snapshotStartIntent(context).also { start = it } != null },
+            consentMissing = { KeqdisVpnService.startsTunnel(start!!) && VpnService.prepare(context) != null },
+            startBlocked = { directStartBlocked(context) },
+        )
+        return when (route) {
+            Route.STOP -> Tap.Stop
+            Route.OPEN_APP -> {
+                if (click) NativeLog.i(tag, "onClick: no usable server snapshot → opening app")
+                Tap.OpenApp
+            }
+            Route.CONSENT_WINDOW -> {
+                if (click) NativeLog.i(tag, "onClick: no VPN consent → quick connect window")
+                Tap.Window
+            }
+            Route.BLOCKED_WINDOW -> {
+                if (click) NativeLog.i(tag, "onClick: this firmware blocks direct start → quick connect window")
+                Tap.Window
+            }
+            Route.START -> Tap.Start(start!!)
         }
-        // согласие спрашивает только окно, невидимое окно спросит и само подключит
-        if (KeqdisVpnService.startsTunnel(start) && VpnService.prepare(context) != null) {
-            if (click) NativeLog.i(tag, "onClick: no VPN consent → quick connect window")
-            return Tap.Window
-        }
-        if (directStartBlocked(context)) {
-            if (click) NativeLog.i(tag, "onClick: this firmware blocks direct start → quick connect window")
-            return Tap.Window
-        }
-        return Tap.Start(start)
     }
 
     fun stopIntent(context: Context): Intent =

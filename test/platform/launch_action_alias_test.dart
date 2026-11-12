@@ -30,9 +30,13 @@ void main() {
     final activity = File('$kotlin/MainActivity.kt').readAsStringSync();
     expect('getStringExtra(EXTRA_LAUNCH_ACTION)'.allMatches(activity).length, 1);
 
-    final body = RegExp(r'fun trustedLaunchAction\(\)[\s\S]*?LAUNCH_ACTIONS')
+    final trusted = RegExp(r'fun trustedLaunchAction\(\)[\s\S]*?getStringExtra')
         .firstMatch(activity)?[0];
-    expect(body, contains('component?.className == LAUNCH_ALIAS'));
+    expect(trusted, contains('launchActionFrom(intent?.component?.className)'));
+    // само поведение проверяет android/app/src/test/.../DeviceAndAppRulesTest.kt
+    final check = RegExp(r'fun launchActionFrom\([\s\S]*?LAUNCH_ACTIONS')
+        .firstMatch(activity)?[0];
+    expect(check, contains('className == LAUNCH_ALIAS) action()'));
     expect(activity, contains('LAUNCH_ALIAS = "$alias"'));
   });
 

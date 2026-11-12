@@ -58,10 +58,10 @@ internal object HomeWidget {
     // анимация, оставленная на виду, повторялась бы при каждом возврате на рабочий стол
     private const val SETTLE_MS = 2700L
 
-    private enum class Look { OFF, CONNECTING, ON, ERROR }
+    internal enum class Look { OFF, CONNECTING, ON, ERROR }
 
     // стоячая вода: задний и передний слой на каждый уровень
-    private enum class Kind(val layout: Int, val idle: IntArray, val busy: IntArray, val on: IntArray) {
+    internal enum class Kind(val layout: Int, val idle: IntArray, val busy: IntArray, val on: IntArray) {
         DROP(
             R.layout.widget_drop,
             intArrayOf(R.drawable.widget_water_drop_idle_back, R.drawable.widget_water_drop_idle_front),
@@ -247,7 +247,7 @@ internal object HomeWidget {
             .onFailure { NativeLog.w(TAG, "tap: could not open ${intent.component}: $it") }
     }
 
-    private fun lookOf(status: String) = when (status) {
+    internal fun lookOf(status: String) = when (status) {
         "connected", "running" -> Look.ON
         "connecting", "starting" -> Look.CONNECTING
         "error" -> Look.ERROR
@@ -303,19 +303,14 @@ internal object HomeWidget {
         val colors = DEFAULT_COLORS.mapValues { (role, res) ->
             if (prefs.contains("color_$role")) prefs.getInt("color_$role", 0) else app.getColor(res)
         }
-        // виджет, как плитка, подключает сервер последней сессии. имя без флага и пинг от приложения берём, только если это он
-        val last = app.getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
-            .getString(KeqdisVpnService.KEY_QS_LAST_SERVER_NAME, null)
-        val key = prefs.getString("server_key", null)
-        val known = last == null || last == key
-        val name = if (known) {
-            listOfNotNull(
-                prefs.getString("server_flag", null)?.let(::flagEmoji),
-                prefs.getString("server_name", null) ?: last,
-            ).joinToString(" ")
-        } else {
-            last ?: ""
-        }
+        val server = widgetServer(
+            last = app.getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
+                .getString(KeqdisVpnService.KEY_QS_LAST_SERVER_NAME, null),
+            key = prefs.getString("server_key", null),
+            flag = prefs.getString("server_flag", null),
+            name = prefs.getString("server_name", null),
+            ping = prefs.getString("server_ping", null),
+        )
         val since = KeqdisVpnService.connectedSince
         val tap = when (QuickConnect.decide(app, TAG, click = false)) {
             QuickConnect.Tap.OpenApp ->
@@ -330,8 +325,8 @@ internal object HomeWidget {
         }
         return Data(
             colors = colors,
-            name = name,
-            ping = if (known) prefs.getString("server_ping", null) else null,
+            name = server.name,
+            ping = server.ping,
             since = if (look == Look.ON && since > 0) since else SystemClock.elapsedRealtime(),
             tap = tap,
             open = activity(app, REQ_OPEN, QuickConnect.openAppIntent(app, connect = false)),
@@ -346,9 +341,18 @@ internal object HomeWidget {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-    private fun flagEmoji(code: String): String? {
+    internal fun flagEmoji(code: String): String? {
         if (code.length != 2 || !code.all { it in 'A'..'Z' }) return null
         return code.map { String(Character.toChars(0x1F1E6 + (it - 'A'))) }.joinToString("")
+    }
+
+    internal class WidgetServer(val name: String, val ping: String?)
+
+    // виджет, как плитка, подключает сервер последней сессии. имя без флага и пинг от приложения берём, только если это он
+    internal fun widgetServer(last: String?, key: String?, flag: String?, name: String?, ping: String?): WidgetServer {
+        val known = last == null || last == key
+        if (!known) return WidgetServer(last ?: "", null)
+        return WidgetServer(listOfNotNull(flag?.let(::flagEmoji), name ?: last).joinToString(" "), ping)
     }
 
     private fun views(app: Context, manager: AppWidgetManager, id: Int, frame: Frame, data: Data): RemoteViews {
@@ -365,10 +369,13 @@ internal object HomeWidget {
         return kindViews(app, kindFor(manager.getAppWidgetOptions(id)), frame, data)
     }
 
+    private fun kindFor(options: Bundle): Kind = kindFor(
+        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH),
+        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT),
+    )
+
     // то же правило, что у RemoteViews с размерами: из влезающих ближайший
-    private fun kindFor(options: Bundle): Kind {
-        val w = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
-        val h = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)
+    internal fun kindFor(w: Int, h: Int): Kind {
         if (w == 0 || h == 0) return Kind.GLASS
         return listOf(Kind.DROP to (40 to 40), Kind.GLASS to (110 to 110), Kind.PLAQUE to (220 to 40))
             .filter { (_, s) -> w + 1 >= s.first && h + 1 >= s.second }

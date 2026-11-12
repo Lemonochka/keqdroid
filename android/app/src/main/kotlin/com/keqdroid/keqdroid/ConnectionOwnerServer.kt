@@ -75,28 +75,21 @@ class ConnectionOwnerServer(private val context: Context) {
 
     private fun ownerOf(request: String): String {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return ""
-        val (network, srcIp, srcPort, dstIp, dstPort) = request.trim().split(' ')
-        val proto = if (network == "udp") OsConstants.IPPROTO_UDP else OsConstants.IPPROTO_TCP
+        val query = parseOwnerQuery(request) ?: return ""
+        val proto = if (query.udp) OsConstants.IPPROTO_UDP else OsConstants.IPPROTO_TCP
         val uid = cm.getConnectionOwnerUid(
             proto,
-            InetSocketAddress(InetAddresses.parseNumericAddress(srcIp), srcPort.toInt()),
-            InetSocketAddress(InetAddresses.parseNumericAddress(dstIp), dstPort.toInt()),
+            InetSocketAddress(InetAddresses.parseNumericAddress(query.srcIp), query.srcPort),
+            InetSocketAddress(InetAddresses.parseNumericAddress(query.dstIp), query.dstPort),
         )
-        // так система отвечает и про приложение вне VPN, привязавшее сокет к tun0: это имя ловит правило защиты адреса сервера
         if (uid == Process.INVALID_UID) {
-            return if (systemOutsideVpn && isSystemDns(dstIp, dstPort.toInt())) "" else OUTSIDE_VPN
+            return unownedAnswer(systemOutsideVpn, query.dstIp, query.dstPort) {
+                cm.getLinkProperties(cm.activeNetwork)?.privateDnsServerName != null
+            }
         }
         return packages.getOrPut(uid) {
             context.packageManager.getPackagesForUid(uid)?.firstOrNull() ?: ""
         }
-    }
-
-    // сам Android ходит только на наш DNS в туннеле и на сервер строгого Частного DNS, чьих адресов приложению не выдают
-    private fun isSystemDns(dstIp: String, dstPort: Int): Boolean = when {
-        dstPort != 53 && dstPort != 853 -> false
-        dstIp == KeqdisVpnService.TUN_DNS_ADDRESS -> true
-        dstPort == 853 -> cm.getLinkProperties(cm.activeNetwork)?.privateDnsServerName != null
-        else -> false
     }
 
     private fun record(micros: Long, outsideVpn: Boolean) {
@@ -116,13 +109,7 @@ class ConnectionOwnerServer(private val context: Context) {
             Triple(copy, answered, outside)
         }
         if (sorted.isEmpty()) return
-        NativeLog.i(
-            "KEQDIS",
-            "owner lookups: $total total, last ${sorted.size}: " +
-                "median ${sorted[sorted.size / 2]} us, " +
-                "p95 ${sorted[(sorted.size * 95 / 100).coerceAtMost(sorted.size - 1)]} us, " +
-                "max ${sorted.last()} us, outside VPN: $outsideTotal",
-        )
+        NativeLog.i("KEQDIS", ownerTimingLine(sorted, total, outsideTotal))
     }
 
     companion object {
@@ -130,3 +117,37 @@ class ConnectionOwnerServer(private val context: Context) {
         const val OUTSIDE_VPN = "keqdroid:outside-vpn"
     }
 }
+
+internal class OwnerQuery(val udp: Boolean, val srcIp: String, val srcPort: Int, val dstIp: String, val dstPort: Int)
+
+// строка от ядра: network srcIp srcPort dstIp dstPort
+internal fun parseOwnerQuery(line: String): OwnerQuery? {
+    val parts = line.trim().split(' ')
+    if (parts.size < 5) return null
+    val srcPort = parts[2].toIntOrNull() ?: return null
+    val dstPort = parts[4].toIntOrNull() ?: return null
+    return OwnerQuery(parts[0] == "udp", parts[1], srcPort, parts[3], dstPort)
+}
+
+// без владельца система отвечает и про приложение вне VPN, привязавшее сокет к tun0: это имя ловит правило защиты адреса сервера.
+// сам Android ходит только на наш DNS в туннеле и на сервер строгого Частного DNS, чьих адресов приложению не выдают
+internal fun unownedAnswer(
+    systemOutsideVpn: Boolean,
+    dstIp: String,
+    dstPort: Int,
+    privateDnsOn: () -> Boolean,
+): String {
+    val systemDns = systemOutsideVpn && when {
+        dstPort != 53 && dstPort != 853 -> false
+        dstIp == KeqdisVpnService.TUN_DNS_ADDRESS -> true
+        dstPort == 853 -> privateDnsOn()
+        else -> false
+    }
+    return if (systemDns) "" else ConnectionOwnerServer.OUTSIDE_VPN
+}
+
+internal fun ownerTimingLine(sorted: List<Long>, total: Long, outside: Long): String =
+    "owner lookups: $total total, last ${sorted.size}: " +
+        "median ${sorted[sorted.size / 2]} us, " +
+        "p95 ${sorted[(sorted.size * 95 / 100).coerceAtMost(sorted.size - 1)]} us, " +
+        "max ${sorted.last()} us, outside VPN: $outside"

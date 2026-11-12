@@ -49,7 +49,7 @@ object EphemeralXrayPing {
 
     // ядра названы lib*.so: APK распаковывает только то, что похоже на библиотеку
 
-    private fun coreBinary(nativeLibraryDir: String, core: String): File =
+    internal fun coreBinary(nativeLibraryDir: String, core: String): File =
         File(nativeLibraryDir, if (core == CORE_MIHOMO) "libmihomo.so" else "libxray.so")
 
 
@@ -693,7 +693,7 @@ object EphemeralXrayPing {
 
 
 
-    private fun ensureHttps(url: String): String {
+    internal fun ensureHttps(url: String): String {
 
         val trimmed = url.trim()
 
@@ -729,12 +729,15 @@ object EphemeralXrayPing {
                 coreAwake?.set(true)
                 return result
             }
-            if (core != CORE_MIHOMO) return result
-            if (coreAwake?.get() == true) return result
-            if (System.currentTimeMillis() - coreStartedAt >= CORE_WAKEUP_GRACE_MS) return result
+            if (!retryProbe(core, coreAwake?.get() == true, System.currentTimeMillis() - coreStartedAt)) return result
             Thread.sleep(200)
         }
     }
+
+    internal fun retryProbe(core: String, coreAwake: Boolean, sinceCoreStartMs: Long): Boolean =
+        core == CORE_MIHOMO && !coreAwake && sinceCoreStartMs < CORE_WAKEUP_GRACE_MS
+
+    internal fun kbps(bytes: Int, elapsedMs: Long): Int = (bytes * 8.0 / 1000.0 / (elapsedMs / 1000.0)).toInt()
 
     private fun httpProbeViaSocks(
         url: String,
@@ -868,17 +871,13 @@ object EphemeralXrayPing {
 
             val elapsedMs = (System.currentTimeMillis() - start).coerceAtLeast(1)
 
-            val seconds = elapsedMs / 1000.0
-
             if (bytes <= 0) {
 
                 return SpeedResult(false, null, "No data received")
 
             }
 
-            val kbps = (bytes * 8.0 / 1000.0 / seconds).toInt()
-
-            SpeedResult(true, kbps, null)
+            SpeedResult(true, kbps(bytes, elapsedMs), null)
 
         } catch (e: Exception) {
 
