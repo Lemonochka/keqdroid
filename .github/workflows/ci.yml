@@ -5,6 +5,10 @@ on:
     branches: [master]
   pull_request:
 
+env:
+  # the same as release.yml and the local SDK
+  FLUTTER_VERSION: '3.44.4'
+
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -12,8 +16,29 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.4'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+
+  # JVM tests of the Android native part (android/app/src/test), no device needed
+  android-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      # the JDK the Robolectric flags in android/app/build.gradle.kts were checked on
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter pub get
+      # gradlew and local.properties are not in git, Flutter writes them
+      - run: flutter build apk --debug --config-only
+      - run: ./gradlew :app:testDebugUnitTest
+        working-directory: android
