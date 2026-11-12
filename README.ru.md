@@ -112,13 +112,13 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 
 ## Документация
 
-Подробная документация: [kequinq.art/keqdroid](https://kequinq.art/keqdroid/)
+Подробная документация: [kequinq.art/docs/keqdroid](https://kequinq.art/docs/keqdroid/)
 
-- [Маршрутизация](https://kequinq.art/keqdroid/routing) и [DNS](https://kequinq.art/keqdroid/dns)
-- [Режимы подключения и раздельное туннелирование](https://kequinq.art/keqdroid/modes)
-- [Xray или mihomo](https://kequinq.art/keqdroid/xray-or-mihomo) и [группы mihomo](https://kequinq.art/keqdroid/mihomo-groups)
-- [Автоматический выбор сервера](https://kequinq.art/keqdroid/auto) и [проверки серверов](https://kequinq.art/keqdroid/ping)
-- Для провайдеров: [заголовки подписки](https://kequinq.art/keqdroid/provider/headers) и [ссылки](https://kequinq.art/keqdroid/provider/links)
+- [Маршрутизация](https://kequinq.art/docs/keqdroid/routing) и [DNS](https://kequinq.art/docs/keqdroid/dns)
+- [Режимы подключения и раздельное туннелирование](https://kequinq.art/docs/keqdroid/modes)
+- [Xray или mihomo](https://kequinq.art/docs/keqdroid/xray-or-mihomo) и [группы mihomo](https://kequinq.art/docs/keqdroid/mihomo-groups)
+- [Автоматический выбор сервера](https://kequinq.art/docs/keqdroid/auto) и [проверки серверов](https://kequinq.art/docs/keqdroid/ping)
+- Для провайдеров: [заголовки подписки](https://kequinq.art/docs/keqdroid/provider/headers) и [ссылки](https://kequinq.art/docs/keqdroid/provider/links)
 
 ## Приватность
 

@@ -112,13 +112,13 @@ Routing, split tunneling, the connection mode and other options are available in
 
 ## Documentation
 
-Detailed documentation is available in Russian at [kequinq.art/keqdroid](https://kequinq.art/keqdroid/):
+Detailed documentation is available at [kequinq.art/docs/keqdroid](https://kequinq.art/docs/keqdroid/en/):
 
-- [Routing](https://kequinq.art/keqdroid/routing) and [DNS](https://kequinq.art/keqdroid/dns)
-- [Connection modes and split tunneling](https://kequinq.art/keqdroid/modes)
-- [Xray or mihomo](https://kequinq.art/keqdroid/xray-or-mihomo) and [mihomo groups](https://kequinq.art/keqdroid/mihomo-groups)
-- [Automatic server selection](https://kequinq.art/keqdroid/auto) and [server checks](https://kequinq.art/keqdroid/ping)
-- For providers: [subscription headers](https://kequinq.art/keqdroid/provider/headers) and [links](https://kequinq.art/keqdroid/provider/links)
+- [Routing](https://kequinq.art/docs/keqdroid/en/routing) and [DNS](https://kequinq.art/docs/keqdroid/en/dns)
+- [Connection modes and split tunneling](https://kequinq.art/docs/keqdroid/en/modes)
+- [Xray or mihomo](https://kequinq.art/docs/keqdroid/en/xray-or-mihomo) and [mihomo groups](https://kequinq.art/docs/keqdroid/en/mihomo-groups)
+- [Automatic server selection](https://kequinq.art/docs/keqdroid/en/auto) and [server checks](https://kequinq.art/docs/keqdroid/en/ping)
+- For providers: [subscription headers](https://kequinq.art/docs/keqdroid/en/provider/headers) and [links](https://kequinq.art/docs/keqdroid/en/provider/links)
 
 ## Privacy
 
