@@ -12,32 +12,62 @@ import 'package:keqdroid/utils/provider_routing.dart';
 import 'package:keqdroid/utils/rule_lists.dart';
 import 'package:keqdroid/utils/traffic_routes.dart';
 
-// ru-direct из huzgnm/ru-direct собран из category-ru и российских зон, обе части у нас есть
+// ru-direct из huzgnm/ru-direct собран из category-ru, ru-available-only-inside и российских зон
 const _index = GeoAssetIndex(
   geoipCodes: {'ru', 'private'},
-  geositeCodes: {'category-ru', 'tld-ru', 'google', 'private'},
+  geositeCodes: {
+    'category-ru',
+    'ru-available-only-inside',
+    'tld-ru',
+    'google',
+    'apple',
+    'refilter',
+    'private',
+  },
 );
+
+const _ruDirect = [
+  'geosite:category-ru',
+  'geosite:ru-available-only-inside',
+  'geosite:tld-ru',
+];
 
 void main() {
   group('замена незнакомого геокода', () {
-    test('ru-direct становится category-ru и tld-ru', () {
-      expect(geoSubstitutes('geosite:ru-direct', _index),
-          ['geosite:category-ru', 'geosite:tld-ru']);
-      expect(geoSubstitutes('GEOSITE:RU-DIRECT', _index), hasLength(2));
+    test('ru-direct становится category-ru, ru-available-only-inside и tld-ru', () {
+      expect(geoSubstitutes('geosite:ru-direct', _index), _ruDirect);
+      expect(geoSubstitutes('GEOSITE:RU-DIRECT', _index), hasLength(3));
+    });
+
+    test('ru-blocked становится refilter, у google-cn и apple-cn варианты для Китая', () {
+      expect(geoSubstitutes('geosite:ru-blocked', _index), ['geosite:refilter']);
+      expect(geoSubstitutes('geosite:google-cn', _index), ['geosite:google@cn']);
+      expect(geoSubstitutes('geosite:apple-cn', _index), ['geosite:apple@cn']);
     });
 
     test('без замены или без её кодов в базе — null, похожее имя не в счёт', () {
-      expect(geoSubstitutes('geosite:ru-blocked', _index), isNull);
+      expect(geoSubstitutes('geosite:ru-blocked-all', _index), isNull);
       expect(geoSubstitutes('geoip:ru-direct', _index), isNull);
-      const thin = GeoAssetIndex(geoipCodes: {'ru'}, geositeCodes: {'category-ru'});
+      const thin = GeoAssetIndex(
+        geoipCodes: {'ru'},
+        geositeCodes: {'category-ru', 'tld-ru'},
+      );
       expect(geoSubstitutes('geosite:ru-direct', thin), isNull);
+      expect(geoSubstitutes('geosite:apple-cn', thin), isNull);
     });
 
     test('в списках правил заменяется, незнакомое без замены выбрасывается', () {
       final out = stripUnknownGeoTokensText(
           'geosite:ru-direct, vk.com, geosite:no-such-list', _index);
-      expect(out.text, 'geosite:category-ru, geosite:tld-ru, vk.com');
+      expect(out.text, '${_ruDirect.join(', ')}, vk.com');
       expect(out.dropped, ['geosite:no-such-list']);
+    });
+
+    test('предупреждение называет только то, что выкинется', () {
+      expect(
+        unknownGeoTokens('geosite:ru-direct, geosite:google-cn, geosite:no-such-list', _index),
+        ['geosite:no-such-list'],
+      );
     });
 
     test('в готовом JSON правило остаётся с заменой', () {
@@ -59,7 +89,7 @@ void main() {
       expect(dropped, ['geosite:no-such-list']);
       expect((config['routing'] as Map)['rules'], [
         {
-          'domain': ['geosite:category-ru', 'geosite:tld-ru'],
+          'domain': _ruDirect,
           'outboundTag': 'direct',
         },
       ]);
@@ -122,6 +152,7 @@ rules:
       final result = CustomClashConfig.tryParse(yaml)!.withKnownGeo(_index);
       expect(result.config.map['rules'], [
         'GEOSITE,category-ru,DIRECT',
+        'GEOSITE,ru-available-only-inside,DIRECT',
         'GEOSITE,tld-ru,DIRECT',
         'GEOSITE,google@cn,A',
         'GEOIP,lan,DIRECT,no-resolve',

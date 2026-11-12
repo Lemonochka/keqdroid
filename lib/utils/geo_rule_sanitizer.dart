@@ -57,6 +57,7 @@ List<String> unknownGeoTokens(String raw, GeoAssetIndex index) {
   final unknown = <String>[];
   for (final trimmed in routingEntries(raw)) {
     if (isKnownGeoToken(trimmed, index)) continue;
+    if (geoSubstitutes(trimmed, index) != null) continue;
     if (seen.add(trimmed.toLowerCase())) unknown.add(trimmed);
   }
   return unknown;
@@ -65,7 +66,12 @@ List<String> unknownGeoTokens(String raw, GeoAssetIndex index) {
 // замены по составу категории, не по похожему имени: ru-blocked тоже про ru, но это обратное ru-direct
 const _geositeAliases = {
   // huzgnm/ru-direct: category-ru v2fly + ru-available-only-inside runetfreedom + зоны .ru .su .рф
-  'ru-direct': ['category-ru', 'tld-ru'],
+  'ru-direct': ['category-ru', 'ru-available-only-inside', 'tld-ru'],
+  // runetfreedom: 98% его доменов есть в нашем refilter, замер 12.11.2026
+  'ru-blocked': ['refilter'],
+  // Loyalsoldier: 97 и 99% доменов есть в google@cn и apple@cn v2fly, замер 12.11.2026
+  'google-cn': ['google@cn'],
+  'apple-cn': ['apple@cn'],
 };
 
 // незнакомый код на известные, если для него есть замена и вся она есть в базе. иначе null
@@ -75,7 +81,10 @@ List<String>? geoSubstitutes(String token, GeoAssetIndex index) {
   if (colon < 0) return null;
   if (trimmed.substring(0, colon).toLowerCase() != 'geosite') return null;
   final targets = _geositeAliases[trimmed.substring(colon + 1).trim().toLowerCase()];
-  if (targets == null || !targets.every(index.geositeCodes.contains)) return null;
+  if (targets == null ||
+      !targets.every((t) => index.geositeCodes.contains(t.split('@').first))) {
+    return null;
+  }
   return [for (final code in targets) 'geosite:$code'];
 }
 

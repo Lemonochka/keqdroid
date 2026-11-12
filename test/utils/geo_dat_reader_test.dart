@@ -2,7 +2,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keqdroid/utils/geo_asset_index.dart';
 import 'package:keqdroid/utils/geo_dat_reader.dart';
+import 'package:keqdroid/utils/geo_rule_sanitizer.dart';
 
 void _varint(List<int> out, int value) {
   var v = value;
@@ -143,12 +145,35 @@ void main() {
       final siteCodes = await GeoDatReader.codes(geosite);
       expect(
         siteCodes,
-        containsAll(['telegram', 'refilter', 'category-ru', 'ru-whitelist']),
+        containsAll([
+          'telegram',
+          'refilter',
+          'category-ru',
+          'ru-whitelist',
+          'ru-available-only-inside',
+          'antifilter-download-community',
+          'gfw',
+          'win-spy',
+          'win-update',
+          'win-extra',
+        ]),
       );
+      for (final code in ['ru-available-only-inside', 'gfw', 'win-spy']) {
+        expect(await GeoDatReader.domains(geosite, code), isNotEmpty, reason: code);
+      }
 
       // Тело домерженной записи должно читаться, а не только её заголовок.
       expect(await GeoDatReader.cidrs(geoip, 'telegram'), isNotEmpty);
       expect(await GeoDatReader.domains(geosite, 'refilter'), isNotEmpty);
+    });
+
+    // замена, у которой в базе нет цели, молча превращается в выброс
+    test('у каждой замены незнакомого кода цели есть в поставляемой базе', () async {
+      if (!geosite.existsSync()) return;
+      final index = await GeoAssetIndex.fromDirectory('assets/bin/windows');
+      for (final code in ['ru-direct', 'ru-blocked', 'google-cn', 'apple-cn']) {
+        expect(geoSubstitutes('geosite:$code', index), isNotNull, reason: code);
+      }
     });
 
     test('белый список собран из текста: домены вместе с поддоменами', () async {

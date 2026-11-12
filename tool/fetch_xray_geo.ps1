@@ -11,6 +11,13 @@
 #   geosite: ir                       (from Chocolate4U/Iran-v2ray-rules, geosite-lite.dat:
 #                                      .ir plus Iranian sites on other zones)
 #   geoip:  arvancloud, derakcloud, iranserver, parspack   (Iranian CDNs, same source)
+#   geosite: ru-available-only-inside, antifilter-download-community
+#                                     (from runetfreedom/russia-v2ray-rules-dat, 87 MB file,
+#                                      only these two small codes are taken)
+#   geosite: gfw, win-spy, win-update, win-extra   (from Loyalsoldier/v2ray-rules-dat)
+#
+# Codes that providers send and we have under another name are not merged but
+# replaced at connect time, see _geositeAliases in lib/utils/geo_rule_sanitizer.dart.
 #
 # Appending works because both files are protobuf `repeated entry = 1`, so a
 # concatenation of records is still a valid message. Base codes win on conflict
@@ -71,6 +78,10 @@ try {
     $iranGeoip = Join-Path $tmpDir 'iran_geoip.dat'
     Get-File 'https://raw.githubusercontent.com/Chocolate4U/Iran-v2ray-rules/release/geosite-lite.dat' $iranGeosite
     Get-File 'https://raw.githubusercontent.com/Chocolate4U/Iran-v2ray-rules/release/geoip.dat' $iranGeoip
+    $runetGeosite = Join-Path $tmpDir 'runetfreedom_geosite.dat'
+    $loyalGeosite = Join-Path $tmpDir 'loyalsoldier_geosite.dat'
+    Get-File 'https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geosite.dat' $runetGeosite
+    Get-File 'https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat' $loyalGeosite
 
     # 3. merge the extra codes into the bundled databases
     Merge-Codes $geoip $loyalGeoip 'telegram,google,netflix,twitter,facebook,cloudflare,cloudfront,fastly,tor'
@@ -79,6 +90,8 @@ try {
     Merge-Codes $geosite $whitelist 'ru-whitelist' '--list'
     Merge-Codes $geosite $iranGeosite 'ir'
     Merge-Codes $geoip $iranGeoip 'arvancloud,derakcloud,iranserver,parspack'
+    Merge-Codes $geosite $runetGeosite 'ru-available-only-inside,antifilter-download-community'
+    Merge-Codes $geosite $loyalGeosite 'gfw,win-spy,win-update,win-extra'
 
     # 4. mirror into the Linux asset dir (installed wholesale by linux/CMakeLists.txt)
     $linuxDir = Join-Path $root 'assets\bin\linux'
