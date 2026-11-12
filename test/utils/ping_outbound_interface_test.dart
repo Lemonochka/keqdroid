@@ -94,19 +94,60 @@ void main() {
   Object? boundTo(Map<String, dynamic> outbound) =>
       ((outbound['streamSettings'] as Map?)?['sockopt'] as Map?)?['interface'];
 
-  // убрать то, что добавляет привязка: остаток обязан совпасть с конфигом без неё
-  Map<String, dynamic> unbind(Map<String, dynamic> config) {
-    final copy = jsonDecode(jsonEncode(config)) as Map<String, dynamic>;
-    for (final outbound in (copy['outbounds'] as List).cast<Map<String, dynamic>>()) {
+  Object? strategyOf(Map<String, dynamic> outbound) =>
+      ((outbound['streamSettings'] as Map?)?['sockopt'] as Map?)?['domainStrategy'];
+
+  List<Object?> dnsServers(Map<String, dynamic> config) =>
+      (config['dns'] as Map)['servers'] as List;
+
+  // убрать то, что добавляет привязка: интерфейс, стратегию там, где её не было, и DNS пинга.
+  // остаток обязан совпасть с конфигом без неё
+  Map<String, dynamic> unbind(
+    Map<String, dynamic> bound,
+    Map<String, dynamic> plain,
+  ) {
+    final copy = jsonDecode(jsonEncode(bound)) as Map<String, dynamic>;
+    final outbounds = (copy['outbounds'] as List).cast<Map<String, dynamic>>();
+    final before = (plain['outbounds'] as List).cast<Map<String, dynamic>>();
+    for (var i = 0; i < outbounds.length; i++) {
+      final outbound = outbounds[i];
       final stream = outbound['streamSettings'] as Map<String, dynamic>?;
       final sockopt = stream?['sockopt'] as Map<String, dynamic>?;
-      if (sockopt == null || sockopt['interface'] != iface) continue;
-      sockopt.remove('interface');
+      if (sockopt == null) continue;
+      if (sockopt['interface'] == iface) sockopt.remove('interface');
+      if (strategyOf(before[i]) == null) sockopt.remove('domainStrategy');
       if (sockopt.isEmpty) stream!.remove('sockopt');
       if (stream!.isEmpty) outbound.remove('streamSettings');
     }
+    copy['dns'] = plain['dns'];
     return copy;
   }
+
+  String customWith(Map<String, dynamic> proxy) => jsonEncode({
+        'outbounds': [
+          {'tag': 'proxy', ...proxy},
+          {'tag': 'direct', 'protocol': 'freedom'},
+        ],
+      });
+
+  Map<String, dynamic> vlessTo(String address, {Map<String, dynamic>? sockopt}) => {
+        'protocol': 'vless',
+        'settings': {
+          'vnext': [
+            {
+              'address': address,
+              'port': 443,
+              'users': [
+                {'id': uuid, 'encryption': 'none'},
+              ],
+            },
+          ],
+        },
+        'streamSettings': {
+          'network': 'tcp',
+          'sockopt': ?sockopt,
+        },
+      };
 
   group('без интерфейса', () {
     test('конфиг тот же, что раньше', () {
@@ -129,10 +170,55 @@ void main() {
       expect(byTag(config, 'block').containsKey('streamSettings'), isFalse);
     });
 
-    test('кроме привязки не меняется ничего', () {
+    test('кроме привязки, стратегии и DNS пинга не меняется ничего', () {
       for (final input in [reality, hysteria, chain, custom]) {
-        expect(unbind(xray(input, bind: iface)), xray(input));
+        expect(unbind(xray(input, bind: iface), xray(input)), xray(input));
       }
+    });
+
+    // жалоба из чата 12.11.2026: готовый JSON провайдера, TUN на Windows и Fake IP, не пинговался ни один сервер.
+    // ядро пинга спрашивало резолвер Windows, тот ходит только в DNS туннеля и отдавал 198.18.x.x
+    test('сокет наружу ищет адрес сервера своим DNS, а не у Windows', () {
+      final config = xray(custom, bind: iface);
+      expect(strategyOf(byTag(config, 'front')), 'UseIPv4');
+      expect(strategyOf(byTag(config, 'author-bound')), 'UseIPv4');
+      // адрес узла с dialerProxy ищет тот, через кого он выходит
+      expect(strategyOf(byTag(config, 'proxy')), isNull);
+      expect(byTag(config, 'old-chain').containsKey('streamSettings'), isFalse);
+      expect(byTag(config, 'drop').containsKey('streamSettings'), isFalse);
+    });
+
+    test('готовый JSON с доменом сервера: узел привязан и ищет адрес сам', () {
+      final config = xray(customWith(vlessTo('nl.example.com')), bind: iface);
+      final proxy = byTag(config, 'proxy');
+      expect(boundTo(proxy), iface);
+      expect(strategyOf(proxy), 'UseIPv4');
+    });
+
+    test('готовый JSON: DNS пинга тот же, что у ссылок, без простого UDP-53', () {
+      final bound = xray(custom, bind: iface);
+      expect(bound['dns'], xray(reality, bind: iface)['dns']);
+      expect(dnsServers(bound).first, startsWith('https+local://'));
+      expect(dnsServers(bound), isNot(contains('8.8.8.8')));
+    });
+
+    test('у ссылок DNS пинга с привязкой прежний', () {
+      for (final input in [reality, hysteria, chain]) {
+        expect(xray(input, bind: iface)['dns'], xray(input)['dns']);
+      }
+    });
+
+    test('стратегию автора оставляем, AsIs заменяем', () {
+      final own = xray(
+        customWith(vlessTo('nl.example.com', sockopt: {'domainStrategy': 'ForceIPv6'})),
+        bind: iface,
+      );
+      expect(strategyOf(byTag(own, 'proxy')), 'ForceIPv6');
+      final asIs = xray(
+        customWith(vlessTo('nl.example.com', sockopt: {'domainStrategy': 'AsIs'})),
+        bind: iface,
+      );
+      expect(strategyOf(byTag(asIs, 'proxy')), 'UseIPv4');
     });
 
     test('hysteria2 тоже: она открывает UDP тем же dialer', () {

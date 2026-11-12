@@ -70,6 +70,8 @@ class ConfigGeneratorV2 {
     );
     if (outboundInterface != null) {
       _bindToInterface(config, outboundInterface);
+      // у готового JSON тут был простой 8.8.8.8, а его ядро отправило бы в тот же ещё не найденный сервер
+      config['dns'] = _pingDns();
     }
     return jsonEncode(config);
   }
@@ -97,11 +99,27 @@ class ConfigGeneratorV2 {
     );
     if ((sockopt['dialerProxy']?.toString() ?? '').isNotEmpty) return outbound;
     sockopt.putIfAbsent('interface', () => name);
+    // без своего TUN ядро спросило бы резолвер Windows, а тот в TUN ходит только в DNS туннеля:
+    // с Fake IP домен сервера получал 198.18.x.x, и замер мимо туннеля уходил в никуда
+    final strategy = sockopt['domainStrategy']?.toString().trim() ?? '';
+    if (strategy.isEmpty || strategy.toLowerCase() == 'asis') {
+      sockopt['domainStrategy'] = 'UseIPv4';
+    }
     return <String, dynamic>{
       ...Map<String, dynamic>.from(outbound),
       'streamSettings': {...stream, 'sockopt': sockopt},
     };
   }
+
+  // тот же DoH, что в боевом конфиге: UDP-53 к 8.8.8.8 у части провайдеров подменяют, и пинг краснел бы на живом
+  static Map<String, dynamic> _pingDns() => {
+        'servers': [
+          'https+local://1.1.1.1/dns-query',
+          'https+local://8.8.8.8/dns-query',
+          'localhost',
+        ],
+        'queryStrategy': 'UseIPv4',
+      };
 
   static const int ephemeralPingPort = 28150;
 
@@ -2056,15 +2074,7 @@ class ConfigGeneratorV2 {
     final globalProxy = settings.finalOutbound == AppSettings.finalOutboundProxy;
 
     final dns = isPingMode
-        ? {
-            // тот же DoH, что в боевом конфиге: UDP-53 к 8.8.8.8 у части провайдеров подменяют, и пинг краснел бы на живом
-            'servers': [
-              'https+local://1.1.1.1/dns-query',
-              'https+local://8.8.8.8/dns-query',
-              'localhost',
-            ],
-            'queryStrategy': 'UseIPv4',
-          }
+        ? _pingDns()
         : core.buildDnsBlock(
             directDomains: [...directDomains, ...placedDns.direct],
             liftedDomains: placedDns.lifted,
