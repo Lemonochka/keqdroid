@@ -58,6 +58,7 @@ import '../utils/mieru_uri.dart';
 import '../utils/desktop_tun.dart';
 import '../utils/host_ipv6.dart';
 import '../utils/process_name_utils.dart';
+import '../utils/local_vpn_proxy.dart' show localProxyCredentialsSync;
 import '../utils/mihomo_api_session.dart';
 import '../utils/mihomo_config_gen.dart';
 import '../utils/owner_guard.dart';

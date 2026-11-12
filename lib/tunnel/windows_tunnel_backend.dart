@@ -114,6 +114,10 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   }
 
   @override
+  Future<({String username, String password})?>
+      fetchActiveSocksCredentials() async => null;
+
+  @override
   Future<({String username, String password})> fetchSocksCredentials() async {
     _pendingCreds = SocksCredentialGenerator.generatePair();
     return _pendingCreds!;

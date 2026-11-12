@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/utils/local_vpn_proxy.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
@@ -112,6 +113,33 @@ class _SessionProxy {
   }
 
   Future<void> stop() => _server.close();
+}
+
+/// Адаптер вместо сети для скачивания: за туннелем заглушки TLS не поднять.
+/// Отказ тем же текстом, что бросает dart:io на 407 в ответ на CONNECT.
+class _TunnelAdapter implements HttpClientAdapter {
+  _TunnelAdapter(this.acceptedUser);
+
+  final String acceptedUser;
+  int calls = 0;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    calls++;
+    if (Socks5Credentials().username != acceptedUser) {
+      throw const HttpException(
+        'Proxy failed to establish tunnel (407 Proxy Authentication Required)',
+      );
+    }
+    return ResponseBody.fromString('payload', 200);
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
 
 void main() {
@@ -347,6 +375,138 @@ void main() {
         ),
       );
       expect(proxy.requestLines, hasLength(lessThanOrEqualTo(2)));
+    });
+  });
+
+  group('407 от своего инбаунда: креды берутся у сессии, повтор один', () {
+    // Случай с Pixel 6a 12.11.2026: синглтон разошёлся с ядром, и обновление,
+    // подписки и всё прочее приложения получали 407 до его перезапуска.
+    late _SessionProxy proxy;
+    late Dio dio;
+    late int syncCalls;
+
+    setUp(() async {
+      proxy = _SessionProxy();
+      await proxy.start();
+      dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 5)));
+      configureDioForLocalVpnHttpProxy(dio, httpPort: proxy.port);
+      syncCalls = 0;
+    });
+
+    tearDown(() async {
+      localProxyCredentialsSync = null;
+      dio.close(force: true);
+      await proxy.stop();
+      Socks5Credentials().init('', '');
+    });
+
+    String basic(String user, String pass) =>
+        'Basic ${base64.encode(utf8.encode('$user:$pass'))}';
+
+    void sessionHas(String user, String pass) {
+      localProxyCredentialsSync = () async {
+        syncCalls++;
+        Socks5Credentials().init(user, pass);
+      };
+    }
+
+    Future<Object?> failureOf(Future<Object?> request) async {
+      try {
+        await request.timeout(const Duration(seconds: 5));
+      } catch (e) {
+        return e;
+      }
+      return null;
+    }
+
+    bool refused(Object? e) =>
+        e is DioException && isLocalProxyAuthRefusal(e.error);
+
+    test('текст отказа dart:io узнаётся', () async {
+      Socks5Credentials().init('stale', 'stale');
+      proxy.accepted = ('live', 'live');
+      final e = await failureOf(dio.get<String>('https://example.test/sub'));
+      expect(refused(e), isTrue, reason: '$e');
+    });
+
+    test('пароль разошёлся с ядром: берём пароль сессии и повторяем', () async {
+      Socks5Credentials().init('stale', 'stale');
+      proxy.accepted = ('live', 'live');
+      sessionHas('live', 'live');
+
+      // повтор доходит до открытого туннеля и падает на TLS, уже не на 407
+      final e = await failureOf(dio.get<String>('https://example.test/sub'));
+      expect(refused(e), isFalse, reason: '$e');
+      expect(syncCalls, 1);
+      expect(proxy.authHeaders, [basic('stale', 'stale'), basic('live', 'live')]);
+    });
+
+    test('у сессии тот же пароль: ошибка сразу, без повтора', () async {
+      Socks5Credentials().init('stale', 'stale');
+      proxy.accepted = ('live', 'live');
+      sessionHas('stale', 'stale');
+
+      final e = await failureOf(dio.get<String>('https://example.test/sub'));
+      expect(refused(e), isTrue, reason: '$e');
+      expect(syncCalls, 1);
+      expect(proxy.requestLines, hasLength(1));
+    });
+
+    test('и с новым паролем 407: второго повтора нет', () async {
+      Socks5Credentials().init('stale', 'stale');
+      proxy.accepted = null;
+      var n = 0;
+      localProxyCredentialsSync = () async {
+        syncCalls++;
+        n++;
+        Socks5Credentials().init('next$n', 'next$n');
+      };
+
+      final e = await failureOf(dio.get<String>('https://example.test/sub'));
+      expect(refused(e), isTrue, reason: '$e');
+      expect(syncCalls, 1);
+      expect(proxy.requestLines, hasLength(2));
+    });
+
+    test('без сверки, как на ПК и в фоновых изолятах, повтора нет', () async {
+      Socks5Credentials().init('stale', 'stale');
+      proxy.accepted = ('live', 'live');
+
+      final e = await failureOf(dio.get<String>('https://example.test/sub'));
+      expect(refused(e), isTrue, reason: '$e');
+      expect(proxy.requestLines, hasLength(1));
+    });
+
+    test('два запроса разом: оба повторяются с паролем сессии', () async {
+      Socks5Credentials().init('stale', 'stale');
+      proxy.accepted = ('live', 'live');
+      sessionHas('live', 'live');
+
+      final errors = await Future.wait([
+        failureOf(dio.get<String>('https://example.test/a')),
+        failureOf(dio.get<String>('https://example.test/b')),
+      ]);
+      expect(errors.where(refused), isEmpty, reason: '$errors');
+      expect(
+        proxy.authHeaders.where((h) => h == basic('live', 'live')),
+        hasLength(2),
+      );
+    });
+
+    test('скачивание файла переживает повтор', () async {
+      Socks5Credentials().init('stale', 'stale');
+      sessionHas('live', 'live');
+      final adapter = _TunnelAdapter('live');
+      dio.httpClientAdapter = adapter;
+      final dir = await Directory.systemTemp.createTemp('keq_407_');
+      addTearDown(() => dir.delete(recursive: true));
+      final file = File('${dir.path}/update.apk');
+
+      await dio.download('https://example.test/update.apk', file.path);
+
+      expect(await file.readAsString(), 'payload');
+      expect(adapter.calls, 2);
+      expect(syncCalls, 1);
     });
   });
 

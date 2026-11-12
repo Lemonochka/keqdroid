@@ -362,6 +362,10 @@ class MainActivity : FlutterFragmentActivity() {
                                 ?.filterIsInstance<String>() ?: emptyList()
                             val includePackages = call.argument<List<*>>("includePackages")
                                 ?.filterIsInstance<String>() ?: emptyList()
+                            val dartCredentials = ProxyCredentials(
+                                call.argument<String>("socksUsername") ?: "",
+                                call.argument<String>("socksPassword") ?: "",
+                            )
                             // нет режима значит старый Dart, поднимаем VPN
                             val tunnelMode =
                                 if (call.argument<String>("tunnelMode") ==
@@ -388,6 +392,7 @@ class MainActivity : FlutterFragmentActivity() {
                                         result,
                                         coreEngine,
                                         tunnelMode = tunnelMode,
+                                        dartCredentials = dartCredentials,
                                     )
                                 }
                                 KeqdisVpnService.VPN_BACKEND_MIHOMO -> {
@@ -408,6 +413,7 @@ class MainActivity : FlutterFragmentActivity() {
                                         // расширение yaml, внутри JSON: он подмножество YAML
                                         "mihomo_config.yaml",
                                         tunnelMode = tunnelMode,
+                                        dartCredentials = dartCredentials,
                                     )
                                 }
                                 else -> result.error("UNSUPPORTED_BACKEND", "Unsupported VPN backend: $backend", null)
@@ -434,15 +440,21 @@ class MainActivity : FlutterFragmentActivity() {
                         "getActiveSocksCredentials" -> {
                             // креды живой сессии, без новых: сервис переживает пересоздание Flutter-движка, а Dart-синглтон нет,
                             // и свежий изолят получал 407 от своего же инбаунда
-                            var user = vpnServiceBinder?.getSocksUsername() ?: ""
-                            var pass = vpnServiceBinder?.getSocksPassword() ?: ""
-                            if (user.isEmpty() || pass.isEmpty()) {
-                                // binder ещё не привязан: те же креды сервис кладёт в QS-prefs
-                                val prefs = getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
-                                user = prefs.getString(KeqdisVpnService.KEY_QS_LAST_SOCKS_USERNAME, "") ?: ""
-                                pass = prefs.getString(KeqdisVpnService.KEY_QS_LAST_SOCKS_PASSWORD, "") ?: ""
-                            }
-                            result.success(mapOf("username" to user, "password" to pass))
+                            // binder ещё не привязан: те же креды сервис кладёт в prefs
+                            val prefs = getSharedPreferences(KeqdisVpnService.PREFS_QS, Context.MODE_PRIVATE)
+                            val active = activeCredentials(
+                                vpnServiceBinder?.getCoreCredentials(),
+                                ProxyCredentials(
+                                    prefs.getString(KeqdisVpnService.KEY_CORE_SOCKS_USERNAME, "") ?: "",
+                                    prefs.getString(KeqdisVpnService.KEY_CORE_SOCKS_PASSWORD, "") ?: "",
+                                ),
+                            )
+                            result.success(
+                                mapOf(
+                                    "username" to (active?.username ?: ""),
+                                    "password" to (active?.password ?: ""),
+                                )
+                            )
                         }
                         "getMihomoApi" -> getMihomoApi(result)
                         "getDialFailures" -> result.success(NativeHelper.dialFailures())
@@ -776,6 +788,7 @@ class MainActivity : FlutterFragmentActivity() {
         backend: String = KeqdisVpnService.VPN_BACKEND_XRAY,
         configFileName: String = "xray_config.json",
         tunnelMode: String = KeqdisVpnService.TUNNEL_MODE_VPN,
+        dartCredentials: ProxyCredentials? = null,
     ) {
         // разрешение VPN только когда поднимаем интерфейс: в режиме прокси establish() не зовётся
         if (tunnelMode != KeqdisVpnService.TUNNEL_MODE_PROXY &&
@@ -786,13 +799,17 @@ class MainActivity : FlutterFragmentActivity() {
         }
 
         // без getSocksCredentials ошибка, пустые строки сервису не шлём
-        val username = pendingSocksUsername
-        val password = pendingSocksPassword
-        if (username.isNullOrEmpty() || password.isNullOrEmpty()) {
+        val credentials = startCredentials(
+            dartCredentials,
+            ProxyCredentials(pendingSocksUsername ?: "", pendingSocksPassword ?: ""),
+        )
+        if (credentials == null) {
             NativeLog.e("KEQDIS", "startVpn: credentials missing — call getSocksCredentials first")
             result.error("NO_CREDENTIALS", "Call getSocksCredentials before startVpn", null)
             return
         }
+        val username = credentials.username
+        val password = credentials.password
 
         // запись на IO: на main она фризила
         mainScope.launch {

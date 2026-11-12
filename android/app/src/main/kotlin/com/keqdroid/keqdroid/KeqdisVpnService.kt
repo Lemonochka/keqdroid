@@ -112,6 +112,8 @@ class KeqdisVpnService : VpnService() {
         const val KEY_QS_LAST_XRAY_CONFIG = "qs_last_xray_config"
         const val KEY_QS_LAST_SOCKS_USERNAME = "qs_last_socks_username"
         const val KEY_QS_LAST_SOCKS_PASSWORD = "qs_last_socks_password"
+        const val KEY_CORE_SOCKS_USERNAME = "core_socks_username"
+        const val KEY_CORE_SOCKS_PASSWORD = "core_socks_password"
         const val KEY_QS_LAST_SOCKS_PORT = "qs_last_socks_port"
         const val KEY_QS_LAST_BACKEND = "qs_last_backend"
         const val KEY_QS_LAST_CORE_ENGINE = "qs_last_core_engine"
@@ -161,6 +163,8 @@ class KeqdisVpnService : VpnService() {
     // креды приходят от MainActivity, так они совпадают с записанными в конфиг ядра
     @Volatile var socksUsername: String    = ""
     @Volatile var socksPassword: String    = ""
+    // с какими кредами поднято работающее ядро: socksUsername меняет и старт, который ядро не перезапустил
+    @Volatile private var coreCredentials: ProxyCredentials? = null
 
     @Volatile private var status              = VpnRunStatus.STOPPED
     @Volatile private var currentServerName: String? = null
@@ -208,8 +212,7 @@ class KeqdisVpnService : VpnService() {
 
     inner class LocalBinder : Binder() {
         fun getStatus()          = status
-        fun getSocksUsername()   = socksUsername
-        fun getSocksPassword()   = socksPassword
+        fun getCoreCredentials() = coreCredentials
         fun setStatusListener(l: StatusListener?) { statusListener = l }
         fun getUploadSpeed()     = uploadSpeed.get()
         fun getDownloadSpeed()   = downloadSpeed.get()
@@ -401,6 +404,18 @@ class KeqdisVpnService : VpnService() {
         // убитый процесс Android поднимет и позовёт без команды, сессия восстановится сама.
         // с NOT_STICKY туннель пропадал до ручного подключения
         return START_STICKY
+    }
+
+    // копия в prefs для MainActivity, пока binder не привязан
+    private fun rememberCoreCredentials(creds: ProxyCredentials?) {
+        coreCredentials = creds
+        runCatching {
+            getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_CORE_SOCKS_USERNAME, creds?.username ?: "")
+                .putString(KEY_CORE_SOCKS_PASSWORD, creds?.password ?: "")
+                .apply()
+        }
     }
 
     private fun rememberSessionWanted(wanted: Boolean) {
@@ -646,6 +661,7 @@ class KeqdisVpnService : VpnService() {
         }
         ownerServer?.close()
         ownerServer = null
+        rememberCoreCredentials(null)
 
         // креды не сбрасываем: с ними дозавершается запущенное ядро, живут до следующего старта
         startTime = 0L
@@ -1168,6 +1184,7 @@ class KeqdisVpnService : VpnService() {
         }
         NativeLog.i("KEQDIS", "Xray started pid=$pid")
         coreStartedAt = android.os.SystemClock.elapsedRealtime()
+        rememberCoreCredentials(ProxyCredentials(socksUsername, socksPassword))
 
         val monitorPid = pid
         serviceScope.launch(Dispatchers.IO) {

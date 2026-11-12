@@ -132,6 +132,10 @@ class LinuxTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   static const coresLogName = 'keqdroid_cores.log';
 
   @override
+  Future<({String username, String password})?>
+      fetchActiveSocksCredentials() async => null;
+
+  @override
   Future<({String username, String password})> fetchSocksCredentials() async {
     return SocksCredentialGenerator.generatePair();
   }

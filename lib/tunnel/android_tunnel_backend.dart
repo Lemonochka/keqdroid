@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
+import '../utils/socks5_credentials.dart';
 import 'tunnel_backend.dart';
 import 'tunnel_session_request.dart';
 import 'tunnel_state.dart';
@@ -69,6 +70,7 @@ class AndroidTunnelBackend implements TunnelBackend {
     }
   }
 
+  @override
   Future<({String username, String password})?>
       fetchActiveSocksCredentials() async {
     try {
@@ -87,8 +89,15 @@ class AndroidTunnelBackend implements TunnelBackend {
   Future<void> startSession(TunnelSessionRequest request) async {
     try {
       final coreConfig = request.xrayConfig;
+      // генераторы вписали в конфиг креды синглтона, и сервис обязан запомнить их же:
+      // в режиме прокси с паролем это пароль из настроек, а не тот, что выдала нативная часть
+      final creds = Socks5Credentials();
 
       final args = <String, dynamic>{
+        if (creds.isInitialized) ...{
+          'socksUsername': creds.username,
+          'socksPassword': creds.password,
+        },
         'vpnBackend': request.vpnBackend.wireValue,
         'xrayConfig': coreConfig,
         if (request.mihomoConfig != null && request.mihomoConfig!.isNotEmpty)

@@ -15,6 +15,10 @@ abstract class TunnelBackend {
 
   Future<({String username, String password})> fetchSocksCredentials();
 
+  // креды, с которыми поднято работающее ядро; на ПК их держит само приложение
+  Future<({String username, String password})?>
+      fetchActiveSocksCredentials() async => null;
+
   Future<void> startSession(TunnelSessionRequest request);
 
   Future<void> stopSession();

@@ -41,14 +41,8 @@ class VpnEngine {
   Future<({String username, String password})> fetchSocksCredentials() =>
       _backend.fetchSocksCredentials();
 
-  Future<({String username, String password})?>
-      fetchActiveSocksCredentials() async {
-    final backend = _backend;
-    if (backend is AndroidTunnelBackend) {
-      return backend.fetchActiveSocksCredentials();
-    }
-    return null;
-  }
+  Future<({String username, String password})?> fetchActiveSocksCredentials() =>
+      _backend.fetchActiveSocksCredentials();
 
   Future<void> startSession(TunnelSessionRequest request) =>
       _backend.startSession(request);

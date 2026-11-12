@@ -57,7 +57,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   AppLifecycleListener? _androidLifecycle;
 
   void _applyNativeState(VpnState s) {
-    _restoreSocksCredentialsIfNeeded(s);
+    if (s.status == VpnStatus.connected) {
+      unawaited(syncSocksCredentialsFromService());
+    }
     _syncMihomoApiSession(s);
     _persistActiveLocalHttpPort(s.status);
     if (_serverSwitchInProgress && s.status == VpnStatus.error) return;
@@ -119,29 +121,45 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     );
   }
 
-  bool _credsRestoreInFlight = false;
+  Future<void>? _credsSync;
 
-  // VpnService переживает пересоздание движка, и без кредов свежий изолят получает 407
-  void _restoreSocksCredentialsIfNeeded(VpnState s) {
-    if (!Platform.isAndroid) return;
-    if (s.status != VpnStatus.connected) return;
-    if (Socks5Credentials().isInitialized) return;
-    if (_credsRestoreInFlight) return;
-    _credsRestoreInFlight = true;
-    unawaited(() async {
-      try {
-        final creds =
-            await ref.read(vpnEngineProvider).fetchActiveSocksCredentials();
-        if (creds != null) {
-          Socks5Credentials().init(creds.username, creds.password);
-          AppLogger.instance.info(
-            'SOCKS5 credentials restored from the running VPN service',
-          );
-        }
-      } finally {
-        _credsRestoreInFlight = false;
-      }
-    }());
+  @visibleForTesting
+  static bool? debugSyncsCredentials;
+
+  // на ПК креды держит само приложение, сверять не с кем
+  static bool get _syncsCredentials => debugSyncsCredentials ?? Platform.isAndroid;
+
+  // креды приложения и ядра расходились: свежий изолят пуст, а старт поверх живой сессии ядро не перезапускает.
+  // тогда всё своё приложение получало 407 от своего же прокси, до перезапуска (Pixel 6a, 12.11.2026)
+  Future<void> syncSocksCredentialsFromService() {
+    if (!_syncsCredentials || _connectInFlight) return Future<void>.value();
+    return _credsSync ??=
+        _takeSocksCredentialsFromService().whenComplete(() => _credsSync = null);
+  }
+
+  Future<void> _takeSocksCredentialsFromService() async {
+    final creds =
+        await ref.read(vpnEngineProvider).fetchActiveSocksCredentials();
+    // connect() сверит сам, когда поднимет ядро
+    if (creds == null || !ref.mounted || _connectInFlight) return;
+    final current = Socks5Credentials();
+    if (current.username == creds.username &&
+        current.password == creds.password) {
+      return;
+    }
+    final restored = !current.isInitialized;
+    current.init(creds.username, creds.password);
+    if (restored) {
+      AppLogger.instance.info(
+        'SOCKS5 credentials restored from the running VPN service',
+      );
+    } else {
+      AppLogger.instance.warn(
+        'Local proxy credentials of the app differed from the running VPN '
+        'session; the session ones are used now',
+      );
+    }
+    _persistActiveLocalHttpPort(state.value?.status ?? VpnStatus.disconnected);
   }
 
   bool _mihomoApiRestoreInFlight = false;
@@ -224,7 +242,13 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         unawaited(_applyTemplatePins());
       }
     });
+    if (_syncsCredentials) {
+      localProxyCredentialsSync = syncSocksCredentialsFromService;
+    }
     ref.onDispose(() {
+      if (localProxyCredentialsSync == syncSocksCredentialsFromService) {
+        localProxyCredentialsSync = null;
+      }
       _autoSelectTimer?.cancel();
       _autoSelectListenTimer?.cancel();
       _autoSelectRecheckTimer?.cancel();
@@ -897,6 +921,9 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       _persistActiveLocalHttpPort(
         state.value?.status ?? VpnStatus.disconnected,
       );
+      if (state.value?.status == VpnStatus.connected) {
+        unawaited(syncSocksCredentialsFromService());
+      }
     }
   }
 
