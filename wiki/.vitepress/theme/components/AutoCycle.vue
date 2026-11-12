@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useData } from 'vitepress'
+
 const x0 = 30
 const x1 = 700
 const span = 30
@@ -6,34 +9,79 @@ const tx = (t: number) => x0 + ((x1 - x0) * t) / span
 
 type Seg = { from: number; to: number; text: string; cls: string; at?: number }
 type Ev = { t: number; lines: string[]; up: boolean }
+type Scene = { title: string; y: number; segs: Seg[]; evs: Ev[]; note?: { from: number; to: number; text: string } }
 
-const scenes: { title: string; y: number; segs: Seg[]; evs: Ev[]; note?: { from: number; to: number; text: string } }[] = [
-  {
-    title: 'Сервер перестал отвечать',
-    y: 0,
-    segs: [
-      { from: 0, to: 8, text: 'Финляндия', cls: 'a' },
-      { from: 8, to: 23, text: 'Нидерланды', cls: 'b' },
-      { from: 23, to: 30, text: 'Финляндия', cls: 'a' },
-    ],
-    evs: [
-      { t: 8, lines: ['Финляндия молчит', '→ Нидерланды'], up: true },
-      { t: 13, lines: ['проверка:', 'Финляндия молчит'], up: false },
-      { t: 18, lines: ['Финляндия ответила,', '1 раз из 2'], up: true },
-      { t: 23, lines: ['ответила снова', '→ обратно'], up: false },
-    ],
-  },
-  {
-    title: 'Пропала сеть',
-    y: 200,
-    segs: [{ from: 0, to: 30, text: 'Финляндия', cls: 'a', at: 23 }],
-    note: { from: 6, to: 16, text: 'нет сети' },
-    evs: [
-      { t: 6, lines: ['молчат все, соседние', 'подписки тоже → остаёмся'], up: true },
-      { t: 16, lines: ['сеть вернулась,', 'всё как было'], up: false },
-    ],
-  },
-]
+const ru = {
+  aria: 'Как Авто ведёт себя во времени: сервер упал и вернулся, пропала сеть',
+  caption: 'Полоса показывает, через какой сервер идёт соединение. Если сервер молчит, а другие отвечают, «Авто» переключается на другой и потом возвращается. Если молчат все, значит, пропала сеть, и «Авто» ничего не трогает.',
+  retries: 'проверки через 15 с, 30 с, 1 мин, 2 мин…',
+  min: 'мин',
+  scenes: [
+    {
+      title: 'Сервер перестал отвечать',
+      y: 0,
+      segs: [
+        { from: 0, to: 8, text: 'Финляндия', cls: 'a' },
+        { from: 8, to: 23, text: 'Нидерланды', cls: 'b' },
+        { from: 23, to: 30, text: 'Финляндия', cls: 'a' },
+      ],
+      evs: [
+        { t: 8, lines: ['Финляндия молчит', '→ Нидерланды'], up: true },
+        { t: 13, lines: ['проверка:', 'Финляндия молчит'], up: false },
+        { t: 18, lines: ['Финляндия ответила,', '1 раз из 2'], up: true },
+        { t: 23, lines: ['ответила снова', '→ обратно'], up: false },
+      ],
+    },
+    {
+      title: 'Пропала сеть',
+      y: 200,
+      segs: [{ from: 0, to: 30, text: 'Финляндия', cls: 'a', at: 23 }],
+      note: { from: 6, to: 16, text: 'нет сети' },
+      evs: [
+        { t: 6, lines: ['молчат все, соседние', 'подписки тоже → остаёмся'], up: true },
+        { t: 16, lines: ['сеть вернулась,', 'всё как было'], up: false },
+      ],
+    },
+  ] as Scene[],
+}
+
+const en: typeof ru = {
+  aria: 'How Auto behaves over time: a server goes down and comes back, the network drops',
+  caption: 'The bar shows which server the connection goes through. If a server is silent while others answer, Auto switches to another one and later switches back. If everything is silent, the network is gone, and Auto leaves things alone.',
+  retries: 'checks after 15 s, 30 s, 1 min, 2 min…',
+  min: 'min',
+  scenes: [
+    {
+      title: 'The server stopped responding',
+      y: 0,
+      segs: [
+        { from: 0, to: 8, text: 'Finland', cls: 'a' },
+        { from: 8, to: 23, text: 'Netherlands', cls: 'b' },
+        { from: 23, to: 30, text: 'Finland', cls: 'a' },
+      ],
+      evs: [
+        { t: 8, lines: ['Finland is silent', '→ Netherlands'], up: true },
+        { t: 13, lines: ['check:', 'Finland is silent'], up: false },
+        { t: 18, lines: ['Finland answered,', '1 time out of 2'], up: true },
+        { t: 23, lines: ['answered again', '→ back'], up: false },
+      ],
+    },
+    {
+      title: 'The network dropped',
+      y: 200,
+      segs: [{ from: 0, to: 30, text: 'Finland', cls: 'a', at: 23 }],
+      note: { from: 6, to: 16, text: 'no network' },
+      evs: [
+        { t: 6, lines: ['all silent, neighbor', 'subscriptions too → stay'], up: true },
+        { t: 16, lines: ['network is back,', 'nothing changed'], up: false },
+      ],
+    },
+  ],
+}
+
+const { lang } = useData()
+const t = computed(() => (lang.value.startsWith('en') ? en : ru))
+const scenes = computed(() => t.value.scenes)
 
 const laneY = 104
 const laneH = 28
@@ -41,7 +89,7 @@ const laneH = 28
 
 <template>
   <figure class="kq-figure">
-    <svg viewBox="0 0 720 400" role="img" aria-label="Как Авто ведёт себя во времени: сервер упал и вернулся, пропала сеть">
+    <svg viewBox="0 0 720 400" role="img" :aria-label="t.aria">
       <defs>
         <pattern id="kq-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <rect width="8" height="8" class="hatch-bg" />
@@ -58,7 +106,7 @@ const laneH = 28
         <template v-if="s.note">
           <rect :x="tx(s.note.from)" :y="laneY" :width="tx(s.note.to) - tx(s.note.from)" :height="laneH" fill="url(#kq-hatch)" />
           <text :x="(tx(s.note.from) + tx(s.note.to)) / 2" :y="laneY + 19" text-anchor="middle" class="note-t">{{ s.note.text }}</text>
-          <text :x="(tx(s.note.from) + tx(s.note.to)) / 2" :y="laneY + laneH + 50" text-anchor="middle" class="small">проверки через 15 с, 30 с, 1 мин, 2 мин…</text>
+          <text :x="(tx(s.note.from) + tx(s.note.to)) / 2" :y="laneY + laneH + 50" text-anchor="middle" class="small">{{ t.retries }}</text>
         </template>
 
         <g v-for="e in s.evs" :key="e.t">
@@ -70,11 +118,11 @@ const laneH = 28
         <line :x1="x0" :y1="laneY + laneH + 8" :x2="x1" :y2="laneY + laneH + 8" class="axis" />
         <g v-for="m in [0, 5, 10, 15, 20, 25, 30]" :key="m">
           <line :x1="tx(m)" :y1="laneY + laneH + 4" :x2="tx(m)" :y2="laneY + laneH + 12" class="axis" />
-          <text :x="tx(m)" :y="laneY + laneH + 26" text-anchor="middle" class="axis-t">{{ m }} мин</text>
+          <text :x="tx(m)" :y="laneY + laneH + 26" text-anchor="middle" class="axis-t">{{ m }} {{ t.min }}</text>
         </g>
       </g>
     </svg>
-    <figcaption>Полоса показывает, через какой сервер идёт соединение. Если сервер молчит, а другие отвечают, «Авто» переключается на другой и потом возвращается. Если молчат все, значит, пропала сеть, и «Авто» ничего не трогает.</figcaption>
+    <figcaption>{{ t.caption }}</figcaption>
   </figure>
 </template>
 

@@ -1,29 +1,56 @@
 <script setup lang="ts">
-const steps = [
-  { name: 'Служебные правила', owner: 'приложение' },
-  { name: 'Правила шаблона', owner: 'провайдер' },
-  { name: 'Ваши маршруты', owner: 'вы' },
-  { name: 'Всё остальное шаблона', owner: 'провайдер' },
-]
+import { computed } from 'vue'
+import { useData } from 'vitepress'
 
-const examples = [
-  { site: 'youtube.com', why: 'есть в шаблоне', stop: 1, result: 'группа YouTube:', result2: 'Нидерланды', cls: 'server' },
-  { site: 'vk.com', why: 'у вас в «Напрямую»', stop: 2, result: 'мимо VPN', result2: '', cls: 'direct' },
-  { site: 'example.org', why: 'нигде нет', stop: 3, result: 'главная группа:', result2: 'Германия', cls: 'proxy' },
-]
+const ru = {
+  aria: 'Три сайта проходят правила при шаблоне с группами и останавливаются на первом подходящем',
+  caption: 'В шаблоне правило отправляет YouTube в группу «YouTube», а MATCH – в главную группу. В группе «YouTube» выбраны Нидерланды, а в списке серверов нажата Германия.',
+  steps: [
+    { name: 'Служебные правила', owner: 'приложение', prov: false },
+    { name: 'Правила шаблона', owner: 'провайдер', prov: true },
+    { name: 'Ваши маршруты', owner: 'вы', prov: false },
+    { name: 'Всё остальное шаблона', owner: 'провайдер', prov: true },
+  ],
+  examples: [
+    { site: 'youtube.com', why: 'есть в шаблоне', stop: 1, result: 'группа YouTube:', result2: 'Нидерланды', cls: 'server' },
+    { site: 'vk.com', why: 'у вас в «Напрямую»', stop: 2, result: 'мимо VPN', result2: '', cls: 'direct' },
+    { site: 'example.org', why: 'нигде нет', stop: 3, result: 'главная группа:', result2: 'Германия', cls: 'proxy' },
+  ],
+}
+
+const en: typeof ru = {
+  aria: 'Three sites go through the rules with a group template and stop at the first one that fits',
+  caption: 'In the template, a rule sends YouTube to the “YouTube” group, and MATCH sends the rest to the main group. The “YouTube” group has the Netherlands selected, and Germany is tapped in the server list.',
+  steps: [
+    { name: 'Service rules', owner: 'the app', prov: false },
+    { name: 'Template rules', owner: 'the provider', prov: true },
+    { name: 'Your routes', owner: 'you', prov: false },
+    { name: 'Template’s “everything else”', owner: 'the provider', prov: true },
+  ],
+  examples: [
+    { site: 'youtube.com', why: 'in the template', stop: 1, result: 'YouTube group:', result2: 'Netherlands', cls: 'server' },
+    { site: 'vk.com', why: 'in your “Direct”', stop: 2, result: 'bypasses VPN', result2: '', cls: 'direct' },
+    { site: 'example.org', why: 'nowhere', stop: 3, result: 'main group:', result2: 'Germany', cls: 'proxy' },
+  ],
+}
+
+const { lang } = useData()
+const t = computed(() => (lang.value.startsWith('en') ? en : ru))
+const steps = computed(() => t.value.steps)
+const examples = computed(() => t.value.examples)
 
 const top = 70
 const rowH = 56
 const labelW = 230
 const colW = 160
-const height = top + steps.length * rowH + 64
+const height = top + ru.steps.length * rowH + 64
 const rowY = (i: number) => top + i * rowH
 const colX = (j: number) => labelW + j * colW + colW / 2
 </script>
 
 <template>
   <figure class="kq-figure">
-    <svg :viewBox="`0 0 720 ${height}`" role="img" aria-label="Три сайта проходят правила при шаблоне с группами и останавливаются на первом подходящем">
+    <svg :viewBox="`0 0 720 ${height}`" role="img" :aria-label="t.aria">
       <g v-for="(e, j) in examples" :key="e.site">
         <text :x="colX(j)" y="22" text-anchor="middle" class="site">{{ e.site }}</text>
         <text :x="colX(j)" y="42" text-anchor="middle" class="why">{{ e.why }}</text>
@@ -32,7 +59,7 @@ const colX = (j: number) => labelW + j * colW + colW / 2
       <g v-for="(s, i) in steps" :key="s.name">
         <rect x="0" :y="rowY(i)" width="720" :height="rowH" :class="i % 2 ? 'band' : 'band alt'" />
         <text x="14" :y="rowY(i) + 25" class="step">{{ s.name }}</text>
-        <text x="14" :y="rowY(i) + 43" :class="['owner', s.owner === 'провайдер' ? 'prov' : '']">{{ s.owner }}</text>
+        <text x="14" :y="rowY(i) + 43" :class="['owner', s.prov ? 'prov' : '']">{{ s.owner }}</text>
       </g>
 
       <g v-for="(e, j) in examples" :key="'p' + e.site">
@@ -43,7 +70,7 @@ const colX = (j: number) => labelW + j * colW + colW / 2
         <text v-if="e.result2" :x="colX(j)" :y="top + steps.length * rowH + 48" text-anchor="middle" :class="['result', e.cls]">{{ e.result2 }}</text>
       </g>
     </svg>
-    <figcaption>В шаблоне правило отправляет YouTube в группу «YouTube», а MATCH – в главную группу. В группе «YouTube» выбраны Нидерланды, а в списке серверов нажата Германия.</figcaption>
+    <figcaption>{{ t.caption }}</figcaption>
   </figure>
 </template>
 

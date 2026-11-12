@@ -1,20 +1,39 @@
 <script setup lang="ts">
-const nodes = [
-  { x: 70, label: 'устройство' },
-  { x: 360, label: 'сервер' },
-  { x: 630, label: 'сайт проверки' },
-]
+import { computed } from 'vue'
+import { useData } from 'vitepress'
 
-const rows = [
-  { name: 'TCP, ICMP', to: 360, note: 'отвечает ли адрес сервера' },
-  { name: 'HTTP через прокси', to: 630, note: 'запрос через сервер до сайта и обратно' },
-  { name: 'Тест скорости', to: 630, note: 'скачать 2 МБ через сервер' },
-]
+const ru = {
+  aria: 'Что измеряет каждый способ проверки',
+  nodes: ['устройство', 'сервер', 'сайт проверки'],
+  rows: [
+    { name: 'TCP, ICMP', note: 'отвечает ли адрес сервера' },
+    { name: 'HTTP через прокси', note: 'запрос через сервер до сайта и обратно' },
+    { name: 'Тест скорости', note: 'скачать 2 МБ через сервер' },
+  ],
+}
+
+const en: typeof ru = {
+  aria: 'What each check method measures',
+  nodes: ['device', 'server', 'test site'],
+  rows: [
+    { name: 'TCP, ICMP', note: 'whether the server address responds' },
+    { name: 'HTTP via proxy', note: 'a request through the server to the site and back' },
+    { name: 'Speed test', note: 'download 2 MB through the server' },
+  ],
+}
+
+const { lang } = useData()
+const t = computed(() => (lang.value.startsWith('en') ? en : ru))
+
+const nodeX = [70, 360, 630]
+const rowTo = [360, 630, 630]
+const nodes = computed(() => t.value.nodes.map((label, i) => ({ x: nodeX[i], label })))
+const rows = computed(() => t.value.rows.map((r, i) => ({ ...r, to: rowTo[i] })))
 </script>
 
 <template>
   <figure class="kq-figure">
-    <svg viewBox="0 0 700 300" role="img" aria-label="Что измеряет каждый способ проверки">
+    <svg viewBox="0 0 700 300" role="img" :aria-label="t.aria">
       <defs>
         <marker id="kq-p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" class="mark" />

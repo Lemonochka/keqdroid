@@ -1,22 +1,53 @@
 <script setup lang="ts">
-import { withBase } from 'vitepress'
+import { computed } from 'vue'
+import { useData, withBase } from 'vitepress'
 
-const marks = [
-  { x: 482, y: 100, header: 'profile-title', what: 'имя подписки, если вы не задали своё' },
-  { x: 833, y: 152, header: 'announce', what: 'объявление провайдера' },
-  { x: 497, y: 404, header: 'subscription-userinfo', what: 'израсходовано и сколько всего: upload + download из total' },
-  { x: 282, y: 530, header: 'subscription-userinfo', what: 'сколько осталось до конца: expire' },
-  { x: 208, y: 585, header: 'profile-update-interval', what: 'как часто обновлять подписку' },
-  { x: 650, y: 585, header: 'profile-web-page-url', what: 'кнопка «Страница подписки»' },
-  { x: 335, y: 675, header: 'support-url', what: 'кнопка «Поддержка»' },
+const ru = {
+  alt: 'Карточка подписки в приложении',
+  what: [
+    'имя подписки, если вы не задали своё',
+    'объявление провайдера',
+    'израсходовано и сколько всего: upload + download из total',
+    'сколько осталось до конца: expire',
+    'как часто обновлять подписку',
+    'кнопка «Страница подписки»',
+    'кнопка «Поддержка»',
+  ],
+}
+
+const en: typeof ru = {
+  alt: 'Subscription card in the app',
+  what: [
+    'subscription name, unless you set your own',
+    'provider announcement',
+    'used and total: upload + download out of total',
+    'time left until the end: expire',
+    'how often to update the subscription',
+    '“Subscription page” button',
+    '“Support” button',
+  ],
+}
+
+const spots = [
+  { x: 482, y: 100, header: 'profile-title' },
+  { x: 833, y: 152, header: 'announce' },
+  { x: 497, y: 404, header: 'subscription-userinfo' },
+  { x: 282, y: 530, header: 'subscription-userinfo' },
+  { x: 208, y: 585, header: 'profile-update-interval' },
+  { x: 650, y: 585, header: 'profile-web-page-url' },
+  { x: 335, y: 675, header: 'support-url' },
 ]
+
+const { lang } = useData()
+const t = computed(() => (lang.value.startsWith('en') ? en : ru))
+const marks = computed(() => spots.map((s, i) => ({ ...s, what: t.value.what[i] })))
 </script>
 
 <template>
   <figure class="kq-anatomy">
     <div class="shot">
-      <img class="only-light" :src="withBase('/img/card-light.png')" alt="Карточка подписки в приложении" />
-      <img class="only-dark" :src="withBase('/img/card-dark.png')" alt="Карточка подписки в приложении" />
+      <img class="only-light" :src="withBase('/img/card-light.png')" :alt="t.alt" />
+      <img class="only-dark" :src="withBase('/img/card-dark.png')" :alt="t.alt" />
       <svg viewBox="0 0 880 800" aria-hidden="true">
         <g v-for="(m, i) in marks" :key="i">
           <circle :cx="m.x" :cy="m.y" r="26" class="badge" />

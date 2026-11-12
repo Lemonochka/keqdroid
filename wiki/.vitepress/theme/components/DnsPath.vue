@@ -1,43 +1,50 @@
 <script setup lang="ts">
-const cols = ['Программа', 'Ядро', 'Сервер VPN', 'Резолвер']
+import { computed } from 'vue'
+import { useData } from 'vitepress'
 
-const rows = [
-  {
-    site: 'youtube.com',
-    why: 'обычный сайт',
-    hops: [0, 1, 2, 3],
-    resolver: '1.1.1.1',
-    result: 'настоящий адрес, запрос шёл через VPN',
-    cls: 'proxy',
-  },
-  {
-    site: 'vpn.example',
-    why: 'адрес вашего сервера',
-    hops: [1, 3],
-    resolver: '1.1.1.1',
-    result: 'напрямую – через сам сервер его адрес не узнать',
-    cls: 'direct',
-  },
-  {
-    site: 'youtube.com',
-    why: 'с Fake IP',
-    hops: [0, 1],
-    resolver: '',
-    result: 'ядро сразу отвечает 198.18.0.7',
-    cls: 'fake',
-  },
+const ru = {
+  aria: 'Три DNS-запроса: обычный сайт через VPN, адрес сервера напрямую и ответ Fake IP из самого ядра',
+  caption: 'Три запроса, когда «Всё остальное» идёт через VPN, а DNS-серверы стоят по умолчанию. Пустой кружок – запрос проходит мимо этой точки.',
+  cols: ['Программа', 'Ядро', 'Сервер VPN', 'Резолвер'],
+  rows: [
+    { why: 'обычный сайт', result: 'настоящий адрес, запрос шёл через VPN' },
+    { why: 'адрес вашего сервера', result: 'напрямую – через сам сервер его адрес не узнать' },
+    { why: 'с Fake IP', result: 'ядро сразу отвечает 198.18.0.7' },
+  ],
+}
+
+const en: typeof ru = {
+  aria: 'Three DNS queries: a regular site through the VPN, the server address directly, and a Fake IP answer from the core itself',
+  caption: 'Three queries when “Everything else” goes through the VPN and the DNS servers are left at their defaults. An empty circle means the query skips that point.',
+  cols: ['Program', 'Core', 'VPN server', 'Resolver'],
+  rows: [
+    { why: 'regular site', result: 'real address, the query went through the VPN' },
+    { why: 'your server address', result: 'direct – the server can’t look up its own address' },
+    { why: 'with Fake IP', result: 'the core answers 198.18.0.7 right away' },
+  ],
+}
+
+const shape = [
+  { site: 'youtube.com', hops: [0, 1, 2, 3], resolver: '1.1.1.1', cls: 'proxy' },
+  { site: 'vpn.example', hops: [1, 3], resolver: '1.1.1.1', cls: 'direct' },
+  { site: 'youtube.com', hops: [0, 1], resolver: '', cls: 'fake' },
 ]
+
+const { lang } = useData()
+const t = computed(() => (lang.value.startsWith('en') ? en : ru))
+const cols = computed(() => t.value.cols)
+const rows = computed(() => shape.map((r, i) => ({ ...r, ...t.value.rows[i] })))
 
 const top = 44
 const rowH = 92
 const colX = (i: number) => 250 + i * 130
 const rowY = (r: number) => top + r * rowH
-const height = top + rows.length * rowH + 6
+const height = top + shape.length * rowH + 6
 </script>
 
 <template>
   <figure class="kq-figure">
-    <svg :viewBox="`0 0 720 ${height}`" role="img" aria-label="Три DNS-запроса: обычный сайт через VPN, адрес сервера напрямую и ответ Fake IP из самого ядра">
+    <svg :viewBox="`0 0 720 ${height}`" role="img" :aria-label="t.aria">
       <text v-for="(c, i) in cols" :key="c" :x="colX(i)" y="22" text-anchor="middle" class="col">{{ c }}</text>
 
       <g v-for="(r, j) in rows" :key="j">
@@ -58,7 +65,7 @@ const height = top + rows.length * rowH + 6
         <text :x="colX(0) - 8" :y="rowY(j) + 80" :class="['result', r.cls]">{{ r.result }}</text>
       </g>
     </svg>
-    <figcaption>Три запроса, когда «Всё остальное» идёт через VPN, а DNS-серверы стоят по умолчанию. Пустой кружок – запрос проходит мимо этой точки.</figcaption>
+    <figcaption>{{ t.caption }}</figcaption>
   </figure>
 </template>
 

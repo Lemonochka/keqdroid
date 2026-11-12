@@ -1,34 +1,48 @@
 <script setup lang="ts">
-const steps = [
-  'Блокировка',
-  'Ваш сервер',
-  'Отдельные приложения',
-  'Напрямую',
-  'Локальная сеть',
-  'Другой сервер',
-  'Через VPN',
-  'Всё остальное',
-]
+import { computed } from 'vue'
+import { useData } from 'vitepress'
 
-const examples = [
-  { site: 'ads.example', why: 'в списке рекламы', stop: 0, result: 'не откроется', cls: 'block' },
-  { site: 'vk.com', why: 'в «Напрямую»', stop: 3, result: 'мимо VPN', cls: 'direct' },
-  { site: '192.168.1.1', why: 'роутер', stop: 4, result: 'мимо VPN', cls: 'direct' },
-  { site: 'youtube.com', why: 'нет в маршрутах', stop: 7, result: 'через VPN', cls: 'proxy' },
-]
+const ru = {
+  aria: 'Четыре соединения проходят маршруты сверху вниз и останавливаются на первом подходящем',
+  caption: 'Каждое соединение идёт по строкам сверху вниз и останавливается на первой, которая ему подходит. Ниже оно уже не смотрит.',
+  steps: ['Блокировка', 'Ваш сервер', 'Отдельные приложения', 'Напрямую', 'Локальная сеть', 'Другой сервер', 'Через VPN', 'Всё остальное'],
+  examples: [
+    { site: 'ads.example', why: 'в списке рекламы', stop: 0, result: 'не откроется', cls: 'block' },
+    { site: 'vk.com', why: 'в «Напрямую»', stop: 3, result: 'мимо VPN', cls: 'direct' },
+    { site: '192.168.1.1', why: 'роутер', stop: 4, result: 'мимо VPN', cls: 'direct' },
+    { site: 'youtube.com', why: 'нет в маршрутах', stop: 7, result: 'через VPN', cls: 'proxy' },
+  ],
+}
+
+const en: typeof ru = {
+  aria: 'Four connections go through the routes from top to bottom and stop at the first one that fits',
+  caption: 'Each connection goes down the rows from top to bottom and stops at the first one that fits. It doesn’t look any further.',
+  steps: ['Blocking', 'Your server', 'Specific apps', 'Direct', 'Local network', 'Another server', 'Via VPN', 'Everything else'],
+  examples: [
+    { site: 'ads.example', why: 'on the ad list', stop: 0, result: 'blocked', cls: 'block' },
+    { site: 'vk.com', why: 'in “Direct”', stop: 3, result: 'bypasses VPN', cls: 'direct' },
+    { site: '192.168.1.1', why: 'router', stop: 4, result: 'bypasses VPN', cls: 'direct' },
+    { site: 'youtube.com', why: 'not in routes', stop: 7, result: 'via VPN', cls: 'proxy' },
+  ],
+}
+
+const { lang } = useData()
+const t = computed(() => (lang.value.startsWith('en') ? en : ru))
+const steps = computed(() => t.value.steps)
+const examples = computed(() => t.value.examples)
 
 const top = 70
 const rowH = 44
 const labelW = 210
 const colW = 125
-const height = top + steps.length * rowH + 50
+const height = top + ru.steps.length * rowH + 50
 const rowY = (i: number) => top + i * rowH
 const colX = (j: number) => labelW + 20 + j * colW + colW / 2
 </script>
 
 <template>
   <figure class="kq-figure">
-    <svg :viewBox="`0 0 720 ${height}`" role="img" aria-label="Четыре соединения проходят маршруты сверху вниз и останавливаются на первом подходящем">
+    <svg :viewBox="`0 0 720 ${height}`" role="img" :aria-label="t.aria">
       <g v-for="(e, j) in examples" :key="e.site">
         <text :x="colX(j)" y="22" text-anchor="middle" class="site">{{ e.site }}</text>
         <text :x="colX(j)" y="42" text-anchor="middle" class="why">{{ e.why }}</text>
@@ -46,7 +60,7 @@ const colX = (j: number) => labelW + 20 + j * colW + colW / 2
         <text :x="colX(j)" :y="top + steps.length * rowH + 30" text-anchor="middle" :class="['result', e.cls]">{{ e.result }}</text>
       </g>
     </svg>
-    <figcaption>Каждое соединение идёт по строкам сверху вниз и останавливается на первой, которая ему подходит. Ниже оно уже не смотрит.</figcaption>
+    <figcaption>{{ t.caption }}</figcaption>
   </figure>
 </template>
 
