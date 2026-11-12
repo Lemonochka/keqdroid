@@ -21,6 +21,7 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 |-----------|-------|
 | Android 7.0 и новее, Android TV | `keqdroid-<версия>-android.apk` |
 | Android 7.0 и новее, 32-битная прошивка | `keqdroid-<версия>-armeabi-v7a-android.apk` |
+| Windows x64 | `keqdroid-windows-x64-<версия>-setup.exe` (установщик) |
 | Windows x64 | `keqdroid-windows-x64-<версия>.zip` (portable) |
 | Linux x86_64 | `.AppImage`, `.deb`, `.rpm`, `.tar.gz`, `PKGBUILD` |
 
@@ -97,7 +98,7 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 
 **Android TV.** Приложением управляют с пульта. Подписку можно передать из keqdroid на телефоне, отсканировав QR-код на телевизоре.
 
-**Windows.** Приложение может запускаться вместе с системой, подключаться автоматически и работать в трее. Настройки хранятся в `%APPDATA%\com.keqdroid\keqdroid\`.
+**Windows.** Установщик ставит приложение в Program Files и может удалить его вместе с данными, портабельная версия запускается из любой папки. Приложение может запускаться вместе с системой, подключаться автоматически и работать в трее. Настройки хранятся в `%APPDATA%\com.keqdroid\keqdroid\`, обе версии пользуются ими.
 
 **Linux.** Приложение может запускаться при входе в систему и подключаться автоматически. В Arch Linux установка выполняется командой `makepkg -si` с файлом `PKGBUILD` из релиза.
 
@@ -132,7 +133,7 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 
 ## Подпись кода
 
-Бесплатную подпись кода предоставляет [SignPath.io](https://signpath.io), сертификат выдан [SignPath Foundation](https://signpath.org). Заявка находится на рассмотрении; до её одобрения сборки для Windows не подписаны.
+Бесплатную подпись кода предоставляет [SignPath.io](https://signpath.io), сертификат выдан [SignPath Foundation](https://signpath.org). Подпись сейчас настраивается; пока она не включена, сборки для Windows не подписаны.
 
 - Авторы и ревьюеры: [Lemonochka](https://github.com/Lemonochka)
 - Подтверждает подпись: [Lemonochka](https://github.com/Lemonochka)

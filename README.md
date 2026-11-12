@@ -21,6 +21,7 @@ Builds are published on the [Releases](https://github.com/Lemonochka/keqdroid/re
 |----------|---------|
 | Android 7.0 and later, Android TV | `keqdroid-<version>-android.apk` |
 | Android 7.0 and later, 32-bit firmware | `keqdroid-<version>-armeabi-v7a-android.apk` |
+| Windows x64 | `keqdroid-windows-x64-<version>-setup.exe` (installer) |
 | Windows x64 | `keqdroid-windows-x64-<version>.zip` (portable) |
 | Linux x86_64 | `.AppImage`, `.deb`, `.rpm`, `.tar.gz`, `PKGBUILD` |
 
@@ -97,7 +98,7 @@ A ready-made configuration keeps its own routing, DNS and outbounds. Inbounds an
 
 **Android TV.** The application is operated with a remote control. A subscription can be sent from keqdroid on a phone by scanning a QR code on the TV.
 
-**Windows.** The application can start with the system, connect automatically and stay in the tray. Settings are stored in `%APPDATA%\com.keqdroid\keqdroid\`.
+**Windows.** The installer places the application in Program Files and can remove it together with its data; the portable version runs from any folder. The application can start with the system, connect automatically and stay in the tray. Settings are stored in `%APPDATA%\com.keqdroid\keqdroid\` and are shared by both versions.
 
 **Linux.** The application can start at login and connect automatically. On Arch Linux, install with `makepkg -si` using the `PKGBUILD` from the release.
 
@@ -132,7 +133,7 @@ On Android, crash reports go to Google Firebase Crashlytics: the error with link
 
 ## Code signing policy
 
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org). The application is under review; until it is accepted, Windows builds are not signed.
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org). Signing is being set up; until it is enabled, Windows builds are not signed.
 
 - Committers and reviewers: [Lemonochka](https://github.com/Lemonochka)
 - Approvers: [Lemonochka](https://github.com/Lemonochka)
