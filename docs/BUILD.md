@@ -131,6 +131,42 @@ sha256sum -c --ignore-missing SHA256SUMS
 
 ### Windows code signing
 
-Signing through SignPath Foundation is part of the workflow and stays off until the repository has the variables `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG` and the secret `SIGNPATH_API_TOKEN`. With them, the `sign-windows` job sends the zip and waits until the request is approved on signpath.io. The artifact configuration there takes the zip as its root and signs only `keqdroid.exe`: `xray.exe` and `mihomo.exe` are upstream builds.
+Signing through SignPath Foundation is part of the workflow and stays off until the repository has the variables `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG` and the secret `SIGNPATH_API_TOKEN`. Without them the same files are built unsigned. With them, a release makes two signing requests, and under the release policy each waits to be approved on signpath.io:
 
-The installer is built before that job, from unsigned files. Before signing is turned on, the workflow has to build `setup.exe` from the signed files and send it for signing too.
+1. `sign-windows` sends the release zip together with the Inno Setup uninstaller. Only `keqdroid.exe` and the uninstaller are signed: `xray.exe` and `mihomo.exe` are upstream builds.
+2. `installer` builds `setup.exe` from these signed files, and `sign-installer` sends it.
+
+Inno Setup signs its uninstaller only while compiling, so `tool/build_windows_installer.ps1` takes it out of one compile (`-ExportUninstaller`) and puts the signed copy into the next (`-SignedUninstaller`). Inno refuses a signed file that differs from its own in anything but the signature.
+
+The `test-signing` policy signs with a test certificate that Windows does not trust. Such a run is only a check: untick draft and do not publish its files.
+
+Artifact configurations in the SignPath project:
+
+`win-files`
+
+```xml
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <zip-file path="keqdroid-windows-x64.zip">
+      <pe-file path="keqdroid.exe" product-name="keqdroid">
+        <authenticode-sign/>
+      </pe-file>
+    </zip-file>
+    <pe-file path="keqdroid-uninstaller.exe">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
+```
+
+`win-setup`
+
+```xml
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <pe-file path="keqdroid-windows-x64-*-setup.exe">
+    <authenticode-sign/>
+  </pe-file>
+</artifact-configuration>
+```
+
+Inno pads the product name in its version resource with spaces to 60 characters, so the uninstaller and `setup.exe` are matched by file name only.

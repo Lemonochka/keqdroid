@@ -1,5 +1,4 @@
-﻿; собирает tool/make_release.ps1: ISCC /DAppVersion=<версия> /DBuildDir=<Release> /DOutputDir=<папка релиза>
-; компилятор Inno Setup 7.1.1, тот же в .github/workflows/release.yml
+﻿; собирает tool/build_windows_installer.ps1, компилятор Inno Setup 7.1.1, тот же в .github/workflows/release.yml
 
 #ifndef AppVersion
   #error AppVersion is not defined
@@ -40,6 +39,10 @@ OutputDir={#OutputDir}
 OutputBaseFilename=keqdroid-windows-x64-{#AppVersion}-setup
 Compression=lzma2/max
 SolidCompression=yes
+#ifdef SignedUninstallerDir
+SignedUninstaller=yes
+SignedUninstallerDir={#SignedUninstallerDir}
+#endif
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"

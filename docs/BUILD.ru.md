@@ -131,6 +131,42 @@ sha256sum -c --ignore-missing SHA256SUMS
 
 ### Подпись для Windows
 
-Подпись через SignPath Foundation встроена в workflow и выключена, пока в репозитории нет переменных `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG` и секрета `SIGNPATH_API_TOKEN`. С ними задача `sign-windows` отправляет zip и ждёт, пока запрос одобрят на signpath.io. Конфигурация артефакта там берёт zip целиком и подписывает только `keqdroid.exe`: `xray.exe` и `mihomo.exe` собраны из чужих исходников.
+Подпись через SignPath Foundation встроена в workflow и выключена, пока в репозитории нет переменных `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_SIGNING_POLICY_SLUG` и секрета `SIGNPATH_API_TOKEN`. Без них те же файлы собираются неподписанными. С ними релиз делает два запроса на подпись, и на боевой политике каждый ждёт одобрения на signpath.io:
 
-Установщик собирается раньше этой задачи, из неподписанных файлов. Прежде чем включать подпись, workflow надо научить собирать `setup.exe` из подписанных файлов и тоже отправлять его на подпись.
+1. `sign-windows` отправляет релизный zip вместе с деинсталлятором Inno Setup. Подписываются только `keqdroid.exe` и деинсталлятор: `xray.exe` и `mihomo.exe` собраны из чужих исходников.
+2. `installer` собирает `setup.exe` из этих подписанных файлов, `sign-installer` отправляет его.
+
+Inno Setup подписывает свой деинсталлятор только во время компиляции, поэтому `tool/build_windows_installer.ps1` достаёт его из одной компиляции (`-ExportUninstaller`) и вкладывает подписанную копию в следующую (`-SignedUninstaller`). Inno отвергает подписанный файл, если он отличается от его собственного чем-то кроме подписи.
+
+Политика `test-signing` подписывает тестовым сертификатом, которому Windows не доверяет. Такой прогон годится только для проверки: галочку draft снять, файлы не публиковать.
+
+Конфигурации артефактов в проекте SignPath:
+
+`win-files`
+
+```xml
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <zip-file path="keqdroid-windows-x64.zip">
+      <pe-file path="keqdroid.exe" product-name="keqdroid">
+        <authenticode-sign/>
+      </pe-file>
+    </zip-file>
+    <pe-file path="keqdroid-uninstaller.exe">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>
+```
+
+`win-setup`
+
+```xml
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <pe-file path="keqdroid-windows-x64-*-setup.exe">
+    <authenticode-sign/>
+  </pe-file>
+</artifact-configuration>
+```
+
+Inno дописывает название продукта в версии файла пробелами до 60 знаков, поэтому деинсталлятор и `setup.exe` узнаются только по имени файла.

@@ -319,22 +319,7 @@ if (-not $SkipWindows) {
 
   if (-not $SkipInstaller) {
     Write-Step "Building the Windows installer"
-    if (-not $Iscc) {
-      $Iscc = @(
-        (Join-Path $env:ProgramFiles 'Inno Setup 7\ISCC.exe'),
-        (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 7\ISCC.exe'),
-        (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 7\ISCC.exe')
-      ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-    }
-    if (-not $Iscc -or -not (Test-Path -LiteralPath $Iscc)) {
-      throw "Inno Setup 7 (ISCC.exe) not found. Install Inno Setup 7.1.1, pass -Iscc, or -SkipInstaller."
-    }
-    & $Iscc /Q "/DAppVersion=$version" "/DBuildDir=$relDir" "/DOutputDir=$outDir" `
-      (Join-Path $repoRoot 'windows\installer\keqdroid.iss')
-    if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
-    $setupOut = Join-Path $outDir "keqdroid-windows-x64-$version-setup.exe"
-    if (-not (Test-Path -LiteralPath $setupOut)) { throw "ISCC did not produce $setupOut" }
-    Write-Host "    $(Split-Path $setupOut -Leaf) ($([math]::Round((Get-Item -LiteralPath $setupOut).Length / 1MB, 1)) MB)"
+    & (Join-Path $PSScriptRoot 'build_windows_installer.ps1') -Version $version -BuildDir $relDir -OutputDir $outDir -Iscc $Iscc
   }
 }
 

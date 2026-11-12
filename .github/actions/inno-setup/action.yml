@@ -1,0 +1,21 @@
+# the image ships Inno Setup 6, where Simplified Chinese is not an official translation yet
+name: Inno Setup 7.1.1
+description: Installs Inno Setup 7.1.1 into RUNNER_TEMP after checking the installer hash
+outputs:
+  iscc:
+    description: Path to ISCC.exe
+    value: ${{ steps.install.outputs.iscc }}
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: pwsh
+      run: |
+        $exe = "$env:RUNNER_TEMP\innosetup-7.1.1-x64.exe"
+        Invoke-WebRequest https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe -OutFile $exe
+        $hash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
+        if ($hash -ne '8A5A6711C3766A6E5FB74F280BA0E3551E719CE94538D901FDBD1F8F9920B3F0') { throw "Inno Setup installer hash $hash" }
+        Start-Process -FilePath $exe -Wait -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/DIR=$env:RUNNER_TEMP\InnoSetup7"
+        $iscc = "$env:RUNNER_TEMP\InnoSetup7\ISCC.exe"
+        if (-not (Test-Path -LiteralPath $iscc)) { throw 'ISCC.exe not installed' }
+        "iscc=$iscc" >> $env:GITHUB_OUTPUT

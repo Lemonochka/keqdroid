@@ -10,7 +10,9 @@
 #                            its public half (lib/services/release_signature.dart)
 # Optional Windows code signing through SignPath Foundation, off until these
 # variables exist: SIGNPATH_ORGANIZATION_ID, SIGNPATH_PROJECT_SLUG,
-# SIGNPATH_SIGNING_POLICY_SLUG, and the secret SIGNPATH_API_TOKEN.
+# SIGNPATH_SIGNING_POLICY_SLUG, and the secret SIGNPATH_API_TOKEN. The project
+# there needs the artifact configurations win-files and win-setup
+# (docs/BUILD.md, Windows code signing).
 name: release
 
 on:
@@ -38,7 +40,7 @@ jobs:
     timeout-minutes: 150
     outputs:
       version: ${{ steps.version.outputs.version }}
-      zip-artifact-id: ${{ steps.zip.outputs.artifact-id }}
+      files-artifact-id: ${{ steps.files.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@v7
 
@@ -77,20 +79,13 @@ jobs:
           [IO.File]::WriteAllText("$PWD/android/key.properties", ($props -join "`n") + "`n")
           [IO.File]::WriteAllText("$PWD/android/app/google-services.json", $env:GOOGLE_SERVICES_JSON)
 
-      # the image ships Inno Setup 6, where Simplified Chinese is not an official translation yet
-      - name: Inno Setup 7.1.1
-        shell: pwsh
-        run: |
-          $exe = "$env:RUNNER_TEMP\innosetup-7.1.1-x64.exe"
-          Invoke-WebRequest https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe -OutFile $exe
-          $hash = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash
-          if ($hash -ne '8A5A6711C3766A6E5FB74F280BA0E3551E719CE94538D901FDBD1F8F9920B3F0') { throw "Inno Setup installer hash $hash" }
-          Start-Process -FilePath $exe -Wait -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/DIR=$env:RUNNER_TEMP\InnoSetup7"
-          if (-not (Test-Path -LiteralPath "$env:RUNNER_TEMP\InnoSetup7\ISCC.exe")) { throw 'ISCC.exe not installed' }
+      - id: inno
+        uses: ./.github/actions/inno-setup
 
+      # the installer waits for signed files, see the installer job
       - name: Build Android and Windows
         shell: powershell
-        run: powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -SkipLinux -Iscc "$env:RUNNER_TEMP\InnoSetup7\ISCC.exe"
+        run: powershell -ExecutionPolicy Bypass -File tool\make_release.ps1 -SkipLinux -SkipInstaller
 
       - name: Drop the partial SHA256SUMS
         shell: pwsh
@@ -102,12 +97,22 @@ jobs:
           path: release/${{ steps.version.outputs.version }}/
           if-no-files-found: error
 
-      # a single file artifact, the form SignPath takes
-      - id: zip
+      # the first SignPath request: keqdroid.exe inside the zip and the uninstaller that setup.exe will carry
+      - name: Files to sign
+        shell: powershell
+        env:
+          VER: ${{ steps.version.outputs.version }}
+        run: |
+          New-Item -ItemType Directory -Force windows-files | Out-Null
+          Copy-Item "release\$env:VER\keqdroid-windows-x64-$env:VER.zip" windows-files\keqdroid-windows-x64.zip
+          .\tool\build_windows_installer.ps1 -Version $env:VER -BuildDir build\windows\x64\runner\Release `
+            -ExportUninstaller windows-files\keqdroid-uninstaller.exe -Iscc '${{ steps.inno.outputs.iscc }}'
+
+      - id: files
         uses: actions/upload-artifact@v7
         with:
-          path: release/${{ steps.version.outputs.version }}/keqdroid-windows-x64-${{ steps.version.outputs.version }}.zip
-          archive: false
+          name: windows-files
+          path: windows-files/
           if-no-files-found: error
 
   linux:
@@ -173,8 +178,8 @@ jobs:
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
           signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
-          github-artifact-id: ${{ needs.windows-android.outputs.zip-artifact-id }}
-          skip-decompress: true
+          artifact-configuration-slug: win-files
+          github-artifact-id: ${{ needs.windows-android.outputs.files-artifact-id }}
           wait-for-completion: true
           wait-for-completion-timeout-in-seconds: 13800
           output-artifact-directory: signed
@@ -185,13 +190,91 @@ jobs:
           path: signed/
           if-no-files-found: error
 
+  # SignPath cannot sign inside an Inno Setup installer, so it is built from the signed files and signed whole
+  installer:
+    needs: [windows-android, sign-windows]
+    if: >-
+      always() &&
+      needs.windows-android.result == 'success' &&
+      (needs.sign-windows.result == 'success' || needs.sign-windows.result == 'skipped')
+    runs-on: windows-2025
+    timeout-minutes: 30
+    outputs:
+      setup-artifact-id: ${{ steps.setup.outputs.artifact-id }}
+    env:
+      VER: ${{ needs.windows-android.outputs.version }}
+      SIGNED: ${{ needs.sign-windows.result == 'success' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: inno
+        uses: ./.github/actions/inno-setup
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.sign-windows.result == 'success' && 'windows-signed' || 'windows-files' }}
+          path: files
+
+      - name: Build the installer
+        shell: powershell
+        run: |
+          Expand-Archive -LiteralPath files\keqdroid-windows-x64.zip -DestinationPath bundle
+          $signedUninstaller = if ($env:SIGNED -eq 'true') { 'files\keqdroid-uninstaller.exe' } else { '' }
+          .\tool\build_windows_installer.ps1 -Version $env:VER -BuildDir bundle -OutputDir setup `
+            -Iscc '${{ steps.inno.outputs.iscc }}' -SignedUninstaller $signedUninstaller
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-installer
+          path: setup/
+          if-no-files-found: error
+
+      # a single file artifact, the form SignPath takes for a lone exe
+      - id: setup
+        uses: actions/upload-artifact@v7
+        with:
+          path: setup/keqdroid-windows-x64-${{ env.VER }}-setup.exe
+          archive: false
+          if-no-files-found: error
+
+  sign-installer:
+    needs: installer
+    if: vars.SIGNPATH_ORGANIZATION_ID != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: win-setup
+          github-artifact-id: ${{ needs.installer.outputs.setup-artifact-id }}
+          skip-decompress: true
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 13800
+          output-artifact-directory: signed
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-installer-signed
+          path: signed/
+          if-no-files-found: error
+
   release:
-    needs: [windows-android, linux, sign-windows]
+    needs: [windows-android, linux, sign-windows, installer, sign-installer]
+    # both Windows files signed or neither
     if: >-
       always() &&
       needs.windows-android.result == 'success' &&
       needs.linux.result == 'success' &&
-      (needs.sign-windows.result == 'success' || needs.sign-windows.result == 'skipped')
+      needs.installer.result == 'success' &&
+      (needs.sign-installer.result == 'success' || needs.sign-installer.result == 'skipped') &&
+      needs.sign-windows.result == needs.sign-installer.result
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -214,6 +297,11 @@ jobs:
           name: linux
           path: dist
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.sign-installer.result == 'success' && 'windows-installer-signed' || 'windows-installer' }}
+          path: dist
+
       - if: needs.sign-windows.result == 'success'
         uses: actions/download-artifact@v8
         with:
@@ -223,9 +311,14 @@ jobs:
       - name: Take the signed Windows zip
         if: needs.sign-windows.result == 'success'
         run: |
-          f="keqdroid-windows-x64-$VER.zip"
-          [ -f "signed/$f" ] || { echo "SignPath returned no $f"; ls -la signed; exit 1; }
-          cp -f "signed/$f" "dist/$f"
+          [ -f signed/keqdroid-windows-x64.zip ] || { echo "SignPath returned no zip"; ls -la signed; exit 1; }
+          cp -f signed/keqdroid-windows-x64.zip "dist/keqdroid-windows-x64-$VER.zip"
+
+      - name: Both Windows files are here
+        run: |
+          for f in "keqdroid-windows-x64-$VER.zip" "keqdroid-windows-x64-$VER-setup.exe"; do
+            [ -f "dist/$f" ] || { echo "no $f"; ls -la dist; exit 1; }
+          done
 
       - name: SHA256SUMS
         shell: pwsh
