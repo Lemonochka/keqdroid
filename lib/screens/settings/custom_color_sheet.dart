@@ -32,6 +32,7 @@ class _CustomColorSheetState extends State<_CustomColorSheet> {
   late HSVColor _color;
   late DynamicSchemeVariant _variant;
   late final TextEditingController _hex;
+  final _hexFocus = FocusNode();
 
   // без флага правка ходила по кругу поле - ползунок и переставляла курсор
   bool _syncing = false;
@@ -44,12 +45,21 @@ class _CustomColorSheetState extends State<_CustomColorSheet> {
     _color = _inRange(HSVColor.fromColor(seed));
     _variant = parseThemeVariant(widget.current.customThemeVariant);
     _hex = TextEditingController(text: formatThemeSeed(_color.toColor()));
+    _hexFocus.addListener(_selectHexOnFocus);
   }
 
   @override
   void dispose() {
+    _hexFocus.dispose();
     _hex.dispose();
     super.dispose();
+  }
+
+  // в поле всегда шесть знаков, и ограничитель длины глотал любой набранный символ
+  void _selectHexOnFocus() {
+    if (_hexFocus.hasFocus) {
+      _hex.selection = TextSelection(baseOffset: 0, extentOffset: _hex.text.length);
+    }
   }
 
   static HSVColor _inRange(HSVColor color) => color
@@ -187,14 +197,16 @@ class _CustomColorSheetState extends State<_CustomColorSheet> {
                     const SizedBox(height: ExpressiveSpacing.small),
                     TextField(
                       controller: _hex,
+                      focusNode: _hexFocus,
                       textDirection: technicalInputDirection,
                       onChanged: _onHexChanged,
                       textCapitalization: TextCapitalization.characters,
+                      // фильтр раньше ограничителя: иначе вставленный #FF5722 обрезался до #FF572
                       inputFormatters: [
-                        LengthLimitingTextInputFormatter(6),
                         FilteringTextInputFormatter.allow(
                           RegExp('[0-9a-fA-F]'),
                         ),
+                        LengthLimitingTextInputFormatter(6),
                       ],
                       decoration: InputDecoration(
                         labelText: l10n.appearanceCustomColorHex,

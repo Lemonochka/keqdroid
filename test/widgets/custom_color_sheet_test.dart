@@ -95,6 +95,32 @@ Future<_FakeSettings> _openSheet(
   return notifier;
 }
 
+/// Ввод как с клавиатуры: каждый символ встаёт на место выделения или курсора
+/// и проходит через форматтеры поля. enterText меняет текст целиком в обход
+/// них, поэтому с ним поле, куда нельзя напечатать ни знака, выглядело рабочим.
+Future<void> _type(WidgetTester tester, String chars, {bool paste = false}) async {
+  final pieces = paste ? [chars] : chars.split('');
+  for (final piece in pieces) {
+    final value = tester.widget<TextField>(find.byType(TextField)).controller!.value;
+    final selection = value.selection.isValid
+        ? value.selection
+        : TextSelection.collapsed(offset: value.text.length);
+    tester.testTextInput.updateEditingValue(
+      TextEditingValue(
+        text: value.text.replaceRange(selection.start, selection.end, piece),
+        selection: TextSelection.collapsed(offset: selection.start + piece.length),
+      ),
+    );
+    await tester.pump();
+  }
+  await _frames(tester);
+}
+
+Future<void> _tapHexField(WidgetTester tester) async {
+  await tester.tap(find.byType(TextField));
+  await _frames(tester);
+}
+
 /// Телефонный экран вместо дефолтных 800×600: шторка ограничена 85% высоты и
 /// на низком окне обязана прокручиваться, а не рваться.
 void _phoneScreen(WidgetTester tester) {
@@ -151,6 +177,57 @@ void main() {
 
     final hue = tester.widgetList<Slider>(find.byType(Slider)).first;
     expect(hue.value, closeTo(HSVColor.fromColor(const Color(0xFF7B2CBF)).hue, 0.5));
+  });
+
+  testWidgets('свой код печатается поверх старого с первого нажатия', (tester) async {
+    // В поле всегда шесть знаков сохранённого цвета, и ограничитель длины
+    // молча отбрасывал любой набранный символ: код было видно, а сменить нельзя
+    _phoneScreen(tester);
+
+    final notifier = await _openSheet(
+      tester,
+      settings: const AppSettings(
+        themePresetId: kCustomThemePresetId,
+        customThemeSeed: '2EC4B6',
+      ),
+    );
+
+    await _tapHexField(tester);
+    await _type(tester, 'FF5722');
+
+    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, 'FF5722');
+    final hue = tester.widgetList<Slider>(find.byType(Slider)).first;
+    expect(hue.value, closeTo(HSVColor.fromColor(const Color(0xFFFF5722)).hue, 0.5));
+
+    await tester.tap(find.text('Apply'));
+    await _frames(tester);
+    expect(notifier.saved!.customThemeSeed, 'FF5722');
+  });
+
+  testWidgets('код вставляется из буфера вместе с решёткой', (tester) async {
+    // Коды цветов копируют в виде #RRGGBB. Ограничитель стоял раньше фильтра,
+    // обрезал #ff5722 до #ff572, решётку снимал уже фильтр, и оставалось пять знаков
+    _phoneScreen(tester);
+
+    final notifier = await _openSheet(
+      tester,
+      settings: const AppSettings(
+        themePresetId: kCustomThemePresetId,
+        customThemeSeed: '2EC4B6',
+      ),
+    );
+
+    await _tapHexField(tester);
+    await _type(tester, '#ff5722', paste: true);
+
+    expect(
+      parseThemeSeed(tester.widget<TextField>(find.byType(TextField)).controller!.text),
+      const Color(0xFFFF5722),
+    );
+
+    await tester.tap(find.text('Apply'));
+    await _frames(tester);
+    expect(notifier.saved!.customThemeSeed, 'FF5722');
   });
 
   testWidgets('ползунками нельзя получить цвет без оттенка', (tester) async {
