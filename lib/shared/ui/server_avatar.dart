@@ -1,3 +1,6 @@
+import 'dart:math';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jovial_svg/jovial_svg.dart';
@@ -69,9 +72,6 @@ Color serverProtocolColor(BuildContext context, String protocol) =>
       'chain' => AppTheme.harmonize(context, const Color(0xFF8E24AA)),
       _ => AppTheme.textLight(context),
     };
-
-// у пакета кэш нулевого размера, без своего fromSISource разбирал ассет на каждый билд
-final _flagArtCache = ScalableImageCache(size: 96);
 
 const flagArtKey = Key('serverAvatar_flagArt');
 
@@ -147,13 +147,11 @@ class ServerAvatar extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: switch (flag) {
-        FlagArt(:final assetPath) => ScalableImageWidget.fromSISource(
+        FlagArt(:final assetPath) => _BakedFlag(
           key: flagArtKey,
-          si: ScalableImageSource.fromSI(rootBundle, assetPath),
-          fit: BoxFit.cover,
-          cache: _flagArtCache,
-          // без этого пакет рисует белый квадрат с вопросом
-          onError: (_) => _protocolBadge(context),
+          assetPath: assetPath,
+          size: size,
+          fallback: () => _protocolBadge(context),
         ),
         FlagGlyph(:final emoji) => _flagWithoutArt(context, emoji),
         null => _protocolBadge(context),
@@ -331,4 +329,106 @@ class _GlyphFlag extends StatelessWidget {
       ),
     ),
   );
+}
+
+// векторный флаг Impeller рисует заново в каждом кадре: при быстрой прокрутке списка отрисовка
+// 8-10 мс и кадры до 24 мс, картинкой 6,5 и не дольше 13 (Pixel 6a, 13.11.2026)
+class _BakedFlag extends StatefulWidget {
+  const _BakedFlag({
+    super.key,
+    required this.assetPath,
+    required this.size,
+    required this.fallback,
+  });
+
+  final String assetPath;
+  final double size;
+  final Widget Function() fallback;
+
+  @override
+  State<_BakedFlag> createState() => _BakedFlagState();
+}
+
+class _BakedFlagState extends State<_BakedFlag> {
+  static final _loading = <String, Future<ScalableImage>>{};
+  static final _loaded = <String, ScalableImage>{};
+  static final _baked = <String, ui.Image>{};
+
+  ScalableImage? _si;
+  var _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(_BakedFlag oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.assetPath != widget.assetPath) _load();
+  }
+
+  // разобранный флаг отдаётся сразу, иначе въехавшая при прокрутке плитка кадр стоит без флага
+  void _load() {
+    final path = widget.assetPath;
+    _failed = false;
+    _si = _loaded[path];
+    if (_si != null) return;
+    _loading
+        .putIfAbsent(path, () async {
+          final si = await ScalableImage.fromSIAsset(rootBundle, path);
+          await si.prepareImages();
+          return _loaded[path] = si;
+        })
+        .then(
+          (si) {
+            if (mounted && widget.assetPath == path) setState(() => _si = si);
+          },
+          onError: (Object _) {
+            _loading.remove(path);
+            if (mounted && widget.assetPath == path) {
+              setState(() => _failed = true);
+            }
+          },
+        );
+  }
+
+  static ui.Image _bake(ScalableImage si, String key, int px) {
+    final cached = _baked.remove(key);
+    if (cached != null) return _baked[key] = cached;
+    final side = px.toDouble();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder)..clipRect(Rect.fromLTWH(0, 0, side, side));
+    ScalingTransform(
+      containerSize: Size(side, side),
+      siViewport: si.viewport,
+      fit: BoxFit.cover,
+    ).applyToCanvas(canvas);
+    si.paint(canvas);
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(px, px);
+    picture.dispose();
+    // RawImage держит свою копию, вытесненная картинка с экрана не пропадает
+    if (_baked.length >= 64) _baked.remove(_baked.keys.first)?.dispose();
+    return _baked[key] = image;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_failed) return widget.fallback();
+    final si = _si;
+    if (si == null) return const SizedBox.shrink();
+    final px = max(
+      1,
+      (widget.size * MediaQuery.devicePixelRatioOf(context)).round(),
+    );
+    return RawImage(
+      image: _bake(si, '${widget.assetPath}@$px', px),
+      width: widget.size,
+      height: widget.size,
+      fit: BoxFit.fill,
+      filterQuality: FilterQuality.medium,
+    );
+  }
 }

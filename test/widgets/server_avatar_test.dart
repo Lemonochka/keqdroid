@@ -24,6 +24,51 @@ void main() {
     expect(find.text('V'), findsNothing);
   });
 
+  testWidgets('флаг запечён в картинку ровно в пиксели экрана', (tester) async {
+    await tester.pumpWidget(_host(const FlagArt('fi')));
+    await tester.pumpAndSettle();
+
+    final image = tester
+        .widget<RawImage>(
+          find.descendant(
+            of: find.byKey(flagArtKey),
+            matching: find.byType(RawImage),
+          ),
+        )
+        .image!;
+    final px = (40 * tester.view.devicePixelRatio).round();
+    expect((image.width, image.height), (px, px));
+  });
+
+  testWidgets('одинаковые флаги делят одну картинку', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Row(
+          children: [
+            ServerAvatar(flag: FlagArt('pl'), protocol: 'vless'),
+            ServerAvatar(flag: FlagArt('pl'), protocol: 'vless'),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final images = tester
+        .widgetList<RawImage>(find.byType(RawImage))
+        .map((w) => w.image!)
+        .toList();
+    expect(images, hasLength(2));
+    expect(images.first.isCloneOf(images.last), isTrue);
+  });
+
+  testWidgets('флаг без ассета падает в букву протокола', (tester) async {
+    await tester.pumpWidget(_host(const FlagArt('zz-none')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('V'), findsOneWidget);
+    expect(find.byType(RawImage), findsNothing);
+  });
+
   testWidgets('флаг субъекта тоже грузится, а не падает в onError', (
     tester,
   ) async {
