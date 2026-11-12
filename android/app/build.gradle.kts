@@ -128,8 +128,14 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
-            // Robolectric 4.17 ставит дескриптор файла через SharedSecrets, без этого падает каждый тест на JDK 25
-            all { it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED") }
+            // Robolectric 4.17 ставит дескриптор файла через SharedSecrets, без этого падает каждый тест на JDK 25.
+            // native-access: его загрузчик зовёт System.load, а JDK 25 обещает такое блокировать
+            all {
+                it.jvmArgs(
+                    "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+                    "--enable-native-access=ALL-UNNAMED",
+                )
+            }
         }
     }
 }
