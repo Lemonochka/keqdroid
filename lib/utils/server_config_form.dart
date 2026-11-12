@@ -12,6 +12,7 @@ class ServerConfigForm {
   Map<String, dynamic>? _vmess;
   bool _vmessPortWasInt = false;
   String _vmessSecurityKey = 'scy';
+  bool _vmessExtraIsObject = false;
 
   Map<String, dynamic>? _clashConfig;
 
@@ -260,10 +261,28 @@ class ServerConfigForm {
       _ctrl('sni', s('sni'));
       _ctrl('host', s('host'));
       _ctrl('path', s('path'));
-      _ctrl('serviceName', s('serviceName'));
+      // ключи как в _vmessStreamParams config_gen: имя сервиса gRPC и seed mKCP лежат в path, заголовок в type.
+      // serviceName писал прежний редактор, генераторы его не читают
+      final net = normalizeTransport(_drop['type']!);
+      _ctrl('serviceName', net == 'grpc' && s('path').isNotEmpty ? s('path') : s('serviceName'));
+      _ctrl('seed', net == 'kcp' ? s('path') : '');
+      _drop['headerType'] = s('type');
+      _drop['mode'] = s('mode');
+      _ctrl('authority', s('authority'));
+      _ctrl('ed', s('ed'));
+      _ctrl('mtu', s('mtu'));
+      _ctrl('tti', s('tti'));
+      _ctrl('method', s('method'));
+      final extra = json['extra'];
+      _vmessExtraIsObject = extra is Map;
+      _ctrl('extra', extra is Map || extra is List ? jsonEncode(extra) : s('extra'));
+      _ctrl('x_padding_bytes', s('x_padding_bytes'));
+      _paddingIntoExtra();
       _drop['fp'] = s('fp');
       _ctrl('alpn', s('alpn'));
       _ctrl('ech', s('ech'));
+      _ctrl('pcs', s('pcs'));
+      _ctrl('vcn', s('vcn'));
       var insecure = false;
       for (final k in ['insecure', 'allowInsecure', 'skip-cert-verify']) {
         final v = s(k).trim().toLowerCase();
@@ -416,6 +435,8 @@ class ServerConfigForm {
     void put(String key, String value) {
       if (value.isEmpty) {
         payload.remove(key);
+      } else if (payload[key] is int && int.tryParse(value) != null) {
+        payload[key] = int.parse(value);
       } else {
         payload[key] = value;
       }
@@ -433,11 +454,39 @@ class ServerConfigForm {
     put('tls', tls ? 'tls' : '');
     put('sni', _v('sni'));
     put('host', _v('host'));
-    put('path', _v('path'));
-    put('serviceName', _v('serviceName'));
+    switch (normalizeTransport(net)) {
+      case 'grpc':
+        put('path', _v('serviceName'));
+        if (payload.containsKey('serviceName')) {
+          put('serviceName', _v('serviceName'));
+        }
+        put('mode', _drop['mode'] ?? '');
+        put('authority', _v('authority'));
+      case 'kcp':
+        put('path', _v('seed'));
+        put('type', _drop['headerType'] ?? '');
+        put('mtu', _v('mtu'));
+        put('tti', _v('tti'));
+      case 'xhttp':
+        put('path', _v('path'));
+        put('mode', _drop['mode'] ?? '');
+        _putVmessExtra(payload);
+        put('x_padding_bytes', _v('x_padding_bytes'));
+      case 'ws' || 'httpupgrade':
+        put('path', _v('path'));
+        put('ed', _v('ed'));
+      case 'tcp':
+        put('type', _drop['headerType'] ?? '');
+        put('path', _v('path'));
+        put('method', _v('method'));
+      default:
+        put('path', _v('path'));
+    }
     put('fp', _drop['fp'] ?? '');
     put('alpn', _v('alpn'));
     put('ech', _v('ech'));
+    put('pcs', _v('pcs'));
+    put('vcn', _v('vcn'));
     payload.remove('allowInsecure');
     payload.remove('skip-cert-verify');
     if (_toggle['insecure'] ?? false) {
@@ -448,5 +497,26 @@ class ServerConfigForm {
 
     final json = jsonEncode(payload);
     return 'vmess://${base64.encode(utf8.encode(json))}';
+  }
+
+  // extra в vmess бывает и объектом, и строкой; генератор понимает оба, пишем как пришло
+  void _putVmessExtra(Map<String, dynamic> payload) {
+    final text = _v('extra');
+    if (text.isEmpty) {
+      payload.remove('extra');
+      return;
+    }
+    if (_vmessExtraIsObject || !_vmess!.containsKey('extra')) {
+      try {
+        final decoded = jsonDecode(text);
+        if (decoded is Map) {
+          payload['extra'] = decoded;
+          return;
+        }
+      } on FormatException {
+        // битый остаётся строкой, его видно в поле extra
+      }
+    }
+    payload['extra'] = text;
   }
 }

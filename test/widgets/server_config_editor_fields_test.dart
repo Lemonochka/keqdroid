@@ -116,6 +116,46 @@ void main() {
     expect(jsonDecode(query['extra']!), {'xPaddingBytes': '100-1000'});
   });
 
+  testWidgets('vmess на xhttp: режим и extra видны и сохраняются', (tester) async {
+    final payload = {
+      'v': '2',
+      'add': 'example.com',
+      'port': 443,
+      'id': '716e3485-d4f9-4471-9660-fb4b0b838100',
+      'net': 'xhttp',
+      'mode': 'packet-up',
+      'extra': {
+        'xmux': {'maxConcurrency': '16-32'},
+      },
+    };
+    final servers = await _open(
+      tester,
+      'vmess://${base64.encode(utf8.encode(jsonEncode(payload)))}',
+    );
+    expect(find.text('packet-up'), findsOneWidget);
+
+    await tester.enterText(
+      find.ancestor(
+        of: find.text('maxConcurrency'),
+        matching: find.byType(TextField),
+      ),
+      '8',
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Save'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final saved = jsonDecode(
+      utf8.decode(base64.decode(servers.saved!.substring('vmess://'.length))),
+    ) as Map;
+    expect(saved['mode'], 'packet-up');
+    expect(saved['extra'], {
+      'xmux': {'maxConcurrency': 8},
+    });
+  });
+
   // 12.11.2026: «зачем информация про паддинг в двух местах дублируется»
   group('набивка в одном месте', () {
     const base = 'vless://716e3485-d4f9-4471-9660-fb4b0b838100@example.com:443'
