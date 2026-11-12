@@ -69,8 +69,14 @@ void main() {
     );
 
     // Тап по тумблеру запускает чернила — тот самый путь, на который ругался
-    // ассерт.
-    await tester.tap(find.byType(SwitchListTile).first);
+    // ассерт. Тумблер ниже края экрана 420x900: без прокрутки тап уходил мимо,
+    // и тест проходил, ничего не проверив
+    final toggle = find.byType(SwitchListTile).first;
+    await tester.ensureVisible(toggle);
+    await tester.pumpAndSettle();
+    WidgetController.hitTestWarningShouldBeFatal = true;
+    addTearDown(() => WidgetController.hitTestWarningShouldBeFatal = false);
+    await tester.tap(toggle);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(tester.takeException(), isNull);
