@@ -105,12 +105,77 @@ void main() {
     for (final part in [
       'type=xhttp',
       'mode=stream-one',
-      'x_padding_bytes=100-1000',
       'security=reality',
       'pbk=',
     ]) {
       expect(saved, contains(part), reason: part);
     }
+    // набивка переехала в extra, оба ядра читают её оттуда так же
+    final query = Uri.parse(saved!).queryParameters;
+    expect(query.containsKey('x_padding_bytes'), isFalse);
+    expect(jsonDecode(query['extra']!), {'xPaddingBytes': '100-1000'});
+  });
+
+  // 12.11.2026: «зачем информация про паддинг в двух местах дублируется»
+  group('набивка в одном месте', () {
+    const base = 'vless://716e3485-d4f9-4471-9660-fb4b0b838100@example.com:443'
+        '?type=xhttp&security=reality&sni=example.com'
+        '&pbk=oYXosxG2YU6_mQkkPTS8JUnoRxqvaBaG5mH-y0pc2nA';
+
+    TextField paddingField(WidgetTester tester) => tester.widget<TextField>(
+          find.ancestor(
+            of: find.text('xPaddingBytes'),
+            matching: find.byType(TextField),
+          ),
+        );
+
+    testWidgets('из extra: в транспорте поля набивки нет', (tester) async {
+      await _open(
+        tester,
+        '$base&mode=auto'
+        '&extra=${Uri.encodeQueryComponent('{"xPaddingBytes":"100-1342"}')}#n',
+      );
+      expect(find.text('Padding, bytes'), findsNothing);
+      expect(paddingField(tester).controller!.text, '100-1342');
+    });
+
+    testWidgets('плоская из ссылки показана там же, где из extra', (tester) async {
+      await _open(tester, '$base&x_padding_bytes=100-1000#n');
+      expect(find.text('Padding, bytes'), findsNothing);
+      expect(paddingField(tester).controller!.text, '100-1000');
+    });
+
+    testWidgets('при обеих берётся из extra, как у xray', (tester) async {
+      await _open(
+        tester,
+        '$base&x_padding_bytes=1-2'
+        '&extra=${Uri.encodeQueryComponent('{"xPaddingBytes":"50-150"}')}#n',
+      );
+      expect(paddingField(tester).controller!.text, '50-150');
+    });
+
+    testWidgets('без правок сервер не перезаписывается', (tester) async {
+      final servers = await _open(tester, '$base&x_padding_bytes=100-1000#n');
+      await tester.ensureVisible(find.text('Save'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(servers.saved, isNull);
+    });
+
+    testWidgets('при битом extra набивка остаётся строкой в транспорте', (
+      tester,
+    ) async {
+      await _open(tester, '$base&x_padding_bytes=100-1000&extra=%7Bbroken#n');
+      expect(find.text('XHTTP details'), findsNothing);
+      final flat = tester.widget<TextField>(
+        find.ancestor(
+          of: find.text('Padding, bytes'),
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(flat.controller!.text, '100-1000');
+    });
   });
 
   testWidgets('Vision на xhttp: и предупреждение, и отсутствие выбора', (
@@ -171,6 +236,63 @@ void main() {
       await tester.tap(find.text('All parameters'));
       await tester.pumpAndSettle();
       expect(find.text('noGRPCHeader'), findsOneWidget);
+    });
+
+    // 12.11.2026: «если нажать на кнопку свернуть то ничего не свернётся»
+    testWidgets('«Скрыть пустые» прячет раскрытое', (tester) async {
+      await _open(tester, link);
+      expect(find.text('uplinkHTTPMethod'), findsNothing);
+
+      await tester.ensureVisible(find.text('All parameters'));
+      await tester.tap(find.text('All parameters'));
+      await tester.pumpAndSettle();
+      expect(find.text('uplinkHTTPMethod'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Hide empty'));
+      await tester.tap(find.text('Hide empty'));
+      await tester.pumpAndSettle();
+      expect(find.text('uplinkHTTPMethod'), findsNothing);
+      expect(find.text('sessionIDKey'), findsNothing);
+      expect(find.text('noGRPCHeader'), findsNothing);
+      expect(find.text('xPaddingBytes'), findsOneWidget);
+      expect(find.text('maxConcurrency'), findsOneWidget);
+      expect(find.text('All parameters'), findsOneWidget);
+    });
+
+    testWidgets('заполненное в раскрытом списке после сворачивания видно', (
+      tester,
+    ) async {
+      await _open(tester, link);
+      await tester.ensureVisible(find.text('All parameters'));
+      await tester.tap(find.text('All parameters'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.ancestor(
+          of: find.text('uplinkHTTPMethod'),
+          matching: find.byType(TextField),
+        ),
+        'GET',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Hide empty'));
+      await tester.tap(find.text('Hide empty'));
+      await tester.pumpAndSettle();
+      expect(find.text('uplinkHTTPMethod'), findsOneWidget);
+      expect(find.text('sessionIDKey'), findsNothing);
+    });
+
+    testWidgets('стёртое поле не пропадает из-под пальца', (tester) async {
+      await _open(tester, link);
+      await tester.enterText(
+        find.ancestor(
+          of: find.text('xPaddingBytes'),
+          matching: find.byType(TextField),
+        ),
+        '',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('xPaddingBytes'), findsOneWidget);
     });
 
     testWidgets('правка поля доезжает до ссылки, остальное как было', (tester) async {

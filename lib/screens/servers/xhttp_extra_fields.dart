@@ -82,6 +82,8 @@ class XhttpExtraFields extends StatefulWidget {
 class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
   late Map<String, dynamic> _map;
   final _ctrls = <String, TextEditingController>{};
+  // стёртое поле не прячем, пока его правят. контроллер для этого не годится: он есть у всего, что раскрывали
+  final _touched = <String>{};
   late final TextEditingController _rest = TextEditingController();
   bool _restInvalid = false;
   String _emitted = '';
@@ -120,6 +122,7 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
       c.dispose();
     }
     _ctrls.clear();
+    _touched.clear();
     final rest = {
       for (final e in _map.entries)
         if (!_known.contains(e.key)) e.key: e.value,
@@ -200,10 +203,11 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
         },
       );
     }
+    final id = inXmux ? 'xmux.$key' : key;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
-        controller: _ctrl(inXmux ? 'xmux.$key' : key, target[key]),
+        controller: _ctrl(id, target[key]),
         textDirection: technicalInputDirection,
         keyboardType: TextInputType.text,
         style: Theme.of(context)
@@ -215,6 +219,7 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
           hint: kind == _Kind.number ? '100-1000' : null,
         ),
         onChanged: (text) {
+          _touched.add(id);
           _set(target, key, kind, text);
           if (inXmux) _putXmux(target);
           _emit();
@@ -260,7 +265,7 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
       for (final (key, kind) in keys)
         if (_all ||
             target.containsKey(key) ||
-            _ctrls.containsKey(inXmux ? 'xmux.$key' : key))
+            _touched.contains(inXmux ? 'xmux.$key' : key))
           _field(key, kind, inXmux: inXmux),
     ];
   }
@@ -282,7 +287,10 @@ class _XhttpExtraFieldsState extends State<XhttpExtraFields> {
         Align(
           alignment: AlignmentDirectional.centerStart,
           child: TextButton.icon(
-            onPressed: () => setState(() => _all = !_all),
+            onPressed: () => setState(() {
+              _all = !_all;
+              if (!_all) _touched.clear();
+            }),
             icon: Icon(
               _all ? Icons.unfold_less_rounded : Icons.unfold_more_rounded,
               size: 18,

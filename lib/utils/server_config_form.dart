@@ -179,6 +179,7 @@ class ServerConfigForm {
       _ctrl('ed', uri.takeParam('ed'));
       _ctrl('extra', uri.takeParam('extra'));
       _ctrl('x_padding_bytes', uri.takeParam('x_padding_bytes'));
+      _paddingIntoExtra();
       _ctrl('seed', uri.takeParam('seed'));
       _ctrl('mtu', uri.takeParam('mtu'));
       _ctrl('tti', uri.takeParam('tti'));
@@ -202,6 +203,25 @@ class ServerConfigForm {
     }
 
     return null;
+  }
+
+  // ссылки несут набивку и плоским x_padding_bytes, и в extra. в редакторе поле у неё одно, в extra: оттуда
+  // её читают оба генератора, а если заданы обе, config_gen берёт значение из extra
+  void _paddingIntoExtra() {
+    final flat = parsedText['x_padding_bytes']!.trim();
+    if (flat.isEmpty) return;
+    final raw = parsedText['extra']!.trim();
+    final Map<String, dynamic> extra;
+    try {
+      final decoded = raw.isEmpty ? <String, dynamic>{} : jsonDecode(raw);
+      if (decoded is! Map) return;
+      extra = decoded.cast<String, dynamic>();
+    } on FormatException {
+      return;
+    }
+    extra.putIfAbsent('xPaddingBytes', () => flat);
+    parsedText['extra'] = jsonEncode(extra);
+    parsedText['x_padding_bytes'] = '';
   }
 
   bool _takeInsecure(RawShareUri uri) {

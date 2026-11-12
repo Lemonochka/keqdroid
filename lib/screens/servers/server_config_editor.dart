@@ -690,14 +690,15 @@ class _ServerConfigEditorScreenState
             l10n.serverEditorMode,
             const ['', 'auto', 'packet-up', 'stream-up', 'stream-one'],
           ),
-          _textField(
-            'x_padding_bytes',
-            l10n.serverEditorPadding,
-            hint: '100-1000',
-          ),
           // битый extra полями не показать, его чинят строкой
-          if (XhttpExtraFields.parse(_v('extra')) == null)
+          if (XhttpExtraFields.parse(_v('extra')) == null) ...[
+            _textField(
+              'x_padding_bytes',
+              l10n.serverEditorPadding,
+              hint: '100-1000',
+            ),
             _textField('extra', l10n.serverEditorExtra, hint: '{ }'),
+          ],
         ],
         if (type == 'grpc') ...[
           _textField('serviceName', l10n.serverEditorServiceName),
