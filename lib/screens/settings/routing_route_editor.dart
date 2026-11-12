@@ -666,14 +666,6 @@ class _RouteEditorScreenState extends ConsumerState<_RouteEditorScreen> {
               color: AppTheme.text(context),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.settingsRoutingGeoUnknownHint,
-            style: textTheme.bodySmall?.copyWith(
-              height: 1.35,
-              color: AppTheme.textLight(context),
-            ),
-          ),
         ],
       ),
     );

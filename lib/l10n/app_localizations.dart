@@ -4625,12 +4625,6 @@ abstract class AppLocalizations {
   /// **'Missing from the geo databases, will be ignored'**
   String get settingsRoutingGeoUnknownTitle;
 
-  /// No description provided for @settingsRoutingGeoUnknownHint.
-  ///
-  /// In en, this message translates to:
-  /// **'The core aborts the whole config on an unknown geo code, so these entries are dropped before connecting. Pick an existing code with the globe button above.'**
-  String get settingsRoutingGeoUnknownHint;
-
   /// No description provided for @settingsRoutingGeoPickerTooltip.
   ///
   /// In en, this message translates to:

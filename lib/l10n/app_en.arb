@@ -1303,7 +1303,6 @@
   "settingsRoutingPresetRefilterTitle": "Blocked in Russia (Re-filter)",
   "settingsRoutingPresetWhitelistTitle": "Russian mobile whitelists",
   "settingsRoutingGeoUnknownTitle": "Missing from the geo databases, will be ignored",
-  "settingsRoutingGeoUnknownHint": "The core aborts the whole config on an unknown geo code, so these entries are dropped before connecting. Pick an existing code with the globe button above.",
   "settingsRoutingGeoPickerTooltip": "Insert a geo code",
   "settingsRoutingGeoPickerTitle": "Geo codes in the bundled databases",
   "settingsRoutingGeoPickerSearchHint": "Search, e.g. telegram",

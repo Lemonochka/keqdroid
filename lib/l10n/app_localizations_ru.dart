@@ -2462,9 +2462,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsRoutingGeoUnknownTitle => 'Нет в гео-базах, будет проигнорировано';
 
   @override
-  String get settingsRoutingGeoUnknownHint => 'На неизвестном гео-коде ядро роняет весь конфиг, поэтому такие записи выкидываются перед подключением. Выберите существующий код кнопкой с глобусом выше.';
-
-  @override
   String get settingsRoutingGeoPickerTooltip => 'Вставить гео-код';
 
   @override

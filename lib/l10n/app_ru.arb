@@ -1245,7 +1245,6 @@
   "settingsRoutingPresetRefilterTitle": "Заблокировано в РФ (Re-filter)",
   "settingsRoutingPresetWhitelistTitle": "Белые списки мобильной связи",
   "settingsRoutingGeoUnknownTitle": "Нет в гео-базах, будет проигнорировано",
-  "settingsRoutingGeoUnknownHint": "На неизвестном гео-коде ядро роняет весь конфиг, поэтому такие записи выкидываются перед подключением. Выберите существующий код кнопкой с глобусом выше.",
   "settingsRoutingGeoPickerTooltip": "Вставить гео-код",
   "settingsRoutingGeoPickerTitle": "Гео-коды из поставляемых баз",
   "settingsRoutingGeoPickerSearchHint": "Поиск, например telegram",

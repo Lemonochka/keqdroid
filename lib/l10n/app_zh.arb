@@ -1243,7 +1243,6 @@
   "settingsRoutingPresetRefilterTitle": "俄罗斯封锁的网站（Re-filter）",
   "settingsRoutingPresetWhitelistTitle": "俄罗斯移动网络白名单",
   "settingsRoutingGeoUnknownTitle": "地理数据库中不存在，将被忽略",
-  "settingsRoutingGeoUnknownHint": "遇到未知的地理代码，内核会拒绝整个配置，因此这些条目会在连接前被丢弃。请用上面的地球按钮选择已有代码。",
   "settingsRoutingGeoPickerTooltip": "插入地理代码",
   "settingsRoutingGeoPickerTitle": "内置数据库中的地理代码",
   "settingsRoutingGeoPickerSearchHint": "搜索，例如 telegram",

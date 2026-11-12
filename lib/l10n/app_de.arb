@@ -1243,7 +1243,6 @@
   "settingsRoutingPresetRefilterTitle": "In Russland gesperrt (Re-filter)",
   "settingsRoutingPresetWhitelistTitle": "Mobilfunk-Whitelists in Russland",
   "settingsRoutingGeoUnknownTitle": "Nicht in den Geo-Datenbanken – wird ignoriert",
-  "settingsRoutingGeoUnknownHint": "Bei einem unbekannten Geo-Code verwirft der Kern die gesamte Konfiguration, daher werden solche Einträge vor dem Verbinden entfernt. Wähle oben mit der Globus-Schaltfläche einen vorhandenen Code.",
   "settingsRoutingGeoPickerTooltip": "Geo-Code einfügen",
   "settingsRoutingGeoPickerTitle": "Geo-Codes der mitgelieferten Datenbanken",
   "settingsRoutingGeoPickerSearchHint": "Suche, z. B. telegram",

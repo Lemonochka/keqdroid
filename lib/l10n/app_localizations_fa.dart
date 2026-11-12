@@ -2448,9 +2448,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsRoutingGeoUnknownTitle => 'در پایگاه دادهٔ جغرافیایی نیست — نادیده گرفته می‌شود';
 
   @override
-  String get settingsRoutingGeoUnknownHint => 'هسته با یک کد جغرافیایی ناشناس کل کانفیگ را رد می‌کند، برای همین این موارد پیش از اتصال حذف می‌شوند. با دکمهٔ کرهٔ زمین در بالا یک کد موجود انتخاب کنید.';
-
-  @override
   String get settingsRoutingGeoPickerTooltip => 'درج کد جغرافیایی';
 
   @override

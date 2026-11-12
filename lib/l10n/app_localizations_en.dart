@@ -2452,9 +2452,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRoutingGeoUnknownTitle => 'Missing from the geo databases, will be ignored';
 
   @override
-  String get settingsRoutingGeoUnknownHint => 'The core aborts the whole config on an unknown geo code, so these entries are dropped before connecting. Pick an existing code with the globe button above.';
-
-  @override
   String get settingsRoutingGeoPickerTooltip => 'Insert a geo code';
 
   @override

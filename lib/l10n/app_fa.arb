@@ -783,7 +783,6 @@
   "settingsRoutingPresetRefilterTitle": "مسدودشده‌ها در روسیه (Re-filter)",
   "settingsRoutingPresetWhitelistTitle": "لیست سفید اینترنت موبایل روسیه",
   "settingsRoutingGeoUnknownTitle": "در پایگاه دادهٔ جغرافیایی نیست — نادیده گرفته می‌شود",
-  "settingsRoutingGeoUnknownHint": "هسته با یک کد جغرافیایی ناشناس کل کانفیگ را رد می‌کند، برای همین این موارد پیش از اتصال حذف می‌شوند. با دکمهٔ کرهٔ زمین در بالا یک کد موجود انتخاب کنید.",
   "settingsRoutingGeoPickerTooltip": "درج کد جغرافیایی",
   "settingsRoutingGeoPickerTitle": "کدهای جغرافیایی موجود در پایگاه دادهٔ همراه",
   "settingsRoutingGeoPickerSearchHint": "جست‌وجو، مثلاً telegram",

@@ -2448,9 +2448,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRoutingGeoUnknownTitle => '地理数据库中不存在，将被忽略';
 
   @override
-  String get settingsRoutingGeoUnknownHint => '遇到未知的地理代码，内核会拒绝整个配置，因此这些条目会在连接前被丢弃。请用上面的地球按钮选择已有代码。';
-
-  @override
   String get settingsRoutingGeoPickerTooltip => '插入地理代码';
 
   @override

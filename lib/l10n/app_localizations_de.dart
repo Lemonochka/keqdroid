@@ -2452,9 +2452,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsRoutingGeoUnknownTitle => 'Nicht in den Geo-Datenbanken – wird ignoriert';
 
   @override
-  String get settingsRoutingGeoUnknownHint => 'Bei einem unbekannten Geo-Code verwirft der Kern die gesamte Konfiguration, daher werden solche Einträge vor dem Verbinden entfernt. Wähle oben mit der Globus-Schaltfläche einen vorhandenen Code.';
-
-  @override
   String get settingsRoutingGeoPickerTooltip => 'Geo-Code einfügen';
 
   @override
