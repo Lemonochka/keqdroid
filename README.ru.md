@@ -147,11 +147,11 @@ https://github.com/user-attachments/assets/e1f899dd-4f2c-4ca2-896c-1da64a3a5645
 
 ```bash
 flutter pub get
-flutter build apk --release      # Android
+flutter build apk --debug        # Android
 flutter build windows --release  # Windows
 ```
 
-Собранные ядра входят в репозиторий. Сборка для Linux, пересборка ядер, тесты и процесс выпуска описаны в [docs/BUILD.md](docs/BUILD.md#русский).
+Для релизного APK нужен ключ подписи в `android/key.properties`. Собранные ядра входят в репозиторий. Сборка для Linux, пересборка ядер, тесты и процесс выпуска описаны в [docs/BUILD.ru.md](docs/BUILD.ru.md).
 
 ## Сообщество
 

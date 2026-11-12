@@ -147,11 +147,11 @@ Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
 ```bash
 flutter pub get
-flutter build apk --release      # Android
+flutter build apk --debug        # Android
 flutter build windows --release  # Windows
 ```
 
-Prebuilt cores are included in the repository. Linux builds, rebuilding the cores, tests and the release process are described in [docs/BUILD.md](docs/BUILD.md).
+A release APK needs a signing key in `android/key.properties`. Prebuilt cores are included in the repository. Linux builds, rebuilding the cores, tests and the release process are described in [docs/BUILD.md](docs/BUILD.md).
 
 ## Community
 
