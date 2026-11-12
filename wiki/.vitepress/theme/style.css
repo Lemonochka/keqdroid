@@ -4,9 +4,6 @@
   --vp-c-brand-3: #8f4a54;
   --vp-c-brand-soft: rgba(143, 74, 84, 0.1);
 
-  --kq-stroke: var(--vp-c-divider);
-  --kq-text: var(--vp-c-text-1);
-  --kq-muted: var(--vp-c-text-2);
   --kq-accent: #8f4a54;
   --kq-block: #b4434f;
   --kq-direct: #2f7d5b;
@@ -51,10 +48,6 @@
   margin-top: 10px;
   font-size: 13px;
   color: var(--vp-c-text-2);
-}
-
-.kq-mono {
-  font-family: var(--vp-font-family-mono);
 }
 
 mjx-container[jax='SVG'][display='true'] {
