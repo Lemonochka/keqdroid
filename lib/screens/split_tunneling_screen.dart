@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/expressive_elements.dart';
@@ -259,6 +260,12 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
     }
   }
 
+  Future<void> _reconnect() async {
+    try {
+      await ref.read(vpnStateProvider.notifier).reconnectToActiveServer();
+    } catch (_) {}
+  }
+
   void _toggle(AppInfo app) {
     if (_mode == TunnelMode.all) return;
     ref
@@ -365,6 +372,12 @@ class _SplitTunnelingScreenState extends ConsumerState<SplitTunnelingScreen>
                         color: AppTheme.orange(context),
                         icon: Icons.info_outline_rounded,
                         text: l10n.splitTunnelingReconnectHint,
+                        action: TextButton(
+                          onPressed: vpnStatus == VpnStatus.connected
+                              ? () => unawaited(_reconnect())
+                              : null,
+                          child: Text(l10n.settingsRoutingReconnect),
+                        ),
                       ),
                     ],
                     if (proxyModeOnDesktop && _mode != TunnelMode.all) ...[

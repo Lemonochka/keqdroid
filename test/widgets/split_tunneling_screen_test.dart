@@ -52,9 +52,13 @@ class _FakeVpn extends VpnStateNotifier {
   _FakeVpn(this._status);
 
   final VpnStatus _status;
+  static int reconnects = 0;
 
   @override
   Future<VpnState> build() async => VpnState(status: _status);
+
+  @override
+  Future<void> reconnectToActiveServer() async => reconnects++;
 }
 
 AppInfo _app(String pkg, String name, {bool running = false}) => AppInfo(
@@ -191,6 +195,27 @@ void main() {
       find.textContaining('переподключ'),
       findsWidgets,
     );
+  });
+
+  // 12.11.2026, просьба из чата: «а можно сюда тоже кнопку переподключиться как в правилах?»
+  testWidgets('переподключиться можно прямо из напоминания', (tester) async {
+    _FakeVpn.reconnects = 0;
+    await _pump(tester, status: VpnStatus.connected);
+
+    await tester.tap(find.text('Переподключить'));
+    await tester.pumpAndSettle();
+    expect(_FakeVpn.reconnects, 1);
+  });
+
+  testWidgets('пока туннель поднимается, кнопка не нажимается', (tester) async {
+    _FakeVpn.reconnects = 0;
+    await _pump(tester, status: VpnStatus.connecting);
+
+    final button = find.ancestor(
+      of: find.text('Переподключить'),
+      matching: find.byType(TextButton),
+    );
+    expect(tester.widget<TextButton>(button).onPressed, isNull);
   });
 
   group('дубли строк', () {
