@@ -179,6 +179,18 @@ void main() {
       expect(paddingField(tester).controller!.text, '100-1342');
     });
 
+    testWidgets('режим, повторённый в extra, не висит в остальных параметрах', (
+      tester,
+    ) async {
+      final extra = Uri.encodeQueryComponent(
+        '{"mode":"auto","xPaddingBytes":"100-1342"}',
+      );
+      await _open(tester, '$base&mode=auto&extra=$extra#n');
+      expect(find.text('Other parameters'), findsNothing);
+      expect(find.textContaining('"mode"'), findsNothing);
+      expect(paddingField(tester).controller!.text, '100-1342');
+    });
+
     testWidgets('плоская из ссылки показана там же, где из extra', (tester) async {
       await _open(tester, '$base&x_padding_bytes=100-1000#n');
       expect(find.text('Padding, bytes'), findsNothing);

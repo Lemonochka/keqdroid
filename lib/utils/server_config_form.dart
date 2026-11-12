@@ -181,6 +181,7 @@ class ServerConfigForm {
       _ctrl('extra', uri.takeParam('extra'));
       _ctrl('x_padding_bytes', uri.takeParam('x_padding_bytes'));
       _paddingIntoExtra();
+      _outerFromExtra();
       _ctrl('seed', uri.takeParam('seed'));
       _ctrl('mtu', uri.takeParam('mtu'));
       _ctrl('tti', uri.takeParam('tti'));
@@ -211,18 +212,42 @@ class ServerConfigForm {
   void _paddingIntoExtra() {
     final flat = parsedText['x_padding_bytes']!.trim();
     if (flat.isEmpty) return;
-    final raw = parsedText['extra']!.trim();
-    final Map<String, dynamic> extra;
-    try {
-      final decoded = raw.isEmpty ? <String, dynamic>{} : jsonDecode(raw);
-      if (decoded is! Map) return;
-      extra = decoded.cast<String, dynamic>();
-    } on FormatException {
-      return;
-    }
+    final extra = _extraMap();
+    if (extra == null) return;
     extra.putIfAbsent('xPaddingBytes', () => flat);
     parsedText['extra'] = jsonEncode(extra);
     parsedText['x_padding_bytes'] = '';
+  }
+
+  // xray берёт host, path и mode только снаружи extra (SplitHTTPConfig.Build), а mihomo из extra, когда снаружи
+  // пусто. держим их в «Транспорте»: оба ядра видят одно, и в остальных параметрах нет повтора
+  void _outerFromExtra() {
+    if (normalizeTransport(_drop['type'] ?? '') != 'xhttp') return;
+    final extra = _extraMap();
+    if (extra == null) return;
+    var moved = false;
+    for (final key in const ['host', 'path', 'mode']) {
+      if (!extra.containsKey(key)) continue;
+      moved = true;
+      final value = extra.remove(key)?.toString().trim() ?? '';
+      if (key == 'mode') {
+        if ((_drop['mode'] ?? '').isEmpty) _drop['mode'] = value;
+      } else if (parsedText[key]!.trim().isEmpty) {
+        parsedText[key] = value;
+      }
+    }
+    if (moved) parsedText['extra'] = extra.isEmpty ? '' : jsonEncode(extra);
+  }
+
+  Map<String, dynamic>? _extraMap() {
+    final raw = parsedText['extra']!.trim();
+    if (raw.isEmpty) return <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map ? decoded.cast<String, dynamic>() : null;
+    } on FormatException {
+      return null;
+    }
   }
 
   bool _takeInsecure(RawShareUri uri) {
@@ -278,6 +303,7 @@ class ServerConfigForm {
       _ctrl('extra', extra is Map || extra is List ? jsonEncode(extra) : s('extra'));
       _ctrl('x_padding_bytes', s('x_padding_bytes'));
       _paddingIntoExtra();
+      _outerFromExtra();
       _drop['fp'] = s('fp');
       _ctrl('alpn', s('alpn'));
       _ctrl('ech', s('ech'));

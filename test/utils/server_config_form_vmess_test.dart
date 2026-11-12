@@ -80,6 +80,19 @@ void main() {
       expect((_stream(built)['xhttpSettings'] as Map)['extra'], {'a': 2});
     });
 
+    test('режим из extra встаёт в Транспорт', () {
+      final opened = _open(_vmess(_base('xhttp', {
+        'extra': {'mode': 'stream-up', 'xPaddingBytes': '1-2'},
+      })));
+      expect(opened.form.drop['mode'], 'stream-up');
+      expect(jsonDecode(opened.form.parsedText['extra']!), {'xPaddingBytes': '1-2'});
+
+      final built = opened.edit({'address': 'edited.example.com'});
+      expect(_payload(built)['mode'], 'stream-up');
+      expect(_payload(built)['extra'], {'xPaddingBytes': '1-2'});
+      expect((_stream(built)['xhttpSettings'] as Map)['mode'], 'stream-up');
+    });
+
     test('плоская набивка в одном поле с extra', () {
       final opened =
           _open(_vmess(_base('xhttp', {'x_padding_bytes': '100-1000'})));

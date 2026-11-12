@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/server_config_form.dart';
+import 'package:keqdroid/utils/socks5_credentials.dart';
 
 import '../helpers/server_config_form_corpus.dart';
 
@@ -87,5 +90,67 @@ void main() {
     expect(form.toggle, isEmpty);
     expect(form.parse('socks://198.51.100.1:1080'), 'raw-only protocol');
     expect(form.protocol, 'trojan');
+  });
+
+  // 12.11.2026: в «Остальных параметрах» висел "mode": "auto", а режим уже стоял в «Транспорте»
+  group('host, path и mode из extra', () {
+    String xhttp(String query, Map<String, Object?> extra) =>
+        'vless://716e3485-d4f9-4471-9660-fb4b0b838100@example.com:443'
+        '?type=xhttp&security=tls&sni=example.com$query'
+        '&extra=${Uri.encodeQueryComponent(jsonEncode(extra))}#n';
+
+    ServerConfigForm parsed(String link) {
+      final form = ServerConfigForm();
+      expect(form.parse(link), isNull);
+      return form;
+    }
+
+    Map<String, dynamic> core(ServerConfigForm form) {
+      Socks5Credentials().init('u', 'p');
+      final link = form.build(
+        (id) => id == 'address' ? 'edited.example.com' : _fieldsOf(form, id),
+      );
+      final config = jsonDecode(
+        ConfigGeneratorV2.generateConfig(link, const AppSettings()),
+      ) as Map<String, dynamic>;
+      final proxy = (config['outbounds'] as List).first as Map;
+      return (proxy['streamSettings'] as Map)['xhttpSettings'] as Map<String, dynamic>;
+    }
+
+    test('повтор режима уходит из extra, остальное в нём остаётся', () {
+      final form = parsed(
+        xhttp('&mode=auto', {'mode': 'auto', 'xPaddingBytes': '100-1342'}),
+      );
+      expect(form.drop['mode'], 'auto');
+      expect(jsonDecode(form.parsedText['extra']!), {'xPaddingBytes': '100-1342'});
+    });
+
+    test('режим только в extra встаёт в Транспорт, и xray его видит', () {
+      final form = parsed(xhttp('', {'mode': 'packet-up'}));
+      expect(form.drop['mode'], 'packet-up');
+      expect(form.parsedText['extra'], '');
+
+      final settings = core(form);
+      expect(settings['mode'], 'packet-up');
+      expect(settings.containsKey('extra'), isFalse);
+    });
+
+    test('host и path так же, а заданные снаружи не перебиваются', () {
+      final form = parsed(
+        xhttp('&path=%2Fouter', {'host': 'h.example', 'path': '/inner'}),
+      );
+      expect(form.parsedText['host'], 'h.example');
+      expect(form.parsedText['path'], '/outer');
+      expect(form.parsedText['extra'], '');
+
+      final settings = core(form);
+      expect(settings['host'], 'h.example');
+      expect(settings['path'], '/outer');
+    });
+
+    test('extra без повторов не переписывается', () {
+      final form = parsed(xhttp('&mode=auto', {'xPaddingBytes': '1-2', 'b': 1}));
+      expect(form.parsedText['extra'], '{"xPaddingBytes":"1-2","b":1}');
+    });
   });
 }
