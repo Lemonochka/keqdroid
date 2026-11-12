@@ -57,6 +57,15 @@ class _FakeServersNoPing extends _FakeServers {
   }
 }
 
+// настоящий pingSingle при неудаче кидает: так меню сервера узнаёт, что показать красный снек
+class _FakeServersPingFails extends _FakeServers {
+  @override
+  Future<void> pingSingle(String serverId) async {
+    await super.pingSingle(serverId);
+    throw Exception('connection closed');
+  }
+}
+
 class _FakeSettings extends SettingsNotifier {
   _FakeSettings(this._settings);
   final AppSettings _settings;
@@ -320,6 +329,18 @@ void main() {
     await tester.tap(find.byTooltip(_l10n.serversPingServer));
     await tester.pump();
     expect(_FakeServers.pinged, ['pl']);
+  });
+
+  // Crashlytics, 0.30.0-0.36.2: ServersNotifier.pingSingle, runZonedGuarded unhandled error
+  testWidgets('неудачный пинг из плашки не уходит необработанной ошибкой', (
+    tester,
+  ) async {
+    _FakeServers.pinged.clear();
+    await _pump(tester, modern: true, servers: _FakeServersPingFails.new);
+    await tester.tap(find.byTooltip(_l10n.serversPingServer));
+    await tester.pump();
+    expect(_FakeServers.pinged, ['pl']);
+    expect(tester.takeException(), isNull);
   });
 
   test('выбор режима переживает сохранение настроек', () {

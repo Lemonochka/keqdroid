@@ -154,7 +154,13 @@ class _ServerPingPlaque extends ConsumerWidget {
                 start: _plaqueInner,
                 end: _plaqueOuter,
               ).resolve(Directionality.of(context)),
-              onTap: () => ref.read(serversProvider.notifier).pingSingle(server.id),
+              // неудачный пинг и так виден тут как N/A, а брошенное исключение уходило в Crashlytics фатальным
+              onTap: () => unawaited(
+                ref
+                    .read(serversProvider.notifier)
+                    .pingSingle(server.id)
+                    .catchError((Object _) {}),
+              ),
               tooltip: context.l10n.serversPingServer,
               padding: const EdgeInsetsDirectional.only(start: 10, end: 12),
               child: Text(
