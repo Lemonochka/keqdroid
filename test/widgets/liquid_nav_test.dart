@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/shared/ui/bottom_nav.dart';
 import 'package:keqdroid/shared/ui/floating_bar.dart';
 import 'package:keqdroid/shared/ui/liquid_nav.dart';
 
@@ -267,6 +268,60 @@ void main() {
       expect(tapped, isEmpty);
     });
   });
+
+  // 483 dp: её телефон после масштаба 0,85, подписи влезают. в 360 подпись выбранной вкладки
+  // обрезана, и край обрезки законно едет за пальцем: собирается только она
+  for (final (width, selectedOnly) in [(483.0, false), (360.0, true)]) {
+    testWidgets('за пальцем на листании лента двигается, а кнопки в ней не собираются заново '
+        '(${width.toInt()} dp)', (tester) async {
+      tester.view.physicalSize = Size(width, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final pages = PageController();
+      addTearDown(pages.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: PageView(
+              controller: pages,
+              children: const [SizedBox.expand(), SizedBox.expand(), SizedBox.expand()],
+            ),
+            bottomNavigationBar: LiquidBottomNav(
+              index: 0,
+              style: LiquidBarStyle.mainland,
+              showConnectedBadge: true,
+              pages: pages,
+              onTap: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final icon = find.byType(NavIcon).first;
+      final before = tester.getTopLeft(icon);
+
+      final built = <Element>{};
+      debugOnRebuildDirtyWidget = (element, _) {
+        if (element.widget is NavIcon) built.add(element);
+      };
+      addTearDown(() => debugOnRebuildDirtyWidget = null);
+      final finger = await tester.startGesture(const Offset(300, 300));
+      for (var i = 0; i < 6; i++) {
+        await finger.moveBy(const Offset(-15, 0));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      debugOnRebuildDirtyWidget = null;
+
+      // в узком окне место под стрелку уходит вместе со страницей серверов, лента съезжает
+      if (selectedOnly) expect(tester.getTopLeft(icon), isNot(before));
+      expect(built, selectedOnly ? {tester.element(icon)} : isEmpty);
+
+      await finger.up();
+      await tester.pumpAndSettle();
+    });
+  }
 
   testWidgets('мелкая прокрутка туда-обратно ленту не прячет, заметная прячет', (
     tester,

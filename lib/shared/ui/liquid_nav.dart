@@ -264,6 +264,96 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
     super.dispose();
   }
 
+  // в кадре листания и прятанья у вкладки меняется только место: тот же виджет не собирает
+  // заново её ~30 элементов. запас подписи роли не играет, пока подпись в него влезает
+  final _tabs = List<_Tab?>.filled(_count, null);
+
+  _Tab _tab(
+    int i,
+    ({IconData icon, String label, bool badge}) item,
+    double t,
+    double hover,
+    double labelMax,
+    double labelWidth,
+  ) {
+    final old = _tabs[i];
+    final selected = widget.index == i;
+    bool fits(double max) => max >= labelWidth + 4;
+    if (old != null &&
+        old.icon == item.icon &&
+        old.label == item.label &&
+        old.badge == item.badge &&
+        old.selected == selected &&
+        old.t == t &&
+        old.hover == hover &&
+        (old.labelMax == labelMax || (fits(old.labelMax) && fits(labelMax)))) {
+      return old;
+    }
+    return _tabs[i] = _Tab(
+      icon: item.icon,
+      label: item.label,
+      badge: item.badge,
+      selected: selected,
+      t: t,
+      hover: hover,
+      labelMax: labelMax,
+      onTap: () {
+        if (i != widget.index) AppHaptics.selection();
+        widget.onTap(i);
+      },
+    );
+  }
+
+  // кнопка и стрелка: колбэки читают вкладку и стрелку в момент нажатия, прежние годятся
+  final _drops = List<({Object inputs, _Drop drop})?>.filled(2, null);
+
+  _Drop _drop(
+    int slot, {
+    required IconData icon,
+    required double size,
+    required double opacity,
+    required Color color,
+    required double radius,
+    required VoidCallback onTap,
+    double turns = 0,
+  }) {
+    final inputs = (icon, size, opacity, color, radius, turns);
+    final cached = _drops[slot];
+    if (cached != null && cached.inputs == inputs) return cached.drop;
+    final drop = _Drop(
+      icon: icon,
+      size: size,
+      opacity: opacity,
+      color: color,
+      radius: radius,
+      turns: turns,
+      onTap: onTap,
+    );
+    _drops[slot] = (inputs: inputs, drop: drop);
+    return drop;
+  }
+
+  late final Widget _grabArea = RawGestureDetector(
+    behavior: HitTestBehavior.translucent,
+    gestures: {
+      LongPressGestureRecognizer:
+          GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+        () => LongPressGestureRecognizer(
+          duration: const Duration(milliseconds: 300),
+          debugOwner: this,
+        ),
+        (r) {
+          r
+            ..onLongPressStart = _grabStart
+            ..onLongPressMoveUpdate = _grabMove
+            ..onLongPressEnd = ((_) => _grabEnd())
+            ..onLongPressCancel = _grabEnd;
+        },
+      ),
+    },
+    child: const SizedBox.expand(),
+  );
+
   int? _tabAt(double x) {
     int? best;
     var bestGap = double.infinity;
@@ -607,19 +697,7 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                     rect: tabs[i],
                     child: IgnorePointer(
                       ignoring: sink > 0,
-                      child: _Tab(
-                        icon: items[i].icon,
-                        label: items[i].label,
-                        badge: items[i].badge,
-                        selected: widget.index == i,
-                        t: ts[i],
-                        hover: hovers[i],
-                        labelMax: budgets[i],
-                        onTap: () {
-                          if (i != widget.index) AppHaptics.selection();
-                          widget.onTap(i);
-                        },
-                      ),
+                      child: _tab(i, items[i], ts[i], hovers[i], budgets[i], labels[i]),
                     ),
                   ),
                 if (absorbed < 1)
@@ -627,7 +705,8 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                     rect: bud,
                     child: IgnorePointer(
                       ignoring: absorbed > 0.5,
-                      child: _Drop(
+                      child: _drop(
+                        0,
                         icon: Icons.add_rounded,
                         size: 28 * budScale,
                         opacity: (1 - 2 * absorbed).clamp(0.0, 1.0),
@@ -678,27 +757,7 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                   rect: strip,
                   child: IgnorePointer(
                     ignoring: sink > 0,
-                    child: RawGestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      gestures: {
-                        LongPressGestureRecognizer:
-                            GestureRecognizerFactoryWithHandlers<
-                                LongPressGestureRecognizer>(
-                          () => LongPressGestureRecognizer(
-                            duration: const Duration(milliseconds: 300),
-                            debugOwner: this,
-                          ),
-                          (r) {
-                            r
-                              ..onLongPressStart = _grabStart
-                              ..onLongPressMoveUpdate = _grabMove
-                              ..onLongPressEnd = ((_) => _grabEnd())
-                              ..onLongPressCancel = _grabEnd;
-                          },
-                        ),
-                      },
-                      child: const SizedBox.expand(),
-                    ),
+                    child: _grabArea,
                   ),
                 ),
                 if (jumpT > 0.01)
@@ -706,7 +765,8 @@ class _LiquidBottomNavState extends State<LiquidBottomNav>
                     rect: jump,
                     child: IgnorePointer(
                       ignoring: jumpT < 0.5,
-                      child: _Drop(
+                      child: _drop(
+                        1,
                         icon: Icons.arrow_downward_rounded,
                         turns: (_jump?.up ?? false) ? 0.5 : 0,
                         size: 26 * jumpScale,

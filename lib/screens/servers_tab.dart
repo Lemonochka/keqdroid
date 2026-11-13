@@ -5,6 +5,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -362,15 +363,37 @@ class _ServersTabState extends ConsumerState<ServersTab>
     WidgetsBinding.instance.removeObserver(this);
     VpnNativeBridge.registerLaunchHandler(null);
     _waveSettleTimer?.cancel();
+    _tickerMode?.removeListener(_onTickerMode);
     _waveCtrl.dispose();
     _stateCtrl.dispose();
     super.dispose();
   }
 
+  // слушателем, а не valuesOf: зависимость от TickerMode пересобирала всю вкладку на каждом
+  // уходе и возврате страницы, до 2000 элементов в одном кадре посреди свайпа
+  ValueListenable<TickerModeData>? _tickerMode;
+
+  void _followTickerMode() {
+    final notifier = TickerMode.getValuesNotifier(context);
+    if (notifier != _tickerMode) {
+      _tickerMode?.removeListener(_onTickerMode);
+      _tickerMode = notifier..addListener(_onTickerMode);
+    }
+    _onTickerMode();
+  }
+
+  void _onTickerMode() => _waveCtrl.muted = !_tickerMode!.value.enabled;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _waveCtrl.muted = !TickerMode.valuesOf(context).enabled;
+    _followTickerMode();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _followTickerMode();
   }
 
   @override

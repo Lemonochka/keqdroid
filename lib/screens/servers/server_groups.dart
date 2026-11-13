@@ -460,7 +460,6 @@ void _serverGroupSortMenu(
 class _ServerGroupHeader extends ConsumerWidget {
   const _ServerGroupHeader({
     required this.subscription,
-    required this.servers,
     required this.groupKey,
     required this.groupTitle,
     required this.onRefresh,
@@ -470,7 +469,6 @@ class _ServerGroupHeader extends ConsumerWidget {
   });
 
   final Subscription? subscription;
-  final List<ServerItem> servers;
   final String? groupKey;
   final String? groupTitle;
   final Future<void> Function()? onRefresh;
@@ -1404,6 +1402,37 @@ class _SubCardState extends ConsumerState<_SubCard>
   List<ServerItem>? _sortedSource;
   ServerSortMode? _sortedMode;
 
+  // пинг раз в 200 мс перестраивает группу целиком. плитка, у которой ничего не поменялось,
+  // уходит прежним виджетом и не собирается заново: свой пинг она и так слушает сама
+  final _tiles = <String, ({Object inputs, Widget tile})>{};
+  List<ServerItem> _shown = const [];
+
+  // то же для шапки: колбэки списка новые на каждую сборку, но при той же подписке делают то же
+  ({Object inputs, Widget header})? _header;
+
+  Widget _groupHeader() {
+    final inputs = (
+      widget.subscription,
+      widget.groupKey,
+      widget.groupTitle,
+      widget.onRefresh == null,
+      _accent,
+    );
+    final cached = _header;
+    if (cached != null && cached.inputs == inputs) return cached.header;
+    final header = _ServerGroupHeader(
+      subscription: widget.subscription,
+      groupKey: widget.groupKey,
+      groupTitle: widget.groupTitle,
+      onRefresh: widget.onRefresh,
+      onPingAll: widget.onPingAll,
+      accent: _accent,
+      openness: _open,
+    );
+    _header = (inputs: inputs, header: header);
+    return header;
+  }
+
   SubscriptionAccent? _accent;
 
   @override
@@ -1537,16 +1566,7 @@ class _SubCardState extends ConsumerState<_SubCard>
         slivers: [
           SliverToBoxAdapter(
             // якорь на шапке: SliverToBoxAdapter раскладывает её всегда, даже за экраном
-            child: _ServerGroupHeader(
-              subscription: widget.subscription,
-              servers: widget.servers,
-              groupKey: widget.groupKey,
-              groupTitle: widget.groupTitle,
-              onRefresh: widget.onRefresh,
-              onPingAll: widget.onPingAll,
-              accent: _accent,
-              openness: _open,
-            ),
+            child: _groupHeader(),
           ),
           AnimatedBuilder(
             animation: _open,
@@ -1638,36 +1658,56 @@ class _SubCardState extends ConsumerState<_SubCard>
     final layout = widget.layout;
     final columns = layout.columns;
     final direction = Directionality.of(context);
+    _shown = servers;
+    final ids = {for (final s in servers) s.id};
+    _tiles.removeWhere((id, _) => !ids.contains(id));
     Widget tileAt(int index) {
       final server = servers[index];
-      return _ServerTile(
+      final isActive = server.id == activeServerId;
+      final radius = ExpressiveListSegment.segmentRadius(
+        index: index,
+        count: servers.length,
+        columns: columns,
+        // радиус концентричный углу группы, со спековыми 16dp последний сервер выпирал за край
+        endCorner: ExpressiveShape.extraLarge - ExpressiveListSegment.gap,
+      ).resolve(direction);
+      final margin = ExpressiveListSegment.segmentMargin(
+        index: index,
+        columns: columns,
+        spacing: layout.gap,
+      ).resolve(direction);
+      final inputs = (
+        server,
+        isActive,
+        layout.rowLayout,
+        widget.rowExtent,
+        accent,
+        radius,
+        margin,
+        picking,
+        autoOn,
+      );
+      final cached = _tiles[server.id];
+      if (cached != null && cached.inputs == inputs) return cached.tile;
+      final tile = _ServerTile(
         key: ValueKey(server.id),
         server: server,
-        isActive: server.id == activeServerId,
+        isActive: isActive,
         layout: layout.rowLayout,
         height: widget.rowExtent,
         accent: accent,
-        radius: ExpressiveListSegment.segmentRadius(
-                index: index,
-                count: servers.length,
-                columns: columns,
-                // радиус концентричный углу группы, со спековыми 16dp последний сервер выпирал за край
-                endCorner:
-                    ExpressiveShape.extraLarge - ExpressiveListSegment.gap,
-              ).resolve(direction),
-        margin: ExpressiveListSegment.segmentMargin(
-          index: index,
-          columns: columns,
-          spacing: layout.gap,
-        ).resolve(direction),
+        radius: radius,
+        margin: margin,
         picking: picking,
         autoOn: autoOn,
         onTap: picking
-            ? () => _toggleAutoSkip(server, servers)
+            ? () => _toggleAutoSkip(server, _shown)
             : () => widget.onSelectServer(server),
         onDelete: () => ref.read(serversProvider.notifier).delete(server.id),
         onPing: () => ref.read(serversProvider.notifier).pingSingle(server.id),
       );
+      _tiles[server.id] = (inputs: inputs, tile: tile);
+      return tile;
     }
 
     if (columns > 1) {
