@@ -18,20 +18,29 @@ for that interface and falls through to main, as before.
 
 The uid rule is what keeps a browser's WebRTC inside: it binds a socket to the
 address of every network, and without the rule that STUN request carried a
-source past every source rule and showed the real address. The price is the
-one the main table routes had: replies of a server run by a user to a client
-from outside go into the TUN; root's servers (sshd) answer the way the request
-came. Telling those apart takes conntrack marks, which xray does not set.
+source past every source rule and showed the real address. On its own the
+rule would also take replies of a server run by a user (Sunshine, a game
+server, a seeding torrent client) to a client from outside into the TUN, since
+a policy rule cannot tell a reply from a new connection. Conntrack can: the
+nftables table keqdroid_xray (inet, a route chain on output) marks every
+packet that leaves in the reply direction with 0x2026, the kernel looks its
+route up again, and the first rule of the range sends that mark to main. This
+is how sing-tun's auto_redirect leaves replies alone (output_prematch, ct
+direction reply). A packet that already has a mark is not touched. Without
+nftables the core logs a warning and those replies go into the TUN.
+github.com/sagernet/nftables comes from keqrnel's go.mod, which xray is built
+against.
 
-The tun gets rp_filter=2 for itself, as sing-tun does. Rules in the range are
-removed before they are added, so a crashed run leaves nothing that the next
-one keeps. Linux desktop only: Android gets the TUN descriptor and never adds
-routes, and Windows keeps its own code.
+The tun gets rp_filter=2 for itself, as sing-tun does. Rules in the range and
+the table are removed before they are added, so a crashed run leaves nothing
+that the next one keeps; a table left behind only marks replies, and without
+the rule the mark leads nowhere. Linux desktop only: Android gets the TUN
+descriptor and never adds routes, and Windows keeps its own code.
 diff --git a/proxy/tun/tun_linux.go b/proxy/tun/tun_linux.go
-index 78e2dd4..0cfe92e 100644
+index 78e2dd4..da10ff5 100644
 --- a/proxy/tun/tun_linux.go
 +++ b/proxy/tun/tun_linux.go
-@@ -6,6 +6,7 @@ import (
+@@ -6,10 +6,14 @@ import (
  	"context"
  	"net"
  	"net/netip"
@@ -39,7 +48,14 @@ index 78e2dd4..0cfe92e 100644
  	"os/exec"
  	"strconv"
  	"sync"
-@@ -40,6 +41,7 @@ type LinuxTun struct {
+ 
++	"github.com/sagernet/nftables"
++	"github.com/sagernet/nftables/binaryutil"
++	"github.com/sagernet/nftables/expr"
+ 	"github.com/vishvananda/netlink"
+ 	appdns "github.com/xtls/xray-core/app/dns"
+ 	"github.com/xtls/xray-core/common/errors"
+@@ -40,6 +44,7 @@ type LinuxTun struct {
  
  	interfaceAddresses []netlink.Addr
  	systemRoutes       []netlink.Route
@@ -47,7 +63,7 @@ index 78e2dd4..0cfe92e 100644
  	routeMonitorStop   chan struct{}
  	routeMonitorOnce   sync.Once
  
-@@ -514,34 +516,203 @@ func (t *LinuxTun) unsetInterfaceAddresses() error {
+@@ -514,34 +519,276 @@ func (t *LinuxTun) unsetInterfaceAddresses() error {
  	return errors.Combine(errs...)
  }
  
@@ -81,11 +97,75 @@ index 78e2dd4..0cfe92e 100644
 +	return netlink.NewRuleUIDRange(1, 0xfffffffe)
 +}
 +
++// replyMark takes a reply of a connection that came from outside past the
++// TUN: Sunshine answering a viewer, a game server or a seeding torrent run by
++// the user. The userUIDs rule alone sends those replies into the TUN, since a
++// policy rule cannot tell a reply from a new connection made from a bound
++// socket. Conntrack can: an nftables route chain marks every packet that goes
++// out in the reply direction and the kernel looks its route up again, the way
++// sing-tun's auto_redirect leaves replies alone (output_prematch, ct direction
++// reply). A packet that already has a mark is not touched.
++const (
++	replyMark      = 0x2026
++	replyMarkTable = "keqdroid_xray"
++)
++
++func replyMarkExprs() []expr.Any {
++	return []expr.Any{
++		&expr.Ct{Key: expr.CtKeyDIRECTION, Register: 1},
++		&expr.Cmp{Op: expr.CmpOpEq, Register: 1, Data: []byte{1}}, // IP_CT_DIR_REPLY
++		&expr.Meta{Key: expr.MetaKeyMARK, Register: 1},
++		&expr.Cmp{Op: expr.CmpOpEq, Register: 1, Data: binaryutil.NativeEndian.PutUint32(0)},
++		&expr.Immediate{Register: 1, Data: binaryutil.NativeEndian.PutUint32(replyMark)},
++		&expr.Meta{Key: expr.MetaKeyMARK, Register: 1, SourceRegister: true},
++	}
++}
++
++// setReplyMark replaces a table a crashed run left. A table left behind only
++// marks replies: without the fwmark rule the mark leads nowhere.
++func setReplyMark() error {
++	if err := deleteReplyMark(); err != nil {
++		return err
++	}
++	nft, err := nftables.New()
++	if err != nil {
++		return errors.New("failed to open nftables").Base(err)
++	}
++	table := nft.AddTable(&nftables.Table{Name: replyMarkTable, Family: nftables.TableFamilyINet})
++	chain := nft.AddChain(&nftables.Chain{
++		Name:     "output",
++		Table:    table,
++		Hooknum:  nftables.ChainHookOutput,
++		Priority: nftables.ChainPriorityMangle,
++		Type:     nftables.ChainTypeRoute,
++	})
++	nft.AddRule(&nftables.Rule{Table: table, Chain: chain, Exprs: replyMarkExprs()})
++	if err := nft.Flush(); err != nil {
++		return errors.New("failed to add nftables table ", replyMarkTable).Base(err)
++	}
++	return nil
++}
++
++func deleteReplyMark() error {
++	nft, err := nftables.New()
++	if err != nil {
++		return errors.New("failed to open nftables").Base(err)
++	}
++	if _, err := nft.ListTableOfFamily(replyMarkTable, nftables.TableFamilyINet); err != nil {
++		return nil
++	}
++	nft.DelTable(&nftables.Table{Name: replyMarkTable, Family: nftables.TableFamilyINet})
++	if err := nft.Flush(); err != nil {
++		return errors.New("failed to delete nftables table ", replyMarkTable).Base(err)
++	}
++	return nil
++}
++
 +// buildSystemRules mirrors sing-tun's rules for one TUN without uid or
 +// interface filters, except its "lookup table suppress_prefixlength 0" rule:
 +// it only matters for routes more specific than the default, and netlink
-+// v1.3.1 drops suppress_prefixlength for tables numbered 256 and up. Added is
-+// the userUIDs rule, see there.
++// v1.3.1 drops suppress_prefixlength for tables numbered 256 and up. Added are
++// the replyMark rule first and the userUIDs rule, see there.
 +func buildSystemRules(tunName string, addresses []netip.Prefix, inet4, inet6 bool) []*netlink.Rule {
 +	var rules []*netlink.Rule
 +	add := func(family, priority int, edit func(*netlink.Rule)) {
@@ -103,9 +183,11 @@ index 78e2dd4..0cfe92e 100644
 +			addr6 = append(addr6, address.Masked())
 +		}
 +	}
++	replied := func(r *netlink.Rule) { r.Mark = replyMark; r.Table = unix.RT_TABLE_MAIN }
 +	if inet4 {
 +		const f = unix.AF_INET
 +		p := systemRuleStart
++		add(f, p, replied)
 +		for _, address := range addr4 {
 +			add(f, p, func(r *netlink.Rule) { r.Dst = prefixIPNet(address); r.Table = systemRouteTable })
 +		}
@@ -133,6 +215,7 @@ index 78e2dd4..0cfe92e 100644
 +	if inet6 {
 +		const f = unix.AF_INET6
 +		p := systemRuleStart
++		add(f, p, replied)
 +		add(f, p, func(r *netlink.Rule) {
 +			r.Invert = true
 +			r.Dport = netlink.NewRulePortRange(53, 53)
@@ -241,6 +324,9 @@ index 78e2dd4..0cfe92e 100644
 +			_ = t.unsetSystemRoutes()
 +			return errors.New("failed to add system rule ", rule.Priority).Base(err)
 +		}
++	}
++	if err := setReplyMark(); err != nil {
++		errors.LogWarningInner(context.Background(), err, "[tun] replies to connections from outside go into the TUN")
  	}
  	return nil
  }
@@ -251,6 +337,9 @@ index 78e2dd4..0cfe92e 100644
 +		if err := deleteSystemRules(); err != nil {
 +			errs = append(errs, err)
 +		}
++		if err := deleteReplyMark(); err != nil {
++			errs = append(errs, err)
++		}
 +		t.systemRules = false
 +	}
  	for i := len(t.systemRoutes) - 1; i >= 0; i-- {
@@ -258,10 +347,10 @@ index 78e2dd4..0cfe92e 100644
  		if err := netlink.RouteDel(&route); err != nil {
 diff --git a/proxy/tun/tun_linux_rules_test.go b/proxy/tun/tun_linux_rules_test.go
 new file mode 100644
-index 0000000..1fb584c
+index 0000000..abbb8b7
 --- /dev/null
 +++ b/proxy/tun/tun_linux_rules_test.go
-@@ -0,0 +1,115 @@
+@@ -0,0 +1,155 @@
 +//go:build linux && !android
 +
 +package tun
@@ -272,6 +361,8 @@ index 0000000..1fb584c
 +	"strings"
 +	"testing"
 +
++	"github.com/sagernet/nftables/expr"
++	"github.com/vishvananda/netlink"
 +	"golang.org/x/sys/unix"
 +)
 +
@@ -306,11 +397,16 @@ index 0000000..1fb584c
 +		if r.UIDRange != nil {
 +			parts = append(parts, fmt.Sprintf("uidrange %d-%d", r.UIDRange.Start, r.UIDRange.End))
 +		}
++		if r.Mark != 0 {
++			parts = append(parts, fmt.Sprintf("fwmark %#x", r.Mark))
++		}
 +		switch {
 +		case r.Type == unix.FR_ACT_NOP:
 +			parts = append(parts, "nop")
 +		case r.Goto >= 0:
 +			parts = append(parts, fmt.Sprintf("goto %d", r.Goto))
++		case r.Table == unix.RT_TABLE_MAIN && r.SuppressPrefixlen < 0:
++			parts = append(parts, "lookup main")
 +		case r.Table == unix.RT_TABLE_MAIN:
 +			parts = append(parts, fmt.Sprintf("lookup main suppress %d", r.SuppressPrefixlen))
 +		default:
@@ -324,6 +420,7 @@ index 0000000..1fb584c
 +func TestSystemRulesMatchSingTunLayout(t *testing.T) {
 +	got := describeRules(t, true, true)
 +	want := []string{
++		"v4 9100: fwmark 0x2026 lookup main",
 +		"v4 9100: to 172.19.0.0/30 lookup 2026",
 +		"v4 9101: not dport 53 lookup main suppress 0",
 +		"v4 9101: iif tun-keqdis goto 9110",
@@ -332,6 +429,7 @@ index 0000000..1fb584c
 +		"v4 9102: from 172.19.0.0/30 iif lo lookup 2026",
 +		"v4 9102: iif lo uidrange 1-4294967294 lookup 2026",
 +		"v4 9110: nop",
++		"v6 9100: fwmark 0x2026 lookup main",
 +		"v6 9100: not dport 53 lookup main suppress 0",
 +		"v6 9101: from fdfe:dcba:9876::/126 iif lo lookup 2026",
 +		"v6 9102: iif tun-keqdis goto 9110",
@@ -374,6 +472,37 @@ index 0000000..1fb584c
 +		}
 +		if r.Goto >= 0 && r.Goto <= r.Priority {
 +			t.Fatalf("goto %d from %d: the kernel only jumps forward", r.Goto, r.Priority)
++		}
++	}
++}
++
++// replies only: a mark on the original direction would take every new
++// connection, the WebRTC one included, past the TUN
++func TestReplyMarkTakesOnlyReplies(t *testing.T) {
++	exprs := replyMarkExprs()
++	ct, ok := exprs[0].(*expr.Ct)
++	if !ok || ct.Key != expr.CtKeyDIRECTION {
++		t.Fatalf("first expression is %#v, want ct direction", exprs[0])
++	}
++	cmp, ok := exprs[1].(*expr.Cmp)
++	if !ok || cmp.Op != expr.CmpOpEq || len(cmp.Data) != 1 || cmp.Data[0] != 1 {
++		t.Fatalf("direction check is %#v, want == reply", exprs[1])
++	}
++	set, ok := exprs[len(exprs)-1].(*expr.Meta)
++	if !ok || set.Key != expr.MetaKeyMARK || !set.SourceRegister {
++		t.Fatalf("last expression is %#v, want meta mark set", exprs[len(exprs)-1])
++	}
++	rules := buildSystemRules("tun-keqdis", nil, true, true)
++	for _, family := range []int{unix.AF_INET, unix.AF_INET6} {
++		var first *netlink.Rule
++		for _, r := range rules {
++			if r.Family == family {
++				first = r
++				break
++			}
++		}
++		if first == nil || first.Mark != replyMark || first.Table != unix.RT_TABLE_MAIN {
++			t.Fatalf("first rule of family %d is %#v, want fwmark %#x lookup main", family, first, replyMark)
 +		}
 +	}
 +}
