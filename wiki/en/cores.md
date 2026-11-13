@@ -13,6 +13,7 @@ The cores are built with current Go releases that fix known vulnerabilities in G
 | [apps outside the VPN](#apps-outside-the-vpn) | both | Android | an excluded app can't learn the server address |
 | [UDP by address](#udp-by-destination-address) | both | everywhere | UDP goes where the routes say |
 | [TUN on desktop](#tun-on-desktop) | Xray | Windows, Linux | split tunneling, honest ping, clean shutdown |
+| [TUN on Linux](#tun-on-linux) | both | Linux | TUN works with strict reverse path filtering, WebRTC doesn't reveal your address, servers on the computer answer people who connect from outside |
 | [geo database memory](#geo-database-memory) | mihomo | everywhere | `geosite` and `geoip` rules use less memory |
 
 ## REALITY on mihomo
@@ -74,6 +75,14 @@ TUN on Windows and Linux used to run on sing-box, now it's Xray's own TUN. What 
 - **UDP timeout.** The “UDP timeout” setting in TUN closes idle UDP sessions. Xray didn't have this.
 - **Shutdown.** On Windows the core stopped so abruptly that it didn't clean up after itself: traces of the tunnel stayed in network settings and the DNS cache. Now the core stops the same way as on Ctrl+C.
 - **Traffic counters.** The app reads them from the core at a local address that any program on the computer can reach. Xray used to expose extra information about itself there, now only the counters.
+
+## TUN on Linux
+
+There are three patches here. The first is in Xray only, the other two are in both cores.
+
+- **Strict reverse path filtering.** Xray put the route into the tunnel in Linux's main routing table. If the system has strict reverse path filtering on (`rp_filter=1`, often turned on for hardening), Linux dropped every reply from the server. By the main table, a reply to that address would go into the tunnel, but it arrived through the network card, so Linux took the packet for a forged one. The core started, but no traffic went through. Now the route lives in a table of its own that rules lead to, as in sing-box and mihomo. Along the way, a DNS query to any address goes into the tunnel, not only to the addresses in `/etc/resolv.conf`.
+- **WebRTC.** A browser also sends WebRTC requests from the address of each network card. In mihomo such a request bypassed the tunnel, and the site saw your real address. Now in both cores everything a regular user's programs send goes into the tunnel.
+- **Replies to connections from outside.** If a server runs on the computer and people connect to it from the internet, Sunshine for game streaming for example, then in Xray its replies went into the tunnel and never reached whoever connected. Now both cores mark replies to connections started from outside, and those replies leave the way the request came in. sing-box does the same. This needs nftables. Without it the core writes a warning to the log, and the replies still go into the tunnel. The exception is a UDP server that doesn't say which address to reply from: its replies go into the tunnel too. Sunshine does say it.
 
 ## Geo database memory
 
