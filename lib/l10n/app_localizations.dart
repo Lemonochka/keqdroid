@@ -1706,7 +1706,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunStackSystemHint.
   ///
   /// In en, this message translates to:
-  /// **'OS stack: the fastest, needs a firewall rule on Windows.'**
+  /// **'OS stack: the fastest, needs a firewall rule on Windows. On Linux with ufw or firewalld on, gVisor runs instead.'**
   String get settingsTunStackSystemHint;
 
   /// No description provided for @settingsTunStackGvisorHint.
@@ -1718,7 +1718,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTunStackMixedHint.
   ///
   /// In en, this message translates to:
-  /// **'system for TCP, gVisor for UDP. Like system, needs a firewall rule on Windows. Needs a core built with gVisor.'**
+  /// **'system for TCP, gVisor for UDP. Like system, needs a firewall rule on Windows, and on Linux with ufw or firewalld on gVisor runs instead. Needs a core built with gVisor.'**
   String get settingsTunStackMixedHint;
 
   /// No description provided for @settingsTunStackMipsHint.

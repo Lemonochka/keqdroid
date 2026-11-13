@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
+import '../models/tun_settings.dart';
+
 enum LinuxFirewall { firewalld, ufw }
 
 class LinuxFirewalls {
@@ -34,6 +36,19 @@ class LinuxFirewalls {
     }
     // под systemd firewalld идёт с --nopid, pid-файл бывает только без него
     return File(firewalldPidFile).existsSync();
+  }
+
+  // system и mixed у mihomo принимают TCP из tun через INPUT, и запрет новых входящих в ufw и firewalld его режет:
+  // ядро живо, а TCP не идёт. gvisor и mips держат TCP у себя, проверено стендом 13.11.2026
+  static Future<({String stack, LinuxFirewall? blockedBy})> tunStack(
+    String stack,
+  ) async {
+    if (stack != TunSettings.stackSystem && stack != TunSettings.stackMixed) {
+      return (stack: stack, blockedBy: null);
+    }
+    final firewall = await detect();
+    if (firewall == null) return (stack: stack, blockedBy: null);
+    return (stack: TunSettings.stackGvisor, blockedBy: firewall);
   }
 
   @visibleForTesting

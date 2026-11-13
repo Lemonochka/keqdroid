@@ -913,13 +913,13 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsTunStackTitle => 'پشتهٔ شبکه';
 
   @override
-  String get settingsTunStackSystemHint => 'پشتهٔ سیستم‌عامل: سریع‌ترین، در ویندوز به قانون فایروال نیاز دارد.';
+  String get settingsTunStackSystemHint => 'پشتهٔ سیستم‌عامل: سریع‌ترین، در ویندوز به قانون فایروال نیاز دارد. در لینوکس با ufw یا firewalld روشن، به جای آن gVisor کار می‌کند.';
 
   @override
   String get settingsTunStackGvisorHint => 'پشتهٔ فضای کاربر: بدون listener و قانون فایروال، کمی کندتر. به هسته‌ای نیاز دارد که با gVisor ساخته شده باشد.';
 
   @override
-  String get settingsTunStackMixedHint => 'system برای TCP، gVisor برای UDP. مانند system، در ویندوز به قانون فایروال نیاز دارد. به هسته‌ای نیاز دارد که با gVisor ساخته شده باشد.';
+  String get settingsTunStackMixedHint => 'system برای TCP، gVisor برای UDP. مانند system، در ویندوز به قانون فایروال نیاز دارد و در لینوکس با ufw یا firewalld روشن، به جای آن gVisor کار می‌کند. به هسته‌ای نیاز دارد که با gVisor ساخته شده باشد.';
 
   @override
   String get settingsTunStackMipsHint => 'پشتهٔ فضای کاربر خود mihomo به‌جای gVisor: سبک‌تر، با کنترل ازدحام TCP قابل انتخاب. فقط روی هستهٔ mihomo.';

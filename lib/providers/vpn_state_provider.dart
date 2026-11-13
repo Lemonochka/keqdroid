@@ -688,9 +688,19 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           autoRoute: false,
         );
       } else if (connectionMode == ConnectionMode.tun) {
+        final picked = Platform.isLinux
+            ? await LinuxFirewalls.tunStack(settings.tun.stack)
+            : (stack: settings.tun.stack, blockedBy: null);
+        if (picked.blockedBy != null) {
+          AppLogger.instance.warn(
+            '${picked.blockedBy!.name} is on and drops the connections the '
+            '"${settings.tun.stack}" TUN stack accepts, so TCP would not go '
+            'through. This session uses the gvisor stack instead.',
+          );
+        }
         mihomoTun = MihomoTunOptions(
           device: kTunInterfaceName,
-          stack: settings.tun.stack,
+          stack: picked.stack,
           mtu: settings.tun.mtu,
           autoRoute: settings.tun.autoRoute,
           strictRoute:

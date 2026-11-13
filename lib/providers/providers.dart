@@ -29,6 +29,7 @@ import '../services/card_image_service.dart';
 import '../services/core_dial_failures.dart';
 import '../services/exit_ip_service.dart';
 import '../services/geo_asset_service.dart';
+import '../services/linux_firewall.dart';
 import '../services/expiry_reminder.dart';
 import '../services/mihomo_groups_api.dart';
 import '../services/notification_service.dart';

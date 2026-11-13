@@ -927,13 +927,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunStackTitle => 'Сетевой стек';
 
   @override
-  String get settingsTunStackSystemHint => 'Стек ОС: самый быстрый, на Windows требует правило фаервола.';
+  String get settingsTunStackSystemHint => 'Стек ОС: самый быстрый, на Windows требует правило фаервола. На Linux с включённым ufw или firewalld вместо него работает gVisor.';
 
   @override
   String get settingsTunStackGvisorHint => 'Userspace-стек: ни листенера, ни правил фаервола, чуть медленнее. Нужно ядро с gVisor.';
 
   @override
-  String get settingsTunStackMixedHint => 'system для TCP, gVisor для UDP. Как и system, на Windows требует правило фаервола. Нужно ядро с gVisor.';
+  String get settingsTunStackMixedHint => 'system для TCP, gVisor для UDP. Как и system, на Windows требует правило фаервола, а на Linux с включённым ufw или firewalld вместо него работает gVisor. Нужно ядро с gVisor.';
 
   @override
   String get settingsTunStackMipsHint => 'Свой userspace-стек mihomo вместо gVisor: легче, со своим контролем перегрузки TCP. Только на ядре mihomo.';

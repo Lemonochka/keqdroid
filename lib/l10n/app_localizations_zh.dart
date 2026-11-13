@@ -913,13 +913,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunStackTitle => '网络栈';
 
   @override
-  String get settingsTunStackSystemHint => '系统协议栈：最快，Windows 上需要防火墙规则。';
+  String get settingsTunStackSystemHint => '系统协议栈：最快，Windows 上需要防火墙规则。Linux 上开启 ufw 或 firewalld 时改用 gVisor。';
 
   @override
   String get settingsTunStackGvisorHint => '用户态协议栈：不需要监听器和防火墙规则，稍慢。需要带 gVisor 的内核。';
 
   @override
-  String get settingsTunStackMixedHint => 'TCP 用 system，UDP 用 gVisor。与 system 一样，Windows 上需要防火墙规则。需要带 gVisor 的内核。';
+  String get settingsTunStackMixedHint => 'TCP 用 system，UDP 用 gVisor。与 system 一样，Windows 上需要防火墙规则，Linux 上开启 ufw 或 firewalld 时改用 gVisor。需要带 gVisor 的内核。';
 
   @override
   String get settingsTunStackMipsHint => 'mihomo 自带的用户态协议栈，用于替代 gVisor：更轻量，可选 TCP 拥塞控制。仅在 mihomo 内核上可用。';

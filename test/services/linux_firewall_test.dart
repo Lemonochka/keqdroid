@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keqdroid/models/tun_settings.dart';
 import 'package:keqdroid/services/linux_firewall.dart';
 import 'package:path/path.dart' as p;
 
@@ -69,5 +70,35 @@ void main() {
       LinuxFirewalls.openCommand(LinuxFirewall.ufw, [2080, 2081]),
       'sudo ufw allow 2080/tcp && sudo ufw allow 2081/tcp',
     );
+  });
+
+  group('TUN stack under a firewall', () {
+    test('system and mixed fall back to gvisor while firewalld runs', () async {
+      runReturns(0);
+      for (final stack in [TunSettings.stackSystem, TunSettings.stackMixed]) {
+        final picked = await LinuxFirewalls.tunStack(stack);
+        expect(picked.stack, TunSettings.stackGvisor, reason: stack);
+        expect(picked.blockedBy, LinuxFirewall.firewalld, reason: stack);
+      }
+    });
+
+    test('without a firewall the chosen stack stays', () async {
+      // ufw читается с диска машины, где идёт тест
+      if (File('/etc/ufw/ufw.conf').existsSync()) return;
+      runReturns(3);
+      final picked = await LinuxFirewalls.tunStack(TunSettings.stackSystem);
+      expect(picked.stack, TunSettings.stackSystem);
+      expect(picked.blockedBy, isNull);
+    });
+
+    test('gvisor and mips keep TCP inside the core and ask nothing', () async {
+      runReturns(0);
+      for (final stack in [TunSettings.stackGvisor, TunSettings.stackMips]) {
+        final picked = await LinuxFirewalls.tunStack(stack);
+        expect(picked.stack, stack);
+        expect(picked.blockedBy, isNull);
+      }
+      expect(calls, isEmpty);
+    });
   });
 }
