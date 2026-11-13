@@ -159,18 +159,13 @@ void main() {
     expect(settings['autoSystemRoutingTable'], ['0.0.0.0/0']);
   });
 
-  test('на Linux половинки /1 и резолверы системы, без DNS и WFP', () {
+  test('на Linux маршрут по умолчанию в таблицу ядра, без DNS и WFP', () {
     final settings = _tunSettings(_config(const DesktopTunOptions(
       windows: false,
       mtu: 1500,
       strictRoute: true,
-      systemResolvers: ['192.168.1.1/32'],
     )));
-    expect(settings['autoSystemRoutingTable'], [
-      '0.0.0.0/1',
-      '128.0.0.0/1',
-      '192.168.1.1/32',
-    ]);
+    expect(settings['autoSystemRoutingTable'], ['0.0.0.0/0']);
     expect(settings.containsKey('dns'), isFalse);
     expect(settings.containsKey('autoSystemWfpBlockLeak'), isFalse);
     expect(settings['mtu'], 1500);
@@ -287,29 +282,5 @@ void main() {
     );
     expect(_rule(config, 'tun-dns'), isNull);
     expect(_rule(config, 'tun-own'), isNotNull);
-  });
-
-  group('resolv.conf', () {
-    test('берём внешние адреса, loopback и link-local мимо', () {
-      expect(
-        parseResolvConf(
-          '# generated\n'
-          'nameserver 127.0.0.53\n'
-          'nameserver 192.168.1.1\n'
-          'nameserver fe80::1%eth0\n'
-          'nameserver 2001:db8::53\n'
-          'nameserver 192.168.1.1\n'
-          'search lan\n',
-        ),
-        ['192.168.1.1/32'],
-      );
-    });
-
-    test('IPv6 только при захвате IPv6', () {
-      expect(
-        parseResolvConf('nameserver 2001:db8::53\n', ipv6: true),
-        ['2001:db8::53/128'],
-      );
-    });
   });
 }

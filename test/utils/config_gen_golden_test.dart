@@ -405,7 +405,6 @@ void main() {
           mtu: 9000,
           captureIpv6: true,
           appProcessName: 'keqdroid',
-          systemResolvers: ['192.168.1.1/32'],
         ),
       );
     });

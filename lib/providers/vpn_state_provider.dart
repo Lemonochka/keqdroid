@@ -829,9 +829,6 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
                               ? const []
                               : processNames,
                       appProcessName: p.basename(Platform.resolvedExecutable),
-                      systemResolvers: Platform.isLinux
-                          ? linuxSystemResolvers(ipv6: captureIpv6)
-                          : const [],
                     )
                   : null,
               routeServers: routeServers,

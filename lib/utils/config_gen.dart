@@ -2373,7 +2373,8 @@ class ConfigGeneratorV2 {
     return flow.startsWith('xtls-rprx-vision') && !flow.endsWith('-udp443');
   }
 
-  // маршрут xray на Linux кладёт в main с метрикой 1, и default с метрикой 0 его перебивал бы: половинки /1 точнее
+  // на Linux /0 держится на патче xray-desktop-linux-rules: своя таблица за правилами.
+  // без него маршрут ляжет в main с метрикой 1 и проиграет default с метрикой 0
   static Map<String, dynamic> _desktopTunSettings(DesktopTunOptions tun) {
     final v6 = tun.captureIpv6;
     return {
@@ -2382,14 +2383,7 @@ class ConfigGeneratorV2 {
       'gateway': [kTunInterfacePrefix, if (v6) kTunInterfaceIpv6Prefix],
       if (tun.windows) 'dns': [kTunDnsAddress],
       if (tun.autoRoute)
-        'autoSystemRoutingTable': tun.windows
-            ? ['0.0.0.0/0', if (v6) '::/0']
-            : [
-                '0.0.0.0/1',
-                '128.0.0.0/1',
-                if (v6) ...['::/1', '8000::/1'],
-                ...tun.systemResolvers,
-              ],
+        'autoSystemRoutingTable': ['0.0.0.0/0', if (v6) '::/0'],
       'autoOutboundsInterface': 'auto',
       // как strict_route у sing-box на Windows: DNS и семейство без маршрута в TUN мимо него не выходят
       if (tun.windows && tun.strictRoute && tun.autoRoute)

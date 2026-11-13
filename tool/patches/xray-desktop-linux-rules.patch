@@ -1,0 +1,379 @@
+Desktop TUN on Linux routes through policy rules and a table of its own,
+the way sing-tun's auto_route does, instead of routes in the main table.
+
+autoSystemRoutingTable put its routes in main. Those routes also answer the
+kernel's reverse path check, so with net.ipv4.conf.all.rp_filter=1 (a common
+hardening setting) every reply from the proxy server arriving on the physical
+interface had its source routed back into the TUN and was dropped: the core
+started, and nothing went through.
+
+Now the routes go to table 2026 and rules 9100..9110 lead to it: the layout of
+sing-tun's rules() without uid or interface filters, as mihomo and sing-box
+use it, plus one rule for every uid but root. A lookup without a source yet
+(any unbound socket), any socket of a user process, forwarded traffic, and DNS
+to any address reach the table. The reverse path check looks up as root with
+iif lo and the packet's local address as source, so it stays on main and
+passes. A socket bound to the physical interface finds no route in the table
+for that interface and falls through to main, as before.
+
+The uid rule is what keeps a browser's WebRTC inside: it binds a socket to the
+address of every network, and without the rule that STUN request carried a
+source past every source rule and showed the real address. The price is the
+one the main table routes had: replies of a server run by a user to a client
+from outside go into the TUN; root's servers (sshd) answer the way the request
+came. Telling those apart takes conntrack marks, which xray does not set.
+
+The tun gets rp_filter=2 for itself, as sing-tun does. Rules in the range are
+removed before they are added, so a crashed run leaves nothing that the next
+one keeps. Linux desktop only: Android gets the TUN descriptor and never adds
+routes, and Windows keeps its own code.
+diff --git a/proxy/tun/tun_linux.go b/proxy/tun/tun_linux.go
+index 78e2dd4..0cfe92e 100644
+--- a/proxy/tun/tun_linux.go
++++ b/proxy/tun/tun_linux.go
+@@ -6,6 +6,7 @@ import (
+ 	"context"
+ 	"net"
+ 	"net/netip"
++	"os"
+ 	"os/exec"
+ 	"strconv"
+ 	"sync"
+@@ -40,6 +41,7 @@ type LinuxTun struct {
+ 
+ 	interfaceAddresses []netlink.Addr
+ 	systemRoutes       []netlink.Route
++	systemRules        bool
+ 	routeMonitorStop   chan struct{}
+ 	routeMonitorOnce   sync.Once
+ 
+@@ -514,34 +516,203 @@ func (t *LinuxTun) unsetInterfaceAddresses() error {
+ 	return errors.Combine(errs...)
+ }
+ 
++// The system routes live in their own table behind policy rules, the layout
++// sing-tun uses for auto_route (tun_linux.go rules(), non-mark mode), instead of
++// the main table. A route in main also answers the reverse path check: with
++// rp_filter=1 a reply from the server arriving on the physical interface had
++// its source routed back through the TUN and was dropped, so nothing worked.
++// Policy rules leave that check to main, because it looks up as root with iif
++// lo and the packet's local address as source, which no rule here takes to the
++// TUN.
++const (
++	systemRouteTable = 2026
++	systemRuleStart  = 9100
++	systemRuleNop    = systemRuleStart + 10
++)
++
++func prefixIPNet(prefix netip.Prefix) *net.IPNet {
++	return &net.IPNet{
++		IP:   prefix.Addr().AsSlice(),
++		Mask: net.CIDRMask(prefix.Bits(), prefix.Addr().BitLen()),
++	}
++}
++
++// userUIDs is every uid but root. A socket bound to the address of the
++// physical interface carries its source into the lookup and would pass every
++// source rule to main: a browser's WebRTC binds such a socket for each network
++// and its STUN request showed the real address. The reverse path check looks
++// up as uid 0 (sock_net_uid with no socket), so this rule leaves it alone.
++func userUIDs() *netlink.RuleUIDRange {
++	return netlink.NewRuleUIDRange(1, 0xfffffffe)
++}
++
++// buildSystemRules mirrors sing-tun's rules for one TUN without uid or
++// interface filters, except its "lookup table suppress_prefixlength 0" rule:
++// it only matters for routes more specific than the default, and netlink
++// v1.3.1 drops suppress_prefixlength for tables numbered 256 and up. Added is
++// the userUIDs rule, see there.
++func buildSystemRules(tunName string, addresses []netip.Prefix, inet4, inet6 bool) []*netlink.Rule {
++	var rules []*netlink.Rule
++	add := func(family, priority int, edit func(*netlink.Rule)) {
++		rule := netlink.NewRule()
++		rule.Family = family
++		rule.Priority = priority
++		edit(rule)
++		rules = append(rules, rule)
++	}
++	var addr4, addr6 []netip.Prefix
++	for _, address := range addresses {
++		if address.Addr().Is4() {
++			addr4 = append(addr4, address.Masked())
++		} else {
++			addr6 = append(addr6, address.Masked())
++		}
++	}
++	if inet4 {
++		const f = unix.AF_INET
++		p := systemRuleStart
++		for _, address := range addr4 {
++			add(f, p, func(r *netlink.Rule) { r.Dst = prefixIPNet(address); r.Table = systemRouteTable })
++		}
++		p++
++		add(f, p, func(r *netlink.Rule) {
++			r.Invert = true
++			r.Dport = netlink.NewRulePortRange(53, 53)
++			r.Table = unix.RT_TABLE_MAIN
++			r.SuppressPrefixlen = 0
++		})
++		add(f, p, func(r *netlink.Rule) { r.IifName = tunName; r.Goto = systemRuleNop })
++		p++
++		add(f, p, func(r *netlink.Rule) { r.Invert = true; r.IifName = "lo"; r.Table = systemRouteTable })
++		add(f, p, func(r *netlink.Rule) {
++			r.IifName = "lo"
++			r.Src = prefixIPNet(netip.PrefixFrom(netip.IPv4Unspecified(), 32))
++			r.Table = systemRouteTable
++		})
++		for _, address := range addr4 {
++			add(f, p, func(r *netlink.Rule) { r.IifName = "lo"; r.Src = prefixIPNet(address); r.Table = systemRouteTable })
++		}
++		add(f, p, func(r *netlink.Rule) { r.IifName = "lo"; r.UIDRange = userUIDs(); r.Table = systemRouteTable })
++		add(f, systemRuleNop, func(r *netlink.Rule) { r.Type = unix.FR_ACT_NOP })
++	}
++	if inet6 {
++		const f = unix.AF_INET6
++		p := systemRuleStart
++		add(f, p, func(r *netlink.Rule) {
++			r.Invert = true
++			r.Dport = netlink.NewRulePortRange(53, 53)
++			r.Table = unix.RT_TABLE_MAIN
++			r.SuppressPrefixlen = 0
++		})
++		p++
++		for _, address := range addr6 {
++			add(f, p, func(r *netlink.Rule) { r.IifName = "lo"; r.Src = prefixIPNet(address); r.Table = systemRouteTable })
++		}
++		p++
++		// IPv6 rules with a source never match a lookup that has none yet, so
++		// unbound sockets pass these and reach the table below
++		add(f, p, func(r *netlink.Rule) { r.IifName = tunName; r.Goto = systemRuleNop })
++		add(f, p, func(r *netlink.Rule) { r.IifName = "lo"; r.UIDRange = userUIDs(); r.Table = systemRouteTable })
++		add(f, p, func(r *netlink.Rule) {
++			r.IifName = "lo"
++			r.Src = prefixIPNet(netip.MustParsePrefix("::/1"))
++			r.Goto = systemRuleNop
++		})
++		add(f, p, func(r *netlink.Rule) {
++			r.IifName = "lo"
++			r.Src = prefixIPNet(netip.MustParsePrefix("8000::/1"))
++			r.Goto = systemRuleNop
++		})
++		p++
++		add(f, p, func(r *netlink.Rule) { r.Table = systemRouteTable })
++		add(f, systemRuleNop, func(r *netlink.Rule) { r.Type = unix.FR_ACT_NOP })
++	}
++	return rules
++}
++
++// deleteSystemRules removes every rule in our priority range, a crashed run's
++// included, the way sing-tun's unsetRules does
++func deleteSystemRules() error {
++	list, err := netlink.RuleList(netlink.FAMILY_ALL)
++	if err != nil {
++		return errors.New("failed to list rules").Base(err)
++	}
++	var errs []error
++	for _, rule := range list {
++		if rule.Priority < systemRuleStart || rule.Priority > systemRuleNop {
++			continue
++		}
++		del := netlink.NewRule()
++		del.Family = rule.Family
++		del.Priority = rule.Priority
++		if err := netlink.RuleDel(del); err != nil {
++			errs = append(errs, errors.New("failed to delete rule ", rule.Priority).Base(err))
++		}
++	}
++	return errors.Combine(errs...)
++}
++
+ func (t *LinuxTun) setSystemRoutes() error {
+ 	if len(t.options.AutoSystemRoutingTable) == 0 {
+ 		return nil
+ 	}
+-	tunIndex := t.tunLink.Attrs().Index
++	attrs := t.tunLink.Attrs()
++	var inet4, inet6 bool
+ 	for _, cidr := range t.options.AutoSystemRoutingTable {
+ 		prefix, err := netip.ParsePrefix(cidr)
+ 		if err != nil {
++			_ = t.unsetSystemRoutes()
+ 			return errors.New("invalid system route ", cidr).Base(err)
+ 		}
+ 		prefix = prefix.Masked()
+-		_, ipNet, _ := net.ParseCIDR(prefix.String())
+ 		route := netlink.Route{
+-			LinkIndex: tunIndex,
+-			Dst:       ipNet,
+-			Priority:  1,
++			LinkIndex: attrs.Index,
++			Dst:       prefixIPNet(prefix),
++			Table:     systemRouteTable,
+ 		}
+ 		if err := netlink.RouteAdd(&route); err != nil {
+ 			_ = t.unsetSystemRoutes()
+ 			return errors.New("failed to add system route ", cidr).Base(err)
+ 		}
+ 		t.systemRoutes = append(t.systemRoutes, route)
++		if prefix.Addr().Is4() {
++			inet4 = true
++		} else {
++			inet6 = true
++		}
++	}
++
++	var addresses []netip.Prefix
++	for _, address := range t.options.Gateway {
++		if prefix, err := netip.ParsePrefix(address); err == nil {
++			addresses = append(addresses, prefix)
++		}
++	}
++	// as sing-tun: the tun itself checks loosely, whatever net.ipv4.conf.all says
++	_ = os.WriteFile("/proc/sys/net/ipv4/conf/"+attrs.Name+"/rp_filter", []byte("2"), 0o644)
++
++	if err := deleteSystemRules(); err != nil {
++		_ = t.unsetSystemRoutes()
++		return err
++	}
++	t.systemRules = true
++	for _, rule := range buildSystemRules(attrs.Name, addresses, inet4, inet6) {
++		if err := netlink.RuleAdd(rule); err != nil {
++			_ = t.unsetSystemRoutes()
++			return errors.New("failed to add system rule ", rule.Priority).Base(err)
++		}
+ 	}
+ 	return nil
+ }
+ 
+ func (t *LinuxTun) unsetSystemRoutes() error {
+ 	var errs []error
++	if t.systemRules {
++		if err := deleteSystemRules(); err != nil {
++			errs = append(errs, err)
++		}
++		t.systemRules = false
++	}
+ 	for i := len(t.systemRoutes) - 1; i >= 0; i-- {
+ 		route := t.systemRoutes[i]
+ 		if err := netlink.RouteDel(&route); err != nil {
+diff --git a/proxy/tun/tun_linux_rules_test.go b/proxy/tun/tun_linux_rules_test.go
+new file mode 100644
+index 0000000..1fb584c
+--- /dev/null
++++ b/proxy/tun/tun_linux_rules_test.go
+@@ -0,0 +1,115 @@
++//go:build linux && !android
++
++package tun
++
++import (
++	"fmt"
++	"net/netip"
++	"strings"
++	"testing"
++
++	"golang.org/x/sys/unix"
++)
++
++func describeRules(t *testing.T, inet4, inet6 bool) []string {
++	t.Helper()
++	addresses := []netip.Prefix{
++		netip.MustParsePrefix("172.19.0.1/30"),
++		netip.MustParsePrefix("fdfe:dcba:9876::1/126"),
++	}
++	var out []string
++	for _, r := range buildSystemRules("tun-keqdis", addresses, inet4, inet6) {
++		family := "v4"
++		if r.Family == unix.AF_INET6 {
++			family = "v6"
++		}
++		var parts []string
++		if r.Invert {
++			parts = append(parts, "not")
++		}
++		if r.Src != nil {
++			parts = append(parts, "from "+r.Src.String())
++		}
++		if r.Dst != nil {
++			parts = append(parts, "to "+r.Dst.String())
++		}
++		if r.IifName != "" {
++			parts = append(parts, "iif "+r.IifName)
++		}
++		if r.Dport != nil {
++			parts = append(parts, fmt.Sprintf("dport %d", r.Dport.Start))
++		}
++		if r.UIDRange != nil {
++			parts = append(parts, fmt.Sprintf("uidrange %d-%d", r.UIDRange.Start, r.UIDRange.End))
++		}
++		switch {
++		case r.Type == unix.FR_ACT_NOP:
++			parts = append(parts, "nop")
++		case r.Goto >= 0:
++			parts = append(parts, fmt.Sprintf("goto %d", r.Goto))
++		case r.Table == unix.RT_TABLE_MAIN:
++			parts = append(parts, fmt.Sprintf("lookup main suppress %d", r.SuppressPrefixlen))
++		default:
++			parts = append(parts, fmt.Sprintf("lookup %d", r.Table))
++		}
++		out = append(out, fmt.Sprintf("%s %d: %s", family, r.Priority, strings.Join(parts, " ")))
++	}
++	return out
++}
++
++func TestSystemRulesMatchSingTunLayout(t *testing.T) {
++	got := describeRules(t, true, true)
++	want := []string{
++		"v4 9100: to 172.19.0.0/30 lookup 2026",
++		"v4 9101: not dport 53 lookup main suppress 0",
++		"v4 9101: iif tun-keqdis goto 9110",
++		"v4 9102: not iif lo lookup 2026",
++		"v4 9102: from 0.0.0.0/32 iif lo lookup 2026",
++		"v4 9102: from 172.19.0.0/30 iif lo lookup 2026",
++		"v4 9102: iif lo uidrange 1-4294967294 lookup 2026",
++		"v4 9110: nop",
++		"v6 9100: not dport 53 lookup main suppress 0",
++		"v6 9101: from fdfe:dcba:9876::/126 iif lo lookup 2026",
++		"v6 9102: iif tun-keqdis goto 9110",
++		"v6 9102: iif lo uidrange 1-4294967294 lookup 2026",
++		"v6 9102: from ::/1 iif lo goto 9110",
++		"v6 9102: from 8000::/1 iif lo goto 9110",
++		"v6 9103: lookup 2026",
++		"v6 9110: nop",
++	}
++	if strings.Join(got, "\n") != strings.Join(want, "\n") {
++		t.Fatalf("rules:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
++	}
++}
++
++func TestSystemRulesOnlyForCapturedFamilies(t *testing.T) {
++	for _, line := range describeRules(t, true, false) {
++		if strings.HasPrefix(line, "v6") {
++			t.Fatalf("IPv6 rule without an IPv6 route: %s", line)
++		}
++	}
++	if got := describeRules(t, false, false); len(got) != 0 {
++		t.Fatalf("rules without routes: %v", got)
++	}
++}
++
++// the reverse path check looks up as root: a rule for root's sockets would send
++// it to the TUN and bring back the rp_filter=1 failure this layout fixes
++func TestSystemRulesLeaveRootToMain(t *testing.T) {
++	for _, r := range buildSystemRules("tun-keqdis", nil, true, true) {
++		if r.UIDRange != nil && r.UIDRange.Start == 0 {
++			t.Fatalf("rule %d covers uid 0", r.Priority)
++		}
++	}
++}
++
++func TestSystemRulesStayInsideTheirRange(t *testing.T) {
++	for _, r := range buildSystemRules("tun-keqdis", nil, true, true) {
++		if r.Priority < systemRuleStart || r.Priority > systemRuleNop {
++			t.Fatalf("priority %d is outside %d..%d, deleteSystemRules would leave it behind", r.Priority, systemRuleStart, systemRuleNop)
++		}
++		if r.Goto >= 0 && r.Goto <= r.Priority {
++			t.Fatalf("goto %d from %d: the kernel only jumps forward", r.Goto, r.Priority)
++		}
++	}
++}
