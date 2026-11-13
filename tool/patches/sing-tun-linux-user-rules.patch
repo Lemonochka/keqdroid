@@ -1,0 +1,350 @@
+On desktop Linux auto_route sends every socket of a user process into the
+TUN, and replies to connections from outside still leave the way they came.
+
+Without auto_redirect sing-tun takes a lookup to the TUN table only when it
+has no source yet or its source is the TUN's own address. A browser's WebRTC
+binds a socket to the address of every network, so its STUN request carried a
+real source past every rule to main and showed the real address with the TUN
+up. Added is "iif lo uidrange 1-4294967294 lookup <table>" next to the source
+rules, before the ::/1 and 8000::/1 rules for IPv6. The reverse path check
+looks up as uid 0 and mihomo runs as root, so neither goes into the TUN
+because of it.
+
+On its own the uid rule would also take replies of a server run by a user
+(Sunshine, a game server, a seeding torrent client) to a client from outside
+into the TUN, since a policy rule cannot tell a reply from a new connection.
+Conntrack can: the nftables table keqdroid_mihomo (inet, a route chain on
+output) marks every packet that leaves in the reply direction with 0x2026, the
+kernel looks its route up again, and a first rule "fwmark 0x2026 lookup main"
+sends it out the way the request came. This is how redirect_nftables.go
+leaves replies alone in mark mode (output_prematch, ct direction reply). A
+packet that already has a mark is not touched. Without nftables the TUN logs a
+warning and those replies go into the TUN.
+
+The tun gets rp_filter=2 for itself, as sagernet's sing-tun does: with
+rp_filter=1 a reply to a bound socket that came back through the TUN failed
+the reverse path check, which finds main for that source.
+
+Only with auto_route, without mark mode, and not on Android. The rules sit in
+the range unsetRules clears and the table goes with them, so a crashed run
+leaves nothing the next one keeps; a table left behind only marks replies.
+Same layout as keqdroid's xray, see xray-desktop-linux-rules.patch.
+
+Applied to github.com/metacubex/sing-tun at the version mihomo's go.mod pins,
+by tool/build_mihomo.ps1, which points mihomo at the patched copy.
+diff --git a/reply_mark_linux.go b/reply_mark_linux.go
+new file mode 100644
+index 0000000..a0492a0
+--- /dev/null
++++ b/reply_mark_linux.go
+@@ -0,0 +1,85 @@
++package tun
++
++import (
++	"github.com/metacubex/nftables"
++	"github.com/metacubex/nftables/binaryutil"
++	"github.com/metacubex/nftables/expr"
++	E "github.com/metacubex/sing/common/exceptions"
++	"github.com/sagernet/netlink"
++)
++
++// keqdroid patch, see tool/patches/sing-tun-linux-user-rules.patch.
++//
++// keqUserUIDs is every uid but root. A socket bound to the address of the
++// physical interface carries its source into the lookup and passes every
++// source rule to main: a browser's WebRTC binds such a socket for each network
++// and its STUN request showed the real address. The reverse path check looks
++// up as uid 0 (sock_net_uid with no socket), so the rule leaves it alone, and
++// mihomo runs as root, so its own sockets do not loop back into the TUN.
++func keqUserUIDs() *netlink.RuleUIDRange {
++	return netlink.NewRuleUIDRange(1, 0xfffffffe)
++}
++
++// keqReplyMark takes a reply of a connection that came from outside past the
++// TUN: Sunshine answering a viewer, a game server or a seeding torrent run by
++// the user. The uid rule alone sends those replies into the TUN, since a
++// policy rule cannot tell a reply from a new connection made from a bound
++// socket. Conntrack can: a route chain marks every packet that goes out in the
++// reply direction and the kernel looks its route up again, the way
++// redirect_nftables.go leaves replies alone in mark mode (output_prematch, ct
++// direction reply). A packet that already has a mark is not touched.
++const (
++	keqReplyMark      = 0x2026
++	keqReplyMarkTable = "keqdroid_mihomo"
++)
++
++func keqReplyMarkExprs() []expr.Any {
++	return []expr.Any{
++		&expr.Ct{Key: expr.CtKeyDIRECTION, Register: 1},
++		&expr.Cmp{Op: expr.CmpOpEq, Register: 1, Data: []byte{1}}, // IP_CT_DIR_REPLY
++		&expr.Meta{Key: expr.MetaKeyMARK, Register: 1},
++		&expr.Cmp{Op: expr.CmpOpEq, Register: 1, Data: binaryutil.NativeEndian.PutUint32(0)},
++		&expr.Immediate{Register: 1, Data: binaryutil.NativeEndian.PutUint32(keqReplyMark)},
++		&expr.Meta{Key: expr.MetaKeyMARK, Register: 1, SourceRegister: true},
++	}
++}
++
++// keqSetReplyMark replaces a table a crashed run left. A table left behind only
++// marks replies: without the fwmark rule the mark leads nowhere.
++func keqSetReplyMark() error {
++	if err := keqDeleteReplyMark(); err != nil {
++		return err
++	}
++	nft, err := nftables.New()
++	if err != nil {
++		return E.Cause(err, "open nftables")
++	}
++	table := nft.AddTable(&nftables.Table{Name: keqReplyMarkTable, Family: nftables.TableFamilyINet})
++	chain := nft.AddChain(&nftables.Chain{
++		Name:     "output",
++		Table:    table,
++		Hooknum:  nftables.ChainHookOutput,
++		Priority: nftables.ChainPriorityMangle,
++		Type:     nftables.ChainTypeRoute,
++	})
++	nft.AddRule(&nftables.Rule{Table: table, Chain: chain, Exprs: keqReplyMarkExprs()})
++	if err := nft.Flush(); err != nil {
++		return E.Cause(err, "add nftables table ", keqReplyMarkTable)
++	}
++	return nil
++}
++
++func keqDeleteReplyMark() error {
++	nft, err := nftables.New()
++	if err != nil {
++		return E.Cause(err, "open nftables")
++	}
++	if _, err := nft.ListTableOfFamily(keqReplyMarkTable, nftables.TableFamilyINet); err != nil {
++		return nil
++	}
++	nft.DelTable(&nftables.Table{Name: keqReplyMarkTable, Family: nftables.TableFamilyINet})
++	if err := nft.Flush(); err != nil {
++		return E.Cause(err, "delete nftables table ", keqReplyMarkTable)
++	}
++	return nil
++}
+diff --git a/reply_mark_linux_test.go b/reply_mark_linux_test.go
+new file mode 100644
+index 0000000..a4f14c4
+--- /dev/null
++++ b/reply_mark_linux_test.go
+@@ -0,0 +1,109 @@
++package tun
++
++import (
++	"net/netip"
++	"testing"
++
++	"github.com/metacubex/nftables/expr"
++	"github.com/sagernet/netlink"
++	"golang.org/x/sys/unix"
++)
++
++func keqTestRules(t *testing.T, mutate func(*Options)) []*netlink.Rule {
++	t.Helper()
++	options := Options{
++		Name:               "tun-keqdis",
++		AutoRoute:          true,
++		Inet4Address:       []netip.Prefix{netip.MustParsePrefix("172.19.0.1/30")},
++		Inet6Address:       []netip.Prefix{netip.MustParsePrefix("fdfe:dcba:9876::1/126")},
++		IPRoute2RuleIndex:  9000,
++		IPRoute2TableIndex: 2022,
++	}
++	if mutate != nil {
++		mutate(&options)
++	}
++	return (&NativeTun{options: options}).rules()
++}
++
++func TestKeqReplyMarkRuleComesFirst(t *testing.T) {
++	rules := keqTestRules(t, nil)
++	for _, family := range []int{unix.AF_INET, unix.AF_INET6} {
++		var first *netlink.Rule
++		for _, r := range rules {
++			if r.Family == family {
++				first = r
++				break
++			}
++		}
++		if first == nil || !first.MarkSet || first.Mark != keqReplyMark || first.Table != unix.RT_TABLE_MAIN || first.Priority != 9000 {
++			t.Fatalf("first rule of family %d is %+v, want 9000: fwmark %#x lookup main", family, first, keqReplyMark)
++		}
++	}
++}
++
++func TestKeqUserRuleSendsEveryUserButRootToTheTable(t *testing.T) {
++	rules := keqTestRules(t, nil)
++	for _, family := range []int{unix.AF_INET, unix.AF_INET6} {
++		found := false
++		for i, r := range rules {
++			if r.Family != family || r.UIDRange == nil {
++				continue
++			}
++			if r.UIDRange.Start == 0 {
++				t.Fatalf("rule %+v covers uid 0: the reverse path check and mihomo itself would go into the TUN", r)
++			}
++			if r.UIDRange.Start != 1 || r.UIDRange.End != 0xfffffffe || r.IifName != "lo" || r.Table != 2022 {
++				t.Fatalf("uid rule is %+v, want iif lo uidrange 1-4294967294 lookup 2022", r)
++			}
++			// IPv6: before the rules that let a bound source pass, or WebRTC goes around again
++			for _, earlier := range rules[:i] {
++				if earlier.Family == family && earlier.Priority == r.Priority && earlier.Src.IsValid() && earlier.Goto >= 0 {
++					t.Fatalf("source rule %+v comes before the uid rule", earlier)
++				}
++			}
++			found = true
++		}
++		if !found {
++			t.Fatalf("no uid rule for family %d", family)
++		}
++	}
++}
++
++func TestKeqRulesStayInsideTheCleanupRange(t *testing.T) {
++	for _, r := range keqTestRules(t, nil) {
++		if r.Priority < 9000 || r.Priority > 9010 {
++			t.Fatalf("rule %+v is outside 9000..9010, unsetRules would leave it behind", r)
++		}
++	}
++}
++
++func TestKeqMarkModeIsLeftAlone(t *testing.T) {
++	rules := keqTestRules(t, func(o *Options) {
++		o.AutoRedirectMarkMode = true
++		o.AutoRedirectInputMark = DefaultAutoRedirectInputMark
++		o.AutoRedirectOutputMark = DefaultAutoRedirectOutputMark
++	})
++	for _, r := range rules {
++		if r.UIDRange != nil || r.Mark == keqReplyMark {
++			t.Fatalf("mark mode got a keqdroid rule: %+v", r)
++		}
++	}
++}
++
++// replies only: a mark on the original direction would take every new
++// connection, the WebRTC one included, past the TUN
++func TestKeqReplyMarkTakesOnlyReplies(t *testing.T) {
++	exprs := keqReplyMarkExprs()
++	ct, ok := exprs[0].(*expr.Ct)
++	if !ok || ct.Key != expr.CtKeyDIRECTION {
++		t.Fatalf("first expression is %#v, want ct direction", exprs[0])
++	}
++	cmp, ok := exprs[1].(*expr.Cmp)
++	if !ok || cmp.Op != expr.CmpOpEq || len(cmp.Data) != 1 || cmp.Data[0] != 1 {
++		t.Fatalf("direction check is %#v, want == reply", exprs[1])
++	}
++	set, ok := exprs[len(exprs)-1].(*expr.Meta)
++	if !ok || set.Key != expr.MetaKeyMARK || !set.SourceRegister {
++		t.Fatalf("last expression is %#v, want meta mark set", exprs[len(exprs)-1])
++	}
++}
+diff --git a/tun_linux.go b/tun_linux.go
+index dac98e5..624d24d 100644
+--- a/tun_linux.go
++++ b/tun_linux.go
+@@ -377,6 +377,12 @@ func (t *NativeTun) configure(tunLink netlink.Link) error {
+ 		}
+ 	}
+ 
++	// keqdroid patch: as sagernet's sing-tun, the tun checks loosely whatever net.ipv4.conf.all says.
++	// with rp_filter=1 a reply to a bound socket that the uid rule took into the TUN was dropped
++	if runtime.GOOS != "android" {
++		_ = os.WriteFile("/proc/sys/net/ipv4/conf/"+t.options.Name+"/rp_filter", []byte("2"), 0o644)
++	}
++
+ 	if t.options.IPRoute2TableIndex == 0 {
+ 		for {
+ 			t.options.IPRoute2TableIndex = int(rand.Uint32())
+@@ -598,6 +604,28 @@ func (t *NativeTun) rules() []*netlink.Rule {
+ 	}
+ 
+ 	nopPriority := ruleStart + 10
++	// keqdroid patch: replies to connections from outside go by main, see reply_mark_linux.go
++	keqUserRules := runtime.GOOS != "android"
++	if keqUserRules {
++		if p4 {
++			it = netlink.NewRule()
++			it.Priority = priority
++			it.Mark = keqReplyMark
++			it.MarkSet = true
++			it.Table = unix.RT_TABLE_MAIN
++			it.Family = unix.AF_INET
++			rules = append(rules, it)
++		}
++		if p6 {
++			it = netlink.NewRule()
++			it.Priority = priority6
++			it.Mark = keqReplyMark
++			it.MarkSet = true
++			it.Table = unix.RT_TABLE_MAIN
++			it.Family = unix.AF_INET6
++			rules = append(rules, it)
++		}
++	}
+ 	for _, excludePort := range t.options.ExcludeSrcPort {
+ 		if p4 {
+ 			it = netlink.NewRule()
+@@ -858,6 +886,15 @@ func (t *NativeTun) rules() []*netlink.Rule {
+ 			it.Family = unix.AF_INET
+ 			rules = append(rules, it)
+ 		}
++		if keqUserRules {
++			it = netlink.NewRule()
++			it.Priority = priority
++			it.IifName = "lo"
++			it.UIDRange = keqUserUIDs()
++			it.Table = t.options.IPRoute2TableIndex
++			it.Family = unix.AF_INET
++			rules = append(rules, it)
++		}
+ 		// priority++
+ 	}
+ 	if p6 {
+@@ -868,6 +905,16 @@ func (t *NativeTun) rules() []*netlink.Rule {
+ 		it.Family = unix.AF_INET6
+ 		rules = append(rules, it)
+ 
++		if keqUserRules {
++			it = netlink.NewRule()
++			it.Priority = priority6
++			it.IifName = "lo"
++			it.UIDRange = keqUserUIDs()
++			it.Table = t.options.IPRoute2TableIndex
++			it.Family = unix.AF_INET6
++			rules = append(rules, it)
++		}
++
+ 		it = netlink.NewRule()
+ 		it.Priority = priority6
+ 		it.IifName = "lo"
+@@ -939,9 +986,18 @@ func (t *NativeTun) setRules() error {
+ 			return E.Cause(err, "add rule ", i, "/", len(t.rules()))
+ 		}
+ 	}
++	if t.keqReplyMarkWanted() {
++		if err := keqSetReplyMark(); err != nil && t.options.Logger != nil {
++			t.options.Logger.Warn(E.Cause(err, "replies to connections from outside go into the TUN"))
++		}
++	}
+ 	return nil
+ }
+ 
++func (t *NativeTun) keqReplyMarkWanted() bool {
++	return t.options.AutoRoute && !t.options.AutoRedirectMarkMode && runtime.GOOS != "android"
++}
++
+ func (t *NativeTun) unsetRoute() error {
+ 	if t.options.FileDescriptor > 0 {
+ 		return nil
+@@ -978,6 +1034,11 @@ func (t *NativeTun) unsetRules() error {
+ 		}
+ 		t.ruleIndex6 = nil
+ 	}
++	if t.keqReplyMarkWanted() {
++		if err := keqDeleteReplyMark(); err != nil && t.options.Logger != nil {
++			t.options.Logger.Warn(err)
++		}
++	}
+ 	if t.options.AutoRoute {
+ 		ruleList, err := netlink.RuleList(netlink.FAMILY_ALL)
+ 		if err != nil {
