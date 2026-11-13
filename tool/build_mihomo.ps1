@@ -31,6 +31,10 @@
 # Linux, and 13 MB off what the user downloads. Go still prints stack traces
 # with function names without either, so nothing is lost for debugging.
 #
+# armeabi-v7a links through the NDK, so its relocation table is stored packed
+# (--pack-dyn-relocs=android, Android 6+), as in build_xray_cores.ps1. arm64
+# has no cgo and Go's own linker cannot pack it.
+#
 # Windows gets -w only. A fully stripped (-s -w), unsigned exe next to the app
 # is a Defender heuristic, and the core once went to quarantine mid-build over
 # it. -w drops just the DWARF (what a debugger reads, 12 MB of this exe and
@@ -288,7 +292,7 @@ if ($wantAndroid) {
     Build-Mihomo `
         -Goos "android" -Goarch "arm" -Goarm "7" `
         -OutPath (Join-Path $repoRoot "android\app\src\main\jniLibs\armeabi-v7a\libmihomo.so") `
-        -Ldflags ("-s -w -checklinkname=0 {0}" -f $versionFlag) `
+        -Ldflags ("-s -w -checklinkname=0 -extldflags=-Wl,--pack-dyn-relocs=android {0}" -f $versionFlag) `
         -Cc (Join-Path $tc "armv7a-linux-androideabi24-clang.cmd") `
         -Label "libmihomo.so for armeabi-v7a" -Cgo
 }
