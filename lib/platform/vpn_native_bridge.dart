@@ -62,6 +62,15 @@ class VpnNativeBridge {
     return channel.invokeMethod<String>('getPendingDeepLink');
   }
 
+  static Future<String?> installedApkPath() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      return await channel.invokeMethod<String>('getInstalledApk');
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<Map<String, Object?>> getNativeInternals() async {
     if (!Platform.isAndroid) return const {};
     try {

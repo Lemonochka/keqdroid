@@ -516,6 +516,7 @@ class MainActivity : FlutterFragmentActivity() {
                             }
                         }
                         "getProcessExits" -> result.success(ProcessExits.recent(this))
+                        "getInstalledApk" -> result.success(applicationInfo.sourceDir)
                         "getDeviceModel" -> result.success(android.os.Build.MODEL ?: "Android Device")
                         // по режиму интерфейса, а не по размеру: планшет в альбомной тоже широкий
                         "isTelevision" -> result.success(

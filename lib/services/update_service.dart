@@ -17,7 +17,9 @@ import 'release_signature.dart';
 import 'windows_install.dart';
 import 'windows_setup_updater.dart';
 import 'windows_zip_updater.dart';
+import 'zip_piece_download.dart';
 import '../core/app_logger.dart';
+import '../platform/vpn_native_bridge.dart';
 import '../utils/local_vpn_proxy.dart';
 
 class UpdateInfo {
@@ -569,26 +571,42 @@ class UpdateService {
     }
 
     final dir = await getTemporaryDirectory();
+    await sweepLeftovers(dir: dir);
     final ext = extensionFromUrl(info.downloadUrl);
-    final file = File('${dir.path}/keqdroid_update_${info.latestVersion}$ext');
+    final file = File('${dir.path}/$_leftoverPrefix${info.latestVersion}$ext');
 
     if (await file.exists()) {
       await file.delete();
     }
 
-    await dio.download(
-      info.downloadUrl,
-      file.path,
-      onReceiveProgress: (received, total) {
-        if (total > 0) {
-          onProgress?.call(received, total);
-        }
-      },
-    );
+    final assembled = Platform.isAndroid &&
+        ext == '.apk' &&
+        await _assembleFromInstalledApk(dio, info, file, onProgress);
+    if (!assembled) {
+      await _downloadWhole(dio, info, file, onProgress);
+    }
 
     // непроверенный файл установщику не отдаём
     try {
       await _verifyDownloadedFile(file, info, dio);
+    } on _IntegrityError catch (e) {
+      if (await file.exists()) {
+        await file.delete();
+      }
+      if (!assembled) rethrow;
+      AppLogger.instance.warn(
+        'Update assembled from the installed APK failed the checksum, '
+        'downloading it whole: $e',
+      );
+      await _downloadWhole(dio, info, file, onProgress);
+      try {
+        await _verifyDownloadedFile(file, info, dio);
+      } catch (_) {
+        if (await file.exists()) {
+          await file.delete();
+        }
+        rethrow;
+      }
     } catch (_) {
       if (await file.exists()) {
         await file.delete();
@@ -656,6 +674,80 @@ class UpdateService {
     return false;
   }
 
+  static const _leftoverPrefix = 'keqdroid_update_';
+
+  // у каждой версии своё имя, и после установки файл оставался: на ПК за неделю 13.11.2026 набралось 258 МБ.
+  // свежие не трогаем, после перезапуска их ещё может держать установщик или скрипт обновления
+  static Future<void> sweepLeftovers({
+    Directory? dir,
+    DateTime? now,
+  }) async {
+    try {
+      final temp = dir ?? await getTemporaryDirectory();
+      final cutoff = (now ?? DateTime.now()).subtract(
+        const Duration(minutes: 10),
+      );
+      await for (final entity in temp.list(followLinks: false)) {
+        if (!p.basename(entity.path).startsWith(_leftoverPrefix)) continue;
+        try {
+          if ((await entity.stat()).modified.isAfter(cutoff)) continue;
+          await entity.delete(recursive: true);
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> _downloadWhole(
+    Dio dio,
+    UpdateInfo info,
+    File file,
+    void Function(int received, int total)? onProgress,
+  ) =>
+      dio.download(
+        info.downloadUrl,
+        file.path,
+        onReceiveProgress: (received, total) {
+          if (total > 0) {
+            onProgress?.call(received, total);
+          }
+        },
+      );
+
+  static Future<bool> _assembleFromInstalledApk(
+    Dio dio,
+    UpdateInfo info,
+    File file,
+    void Function(int received, int total)? onProgress,
+  ) async {
+    try {
+      final installed = await VpnNativeBridge.installedApkPath();
+      if (installed == null || !await File(installed).exists()) return false;
+      final result = await ZipPieceDownload.assemble(
+        dio: dio,
+        url: info.downloadUrl,
+        base: File(installed),
+        target: file,
+        onProgress: onProgress,
+      );
+      if (result == null) {
+        if (await file.exists()) await file.delete();
+        return false;
+      }
+      AppLogger.instance.info(
+        'Update assembled from the installed APK: downloaded '
+        '${result.downloaded} of ${result.total} bytes',
+      );
+      return true;
+    } catch (e) {
+      AppLogger.instance.warn(
+        'Could not assemble the update from the installed APK, '
+        'downloading it whole: $e',
+      );
+      if (await file.exists()) await file.delete();
+      return false;
+    }
+  }
+
   @visibleForTesting
   static String extensionFromUrl(String url) {
     final path = Uri.parse(url).path.toLowerCase();
@@ -710,7 +802,7 @@ class UpdateService {
 
     final actual = await _sha256OfFile(file);
     if (actual.toLowerCase() != expected.toLowerCase()) {
-      throw StateError(
+      throw _IntegrityError(
         'Update integrity check failed for ${info.assetName} '
         '(expected $expected, got $actual). The download was discarded.',
       );
@@ -770,4 +862,9 @@ class UpdateService {
     }
     await OpenFilex.open(url);
   }
+}
+
+// хеш не сошёлся: собранный из кусков файл ещё можно скачать целиком
+class _IntegrityError extends StateError {
+  _IntegrityError(super.message);
 }

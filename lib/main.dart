@@ -124,6 +124,7 @@ Future<void> main() async {
     );
 
     MemoryWatch.instance.start();
+    unawaited(UpdateService.sweepLeftovers());
   }, (error, stack) async {
     await AppLogger.instance.recordError(
       error,
