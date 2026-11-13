@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
+import 'on_screen.dart';
 import 'shape_morph.dart';
 
 class ShapeLoadingIndicator extends StatefulWidget {
@@ -26,9 +28,29 @@ class ShapeLoadingIndicator extends StatefulWidget {
 class _ShapeLoadingIndicatorState extends State<ShapeLoadingIndicator>
     with TickerProviderStateMixin {
   late final ShapeMorphCycle _cycle = ShapeMorphCycle(vsync: this);
+  late final AppLifecycleListener _lifecycle;
+  ValueListenable<TickerModeData>? _ticking;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(onStateChange: (_) => _sync());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ticking?.removeListener(_sync);
+    _ticking = TickerMode.getValuesNotifier(context)..addListener(_sync);
+    _sync();
+  }
+
+  void _sync() => _cycle.asleep = !onScreen(_ticking);
 
   @override
   void dispose() {
+    _ticking?.removeListener(_sync);
+    _lifecycle.dispose();
     _cycle.dispose();
     super.dispose();
   }

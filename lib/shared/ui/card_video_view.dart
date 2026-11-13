@@ -6,9 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../models/subscription_card_theme.dart';
+import 'on_screen.dart';
 
 // фон шапки подписки из видео. Плеер живёт, только пока видео на экране: на чужой вкладке
-// (TickerMode) и за краем списка его нет. Шапки групп серверов строятся и за экраном: десять
+// (TickerMode), в свёрнутом приложении и за краем списка его нет. Шапки групп серверов строятся и за экраном: десять
 // плееров разом держали по ~37 МБ буферов декодера и грузили сервис кодеков на ~47% ядра
 // Pixel 6a (26.10.2026). Без звука и не забирает его у других приложений
 class CardVideoView extends StatefulWidget {
@@ -26,28 +27,37 @@ class CardVideoView extends StatefulWidget {
 
   final Widget? overlay;
 
+  @visibleForTesting
+  static VideoPlayerController Function(String path)? debugCreateController;
+
+  @visibleForTesting
+  static int get debugRecheckTimers => _CardVideoViewState._rechecks;
+
   @override
   State<CardVideoView> createState() => _CardVideoViewState();
 }
 
 class _CardVideoViewState extends State<CardVideoView> {
+  static var _rechecks = 0;
+
   VideoPlayerController? _controller;
   ValueListenable<TickerModeData>? _ticking;
+  late final AppLifecycleListener _lifecycle;
   var _ready = false;
   var _shown = false;
   ScrollableState? _scrollable;
   // до первой проверки места не знаем: плеер не открываем
   var _inView = false;
-  DateTime? _hiddenAt;
   Timer? _recheck;
+  Timer? _closeLater;
+
+  bool get _plays =>
+      CardVideoView.debugCreateController != null || Platform.isAndroid;
 
   @override
   void initState() {
     super.initState();
-    // сворачивание группы двигает шапки без прокрутки
-    if (Platform.isAndroid) {
-      _recheck = Timer.periodic(const Duration(seconds: 1), (_) => _checkView());
-    }
+    _lifecycle = AppLifecycleListener(onStateChange: (_) => _sync());
   }
 
   @override
@@ -74,7 +84,8 @@ class _CardVideoViewState extends State<CardVideoView> {
 
   @override
   void dispose() {
-    _recheck?.cancel();
+    _lifecycle.dispose();
+    _keepChecking(false);
     _ticking?.removeListener(_sync);
     _scrollable?.position.removeListener(_checkView);
     _close();
@@ -101,21 +112,29 @@ class _CardVideoViewState extends State<CardVideoView> {
       _inView = inView;
       _sync();
     }
-    // при прокрутке туда-обратно у края плеер не пересоздаётся каждый раз
-    final hiddenAt = _hiddenAt;
-    if (hiddenAt != null &&
-        _controller != null &&
-        DateTime.now().difference(hiddenAt) > const Duration(seconds: 2)) {
-      setState(_close);
+  }
+
+  // сворачивание группы двигает шапки без прокрутки, поэтому место проверяется раз в секунду.
+  // только пока шапку видно: в свёрнутом приложении пять таких таймеров будили процесс впустую
+  void _keepChecking(bool on) {
+    if (on && _plays && _recheck == null) {
+      _rechecks++;
+      _recheck = Timer.periodic(const Duration(seconds: 1), (_) => _checkView());
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkView());
+    } else if (!on && _recheck != null) {
+      _rechecks--;
+      _recheck!.cancel();
+      _recheck = null;
     }
   }
 
   void _open() {
-    if (!Platform.isAndroid) return;
-    final controller = VideoPlayerController.file(
-      File(widget.path),
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-    );
+    if (!_plays) return;
+    final controller = CardVideoView.debugCreateController?.call(widget.path) ??
+        VideoPlayerController.file(
+          File(widget.path),
+          videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+        );
     _controller = controller;
     controller.addListener(_onValue);
     controller.initialize().then((_) async {
@@ -136,6 +155,8 @@ class _CardVideoViewState extends State<CardVideoView> {
   }
 
   void _close() {
+    _closeLater?.cancel();
+    _closeLater = null;
     _ready = false;
     _shown = false;
     final controller = _controller;
@@ -145,9 +166,19 @@ class _CardVideoViewState extends State<CardVideoView> {
   }
 
   void _sync() {
-    final wanted = (_ticking?.value.enabled ?? true) && _inView;
-    _hiddenAt = wanted ? null : (_hiddenAt ?? DateTime.now());
+    final shown = onScreen(_ticking);
+    final wanted = shown && _inView;
+    _keepChecking(shown);
     final controller = _controller;
+    if (wanted) {
+      _closeLater?.cancel();
+      _closeLater = null;
+    } else if (controller != null) {
+      // при прокрутке туда-обратно у края плеер не пересоздаётся каждый раз
+      _closeLater ??= Timer(const Duration(seconds: 2), () {
+        if (mounted) setState(_close);
+      });
+    }
     if (controller == null) {
       if (wanted) _open();
       return;

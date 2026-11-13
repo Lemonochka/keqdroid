@@ -99,7 +99,23 @@ class ShapeMorphCycle extends ChangeNotifier {
   void resume() {
     if (!isSettling) return;
     _settleMorph = null;
-    _start();
+    if (!_asleep) _start();
+  }
+
+  var _asleep = false;
+
+  // невидимый индикатор спит: таймер шага будил процесс и на чужой вкладке, и в свёрнутом приложении
+  set asleep(bool value) {
+    if (value == _asleep) return;
+    _asleep = value;
+    if (isSettling) return;
+    if (value) {
+      _timer?.cancel();
+      _timer = null;
+      _rotation.stop();
+    } else {
+      _start();
+    }
   }
 
   static final _circle = MaterialShapes.circle;
