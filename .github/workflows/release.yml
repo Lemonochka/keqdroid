@@ -320,6 +320,20 @@ jobs:
             [ -f "dist/$f" ] || { echo "no $f"; ls -la dist; exit 1; }
           done
 
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      # SignPath packs the zip anew after signing, so make_release's repack is redone here
+      - name: Repack the Windows zip
+        run: |
+          command -v 7z >/dev/null || command -v 7zz >/dev/null || { sudo apt-get update -y && sudo apt-get install -y 7zip; }
+          flutter pub get
+          dart run tool/repack_zip.dart --in "dist/keqdroid-windows-x64-$VER.zip" --out repacked.zip
+          mv -f repacked.zip "dist/keqdroid-windows-x64-$VER.zip"
+
       - name: SHA256SUMS
         shell: pwsh
         run: ./tool/write_sha256sums.ps1 -Dir dist

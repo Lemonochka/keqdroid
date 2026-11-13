@@ -169,6 +169,84 @@ function Assert-ApkAbi([string]$apk, [string]$abi) {
   Write-Host "    lib/$abi only, all native code present"
 }
 
+function Find-BuildTool([string]$name) {
+  $sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME }
+         elseif ($env:ANDROID_SDK_ROOT) { $env:ANDROID_SDK_ROOT }
+         else { Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
+  $dirs = Get-ChildItem -LiteralPath (Join-Path $sdk 'build-tools') -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^\d+(\.\d+)*$' } |
+    Sort-Object { [version]$_.Name } -Descending
+  foreach ($d in $dirs) {
+    $tool = Join-Path $d.FullName $name
+    if (Test-Path -LiteralPath $tool) { return $tool }
+  }
+  throw "$name not found in $sdk\build-tools"
+}
+
+# The same deflate at 7-Zip's maximum: every entry stays byte for byte the
+# same once unpacked (repack_zip.dart checks it and fails otherwise), only the
+# download gets lighter: 2.0 MB per APK, 2.9 MB for the Windows zip (0.36.3).
+function Invoke-Repack([string]$zip, [switch]$Apk) {
+  $out = "$zip.repacked"
+  $repackArgs = @('run', 'tool/repack_zip.dart', '--in', $zip, '--out', $out)
+  if ($Apk) { $repackArgs += '--apk' }
+  & dart @repackArgs
+  if ($LASTEXITCODE -ne 0) { throw "repack_zip.dart failed for $zip" }
+  Move-Item -LiteralPath $out -Destination $zip -Force
+}
+
+function Get-ApkSignature([string]$apk) {
+  $out = & (Find-BuildTool 'apksigner.bat') verify -v --print-certs $apk
+  if ($LASTEXITCODE -ne 0) { throw "apksigner verify failed for $apk" }
+  @($out | Where-Object { $_ -match '^Verified using v|certificate SHA-256 digest' }) -join "`n"
+}
+
+# Repacking drops the signature, so the APK is signed again with the same key
+# and the same schemes. AGP's dependency-info block for Google Play is not
+# carried over: it is not part of the signature and no device reads it.
+function Repack-Apk([string]$apk) {
+  $before = Get-ApkSignature $apk
+  Invoke-Repack $apk -Apk
+
+  & (Find-BuildTool 'zipalign.exe') -c 4 $apk
+  if ($LASTEXITCODE -ne 0) { throw "repacked $apk is not aligned" }
+
+  $props = @{}
+  foreach ($line in Get-Content -LiteralPath (Join-Path $repoRoot 'android\key.properties')) {
+    $i = $line.IndexOf('=')
+    if ($i -gt 0 -and -not $line.TrimStart().StartsWith('#')) {
+      # java.util.Properties escapes, as Gradle reads them
+      $props[$line.Substring(0, $i).Trim()] = [regex]::Replace($line.Substring($i + 1).Trim(), '\\(.)', '$1')
+    }
+  }
+  foreach ($k in 'storeFile', 'storePassword', 'keyAlias', 'keyPassword') {
+    if (-not $props[$k]) { throw "android\key.properties lacks $k" }
+  }
+  $store = $props['storeFile']
+  if (-not [IO.Path]::IsPathRooted($store)) { $store = Join-Path $repoRoot "android\app\$store" }
+
+  $signed = "$apk.signed"
+  $env:KEQ_KS_PASS = $props['storePassword']
+  $env:KEQ_KEY_PASS = $props['keyPassword']
+  try {
+    & (Find-BuildTool 'apksigner.bat') sign --ks $store --ks-key-alias $props['keyAlias'] `
+      --ks-pass env:KEQ_KS_PASS --key-pass env:KEQ_KEY_PASS `
+      --v1-signing-enabled false --v2-signing-enabled true `
+      --v3-signing-enabled false --v4-signing-enabled false `
+      --out $signed $apk
+    if ($LASTEXITCODE -ne 0) { throw "apksigner sign failed for $apk" }
+  } finally {
+    Remove-Item Env:KEQ_KS_PASS, Env:KEQ_KEY_PASS -ErrorAction SilentlyContinue
+  }
+  Move-Item -LiteralPath $signed -Destination $apk -Force
+
+  $after = Get-ApkSignature $apk
+  if ($after -ne $before) {
+    throw "Signature of $apk changed after repacking:`n$before`n---`n$after"
+  }
+  Write-Host "    repacked and signed again, same key and schemes"
+}
+
 # --- version from pubspec.yaml: "version: 0.4.9+1" -> "0.4.9", tag "v0.4.9" ---
 $pubspec = Get-Content (Join-Path $repoRoot 'pubspec.yaml') -Raw
 $m = [regex]::Match($pubspec, '(?m)^\s*version:\s*([0-9]+\.[0-9]+(?:\.[0-9]+)?)')
@@ -234,6 +312,8 @@ if (-not $SkipAndroid) {
 
     $apkOut = Join-Path $outDir $apk.Name
     Copy-Item -LiteralPath $apkSrc -Destination $apkOut -Force
+    Repack-Apk $apkOut
+    Assert-ApkAbi $apkOut $apk.Abi
     Write-Host "    $($apk.Name) ($([math]::Round((Get-Item -LiteralPath $apkOut).Length / 1MB, 1)) MB)"
   }
 }
@@ -315,6 +395,7 @@ if (-not $SkipWindows) {
   # Zip the contents so keqdroid.exe sits at the archive root (the updater's
   # findPayloadRoot expects keqdroid.exe at root or in a single subfolder).
   Compress-Archive -Path (Join-Path $relDir '*') -DestinationPath $zipOut
+  Invoke-Repack $zipOut
   Write-Host "    $(Split-Path $zipOut -Leaf) ($([math]::Round((Get-Item -LiteralPath $zipOut).Length / 1MB, 1)) MB)"
 
   if (-not $SkipInstaller) {

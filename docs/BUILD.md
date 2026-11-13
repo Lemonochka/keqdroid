@@ -105,6 +105,7 @@ What the app expects from a release:
 - The version and the `vX.Y.Z` tag come from `version:` in `pubspec.yaml`.
 - `SHA256SUMS.sig` is an Ed25519 signature of `SHA256SUMS`. Without it, versions after 0.35.0 install no update and no full geo base. The key is the `UPDATE_SIGNING_KEY` secret; the app also accepts a reserve key kept off GitHub (`lib/services/release_signature.dart`).
 - `SHA256SUMS` names each file in exactly one line: the updater takes the first line that contains the name.
+- The APKs and the Windows zip go through `tool/repack_zip.dart`: the same deflate, at 7-Zip's maximum, every file inside unchanged. The APK is then signed again with the same key and only the v2 scheme, like AGP signs it. The Android updater builds the new APK from the installed one and downloads only the entries whose compressed bytes changed, so an unchanged core costs nothing as long as every release is packed the same way.
 - File names never change. Installed versions look for exactly these:
 
 ```
