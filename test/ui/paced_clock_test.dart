@@ -4,6 +4,7 @@ import 'package:keqdroid/shared/ui/paced_clock.dart';
 
 const _hz60 = Duration(microseconds: 16667);
 const _hz120 = Duration(microseconds: 8333);
+const _hz144 = Duration(microseconds: 6944);
 
 // секунды кадров, где каждый late-й из десяти не влез в бюджет 60 к/с
 void _feed(
@@ -127,6 +128,13 @@ void main() {
 
       expect(clock.vsync, _hz120);
       expect(ticks, inInclusiveRange(119, 122));
+    });
+
+    clockTest('на 144 Гц тикает через кадр, 72 к/с', (tester, clock) async {
+      final ticks = await _ticksOver(tester, clock, frame: _hz144, frames: 288);
+
+      expect(clock.vsync, _hz144);
+      expect(ticks, inInclusiveRange(143, 146));
     });
 
     clockTest('сам будит кадр, когда больше никто не рисует',
