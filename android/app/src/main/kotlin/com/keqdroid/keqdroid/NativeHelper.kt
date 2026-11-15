@@ -2,6 +2,9 @@ package com.keqdroid.keqdroid
 
 import java.io.File
 import java.util.Collections
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 
 // по этим же именам ищутся сироты
 private val CORE_BINARIES = setOf(
@@ -16,13 +19,25 @@ internal fun orphanCoreName(cmdline: ByteArray): String? =
         .substringAfterLast('/')
         .takeIf { it in CORE_BINARIES }
 
+// только свои: список живёт в памяти процесса и умирает с ним, всё прочее в /proc запущено прошлой жизнью.
+// pid известен лишь после окна в 250 мс внутри nativeStartCore, и скан в это окно убивал пробы пинга
+internal class CoreLaunches {
+    private val gate = ReentrantReadWriteLock()
+    private val pids = Collections.synchronizedSet(mutableSetOf<Int>())
+
+    fun start(launch: () -> Int): Int = gate.read {
+        launch().also { if (it > 0) pids.add(it) }
+    }
+
+    fun <T> sweep(block: (MutableSet<Int>) -> T): T = gate.write { block(pids) }
+}
+
 object NativeHelper {
     init { System.loadLibrary("keqdroid_native") }
 
     private const val TAG = "KEQDIS"
 
-    // только свои: список живёт в памяти процесса и умирает с ним, всё прочее в /proc запущено прошлой жизнью
-    private val livePids = Collections.synchronizedSet(mutableSetOf<Int>())
+    private val launches = CoreLaunches()
 
     @JvmStatic
     private external fun nativeDialFailures(): Long
@@ -64,25 +79,20 @@ object NativeHelper {
         coreKind: String,
         tunFd: Int = -1,
         ownerSocket: String = "",
-    ): Int = remember(
-        nativeStartCore(binPath, configPath, assetDir, logName, coreKind, tunFd, ownerSocket),
-    )
-
-    private fun remember(pid: Int): Int {
-        if (pid > 0) livePids.add(pid)
-        return pid
+    ): Int = launches.start {
+        nativeStartCore(binPath, configPath, assetDir, logName, coreKind, tunFd, ownerSocket)
     }
 
     // ядро живёт отдельно и переживает смерть приложения (force stop, flutter run), продолжая сидеть на 2080.
-    // новое тогда порт не займёт, а прокси приложения ходит в старое с чужими кредами. ядра замера в livePids и не трогаются
-    fun killOrphans(): Int {
+    // новое тогда порт не займёт, а прокси приложения ходит в старое с чужими кредами. ядра замера свои и не трогаются
+    fun killOrphans(): Int = launches.sweep { livePids ->
         var killed = 0
         val mine = android.os.Process.myPid()
         // мёртвых выкидываем: иначе список растёт всю сессию, и pid, пошедший по второму кругу, спрячет настоящую сироту
         synchronized(livePids) {
             livePids.removeAll { !File("/proc/$it").exists() }
         }
-        val dirs = File("/proc").listFiles() ?: return 0
+        val dirs = File("/proc").listFiles() ?: return@sweep 0
         for (dir in dirs) {
             val pid = dir.name.toIntOrNull() ?: continue
             if (pid == mine || livePids.contains(pid)) continue
@@ -92,6 +102,6 @@ object NativeHelper {
             runCatching { android.os.Process.killProcess(pid) }
             killed++
         }
-        return killed
+        killed
     }
 }
