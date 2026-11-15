@@ -201,6 +201,11 @@ class SubscriptionService {
     return dio;
   }
 
+  static const _maxBodyLength = 10 * 1024 * 1024;
+
+  // регулярки ссылок и base64 на строке в мегабайты переполняют стек в AOT: 10 МБ падают, 3 МБ проходят
+  static const _maxVariantLength = 1024 * 1024;
+
   static const _blockedHostnames = {
     'metadata.google.internal',
     '169.254.169.254',           // AWS/GCP/Azure IMDS
@@ -427,7 +432,7 @@ class SubscriptionService {
       }
 
       final body = response.data ?? '';
-      if (body.length > 10 * 1024 * 1024) {
+      if (body.length > _maxBodyLength) {
         throw SubscriptionFetchException('Response too large (>10MB)', url: url);
       }
       final contentType = response.headers.value('content-type')?.toLowerCase() ?? '';
@@ -655,7 +660,7 @@ class SubscriptionService {
     _throwIfRemnawaveHwidHeadersIndicateError(response.headers, url: url);
 
     final body = response.data ?? '';
-    if (body.length > 10 * 1024 * 1024) {
+    if (body.length > _maxBodyLength) {
       throw SubscriptionFetchException('Response too large (>10MB)', url: url);
     }
 
@@ -1216,6 +1221,11 @@ class SubscriptionService {
 
   static List<String> _parseBody(String content) {
     final original = content.trim();
+    // вариантов у такого тела нет вовсе: JSON Geodema на 1,09 МБ выпадал целиком, будто ссылок нет
+    if (original.length > _maxVariantLength) {
+      final large = _parseLargeStructured(original);
+      if (large.isNotEmpty) return large;
+    }
     final candidates = _collectTextVariants(original);
 
     for (final candidate in candidates) {
@@ -1278,6 +1288,25 @@ class SubscriptionService {
     throw const FormatException(
       'No supported proxy links found. Expected URI lines like vless://, vmess://, trojan://, ss://, ssr://, hysteria://, hysteria2://, hy2://, tuic://, anytls://, mierus:// or socks://',
     );
+  }
+
+  // порядок как в _parseBody, но без регулярок по всему тексту, а YAML только у похожего на Clash
+  static List<String> _parseLargeStructured(String body) {
+    if (body.startsWith('[') || body.startsWith('{')) {
+      final xray = CustomXrayConfig.extractConfigs(body)
+          .where(_isUsableCustomConfig)
+          .toList();
+      if (xray.isNotEmpty) return xray;
+      final singbox = SingboxOutbounds.translate(body)
+          .links
+          .where((c) => !_isMetadataConfig(c))
+          .toList();
+      if (singbox.isNotEmpty) return singbox;
+    }
+    if (!CustomClashConfig.looksLikeClash(body)) return const [];
+    final nodes = _extractConfigsFromStructuredContent(body);
+    if (nodes.isNotEmpty) return nodes;
+    return _extractClashConfigs(body);
   }
 
   static List<String> _extractCustomConfigs(String content) {
@@ -1344,7 +1373,7 @@ class SubscriptionService {
       }
 
       final current = queue.removeAt(0).trim();
-      if (current.isEmpty || current.length > 1024 * 1024 || !seen.add(current)) continue;
+      if (current.isEmpty || current.length > _maxVariantLength || !seen.add(current)) continue;
       out.add(current);
 
       final html = _htmlUnescape(current);

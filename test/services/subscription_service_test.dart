@@ -355,6 +355,74 @@ void main() {
       expect(configs.single, contains('obfs=salamander'));
     });
 
+    // Geodema 15.11.2026: Happ получал 100 конфигов Xray JSON на 1,09 МБ, у нас тело
+    // длиннее 1 МиБ выпадало из разбора целиком и подписка не обновлялась.
+    // Пробелы между элементами JSON смысла не меняют: серверы обязаны совпасть с малым телом
+    test('a JSON subscription over a megabyte gives the same servers as a small one',
+        () {
+      final configs = [
+        for (var i = 0; i < 100; i++)
+          jsonEncode({
+            'remarks': 'Node $i',
+            'outbounds': [
+              {
+                'tag': 'proxy',
+                'protocol': 'vless',
+                'settings': {
+                  'vnext': [
+                    {
+                      'address': 'node$i.example.com',
+                      'port': 443,
+                      'users': [
+                        {
+                          'id': 'a9bbfa43-59fb-4db1-bd4a-${'$i'.padLeft(12, '0')}',
+                          'encryption': 'none',
+                        },
+                      ],
+                    },
+                  ],
+                },
+                'streamSettings': {'network': 'tcp', 'security': 'tls'},
+              },
+              {'tag': 'direct', 'protocol': 'freedom'},
+            ],
+          }),
+      ];
+      final small = '[${configs.join(',')}]';
+      final large = '[${configs.join(',${' ' * 12000}')}]';
+      expect(small.length, lessThan(1024 * 1024));
+      expect(large.length, greaterThan(1024 * 1024));
+
+      final expected = SubscriptionService.parseBodyForTest(small);
+      expect(expected, hasLength(100));
+      expect(SubscriptionService.parseBodyForTest(large), expected);
+    });
+
+    test('a Clash profile over a megabyte gives the same nodes as a small one',
+        () {
+      final yaml = StringBuffer('proxies:\n');
+      for (var i = 0; i < 50; i++) {
+        yaml
+          ..writeln('  - name: node $i')
+          ..writeln('    type: trojan')
+          ..writeln('    server: node$i.example.com')
+          ..writeln('    port: 443')
+          ..writeln('    password: secret$i');
+      }
+      yaml.writeln('rules:');
+      yaml.writeln('  - MATCH,DIRECT');
+      final small = yaml.toString();
+      for (var r = 0; r < 30000; r++) {
+        yaml.writeln('# DOMAIN-SUFFIX,site$r.example.org,DIRECT');
+      }
+      final large = yaml.toString();
+      expect(large.length, greaterThan(1024 * 1024));
+
+      final expected = SubscriptionService.parseBodyForTest(small);
+      expect(expected, hasLength(50));
+      expect(SubscriptionService.parseBodyForTest(large), expected);
+    });
+
     test('splits two URIs that share one line instead of merging them', () {
       const body =
           'vless://aaaaaaaa-1111-2222-3333-444444444444@1.2.3.4:443?type=tcp#name one '
