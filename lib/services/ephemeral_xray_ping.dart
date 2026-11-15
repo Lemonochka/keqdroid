@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 
 import '../core/app_logger.dart';
+import '../platform/windows_cert_trust.dart';
 import '../tunnel/linux_core_paths.dart';
 import '../tunnel/windows_core_paths.dart';
 import '../tunnel/vpn_backend.dart';
@@ -280,7 +281,7 @@ class EphemeralXrayPing {
       var coreAwake = false;
       return await mapPooled(probes, concurrency, (probe) async {
         while (true) {
-          final result = await _httpProbeViaSocks(
+          final result = await httpProbeViaSocks(
             testUrl: testUrl,
             socksPort: probe.$2,
             timeoutMs: timeoutMs,
@@ -454,7 +455,7 @@ class EphemeralXrayPing {
 
       final coreLife = Stopwatch()..start();
       while (true) {
-        final probe = await _httpProbeViaSocks(
+        final probe = await httpProbeViaSocks(
           testUrl: testUrl,
           socksPort: port,
           timeoutMs: timeoutMs,
@@ -601,13 +602,14 @@ class EphemeralXrayPing {
     }
   }
 
+  @visibleForTesting
   static Future<
       ({
         bool success,
         int? latencyMs,
         String error,
         int? httpStatus,
-      })> _httpProbeViaSocks({
+      })> httpProbeViaSocks({
     required String testUrl,
     required int socksPort,
     required int timeoutMs,
@@ -648,8 +650,14 @@ class EphemeralXrayPing {
         );
       }
 
-      final tls = await SecureSocket.secure(raw, host: host)
-          .timeout(connectTimeout);
+      // сырой сокет не проходит через WindowsSystemTrust: без этого на свежей Windows пинг давал N/A всему списку
+      final tls = await SecureSocket.secure(
+        raw,
+        host: host,
+        onBadCertificate: Platform.isWindows
+            ? (cert) => windowsTrustsCertificate(cert.der, host)
+            : null,
+      ).timeout(connectTimeout);
       raw = tls;
       reader = _HttpResponseReader(tls);
 
