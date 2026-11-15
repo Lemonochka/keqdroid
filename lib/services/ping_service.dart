@@ -1005,6 +1005,44 @@ class PingService {
     return PingLatencyQuality.poor;
   }
 
+  // без этой строки N/A у всей подписки в журнале не видно вовсе, #18
+  static String? failureSummary(PingType type, List<PingResult> results) {
+    final failed = [for (final r in results) if (!r.success) r];
+    if (failed.isEmpty) return null;
+    final counts = <String, int>{};
+    for (final r in failed) {
+      final reason = _failureReason(r.error);
+      counts[reason] = (counts[reason] ?? 0) + 1;
+    }
+    final ranked = counts.entries.indexed.toList()
+      ..sort((x, y) {
+        final byCount = y.$2.value.compareTo(x.$2.value);
+        return byCount != 0 ? byCount : x.$1.compareTo(y.$1);
+      });
+    const shown = 4;
+    final reasons = [
+      for (final (_, e) in ranked.take(shown)) '${e.key} x${e.value}',
+      if (ranked.length > shown) 'and ${ranked.length - shown} more',
+    ];
+    return 'Ping ${type.name}: ${results.length - failed.length} of '
+        '${results.length} answered; ${reasons.join('; ')}';
+  }
+
+  static final _portInError = RegExp(r'\b(port|127\.0\.0\.1:)\s*\d+');
+  static final _spaces = RegExp(r'\s+');
+
+  static String _failureReason(String error) {
+    final text = error
+        .replaceAllMapped(
+          _portInError,
+          (m) => m[1] == 'port' ? 'port' : '127.0.0.1',
+        )
+        .replaceAll(_spaces, ' ')
+        .trim();
+    if (text.isEmpty) return 'no reason';
+    return text.length <= 160 ? text : '${text.substring(0, 160)}...';
+  }
+
   static String formatPingValue(int value, PingType type) {
     if (type == PingType.speed) {
       final mbps = value / 1000.0;

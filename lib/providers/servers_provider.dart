@@ -513,7 +513,7 @@ class ServersNotifier extends Notifier<ServersState> {
         .update((set) => {...set, ...pingingIds});
 
     try {
-      await PingService.pingBatch(
+      final measured = await PingService.pingBatch(
         servers,
         pingType,
         settings: settings,
@@ -537,6 +537,8 @@ class ServersNotifier extends Notifier<ServersState> {
           buffered.add(result);
         },
       );
+      final summary = PingService.failureSummary(pingType, measured);
+      if (summary != null) AppLogger.instance.info(summary);
     } finally {
       flushTimer.cancel();
       flushBufferedToState();
