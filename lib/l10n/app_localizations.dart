@@ -3281,6 +3281,48 @@ abstract class AppLocalizations {
   /// **'Open download'**
   String get updateOpenDownload;
 
+  /// No description provided for @updateNoticeProgressChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Update download'**
+  String get updateNoticeProgressChannel;
+
+  /// No description provided for @updateNoticeResultChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'App updates'**
+  String get updateNoticeResultChannel;
+
+  /// No description provided for @updateNoticeDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading update {version}'**
+  String updateNoticeDownloading(Object version);
+
+  /// No description provided for @updateNoticeReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Update {version} downloaded'**
+  String updateNoticeReady(Object version);
+
+  /// No description provided for @updateNoticeReadyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to install'**
+  String get updateNoticeReadyHint;
+
+  /// No description provided for @updateNoticeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download the update'**
+  String get updateNoticeFailed;
+
+  /// No description provided for @updateNoticeFailedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to try again'**
+  String get updateNoticeFailedHint;
+
   /// No description provided for @vpnConnectedGeneric.
   ///
   /// In en, this message translates to:

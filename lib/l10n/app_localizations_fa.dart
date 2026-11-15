@@ -1767,6 +1767,31 @@ class AppLocalizationsFa extends AppLocalizations {
   String get updateOpenDownload => 'باز کردن صفحهٔ دانلود';
 
   @override
+  String get updateNoticeProgressChannel => 'دانلود به‌روزرسانی';
+
+  @override
+  String get updateNoticeResultChannel => 'به‌روزرسانی‌های برنامه';
+
+  @override
+  String updateNoticeDownloading(Object version) {
+    return 'در حال دانلود به‌روزرسانی $version';
+  }
+
+  @override
+  String updateNoticeReady(Object version) {
+    return 'به‌روزرسانی $version دانلود شد';
+  }
+
+  @override
+  String get updateNoticeReadyHint => 'برای نصب ضربه بزنید';
+
+  @override
+  String get updateNoticeFailed => 'دانلود به‌روزرسانی ناموفق بود';
+
+  @override
+  String get updateNoticeFailedHint => 'برای تلاش دوباره ضربه بزنید';
+
+  @override
   String get vpnConnectedGeneric => 'VPN متصل شد';
 
   @override

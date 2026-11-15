@@ -1790,6 +1790,31 @@ class AppLocalizationsRu extends AppLocalizations {
   String get updateOpenDownload => 'Открыть загрузку';
 
   @override
+  String get updateNoticeProgressChannel => 'Загрузка обновления';
+
+  @override
+  String get updateNoticeResultChannel => 'Обновления приложения';
+
+  @override
+  String updateNoticeDownloading(Object version) {
+    return 'Скачивается обновление $version';
+  }
+
+  @override
+  String updateNoticeReady(Object version) {
+    return 'Обновление $version скачано';
+  }
+
+  @override
+  String get updateNoticeReadyHint => 'Нажмите, чтобы установить';
+
+  @override
+  String get updateNoticeFailed => 'Не удалось скачать обновление';
+
+  @override
+  String get updateNoticeFailedHint => 'Нажмите, чтобы попробовать ещё раз';
+
+  @override
   String get vpnConnectedGeneric => 'VPN подключён';
 
   @override

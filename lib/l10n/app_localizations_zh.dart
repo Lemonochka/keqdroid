@@ -1767,6 +1767,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateOpenDownload => '打开下载';
 
   @override
+  String get updateNoticeProgressChannel => '更新下载';
+
+  @override
+  String get updateNoticeResultChannel => '应用更新';
+
+  @override
+  String updateNoticeDownloading(Object version) {
+    return '正在下载更新 $version';
+  }
+
+  @override
+  String updateNoticeReady(Object version) {
+    return '更新 $version 已下载';
+  }
+
+  @override
+  String get updateNoticeReadyHint => '点按以安装';
+
+  @override
+  String get updateNoticeFailed => '无法下载更新';
+
+  @override
+  String get updateNoticeFailedHint => '点按以重试';
+
+  @override
   String get vpnConnectedGeneric => 'VPN 已连接';
 
   @override

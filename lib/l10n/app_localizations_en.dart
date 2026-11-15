@@ -1774,6 +1774,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateOpenDownload => 'Open download';
 
   @override
+  String get updateNoticeProgressChannel => 'Update download';
+
+  @override
+  String get updateNoticeResultChannel => 'App updates';
+
+  @override
+  String updateNoticeDownloading(Object version) {
+    return 'Downloading update $version';
+  }
+
+  @override
+  String updateNoticeReady(Object version) {
+    return 'Update $version downloaded';
+  }
+
+  @override
+  String get updateNoticeReadyHint => 'Tap to install';
+
+  @override
+  String get updateNoticeFailed => 'Couldn\'t download the update';
+
+  @override
+  String get updateNoticeFailedHint => 'Tap to try again';
+
+  @override
   String get vpnConnectedGeneric => 'VPN connected';
 
   @override

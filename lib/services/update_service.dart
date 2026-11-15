@@ -563,6 +563,7 @@ class UpdateService {
     int httpPort = 2081,
     void Function(int received, int total)? onProgress,
     Future<void> Function()? beforeRestart,
+    Future<void> Function()? beforeInstaller,
   }) async {
     final dio = _buildDio(viaLocalProxy: viaLocalProxy, httpPort: httpPort);
     if (info.openInBrowser) {
@@ -670,6 +671,7 @@ class UpdateService {
       );
     }
 
+    await beforeInstaller?.call();
     await OpenFilex.open(file.path);
     return false;
   }

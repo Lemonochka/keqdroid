@@ -935,6 +935,23 @@
     }
   },
   "updateOpenDownload": "Открыть загрузку",
+  "updateNoticeProgressChannel": "Загрузка обновления",
+  "updateNoticeResultChannel": "Обновления приложения",
+  "updateNoticeDownloading": "Скачивается обновление {version}",
+  "@updateNoticeDownloading": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "updateNoticeReady": "Обновление {version} скачано",
+  "@updateNoticeReady": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "updateNoticeReadyHint": "Нажмите, чтобы установить",
+  "updateNoticeFailed": "Не удалось скачать обновление",
+  "updateNoticeFailedHint": "Нажмите, чтобы попробовать ещё раз",
   "vpnConnectedGeneric": "VPN подключён",
   "serversImportedSummary": "Добавлено серверов: {added} из {total}",
   "@serversImportedSummary": {

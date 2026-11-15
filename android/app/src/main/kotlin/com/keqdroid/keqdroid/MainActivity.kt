@@ -165,6 +165,8 @@ class MainActivity : FlutterFragmentActivity() {
         // и на HyperOS под панелью навигации торчала белая полоска. запомненный цвет нужен до первого кадра
         rememberedWindowBackground()?.let { applyWindowBackground(it) }
         pendingDeepLink = deepLinkFrom(intent)?.takeIf { isNewLaunchLink(it) }
+        // новый движок не помнит скачанного прежним, нажатие ничего бы не установило
+        UpdateNotices.cancelResult(this)
     }
 
     // задача помнит интент, которым её открыли, и после смерти процесса или обновления окно встаёт с ним снова:
@@ -517,6 +519,38 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                         "getProcessExits" -> result.success(ProcessExits.recent(this))
                         "getInstalledApk" -> result.success(applicationInfo.sourceDir)
+                        "startUpdateDownload" -> {
+                            UpdateDownloadService.start(
+                                applicationContext,
+                                call.argument<String>("channel") ?: "Update",
+                                call.argument<String>("title") ?: "",
+                            )
+                            result.success(null)
+                        }
+                        "updateDownloadProgress" -> {
+                            UpdateDownloadService.progress(
+                                applicationContext,
+                                call.argument<Int>("percent") ?: -1,
+                            )
+                            result.success(null)
+                        }
+                        "stopUpdateDownload" -> {
+                            UpdateDownloadService.stop()
+                            result.success(null)
+                        }
+                        "showUpdateNotice" -> {
+                            UpdateNotices.result(
+                                applicationContext,
+                                call.argument<String>("channel") ?: "Update",
+                                call.argument<String>("title") ?: "",
+                                call.argument<String>("text") ?: "",
+                            )
+                            result.success(null)
+                        }
+                        "cancelUpdateNotice" -> {
+                            UpdateNotices.cancelResult(applicationContext)
+                            result.success(null)
+                        }
                         "getDeviceModel" -> result.success(android.os.Build.MODEL ?: "Android Device")
                         // по режиму интерфейса, а не по размеру: планшет в альбомной тоже широкий
                         "isTelevision" -> result.success(
@@ -1364,6 +1398,7 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onDestroy() {
         vpnServiceBinder?.setStatusListener(null)
         stopWallpaperColorsWatch()
+        if (!isChangingConfigurations) UpdateDownloadService.stop()
 
         if (vpnStatusReceiverRegistered) {
             try {

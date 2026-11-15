@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:keqdroid/shared/ui/expressive.dart';
 
@@ -9,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/providers.dart';
 import '../../services/resume_after_update.dart';
+import '../../services/update_download_notice.dart';
 import '../../services/update_service.dart';
 import '../../tunnel/local_port_plan.dart';
 import '../../tunnel/tunnel_state.dart';
@@ -266,6 +268,10 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
       _applying = false;
       _progress = 0;
     });
+    final notice = UpdateDownloadNotice.supported && !widget.info.openInBrowser
+        ? UpdateDownloadNotice(context.l10n, widget.info.displayLatestVersion)
+        : null;
+    if (notice != null) unawaited(notice.started());
 
     try {
       final vpn = ref.read(vpnStateProvider).value;
@@ -276,10 +282,11 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
         // порт сессии: если настроенный был занят, ядро слушает другой
         httpPort: ActiveLocalPorts().httpPortOr(settings.httpPort),
         onProgress: (received, total) {
-          if (total > 0 && mounted) {
-            setState(() => _progress = received / total);
-          }
+          if (total <= 0) return;
+          notice?.progress(received / total);
+          if (mounted) setState(() => _progress = received / total);
         },
+        beforeInstaller: notice?.downloaded,
         // только перед самым выходом: путь через браузер этот колбэк не зовёт
         beforeRestart: Platform.isWindows || Platform.isLinux
             ? () async {
@@ -299,6 +306,7 @@ class _UpdateDialogState extends ConsumerState<_UpdateDialog> {
         Navigator.pop(context);
       }
     } catch (e) {
+      await notice?.failed();
       if (mounted) {
         setState(() {
           _downloading = false;

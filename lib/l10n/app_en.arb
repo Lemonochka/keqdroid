@@ -1017,6 +1017,23 @@
     }
   },
   "updateOpenDownload": "Open download",
+  "updateNoticeProgressChannel": "Update download",
+  "updateNoticeResultChannel": "App updates",
+  "updateNoticeDownloading": "Downloading update {version}",
+  "@updateNoticeDownloading": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "updateNoticeReady": "Update {version} downloaded",
+  "@updateNoticeReady": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "updateNoticeReadyHint": "Tap to install",
+  "updateNoticeFailed": "Couldn't download the update",
+  "updateNoticeFailedHint": "Tap to try again",
   "vpnConnectedGeneric": "VPN connected",
   "serversImportedSummary": "Servers added: {added} of {total}",
   "@serversImportedSummary": {
