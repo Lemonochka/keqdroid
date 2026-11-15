@@ -546,7 +546,8 @@ class PingService {
   static VpnEngine get _engine => debugEngine ?? VpnEngine();
 
   static bool get multiPingSupported =>
-      debugMultiPingSupported ?? Platform.isAndroid;
+      debugMultiPingSupported ??
+      (Platform.isAndroid || Platform.isWindows || Platform.isLinux);
 
   static const multiPingChunk = 10;
 

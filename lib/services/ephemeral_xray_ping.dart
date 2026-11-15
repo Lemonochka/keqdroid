@@ -9,6 +9,7 @@ import '../core/app_logger.dart';
 import '../tunnel/linux_core_paths.dart';
 import '../tunnel/windows_core_paths.dart';
 import '../tunnel/vpn_backend.dart';
+import '../utils/pooled.dart';
 import 'windows_desktop_service.dart';
 
 final _ansiEscape = RegExp(r'\x1B\[[0-9;]*[A-Za-z]');
@@ -55,8 +56,12 @@ class EphemeralXrayPing {
     return Future<String?>.value(null);
   }
 
+  @visibleForTesting
+  static Future<String?> Function(VpnBackend core)? debugResolveCore;
+
   static Future<String?> _resolveCore(VpnBackend core) =>
-      core == VpnBackend.mihomo ? _resolveMihomo() : _resolveXray();
+      debugResolveCore?.call(core) ??
+      (core == VpnBackend.mihomo ? _resolveMihomo() : _resolveXray());
 
   // свой каталог: mihomo держит cache.db через bbolt с секундным таймаутом на захват
   static List<String> _coreArgs(
@@ -192,6 +197,143 @@ class EphemeralXrayPing {
     return out;
   }
 
+  // не поднялось ядро, значит null: по нему PingService делит пачку пополам, а список отказов
+  // той же длины он принял бы за ответ, и живые соседи негодного сервера ушли бы в красные
+  static Future<
+      List<
+          ({
+            String id,
+            bool success,
+            int? latencyMs,
+            String error,
+            int? httpStatus,
+          })>?> urlTestMulti({
+    required String configJson,
+    required List<(String id, int port)> probes,
+    required String testUrl,
+    required int timeoutMs,
+    VpnBackend core = VpnBackend.xray,
+    bool keepAlive = true,
+    int concurrency = 16,
+    void Function(
+      ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+          item,
+    )? onEach,
+  }) async {
+    if (probes.isEmpty) return const [];
+    if (!Platform.isWindows && !Platform.isLinux) return null;
+
+    final coreBin = await _resolveCore(core);
+    if (coreBin == null) {
+      final error = '${core.wireValue} not found. $_binariesHint';
+      return [
+        for (final (id, _) in probes)
+          (id: id, success: false, latencyMs: null, error: error, httpStatus: null),
+      ];
+    }
+
+    final sessionDir = await _sessionDir();
+    final configFile = File(p.join(sessionDir.path, '${core.wireValue}_ping_multi.json'));
+    Process? process;
+    try {
+      await configFile.writeAsString(configJson);
+      process = await Process.start(
+        coreBin,
+        _coreArgs(core, configFile.path, sessionDir.path),
+        workingDirectory: sessionDir.path,
+        mode: ProcessStartMode.normal,
+      );
+      unawaited(_attachCoreProcess(process.pid));
+      final log = _CoreLog(process);
+      final coreLife = Stopwatch()..start();
+
+      for (var i = 0; i < probes.length; i++) {
+        final port = probes[i].$2;
+        final left = coreStartupBudget - coreLife.elapsed;
+        final startup = await _waitForPort(
+          '127.0.0.1',
+          port,
+          left > _laterPortWait ? left : _laterPortWait,
+          process: process,
+        );
+        if (startup.ready) continue;
+        final error = _startupError(startup.exitCode, port, log);
+        // живое ядро без единого порта медленное, а не придирчивое: деление пополам
+        // стоило бы по сроку старта на каждую половину. mihomo с занятым портом не выходит,
+        // но остальные его порты открыты, и такую пачку делим
+        final slowCore = startup.exitCode == null &&
+            i == 0 &&
+            !await _anyPortOpen([for (final probe in probes.skip(1)) probe.$2]);
+        if (slowCore) {
+          return [
+            for (final (id, _) in probes)
+              (id: id, success: false, latencyMs: null, error: error, httpStatus: null),
+          ];
+        }
+        AppLogger.instance.debug(
+          'EphemeralXrayPing: ${probes.length} probes on one ${core.wireValue}, splitting: $error',
+        );
+        return null;
+      }
+
+      // первая удачная проба значит, что ядро дочитало конфиг: остальным отказам верим сразу
+      var coreAwake = false;
+      return await mapPooled(probes, concurrency, (probe) async {
+        while (true) {
+          final result = await _httpProbeViaSocks(
+            testUrl: testUrl,
+            socksPort: probe.$2,
+            timeoutMs: timeoutMs,
+            keepAlive: keepAlive,
+          );
+          if (result.success) coreAwake = true;
+          if (result.success ||
+              coreAwake ||
+              !retryProbeWhileCoreWakesUp(
+                core: core,
+                sinceCoreStart: coreLife.elapsed,
+              )) {
+            final item = (
+              id: probe.$1,
+              success: result.success,
+              latencyMs: result.latencyMs,
+              error: result.error,
+              httpStatus: result.httpStatus,
+            );
+            onEach?.call(item);
+            return item;
+          }
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+        }
+      });
+    } catch (e) {
+      AppLogger.instance.debug('EphemeralXrayPing multi failed: $e');
+      return null;
+    } finally {
+      await _killProcess(process);
+      try {
+        await sessionDir.delete(recursive: true);
+      } catch (_) {}
+    }
+  }
+
+  static const _laterPortWait = Duration(seconds: 1);
+
+  static Future<bool> _anyPortOpen(List<int> ports) async {
+    for (final port in ports) {
+      try {
+        final socket = await Socket.connect(
+          InternetAddress.loopbackIPv4,
+          port,
+          timeout: const Duration(milliseconds: 200),
+        );
+        socket.destroy();
+        return true;
+      } catch (_) {}
+    }
+    return false;
+  }
+
   static Future<
       List<({String id, bool success, int? kbps, String error})>> speedTestBatch({
     required List<({String id, String xrayConfigJson})> items,
@@ -291,7 +433,7 @@ class EphemeralXrayPing {
         final startup = await _waitForPort(
           '127.0.0.1',
           port,
-          Duration(milliseconds: timeoutMs.clamp(500, _startupBudgetMs)),
+          coreStartupBudget,
           process: process,
         );
         if (startup.ready) break;
@@ -385,7 +527,7 @@ class EphemeralXrayPing {
       final startup = await _waitForPort(
         '127.0.0.1',
         socksPort,
-        Duration(milliseconds: timeoutMs.clamp(500, _startupBudgetMs)),
+        coreStartupBudget,
         process: process,
       );
       if (!startup.ready) {
@@ -570,8 +712,9 @@ class EphemeralXrayPing {
     return trimmed;
   }
 
-  // до шестнадцати ядер стартуют разом и делят диск с антивирусом, 5 с не хватало
-  static const int _startupBudgetMs = 12000;
+  // ядра стартуют пачкой и делят диск с антивирусом, 5 с не хватало. таймаут пробы сюда не годится:
+  // он обрезал срок до 8 с у пинга и до 4 у автовыбора, #18
+  static const coreStartupBudget = Duration(seconds: 12);
 
   static Future<({bool ready, int? exitCode})> _waitForPort(
     String host,

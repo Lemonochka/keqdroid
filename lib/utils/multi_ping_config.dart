@@ -184,6 +184,9 @@ abstract final class MultiPingConfig {
       'log-level': 'silent',
       'find-process-mode': 'off',
       'geo-auto-update': false,
+      // привязка к сетевой карте в TUN на Windows: без неё замер REALITY уходил на сайт маски
+      if (first['interface-name'] != null)
+        'interface-name': first['interface-name'],
       if (first['dns'] != null) 'dns': first['dns'],
       'proxies': proxies,
       if (groups.isNotEmpty) 'proxy-groups': groups,

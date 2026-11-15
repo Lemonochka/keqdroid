@@ -704,8 +704,17 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     bool keepAlive = true,
     int concurrency = 16,
     UrlTestProgress? onEach,
-  }) async =>
-      null;
+  }) =>
+      EphemeralXrayPing.urlTestMulti(
+        configJson: config,
+        probes: probes,
+        core: core,
+        testUrl: testUrl,
+        timeoutMs: timeoutMs,
+        keepAlive: keepAlive,
+        concurrency: concurrency,
+        onEach: onEach,
+      );
 
   @override
   Future<

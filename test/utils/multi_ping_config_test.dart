@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/multi_ping_config.dart';
+import 'package:keqdroid/utils/socks5_credentials.dart';
 
 /// Общий конфиг замера: весь батч меряется одним ядром вместо ядра на сервер.
 ///
@@ -288,6 +290,93 @@ rules:
           contains('proxy-providers'),
         )),
       );
+    });
+  });
+
+  // на ПК пачку меряет одно ядро так же, как на Android; в TUN на Windows его выход привязан к сетевой
+  // карте (3b29d8f), и склейка обязана эту привязку донести, иначе REALITY с маской снова краснеет
+  group('пачка на ПК', () {
+    const iface = 'Ethernet';
+    const uuid = '00000000-0000-4000-8000-000000000000';
+    const links = [
+      'vless://$uuid@198.51.100.40:443?type=tcp&security=reality'
+          '&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome#de',
+      'trojan://pass@198.51.100.41:8443?sni=tr.example&type=ws&path=%2Fw#nl',
+    ];
+
+    setUp(() => Socks5Credentials().init('u', 'p'));
+
+    Map<String, dynamic> mihomo({String? bind}) => jsonDecode(
+          MultiPingConfig.mergeMihomo(
+            [
+              for (var i = 0; i < links.length; i++)
+                (
+                  id: '$i',
+                  configJson: MihomoConfigGen.generatePingConfig(
+                    links[i],
+                    const AppSettings(),
+                    socksPort: 3001 + i,
+                    httpInbound: true,
+                    outboundInterface: bind,
+                  ),
+                  port: 3001 + i,
+                ),
+            ],
+            httpListeners: true,
+          ),
+        ) as Map<String, dynamic>;
+
+    Map<String, dynamic> xray({String? bind}) => jsonDecode(
+          MultiPingConfig.mergeXray([
+            for (var i = 0; i < links.length; i++)
+              (
+                id: '$i',
+                configJson: ConfigGeneratorV2.generatePingConfig(
+                  links[i],
+                  const AppSettings(),
+                  socksPort: 3001 + i,
+                  httpInbound: true,
+                  outboundInterface: bind,
+                ),
+                port: 3001 + i,
+              ),
+          ]),
+        ) as Map<String, dynamic>;
+
+    test('mihomo: привязка к сетевой карте доезжает до общего конфига', () {
+      expect(mihomo(bind: iface)['interface-name'], iface);
+    });
+
+    test('mihomo: без привязки ключа нет, как на Android', () {
+      expect(mihomo().containsKey('interface-name'), isFalse);
+    });
+
+    test('mihomo: листенеры http, проба на ПК говорит CONNECT', () {
+      final listeners = (mihomo()['listeners'] as List).cast<Map>();
+      expect(listeners.map((l) => l['type']), ['http', 'http']);
+      expect(listeners.map((l) => l['port']), ['3001', '3002']);
+    });
+
+    test('xray: каждый выход наружу привязан, DNS пинга свой', () {
+      final merged = xray(bind: iface);
+      final proxies = (merged['outbounds'] as List)
+          .cast<Map<String, dynamic>>()
+          .where((o) => o['tag'].toString().startsWith('proxy-'))
+          .toList();
+      expect(proxies, hasLength(links.length));
+      for (final proxy in proxies) {
+        expect(proxy['streamSettings']['sockopt']['interface'], iface);
+      }
+      expect(
+        (merged['dns'] as Map)['servers'],
+        contains('https+local://1.1.1.1/dns-query'),
+      );
+    });
+
+    test('xray: инбаунды http на своих портах', () {
+      final inbounds = (xray()['inbounds'] as List).cast<Map>();
+      expect(inbounds.map((i) => i['protocol']), ['http', 'http']);
+      expect(inbounds.map((i) => i['port']), [3001, 3002]);
     });
   });
 }

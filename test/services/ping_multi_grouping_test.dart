@@ -113,14 +113,16 @@ proxies:
     expect(PingService.mergeableForMultiPing(''), isFalse);
   });
 
-  test('групповой путь включается только там, где его умеют', () {
-    // На десктопе процессов не жалко, и общий конфиг там пришлось бы
-    // заворачивать в keqrnel, чьи инбаунды принадлежат sing-box.
-    expect(PingService.multiPingSupported, isFalse, reason: 'тесты идут на Windows');
+  test('на ПК пачку тоже меряет одно ядро', () {
+    // #18, 13.11.2026: на Windows «пинг всех» поднимал по ядру на сервер,
+    // шестнадцать разом, и у человека не ответил ни один, а поштучно все.
+    // keqrnel, из-за которого общий конфиг на ПК не годился, с 19.10.2026
+    // не собирается: на ПК те же xray и mihomo, что на телефоне.
+    expect(PingService.multiPingSupported, isTrue, reason: 'тесты идут на ПК');
 
-    PingService.debugMultiPingSupported = true;
+    PingService.debugMultiPingSupported = false;
     addTearDown(() => PingService.debugMultiPingSupported = null);
-    expect(PingService.multiPingSupported, isTrue);
+    expect(PingService.multiPingSupported, isFalse);
   });
 
   test('на десктопе замеров идёт больше, чем на телефоне', () {
