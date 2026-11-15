@@ -1,27 +1,38 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/app_settings.dart';
+import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/tunnel/tunnel_state.dart';
 import 'package:keqdroid/ui/desktop/desktop_rail.dart';
+import 'package:keqdroid/ui/desktop/sidebar_group_nav.dart';
 
 import '../helpers/test_storage.dart';
 
 /// Боковая панель ПК по спеке M3E: разделы как кнопки-переключатели, кнопка меню
 /// сворачивает панель, в узком окне она свёрнута сама.
-class _NoSubs extends SubscriptionsNotifier {
+class _Subs extends SubscriptionsNotifier {
+  _Subs(this._subs);
+
+  final List<Subscription> _subs;
+
   @override
-  Future<List<Subscription>> build() async => const [];
+  Future<List<Subscription>> build() async => _subs;
 }
 
-class _NoServers extends ServersNotifier {
+class _Servers extends ServersNotifier {
+  _Servers(this._servers);
+
+  final List<ServerItem> _servers;
+
   @override
-  ServersState build() => ServersState(servers: const []);
+  ServersState build() => ServersState(servers: _servers);
 }
 
 // настоящий заводит таймеры сторожа автовыбора
@@ -36,6 +47,8 @@ Future<(List<int>, ProviderContainer)> _pumpRail(
   Size window = const Size(1200, 760),
   AppSettings settings = const AppSettings(),
   Locale locale = const Locale('en'),
+  List<Subscription> subs = const [],
+  List<ServerItem> servers = const [],
 }) async {
   final tapped = <int>[];
   tester.view.physicalSize = window;
@@ -47,8 +60,8 @@ Future<(List<int>, ProviderContainer)> _pumpRail(
   final container = ProviderContainer(
     overrides: [
       storageProvider.overrideWithValue(storage!),
-      subscriptionsProvider.overrideWith(_NoSubs.new),
-      serversProvider.overrideWith(_NoServers.new),
+      subscriptionsProvider.overrideWith(() => _Subs(subs)),
+      serversProvider.overrideWith(() => _Servers(servers)),
       vpnStateProvider.overrideWith(_IdleVpn.new),
     ],
   );
@@ -192,5 +205,45 @@ void main() {
     final subscriptions = tester.getRect(find.text('Subscriptions')).top;
     // высота раздела 64 и зазор 4
     expect(subscriptions - servers, moreOrLessEquals(68, epsilon: 0.5));
+  });
+
+  testWidgets('переход по разделам и наведение не перестраивают быстрый переход', (tester) async {
+    final subs = [
+      for (var s = 0; s < 3; s++)
+        Subscription(id: 'sub$s', name: 'Provider $s', url: 'https://example.com/$s'),
+    ];
+    final servers = [
+      for (var s = 0; s < 3; s++)
+        for (var i = 0; i < 40; i++)
+          ServerItem(
+            id: 's$s-$i',
+            config: 'vless://00000000-0000-4000-8000-000000000000@198.51.100.$i:443'
+                '?type=tcp&security=reality&pbk=k&sni=example.com#S$s-$i',
+            type: ServerItemType.subscription,
+            subscriptionId: 'sub$s',
+          ),
+    ];
+    await _pumpRail(tester, subs: subs, servers: servers);
+    expect(find.byType(SidebarGroupNav), findsOneWidget);
+    expect(find.text('Provider 1'), findsWidgets);
+
+    var navBuilds = 0;
+    debugOnRebuildDirtyWidget = (element, _) {
+      if (element.widget is SidebarGroupNav) navBuilds++;
+    };
+    addTearDown(() => debugOnRebuildDirtyWidget = null);
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: tester.getCenter(find.text('Servers')));
+    await mouse.moveTo(tester.getCenter(find.text('Settings')));
+    for (final label in ['Subscriptions', 'Settings', 'Servers']) {
+      await tester.tap(find.text(label));
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+    }
+    debugOnRebuildDirtyWidget = null;
+    expect(navBuilds, 0);
   });
 }

@@ -48,6 +48,7 @@ class ServerItem {
   ProxyChainConfig? _cachedChain;
   bool _chainParsed = false;
   String? _cachedSameServerKey;
+  String? _cachedProtocol;
 
   ServerItem({
     required this.id,
@@ -403,7 +404,10 @@ class ServerItem {
     ];
   }
 
-  String get protocol {
+  // раскладка по группам спрашивает каждый сервер, а здесь копия всего конфига в нижнем регистре
+  String get protocol => _cachedProtocol ??= _protocolOf();
+
+  String _protocolOf() {
     final lower = config.toLowerCase();
     if (lower.startsWith('${ProxyChainConfig.scheme}://')) {
       // битая цепочка остаётся unknown, иначе chainConfig! ниже упадёт на null

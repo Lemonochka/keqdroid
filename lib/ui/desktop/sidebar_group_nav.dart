@@ -11,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/server_group.dart';
+import '../../models/server_item.dart';
+import '../../models/subscription.dart';
 import '../../models/subscription_card_theme.dart';
 import '../../providers/providers.dart';
 import '../../shared/ui/server_group_anchors.dart';
@@ -40,6 +42,8 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
 
   final _carousel = _CoverController();
   List<ServerGroupRef> _groups = const [];
+  List<ServerItem>? _groupsOf;
+  List<Subscription>? _groupsSubs;
   int _shown = 0;
 
   @override
@@ -193,7 +197,11 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
       vpnStateProvider.select((a) => a.value?.status == VpnStatus.connected),
     );
 
-    _groups = buildServerGroups(servers: servers, subscriptions: subs);
+    if (!identical(servers, _groupsOf) || !identical(subs, _groupsSubs)) {
+      _groups = buildServerGroups(servers: servers, subscriptions: subs);
+      _groupsOf = servers;
+      _groupsSubs = subs;
+    }
     if (_groups.length < 2) return const SizedBox.shrink();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _follow();
