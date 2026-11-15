@@ -573,7 +573,9 @@ class _VisibilityTickerGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final visible = ref.watch(desktopUiVisibleProvider);
+    // репетиции подключения нужны тикеры и в трее, иначе её анимации стоят и шейдеры не собираются
+    final visible =
+        ref.watch(desktopUiVisibleProvider) || ref.watch(connectRehearsalProvider);
     return TickerMode(enabled: visible, child: child);
   }
 }

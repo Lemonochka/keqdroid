@@ -31,6 +31,7 @@ import '../../shared/ui/halloween/halloween_icons.dart';
 import '../../shared/ui/liquid_toast.dart';
 import '../../shared/ui/update_dialog.dart';
 import '../../utils/clipboard_import.dart';
+import 'connect_rehearsal_host.dart';
 import 'desktop_connection_mode.dart';
 import 'desktop_rail.dart';
 import 'desktop_tab_switcher.dart';
@@ -418,19 +419,22 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
           ),
           VerticalDivider(width: 1, color: AppTheme.divider(context)),
           Expanded(
-            child: DesktopTabSwitcher(
-              index: _index,
-              // подписки к этому времени уже прочитаны из хранилища
-              warmUpAfter: const Duration(seconds: 3),
-              windowHidden: () => !ref.read(desktopUiVisibleProvider),
-              children: [
-                for (final tab in const [
-                  ServersTab(),
-                  SubscriptionsTab(),
-                  SettingsTab(),
-                ])
-                  _DesktopTabHost(child: tab),
-              ],
+            child: ConnectRehearsalHost(
+              enabled: Platform.isWindows,
+              child: DesktopTabSwitcher(
+                index: _index,
+                // подписки к этому времени уже прочитаны из хранилища
+                warmUpAfter: const Duration(seconds: 3),
+                windowHidden: () => !ref.read(desktopUiVisibleProvider),
+                children: [
+                  for (final tab in const [
+                    ServersTab(),
+                    SubscriptionsTab(),
+                    SettingsTab(),
+                  ])
+                    _DesktopTabHost(child: tab),
+                ],
+              ),
             ),
           ),
         ],

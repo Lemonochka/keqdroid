@@ -149,3 +149,13 @@ final desktopWindowVisibleProvider =
 final desktopUiVisibleProvider = Provider<bool>((ref) {
   return ref.watch(desktopWindowVisibleProvider);
 });
+
+class ConnectRehearsalNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set(bool value) => state = value;
+}
+
+final connectRehearsalProvider =
+    NotifierProvider<ConnectRehearsalNotifier, bool>(ConnectRehearsalNotifier.new);
