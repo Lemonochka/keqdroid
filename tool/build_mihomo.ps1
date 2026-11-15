@@ -54,7 +54,7 @@
 #   powershell -File tool/build_mihomo.ps1 -Version v1.19.33
 
 param(
-    [string]$Version = "v1.19.32",
+    [string]$Version = "v1.19.34",
     [ValidateSet("all", "android", "windows", "linux")]
     [string]$Target = "all",
     [string]$BuildDir = (Join-Path $PSScriptRoot "..\..\mihomo-build")
