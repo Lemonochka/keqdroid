@@ -4,7 +4,32 @@
 #include <psapi.h>
 #include <tlhelp32.h>
 
+#include <atomic>
+#include <memory>
+#include <thread>
+#include <vector>
+
 namespace {
+
+std::atomic<bool> g_prefetching{false};
+
+void PrefetchCommittedMemory() {
+  std::vector<WIN32_MEMORY_RANGE_ENTRY> ranges;
+  MEMORY_BASIC_INFORMATION info{};
+  const char* address = nullptr;
+  while (VirtualQuery(address, &info, sizeof(info)) == sizeof(info)) {
+    const bool readable =
+        info.Protect != 0 && (info.Protect & (PAGE_NOACCESS | PAGE_GUARD)) == 0;
+    if (info.State == MEM_COMMIT && readable &&
+        (info.Type == MEM_PRIVATE || info.Type == MEM_IMAGE)) {
+      ranges.push_back({info.BaseAddress, info.RegionSize});
+    }
+    address = static_cast<const char*>(info.BaseAddress) + info.RegionSize;
+  }
+  if (!ranges.empty()) {
+    PrefetchVirtualMemory(GetCurrentProcess(), ranges.size(), ranges.data(), 0);
+  }
+}
 
 // своего вызова для чужого процесса в Win32 нет, а снимок раз в десять минут ничего не стоит
 uint32_t ThreadCount(DWORD pid) {
@@ -54,4 +79,18 @@ ProcessResources QueryProcessResources(uint32_t pid) {
 
   if (!self) CloseHandle(process);
   return out;
+}
+
+void PrefetchOwnMemory(DWORD wait_ms) {
+  if (g_prefetching.exchange(true)) return;
+  std::shared_ptr<void> done(CreateEventW(nullptr, TRUE, FALSE, nullptr),
+                             [](HANDLE event) {
+                               if (event != nullptr) CloseHandle(event);
+                             });
+  std::thread([done] {
+    PrefetchCommittedMemory();
+    g_prefetching = false;
+    if (done.get() != nullptr) SetEvent(done.get());
+  }).detach();
+  if (done.get() != nullptr) WaitForSingleObject(done.get(), wait_ms);
 }

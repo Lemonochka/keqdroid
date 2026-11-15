@@ -2,6 +2,7 @@
 
 #include "tunnel_channel_handler.h"
 #include "window_placement.h"
+#include "windows_process_memory.h"
 
 namespace {
 
@@ -41,6 +42,10 @@ HWND WindowsTrayGetMainHwnd() {
 bool WindowsTrayActivateMainWindow() {
   if (g_tray_hwnd == nullptr || !::IsWindow(g_tray_hwnd)) {
     return false;
+  }
+  if (g_window_hidden_in_tray || !::IsWindowVisible(g_tray_hwnd)) {
+    // дольше не ждём: окно появится, а остаток подтянется в фоне
+    PrefetchOwnMemory(150);
   }
   KeqdroidNotifyWindowVisibility(true);
   g_window_hidden_in_tray = false;
