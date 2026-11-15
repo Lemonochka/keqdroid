@@ -1187,7 +1187,7 @@ class _XrayTunSection extends ConsumerWidget {
                 l10n.settingsTunSectionNote,
               ),
             ),
-            // TUN xray держит сам и только на gVisor, выбирать там нечего
+            // TUN xray держит сам на своём единственном стеке, выбирать там нечего
             if (!xray) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),

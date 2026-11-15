@@ -37,7 +37,7 @@ that the next one keeps; a table left behind only marks replies, and without
 the rule the mark leads nowhere. Linux desktop only: Android gets the TUN
 descriptor and never adds routes, and Windows keeps its own code.
 diff --git a/proxy/tun/tun_linux.go b/proxy/tun/tun_linux.go
-index 78e2dd4..da10ff5 100644
+index 970cb4c..6f44be1 100644
 --- a/proxy/tun/tun_linux.go
 +++ b/proxy/tun/tun_linux.go
 @@ -6,10 +6,14 @@ import (
@@ -53,9 +53,9 @@ index 78e2dd4..da10ff5 100644
 +	"github.com/sagernet/nftables/binaryutil"
 +	"github.com/sagernet/nftables/expr"
  	"github.com/vishvananda/netlink"
- 	appdns "github.com/xtls/xray-core/app/dns"
  	"github.com/xtls/xray-core/common/errors"
-@@ -40,6 +44,7 @@ type LinuxTun struct {
+ 	"github.com/xtls/xray-core/common/platform"
+@@ -27,6 +31,7 @@ type LinuxTun struct {
  
  	interfaceAddresses []netlink.Addr
  	systemRoutes       []netlink.Route
@@ -63,7 +63,7 @@ index 78e2dd4..da10ff5 100644
  	routeMonitorStop   chan struct{}
  	routeMonitorOnce   sync.Once
  
-@@ -514,34 +519,276 @@ func (t *LinuxTun) unsetInterfaceAddresses() error {
+@@ -435,34 +440,276 @@ func (t *LinuxTun) unsetInterfaceAddresses() error {
  	return errors.Combine(errs...)
  }
  

@@ -24,107 +24,11 @@ to, from Settings, core settings.
 Android and desktop: since the move off keqrnel the desktop TUN is xray's own
 tun inbound as well, built from the same tree by tool/build_xray_cores.ps1.
 
---- a/proxy/tun/udp_fullcone.go
-+++ b/proxy/tun/udp_fullcone.go
-@@ -16,21 +16,33 @@
- 	dest *net.Destination
- }
- 
-+// keqdroid: a flow keyed by the source alone went out through whatever its
-+// first datagram matched, and an address routed to another outbound later on
-+// rode along. Keyed by source and exit, a socket that stays on one exit keeps
-+// one flow (full cone as before), and an address the rules send elsewhere
-+// gets its own.
-+type udpKey struct {
-+	src  net.Destination
-+	exit string
-+}
-+
- // sub-handler specifically for udp connections under main handler
- type udpConnectionHandler struct {
- 	sync.RWMutex
- 
--	udpConns map[net.Destination]*udpConn
-+	udpConns map[udpKey]*udpConn
- 
- 	handleConnection func(conn net.Conn, dest net.Destination)
- 	writePacket      func(data []byte, src net.Destination, dst net.Destination) error
-+	exitOf           func(src net.Destination, dst net.Destination) string
- }
- 
--func newUdpConnectionHandler(handleConnection func(conn net.Conn, dest net.Destination), writePacket func(data []byte, src net.Destination, dst net.Destination) error) *udpConnectionHandler {
-+func newUdpConnectionHandler(handleConnection func(conn net.Conn, dest net.Destination), writePacket func(data []byte, src net.Destination, dst net.Destination) error, exitOf func(src net.Destination, dst net.Destination) string) *udpConnectionHandler {
- 	handler := &udpConnectionHandler{
--		udpConns:         make(map[net.Destination]*udpConn),
-+		udpConns:         make(map[udpKey]*udpConn),
- 		handleConnection: handleConnection,
- 		writePacket:      writePacket,
-+		exitOf:           exitOf,
- 	}
- 
- 	return handler
-@@ -39,8 +51,12 @@
- // HandlePacket handles UDP packets coming from tun, to forward to the dispatcher
- // this custom handler support FullCone NAT of returning packets, binding connection only by the source addr:port
- func (u *udpConnectionHandler) HandlePacket(src net.Destination, dst net.Destination, data []byte) {
-+	key := udpKey{src: src}
-+	if u.exitOf != nil {
-+		key.exit = u.exitOf(src, dst)
-+	}
- 	u.RLock()
--	conn, found := u.udpConns[src]
-+	conn, found := u.udpConns[key]
- 	if found {
- 		select {
- 		case conn.egress <- &packet{
-@@ -58,11 +74,11 @@
- 	u.Lock()
- 	defer u.Unlock()
- 
--	conn, found = u.udpConns[src]
-+	conn, found = u.udpConns[key]
- 	if !found {
- 		egress := make(chan *packet, 1024)
--		conn = &udpConn{handler: u, egress: egress, src: src, dst: dst}
--		u.udpConns[src] = conn
-+		conn = &udpConn{handler: u, egress: egress, key: key, src: src, dst: dst}
-+		u.udpConns[key] = conn
- 
- 		go u.handleConnection(conn, dst)
- 	}
-@@ -81,8 +97,8 @@
- func (u *udpConnectionHandler) connectionFinished(conn *udpConn) {
- 	u.Lock()
- 	// Close runs twice per flow; a newer conn may already own this src.
--	if u.udpConns[conn.src] == conn {
--		delete(u.udpConns, conn.src)
-+	if u.udpConns[conn.key] == conn {
-+		delete(u.udpConns, conn.key)
- 		close(conn.egress)
- 	}
- 	u.Unlock()
-@@ -93,6 +109,7 @@
- 	handler *udpConnectionHandler
- 
- 	egress chan *packet
-+	key    udpKey
- 	src    net.Destination
- 	dst    net.Destination
- }
---- a/proxy/tun/stack_gvisor.go
-+++ b/proxy/tun/stack_gvisor.go
-@@ -99,7 +99,7 @@
- 	ipStack.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpForwarder.HandlePacket)
- 
- 	// Use custom UDP packet handler, instead of strict gVisor forwarder, for FullCone NAT support
--	udpForwarder := newUdpConnectionHandler(t.handler.HandleConnection, t.writeRawUDPPacket)
-+	udpForwarder := newUdpConnectionHandler(t.handler.HandleConnection, t.writeRawUDPPacket, t.handler.udpExitFunc())
- 	ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, func(id stack.TransportEndpointID, pkt *stack.PacketBuffer) bool {
- 		data := pkt.Data().AsRange().ToSlice()
- 		// if len(data) == 0 {
+diff --git a/proxy/tun/handler.go b/proxy/tun/handler.go
+index 59b643b..733aa7b 100644
 --- a/proxy/tun/handler.go
 +++ b/proxy/tun/handler.go
-@@ -35,6 +35,10 @@
+@@ -35,6 +35,10 @@ type Handler struct {
  	sniffingRequest session.SniffingRequest
  	uplinkCounter   stats.Counter
  	downlinkCounter stats.Counter
@@ -135,7 +39,7 @@ tun inbound as well, built from the same tree by tool/build_xray_cores.ps1.
  }
  
  type tunUDPStatsWriter struct {
-@@ -78,6 +82,7 @@
+@@ -97,6 +101,7 @@ func (t *Handler) Init(ctx context.Context, pm policy.Manager, dispatcher routin
  	}
  
  	t.ctx = core.ToBackgroundDetachedContext(ctx)
@@ -143,6 +47,39 @@ tun inbound as well, built from the same tree by tool/build_xray_cores.ps1.
  	t.policyManager = pm
  	t.dispatcher = dispatcher
  
+diff --git a/proxy/tun/stack.go b/proxy/tun/stack.go
+index 5048ae9..b6712d2 100644
+--- a/proxy/tun/stack.go
++++ b/proxy/tun/stack.go
+@@ -116,7 +116,11 @@ func NewStack(ctx context.Context, options StackOptions, handler ConnectionHandl
+ 	}
+ 	if handler != nil {
+ 		s.handle = handler.HandleConnection
+-		s.udp = newUdpConnectionHandler(s.handle, s.writeUDP)
++		var exitOf func(src net.Destination, dst net.Destination) string
++		if h, ok := handler.(*Handler); ok {
++			exitOf = h.udpExitFunc()
++		}
++		s.udp = newUdpConnectionHandler(s.handle, s.writeUDP, exitOf)
+ 	}
+ 	return s, nil
+ }
+diff --git a/proxy/tun/stack_test.go b/proxy/tun/stack_test.go
+index e6b7b31..12e91e9 100644
+--- a/proxy/tun/stack_test.go
++++ b/proxy/tun/stack_test.go
+@@ -112,7 +112,7 @@ func newTestStack(t *testing.T, l *link, handle func(net.Conn, net.Destination))
+ 		s.segmenter, s.window, l.wrong = l, tcpLargeWindow, t.Error
+ 	}
+ 	if handle != nil {
+-		s.udp = newUdpConnectionHandler(handle, s.writeUDP)
++		s.udp = newUdpConnectionHandler(handle, s.writeUDP, nil)
+ 	}
+ 	s.Start()
+ 	t.Cleanup(func() {
+diff --git a/proxy/tun/udp_exit.go b/proxy/tun/udp_exit.go
+new file mode 100644
+index 0000000..4e55a85
 --- /dev/null
 +++ b/proxy/tun/udp_exit.go
 @@ -0,0 +1,90 @@
@@ -236,14 +173,18 @@ tun inbound as well, built from the same tree by tool/build_xray_cores.ps1.
 +	}
 +	return fallback
 +}
+diff --git a/proxy/tun/udp_exit_test.go b/proxy/tun/udp_exit_test.go
+new file mode 100644
+index 0000000..3673918
 --- /dev/null
 +++ b/proxy/tun/udp_exit_test.go
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,40 @@
 +package tun
 +
 +import (
 +	"testing"
 +
++	"github.com/xtls/xray-core/common/buf"
 +	"github.com/xtls/xray-core/common/net"
 +)
 +
@@ -253,7 +194,9 @@ tun inbound as well, built from the same tree by tool/build_xray_cores.ps1.
 +	h := newUdpConnectionHandler(handle, write, exitOf)
 +	src := net.UDPDestination(net.ParseAddress("10.0.0.2"), 40000)
 +	for _, ip := range []string{"1.1.1.1", "2.2.2.2", "3.3.3.3"} {
-+		h.HandlePacket(src, net.UDPDestination(net.ParseAddress(ip), 3478), []byte("x"))
++		b := buf.New()
++		b.WriteString("x")
++		h.HandlePacket(src, net.UDPDestination(net.ParseAddress(ip), 3478), b)
 +	}
 +	h.RLock()
 +	defer h.RUnlock()
@@ -276,3 +219,104 @@ tun inbound as well, built from the same tree by tool/build_xray_cores.ps1.
 +		t.Fatalf("without the mark one source made %d flows, want 1", got)
 +	}
 +}
+diff --git a/proxy/tun/udp_fullcone.go b/proxy/tun/udp_fullcone.go
+index 6a71f4b..039dd16 100644
+--- a/proxy/tun/udp_fullcone.go
++++ b/proxy/tun/udp_fullcone.go
+@@ -11,21 +11,33 @@ import (
+ 	"github.com/xtls/xray-core/common/net"
+ )
+ 
++// keqdroid: a flow keyed by the source alone went out through whatever its
++// first datagram matched, and an address routed to another outbound later on
++// rode along. Keyed by source and exit, a socket that stays on one exit keeps
++// one flow (full cone as before), and an address the rules send elsewhere
++// gets its own.
++type udpKey struct {
++	src  net.Destination
++	exit string
++}
++
+ // sub-handler specifically for udp connections under main handler
+ type udpConnectionHandler struct {
+ 	sync.RWMutex
+ 
+-	udpConns map[net.Destination]*udpConn
++	udpConns map[udpKey]*udpConn
+ 
+ 	handleConnection func(conn net.Conn, dest net.Destination)
+ 	writePacket      func(data []byte, src net.Destination, dst net.Destination) error
++	exitOf           func(src net.Destination, dst net.Destination) string
+ }
+ 
+-func newUdpConnectionHandler(handleConnection func(conn net.Conn, dest net.Destination), writePacket func(data []byte, src net.Destination, dst net.Destination) error) *udpConnectionHandler {
++func newUdpConnectionHandler(handleConnection func(conn net.Conn, dest net.Destination), writePacket func(data []byte, src net.Destination, dst net.Destination) error, exitOf func(src net.Destination, dst net.Destination) string) *udpConnectionHandler {
+ 	handler := &udpConnectionHandler{
+-		udpConns:         make(map[net.Destination]*udpConn),
++		udpConns:         make(map[udpKey]*udpConn),
+ 		handleConnection: handleConnection,
+ 		writePacket:      writePacket,
++		exitOf:           exitOf,
+ 	}
+ 
+ 	return handler
+@@ -36,8 +48,12 @@ func newUdpConnectionHandler(handleConnection func(conn net.Conn, dest net.Desti
+ func (u *udpConnectionHandler) HandlePacket(src net.Destination, dst net.Destination, data *buf.Buffer) {
+ 	data.UDP = &dst
+ 
++	key := udpKey{src: src}
++	if u.exitOf != nil {
++		key.exit = u.exitOf(src, dst)
++	}
+ 	u.RLock()
+-	conn, found := u.udpConns[src]
++	conn, found := u.udpConns[key]
+ 	if found {
+ 		if !conn.queue.push(data) {
+ 			errors.LogDebug(context.Background(), "drop udp with size ", data.Len(), " to ", dst.NetAddr(), " original ", conn.dst.NetAddr(), " > queue full")
+@@ -51,10 +67,10 @@ func (u *udpConnectionHandler) HandlePacket(src net.Destination, dst net.Destina
+ 	u.Lock()
+ 	defer u.Unlock()
+ 
+-	conn, found = u.udpConns[src]
++	conn, found = u.udpConns[key]
+ 	if !found {
+-		conn = &udpConn{handler: u, queue: newPacketQueue(udpQueueLimit), src: src, dst: dst}
+-		u.udpConns[src] = conn
++		conn = &udpConn{handler: u, queue: newPacketQueue(udpQueueLimit), key: key, src: src, dst: dst}
++		u.udpConns[key] = conn
+ 
+ 		go u.handleConnection(conn, dst)
+ 	}
+@@ -69,8 +85,8 @@ func (u *udpConnectionHandler) HandlePacket(src net.Destination, dst net.Destina
+ func (u *udpConnectionHandler) connectionFinished(conn *udpConn) {
+ 	u.Lock()
+ 	// Close runs twice per flow; a newer conn may already own this src.
+-	if u.udpConns[conn.src] == conn {
+-		delete(u.udpConns, conn.src)
++	if u.udpConns[conn.key] == conn {
++		delete(u.udpConns, conn.key)
+ 		conn.queue.close()
+ 	}
+ 	u.Unlock()
+@@ -81,6 +97,7 @@ type udpConn struct {
+ 	handler *udpConnectionHandler
+ 
+ 	queue *packetQueue
++	key   udpKey
+ 	src   net.Destination
+ 	dst   net.Destination
+ }
+diff --git a/proxy/tun/udp_fullcone_test.go b/proxy/tun/udp_fullcone_test.go
+index f764830..35f030c 100644
+--- a/proxy/tun/udp_fullcone_test.go
++++ b/proxy/tun/udp_fullcone_test.go
+@@ -12,7 +12,7 @@ import (
+ // inbound while it stays open: QUIC and DNS open many short flows, and each
+ // one lives until the connection idle timeout.
+ func BenchmarkUDPNewSession(b *testing.B) {
+-	u := newUdpConnectionHandler(func(conn net.Conn, dest net.Destination) {}, nil)
++	u := newUdpConnectionHandler(func(conn net.Conn, dest net.Destination) {}, nil, nil)
+ 	dst := net.UDPDestination(net.ParseAddress("1.1.1.1"), 443)
+ 	b.ReportAllocs()
+ 	b.ResetTimer()

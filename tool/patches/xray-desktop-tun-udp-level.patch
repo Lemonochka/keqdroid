@@ -10,7 +10,7 @@ the shorter of the two, as it did when sing-box handed UDP to xray over SOCKS.
 A level the config does not set has xray's defaults, 300 s, the outbound's
 own, so nothing changes until the config sets one.
 diff --git a/proxy/tun/handler.go b/proxy/tun/handler.go
-index 9ba4fab..c8a6634 100644
+index 733aa7b..1029b3c 100644
 --- a/proxy/tun/handler.go
 +++ b/proxy/tun/handler.go
 @@ -14,6 +14,7 @@ import (
@@ -21,7 +21,7 @@ index 9ba4fab..c8a6634 100644
  	"github.com/xtls/xray-core/core"
  	"github.com/xtls/xray-core/features/policy"
  	"github.com/xtls/xray-core/features/routing"
-@@ -60,6 +61,31 @@ func (w *tunUDPStatsWriter) WriteMultiBuffer(mb buf.MultiBuffer) error {
+@@ -79,6 +80,31 @@ func (w *TCPWriter) WriteMultiBuffer(mb buf.MultiBuffer) error {
  	return nil
  }
  
@@ -53,10 +53,16 @@ index 9ba4fab..c8a6634 100644
  // ConnectionHandler interface with the only method that stack is going to push new connections to
  type ConnectionHandler interface {
  	HandleConnection(conn net.Conn, destination net.Destination)
-@@ -247,6 +273,12 @@ func (t *Handler) HandleConnection(conn net.Conn, destination net.Destination) {
- 		if t.downlinkCounter != nil {
- 			writer = &tunUDPStatsWriter{writer: writer, counter: t.downlinkCounter}
- 		}
+@@ -255,8 +281,16 @@ func (t *Handler) HandleConnection(conn net.Conn, destination net.Destination) {
+ 	writer := buf.NewWriter(conn)
+ 	if destination.Network != net.Network_UDP {
+ 		writer = &TCPWriter{Writer: writer, Counter: t.downlinkCounter}
+-	} else if t.downlinkCounter != nil {
+-		writer = &tunUDPStatsWriter{writer: writer, counter: t.downlinkCounter}
++	} else {
++		if t.downlinkCounter != nil {
++			writer = &tunUDPStatsWriter{writer: writer, counter: t.downlinkCounter}
++		}
 +		// keqdroid patch, see tool/patches/xray-desktop-tun-udp-level.patch: a UDP
 +		// flow ends after connIdle of level userLevel+1 with no datagram either
 +		// way. The outbound keeps its own timer, so this only ends it sooner

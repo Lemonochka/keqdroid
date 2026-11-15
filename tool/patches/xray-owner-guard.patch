@@ -4,65 +4,34 @@ pushes into the tun on Android, behind keqdroid's outside-vpn rule.
 An app excluded from the VPN can still bind a socket to tun0 (SO_BINDTODEVICE
 needs no rights since Linux 5.7). keqdroid writes a first rule, tagged
 outside-vpn, that blocks connections the app names as outside the VPN (see
-xray-android-uid-owner.patch and ConnectionOwnerServer.kt). But the gVisor
-stack completes the TCP handshake before routing runs, so such an app saw a
-connection that opened and then closed: proof that the tun answers.
+xray-android-uid-owner.patch and ConnectionOwnerServer.kt). But the stack
+completes the TCP handshake before routing runs (proxy/tun/stack.go, gVisor
+before xray 26.10.21), so such an app saw a connection that opened and then
+closed: proof that the tun answers.
 
 proxy/tun now asks the router for that one rule before the handshake
 (Router.MatchRuleTag applies only the rule with the given tag, nothing above
 it) and answers a match with a reset. No outside-vpn rule in the config means
-no lookup and no change. The owner lookup goes through the finder's two
-second cache, so the routing that follows does not ask the app again. UDP has
-no handshake and keeps being dropped by the rule itself.
+no lookup and no change (Router.HasRuleTag). The owner lookup goes through the
+finder's two second cache, so the routing that follows does not ask the app
+again. UDP has no handshake and keeps being dropped by the rule itself.
+
+The stack takes a SYN in the loop that reads the tun, and the lookup asks the
+app over a socket: done there, it would hold up every packet. The SYN waits in
+a goroutine of its own, as gVisor's forwarder ran its handler, and the same
+SYN sent again meanwhile is dropped. Without the rule a SYN is answered in the
+loop as upstream does.
 
 Android only (owner_guard_android.go); other platforms get a stub.
 
-Built by tool/build_xray_cores.ps1. Checked against xray-core v26.10.10.
+Built by tool/build_xray_cores.ps1. Checked against xray-core v26.11.9.
 
-diff --git a/app/router/router.go b/app/router/router.go
---- a/app/router/router.go
-+++ b/app/router/router.go
-@@ -53,6 +53,17 @@ func (r *Router) Init(ctx context.Context, config *Config, d dns.Client, ohm out
- 	return r.ReloadRules(config, false)
- }
- 
-+// MatchRuleTag applies only the rule tagged tag. keqdroid: the tun asks it
-+// before a TCP handshake, see tool/patches/xray-owner-guard.patch.
-+func (r *Router) MatchRuleTag(ctx routing.Context, tag string) bool {
-+	for _, rule := range *r.rules.Load() {
-+		if rule.RuleTag == tag {
-+			return rule.Apply(ctx)
-+		}
-+	}
-+	return false
-+}
-+
- // PickRoute implements routing.Router.
- func (r *Router) PickRoute(ctx routing.Context) (routing.Route, error) {
- 	if r.script != nil {
-diff --git a/proxy/tun/stack_gvisor.go b/proxy/tun/stack_gvisor.go
---- a/proxy/tun/stack_gvisor.go
-+++ b/proxy/tun/stack_gvisor.go
-@@ -72,6 +72,14 @@ func (t *stackGVisor) Start() error {
- 			var wq waiter.Queue
- 			id := r.ID()
- 
-+			if t.handler.rejectBeforeHandshake(
-+				net.TCPDestination(net.IPAddress(id.RemoteAddress.AsSlice()), net.Port(id.RemotePort)),
-+				net.TCPDestination(net.IPAddress(id.LocalAddress.AsSlice()), net.Port(id.LocalPort)),
-+			) {
-+				r.Complete(true)
-+				return
-+			}
-+
- 			// Perform a TCP three-way handshake.
- 			ep, err := r.CreateEndpoint(&wq)
- 			if err != nil {
 diff --git a/app/router/match_rule_tag_test.go b/app/router/match_rule_tag_test.go
 new file mode 100644
+index 0000000..9fbd194
 --- /dev/null
 +++ b/app/router/match_rule_tag_test.go
-@@ -0,0 +1,59 @@
+@@ -0,0 +1,62 @@
 +package router_test
 +
 +import (
@@ -121,12 +90,48 @@ new file mode 100644
 +	if r.MatchRuleTag(tcp, "missing") {
 +		t.Error("a tag with no rule matches nothing")
 +	}
++	if !r.HasRuleTag("outside-vpn") || r.HasRuleTag("missing") {
++		t.Error("HasRuleTag sees only the tags of the rules")
++	}
 +}
+diff --git a/app/router/router.go b/app/router/router.go
+index cd695d8..497a3da 100644
+--- a/app/router/router.go
++++ b/app/router/router.go
+@@ -59,6 +59,27 @@ func (r *Router) Init(ctx context.Context, config *Config, d dns.Client, ohm out
+ 	return r.ReloadRules(config, false)
+ }
+ 
++// MatchRuleTag applies only the rule tagged tag. keqdroid: the tun asks it
++// before a TCP handshake, see tool/patches/xray-owner-guard.patch.
++func (r *Router) MatchRuleTag(ctx routing.Context, tag string) bool {
++	for _, rule := range *r.rules.Load() {
++		if rule.RuleTag == tag {
++			return rule.Apply(ctx)
++		}
++	}
++	return false
++}
++
++// HasRuleTag reports whether a rule is tagged tag, without applying it
++func (r *Router) HasRuleTag(tag string) bool {
++	for _, rule := range *r.rules.Load() {
++		if rule.RuleTag == tag {
++			return true
++		}
++	}
++	return false
++}
++
+ // PickRoute implements routing.Router.
+ func (r *Router) PickRoute(ctx routing.Context) (routing.Route, error) {
+ 	if r.script != nil {
 diff --git a/proxy/tun/owner_guard_android.go b/proxy/tun/owner_guard_android.go
 new file mode 100644
+index 0000000..83b5379
 --- /dev/null
 +++ b/proxy/tun/owner_guard_android.go
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,46 @@
 +//go:build android
 +
 +package tun
@@ -143,17 +148,30 @@ new file mode 100644
 +const outsideVPNRuleTag = "outside-vpn"
 +
 +type ruleTagMatcher interface {
++	HasRuleTag(tag string) bool
 +	MatchRuleTag(ctx routing.Context, tag string) bool
++}
++
++func (t *Handler) ruleTagMatcher() ruleTagMatcher {
++	if t.instance == nil {
++		return nil
++	}
++	matcher, _ := t.instance.GetFeature(routing.RouterType()).(ruleTagMatcher)
++	return matcher
++}
++
++// guarded reports whether a SYN waits for rejectBeforeHandshake, cheap enough
++// for the loop that reads the tun
++func (t *Handler) guarded() bool {
++	matcher := t.ruleTagMatcher()
++	return matcher != nil && matcher.HasRuleTag(outsideVPNRuleTag)
 +}
 +
 +// rejectBeforeHandshake answers before the stack completes a TCP handshake:
 +// an app outside the VPN gets a reset, not a connection that opens and dies.
 +func (t *Handler) rejectBeforeHandshake(src, dst net.Destination) bool {
-+	if t.instance == nil {
-+		return false
-+	}
-+	matcher, ok := t.instance.GetFeature(routing.RouterType()).(ruleTagMatcher)
-+	if !ok {
++	matcher := t.ruleTagMatcher()
++	if matcher == nil {
 +		return false
 +	}
 +	ctx := session.ContextWithInbound(t.ctx, &session.Inbound{Source: src, Tag: t.tag})
@@ -162,13 +180,179 @@ new file mode 100644
 +}
 diff --git a/proxy/tun/owner_guard_other.go b/proxy/tun/owner_guard_other.go
 new file mode 100644
+index 0000000..66939fa
 --- /dev/null
 +++ b/proxy/tun/owner_guard_other.go
-@@ -0,0 +1,7 @@
+@@ -0,0 +1,9 @@
 +//go:build !android
 +
 +package tun
 +
 +import "github.com/xtls/xray-core/common/net"
 +
++func (t *Handler) guarded() bool { return false }
++
 +func (t *Handler) rejectBeforeHandshake(net.Destination, net.Destination) bool { return false }
+diff --git a/proxy/tun/owner_guard_test.go b/proxy/tun/owner_guard_test.go
+new file mode 100644
+index 0000000..cd163e6
+--- /dev/null
++++ b/proxy/tun/owner_guard_test.go
+@@ -0,0 +1,83 @@
++package tun
++
++import (
++	"context"
++	"net/netip"
++	"testing"
++	"time"
++
++	"github.com/xtls/xray-core/common/net"
++)
++
++type testGuard struct {
++	reject func(src net.Destination) bool
++}
++
++func (testGuard) guarded() bool { return true }
++
++func (g testGuard) rejectBeforeHandshake(src, _ net.Destination) bool { return g.reject(src) }
++
++// keqdroid, xray-owner-guard.patch: a SYN of an app outside the VPN gets a
++// reset, and the loop that reads the tun goes on while the app is asked
++func TestOwnerGuardBeforeHandshake(t *testing.T) {
++	conns := make(chan accepted, 2)
++	p, l := newPeer(t, "10.0.0.1:1235", "10.0.0.2:80")
++	release := make(chan struct{})
++	asked := make(chan struct{}, 4)
++	s := &stack{ctx: context.Background(), tun: l, mtu: testMTU, window: tcpWindow, handle: accept(conns), conns: make(map[flow]*tcpConn), sockets: make(map[netip.AddrPort]*udpSocket)}
++	s.udp = newUdpConnectionHandler(s.handle, s.writeUDP, nil)
++	s.guard = testGuard{reject: func(src net.Destination) bool {
++		switch src.Port {
++		case 1235:
++			asked <- struct{}{}
++			<-release
++			return false
++		case 1234:
++			return true
++		}
++		return false
++	}}
++	s.Start()
++	t.Cleanup(func() {
++		s.Close()
++		l.Close()
++	})
++
++	// the app takes its time to answer about this one
++	slow := p.seq
++	p.send(slow, tcpSyn, nil, nil)
++	<-asked
++
++	p.src = netip.MustParseAddrPort("10.0.0.1:1234")
++	p.send(p.seq, tcpSyn, nil, nil)
++	if seg := p.receive(); seg.flags != tcpRst|tcpAck || seg.ack != p.seq+1 {
++		t.Fatal("not a reset: flags ", seg.flags, ", ack ", seg.ack)
++	}
++	p.seq++
++
++	p.src = netip.MustParseAddrPort("10.0.0.1:1236")
++	p.connect(nil)
++	if a := take(t, conns); a.conn.RemoteAddr().String() != "10.0.0.1:1236" {
++		t.Fatal("connection from ", a.conn.RemoteAddr())
++	}
++
++	// the SYN sent again while the app is asked is not asked about twice
++	p.src = netip.MustParseAddrPort("10.0.0.1:1235")
++	p.send(slow, tcpSyn, nil, nil)
++	p.silent(100 * time.Millisecond)
++	select {
++	case <-asked:
++		t.Fatal("asked twice about one SYN")
++	default:
++	}
++	close(release)
++	seg := p.receive()
++	if seg.flags != tcpSyn|tcpAck || seg.ack != slow+1 {
++		t.Fatal("not an answer to the SYN: flags ", seg.flags, ", ack ", seg.ack)
++	}
++	p.seq, p.ack = slow+1, seg.seq+1
++	p.send(p.seq, tcpAck, nil, nil)
++	if a := take(t, conns); a.conn.RemoteAddr().String() != "10.0.0.1:1235" {
++		t.Fatal("connection from ", a.conn.RemoteAddr())
++	}
++}
+diff --git a/proxy/tun/stack.go b/proxy/tun/stack.go
+index 8f98890..3291516 100644
+--- a/proxy/tun/stack.go
++++ b/proxy/tun/stack.go
+@@ -91,6 +91,16 @@ type stack struct {
+ 	identification [64]atomic.Uint32
+ 
+ 	icmp *icmpDirect
++
++	// keqdroid, owner_guard_android.go: guarding are the SYNs whose owner is being asked about
++	guard    handshakeGuard
++	guarding map[flow]struct{}
++}
++
++// keqdroid patch, see tool/patches/xray-owner-guard.patch
++type handshakeGuard interface {
++	guarded() bool
++	rejectBeforeHandshake(src, dst net.Destination) bool
+ }
+ 
+ // NewStack builds new ip stack. Without a handler it takes no connections, only opens them
+@@ -123,6 +133,7 @@ func NewStack(ctx context.Context, options StackOptions, handler ConnectionHandl
+ 			exitOf = h.udpExitFunc()
+ 			// the tun inbound only, the stack of a WireGuard peer answers itself
+ 			s.icmp = newICMPDirect(s)
++			s.guard = h
+ 		}
+ 		s.udp = newUdpConnectionHandler(s.handle, s.writeUDP, exitOf)
+ 	}
+@@ -344,7 +355,43 @@ func (s *stack) handleTCP(p packet) {
+ 	if s.opening.Load() >= tcpOpening {
+ 		return
+ 	}
+-	c = newTCPConn(s, f)
++	// keqdroid patch, see tool/patches/xray-owner-guard.patch: the owner is asked
++	// of the app, and the loop that reads the tun does not wait for the answer
++	if s.guard != nil && s.guard.guarded() {
++		s.mu.Lock()
++		_, asked := s.guarding[f]
++		if !asked {
++			if s.guarding == nil {
++				s.guarding = make(map[flow]struct{})
++			}
++			s.guarding[f] = struct{}{}
++		}
++		s.mu.Unlock()
++		if asked {
++			return
++		}
++		// the buffers are read into again: refuse needs only the length
++		seg.options, seg.rest, seg.payload = slices.Clone(seg.options), len(seg.payload)+seg.rest, nil
++		go func() {
++			src := net.TCPDestination(net.IPAddress(f.src.Addr().AsSlice()), net.Port(f.src.Port()))
++			dst := net.TCPDestination(net.IPAddress(f.dst.Addr().AsSlice()), net.Port(f.dst.Port()))
++			if s.guard.rejectBeforeHandshake(src, dst) {
++				s.refuse(f, seg)
++			} else {
++				s.open(f, seg)
++			}
++			s.mu.Lock()
++			delete(s.guarding, f)
++			s.mu.Unlock()
++		}()
++		return
++	}
++	s.open(f, seg)
++}
++
++// open answers the SYN of a connection that the other side opens
++func (s *stack) open(f flow, seg segment) {
++	c := newTCPConn(s, f)
+ 	c.synchronize(seg)
+ 	s.mu.Lock()
+ 	if s.closed {
