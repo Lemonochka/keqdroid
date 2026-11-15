@@ -46,8 +46,6 @@ class DesktopHomeScreen extends ConsumerStatefulWidget {
 class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     with WidgetsBindingObserver {
   int _index = 0;
-  int? _preparing;
-  final _shownTabs = {0};
   bool _startupTasksDone = false;
   bool _startupConnectInFlight = false;
 
@@ -359,24 +357,8 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   }
 
   void _selectTab(int index) {
-    if (_index == index) {
-      if (_preparing != null) setState(() => _preparing = null);
-      return;
-    }
-    // панель тоже ждёт: иначе её подсветка дёрнется на тяжёлом кадре вместо вкладки
-    if (!_shownTabs.contains(index) && !MediaQuery.disableAnimationsOf(context)) {
-      setState(() => _preparing = index);
-      return;
-    }
-    _showTab(index);
-  }
-
-  void _showTab(int index) {
-    _shownTabs.add(index);
-    setState(() {
-      _index = index;
-      _preparing = null;
-    });
+    if (_index == index) return;
+    setState(() => _index = index);
     ref.read(homeTabIndexProvider.notifier).set(index);
     ref.read(homeTabPageProvider.notifier).set(index.toDouble());
   }
@@ -438,8 +420,9 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
           Expanded(
             child: DesktopTabSwitcher(
               index: _index,
-              preparing: _preparing,
-              onPrepared: _showTab,
+              // подписки к этому времени уже прочитаны из хранилища
+              warmUpAfter: const Duration(seconds: 3),
+              windowHidden: () => !ref.read(desktopUiVisibleProvider),
               children: [
                 for (final tab in const [
                   ServersTab(),
