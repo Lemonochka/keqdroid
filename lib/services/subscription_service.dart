@@ -25,6 +25,7 @@ import '../utils/mihomo_config_gen.dart';
 import '../utils/provider_routing.dart';
 import '../utils/raw_share_uri.dart';
 import '../utils/routing_profiles.dart';
+import '../utils/same_server_key.dart';
 import '../utils/singbox_outbounds.dart';
 import '../utils/subscription_url.dart';
 import '../utils/socks_uri.dart';
@@ -2862,8 +2863,18 @@ class SubscriptionService {
         for (final s in oldServers) _stableKey(s.config): s,
       };
 
-      // дубли конфигов дали бы два сервера с одним id и duplicate ValueKey в списке
-      final uniqueConfigs = result.configs.toSet().toList();
+      // точный дубль давал два сервера с одним id и duplicate ValueKey в списке;
+      // выбранная или помеченная копия остаётся вместо первой, иначе выбор слетал бы при обновлении
+      final activeConfig =
+          oldServers.where((s) => s.id == activeId).firstOrNull?.config;
+      final marked = {
+        for (final s in oldServers)
+          if (s.isPinned || s.customName != null || s.autoSkip) s.config,
+      };
+      final uniqueConfigs = withoutNameCopies(
+        result.configs,
+        rank: (c) => c == activeConfig ? 2 : (marked.contains(c) ? 1 : 0),
+      );
 
       // близкие конфиги могут сойтись на одном stable-ключе, второму новый id
       final usedOldIds = <String>{};

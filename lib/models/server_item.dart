@@ -7,6 +7,7 @@ import '../utils/custom_clash_config.dart';
 import '../utils/custom_xray_config.dart';
 import '../utils/mieru_uri.dart';
 import '../utils/proxy_chain.dart';
+import '../utils/same_server_key.dart';
 import '../utils/socks_uri.dart';
 import '../utils/ssr_uri.dart';
 import 'ping_sample.dart';
@@ -46,6 +47,7 @@ class ServerItem {
   bool _clashParsed = false;
   ProxyChainConfig? _cachedChain;
   bool _chainParsed = false;
+  String? _cachedSameServerKey;
 
   ServerItem({
     required this.id,
@@ -166,6 +168,9 @@ class ServerItem {
       );
 
   bool get isPinned => pinnedAt != null;
+
+  String get sameServerKey =>
+      _cachedSameServerKey ??= sameServerKeyOf(config);
 
   String get displayName {
     final custom = customName?.trim();

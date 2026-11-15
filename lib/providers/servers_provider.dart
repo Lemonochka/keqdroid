@@ -188,9 +188,10 @@ class ServersNotifier extends Notifier<ServersState> {
     if (validationError != null) throw Exception(validationError);
 
     final configs = MieruLink.expand(config);
-    final fresh = configs
-        .where((c) => !state.servers.any((s) => s.config == c))
-        .toList();
+    final fresh = configs.where((c) {
+      final key = sameServerKeyOf(c);
+      return !state.servers.any((s) => s.sameServerKey == key);
+    }).toList();
     if (fresh.isEmpty) throw Exception('This server is already added');
 
     final added = <ServerItem>[];
