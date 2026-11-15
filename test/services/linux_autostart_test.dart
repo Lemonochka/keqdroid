@@ -351,4 +351,62 @@ void main() {
       expect(hyprlandDropIn().existsSync(), isFalse);
     });
   });
+
+  group('start in the tray', () {
+    late Directory data;
+    final realCommandLine = LinuxAutostart.commandLine;
+    var args = <String>[];
+
+    // раннер ищет файл в g_get_user_data_dir() под своим APPLICATION_ID
+    String appId() => RegExp(r'set\(APPLICATION_ID "([^"]+)"\)')
+        .firstMatch(File('linux/CMakeLists.txt').readAsStringSync())!
+        .group(1)!;
+    File inTray() => File(p.join(data.path, appId(), 'autostart-in-tray'));
+
+    setUp(() {
+      data = Directory.systemTemp.createTempSync('kq_in_tray_');
+      LinuxAutostart.dataHomeOverride = data.path;
+      args = ['/opt/keqdroid/keqdroid'];
+      LinuxAutostart.commandLine = () => args;
+    });
+
+    tearDown(() {
+      LinuxAutostart.dataHomeOverride = null;
+      LinuxAutostart.commandLine = realCommandLine;
+      data.deleteSync(recursive: true);
+    });
+
+    test('the switch puts the file where the runner looks and takes it away',
+        () async {
+      await LinuxAutostart.setStartInTray(true);
+      await LinuxAutostart.setStartInTray(true);
+      expect(inTray().existsSync(), isTrue);
+
+      await LinuxAutostart.setStartInTray(false);
+      await LinuxAutostart.setStartInTray(false);
+      expect(inTray().existsSync(), isFalse);
+    });
+
+    test('the runner checks the same flag and file', () {
+      final runner =
+          File('linux/runner/my_application.cc').readAsStringSync();
+      expect(runner, contains('"${LinuxAutostart.flag}"'));
+      expect(runner, contains('g_get_user_data_dir(), APPLICATION_ID, '
+          '"${p.basename(inTray().path)}"'));
+    });
+
+    test('only a launch at login starts hidden', () async {
+      expect(LinuxAutostart.startedInTray(), isFalse);
+
+      await LinuxAutostart.setStartInTray(true);
+      expect(LinuxAutostart.startedInTray(), isFalse,
+          reason: 'opened by hand, the window shows');
+
+      args = [...args, LinuxAutostart.flag];
+      expect(LinuxAutostart.startedInTray(), isTrue);
+
+      await LinuxAutostart.setStartInTray(false);
+      expect(LinuxAutostart.startedInTray(), isFalse);
+    });
+  });
 }

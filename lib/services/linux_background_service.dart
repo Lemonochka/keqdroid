@@ -8,6 +8,7 @@ import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../core/app_logger.dart';
+import 'linux_autostart.dart';
 import 'linux_desktop_entry.dart';
 import 'storage_service.dart';
 
@@ -73,6 +74,8 @@ class LinuxBackgroundService with WindowListener, TrayListener {
         );
         return true;
       }
+      // второй запуск при входе поднял бы окно, которое первый спрятал в трей
+      if (LinuxAutostart.startedInTray()) return false;
       try {
         final s = await Socket.connect(
           address,
@@ -88,6 +91,7 @@ class LinuxBackgroundService with WindowListener, TrayListener {
   }
 
   Future<void> initWindowAndTray() async {
+    if (LinuxAutostart.startedInTray()) uiVisible.value = false;
     unawaited(LinuxDesktopEntry.sync());
     await windowManager.ensureInitialized();
     windowManager.addListener(this);

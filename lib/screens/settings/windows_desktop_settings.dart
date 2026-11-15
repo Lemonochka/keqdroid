@@ -19,6 +19,7 @@ class _DesktopSettingsScreenState
   Future<void> _save(AppSettings next) async {
     await ref.read(settingsNotifierProvider.notifier).save(next);
     await WindowsDesktopService.applySettings(next);
+    if (Platform.isLinux) await LinuxAutostart.setStartInTray(next.autostartInTray);
   }
 
   Future<void> _syncWithSystem() async {
@@ -130,15 +131,14 @@ class _DesktopSettingsScreenState
                         )
                     : null,
               ),
-            if (!linux)
-              _AppearanceSwitchTile(
-                icon: Icons.web_asset_off_rounded,
-                title: l10n.settingsAutostartInTray,
-                value: settings.autostartInTray,
-                onChanged: settings.launchAtStartup
-                    ? (v) => _save(settings.copyWith(autostartInTray: v))
-                    : null,
-              ),
+            _AppearanceSwitchTile(
+              icon: Icons.web_asset_off_rounded,
+              title: l10n.settingsAutostartInTray,
+              value: settings.autostartInTray,
+              onChanged: settings.launchAtStartup
+                  ? (v) => _save(settings.copyWith(autostartInTray: v))
+                  : null,
+            ),
             _AppearanceSwitchTile(
               icon: Icons.vpn_lock_rounded,
               title: l10n.settingsAutoConnectOnAutostart,

@@ -72,6 +72,8 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     HotkeyService.onPressed = _onHotkeyAction;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      // при автозапуске в трей окно спрятано ещё до runApp, слушатель этого не застал
+      if (Platform.isLinux) _onLinuxWindowVisibility();
       ref.read(homeTabIndexProvider.notifier).set(_index);
       ref.read(homeTabPageProvider.notifier).set(_index.toDouble());
       ref.read(updateInfoProvider);
@@ -239,6 +241,8 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
   Future<void> _runLinuxStartupTasks() async {
     if (!Platform.isLinux || _startupTasksDone) return;
     _startupTasksDone = true;
+    final settings = await ref.read(storageProvider).getSettings();
+    await LinuxAutostart.setStartInTray(settings.autostartInTray);
     await LinuxAutostart.refresh();
     await _maybeAutostartConnect();
   }

@@ -12,6 +12,7 @@ struct _MyApplication {
   char** dart_entrypoint_arguments;
   GtkWindow* window;
   gboolean first_frame_seen;
+  gboolean start_in_tray;
   guint startup_watchdog_id;
 };
 
@@ -87,6 +88,14 @@ static void use_software_rendering_without_gl(GtkWindow* window) {
   g_setenv("FLUTTER_LINUX_RENDERER", "software", TRUE);
 }
 
+// файл кладёт LinuxAutostart.setStartInTray: окно решается до первого кадра, а настройки Dart к нему ещё не прочитаны
+static gboolean starts_in_tray(char** args) {
+  if (args == nullptr || !g_strv_contains(args, "--autostart")) return FALSE;
+  g_autofree gchar* path = g_build_filename(
+      g_get_user_data_dir(), APPLICATION_ID, "autostart-in-tray", nullptr);
+  return g_file_test(path, G_FILE_TEST_EXISTS);
+}
+
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
   self->first_frame_seen = TRUE;
@@ -94,6 +103,7 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
     g_source_remove(self->startup_watchdog_id);
     self->startup_watchdog_id = 0;
   }
+  if (self->start_in_tray) return;
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
@@ -163,6 +173,7 @@ static void my_application_activate(GApplication* application) {
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
 
   self->window = window;
+  self->start_in_tray = starts_in_tray(self->dart_entrypoint_arguments);
   self->startup_watchdog_id =
       g_timeout_add_seconds(kStartupWatchdogSeconds, startup_watchdog_cb, self);
 

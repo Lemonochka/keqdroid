@@ -272,10 +272,51 @@ class LinuxAutostart {
   }
 
   // раннер аргументы в Dart не передаёт, читаем /proc/self/cmdline
-  static bool launchedAtLogin() {
+  @visibleForTesting
+  static List<String> Function() commandLine = () {
     try {
-      final raw = File('/proc/self/cmdline').readAsStringSync();
-      return raw.split('\u0000').contains(flag);
+      return File('/proc/self/cmdline').readAsStringSync().split('\u0000');
+    } catch (_) {
+      return const [];
+    }
+  };
+
+  static bool launchedAtLogin() => commandLine().contains(flag);
+
+  @visibleForTesting
+  static String? dataHomeOverride;
+
+  // тот же путь, что у раннера (starts_in_tray в my_application.cc): g_get_user_data_dir и APPLICATION_ID.
+  // path_provider тут не годится, он может уйти в старый каталог по имени бинаря
+  static File _inTrayFile() {
+    final xdg = Platform.environment['XDG_DATA_HOME'];
+    final dataHome = dataHomeOverride ??
+        (xdg != null && xdg.isNotEmpty ? xdg : p.join(_home(), '.local', 'share'));
+    return File(p.join(dataHome, 'com.keqdroid.keqdroid', 'autostart-in-tray'));
+  }
+
+  static Future<void> setStartInTray(bool enabled) async {
+    try {
+      final file = _inTrayFile();
+      if (file.existsSync() == enabled) return;
+      if (!enabled) {
+        await file.delete();
+        return;
+      }
+      await file.parent.create(recursive: true);
+      await file.writeAsString('');
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Could not change Linux start in tray',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  static bool startedInTray() {
+    try {
+      return launchedAtLogin() && _inTrayFile().existsSync();
     } catch (_) {
       return false;
     }
