@@ -16,6 +16,7 @@ import '../../models/subscription.dart';
 import '../../models/subscription_card_theme.dart';
 import '../../providers/providers.dart';
 import '../../shared/ui/server_group_anchors.dart';
+import '../../shared/ui/steady_baseline.dart';
 import '../../shared/ui/expressive.dart';
 import '../../tunnel/tunnel_state.dart';
 
@@ -435,19 +436,23 @@ class _GroupCover extends StatelessWidget {
                           const SizedBox(width: 8),
                         ],
                         Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.fade,
-                            style: titleStyle,
+                          child: SteadyBaseline(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.fade,
+                              style: titleStyle,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          '$count',
-                          style: textTheme.labelMedium?.copyWith(
-                            color: onCover.withValues(alpha: 0.8),
+                        SteadyBaseline(
+                          child: Text(
+                            '$count',
+                            style: textTheme.labelMedium?.copyWith(
+                              color: onCover.withValues(alpha: 0.8),
+                            ),
                           ),
                         ),
                       ],
