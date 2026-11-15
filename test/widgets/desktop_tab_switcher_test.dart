@@ -40,6 +40,18 @@ class _ProbeState extends State<_Probe> {
   }
 }
 
+class _PaintLog extends CustomPainter {
+  _PaintLog(this.i, this.log);
+  final int i;
+  final List<int> log;
+
+  @override
+  void paint(Canvas canvas, Size size) => log.add(i);
+
+  @override
+  bool shouldRepaint(_PaintLog old) => false;
+}
+
 Future<void> _show(
   WidgetTester tester,
   int index, {
@@ -205,6 +217,107 @@ void main() {
     await watch(36);
     await _show(tester, 0);
     await watch(600);
+  });
+
+  group('подготовка новой вкладки', () {
+    late List<int> painted;
+    late List<int> prepared;
+
+    setUp(() {
+      painted = [];
+      prepared = [];
+    });
+
+    Future<void> pump(WidgetTester tester, int index, {int? preparing}) =>
+        tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+            body: DesktopTabSwitcher(
+              index: index,
+              preparing: preparing,
+              onPrepared: prepared.add,
+              children: [
+                for (var i = 0; i < 3; i++)
+                  Stack(fit: StackFit.expand, children: [
+                    CustomPaint(painter: _PaintLog(i, painted)),
+                    _Probe(i),
+                  ]),
+              ],
+            ),
+          ),
+        ));
+
+    List<Key?> order(WidgetTester tester) => tester
+        .widgetList<KeyedSubtree>(find.descendant(
+          of: find.byType(DesktopTabSwitcher),
+          matching: find.byType(KeyedSubtree),
+        ))
+        .map((k) => k.key)
+        .toList();
+
+    testWidgets('рисуется под текущей с тикерами, и только через два кадра её открывают', (
+      tester,
+    ) async {
+      await pump(tester, 0);
+      painted.clear();
+
+      await pump(tester, 0, preparing: 1);
+      expect(painted, contains(1));
+      expect(painted, isNot(contains(2)));
+      // данные провайдеров приходят только с тикерами: без них Riverpod держит подписки на паузе
+      expect(_Probe.ticking, {0: true, 1: true, 2: false});
+      // слои в стопке идут снизу вверх: видимая последней, то есть поверх готовящейся
+      expect(order(tester).last, const ValueKey(0));
+      expect(find.text('tab 1: 0').hitTestable(), findsNothing);
+      expect(_Probe.nodes[1]!.canRequestFocus, isFalse);
+      expect(prepared, isEmpty, reason: 'переход не дождался тяжёлого кадра');
+
+      await tester.pump();
+      expect(prepared, [1]);
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(prepared, [1], reason: 'готовность сообщают один раз');
+
+      await pump(tester, 1);
+      await _settle(tester);
+      expect(find.text('tab 1: 0').hitTestable(), findsOneWidget);
+      expect(_Probe.ticking, {0: false, 1: true, 2: false});
+    });
+
+    testWidgets('пока идёт переход, не готовят: её было бы видно снизу', (
+      tester,
+    ) async {
+      await pump(tester, 0);
+      await pump(tester, 2);
+      await tester.pump(const Duration(milliseconds: 40));
+      painted.clear();
+
+      await pump(tester, 2, preparing: 1);
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(painted, isNot(contains(1)));
+      expect(_Probe.ticking[1], isFalse);
+      expect(prepared, isEmpty);
+
+      await _settle(tester);
+      expect(painted, contains(1));
+      expect(prepared, [1]);
+    });
+
+    testWidgets('передумали: подготовку сняли, вкладка снова не рисуется и не тикает', (
+      tester,
+    ) async {
+      await pump(tester, 0);
+      await pump(tester, 0, preparing: 1);
+      await pump(tester, 0);
+      painted.clear();
+
+      await _settle(tester);
+      expect(prepared, isEmpty);
+      expect(painted.where((i) => i != 0), isEmpty);
+      expect(_Probe.ticking[1], isFalse);
+    });
   });
 
   testWidgets('с выключенными анимациями системы вкладка меняется сразу', (
