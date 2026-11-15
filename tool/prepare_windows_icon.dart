@@ -1,7 +1,7 @@
 // icon_windows_launcher.png из icon_foreground.png: обрезка полей, прозрачность,
 // лого почти на весь квадрат (иначе в таскбаре windows иконка мелкая).
 // dart run tool/prepare_windows_icon.dart
-// dart run flutter_launcher_icons
+// dart run tool/make_desktop_icons.dart
 
 import 'dart:io';
 import 'dart:math' as math;

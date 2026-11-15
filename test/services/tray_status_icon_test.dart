@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
@@ -8,6 +9,11 @@ import 'package:keqdroid/services/linux_background_service.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
 import 'package:keqdroid/services/windows_tray_menu.dart';
 import 'package:path/path.dart' as p;
+
+List<int> _icoSizes(ByteData ico) => [
+      for (var i = 0; i < ico.getUint16(4, Endian.little); i++)
+        switch (ico.getUint8(6 + i * 16)) { 0 => 256, final s => s },
+    ];
 
 class _Vpn extends VpnStateNotifier {
   @override
@@ -91,14 +97,18 @@ void main() {
     for (final name in ['tray_icon.ico', 'tray_icon_connected.ico']) {
       test('$name: кадр на каждый масштаб экрана', () async {
         final ico = await rootBundle.load('assets/$name');
-        final count = ico.getUint16(4, Endian.little);
-        final sizes = [
-          for (var i = 0; i < count; i++)
-            switch (ico.getUint8(6 + i * 16)) { 0 => 256, final s => s },
-        ];
-        expect(sizes, containsAll([16, 20, 24, 28, 32, 40, 48, 256]));
+        expect(_icoSizes(ico), containsAll([16, 20, 24, 28, 32, 40, 48, 256]));
       });
     }
+
+    // панель задач рисует 24 x масштаб, заголовок окна 16 x масштаб
+    test('app_icon.ico в exe: кадры под панель задач и заголовок окна', () {
+      final ico = File('windows/runner/resources/app_icon.ico').readAsBytesSync();
+      expect(
+        _icoSizes(ByteData.sublistView(ico)),
+        containsAll([16, 20, 24, 28, 30, 32, 36, 40, 42, 48, 256]),
+      );
+    });
 
     for (final name in ['icon.png', 'icon_connected.png']) {
       test('$name: 256 на 256, как ждут ярлык и пакеты Linux', () async {

@@ -86,10 +86,8 @@ flutter_launcher_icons:
   adaptive_icon_background: "#ffb2bd"
   adaptive_icon_foreground: "assets/icon_foreground.png"
   adaptive_icon_monochrome: "assets/icon_foreground.png"
-  windows:
-    generate: true
-    image_path: "assets/icon_windows_launcher.png"
-    icon_size: 256
+  # windows/runner/resources/app_icon.ico рисует tool/make_desktop_icons.dart:
+  # отсюда в ico попадал один кадр 256, и значок на панели задач мылился.
 
 flutter_native_splash:
   color: "#FFF5F7"
@@ -107,7 +105,7 @@ flutter:
   uses-material-design: true
   assets:
     # Эти четыре значка, обычные и с точкой подключения, рисует
-    # tool/make_tray_icons.dart.
+    # tool/make_desktop_icons.dart.
     - assets/icon.png
     - assets/icon_connected.png
     # Иконка трея: .ico, а не .png — Windows берёт из него кадр нужного размера.
@@ -115,7 +113,7 @@ flutter:
     - assets/tray_icon_connected.ico
     # icon_foreground.png и icon_windows_launcher.png сюда не входят: их с
     # диска читают только генераторы значков (flutter_launcher_icons,
-    # tool/prepare_windows_icon.dart, tool/make_tray_icons.dart), а в пакете
+    # tool/prepare_windows_icon.dart, tool/make_desktop_icons.dart), а в пакете
     # они были 300 КБ мёртвого веса.
     # OFL-лицензии шрифтов обязаны ехать вместе со шрифтами в дистрибутиве.
     - assets/fonts/Comfortaa-OFL.txt

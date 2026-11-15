@@ -1,6 +1,7 @@
-// значки трея из assets/icon_windows_launcher.png: обычный и с зелёной точкой подключения
+// значки ПК из assets/icon_windows_launcher.png: exe на Windows, трей обычный и с зелёной точкой подключения, png для Linux
 // в ico кадр на каждый масштаб экрана: из одного кадра 256 Windows ужимала до 16 сама, края рвались
-// dart run tool/make_tray_icons.dart
+// flutter_launcher_icons кладёт в ico один кадр, поэтому exe рисуем здесь, а не им
+// dart run tool/make_desktop_icons.dart
 
 import 'dart:io';
 import 'dart:math' as math;
@@ -9,7 +10,11 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
 // SM_CXSMICON на масштабах 100-300%, 64 и 256 для крупных значков оболочки
-const _icoSizes = [16, 20, 24, 28, 32, 40, 48, 64, 256];
+const _traySizes = [16, 20, 24, 28, 32, 40, 48, 64, 256];
+// плюс панель задач (24 x масштаб) и крупные виды проводника
+const _appSizes = [
+  16, 20, 24, 28, 30, 32, 36, 40, 42, 48, 56, 64, 72, 96, 128, 256, //
+];
 const _pngSize = 256;
 
 const _dotDiameter = 0.40;
@@ -25,10 +30,11 @@ void main() {
     exit(1);
   }
   final src = _Premultiplied(decoded);
+  final frames = {for (final s in {..._traySizes, ..._appSizes}) s: src.shrink(s)};
 
-  final plain = [for (final s in _icoSizes) src.shrink(s)];
+  final plain = [for (final s in _traySizes) frames[s]!];
   final connected = [for (final frame in plain) withDot(frame)];
-  final png = _icoSizes.indexOf(_pngSize);
+  final png = _traySizes.indexOf(_pngSize);
 
   File('assets/icon.png').writeAsBytesSync(img.encodePng(plain[png]));
   File('assets/icon_connected.png')
@@ -37,8 +43,12 @@ void main() {
       .writeAsBytesSync(img.IcoEncoder().encodeImages(plain));
   File('assets/tray_icon_connected.ico')
       .writeAsBytesSync(img.IcoEncoder().encodeImages(connected));
+  File('windows/runner/resources/app_icon.ico').writeAsBytesSync(
+    img.IcoEncoder().encodeImages([for (final s in _appSizes) frames[s]!]),
+  );
   stdout.writeln('Wrote icon.png, icon_connected.png, tray_icon.ico, '
-      'tray_icon_connected.ico (${_icoSizes.join(', ')})');
+      'tray_icon_connected.ico (${_traySizes.join(', ')}), '
+      'app_icon.ico (${_appSizes.join(', ')})');
 }
 
 // усреднение по площади с премультиплицированной альфой: иначе прозрачный фон темнит края штриха
