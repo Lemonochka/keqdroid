@@ -237,6 +237,20 @@ void main() {
     expect(gap(), moreOrLessEquals(atStart, epsilon: 0.5), reason: 'обложка заехала на надпись');
   });
 
+  testWidgets('у последней группы под большой обложкой нет пустого места', (tester) async {
+    await _pumpNav(tester);
+    ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;
+    await tester.pumpAndSettle();
+    expect(_big(tester), kManualServerGroupKey);
+    final panel = tester.getRect(find.byType(SidebarGroupNav));
+    final big = tester.getRect(_cover(kManualServerGroupKey));
+    expect(panel.bottom - big.bottom, lessThan(12), reason: 'снизу пустая доля');
+    // надпись едет вместе со стопкой и не наезжает на верхнюю обложку
+    final label = tester.getRect(find.text('Jump to'));
+    expect(label.bottom, lessThanOrEqualTo(_coverTop(tester, 'sub-b') + 0.5));
+    expect(label.top, greaterThanOrEqualTo(panel.top));
+  });
+
   testWidgets('к верхней группе карусель едет назад, а не крутит круг вперёд', (tester) async {
     await _pumpNav(tester);
     ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;

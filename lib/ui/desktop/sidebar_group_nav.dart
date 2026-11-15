@@ -211,7 +211,7 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
     final scheme = Theme.of(context).colorScheme;
     final labels = widget.labels.clamp(0.0, 1.0);
 
-    return Column(
+    final column = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (labels > 0.01)
@@ -308,6 +308,25 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
           ),
         ),
       ],
+    );
+
+    // под последней группой та же пустая доля, что над первой: там её занимает надпись,
+    // здесь вся стопка садится на дно панели
+    return ClipRect(
+      child: AnimatedBuilder(
+        animation: _carousel,
+        builder: (context, child) {
+          var sink = 0.0;
+          if (_carousel.hasClients && _carousel.position.hasContentDimensions) {
+            final position = _carousel.position;
+            final unit = _unit(position);
+            final left = (position.maxScrollExtent - position.pixels) / unit;
+            sink = unit * (1 - left.clamp(0.0, 1.0));
+          }
+          return Transform.translate(offset: Offset(0, sink), child: child);
+        },
+        child: column,
+      ),
     );
   }
 
