@@ -12,6 +12,12 @@ final _appInternalsProvider = FutureProvider.autoDispose<AppInternals>((
   );
 });
 
+@visibleForTesting
+final appInternalsProviderForTest = _appInternalsProvider;
+
+@visibleForTesting
+Widget appInternalsScreenForTest() => const _AppInternalsScreen();
+
 class _AppInternalsScreen extends ConsumerWidget {
   const _AppInternalsScreen();
 
@@ -33,7 +39,6 @@ class _AppInternalsScreen extends ConsumerWidget {
         ),
       ],
       children: switch (internals) {
-        AsyncData(:final value) => _sections(context, ref, l10n, value),
         AsyncError(:final error) => [
             ExpressiveNotice(
               color: Theme.of(context).colorScheme.error,
@@ -41,6 +46,8 @@ class _AppInternalsScreen extends ConsumerWidget {
               text: friendlyError(error, context),
             ),
           ],
+        // смена настроек пересобирает провайдер в AsyncLoading со старым значением: крутилка на это время сбрасывала прокрутку наверх
+        AsyncValue(:final value?) => _sections(context, ref, l10n, value),
         _ => const [
             Padding(
               padding: EdgeInsets.symmetric(vertical: 48),
