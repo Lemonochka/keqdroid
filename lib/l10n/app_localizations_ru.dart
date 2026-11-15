@@ -1191,6 +1191,54 @@ class AppLocalizationsRu extends AppLocalizations {
   String get subscriptionIdentityApply => 'Применить';
 
   @override
+  String get subscriptionProtocolsTitle => 'Протоколы';
+
+  @override
+  String get subscriptionProtocolsHint => 'Выключенные не попадут в список при обновлении подписки';
+
+  @override
+  String subscriptionProtocolsAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Все, $count сервера',
+      many: 'Все, $count серверов',
+      few: 'Все, $count сервера',
+      one: 'Все, $count сервер',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String subscriptionProtocolsKept(int kept, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      kept,
+      locale: localeName,
+      other: '$kept сервера из $total',
+      many: '$kept серверов из $total',
+      few: '$kept сервера из $total',
+      one: '$kept сервер из $total',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String subscriptionProtocolsServerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count сервера',
+      many: '$count серверов',
+      few: '$count сервера',
+      one: '$count сервер',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get subscriptionProtocolsTakeAll => 'Брать все';
+
+  @override
   String get subscriptionsDeleteSubscription => 'Удалить подписку';
 
   @override

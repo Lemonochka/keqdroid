@@ -2219,6 +2219,42 @@ abstract class AppLocalizations {
   /// **'Apply'**
   String get subscriptionIdentityApply;
 
+  /// No description provided for @subscriptionProtocolsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Protocols'**
+  String get subscriptionProtocolsTitle;
+
+  /// No description provided for @subscriptionProtocolsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Turned-off ones won\'t get into the list when the subscription updates'**
+  String get subscriptionProtocolsHint;
+
+  /// No description provided for @subscriptionProtocolsAll.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{All, 1 server} other{All, {count} servers}}'**
+  String subscriptionProtocolsAll(int count);
+
+  /// No description provided for @subscriptionProtocolsKept.
+  ///
+  /// In en, this message translates to:
+  /// **'{total, plural, =1{{kept} of 1 server} other{{kept} of {total} servers}}'**
+  String subscriptionProtocolsKept(int kept, int total);
+
+  /// No description provided for @subscriptionProtocolsServerCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 server} other{{count} servers}}'**
+  String subscriptionProtocolsServerCount(int count);
+
+  /// No description provided for @subscriptionProtocolsTakeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Take all'**
+  String get subscriptionProtocolsTakeAll;
+
   /// No description provided for @subscriptionsDeleteSubscription.
   ///
   /// In en, this message translates to:

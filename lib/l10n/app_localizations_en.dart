@@ -1181,6 +1181,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subscriptionIdentityApply => 'Apply';
 
   @override
+  String get subscriptionProtocolsTitle => 'Protocols';
+
+  @override
+  String get subscriptionProtocolsHint => 'Turned-off ones won\'t get into the list when the subscription updates';
+
+  @override
+  String subscriptionProtocolsAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'All, $count servers',
+      one: 'All, 1 server',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String subscriptionProtocolsKept(int kept, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$kept of $total servers',
+      one: '$kept of 1 server',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String subscriptionProtocolsServerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count servers',
+      one: '1 server',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get subscriptionProtocolsTakeAll => 'Take all';
+
+  @override
   String get subscriptionsDeleteSubscription => 'Delete subscription';
 
   @override

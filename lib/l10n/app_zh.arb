@@ -646,6 +646,12 @@
   "subscriptionIdentityUseTyped": "使用此值",
   "subscriptionIdentityReset": "重置",
   "subscriptionIdentityApply": "应用",
+  "subscriptionProtocolsTitle": "协议",
+  "subscriptionProtocolsHint": "关闭的协议在订阅更新时不会加入列表",
+  "subscriptionProtocolsAll": "{count, plural, other{全部，{count} 个服务器}}",
+  "subscriptionProtocolsKept": "{total, plural, other{{kept} / {total} 个服务器}}",
+  "subscriptionProtocolsServerCount": "{count, plural, other{{count} 个服务器}}",
+  "subscriptionProtocolsTakeAll": "全部保留",
   "subscriptionsDeleteSubscription": "删除订阅",
   "subscriptionsDeleteConfirm": "确定要删除“{name}”吗？\n\n该订阅中的服务器也会一并删除。",
   "@subscriptionsDeleteConfirm": {

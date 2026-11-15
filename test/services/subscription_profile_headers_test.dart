@@ -197,6 +197,8 @@ void main() {
       cardVeil: CardVeil.strong,
       autoSelectVisible: true,
       autoSelect: true,
+      excludedProtocols: const {'ss'},
+      protocolCounts: const {'vless': 5, 'ss': 2},
     );
 
     test('заголовки пришли те же — не изменилось ни одно поле', () {

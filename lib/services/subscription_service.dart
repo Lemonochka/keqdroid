@@ -22,6 +22,7 @@ import '../utils/hysteria_uri.dart';
 import '../utils/identity_presets.dart';
 import '../utils/mieru_uri.dart';
 import '../utils/mihomo_config_gen.dart';
+import '../utils/protocol_filter.dart';
 import '../utils/provider_routing.dart';
 import '../utils/raw_share_uri.dart';
 import '../utils/routing_profiles.dart';
@@ -2871,10 +2872,14 @@ class SubscriptionService {
         for (final s in oldServers)
           if (s.isPinned || s.customName != null || s.autoSkip) s.config,
       };
-      final uniqueConfigs = withoutNameCopies(
-        result.configs,
-        rank: (c) => c == activeConfig ? 2 : (marked.contains(c) ? 1 : 0),
+      final sifted = siftProtocols(
+        withoutNameCopies(
+          result.configs,
+          rank: (c) => c == activeConfig ? 2 : (marked.contains(c) ? 1 : 0),
+        ),
+        sub.excludedProtocols,
       );
+      final uniqueConfigs = sifted.kept;
 
       // близкие конфиги могут сойтись на одном stable-ключе, второму новый id
       final usedOldIds = <String>{};
@@ -2936,7 +2941,10 @@ class SubscriptionService {
       // правленные руками серверы, разошедшиеся по ключу, рефреш не стирает
       servers.addAll(
         oldServers.where(
-          (s) => s.configOverridden && !usedOldIds.contains(s.id),
+          (s) =>
+              s.configOverridden &&
+              !usedOldIds.contains(s.id) &&
+              !sub.excludedProtocols.contains(protocolFilterKey(s.protocol)),
         ),
       );
 
@@ -2967,6 +2975,7 @@ class SubscriptionService {
             totalBytes: result.totalBytes,
             expiresAt: result.expiresAt,
             serverCount: servers.length,
+            protocolCounts: sifted.counts,
             // закреплённый UA не сохраняем как рабочий, иначе после выключения подмены он действовал бы молча
             userAgent: sub.fetchIdentity.activeUserAgent != null
                 ? null

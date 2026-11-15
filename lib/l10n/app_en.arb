@@ -698,6 +698,36 @@
   "subscriptionIdentityUseTyped": "Use this value",
   "subscriptionIdentityReset": "Reset",
   "subscriptionIdentityApply": "Apply",
+  "subscriptionProtocolsTitle": "Protocols",
+  "subscriptionProtocolsHint": "Turned-off ones won't get into the list when the subscription updates",
+  "subscriptionProtocolsAll": "{count, plural, =1{All, 1 server} other{All, {count} servers}}",
+  "@subscriptionProtocolsAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionProtocolsKept": "{total, plural, =1{{kept} of 1 server} other{{kept} of {total} servers}}",
+  "@subscriptionProtocolsKept": {
+    "placeholders": {
+      "kept": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionProtocolsServerCount": "{count, plural, =1{1 server} other{{count} servers}}",
+  "@subscriptionProtocolsServerCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionProtocolsTakeAll": "Take all",
   "subscriptionsDeleteSubscription": "Delete subscription",
   "subscriptionsDeleteConfirm": "Are you sure you want to delete \"{name}\"?\n\nThis will also remove all associated servers.",
   "@subscriptionsDeleteConfirm": {

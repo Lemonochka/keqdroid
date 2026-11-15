@@ -1181,6 +1181,48 @@ class AppLocalizationsDe extends AppLocalizations {
   String get subscriptionIdentityApply => 'Übernehmen';
 
   @override
+  String get subscriptionProtocolsTitle => 'Protokolle';
+
+  @override
+  String get subscriptionProtocolsHint => 'Ausgeschaltete kommen beim Aktualisieren des Abonnements nicht in die Liste';
+
+  @override
+  String subscriptionProtocolsAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Alle, $count Server',
+      one: 'Alle, 1 Server',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String subscriptionProtocolsKept(int kept, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$kept von $total Servern',
+      one: '$kept von 1 Server',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String subscriptionProtocolsServerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Server',
+      one: '1 Server',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get subscriptionProtocolsTakeAll => 'Alle nehmen';
+
+  @override
   String get subscriptionsDeleteSubscription => 'Abonnement löschen';
 
   @override

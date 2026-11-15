@@ -646,6 +646,12 @@
   "subscriptionIdentityUseTyped": "Использовать это значение",
   "subscriptionIdentityReset": "Сбросить",
   "subscriptionIdentityApply": "Применить",
+  "subscriptionProtocolsTitle": "Протоколы",
+  "subscriptionProtocolsHint": "Выключенные не попадут в список при обновлении подписки",
+  "subscriptionProtocolsAll": "{count, plural, one{Все, {count} сервер} few{Все, {count} сервера} many{Все, {count} серверов} other{Все, {count} сервера}}",
+  "subscriptionProtocolsKept": "{kept, plural, one{{kept} сервер из {total}} few{{kept} сервера из {total}} many{{kept} серверов из {total}} other{{kept} сервера из {total}}}",
+  "subscriptionProtocolsServerCount": "{count, plural, one{{count} сервер} few{{count} сервера} many{{count} серверов} other{{count} сервера}}",
+  "subscriptionProtocolsTakeAll": "Брать все",
   "subscriptionsDeleteSubscription": "Удалить подписку",
   "subscriptionsDeleteConfirm": "Удалить «{name}»?\n\nСерверы этой подписки уйдут вместе с ней.",
   "@subscriptionsDeleteConfirm": {

@@ -1177,6 +1177,45 @@ class AppLocalizationsFa extends AppLocalizations {
   String get subscriptionIdentityApply => 'اعمال';
 
   @override
+  String get subscriptionProtocolsTitle => 'پروتکل‌ها';
+
+  @override
+  String get subscriptionProtocolsHint => 'پروتکل‌های خاموش هنگام به‌روزرسانی اشتراک به فهرست اضافه نمی‌شوند';
+
+  @override
+  String subscriptionProtocolsAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'همه، $count سرور',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String subscriptionProtocolsKept(int kept, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$kept از $total سرور',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String subscriptionProtocolsServerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count سرور',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get subscriptionProtocolsTakeAll => 'همه را بگیر';
+
+  @override
   String get subscriptionsDeleteSubscription => 'حذف اشتراک';
 
   @override

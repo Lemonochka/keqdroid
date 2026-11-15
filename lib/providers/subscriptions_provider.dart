@@ -381,6 +381,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
     CardVeil? cardVeil,
     bool? autoSelectVisible,
     bool? autoSelect,
+    Set<String>? excludedProtocols,
   }) async {
     final subs = state.value ?? [];
     final idx = subs.indexWhere((s) => s.id == id);
@@ -403,6 +404,9 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
         : (Uri.tryParse(effectiveUrl)?.host ?? current.name);
     final identityChanged =
         fetchIdentity != null && fetchIdentity != current.fetchIdentity;
+    final protocolsChanged = excludedProtocols != null &&
+        (excludedProtocols.length != current.excludedProtocols.length ||
+            !excludedProtocols.containsAll(current.excludedProtocols));
     final updated = current.copyWith(
       name: resetName ? autoName : (name ?? current.name),
       url: url ?? current.url,
@@ -414,6 +418,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       cardVeil: cardVeil,
       autoSelectVisible: autoSelectVisible,
       autoSelect: autoSelectVisible == false ? false : autoSelect,
+      excludedProtocols: excludedProtocols,
     );
     await ref.read(storageProvider).upsertSubscription(updated);
     final newList = [...subs]..[idx] = updated;
@@ -423,7 +428,7 @@ class SubscriptionsNotifier extends AsyncNotifier<List<Subscription>> {
       CardImageService.prune(id, updated.cardThemeId).catchError((_) {}),
     );
 
-    if (urlChanged || identityChanged) {
+    if (urlChanged || identityChanged || protocolsChanged) {
       unawaited(refreshTracked(updated).catchError((_) {}));
     }
   }

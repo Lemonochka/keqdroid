@@ -21,6 +21,7 @@ import 'package:keqdroid/shared/ui/update_interval_sheet.dart';
 import 'package:keqdroid/shared/ui/horizontal_mouse_scroll.dart';
 import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/shared/ui/smooth_scroll.dart';
+import 'package:keqdroid/shared/ui/server_avatar.dart' show serverProtocolColor;
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -43,6 +44,7 @@ import '../utils/bidi.dart';
 import '../utils/error_messages.dart';
 import '../utils/external_link.dart';
 import '../utils/identity_presets.dart';
+import '../utils/protocol_filter.dart';
 import '../utils/routing_profiles.dart';
 import '../utils/time_ago.dart';
 import 'package:keqdroid/shared/ui/liquid_toast.dart';
@@ -51,6 +53,7 @@ part 'subscriptions/card_look_sheet.dart';
 part 'subscriptions/card_menu.dart';
 part 'subscriptions/edit_sheet.dart';
 part 'subscriptions/identity_sheet.dart';
+part 'subscriptions/protocols_sheet.dart';
 part 'subscriptions/share_sheet.dart';
 
 class SubscriptionsTab extends ConsumerWidget {

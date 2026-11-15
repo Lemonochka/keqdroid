@@ -9,6 +9,7 @@ void _showSubscriptionEditSheet(
   final nameCtrl = TextEditingController(text: sub.name);
   final urlCtrl = TextEditingController(text: sub.url);
   var identity = sub.fetchIdentity;
+  var excludedProtocols = sub.excludedProtocols;
   String? editError;
 
   final cardColor = AppTheme.card(context);
@@ -131,6 +132,28 @@ void _showSubscriptionEditSheet(
                   setSheet(() => identity = picked);
                 },
               ),
+              Consumer(
+                builder: (context, ref, _) {
+                  final counts = _protocolCountsOf(sub, ref);
+                  if (counts.length < 2) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: _ProtocolsTile(
+                      counts: counts,
+                      excluded: excludedProtocols,
+                      onTap: () async {
+                        final picked = await _showProtocolsSheet(
+                          ctx,
+                          counts: counts,
+                          excluded: excludedProtocols,
+                        );
+                        if (picked == null) return;
+                        setSheet(() => excludedProtocols = picked);
+                      },
+                    ),
+                  );
+                },
+              ),
               if (editError != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -163,6 +186,7 @@ void _showSubscriptionEditSheet(
                             resetName: newName.isEmpty,
                             url: newUrl,
                             fetchIdentity: identity,
+                            excludedProtocols: excludedProtocols,
                           );
                     } catch (e) {
                       // без catch ошибка уходит в zone, и Save молча ничего не делает

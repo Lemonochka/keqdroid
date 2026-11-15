@@ -1177,6 +1177,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subscriptionIdentityApply => '应用';
 
   @override
+  String get subscriptionProtocolsTitle => '协议';
+
+  @override
+  String get subscriptionProtocolsHint => '关闭的协议在订阅更新时不会加入列表';
+
+  @override
+  String subscriptionProtocolsAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '全部，$count 个服务器',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String subscriptionProtocolsKept(int kept, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      total,
+      locale: localeName,
+      other: '$kept / $total 个服务器',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String subscriptionProtocolsServerCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个服务器',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get subscriptionProtocolsTakeAll => '全部保留';
+
+  @override
   String get subscriptionsDeleteSubscription => '删除订阅';
 
   @override

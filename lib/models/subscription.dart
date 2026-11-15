@@ -126,6 +126,12 @@ class Subscription {
   // группа шаблона mihomo и выбранный в ней пункт, сам шаблон в StorageService.getClashTemplate
   final Map<String, String> groupChoices;
 
+  // хранится выключенное, а не оставленное: новый протокол от провайдера приходит, а не пропадает молча
+  final Set<String> excludedProtocols;
+
+  // всё пришедшее при последнем обновлении, вместе с выключенным: по нему строится шторка «Протоколы»
+  final Map<String, int> protocolCounts;
+
   const Subscription({
     required this.id,
     required this.name,
@@ -153,6 +159,8 @@ class Subscription {
     this.fallbackUrl,
     this.remindExpiry = false,
     this.groupChoices = const {},
+    this.excludedProtocols = const {},
+    this.protocolCounts = const {},
   });
 
   factory Subscription.create({
@@ -212,6 +220,16 @@ class Subscription {
               key.toString(): value.toString(),
           }
         : const {},
+    excludedProtocols: json['excludedProtocols'] is List
+        ? {for (final p in json['excludedProtocols'] as List) p.toString()}
+        : const {},
+    protocolCounts: json['protocolCounts'] is Map
+        ? {
+            for (final MapEntry(:key, :value)
+                in (json['protocolCounts'] as Map).entries)
+              if (value is int) key.toString(): value,
+          }
+        : const {},
     fetchIdentity: json['fetchIdentity'] is Map
         ? SubscriptionFetchIdentity.fromJson(
             (json['fetchIdentity'] as Map).cast<String, dynamic>(),
@@ -248,6 +266,9 @@ class Subscription {
     if (fallbackUrl != null) 'fallbackUrl': fallbackUrl,
     if (remindExpiry) 'remindExpiry': true,
     if (groupChoices.isNotEmpty) 'groupChoices': groupChoices,
+    if (excludedProtocols.isNotEmpty)
+      'excludedProtocols': excludedProtocols.toList(),
+    if (protocolCounts.isNotEmpty) 'protocolCounts': protocolCounts,
     if (fetchIdentity.enabled || fetchIdentity.hasCustomFields)
       'fetchIdentity': fetchIdentity.toJson(),
   };
@@ -279,6 +300,8 @@ class Subscription {
     String? fallbackUrl,
     bool? remindExpiry,
     Map<String, String>? groupChoices,
+    Set<String>? excludedProtocols,
+    Map<String, int>? protocolCounts,
   }) =>
       Subscription(
         id: id ?? this.id,
@@ -307,6 +330,8 @@ class Subscription {
         fallbackUrl: fallbackUrl ?? this.fallbackUrl,
         remindExpiry: remindExpiry ?? this.remindExpiry,
         groupChoices: groupChoices ?? this.groupChoices,
+        excludedProtocols: excludedProtocols ?? this.excludedProtocols,
+        protocolCounts: protocolCounts ?? this.protocolCounts,
       );
 
   // новое поле модели добавлять и сюда, иначе оно слетает при каждом обновлении подписки
@@ -351,6 +376,8 @@ class Subscription {
       fallbackUrl: fallbackUrl ?? this.fallbackUrl,
       remindExpiry: remindExpiry,
       groupChoices: groupChoices,
+      excludedProtocols: excludedProtocols,
+      protocolCounts: protocolCounts,
     );
   }
 

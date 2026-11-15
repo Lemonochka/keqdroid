@@ -646,6 +646,12 @@
   "subscriptionIdentityUseTyped": "Diesen Wert verwenden",
   "subscriptionIdentityReset": "Zurücksetzen",
   "subscriptionIdentityApply": "Übernehmen",
+  "subscriptionProtocolsTitle": "Protokolle",
+  "subscriptionProtocolsHint": "Ausgeschaltete kommen beim Aktualisieren des Abonnements nicht in die Liste",
+  "subscriptionProtocolsAll": "{count, plural, =1{Alle, 1 Server} other{Alle, {count} Server}}",
+  "subscriptionProtocolsKept": "{total, plural, =1{{kept} von 1 Server} other{{kept} von {total} Servern}}",
+  "subscriptionProtocolsServerCount": "{count, plural, =1{1 Server} other{{count} Server}}",
+  "subscriptionProtocolsTakeAll": "Alle nehmen",
   "subscriptionsDeleteSubscription": "Abonnement löschen",
   "subscriptionsDeleteConfirm": "Möchtest du „{name}“ wirklich löschen?\n\nDadurch werden auch alle zugehörigen Server entfernt.",
   "@subscriptionsDeleteConfirm": {
