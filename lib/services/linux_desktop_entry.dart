@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'dart:ui' as ui;
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show listEquals, visibleForTesting;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
 
@@ -50,9 +50,9 @@ class LinuxDesktopEntry {
         appImage,
         hidden: integratedElsewhere(appImage, others),
       );
+      await _writeIcons(dataHome);
       if (content == existing) return;
 
-      await _writeIcons(dataHome);
       apps.createSync(recursive: true);
       entry.writeAsStringSync(content);
     } catch (e, st) {
@@ -98,21 +98,24 @@ class LinuxDesktopEntry {
 
   static Future<void> _writeIcons(String dataHome) async {
     final data = await rootBundle.load('assets/icon.png');
-    final codec = await ui.instantiateImageCodec(
-      data.buffer.asUint8List(),
-      targetWidth: 256,
-      targetHeight: 256,
+    writeIcons(
+      dataHome,
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
     );
-    final frame = await codec.getNextFrame();
-    final png = await frame.image.toByteData(format: ui.ImageByteFormat.png);
-    frame.image.dispose();
-    if (png == null) return;
+  }
+
+  // AppImage обновляется на месте и ярлык не меняется: без сверки у прежних установок осталась бы старая иконка
+  @visibleForTesting
+  static void writeIcons(String dataHome, Uint8List png) {
     final dir = Directory(
       p.join(dataHome, 'icons', 'hicolor', '256x256', 'apps'),
     )..createSync(recursive: true);
     for (final name in _iconNames) {
-      File(p.join(dir.path, '$name.png'))
-          .writeAsBytesSync(png.buffer.asUint8List());
+      final file = File(p.join(dir.path, '$name.png'));
+      if (file.existsSync() && listEquals(file.readAsBytesSync(), png)) {
+        continue;
+      }
+      file.writeAsBytesSync(png);
     }
   }
 }

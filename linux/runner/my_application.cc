@@ -54,7 +54,6 @@ static void set_window_icon(GtkWindow* window) {
   g_autofree gchar* dir = g_path_get_dirname(exe);
   g_autofree gchar* path = g_build_filename(
       dir, "data", "flutter_assets", "assets", "icon.png", nullptr);
-  // исходник 2048, а X11 несёт пиксели целиком
   g_autoptr(GdkPixbuf) icon =
       gdk_pixbuf_new_from_file_at_size(path, 256, 256, nullptr);
   if (icon != nullptr) gtk_window_set_icon(window, icon);

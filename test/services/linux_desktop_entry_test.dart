@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/services/linux_desktop_entry.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   group('contentFor', () {
@@ -52,5 +56,41 @@ void main() {
       ]),
       isFalse,
     );
+  });
+
+  group('writeIcons', () {
+    late Directory home;
+    final fresh = Uint8List.fromList([1, 2, 3]);
+
+    setUp(() => home = Directory.systemTemp.createTempSync('desktop_icons'));
+    tearDown(() => home.deleteSync(recursive: true));
+
+    File icon(String name) =>
+        File(p.join(home.path, 'icons', 'hicolor', '256x256', 'apps', name));
+
+    test('puts the icon under both names', () {
+      LinuxDesktopEntry.writeIcons(home.path, fresh);
+      expect(icon('keqdroid.png').readAsBytesSync(), fresh);
+      expect(icon('com.keqdroid.keqdroid.png').readAsBytesSync(), fresh);
+    });
+
+    // AppImage обновился на месте: ярлык тот же, а иконка в нём уже другая
+    test('replaces an icon left by an older version', () {
+      icon('keqdroid.png')
+        ..createSync(recursive: true)
+        ..writeAsBytesSync([9, 9]);
+      LinuxDesktopEntry.writeIcons(home.path, fresh);
+      expect(icon('keqdroid.png').readAsBytesSync(), fresh);
+    });
+
+    test('leaves an icon that is already current alone', () {
+      final old = DateTime(2026, 1, 1);
+      icon('keqdroid.png')
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(fresh)
+        ..setLastModifiedSync(old);
+      LinuxDesktopEntry.writeIcons(home.path, fresh);
+      expect(icon('keqdroid.png').lastModifiedSync(), old);
+    });
   });
 }
