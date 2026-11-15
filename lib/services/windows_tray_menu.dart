@@ -24,6 +24,7 @@ class WindowsTrayMenu with TrayListener {
 
   // ico, чтобы Windows взяла кадр нужного размера, png в трее мылится
   static const _iconAsset = 'assets/tray_icon.ico';
+  static const _connectedIconAsset = 'assets/tray_icon_connected.ico';
 
   static const _keyToggleVpn = 'vpn';
   static const _keyModeProxy = 'mode.proxy';
@@ -40,12 +41,37 @@ class WindowsTrayMenu with TrayListener {
 
   Future<void> init() async {
     trayManager.addListener(this);
+    _ref.listen(
+      vpnStateProvider.select(_isConnected),
+      (_, connected) => _showConnected(connected),
+    );
     try {
-      await trayManager.setIcon(_iconAsset);
+      await trayManager.setIcon(
+        _isConnected(_ref.read(vpnStateProvider))
+            ? _connectedIconAsset
+            : _iconAsset,
+      );
       await trayManager.setToolTip('KeqDroid');
     } catch (e, st) {
       AppLogger.instance.warn(
         'Tray icon init failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  static bool _isConnected(AsyncValue<VpnState> state) =>
+      state.value?.status == VpnStatus.connected;
+
+  Future<void> _showConnected(bool connected) async {
+    try {
+      await trayManager.setIcon(
+        connected ? _connectedIconAsset : _iconAsset,
+      );
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Tray icon update failed',
         error: e,
         stackTrace: st,
       );

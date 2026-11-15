@@ -106,12 +106,17 @@ flutter:
   generate: true
   uses-material-design: true
   assets:
+    # Эти четыре значка, обычные и с точкой подключения, рисует
+    # tool/make_tray_icons.dart.
     - assets/icon.png
+    - assets/icon_connected.png
     # Иконка трея: .ico, а не .png — Windows берёт из него кадр нужного размера.
     - assets/tray_icon.ico
+    - assets/tray_icon_connected.ico
     # icon_foreground.png и icon_windows_launcher.png сюда не входят: их с
     # диска читают только генераторы значков (flutter_launcher_icons,
-    # tool/prepare_windows_icon.dart), а в пакете они были 300 КБ мёртвого веса.
+    # tool/prepare_windows_icon.dart, tool/make_tray_icons.dart), а в пакете
+    # они были 300 КБ мёртвого веса.
     # OFL-лицензии шрифтов обязаны ехать вместе со шрифтами в дистрибутиве.
     - assets/fonts/Comfortaa-OFL.txt
     - assets/fonts/Montserrat-OFL.txt

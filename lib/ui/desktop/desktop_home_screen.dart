@@ -382,6 +382,13 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     });
 
     ref.watch(windowsTrayMenuProvider);
+    if (Platform.isLinux) {
+      ref.listen(
+        vpnStateProvider.select((a) => a.value?.status == VpnStatus.connected),
+        (_, connected) =>
+            unawaited(LinuxBackgroundService.instance.showConnected(connected)),
+      );
+    }
     LiquidToast.enabled = true;
 
     ref.listen<AsyncValue<UpdateInfo?>>(updateInfoProvider, (prev, next) {

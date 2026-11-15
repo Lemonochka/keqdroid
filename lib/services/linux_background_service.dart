@@ -20,6 +20,8 @@ class LinuxBackgroundService with WindowListener, TrayListener {
   LinuxBackgroundService.forTesting();
 
   static const _trayId = 'keqdroid';
+  static const _trayIcon = 'assets/icon.png';
+  static const _trayIconConnected = 'assets/icon_connected.png';
 
   @visibleForTesting
   static Duration quitSettleDelay = const Duration(milliseconds: 300);
@@ -100,7 +102,7 @@ class LinuxBackgroundService with WindowListener, TrayListener {
 
     trayManager.addListener(this);
     try {
-      await trayManager.setIcon('assets/icon.png', id: _trayId, title: 'keqdroid');
+      await trayManager.setIcon(_trayIcon, id: _trayId, title: 'keqdroid');
       // без setToolTip: на Linux tray_manager кидает MissingPluginException, и меню остаётся пустым
       await _applyTrayMenu();
     } catch (e, st) {
@@ -120,6 +122,16 @@ class LinuxBackgroundService with WindowListener, TrayListener {
           MenuItem(key: 'quit', label: _quitLabel),
         ]),
       );
+
+  Future<void> showConnected(bool connected) async {
+    try {
+      await trayManager.setIcon(
+        connected ? _trayIconConnected : _trayIcon,
+        id: _trayId,
+        title: 'keqdroid',
+      );
+    } catch (_) {}
+  }
 
   Future<void> setTrayLabels({
     required String show,
