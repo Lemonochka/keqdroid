@@ -267,6 +267,8 @@ class ConfigGeneratorV2 {
       config = _buildCustomConfig(
         custom,
         settings,
+        providerExit:
+            settings.ignoreProviderRules ? parsedCustom?.providerExit : null,
         resolvedServerIp: resolvedServerIp,
         pingSocksPort: pingSocksPort,
         pingHttpInbound: pingHttpInbound,
@@ -941,6 +943,7 @@ class ConfigGeneratorV2 {
   static Map<String, dynamic> _buildCustomConfig(
     CustomXrayConfig custom,
     AppSettings settings, {
+    Map<String, String>? providerExit,
     String? resolvedServerIp,
     int? pingSocksPort,
     bool pingHttpInbound = false,
@@ -1154,6 +1157,19 @@ class ConfigGeneratorV2 {
       if (routeServers.any((r) => r.address.trim().isNotEmpty)) directTag,
     };
 
+    // его правила выброшены, а балансировщик нет: ради него конфиг часто и собран
+    List<Map<String, dynamic>> viaProviderExit(List<Map<String, dynamic>> rules) =>
+        providerExit == null
+            ? rules
+            : [
+                for (final rule in rules)
+                  rule['outboundTag'] == custom.primaryOutboundTag
+                      ? ({...rule}
+                        ..remove('outboundTag')
+                        ..addAll(providerExit))
+                      : rule,
+              ];
+
     final config = custom.buildSessionConfig(
       inbounds: inbounds,
       logLevel: settings.xrayCore.logLevel,
@@ -1161,7 +1177,7 @@ class ConfigGeneratorV2 {
       dns: fallbackDns,
       ownDns: ownDns,
       // LAN-правила раньше авторских: иначе запрос снаружи уехал бы в туннель до запрета, и прокси стал бы открытым
-      prependRules: [
+      prependRules: viaProviderExit([
         ...desktopHead,
         if (outsideVpn != null) customRule('outside-vpn', outsideVpn),
         ...lanRules,
@@ -1176,8 +1192,8 @@ class ConfigGeneratorV2 {
           directTag,
           (tag, fields) => {'type': 'field', 'ruleTag': tag, ...fields},
         ),
-      ],
-      appendRules: appendRules,
+      ]),
+      appendRules: viaProviderExit(appendRules),
       geoIndex: geoIndex,
     );
 

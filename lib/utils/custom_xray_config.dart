@@ -409,6 +409,27 @@ class CustomXrayConfig {
     });
   }
 
+  // куда вело его правило на всё остальное, если не напрямую и не в блок. null, если на главный выход
+  Map<String, String>? get providerExit {
+    final routing = json['routing'];
+    if (routing is! Map) return null;
+    final catchAll = _rulesOf(_asStringMap(routing))?.where(_isCatchAll).firstOrNull;
+    if (catchAll == null) return null;
+    final balancer = catchAll['balancerTag']?.toString().trim() ?? '';
+    if (balancer.isNotEmpty) return {'balancerTag': balancer};
+    final outbound = catchAll['outboundTag']?.toString().trim() ?? '';
+    final local = {
+      for (final o in _outboundsOf(json))
+        if (_localOutboundProtocols
+            .contains(o['protocol']?.toString().toLowerCase()))
+          o['tag']?.toString().trim(),
+    };
+    if (outbound.isEmpty || outbound == primaryOutboundTag || local.contains(outbound)) {
+      return null;
+    }
+    return {'outboundTag': outbound};
+  }
+
   bool get hasProviderDns => authorDns != null;
 
   bool get hasProviderRules {

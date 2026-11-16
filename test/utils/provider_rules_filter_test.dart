@@ -138,6 +138,98 @@ void main() {
       expect(routeOf(own), 'proxy');
     });
 
+    group('через VPN туда, куда вело его «всё остальное»', () {
+      Map<String, dynamic> vless(String tag, String address) => {
+            'tag': tag,
+            'protocol': 'vless',
+            'settings': {
+              'vnext': [
+                {
+                  'address': address,
+                  'port': 443,
+                  'users': [
+                    {'id': '00000000-0000-4000-8000-000000000000', 'encryption': 'none'},
+                  ],
+                },
+              ],
+            },
+            'streamSettings': {'network': 'tcp', 'security': 'tls'},
+          };
+
+      List<Map<String, dynamic>> rulesOf(
+        Map<String, dynamic> catchAll,
+        AppSettings settings,
+      ) {
+        final input = jsonEncode({
+          'remarks': 'Auto',
+          'outbounds': [
+            vless('auto', '198.51.100.71'),
+            vless('auto-2', '198.51.100.72'),
+            {'tag': 'direct', 'protocol': 'freedom'},
+            {'tag': 'block', 'protocol': 'blackhole'},
+          ],
+          'routing': {
+            'balancers': [
+              {'tag': 'auto-lb', 'selector': ['auto']},
+            ],
+            'rules': [
+              {'type': 'field', 'ip': ['geoip:private'], 'outboundTag': 'direct'},
+              {'type': 'field', ...catchAll},
+            ],
+          },
+        });
+        final out = jsonDecode(ConfigGeneratorV2.generateConfig(input, settings)) as Map;
+        return ((out['routing'] as Map)['rules'] as List).cast<Map<String, dynamic>>();
+      }
+
+      Map<String, dynamic> tagged(List<Map<String, dynamic>> rules, String tag) =>
+          rules.firstWhere((r) => r['ruleTag'] == tag);
+
+      const own = AppSettings(
+        ignoreProviderRules: true,
+        directRules: 'corp.example',
+        proxyRules: 'vpn.example',
+      );
+      const toBalancer = {'network': 'tcp,udp', 'balancerTag': 'auto-lb'};
+
+      test('балансировщик', () {
+        final rules = rulesOf(toBalancer, own);
+        for (final tag in ['final', 'user-proxy-domains', 'exit-ip-probe']) {
+          expect(tagged(rules, tag)['balancerTag'], 'auto-lb', reason: tag);
+          expect(tagged(rules, tag).containsKey('outboundTag'), isFalse, reason: tag);
+        }
+        expect(tagged(rules, 'user-direct-domains')['outboundTag'], 'direct');
+        expect(tagged(rules, 'direct-private')['outboundTag'], 'direct');
+      });
+
+      test('другой его сервер', () {
+        final rules = rulesOf(const {'port': '0-65535', 'outboundTag': 'auto-2'}, own);
+        expect(tagged(rules, 'final')['outboundTag'], 'auto-2');
+        expect(tagged(rules, 'user-proxy-domains')['outboundTag'], 'auto-2');
+      });
+
+      test('всё остальное у человека напрямую: так и остаётся', () {
+        final rules = rulesOf(
+          toBalancer,
+          own.copyWith(finalOutbound: AppSettings.finalOutboundDirect),
+        );
+        expect(tagged(rules, 'final')['outboundTag'], 'direct');
+        expect(tagged(rules, 'user-proxy-domains')['balancerTag'], 'auto-lb');
+      });
+
+      test('его «всё остальное» напрямую: через VPN как раньше, на первый сервер', () {
+        final rules = rulesOf(const {'network': 'tcp,udp', 'outboundTag': 'direct'}, own);
+        expect(tagged(rules, 'final')['outboundTag'], 'auto');
+        expect(tagged(rules, 'user-proxy-domains')['outboundTag'], 'auto');
+      });
+
+      test('с его правилами всё как раньше: решает его балансировщик, наши на первый сервер', () {
+        final rules = rulesOf(toBalancer, own.copyWith(ignoreProviderRules: false));
+        expect(rules.where((r) => r['balancerTag'] == 'auto-lb').single['ruleTag'], isNull);
+        expect(tagged(rules, 'final')['outboundTag'], 'auto');
+      });
+    });
+
     test('что выбросит, видно заранее', () {
       expect(config([{'domain': ['domain:x'], 'outboundTag': 'direct'}]).hasProviderRules, isTrue);
       expect(config([{'port': '53', 'outboundTag': 'direct'}]).hasProviderRules, isFalse);
@@ -249,6 +341,38 @@ rules:
       );
       expect(config(['IP-CIDR,0.0.0.0/0,Proxy']).hasProviderRules, isTrue);
       expect(kept(['IP-CIDR,203.0.113.0/24,Proxy']), ['IP-CIDR,203.0.113.0/24,Proxy']);
+    });
+
+    test('через VPN идёт в его первую группу, автовыбор остаётся', () {
+      const yaml = '''
+proxies:
+  - name: "NL"
+    type: trojan
+    server: 198.51.100.62
+    port: 443
+    password: password
+  - name: "DE"
+    type: trojan
+    server: 198.51.100.63
+    port: 443
+    password: password
+proxy-groups:
+  - name: "Auto"
+    type: url-test
+    proxies: ["NL", "DE"]
+    url: "https://www.gstatic.com/generate_204"
+    interval: 300
+rules:
+  - MATCH,Auto
+''';
+      final out = jsonDecode(MihomoConfigGen.generate(
+        yaml,
+        const AppSettings(ignoreProviderRules: true, proxyRules: 'vpn.example'),
+        socksPort: 2080,
+      )) as Map;
+      final rules = [for (final r in out['rules'] as List) r.toString()];
+      expect(rules.last, 'MATCH,Auto');
+      expect(rules, contains('DOMAIN-SUFFIX,vpn.example,Auto'));
     });
 
     test('что выбросит, видно заранее', () {
