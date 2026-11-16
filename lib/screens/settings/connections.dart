@@ -275,6 +275,9 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
           live: snapshot.source == ConnectionsSource.coreApi,
           livenessKnown: snapshot.ruleInfoAvailable,
           insight: insight,
+          pendingLists: [
+            for (final preset in RoutingPresets.all) _presetName(l10n, preset.id),
+          ],
           app: app,
           rule: _ruleField(
             l10n,

@@ -6,6 +6,7 @@ import 'package:keqdroid/models/connection_entry.dart';
 import 'package:keqdroid/screens/settings/connection_tile.dart';
 import 'package:keqdroid/shared/ui/accent_edge_card.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
+import 'package:keqdroid/shared/ui/expressive.dart';
 import 'package:keqdroid/shared/ui/liquid_toast.dart';
 import 'package:keqdroid/utils/connection_route.dart';
 
@@ -52,6 +53,7 @@ class ConnectionDetailsSheet extends StatefulWidget {
     required this.live,
     required this.livenessKnown,
     required this.insight,
+    this.pendingLists = const [],
     this.app,
     this.rule,
     this.exit,
@@ -66,6 +68,9 @@ class ConnectionDetailsSheet extends StatefulWidget {
   final bool livenessKnown;
 
   final Future<ConnectionInsightView> insight;
+
+  // названия списков, пока база читается: шторка выезжает уже своей высоты и в конце не подпрыгивает
+  final List<String> pendingLists;
 
   final ConnectionField? app;
   final ConnectionField? rule;
@@ -85,9 +90,18 @@ class _ConnectionDetailsSheetState extends State<ConnectionDetailsSheet> {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ConnectionEntry>(
       valueListenable: widget.entry,
-      builder: (context, entry, _) => FutureBuilder<ConnectionInsightView>(
-        future: widget.insight,
-        builder: (context, snap) => _content(context, entry, snap),
+      // подпись к правилу или приложению приходит вместе со списками и добавляет строку
+      builder: (context, entry, _) => AnimatedSize(
+        duration: const Duration(milliseconds: 450),
+        curve: const SpringCurve(
+          ExpressiveMotion.spatialDefault,
+          Duration(milliseconds: 450),
+        ),
+        alignment: Alignment.topCenter,
+        child: FutureBuilder<ConnectionInsightView>(
+          future: widget.insight,
+          builder: (context, snap) => _content(context, entry, snap),
+        ),
       ),
     );
   }
@@ -182,14 +196,32 @@ class _ConnectionDetailsSheetState extends State<ConnectionDetailsSheet> {
               _plainCard(
                 context,
                 view == null
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 6),
-                        child: Center(
-                          child: SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                    ? Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Visibility(
+                            visible: false,
+                            maintainSize: true,
+                            maintainAnimation: true,
+                            maintainState: true,
+                            child: Column(
+                              children: [
+                                for (final name in widget.pendingLists)
+                                  _listRow(
+                                    context,
+                                    ConnectionListLine(name, ListMatch.miss),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 6),
+                            child: SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        ],
                       )
                     : Column(
                         children: [

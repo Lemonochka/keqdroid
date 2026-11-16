@@ -82,11 +82,13 @@ ConnectionDetailsSheet _sheet(
   bool live = false,
   bool livenessKnown = true,
   Future<ConnectionInsightView>? insight,
+  List<String> pendingLists = const [],
 }) =>
     ConnectionDetailsSheet(
       entry: entry,
       live: live,
       livenessKnown: livenessKnown,
+      pendingLists: pendingLists,
       insight: insight ??
           Future.value(
             const ConnectionInsightView(
@@ -156,6 +158,69 @@ void main() {
     pending.complete(const ConnectionInsightView(lists: _lists));
     await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets('the sheet opens at its full height and does not jump when the lists arrive',
+      (tester) async {
+    final entry = ValueNotifier(_one('a:1', _t0));
+    final pending = Completer<ConnectionInsightView>();
+    await tester.pumpWidget(
+      _app(
+        _sheet(
+          entry,
+          insight: pending.future,
+          pendingLists: [for (final line in _lists) line.name],
+        ),
+      ),
+    );
+    final before = tester.getSize(find.byType(ConnectionDetailsSheet)).height;
+
+    pending.complete(const ConnectionInsightView(lists: _lists));
+    await tester.pump();
+    expect(
+      tester.getSize(find.byType(ConnectionDetailsSheet)).height,
+      moreOrLessEquals(before, epsilon: 0.5),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byType(ConnectionDetailsSheet)).height,
+      moreOrLessEquals(before, epsilon: 0.5),
+    );
+  });
+
+  testWidgets('a route note that comes with the lists grows the sheet smoothly',
+      (tester) async {
+    final entry = ValueNotifier(_one('a:1', _t0));
+    final pending = Completer<ConnectionInsightView>();
+    await tester.pumpWidget(
+      _app(
+        _sheet(
+          entry,
+          insight: pending.future,
+          pendingLists: [for (final line in _lists) line.name],
+        ),
+      ),
+    );
+    double height() => tester.getSize(find.byType(ConnectionDetailsSheet)).height;
+    final before = height();
+
+    pending.complete(
+      const ConnectionInsightView(
+        rule: ConnectionField(
+          'keq-route-3-domains',
+          mono: true,
+          note: 'маршрут «Российские сайты»',
+        ),
+        lists: _lists,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    final firstFrame = height();
+    await tester.pumpAndSettle();
+    final grown = height() - before;
+    expect(grown, greaterThan(8));
+    expect(firstFrame - before, lessThan(grown / 2));
   });
 
   testWidgets('a group lists its connections, four first, the rest on tap',
