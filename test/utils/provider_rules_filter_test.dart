@@ -4,9 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/tunnel/app_routing_mode.dart';
 import 'package:keqdroid/utils/custom_clash_config.dart';
+import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/custom_xray_config.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
+
+import '../helpers/xray_rules_sim.dart';
 
 /// «Не учитывать правила провайдера»: уходят его сайты напрямую и в блок и его
 /// «всё остальное», а правила к его же узлам и технические остаются, иначе
@@ -68,6 +71,71 @@ void main() {
         ]),
         isEmpty,
       );
+    });
+
+    test('«всё остальное» через любой адрес тоже уходит', () {
+      expect(
+        kept([
+          {'type': 'field', 'ip': ['0.0.0.0/0', '::/0'], 'outboundTag': 'proxy'},
+          {'ip': ['::/0'], 'outboundTag': 'proxy-fast'},
+          {'ip': ['0.0.0.0/0'], 'balancerTag': 'auto'},
+        ]),
+        isEmpty,
+      );
+      expect(
+        config([{'ip': ['0.0.0.0/0', '::/0'], 'outboundTag': 'proxy'}]).hasProviderRules,
+        isTrue,
+      );
+      // с другим условием это уже не правило на всё остальное
+      final narrowed = [
+        {'ip': ['0.0.0.0/0'], 'port': '443', 'outboundTag': 'proxy'},
+      ];
+      expect(kept(narrowed), narrowed);
+    });
+
+    // шаблон панели 16.11.2026: последним правилом ip 0.0.0.0/0 в прокси, и оно забирало маршрут напрямую
+    test('маршрут напрямую при выключенных правилах провайдера не уезжает в его прокси', () {
+      final input = jsonEncode({
+        'remarks': 'FI',
+        'outbounds': [
+          {
+            'tag': 'proxy',
+            'protocol': 'vless',
+            'settings': {
+              'vnext': [
+                {
+                  'address': '198.51.100.70',
+                  'port': 443,
+                  'users': [
+                    {'id': '00000000-0000-4000-8000-000000000000', 'encryption': 'none'},
+                  ],
+                },
+              ],
+            },
+            'streamSettings': {'network': 'tcp', 'security': 'tls'},
+          },
+          {'tag': 'direct', 'protocol': 'freedom'},
+          {'tag': 'block', 'protocol': 'blackhole'},
+        ],
+        'routing': {
+          'domainStrategy': 'IPIfNonMatch',
+          'rules': [
+            {'type': 'field', 'domain': ['domain:ru'], 'outboundTag': 'direct'},
+            {'type': 'field', 'ip': ['0.0.0.0/0', '::/0'], 'outboundTag': 'proxy'},
+          ],
+        },
+      });
+      // без имени: снифер с routeOnly false подменил бы адрес доменом, и ip-правило его не поймало бы
+      String routeOf(AppSettings settings) => simulateXray(
+            jsonDecode(ConfigGeneratorV2.generateConfig(input, settings))
+                as Map<String, dynamic>,
+            const XrayConn(ip: '93.184.215.14'),
+          )!;
+
+      const own = AppSettings(directRules: '93.184.215.0/24');
+      expect(routeOf(own.copyWith(ignoreProviderRules: true)), 'direct');
+      // выключенный переключатель: решает провайдер, как раньше
+      expect(routeOf(own), 'proxy');
     });
 
     test('что выбросит, видно заранее', () {
@@ -169,6 +237,18 @@ rules:
       // выключенный переключатель: всё как раньше, решает MATCH провайдера
       expect(rulesOf(const AppSettings()).last, 'MATCH,DIRECT');
       expect(rulesOf(const AppSettings()), contains('DOMAIN-SUFFIX,provider-only.example,DIRECT'));
+    });
+
+    test('«всё остальное» через любой адрес уходит, как MATCH', () {
+      expect(
+        kept([
+          'IP-CIDR,0.0.0.0/0,Proxy',
+          'IP-CIDR6,::/0,Proxy,no-resolve',
+        ]),
+        isEmpty,
+      );
+      expect(config(['IP-CIDR,0.0.0.0/0,Proxy']).hasProviderRules, isTrue);
+      expect(kept(['IP-CIDR,203.0.113.0/24,Proxy']), ['IP-CIDR,203.0.113.0/24,Proxy']);
     });
 
     test('что выбросит, видно заранее', () {

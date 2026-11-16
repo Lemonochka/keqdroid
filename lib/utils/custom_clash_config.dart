@@ -723,6 +723,10 @@ class CustomClashConfig {
     final parsed = _parseRule(rule);
     if (parsed == null) return false;
     if (parsed.type == 'MATCH') return true;
+    if (const {'IP-CIDR', 'IP-CIDR6'}.contains(parsed.type) &&
+        const {'0.0.0.0/0', '::/0'}.contains(parsed.payload.trim())) {
+      return true;
+    }
     if (!_localTargets.contains(parsed.target.toUpperCase())) return false;
     if (_siteRuleTypes.contains(parsed.type)) return true;
     if (const {'AND', 'OR', 'NOT'}.contains(parsed.type)) {

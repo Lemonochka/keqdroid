@@ -435,13 +435,21 @@ class CustomXrayConfig {
   };
 
   // порт 0-65535 тоже catch-all: так его пишут провайдеры, у которых в конце «всё напрямую»
+  // ip 0.0.0.0/0 тоже: им кончался шаблон панели (16.11.2026) и обыгрывал маршрут человека напрямую
   static bool _isCatchAll(Map<String, dynamic> rule) {
     final conditions = rule.keys.where((k) => !_notConditions.contains(k)).toSet();
     if (conditions.isEmpty) return true;
-    if (conditions.length != 1 || conditions.single != 'port') return false;
+    if (conditions.length != 1) return false;
+    if (conditions.single == 'ip') {
+      final ip = rule['ip'];
+      return ip is List && ip.any((e) => _anyAddress.contains(e.toString().trim()));
+    }
+    if (conditions.single != 'port') return false;
     final port = rule['port']?.toString().replaceAll(' ', '');
     return port == '0-65535' || port == '1-65535';
   }
+
+  static const _anyAddress = {'0.0.0.0/0', '::/0'};
 
   // перевод устаревших полей правит карты на месте: без копии второй сбор того же конфига терял поля
   static Map<String, dynamic> _deepCopy(Map<String, dynamic> map) =>
