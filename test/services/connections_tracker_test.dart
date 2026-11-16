@@ -114,6 +114,52 @@ void main() {
       expect(snapshot.entries.single.upload, 120);
       expect(snapshot.entries.single.download, 980);
     });
+
+    test('a group row takes the first known rule and inbound, no bytes when nobody counted them', () {
+      final tracker = ConnectionsTracker();
+      final snapshot = tracker.merge(
+        _log([
+          _entry(source: 'a:1', rule: '', startedAt: t0),
+          _entry(source: 'a:2', startedAt: t0.add(const Duration(seconds: 1))),
+        ]),
+        sessionToken: 'log:',
+        now: t0.add(const Duration(seconds: 2)),
+      );
+      final row = snapshot.entries.single;
+      expect(row.id, startsWith('group:'));
+      expect(row.rule, 'proxy-geosite');
+      expect(row.inbound, 'socks-in');
+      expect(row.upload, isNull);
+      expect(row.download, isNull);
+    });
+
+    test('a group row keeps its connections, newest first', () {
+      final tracker = ConnectionsTracker();
+      final snapshot = tracker.merge(
+        _log([
+          _entry(source: 'a:1', startedAt: t0, closed: true),
+          _entry(source: 'a:3', startedAt: t0.add(const Duration(seconds: 2))),
+          _entry(source: 'a:2', startedAt: t0.add(const Duration(seconds: 1))),
+        ]),
+        sessionToken: 'log:',
+        now: t0.add(const Duration(seconds: 3)),
+      );
+      final row = snapshot.entries.single;
+      expect(row.members.map((m) => m.source), ['a:3', 'a:2', 'a:1']);
+      expect(row.members.last.closed, isTrue);
+      expect(row.members.every((m) => m.members.isEmpty), isTrue);
+    });
+
+    test('a single connection has no member list', () {
+      final tracker = ConnectionsTracker();
+      final snapshot = tracker.merge(
+        _log([_entry(source: 'a:1', startedAt: t0)]),
+        sessionToken: 'log:',
+        now: t0,
+      );
+      expect(snapshot.entries.single.members, isEmpty);
+      expect(snapshot.entries.single.source, 'a:1');
+    });
   });
 
   group('ConnectionsTracker holding live connections', () {

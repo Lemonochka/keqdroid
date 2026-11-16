@@ -20,9 +20,12 @@ class RouteAppRules {
     this.network = RouteNetwork.any,
     this.ports = const [],
     this.ownOrder = false,
+    this.routeId = '',
   });
 
   final String tag;
+
+  final String routeId;
 
   // пусто у маршрута всех приложений (routeProtocolRules): ни TUN, ни поиска процесса ему не надо
   final List<String> apps;
@@ -61,6 +64,7 @@ class RouteAppRules {
         network: network,
         ports: ports,
         ownOrder: ownOrder,
+        routeId: routeId,
       );
 }
 
@@ -96,6 +100,7 @@ List<RouteAppRules> routeProtocolRules({
       network: route.network,
       ports: ports,
       ownOrder: placed,
+      routeId: route.id,
     ));
   }
   return out;
@@ -133,6 +138,7 @@ List<RouteAppRules> routeAppRules({
       entries: routeEntriesText(route).trim(),
       network: route.network,
       ports: ports,
+      routeId: route.id,
     ));
   }
   return out;

@@ -150,6 +150,11 @@ class ConnectionsTracker {
       if (!member.closed) closed = false;
     }
 
+    final newestFirst = [...members]..sort((a, b) {
+        final at = a.startedAt, bt = b.startedAt;
+        if (at == null || bt == null) return 0;
+        return bt.compareTo(at);
+      });
     final first = members.first;
     return first.copyWith(
       id: 'group:${first.groupKey}',
@@ -161,6 +166,7 @@ class ConnectionsTracker {
       download: hasBytes ? download : null,
       closed: closed,
       count: members.length,
+      members: newestFirst,
     );
   }
 }

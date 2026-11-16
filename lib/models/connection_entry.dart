@@ -17,6 +17,7 @@ class ConnectionEntry {
     this.decidedByCore = false,
     this.closed = false,
     this.count = 1,
+    this.members = const [],
   });
 
   final String id;
@@ -50,6 +51,8 @@ class ConnectionEntry {
   final bool decidedByCore;
 
   final int count;
+
+  final List<ConnectionEntry> members;
 
   ConnectionVerdict get verdict {
     if (rejected) return ConnectionVerdict.blocked;
@@ -90,6 +93,7 @@ class ConnectionEntry {
     bool? decidedByCore,
     bool? closed,
     int? count,
+    List<ConnectionEntry>? members,
   }) =>
       ConnectionEntry(
         id: id ?? this.id,
@@ -109,6 +113,7 @@ class ConnectionEntry {
         decidedByCore: decidedByCore ?? this.decidedByCore,
         closed: closed ?? this.closed,
         count: count ?? this.count,
+        members: members ?? this.members,
       );
 
   String get groupKey => '$network|${host.toLowerCase()}|$destPort'

@@ -58,6 +58,10 @@ class GeoDatReader {
         .cast<GeoDatRecord?>()
         .firstWhere((r) => r!.code == wanted, orElse: () => null);
     if (record == null) return null;
+    return bodyAt(file, record);
+  }
+
+  static Future<Uint8List?> bodyAt(File file, GeoDatRecord record) async {
     RandomAccessFile? raf;
     try {
       raf = await file.open();
