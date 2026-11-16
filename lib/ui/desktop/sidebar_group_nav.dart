@@ -285,11 +285,14 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
                         onTap: _open,
                         children: [
                           for (final group in _groups)
-                            _GroupCover(
-                              group: group,
-                              title: _titleFor(group, l10n),
-                              labels: labels,
-                              through: connected && group.servers.any((s) => s.id == activeId),
+                            _UnsnappedCover(
+                              motion: _carousel,
+                              child: _GroupCover(
+                                group: group,
+                                title: _titleFor(group, l10n),
+                                labels: labels,
+                                through: connected && group.servers.any((s) => s.id == activeId),
+                              ),
                             ),
                         ],
                       ),
@@ -420,43 +423,42 @@ class _GroupCover extends StatelessWidget {
                   start: 16,
                   end: 14,
                   bottom: bottom,
-                  child: Opacity(
-                    opacity: text,
-                    child: Row(
-                      children: [
-                        if (through) ...[
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: onCover,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                        Expanded(
-                          child: SteadyBaseline(
-                            child: Text(
-                              title,
-                              maxLines: 1,
-                              softWrap: false,
-                              overflow: TextOverflow.fade,
-                              style: titleStyle,
-                            ),
+                  // без Opacity: её слой движок ещё раз ставил в целый пиксель, и подпись на середине
+                  // пикселя моргала, сколько её ни держи
+                  child: Row(
+                    children: [
+                      if (through) ...[
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: onCover.withValues(alpha: text),
+                            shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        SteadyBaseline(
+                      ],
+                      Expanded(
+                        child: SteadyBaseline(
                           child: Text(
-                            '$count',
-                            style: textTheme.labelMedium?.copyWith(
-                              color: onCover.withValues(alpha: 0.8),
-                            ),
+                            title,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.fade,
+                            style: titleStyle?.copyWith(color: onCover.withValues(alpha: text)),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      SteadyBaseline(
+                        child: Text(
+                          '$count',
+                          style: textTheme.labelMedium?.copyWith(
+                            color: onCover.withValues(alpha: 0.8 * text),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],
@@ -464,6 +466,84 @@ class _GroupCover extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+// Skia на ПК ставит начало слоя в целый пиксель (ComputeIntegralTransCTM в flow), а край обложки
+// режет без этого: пока обложка растёт, картинка и подпись под краем прыгали на пиксель туда и обратно.
+// содержимое сдвигается на отброшенную долю, край обложки всегда отдельный слой
+class _UnsnappedCover extends SingleChildRenderObjectWidget {
+  const _UnsnappedCover({required this.motion, required super.child});
+
+  // сдвиг стопки на дно двигает обложку без новой раскладки
+  final Listenable motion;
+
+  @override
+  _RenderUnsnappedCover createRenderObject(BuildContext context) =>
+      _RenderUnsnappedCover(motion, MediaQuery.devicePixelRatioOf(context));
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderUnsnappedCover renderObject) =>
+      renderObject
+        ..motion = motion
+        ..devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+}
+
+class _RenderUnsnappedCover extends RenderProxyBox {
+  _RenderUnsnappedCover(this._motion, this._devicePixelRatio);
+
+  double _devicePixelRatio;
+  set devicePixelRatio(double value) {
+    if (value == _devicePixelRatio) return;
+    _devicePixelRatio = value;
+    markNeedsPaint();
+  }
+
+  Listenable _motion;
+  set motion(Listenable value) {
+    if (identical(value, _motion)) return;
+    if (attached) {
+      _motion.removeListener(markNeedsPaint);
+      value.addListener(markNeedsPaint);
+    }
+    _motion = value;
+    markNeedsPaint();
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _motion.addListener(markNeedsPaint);
+  }
+
+  @override
+  void detach() {
+    _motion.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  @override
+  bool get alwaysNeedsCompositing => true;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final child = this.child;
+    if (child == null) return;
+    RenderObject layerOwner = this;
+    while (!layerOwner.isRepaintBoundary && layerOwner.parent != null) {
+      layerOwner = layerOwner.parent!;
+    }
+    final m = layerOwner.getTransformTo(null).storage;
+    final scaleTranslate = m[1] == 0 && m[2] == 0 && m[3] == 0 && m[4] == 0 && m[6] == 0 &&
+        m[7] == 0 && m[8] == 0 && m[9] == 0 && m[11] == 0 && m[15] == 1 && m[0] != 0 && m[5] != 0;
+    var shift = Offset.zero;
+    if (scaleTranslate) {
+      final dpr = _devicePixelRatio;
+      // корень может уже умножать на масштаб экрана, может и нет
+      final x = m[12] * dpr / m[0], y = m[13] * dpr / m[5];
+      shift = Offset(x - x.roundToDouble(), y - y.roundToDouble()) / dpr;
+    }
+    context.paintChild(child, offset + shift);
   }
 }
 

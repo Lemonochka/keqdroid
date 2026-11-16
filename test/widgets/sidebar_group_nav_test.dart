@@ -16,6 +16,8 @@ import 'package:keqdroid/shared/ui/server_group_anchors.dart';
 import 'package:keqdroid/tunnel/tunnel_state.dart';
 import 'package:keqdroid/ui/desktop/sidebar_group_nav.dart';
 
+import '../helpers/desktop_skia_frame.dart';
+
 /// Быстрый переход в боковой панели ПК: карусель обложек групп. Большая обложка у группы,
 /// на которой стоит список, клик по обложке ведёт к группе.
 class _FakeServers extends ServersNotifier {
@@ -171,6 +173,114 @@ Future<void> _expectNoRollback(WidgetTester tester, ScrollPosition position) asy
     peak = math.max(peak, position.pixels);
   }
   await tester.pumpAndSettle();
+}
+
+// обложки красные, формы на них синие, подписи зелёные: каждое мерится своим каналом
+const _coverColor = Color(0xFFFF0000);
+const _shapeColor = Color(0xFF0000FF);
+const _captionColor = Color(0xFF00FF00);
+
+Future<ScrollPosition> _pumpOnScreen(WidgetTester tester, double dpr) async {
+  tester.view.physicalSize = Size(248 * dpr, 500 * dpr);
+  tester.view.devicePixelRatio = dpr;
+  addTearDown(tester.view.reset);
+  final scheme = ColorScheme.fromSeed(seedColor: _coverColor).copyWith(
+    primaryContainer: _coverColor,
+    tertiaryContainer: _coverColor,
+    secondaryContainer: _coverColor,
+    primary: _shapeColor,
+    tertiary: _shapeColor,
+    secondary: _shapeColor,
+    onPrimaryContainer: _captionColor,
+    onTertiaryContainer: _captionColor,
+    onSecondaryContainer: _captionColor,
+    surfaceContainerHigh: Colors.black,
+    surface: Colors.black,
+    onSurfaceVariant: Colors.black,
+  );
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        serversProvider.overrideWith(
+          () => _FakeServers(
+            ServersState(
+              servers: [
+                _server('a1', subscriptionId: 'sub-a'),
+                _server('b1', subscriptionId: 'sub-b'),
+                _server('m1'),
+              ],
+            ),
+          ),
+        ),
+        subscriptionsProvider.overrideWith(() => _FakeSubs(_subs)),
+        settingsNotifierProvider.overrideWith(_FakeSettings.new),
+        vpnStateProvider.overrideWith(() => _FakeVpn(VpnStatus.disconnected)),
+      ],
+      child: MaterialApp(
+        theme: ThemeData(colorScheme: scheme, scaffoldBackgroundColor: Colors.black),
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: SizedBox(
+            width: 248,
+            height: 500,
+            child: SidebarGroupNav(labels: 1, onOpenServers: () {}),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return _carouselPosition(tester);
+}
+
+class _Scrolling extends ScrollActivity {
+  _Scrolling(super.delegate);
+
+  @override
+  bool get shouldIgnorePointer => false;
+
+  @override
+  bool get isScrolling => true;
+
+  @override
+  double get velocity => 0;
+}
+
+typedef _CoverFrame = ({Rect cover, DesktopSkiaFrame frame, double dpr});
+
+// по 0,37 px за кадр: медленнее колеса, видно каждый пиксель
+Stream<_CoverFrame> _slowScroll(
+  WidgetTester tester,
+  ScrollPosition position,
+  double from,
+  double to,
+  String groupKey,
+) async* {
+  final dpr = tester.view.devicePixelRatio;
+  final single = position as ScrollPositionWithSingleContext;
+  for (var pixels = from; pixels <= to; pixels += 0.37) {
+    single.beginActivity(_Scrolling(single));
+    single.setPixels(pixels);
+    await tester.pump();
+    if (_cover(groupKey).evaluate().isEmpty) continue;
+    final cover = tester.getRect(_cover(groupKey));
+    if (cover.height < 40) continue;
+    yield (cover: cover, frame: await DesktopSkiaFrame.capture(tester), dpr: dpr);
+  }
+}
+
+double _captionTop(_CoverFrame f) {
+  final x = ((f.cover.left + 16 + 7) * f.dpr).floor();
+  return f.frame
+      .edges(
+        x,
+        (c) => c.g,
+        from: (f.cover.top * f.dpr).floor() - 3,
+        to: (f.cover.bottom * f.dpr).ceil() + 3,
+      )!
+      .top;
 }
 
 void main() {
@@ -573,4 +683,73 @@ void main() {
     await _pumpNav(tester, activeServerId: 'a1', status: VpnStatus.connected);
     expect(dot(), findsOneWidget);
   });
+
+  for (final dpr in [1.25, 1.5]) {
+    testWidgets('на ПК подпись растущей обложки едет за ней и не отскакивает назад, масштаб $dpr', (
+      tester,
+    ) async {
+      final position = await _pumpOnScreen(tester, dpr);
+      final unit = position.viewportDimension / 8;
+      final tops = [
+        await for (final f in _slowScroll(tester, position, 0, unit, 'sub-b')) _captionTop(f),
+      ];
+      expect(tops.length, greaterThan(100));
+      for (var i = 1; i < tops.length; i++) {
+        expect(tops[i], lessThanOrEqualTo(tops[i - 1] + 0.01), reason: 'кадр $i');
+      }
+    });
+
+    testWidgets('на ПК подпись нижней обложки стоит, пока стопка садится на дно, масштаб $dpr', (
+      tester,
+    ) async {
+      final position = await _pumpOnScreen(tester, dpr);
+      final unit = position.viewportDimension / 8;
+      // до первой раскладки у конца карусель знает только оценку своей длины
+      ServerGroupAnchors.instance.currentGroup.value = kManualServerGroupKey;
+      await tester.pumpAndSettle();
+      final end = position.maxScrollExtent;
+      final rows = {
+        await for (final f in _slowScroll(tester, position, end - unit, end, kManualServerGroupKey))
+          _captionTop(f).round(),
+      };
+      expect(rows, hasLength(1));
+    });
+
+    testWidgets('на ПК рисунок обложки едет вместе с её краем, а не прилипает к пикселям, масштаб $dpr', (
+      tester,
+    ) async {
+      final position = await _pumpOnScreen(tester, dpr);
+      final unit = position.viewportDimension / 8;
+      final gaps = <double>[];
+      await for (final f in _slowScroll(tester, position, 0, unit, 'sub-a')) {
+        // пока обложка выше своей ширины, формы стоят на одном месте от её верха
+        if (f.cover.height < f.cover.width + 8) break;
+        final from = (f.cover.top * f.dpr).floor() - 3;
+        final top = f.frame
+            .edges(
+              ((f.cover.left + f.cover.width * 0.6) * f.dpr).floor(),
+              (c) => c.r + c.b,
+              from: from,
+              to: (f.cover.bottom * f.dpr).ceil(),
+            )!
+            .top;
+        for (final side in [0.15, 0.85]) {
+          final shape = f.frame.edges(
+            ((f.cover.left + f.cover.width * side) * f.dpr).floor(),
+            (c) => c.g < 0.03 && c.b < 0.6 ? c.b / 0.3 : 0,
+            from: from,
+            to: ((f.cover.top + f.cover.width * 0.6) * f.dpr).ceil(),
+          );
+          if (shape != null) {
+            gaps.add(shape.bottom - top);
+            break;
+          }
+        }
+      }
+      expect(gaps.length, greaterThan(20));
+      // край формы косой, и по одному столбцу его место мерится с ошибкой до четверти пикселя;
+      // прилипшая к пикселям форма отходит от края на целый
+      expect(gaps.reduce(math.max) - gaps.reduce(math.min), lessThan(0.5));
+    });
+  }
 }
