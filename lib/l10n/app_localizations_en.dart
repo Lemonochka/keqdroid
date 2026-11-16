@@ -2621,6 +2621,87 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectionsSplitTunnelNote => 'Apps kept out of the tunnel are not listed here: Android routes them past it. A row with the outside-vpn rule means such an app pushed a connection into the tunnel itself and the core refused it.';
 
   @override
+  String get connectionsDetailsIp => 'IP';
+
+  @override
+  String get connectionsDetailsApp => 'app';
+
+  @override
+  String get connectionsDetailsRule => 'rule';
+
+  @override
+  String get connectionsDetailsExit => 'exit';
+
+  @override
+  String get connectionsDetailsInbound => 'inbound';
+
+  @override
+  String get connectionsDetailsSource => 'source';
+
+  @override
+  String get connectionsDetailsStarted => 'started';
+
+  @override
+  String get connectionsDetailsFirst => 'first';
+
+  @override
+  String get connectionsDetailsTraffic => 'traffic';
+
+  @override
+  String connectionsDetailsOpenFor(String time) {
+    return 'open for $time';
+  }
+
+  @override
+  String connectionsDetailsRouteNamed(String name) {
+    return 'route \"$name\"';
+  }
+
+  @override
+  String get connectionsDetailsRouteFinal => 'no route matched';
+
+  @override
+  String connectionsDetailsExitActive(String protocol) {
+    return '$protocol, the server the app is connected to';
+  }
+
+  @override
+  String connectionsDetailsExitRoute(String protocol) {
+    return '$protocol, the server of the route';
+  }
+
+  @override
+  String get connectionsDetailsExitDirect => 'bypassing the VPN, from this device\'s own address';
+
+  @override
+  String get connectionsDetailsExitBlock => 'the connection is dropped';
+
+  @override
+  String get connectionsDetailsCopy => 'Copy';
+
+  @override
+  String connectionsDetailsMembers(int count) {
+    return 'Connections: $count';
+  }
+
+  @override
+  String connectionsDetailsMore(int count) {
+    return '$count more';
+  }
+
+  @override
+  String get connectionsDetailsOpen => 'open';
+
+  @override
+  String get connectionsDetailsLists => 'In the ready-made lists';
+
+  @override
+  String get connectionsDetailsListRouteOn => 'route on';
+
+  @override
+  String get connectionsDetailsListUnknown => 'not in the base';
+
+  @override
   String subscriptionsExpiredOn(String when) {
     return 'Subscription expired $when';
   }

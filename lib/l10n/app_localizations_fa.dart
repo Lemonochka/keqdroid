@@ -2614,6 +2614,87 @@ class AppLocalizationsFa extends AppLocalizations {
   String get connectionsSplitTunnelNote => 'برنامه‌هایی که بیرون تونل مانده‌اند اینجا نمی‌آیند: اندروید آن‌ها را از کنار تونل رد می‌کند. ردیفی با قانون outside-vpn یعنی چنین برنامه‌ای خودش اتصالی را به تونل فرستاده و هسته آن را رد کرده است.';
 
   @override
+  String get connectionsDetailsIp => 'IP';
+
+  @override
+  String get connectionsDetailsApp => 'برنامه';
+
+  @override
+  String get connectionsDetailsRule => 'قاعده';
+
+  @override
+  String get connectionsDetailsExit => 'خروجی';
+
+  @override
+  String get connectionsDetailsInbound => 'ورودی';
+
+  @override
+  String get connectionsDetailsSource => 'مبدأ';
+
+  @override
+  String get connectionsDetailsStarted => 'شروع';
+
+  @override
+  String get connectionsDetailsFirst => 'اولین';
+
+  @override
+  String get connectionsDetailsTraffic => 'ترافیک';
+
+  @override
+  String connectionsDetailsOpenFor(String time) {
+    return 'باز به مدت $time';
+  }
+
+  @override
+  String connectionsDetailsRouteNamed(String name) {
+    return 'مسیر «$name»';
+  }
+
+  @override
+  String get connectionsDetailsRouteFinal => 'هیچ مسیری مطابقت نداشت';
+
+  @override
+  String connectionsDetailsExitActive(String protocol) {
+    return '$protocol، سروری که برنامه به آن متصل است';
+  }
+
+  @override
+  String connectionsDetailsExitRoute(String protocol) {
+    return '$protocol، سرور مسیر';
+  }
+
+  @override
+  String get connectionsDetailsExitDirect => 'بدون VPN، از نشانی خود این دستگاه';
+
+  @override
+  String get connectionsDetailsExitBlock => 'اتصال رد می‌شود';
+
+  @override
+  String get connectionsDetailsCopy => 'کپی';
+
+  @override
+  String connectionsDetailsMembers(int count) {
+    return 'اتصال‌ها: $count';
+  }
+
+  @override
+  String connectionsDetailsMore(int count) {
+    return '$count مورد دیگر';
+  }
+
+  @override
+  String get connectionsDetailsOpen => 'باز';
+
+  @override
+  String get connectionsDetailsLists => 'در فهرست‌های آماده';
+
+  @override
+  String get connectionsDetailsListRouteOn => 'مسیر روشن است';
+
+  @override
+  String get connectionsDetailsListUnknown => 'در پایگاه داده نیست';
+
+  @override
   String subscriptionsExpiredOn(String when) {
     return 'اشتراک $when منقضی شد';
   }

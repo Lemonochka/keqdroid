@@ -2639,6 +2639,87 @@ class AppLocalizationsRu extends AppLocalizations {
   String get connectionsSplitTunnelNote => 'Приложения, выведенные из туннеля, здесь не появятся: Android пускает их мимо. Строка с правилом outside-vpn значит, что такое приложение само полезло в туннель, и ядро его не пустило.';
 
   @override
+  String get connectionsDetailsIp => 'IP';
+
+  @override
+  String get connectionsDetailsApp => 'приложение';
+
+  @override
+  String get connectionsDetailsRule => 'правило';
+
+  @override
+  String get connectionsDetailsExit => 'выход';
+
+  @override
+  String get connectionsDetailsInbound => 'вход';
+
+  @override
+  String get connectionsDetailsSource => 'источник';
+
+  @override
+  String get connectionsDetailsStarted => 'начало';
+
+  @override
+  String get connectionsDetailsFirst => 'первое';
+
+  @override
+  String get connectionsDetailsTraffic => 'трафик';
+
+  @override
+  String connectionsDetailsOpenFor(String time) {
+    return 'открыто $time';
+  }
+
+  @override
+  String connectionsDetailsRouteNamed(String name) {
+    return 'маршрут «$name»';
+  }
+
+  @override
+  String get connectionsDetailsRouteFinal => 'ни один маршрут не подошёл';
+
+  @override
+  String connectionsDetailsExitActive(String protocol) {
+    return '$protocol, сервер, к которому подключено приложение';
+  }
+
+  @override
+  String connectionsDetailsExitRoute(String protocol) {
+    return '$protocol, сервер маршрута';
+  }
+
+  @override
+  String get connectionsDetailsExitDirect => 'мимо VPN, с адреса этого устройства';
+
+  @override
+  String get connectionsDetailsExitBlock => 'соединение сброшено';
+
+  @override
+  String get connectionsDetailsCopy => 'Скопировать';
+
+  @override
+  String connectionsDetailsMembers(int count) {
+    return 'Соединения: $count';
+  }
+
+  @override
+  String connectionsDetailsMore(int count) {
+    return 'ещё $count';
+  }
+
+  @override
+  String get connectionsDetailsOpen => 'открыто';
+
+  @override
+  String get connectionsDetailsLists => 'Во встроенных списках';
+
+  @override
+  String get connectionsDetailsListRouteOn => 'маршрут включён';
+
+  @override
+  String get connectionsDetailsListUnknown => 'нет в базе';
+
+  @override
   String subscriptionsExpiredOn(String when) {
     return 'Подписка истекла $when';
   }

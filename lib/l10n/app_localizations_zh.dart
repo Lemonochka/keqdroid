@@ -2613,6 +2613,87 @@ class AppLocalizationsZh extends AppLocalizations {
   String get connectionsSplitTunnelNote => '被排除在隧道之外的应用不会列出：Android 让它们绕过隧道。带有 outside-vpn 规则的条目表示这类应用自行把连接发进隧道，被内核拒绝。';
 
   @override
+  String get connectionsDetailsIp => 'IP';
+
+  @override
+  String get connectionsDetailsApp => '应用';
+
+  @override
+  String get connectionsDetailsRule => '规则';
+
+  @override
+  String get connectionsDetailsExit => '出口';
+
+  @override
+  String get connectionsDetailsInbound => '入口';
+
+  @override
+  String get connectionsDetailsSource => '来源';
+
+  @override
+  String get connectionsDetailsStarted => '开始';
+
+  @override
+  String get connectionsDetailsFirst => '最早';
+
+  @override
+  String get connectionsDetailsTraffic => '流量';
+
+  @override
+  String connectionsDetailsOpenFor(String time) {
+    return '已打开 $time';
+  }
+
+  @override
+  String connectionsDetailsRouteNamed(String name) {
+    return '路由“$name”';
+  }
+
+  @override
+  String get connectionsDetailsRouteFinal => '没有匹配的路由';
+
+  @override
+  String connectionsDetailsExitActive(String protocol) {
+    return '$protocol，应用当前连接的服务器';
+  }
+
+  @override
+  String connectionsDetailsExitRoute(String protocol) {
+    return '$protocol，路由指定的服务器';
+  }
+
+  @override
+  String get connectionsDetailsExitDirect => '绕过 VPN，使用本设备自己的地址';
+
+  @override
+  String get connectionsDetailsExitBlock => '连接被丢弃';
+
+  @override
+  String get connectionsDetailsCopy => '复制';
+
+  @override
+  String connectionsDetailsMembers(int count) {
+    return '连接：$count';
+  }
+
+  @override
+  String connectionsDetailsMore(int count) {
+    return '还有 $count 个';
+  }
+
+  @override
+  String get connectionsDetailsOpen => '打开';
+
+  @override
+  String get connectionsDetailsLists => '在内置列表中';
+
+  @override
+  String get connectionsDetailsListRouteOn => '路由已启用';
+
+  @override
+  String get connectionsDetailsListUnknown => '不在数据库中';
+
+  @override
   String subscriptionsExpiredOn(String when) {
     return '订阅已到期（$when）';
   }

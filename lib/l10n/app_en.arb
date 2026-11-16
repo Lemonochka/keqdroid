@@ -1389,6 +1389,71 @@
   "connectionsClosed": "closed",
   "connectionsAppNamesHint": "App names come from the system, and it knows only live connections, so closed ones stay unnamed.",
   "connectionsSplitTunnelNote": "Apps kept out of the tunnel are not listed here: Android routes them past it. A row with the outside-vpn rule means such an app pushed a connection into the tunnel itself and the core refused it.",
+  "connectionsDetailsIp": "IP",
+  "connectionsDetailsApp": "app",
+  "connectionsDetailsRule": "rule",
+  "connectionsDetailsExit": "exit",
+  "connectionsDetailsInbound": "inbound",
+  "connectionsDetailsSource": "source",
+  "connectionsDetailsStarted": "started",
+  "connectionsDetailsFirst": "first",
+  "connectionsDetailsTraffic": "traffic",
+  "connectionsDetailsOpenFor": "open for {time}",
+  "@connectionsDetailsOpenFor": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionsDetailsRouteNamed": "route \"{name}\"",
+  "@connectionsDetailsRouteNamed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionsDetailsRouteFinal": "no route matched",
+  "connectionsDetailsExitActive": "{protocol}, the server the app is connected to",
+  "@connectionsDetailsExitActive": {
+    "placeholders": {
+      "protocol": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionsDetailsExitRoute": "{protocol}, the server of the route",
+  "@connectionsDetailsExitRoute": {
+    "placeholders": {
+      "protocol": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionsDetailsExitDirect": "bypassing the VPN, from this device's own address",
+  "connectionsDetailsExitBlock": "the connection is dropped",
+  "connectionsDetailsCopy": "Copy",
+  "connectionsDetailsMembers": "Connections: {count}",
+  "@connectionsDetailsMembers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectionsDetailsMore": "{count} more",
+  "@connectionsDetailsMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectionsDetailsOpen": "open",
+  "connectionsDetailsLists": "In the ready-made lists",
+  "connectionsDetailsListRouteOn": "route on",
+  "connectionsDetailsListUnknown": "not in the base",
   "subscriptionsExpiredOn": "Subscription expired {when}",
   "@subscriptionsExpiredOn": {
     "placeholders": {

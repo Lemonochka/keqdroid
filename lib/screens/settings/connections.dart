@@ -17,6 +17,8 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
   bool _refreshing = false;
   final _filterCtrl = TextEditingController();
 
+  ValueNotifier<ConnectionEntry>? _opened;
+
   @override
   void initState() {
     super.initState();
@@ -44,6 +46,7 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
         _snapshot = snapshot;
         _loading = false;
       });
+      _syncOpened(snapshot);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -210,12 +213,274 @@ class _ConnectionsScreenState extends ConsumerState<_ConnectionsScreen> {
                             entry: entries[i],
                             showProcess: ConnectionsService.supportsProcessNames,
                             ruleInfoAvailable: _snapshot.ruleInfoAvailable,
+                            onTap: () => _openDetails(entries[i]),
                           ),
                         ),
                 ),
               ],
             ),
     );
+  }
+
+  // строка живёт под ключом группы: одиночная, обзаведясь соседом, меняет id на group:
+  void _syncOpened(ConnectionsSnapshot snapshot) {
+    final opened = _opened;
+    if (opened == null) return;
+    final key = opened.value.groupKey;
+    final fresh =
+        snapshot.entries.where((e) => e.groupKey == key).firstOrNull;
+    if (fresh != null) opened.value = fresh;
+  }
+
+  void _openDetails(ConnectionEntry entry) {
+    final l10n = AppLocalizations.of(context)!;
+    final opened = ValueNotifier(entry);
+    _opened = opened;
+    final snapshot = _snapshot;
+    final servers = ref.read(serversProvider);
+    final active = servers.activeServer;
+    final profiles =
+        ref.read(routingProfilesProvider).value ?? const <RoutingProfile>[];
+    // те же маршруты, что взяло подключение
+    final routes = (active == null
+            ? null
+            : profileForServer(profiles, active)?.routes) ??
+        ref.read(routesProvider).value ??
+        const <TrafficRoute>[];
+    final iconCache = ref.read(appIconCacheProvider);
+    final installed = Platform.isAndroid && entry.process.isNotEmpty
+        ? ref.read(installedAppsProvider(true).future)
+        : Future.value(const <AppInfo>[]);
+    final showProcess = ConnectionsService.supportsProcessNames;
+    final app = showProcess ? _appField(entry, const [], iconCache) : null;
+
+    final insight = _insight(
+      l10n,
+      entry,
+      routes: routes,
+      servers: servers,
+      installed: installed,
+      iconCache: iconCache,
+      showProcess: showProcess,
+      ruleInfoAvailable: snapshot.ruleInfoAvailable,
+    );
+
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (_) => ConnectionDetailsSheet(
+          entry: opened,
+          live: snapshot.source == ConnectionsSource.coreApi,
+          livenessKnown: snapshot.ruleInfoAvailable,
+          insight: insight,
+          app: app,
+          rule: _ruleField(
+            l10n,
+            entry,
+            null,
+            ruleInfoAvailable: snapshot.ruleInfoAvailable,
+          ),
+          exit: _exitField(l10n, entry, servers, null),
+        ),
+      ).whenComplete(() {
+        if (identical(_opened, opened)) _opened = null;
+      }),
+    );
+  }
+
+  Future<ConnectionInsightView> _insight(
+    AppLocalizations l10n,
+    ConnectionEntry entry, {
+    required List<TrafficRoute> routes,
+    required ServersState servers,
+    required Future<List<AppInfo>> installed,
+    required AppIconCache iconCache,
+    required bool showProcess,
+    required bool ruleInfoAvailable,
+  }) async {
+    final appsLoad = installed.catchError((Object e) {
+      AppLogger.instance.warn('Connection details: installed apps: $e');
+      return const <AppInfo>[];
+    });
+    Future<ConnectionInsight?> inspect(List<AppInfo> apps) async {
+      // на Android владелец приходит названием, а маршрут хранит пакет
+      final packages = {
+        for (final a in apps)
+          if (a.appName == entry.process) a.packageName,
+      };
+      try {
+        return await inspectConnection(
+          entry: entry,
+          routes: routes,
+          ruleInfoAvailable: ruleInfoAvailable,
+          geoDir: await GeoAssetService.geoDir(),
+          appMatch: {
+            for (final r in routes)
+              if (!r.allApps)
+                r.id: routeAppsMatch(
+                  r.apps,
+                  process: entry.process,
+                  packages: packages,
+                ),
+          },
+        );
+      } catch (e) {
+        AppLogger.instance.warn('Connection details: $e');
+        return null;
+      }
+    }
+
+    final List<AppInfo> apps;
+    final ConnectionInsight? result;
+    if (routes.any((r) => r.enabled && !r.allApps)) {
+      apps = await appsLoad;
+      result = await inspect(apps);
+    } else {
+      (apps, result) = await (appsLoad, inspect(const [])).wait;
+    }
+    final explanation = result?.route ?? const Unexplained();
+    final lists = result?.lists ?? const <String, ListMatch>{};
+    final presetRoutes = {
+      for (final r in routes)
+        if (r.enabled && r.content == RouteContent.preset) r.presetId,
+    };
+    return ConnectionInsightView(
+      app: showProcess ? _appField(entry, apps, iconCache) : null,
+      rule: _ruleField(
+        l10n,
+        entry,
+        explanation,
+        ruleInfoAvailable: ruleInfoAvailable,
+        installed: apps,
+      ),
+      exit: _exitField(l10n, entry, servers, explanation),
+      lists: [
+        for (final preset in RoutingPresets.all)
+          ConnectionListLine(
+            _presetName(l10n, preset.id),
+            lists[preset.id] ?? ListMatch.unknown,
+            note: switch (lists[preset.id]) {
+              ListMatch.hit when presetRoutes.contains(preset.id) =>
+                l10n.connectionsDetailsListRouteOn,
+              ListMatch.unknown || null => l10n.connectionsDetailsListUnknown,
+              _ => null,
+            },
+          ),
+      ],
+    );
+  }
+
+  ConnectionField? _appField(
+    ConnectionEntry entry,
+    List<AppInfo> installed,
+    AppIconCache iconCache,
+  ) {
+    final name = ConnectionTile.processName(entry.process);
+    if (name.isEmpty) return null;
+    final app =
+        installed.where((a) => a.appName == entry.process).firstOrNull;
+    final path = isProcessPathEntry(entry.process) ? entry.process : null;
+    if (Platform.isAndroid && app == null) return ConnectionField(name);
+    return ConnectionField(
+      name,
+      note: app?.packageName ?? (path == name ? null : path),
+      leading: SizedBox.square(
+        dimension: 16,
+        child: FittedBox(
+          child: AppIconView(
+            iconBase64: app?.iconBase64,
+            appName: name,
+            iconPath: path,
+            cache: iconCache,
+          ),
+        ),
+      ),
+    );
+  }
+
+  ConnectionField? _ruleField(
+    AppLocalizations l10n,
+    ConnectionEntry entry,
+    RouteExplanation? explanation, {
+    required bool ruleInfoAvailable,
+    List<AppInfo> installed = const [],
+  }) {
+    switch (explanation) {
+      case ByFinal():
+        return ConnectionField(
+          l10n.settingsRoutingFinalTitle,
+          note: l10n.connectionsDetailsRouteFinal,
+        );
+      case ByRoute(:final route) when entry.rule.isNotEmpty:
+        final content = _contentLabel(l10n, route);
+        final name = route.allApps
+            ? content
+            : '${route.apps.map((a) => _appLabel(a, installed)).join(', ')} · $content';
+        return ConnectionField(
+          entry.rule,
+          mono: true,
+          note: l10n.connectionsDetailsRouteNamed(name),
+        );
+      default:
+        final label =
+            ConnectionTile.ruleLabel(l10n, entry, ruleInfoAvailable: ruleInfoAvailable);
+        if (label.isEmpty) return null;
+        return ConnectionField(label, mono: label == entry.rule);
+    }
+  }
+
+  ConnectionField? _exitField(
+    AppLocalizations l10n,
+    ConnectionEntry entry,
+    ServersState servers,
+    RouteExplanation? explanation,
+  ) {
+    final out = entry.outbound;
+    switch (entry.verdict) {
+      case ConnectionVerdict.direct:
+        return ConnectionField(
+          out,
+          mono: true,
+          note: l10n.connectionsDetailsExitDirect,
+        );
+      case ConnectionVerdict.blocked:
+        return ConnectionField(
+          out,
+          mono: true,
+          note: l10n.connectionsDetailsExitBlock,
+        );
+      case ConnectionVerdict.proxied:
+        // proxy у обоих ядер это сервер подключения, keq-srv-N выход маршрута на свой сервер (routeServerOutbounds)
+        final routeServer = switch (explanation) {
+          ByRoute(:final route)
+              when route.target == RouteTarget.server &&
+                  out.startsWith('keq-srv-') =>
+            servers.byId[route.serverId],
+          _ => null,
+        };
+        final server = routeServer ??
+            (out == MihomoConfigGen.proxyName ? servers.activeServer : null);
+        if (server == null) {
+          return out.isEmpty ? null : ConnectionField(out, mono: true);
+        }
+        final protocol = server.protocol.toUpperCase();
+        return ConnectionField(
+          ServerNameUtils.cleanDisplayName(server.displayName),
+          leading: ServerAvatar(
+            flag: server.flag,
+            protocol: server.protocol,
+            size: 16,
+          ),
+          note: routeServer != null
+              ? l10n.connectionsDetailsExitRoute(protocol)
+              : l10n.connectionsDetailsExitActive(protocol),
+        );
+      case ConnectionVerdict.viaCore:
+      case ConnectionVerdict.unknown:
+        return out.isEmpty ? null : ConnectionField(out, mono: true);
+    }
   }
 
   Widget _statusBar(BuildContext context, AppLocalizations l10n, int shown) {

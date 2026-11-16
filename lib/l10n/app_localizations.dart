@@ -4889,6 +4889,144 @@ abstract class AppLocalizations {
   /// **'Apps kept out of the tunnel are not listed here: Android routes them past it. A row with the outside-vpn rule means such an app pushed a connection into the tunnel itself and the core refused it.'**
   String get connectionsSplitTunnelNote;
 
+  /// No description provided for @connectionsDetailsIp.
+  ///
+  /// In en, this message translates to:
+  /// **'IP'**
+  String get connectionsDetailsIp;
+
+  /// No description provided for @connectionsDetailsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'app'**
+  String get connectionsDetailsApp;
+
+  /// No description provided for @connectionsDetailsRule.
+  ///
+  /// In en, this message translates to:
+  /// **'rule'**
+  String get connectionsDetailsRule;
+
+  /// No description provided for @connectionsDetailsExit.
+  ///
+  /// In en, this message translates to:
+  /// **'exit'**
+  String get connectionsDetailsExit;
+
+  /// No description provided for @connectionsDetailsInbound.
+  ///
+  /// In en, this message translates to:
+  /// **'inbound'**
+  String get connectionsDetailsInbound;
+
+  /// No description provided for @connectionsDetailsSource.
+  ///
+  /// In en, this message translates to:
+  /// **'source'**
+  String get connectionsDetailsSource;
+
+  /// No description provided for @connectionsDetailsStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'started'**
+  String get connectionsDetailsStarted;
+
+  /// No description provided for @connectionsDetailsFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'first'**
+  String get connectionsDetailsFirst;
+
+  /// No description provided for @connectionsDetailsTraffic.
+  ///
+  /// In en, this message translates to:
+  /// **'traffic'**
+  String get connectionsDetailsTraffic;
+
+  /// No description provided for @connectionsDetailsOpenFor.
+  ///
+  /// In en, this message translates to:
+  /// **'open for {time}'**
+  String connectionsDetailsOpenFor(String time);
+
+  /// No description provided for @connectionsDetailsRouteNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'route \"{name}\"'**
+  String connectionsDetailsRouteNamed(String name);
+
+  /// No description provided for @connectionsDetailsRouteFinal.
+  ///
+  /// In en, this message translates to:
+  /// **'no route matched'**
+  String get connectionsDetailsRouteFinal;
+
+  /// No description provided for @connectionsDetailsExitActive.
+  ///
+  /// In en, this message translates to:
+  /// **'{protocol}, the server the app is connected to'**
+  String connectionsDetailsExitActive(String protocol);
+
+  /// No description provided for @connectionsDetailsExitRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'{protocol}, the server of the route'**
+  String connectionsDetailsExitRoute(String protocol);
+
+  /// No description provided for @connectionsDetailsExitDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'bypassing the VPN, from this device\'s own address'**
+  String get connectionsDetailsExitDirect;
+
+  /// No description provided for @connectionsDetailsExitBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'the connection is dropped'**
+  String get connectionsDetailsExitBlock;
+
+  /// No description provided for @connectionsDetailsCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get connectionsDetailsCopy;
+
+  /// No description provided for @connectionsDetailsMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Connections: {count}'**
+  String connectionsDetailsMembers(int count);
+
+  /// No description provided for @connectionsDetailsMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more'**
+  String connectionsDetailsMore(int count);
+
+  /// No description provided for @connectionsDetailsOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'open'**
+  String get connectionsDetailsOpen;
+
+  /// No description provided for @connectionsDetailsLists.
+  ///
+  /// In en, this message translates to:
+  /// **'In the ready-made lists'**
+  String get connectionsDetailsLists;
+
+  /// No description provided for @connectionsDetailsListRouteOn.
+  ///
+  /// In en, this message translates to:
+  /// **'route on'**
+  String get connectionsDetailsListRouteOn;
+
+  /// No description provided for @connectionsDetailsListUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'not in the base'**
+  String get connectionsDetailsListUnknown;
+
   /// No description provided for @subscriptionsExpiredOn.
   ///
   /// In en, this message translates to:
