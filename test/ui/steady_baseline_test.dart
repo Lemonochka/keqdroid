@@ -75,12 +75,34 @@ void main() {
     expect(rows, hasLength(2));
   });
 
-  testWidgets('строка стоит на целом пикселе и идёт за настоящим сдвигом', (tester) async {
-    final painted = await _paintAt(tester, [100.3, 100.31, 102.3, 102.31], steady: true);
+  testWidgets('в покое строка стоит на целом пикселе', (tester) async {
+    final painted = await _paintAt(tester, [100.3, 100.31], steady: true);
     for (final y in painted) {
       expect(y, closeTo(y.roundToDouble(), 1e-6));
     }
-    // 2 dp вниз это 2,5 пикселя экрана: строка переезжает, а не остаётся на старом месте
-    expect(painted.last - painted.first, inInclusiveRange(2, 3));
+  });
+
+  testWidgets('на ходу строка ползёт с долей пикселя, а встав, доезжает до целого', (tester) async {
+    // по 0,05 dp за кадр, как обложка в конце прокрутки
+    final ys = [for (var i = 0; i <= 40; i++) 100.3 + i * 0.05];
+    final painted = await _paintAt(tester, ys, steady: true);
+    final steps = [for (var i = 1; i < painted.length; i++) painted[i] - painted[i - 1]];
+    // ни одного прыжка на целый пиксель, только ход вместе со строкой
+    expect(steps.every((s) => s >= 0 && s < 0.2), isTrue, reason: '$steps');
+    final truth = (ys.last + 10) * 1.25;
+    expect(painted.last, closeTo(truth, 0.5));
+
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump();
+    expect(painted.last, closeTo(painted.last.roundToDouble(), 1e-6));
+    expect(painted.last, closeTo(truth, 0.5));
+    // доезд до целого пикселя плавный, тоже без прыжка
+    final settle = painted.skip(ys.length);
+    var prev = painted[ys.length - 1];
+    for (final y in settle) {
+      expect((y - prev).abs(), lessThan(0.5));
+      prev = y;
+    }
   });
 }

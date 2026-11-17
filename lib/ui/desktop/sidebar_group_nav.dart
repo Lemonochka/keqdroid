@@ -154,6 +154,7 @@ class _SidebarGroupNavState extends ConsumerState<SidebarGroupNav> {
       position,
       ScrollSpringSimulation(_wheelSpring, position.pixels, target, _spring?.velocity ?? 0),
       position.context.vsync,
+      from: _spring?.frame,
       onDisposed: (a) {
         if (identical(_spring, a)) _spring = null;
       },
@@ -710,7 +711,8 @@ class _SpringActivity extends ScrollActivity {
     this._simulation,
     TickerProvider vsync, {
     required this.onDisposed,
-  }) {
+    Duration? from,
+  }) : _from = from {
     _ticker = vsync.createTicker(_tick)..start();
   }
 
@@ -719,8 +721,15 @@ class _SpringActivity extends ScrollActivity {
   late final Ticker _ticker;
   double _time = 0;
 
+  // новый щелчок продолжает с кадра прежней пружины: с нуля в следующем кадре карусель стояла кадр
+  Duration? _from;
+  Duration? frame;
+
   void _tick(Duration elapsed) {
-    _time = elapsed.inMicroseconds / Duration.microsecondsPerSecond;
+    final now = SchedulerBinding.instance.currentFrameTimeStamp;
+    final from = _from ??= now;
+    frame = now;
+    _time = (now - from).inMicroseconds / Duration.microsecondsPerSecond;
     delegate.setPixels(_simulation.x(_time));
     if (_simulation.isDone(_time)) delegate.goBallistic(0);
   }

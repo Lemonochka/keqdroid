@@ -15,6 +15,8 @@ class DesktopSkiaFrame {
   final int width;
   final int height;
 
+  Uint8List get rgba => _rgba;
+
   static Future<DesktopSkiaFrame> capture(WidgetTester tester, {bool snap = true}) async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)..drawColor(const Color(0xFF000000), BlendMode.src);

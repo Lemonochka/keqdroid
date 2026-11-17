@@ -684,6 +684,66 @@ void main() {
     expect(dot(), findsOneWidget);
   });
 
+  // её экран: 100 %, 144 Гц
+  const frame144 = Duration(microseconds: 6944);
+
+  testWidgets('на ПК второй щелчок колеса не останавливает карусель ни на кадр', (tester) async {
+    final position = await _pumpOnScreen(tester, 1);
+    final mouse = TestPointer(1, PointerDeviceKind.mouse);
+    await tester.sendEventToBinding(mouse.hover(tester.getCenter(find.byType(CarouselView))));
+    await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+    final steps = <double>[];
+    for (var i = 0; i < 30; i++) {
+      if (i == 12) await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+      final before = position.pixels;
+      await tester.pump(frame144);
+      steps.add(position.pixels - before);
+    }
+    // первый кадр после щелчка пружина только трогается
+    expect(steps.skip(1).every((s) => s > 0.1), isTrue, reason: '$steps');
+  });
+
+  testWidgets('на ПК подпись доезжает до остановки вместе с обложкой, без прыжков на пиксель', (
+    tester,
+  ) async {
+    await _pumpOnScreen(tester, 1);
+    Future<double> captionNow(String key) async {
+      final cover = tester.getRect(_cover(key));
+      return _captionTop((cover: cover, frame: await DesktopSkiaFrame.capture(tester), dpr: 1.0));
+    }
+
+    final atStart = await captionNow('sub-a');
+    final mouse = TestPointer(1, PointerDeviceKind.mouse);
+    await tester.sendEventToBinding(mouse.hover(tester.getCenter(find.byType(CarouselView))));
+    await tester.sendEventToBinding(mouse.scroll(const Offset(0, 100)));
+    _CoverFrame? last;
+    var slow = 0;
+    for (var i = 0; i < 160; i++) {
+      await tester.pump(frame144);
+      final cover = tester.getRect(_cover('sub-a'));
+      final f = (cover: cover, frame: await DesktopSkiaFrame.capture(tester), dpr: 1.0);
+      final prev = last;
+      last = f;
+      if (prev == null || cover.height < 40) continue;
+      // пока обложка почти стоит, подпись не может прыгать на целый пиксель
+      final coverMoved = math.max(
+        (cover.top - prev.cover.top).abs(),
+        (cover.bottom - prev.cover.bottom).abs(),
+      );
+      if (coverMoved > 0.3) continue;
+      slow++;
+      expect((_captionTop(f) - _captionTop(prev)).abs(), lessThan(0.6), reason: 'кадр $i');
+    }
+    expect(slow, greaterThan(40));
+    // туда и обратно: встав, подпись стоит в том же целом пикселе, что до прокрутки, текст чёткий
+    await tester.pumpAndSettle();
+    await tester.sendEventToBinding(mouse.scroll(const Offset(0, -100)));
+    // подсветка наведения тонирует обложку и сбивает замер по яркости
+    await tester.sendEventToBinding(mouse.hover(const Offset(124, 2)));
+    await tester.pumpAndSettle();
+    expect(await captionNow('sub-a'), closeTo(atStart, 0.02));
+  });
+
   for (final dpr in [1.25, 1.5]) {
     testWidgets('на ПК подпись растущей обложки едет за ней и не отскакивает назад, масштаб $dpr', (
       tester,
