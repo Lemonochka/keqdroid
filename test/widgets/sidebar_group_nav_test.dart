@@ -754,8 +754,10 @@ void main() {
         await for (final f in _slowScroll(tester, position, 0, unit, 'sub-b')) _captionTop(f),
       ];
       expect(tops.length, greaterThan(100));
+      // на Linux FreeType сглаживает строку на ходу чуть иначе, чем в покое: верх буквы меряется
+      // на десятую пикселя ниже. отскок, который ловим, был на целый пиксель
       for (var i = 1; i < tops.length; i++) {
-        expect(tops[i], lessThanOrEqualTo(tops[i - 1] + 0.01), reason: 'кадр $i');
+        expect(tops[i], lessThanOrEqualTo(tops[i - 1] + 0.25), reason: 'кадр $i');
       }
     });
 
