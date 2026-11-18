@@ -79,6 +79,7 @@ void callbackDispatcher() {
         ),
       );
 
+      await AppLogger.instance.flush();
       return true;
     } catch (e, st) {
       AppLogger.instance.error(
@@ -86,6 +87,7 @@ void callbackDispatcher() {
         error: e,
         stackTrace: st,
       );
+      await AppLogger.instance.flush();
       // false: workmanager повторит с нарастающей паузой
       return false;
     }

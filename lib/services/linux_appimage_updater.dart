@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../core/app_logger.dart';
 import 'linux_install.dart';
 
 class LinuxAppImageUpdater {
@@ -27,6 +28,7 @@ class LinuxAppImageUpdater {
 
     await beforeRestart?.call();
     await Future<void>.delayed(const Duration(milliseconds: 200));
+    await AppLogger.instance.flush();
     exit(0);
   }
 

@@ -22,6 +22,9 @@ class AppLogger {
 
   File? _logFile;
 
+  final _pending = StringBuffer();
+  Future<void>? _draining;
+
   void setCrashlyticsEnabled(bool enabled) {
     _crashlyticsEnabled = enabled;
   }
@@ -36,6 +39,7 @@ class AppLogger {
   Future<String> readFileLog({int maxChars = 512 * 1024}) async {
     final file = _logFile;
     if (file == null) return '';
+    await flush();
     try {
       final previous = File('${file.path}.1');
       final text = [
@@ -145,19 +149,34 @@ class AppLogger {
   }
 
   void _appendToFile(String text, Object? error, StackTrace? stackTrace) {
-    final file = _logFile;
-    if (file == null) return;
+    if (_logFile == null) return;
     final line = StringBuffer('${DateTime.now().toIso8601String()} $text');
     if (error != null) line.write(' | error: $error');
     if (stackTrace != null) line.write('\n$stackTrace');
-    try {
-      file.writeAsStringSync(
-        '${redactSensitive(line.toString())}\n',
-        mode: FileMode.append,
-        flush: true,
-      );
-    } catch (_) {}
+    _pending.write('${redactSensitive(line.toString())}\n');
+    _draining ??= _drain();
   }
+
+  // синхронная строка с flush стоила потоку интерфейса на ПК с Defender 21 мс в медиане и до 460 мс,
+  // без flush 7 мс (замер 18.11.2026). файл открывается на каждую запись: в него же пишет фоновый изолят
+  Future<void> _drain() async {
+    try {
+      while (_pending.isNotEmpty) {
+        final file = _logFile;
+        final chunk = _pending.toString();
+        _pending.clear();
+        if (file == null) break;
+        try {
+          await file.writeAsString(chunk, mode: FileMode.append);
+        } catch (_) {}
+      }
+    } finally {
+      _draining = null;
+    }
+  }
+
+  // перед выходом из процесса и перед чтением журнала
+  Future<void> flush() => _draining ?? Future<void>.value();
 }
 
 class _RedactedError implements Exception {
