@@ -1481,9 +1481,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsExport => 'Экспорт';
 
   @override
-  String get settingsCreateFileToSave => 'Файл можно перенести на другое устройство';
-
-  @override
   String get settingsPickExportedFile => 'Сначала файл, потом выбор, что из него восстановить';
 
   @override
@@ -3315,4 +3312,85 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get cardImageRejectUnreadable => 'Не удалось прочитать эту картинку.';
+
+  @override
+  String get backupTransferTitle => 'На другое устройство';
+
+  @override
+  String get backupTransferOpen => 'Перенести на другое устройство';
+
+  @override
+  String get backupTransferReceive => 'Принять копию';
+
+  @override
+  String get backupTransferReceiveHint => 'С другого устройства в этой сети';
+
+  @override
+  String get backupTransferGive => 'Отдать копию';
+
+  @override
+  String get backupTransferGiveHint => 'На другое устройство в этой сети';
+
+  @override
+  String get backupTransferScan => 'Сканировать код';
+
+  @override
+  String get backupTransferScanHint => 'С экрана другого устройства';
+
+  @override
+  String get backupTransferHowTo => 'На другом устройстве откройте Резервное копирование и отсканируйте код. Оба устройства должны быть в одной сети Wi-Fi.';
+
+  @override
+  String get backupTransferWaitingReceive => 'Жду копию…';
+
+  @override
+  String get backupTransferWaitingGive => 'Жду, когда копию заберут…';
+
+  @override
+  String get backupTransferGiven => 'Копию забрали';
+
+  @override
+  String get backupTransferNoNetwork => 'Устройство не подключено к сети';
+
+  @override
+  String get backupTransferSendTitle => 'Отправить копию';
+
+  @override
+  String backupTransferSendMessage(Object host) {
+    return 'Копия этого устройства уйдёт на $host. Там выберут, что из неё восстановить.';
+  }
+
+  @override
+  String get backupTransferSendAction => 'Отправить';
+
+  @override
+  String get backupTransferSent => 'Копия отправлена';
+
+  @override
+  String get backupTransferFetchTitle => 'Принять копию';
+
+  @override
+  String backupTransferFetching(Object host) {
+    return 'Забираю копию с $host…';
+  }
+
+  @override
+  String get backupTransferRetry => 'Ещё раз';
+
+  @override
+  String get backupTransferNotOurCode => 'Это не код резервной копии keqdroid';
+
+  @override
+  String get backupTransferUnreachable => 'Устройство не отвечает. Оба должны быть в одной сети Wi-Fi, а на компьютере keqdroid должен быть разрешён в брандмауэре';
+
+  @override
+  String get backupTransferExpired => 'Код уже использован или закрыт. Откройте его на другом устройстве заново';
+
+  @override
+  String backupTransferRejected(Object error) {
+    return 'Не удалось передать копию: $error';
+  }
+
+  @override
+  String get backupFromReleaseBuild => 'Эту копию сделал выпуск keqdroid, а в этой сборке нет его ключа';
 }

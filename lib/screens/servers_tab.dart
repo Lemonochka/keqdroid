@@ -63,6 +63,7 @@ import '../ui/desktop/desktop_connection_mode.dart';
 import '../services/mihomo_groups_api.dart';
 import '../services/ping_service.dart';
 import '../services/subscription_accent_service.dart';
+import '../services/backup_transfer.dart';
 import '../services/tv_handoff.dart';
 import '../services/vpn_engine.dart';
 import '../platform/platform_bootstrap.dart';
@@ -80,6 +81,7 @@ import '../utils/vpn_core_support.dart';
 import '../utils/server_sort.dart';
 import 'qr_scan_screen.dart';
 import 'tv_receive_screen.dart';
+import 'backup_transfer_flow.dart';
 import 'tv_send_dialog.dart';
 import 'servers/chain_editor.dart';
 import 'servers/server_config_editor.dart';
@@ -539,6 +541,11 @@ class _ServersTabState extends ConsumerState<ServersTab>
 
   Future<void> _importDeepLink(String raw) async {
     if (!mounted) return;
+    final backup = BackupTransferLink.parse(raw);
+    if (backup != null) {
+      await runBackupTransferLink(context, ref, backup);
+      return;
+    }
     final tv = TvPairing.parse(raw);
     if (tv != null) {
       await sendSubscriptionToTv(context, ref, tv);
@@ -1005,6 +1012,12 @@ class _ServersTabState extends ConsumerState<ServersTab>
   }
 
   Future<void> _importQrText(BuildContext ctx, String raw) async {
+    final backup = BackupTransferLink.parse(raw);
+    if (backup != null) {
+      await runBackupTransferLink(ctx, ref, backup);
+      return;
+    }
+
     final tv = TvPairing.parse(raw);
     if (tv != null) {
       await sendSubscriptionToTv(ctx, ref, tv);

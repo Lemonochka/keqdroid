@@ -2699,12 +2699,6 @@ abstract class AppLocalizations {
   /// **'Export'**
   String get settingsExport;
 
-  /// No description provided for @settingsCreateFileToSave.
-  ///
-  /// In en, this message translates to:
-  /// **'The file can be moved to another device'**
-  String get settingsCreateFileToSave;
-
   /// No description provided for @settingsPickExportedFile.
   ///
   /// In en, this message translates to:
@@ -6136,6 +6130,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not read this image.'**
   String get cardImageRejectUnreadable;
+
+  /// No description provided for @backupTransferTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'To another device'**
+  String get backupTransferTitle;
+
+  /// No description provided for @backupTransferOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to another device'**
+  String get backupTransferOpen;
+
+  /// No description provided for @backupTransferReceive.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive a backup'**
+  String get backupTransferReceive;
+
+  /// No description provided for @backupTransferReceiveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'From another device on this network'**
+  String get backupTransferReceiveHint;
+
+  /// No description provided for @backupTransferGive.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a backup'**
+  String get backupTransferGive;
+
+  /// No description provided for @backupTransferGiveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'To another device on this network'**
+  String get backupTransferGiveHint;
+
+  /// No description provided for @backupTransferScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan a code'**
+  String get backupTransferScan;
+
+  /// No description provided for @backupTransferScanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'From another device\'s screen'**
+  String get backupTransferScanHint;
+
+  /// No description provided for @backupTransferHowTo.
+  ///
+  /// In en, this message translates to:
+  /// **'On the other device, open Backup & restore and scan the code. Both devices must be on the same Wi-Fi network.'**
+  String get backupTransferHowTo;
+
+  /// No description provided for @backupTransferWaitingReceive.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the backup…'**
+  String get backupTransferWaitingReceive;
+
+  /// No description provided for @backupTransferWaitingGive.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the backup to be taken…'**
+  String get backupTransferWaitingGive;
+
+  /// No description provided for @backupTransferGiven.
+  ///
+  /// In en, this message translates to:
+  /// **'The backup was taken'**
+  String get backupTransferGiven;
+
+  /// No description provided for @backupTransferNoNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'This device is not connected to a network'**
+  String get backupTransferNoNetwork;
+
+  /// No description provided for @backupTransferSendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send the backup'**
+  String get backupTransferSendTitle;
+
+  /// No description provided for @backupTransferSendMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This device\'s backup goes to {host}. You choose there what to restore from it.'**
+  String backupTransferSendMessage(Object host);
+
+  /// No description provided for @backupTransferSendAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get backupTransferSendAction;
+
+  /// No description provided for @backupTransferSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup sent'**
+  String get backupTransferSent;
+
+  /// No description provided for @backupTransferFetchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive a backup'**
+  String get backupTransferFetchTitle;
+
+  /// No description provided for @backupTransferFetching.
+  ///
+  /// In en, this message translates to:
+  /// **'Taking the backup from {host}…'**
+  String backupTransferFetching(Object host);
+
+  /// No description provided for @backupTransferRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get backupTransferRetry;
+
+  /// No description provided for @backupTransferNotOurCode.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a keqdroid backup code'**
+  String get backupTransferNotOurCode;
+
+  /// No description provided for @backupTransferUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'The device does not answer. Both must be on the same Wi-Fi network, and on a computer keqdroid must be allowed in the firewall'**
+  String get backupTransferUnreachable;
+
+  /// No description provided for @backupTransferExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The code was already used or closed. Open it again on the other device'**
+  String get backupTransferExpired;
+
+  /// No description provided for @backupTransferRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not transfer the backup: {error}'**
+  String backupTransferRejected(Object error);
+
+  /// No description provided for @backupFromReleaseBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup was made by a keqdroid release, and this build does not have its key'**
+  String get backupFromReleaseBuild;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

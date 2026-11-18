@@ -1465,9 +1465,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsExport => 'Exportieren';
 
   @override
-  String get settingsCreateFileToSave => 'Die Datei lässt sich auf ein anderes Gerät mitnehmen';
-
-  @override
   String get settingsPickExportedFile => 'Was wiederhergestellt wird, wählst du nach der Datei';
 
   @override
@@ -3293,4 +3290,85 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get cardImageRejectUnreadable => 'Bild konnte nicht gelesen werden.';
+
+  @override
+  String get backupTransferTitle => 'Auf ein anderes Gerät';
+
+  @override
+  String get backupTransferOpen => 'Auf ein anderes Gerät übertragen';
+
+  @override
+  String get backupTransferReceive => 'Sicherung empfangen';
+
+  @override
+  String get backupTransferReceiveHint => 'Von einem anderen Gerät in diesem Netz';
+
+  @override
+  String get backupTransferGive => 'Sicherung abgeben';
+
+  @override
+  String get backupTransferGiveHint => 'An ein anderes Gerät in diesem Netz';
+
+  @override
+  String get backupTransferScan => 'Code scannen';
+
+  @override
+  String get backupTransferScanHint => 'Vom Bildschirm eines anderen Geräts';
+
+  @override
+  String get backupTransferHowTo => 'Öffne auf dem anderen Gerät „Sichern und wiederherstellen“ und scanne den Code. Beide Geräte müssen im selben WLAN sein.';
+
+  @override
+  String get backupTransferWaitingReceive => 'Warte auf die Sicherung…';
+
+  @override
+  String get backupTransferWaitingGive => 'Warte, bis die Sicherung abgeholt wird…';
+
+  @override
+  String get backupTransferGiven => 'Die Sicherung wurde abgeholt';
+
+  @override
+  String get backupTransferNoNetwork => 'Dieses Gerät ist mit keinem Netz verbunden';
+
+  @override
+  String get backupTransferSendTitle => 'Sicherung senden';
+
+  @override
+  String backupTransferSendMessage(Object host) {
+    return 'Die Sicherung dieses Geräts geht an $host. Dort wählst du, was daraus wiederhergestellt wird.';
+  }
+
+  @override
+  String get backupTransferSendAction => 'Senden';
+
+  @override
+  String get backupTransferSent => 'Sicherung gesendet';
+
+  @override
+  String get backupTransferFetchTitle => 'Sicherung empfangen';
+
+  @override
+  String backupTransferFetching(Object host) {
+    return 'Hole die Sicherung von $host…';
+  }
+
+  @override
+  String get backupTransferRetry => 'Noch einmal';
+
+  @override
+  String get backupTransferNotOurCode => 'Das ist kein Sicherungscode von keqdroid';
+
+  @override
+  String get backupTransferUnreachable => 'Das Gerät antwortet nicht. Beide müssen im selben WLAN sein, und auf einem Computer muss keqdroid in der Firewall erlaubt sein';
+
+  @override
+  String get backupTransferExpired => 'Der Code wurde schon benutzt oder geschlossen. Öffne ihn auf dem anderen Gerät neu';
+
+  @override
+  String backupTransferRejected(Object error) {
+    return 'Die Sicherung konnte nicht übertragen werden: $error';
+  }
+
+  @override
+  String get backupFromReleaseBuild => 'Diese Sicherung stammt von einer keqdroid-Veröffentlichung, und diesem Build fehlt ihr Schlüssel';
 }

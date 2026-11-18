@@ -1465,9 +1465,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsExport => 'Export';
 
   @override
-  String get settingsCreateFileToSave => 'The file can be moved to another device';
-
-  @override
   String get settingsPickExportedFile => 'You pick what to restore after choosing the file';
 
   @override
@@ -3293,4 +3290,85 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cardImageRejectUnreadable => 'Could not read this image.';
+
+  @override
+  String get backupTransferTitle => 'To another device';
+
+  @override
+  String get backupTransferOpen => 'Move to another device';
+
+  @override
+  String get backupTransferReceive => 'Receive a backup';
+
+  @override
+  String get backupTransferReceiveHint => 'From another device on this network';
+
+  @override
+  String get backupTransferGive => 'Send a backup';
+
+  @override
+  String get backupTransferGiveHint => 'To another device on this network';
+
+  @override
+  String get backupTransferScan => 'Scan a code';
+
+  @override
+  String get backupTransferScanHint => 'From another device\'s screen';
+
+  @override
+  String get backupTransferHowTo => 'On the other device, open Backup & restore and scan the code. Both devices must be on the same Wi-Fi network.';
+
+  @override
+  String get backupTransferWaitingReceive => 'Waiting for the backup…';
+
+  @override
+  String get backupTransferWaitingGive => 'Waiting for the backup to be taken…';
+
+  @override
+  String get backupTransferGiven => 'The backup was taken';
+
+  @override
+  String get backupTransferNoNetwork => 'This device is not connected to a network';
+
+  @override
+  String get backupTransferSendTitle => 'Send the backup';
+
+  @override
+  String backupTransferSendMessage(Object host) {
+    return 'This device\'s backup goes to $host. You choose there what to restore from it.';
+  }
+
+  @override
+  String get backupTransferSendAction => 'Send';
+
+  @override
+  String get backupTransferSent => 'Backup sent';
+
+  @override
+  String get backupTransferFetchTitle => 'Receive a backup';
+
+  @override
+  String backupTransferFetching(Object host) {
+    return 'Taking the backup from $host…';
+  }
+
+  @override
+  String get backupTransferRetry => 'Try again';
+
+  @override
+  String get backupTransferNotOurCode => 'This is not a keqdroid backup code';
+
+  @override
+  String get backupTransferUnreachable => 'The device does not answer. Both must be on the same Wi-Fi network, and on a computer keqdroid must be allowed in the firewall';
+
+  @override
+  String get backupTransferExpired => 'The code was already used or closed. Open it again on the other device';
+
+  @override
+  String backupTransferRejected(Object error) {
+    return 'Could not transfer the backup: $error';
+  }
+
+  @override
+  String get backupFromReleaseBuild => 'This backup was made by a keqdroid release, and this build does not have its key';
 }

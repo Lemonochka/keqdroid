@@ -1458,9 +1458,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsExport => '导出';
 
   @override
-  String get settingsCreateFileToSave => '文件可以拿到其他设备导入';
-
-  @override
   String get settingsPickExportedFile => '选好文件后再挑要恢复的部分';
 
   @override
@@ -3283,4 +3280,85 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cardImageRejectUnreadable => '无法读取该图片。';
+
+  @override
+  String get backupTransferTitle => '传到另一台设备';
+
+  @override
+  String get backupTransferOpen => '转移到另一台设备';
+
+  @override
+  String get backupTransferReceive => '接收备份';
+
+  @override
+  String get backupTransferReceiveHint => '来自同一网络中的另一台设备';
+
+  @override
+  String get backupTransferGive => '发送备份';
+
+  @override
+  String get backupTransferGiveHint => '发给同一网络中的另一台设备';
+
+  @override
+  String get backupTransferScan => '扫描二维码';
+
+  @override
+  String get backupTransferScanHint => '另一台设备屏幕上的二维码';
+
+  @override
+  String get backupTransferHowTo => '在另一台设备上打开“备份与恢复”并扫描此二维码。两台设备需连接同一 Wi-Fi 网络。';
+
+  @override
+  String get backupTransferWaitingReceive => '正在等待备份…';
+
+  @override
+  String get backupTransferWaitingGive => '正在等待对方取走备份…';
+
+  @override
+  String get backupTransferGiven => '备份已被取走';
+
+  @override
+  String get backupTransferNoNetwork => '此设备未连接网络';
+
+  @override
+  String get backupTransferSendTitle => '发送备份';
+
+  @override
+  String backupTransferSendMessage(Object host) {
+    return '此设备的备份将发送到 $host，在那里选择要恢复的内容。';
+  }
+
+  @override
+  String get backupTransferSendAction => '发送';
+
+  @override
+  String get backupTransferSent => '备份已发送';
+
+  @override
+  String get backupTransferFetchTitle => '接收备份';
+
+  @override
+  String backupTransferFetching(Object host) {
+    return '正在从 $host 获取备份…';
+  }
+
+  @override
+  String get backupTransferRetry => '重试';
+
+  @override
+  String get backupTransferNotOurCode => '这不是 keqdroid 的备份二维码';
+
+  @override
+  String get backupTransferUnreachable => '设备无响应。两台设备需连接同一 Wi-Fi 网络，电脑上还需在防火墙中允许 keqdroid';
+
+  @override
+  String get backupTransferExpired => '此二维码已被使用或已关闭。请在另一台设备上重新打开';
+
+  @override
+  String backupTransferRejected(Object error) {
+    return '无法传输备份：$error';
+  }
+
+  @override
+  String get backupFromReleaseBuild => '此备份由 keqdroid 正式版生成，而当前版本没有它的密钥';
 }

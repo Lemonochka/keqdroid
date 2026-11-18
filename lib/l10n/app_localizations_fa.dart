@@ -1458,9 +1458,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsExport => 'خروجی گرفتن';
 
   @override
-  String get settingsCreateFileToSave => 'فایل را می‌توان به دستگاه دیگری برد';
-
-  @override
   String get settingsPickExportedFile => 'بعد از انتخاب فایل، بخش‌ها را انتخاب می‌کنید';
 
   @override
@@ -3285,4 +3282,85 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get cardImageRejectUnreadable => 'خواندن این تصویر ممکن نشد.';
+
+  @override
+  String get backupTransferTitle => 'به دستگاه دیگر';
+
+  @override
+  String get backupTransferOpen => 'انتقال به دستگاه دیگر';
+
+  @override
+  String get backupTransferReceive => 'دریافت پشتیبان';
+
+  @override
+  String get backupTransferReceiveHint => 'از دستگاه دیگری در همین شبکه';
+
+  @override
+  String get backupTransferGive => 'ارسال پشتیبان';
+
+  @override
+  String get backupTransferGiveHint => 'به دستگاه دیگری در همین شبکه';
+
+  @override
+  String get backupTransferScan => 'اسکن کد';
+
+  @override
+  String get backupTransferScanHint => 'از صفحهٔ دستگاه دیگر';
+
+  @override
+  String get backupTransferHowTo => 'در دستگاه دیگر «پشتیبان‌گیری و بازیابی» را باز کنید و کد را اسکن کنید. هر دو دستگاه باید به یک شبکهٔ Wi-Fi وصل باشند.';
+
+  @override
+  String get backupTransferWaitingReceive => 'منتظر پشتیبان…';
+
+  @override
+  String get backupTransferWaitingGive => 'منتظر برداشتن پشتیبان…';
+
+  @override
+  String get backupTransferGiven => 'پشتیبان برداشته شد';
+
+  @override
+  String get backupTransferNoNetwork => 'این دستگاه به شبکه وصل نیست';
+
+  @override
+  String get backupTransferSendTitle => 'ارسال پشتیبان';
+
+  @override
+  String backupTransferSendMessage(Object host) {
+    return 'پشتیبان این دستگاه به $host می‌رود. آنجا انتخاب می‌کنید چه چیزی از آن بازیابی شود.';
+  }
+
+  @override
+  String get backupTransferSendAction => 'ارسال';
+
+  @override
+  String get backupTransferSent => 'پشتیبان ارسال شد';
+
+  @override
+  String get backupTransferFetchTitle => 'دریافت پشتیبان';
+
+  @override
+  String backupTransferFetching(Object host) {
+    return 'در حال گرفتن پشتیبان از $host…';
+  }
+
+  @override
+  String get backupTransferRetry => 'دوباره';
+
+  @override
+  String get backupTransferNotOurCode => 'این کد پشتیبان keqdroid نیست';
+
+  @override
+  String get backupTransferUnreachable => 'دستگاه پاسخ نمی‌دهد. هر دو باید به یک شبکهٔ Wi-Fi وصل باشند و روی رایانه keqdroid باید در فایروال مجاز باشد';
+
+  @override
+  String get backupTransferExpired => 'این کد قبلاً استفاده یا بسته شده است. آن را در دستگاه دیگر دوباره باز کنید';
+
+  @override
+  String backupTransferRejected(Object error) {
+    return 'انتقال پشتیبان ممکن نشد: $error';
+  }
+
+  @override
+  String get backupFromReleaseBuild => 'این پشتیبان را نسخهٔ رسمی keqdroid ساخته و این نسخه کلید آن را ندارد';
 }

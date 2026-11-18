@@ -871,7 +871,6 @@
   "settingsAppSettings": "App settings",
   "settingsImport": "Import",
   "settingsExport": "Export",
-  "settingsCreateFileToSave": "The file can be moved to another device",
   "settingsPickExportedFile": "You pick what to restore after choosing the file",
   "settingsWorking": "Working...",
   "settingsImportedSections": "Imported: {count} section(s)",
@@ -1724,5 +1723,45 @@
       }
     }
   },
-  "cardImageRejectUnreadable": "Could not read this image."
+  "cardImageRejectUnreadable": "Could not read this image.",
+  "backupTransferTitle": "To another device",
+  "backupTransferOpen": "Move to another device",
+  "backupTransferReceive": "Receive a backup",
+  "backupTransferReceiveHint": "From another device on this network",
+  "backupTransferGive": "Send a backup",
+  "backupTransferGiveHint": "To another device on this network",
+  "backupTransferScan": "Scan a code",
+  "backupTransferScanHint": "From another device's screen",
+  "backupTransferHowTo": "On the other device, open Backup & restore and scan the code. Both devices must be on the same Wi-Fi network.",
+  "backupTransferWaitingReceive": "Waiting for the backup…",
+  "backupTransferWaitingGive": "Waiting for the backup to be taken…",
+  "backupTransferGiven": "The backup was taken",
+  "backupTransferNoNetwork": "This device is not connected to a network",
+  "backupTransferSendTitle": "Send the backup",
+  "backupTransferSendMessage": "This device's backup goes to {host}. You choose there what to restore from it.",
+  "@backupTransferSendMessage": {
+    "placeholders": {
+      "host": {}
+    }
+  },
+  "backupTransferSendAction": "Send",
+  "backupTransferSent": "Backup sent",
+  "backupTransferFetchTitle": "Receive a backup",
+  "backupTransferFetching": "Taking the backup from {host}…",
+  "@backupTransferFetching": {
+    "placeholders": {
+      "host": {}
+    }
+  },
+  "backupTransferRetry": "Try again",
+  "backupTransferNotOurCode": "This is not a keqdroid backup code",
+  "backupTransferUnreachable": "The device does not answer. Both must be on the same Wi-Fi network, and on a computer keqdroid must be allowed in the firewall",
+  "backupTransferExpired": "The code was already used or closed. Open it again on the other device",
+  "backupTransferRejected": "Could not transfer the backup: {error}",
+  "@backupTransferRejected": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "backupFromReleaseBuild": "This backup was made by a keqdroid release, and this build does not have its key"
 }

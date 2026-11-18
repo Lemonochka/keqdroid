@@ -39,7 +39,9 @@ void main() {
 
   test('saved files carry the new name', () {
     expect(read('lib/screens/settings/backup_restore.dart'),
-        contains(r"'keqdroid-backup-$stamp.json'"));
+        contains(r"'keqdroid-backup-$stamp.${SettingsBackupService.fileExtension}'"));
+    expect(read('lib/services/settings_backup_service.dart'),
+        contains("fileExtension = 'keqdroid'"));
     expect(read('lib/screens/subscriptions/share_sheet.dart'),
         contains(r"'keqdroid_sub_${safe"));
   });
@@ -48,7 +50,9 @@ void main() {
     final service = read('lib/services/settings_backup_service.dart');
     expect(service, contains("'format': 'keqdis_backup'"));
     expect(service, contains("format != 'keqdis_backup'"));
-    expect(read('lib/screens/settings/backup_restore.dart'),
-        contains("allowedExtensions: const ['json', 'keqdis']"));
+    final picker = read('lib/screens/settings/backup_restore.dart');
+    expect(picker, contains('SettingsBackupService.fileExtension,'));
+    expect(picker, contains("'json',"));
+    expect(picker, contains("'keqdis',"));
   });
 }

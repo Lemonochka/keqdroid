@@ -125,3 +125,13 @@ On Linux, hotkeys only work while the app window has focus.
 | App settings | routes, routing profiles, core, DNS, ping, appearance and language settings |
 
 The backup leaves out what belongs to the specific device: connection mode, TUN settings, LAN Proxy, the local proxy password, autostart, tray and hotkeys. A restored section fully replaces the current data. When restoring, you pick the file first and then the sections from it.
+
+The backup file is encrypted: a text editor or another client cannot read it, and the subscription links in it are not visible. Any keqdroid release opens it, so keep the file the way you would keep a password. `.json` files from earlier versions open as before.
+
+### To another device
+
+A backup can go to another device without a file when both are on the same Wi-Fi network: “Move to another device” in “Backup & restore”. One device shows a code: “Receive a backup” to take a backup from the other device, or “Send a backup” to give its own. The other device scans that code in “Backup & restore” or with the phone camera. keqdroid asks before it sends anything, and a received backup opens the same choice of sections as a file.
+
+The backup travels encrypted with the key from the code, and the key itself never goes over the network. Only the device that scanned the code can read it. A code works for one transfer and only while its screen is open.
+
+A computer has no camera, so it shows the code and the phone scans it, in either direction. Two computers use a file. If the phone says the computer does not answer, Windows may have kept keqdroid off the network: the first time a code is shown it can ask for firewall permission.

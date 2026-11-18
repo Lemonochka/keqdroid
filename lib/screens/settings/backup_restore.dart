@@ -19,7 +19,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
 
   String _failureReason(Object e) => e is FileDialogUnavailableException
       ? friendlyErrorDetailed(e, context)
-      : '$e';
+      : backupErrorText(l10n, e);
 
   Future<void> _export() async {
     if (_busy) return;
@@ -40,16 +40,16 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
         }
 
       final backup = await SettingsBackupService.buildBackup(storage, sections: sections);
-      final jsonText = backup.toJsonString(pretty: true);
+      final bytes = await SettingsBackupService.encodeFile(backup);
 
       final stamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
-      final fileName = 'keqdroid-backup-$stamp.json';
+      final fileName =
+          'keqdroid-backup-$stamp.${SettingsBackupService.fileExtension}';
 
       final savedPath = await AppFileDialogs.saveFile(
         dialogTitle: l10n.settingsSelectLocation,
         fileName: fileName,
-        bytes: Uint8List.fromList(utf8.encode(jsonText)),
-        mimeType: 'application/json',
+        bytes: bytes,
       );
 
       if (savedPath == null) {
@@ -83,38 +83,18 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
       final res = await AppFileDialogs.pickFile(
         dialogTitle: l10n.settingsImportBackup,
         type: FileType.custom,
-        allowedExtensions: const ['json', 'keqdis'],
+        allowedExtensions: const [
+          SettingsBackupService.fileExtension,
+          'json',
+          'keqdis',
+        ],
       );
       if (res == null) return;
 
-      final backup = KeqdroidBackup.parse(await res.readAsBytes());
-      final available = SettingsBackupService.detectSections(backup);
-      if (available.isEmpty) {
-        throw const FormatException('No supported sections found in backup');
-      }
-
-      final selected = await _showImportPicker(available);
-      if (selected == null || selected.isEmpty) return;
-
-      await SettingsBackupService.applyBackup(
-        ref.read(storageProvider),
-        backup: backup,
-        sections: selected,
-      );
-
-      await ref.read(storageProvider).reloadFromDisk();
-      ref.invalidate(serversProvider);
-      ref.invalidate(subscriptionsProvider);
-      ref.invalidate(splitTunnelingProvider);
-      // без сброса импортированное доехало бы до диска, а на экране осталось прежнее до перезапуска
-      ref.invalidate(settingsNotifierProvider);
-      ref.invalidate(routesProvider);
-      ref.invalidate(routingProfilesProvider);
-
+      final backup =
+          await SettingsBackupService.decodeFile(await res.readAsBytes());
       if (!mounted) return;
-      AppSnack.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsImportedSections(selected.length))),
-      );
+      await _restore(backup);
     } catch (e) {
       if (!mounted) return;
       AppSnack.of(context).showSnackBar(
@@ -125,105 +105,91 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
     }
   }
 
-  Future<Set<BackupSection>?> _showImportPicker(Set<BackupSection> available) async {
-    var split = available.contains(BackupSection.splitTunneling);
-    var subs = available.contains(BackupSection.subscriptions);
-    var servers = available.contains(BackupSection.servers);
-    var settings = available.contains(BackupSection.appSettings);
+  Future<void> _restore(KeqdroidBackup backup) async {
+    final restored = await restoreBackupInteractive(context, ref, backup);
+    if (restored == null || !mounted) return;
+    AppSnack.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.settingsImportedSections(restored))),
+    );
+  }
 
-    return showModalBottomSheet<Set<BackupSection>>(
+  Future<void> _openTransfer(BackupTransferDirection direction) async {
+    final received = await BackupTransferScreen.open(context, direction);
+    if (received == null || !mounted) return;
+    try {
+      await _restore(received);
+    } catch (e) {
+      if (!mounted) return;
+      AppSnack.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsImportFailed(_failureReason(e))), backgroundColor: AppTheme.red(context)),
+      );
+    }
+  }
+
+  // камера есть у телефона и планшета; ПК и телевизор только показывают код
+  bool get _canScan =>
+      !PlatformBootstrap.isDesktop && !PlatformBootstrap.isTelevision;
+
+  // вид шторки тот же, что у меню «Добавить» на вкладке серверов
+  void _showTransferSheet() {
+    unawaited(showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      // без этого шторка не выше 9/16 экрана, и на телевизоре кнопка импорта уезжала за край
       isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) {
-          Widget checkbox({
-            required String title,
-            required bool value,
-            required bool enabled,
-            required ValueChanged<bool> onChanged,
-          }) {
-            return CheckboxListTile(
-              value: value,
-              onChanged: enabled ? (v) => onChanged(v ?? false) : null,
-              title: Text(title, style: TextStyle(color: AppTheme.text(context))),
-              controlAffinity: ListTileControlAffinity.leading,
-              activeColor: AppTheme.accent(context),
-            );
-          }
-
-          Set<BackupSection> current() {
-            final s = <BackupSection>{};
-            if (split) s.add(BackupSection.splitTunneling);
-            if (subs) s.add(BackupSection.subscriptions);
-            if (servers) s.add(BackupSection.servers);
-            if (settings) s.add(BackupSection.appSettings);
-            return s;
-          }
-
-          return SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.settingsImportBackup,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    l10n.settingsChooseWhatToImport,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context)),
-                  ),
-                  const SizedBox(height: 10),
-                  checkbox(
-                    title: l10n.settingsSplitTunnelingApps,
-                    value: split,
-                    enabled: available.contains(BackupSection.splitTunneling),
-                    onChanged: (v) => setSheet(() => split = v),
-                  ),
-                  checkbox(
-                    title: l10n.settingsSubscriptions,
-                    value: subs,
-                    enabled: available.contains(BackupSection.subscriptions),
-                    onChanged: (v) => setSheet(() => subs = v),
-                  ),
-                  checkbox(
-                    title: l10n.settingsServersActive,
-                    value: servers,
-                    enabled: available.contains(BackupSection.servers),
-                    onChanged: (v) => setSheet(() => servers = v),
-                  ),
-                  checkbox(
-                    title: l10n.settingsAppSettings,
-                    value: settings,
-                    enabled: available.contains(BackupSection.appSettings),
-                    onChanged: (v) => setSheet(() => settings = v),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accentContainer(context),
-                        foregroundColor: AppTheme.onAccentContainer(context),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ExpressiveShape.medium)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () => Navigator.pop(ctx, current()),
-                      child: Text(l10n.settingsImport),
-                    ),
-                  ),
-                ],
+      builder: (sheetCtx) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                l10n.backupTransferTitle,
+                textAlign: TextAlign.center,
+                style: Theme.of(sheetCtx).textTheme
+                    .emphasized(Theme.of(sheetCtx).textTheme.titleLarge)
+                    ?.copyWith(color: AppTheme.text(sheetCtx)),
               ),
             ),
-          );
-        },
+            ExpressiveGroup(
+              children: [
+                ExpressiveActionTile(
+                  icon: Icons.download_for_offline_rounded,
+                  title: l10n.backupTransferReceive,
+                  subtitle: l10n.backupTransferReceiveHint,
+                  accent: ExpressiveAccent.primary,
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    unawaited(_openTransfer(BackupTransferDirection.receive));
+                  },
+                ),
+                ExpressiveActionTile(
+                  icon: Icons.ios_share_rounded,
+                  title: l10n.backupTransferGive,
+                  subtitle: l10n.backupTransferGiveHint,
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    unawaited(_openTransfer(BackupTransferDirection.give));
+                  },
+                ),
+                if (_canScan)
+                  ExpressiveActionTile(
+                    icon: Icons.qr_code_scanner_rounded,
+                    title: l10n.backupTransferScan,
+                    subtitle: l10n.backupTransferScanHint,
+                    accent: ExpressiveAccent.tertiary,
+                    onTap: () {
+                      Navigator.pop(sheetCtx);
+                      unawaited(scanBackupCode(context, ref));
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
-    );
+    ));
   }
 
   @override
@@ -231,6 +197,17 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
     return ExpressivePage(
       title: l10n.settingsBackupRestore,
       children: [
+          ExpressiveGroup(
+            children: [
+              ExpressiveActionTile(
+                icon: Icons.devices_rounded,
+                title: l10n.backupTransferOpen,
+                accent: ExpressiveAccent.primary,
+                onTap: _showTransferSheet,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           ExpressiveCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,11 +215,6 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
                 Text(
                   l10n.settingsExport,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.text(context)),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.settingsCreateFileToSave,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textLight(context), height: 1.35),
                 ),
                 const SizedBox(height: 10),
                 SwitchListTile(

@@ -57,18 +57,24 @@ bool isPrivateIpv4(String host) {
       (b[0] == 192 && b[1] == 168);
 }
 
-// у туннеля тоже частный адрес, но телефону до него не достучаться
+// у туннеля тоже частный адрес, но телефону до него не достучаться; на ПК так же с адаптерами WSL, Hyper-V, Docker и виртуалок
 String? pickLanAddress(Iterable<({String name, String address})> candidates) {
-  const tunnels = ['tun', 'ppp', 'wg', 'ipsec', 'rmnet', 'dummy'];
+  const tunnels = [
+    'tun', 'ppp', 'wg', 'ipsec', 'rmnet', 'dummy', 'meta', 'wintun',
+    'vethernet', 'virtualbox', 'vmware', 'docker', 'br-', 'veth', 'virbr',
+    'tailscale', 'zt', 'hyper-v', 'loopback',
+  ];
   final usable = [
     for (final c in candidates)
       if (isPrivateIpv4(c.address) &&
           !tunnels.any((t) => c.name.toLowerCase().startsWith(t)))
         c,
   ];
+  // wlan0/eth0 у Android, Wi-Fi/Ethernet у Windows, wlp/enp/eno у Linux
   int rank(String name) {
     final n = name.toLowerCase();
-    return n.startsWith('wlan') || n.startsWith('eth') ? 0 : 1;
+    const real = ['wlan', 'wi-fi', 'wifi', 'wl', 'eth', 'en'];
+    return real.any(n.startsWith) ? 0 : 1;
   }
 
   usable.sort((a, b) => rank(a.name).compareTo(rank(b.name)));

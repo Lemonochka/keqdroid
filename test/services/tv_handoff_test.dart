@@ -68,6 +68,31 @@ void main() {
       );
     });
 
+    test('на ПК код показывает адрес Wi-Fi, а не WSL, Hyper-V или Docker', () {
+      expect(
+        pickLanAddress([
+          (name: 'vEthernet (WSL (Hyper-V firewall))', address: '172.27.160.1'),
+          (name: 'vEthernet (Default Switch)', address: '172.20.48.1'),
+          (name: 'VirtualBox Host-Only Network', address: '192.168.56.1'),
+          (name: 'Meta Tunnel', address: '172.19.0.1'),
+          (name: 'Wi-Fi', address: '192.168.1.71'),
+        ]),
+        '192.168.1.71',
+      );
+      expect(
+        pickLanAddress([
+          (name: 'docker0', address: '172.17.0.1'),
+          (name: 'virbr0', address: '192.168.122.1'),
+          (name: 'wlp3s0', address: '192.168.0.12'),
+        ]),
+        '192.168.0.12',
+      );
+      expect(
+        pickLanAddress([(name: 'Ethernet', address: '10.0.0.5')]),
+        '10.0.0.5',
+      );
+    });
+
     test('кабель годится так же, как Wi-Fi', () {
       expect(
         pickLanAddress([(name: 'eth0', address: '10.0.2.15')]),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import '../core/app_logger.dart';
 import '../models/app_settings.dart';
@@ -7,6 +8,7 @@ import '../models/server_item.dart';
 import '../models/subscription.dart';
 import '../models/traffic_route.dart';
 import '../utils/traffic_routes.dart';
+import 'backup_crypto.dart';
 import 'card_image_service.dart';
 import 'storage_service.dart';
 
@@ -123,6 +125,22 @@ class KeqdroidBackup {
 
 class SettingsBackupService {
   static const int currentVersion = 1;
+
+  static const fileExtension = 'keqdroid';
+
+  static Future<Uint8List> encodeFile(KeqdroidBackup backup) => BackupCrypto.seal(
+        utf8.encode(backup.toJsonString(pretty: false)),
+        keyId: BackupKeys.writeKeyId,
+        key: BackupKeys.writeKey,
+      );
+
+  // файлы до шифрования (.json, .keqdis) открываются как раньше
+  static Future<KeqdroidBackup> decodeFile(List<int> bytes) async {
+    if (!BackupCrypto.isSealed(bytes)) return KeqdroidBackup.parse(bytes);
+    return KeqdroidBackup.parse(
+      await BackupCrypto.open(bytes, keyFor: BackupKeys.forReading),
+    );
+  }
 
   // белый список: остальное описывает машину и её сеть. тест требует разложить каждый ключ toJson()
   static const portableSettingKeys = <String>{
