@@ -228,6 +228,14 @@ class MainActivity : FlutterFragmentActivity() {
         super.onResume()
         ensureVpnServiceBound()
         mainScope.launch { emitVpnSnapshot() }
+        // с объединёнными потоками Dart строит кадры в главном, а от слабых ядер движок уводит только свои.
+        // на Pixel 6a кадр стоял на A55 при 570-740 МГц и опаздывал на каждом тике телеметрии (трасса 18.11.2026).
+        // повтор через секунду: процесс переезжает в cpuset top-app позже onResume, и переезд может сбросить маску
+        NativeHelper.avoidEfficiencyCores()
+        mainScope.launch {
+            delay(1_000)
+            NativeHelper.avoidEfficiencyCores()
+        }
     }
 
     private fun ensureVpnServiceBound() {

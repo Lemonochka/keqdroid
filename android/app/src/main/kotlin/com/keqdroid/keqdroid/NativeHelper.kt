@@ -60,6 +60,13 @@ object NativeHelper {
     fun tunReadyCount(): Long = runCatching { nativeTunReadyCount() }.getOrDefault(0L)
 
     @JvmStatic
+    private external fun nativeAvoidEfficiencyCores(): Boolean
+
+    // только для вызывающего потока
+    fun avoidEfficiencyCores(): Boolean =
+        runCatching { nativeAvoidEfficiencyCores() }.getOrDefault(false)
+
+    @JvmStatic
     private external fun nativeStartCore(
         binPath: String,
         configPath: String,
