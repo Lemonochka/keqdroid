@@ -25,7 +25,7 @@ class _BehaviourSettingsCard extends StatelessWidget {
       subtitle: l10n.settingsBehaviourSubtitle(
         _lowerFirst(_updatePromptLabel(l10n, settings.updatePromptDays)),
       ),
-      icon: Icons.tune_rounded,
+      icon: Icons.notifications_rounded,
       accent: ExpressiveAccent.secondary,
       onTap: () => Navigator.push(
         context,

@@ -854,7 +854,7 @@
       "language": {}
     }
   },
-  "settingsBehaviourTitle": "行为",
+  "settingsBehaviourTitle": "更新与通知",
   "settingsBehaviourSubtitle": "更新：{interval}",
   "behaviourUpdatesSection": "应用更新",
   "behaviourUpdatePrompt": "提示新版本",

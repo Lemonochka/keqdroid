@@ -1561,7 +1561,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsBehaviourTitle => 'Behaviour';
+  String get settingsBehaviourTitle => 'Updates and notifications';
 
   @override
   String settingsBehaviourSubtitle(Object interval) {

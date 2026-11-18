@@ -475,7 +475,7 @@
   "settingsCheckFailedError": "بررسی ناموفق بود: {error}",
   "settingsLanguageTitle": "زبان",
   "settingsLanguageSubtitle": "{language}",
-  "settingsBehaviourTitle": "رفتار",
+  "settingsBehaviourTitle": "به‌روزرسانی و اعلان‌ها",
   "settingsBehaviourSubtitle": "به‌روزرسانی: {interval}",
   "behaviourUpdatesSection": "به‌روزرسانی برنامه",
   "behaviourUpdatePrompt": "اطلاع از نسخهٔ جدید",

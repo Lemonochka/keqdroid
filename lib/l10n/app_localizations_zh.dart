@@ -1554,7 +1554,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get settingsBehaviourTitle => '行为';
+  String get settingsBehaviourTitle => '更新与通知';
 
   @override
   String settingsBehaviourSubtitle(Object interval) {

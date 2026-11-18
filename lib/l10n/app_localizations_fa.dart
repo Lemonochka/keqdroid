@@ -1554,7 +1554,7 @@ class AppLocalizationsFa extends AppLocalizations {
   }
 
   @override
-  String get settingsBehaviourTitle => 'رفتار';
+  String get settingsBehaviourTitle => 'به‌روزرسانی و اعلان‌ها';
 
   @override
   String settingsBehaviourSubtitle(Object interval) {

@@ -2870,7 +2870,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsBehaviourTitle.
   ///
   /// In en, this message translates to:
-  /// **'Behaviour'**
+  /// **'Updates and notifications'**
   String get settingsBehaviourTitle;
 
   /// No description provided for @settingsBehaviourSubtitle.

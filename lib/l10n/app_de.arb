@@ -854,7 +854,7 @@
       "language": {}
     }
   },
-  "settingsBehaviourTitle": "Verhalten",
+  "settingsBehaviourTitle": "Updates und Benachrichtigungen",
   "settingsBehaviourSubtitle": "Updates: {interval}",
   "behaviourUpdatesSection": "App-Updates",
   "behaviourUpdatePrompt": "Über neue Versionen informieren",

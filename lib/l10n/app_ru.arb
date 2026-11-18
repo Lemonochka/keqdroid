@@ -854,7 +854,7 @@
       "language": {}
     }
   },
-  "settingsBehaviourTitle": "Поведение",
+  "settingsBehaviourTitle": "Обновления и уведомления",
   "settingsBehaviourSubtitle": "Обновления: {interval}",
   "behaviourUpdatesSection": "Обновления приложения",
   "behaviourUpdatePrompt": "Сообщать о новой версии",

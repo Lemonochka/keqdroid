@@ -931,7 +931,7 @@
       "language": {}
     }
   },
-  "settingsBehaviourTitle": "Behaviour",
+  "settingsBehaviourTitle": "Updates and notifications",
   "settingsBehaviourSubtitle": "Updates: {interval}",
   "@settingsBehaviourSubtitle": {
     "placeholders": {
