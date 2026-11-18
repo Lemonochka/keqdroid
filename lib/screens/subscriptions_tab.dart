@@ -67,6 +67,10 @@ class SubscriptionsTab extends ConsumerWidget {
     final bgColor = AppTheme.bg(context);
     final textColor = AppTheme.text(context);
 
+    // касание карточки зовёт setState у всего списка (startItemDragReorder в reorderable_list.dart), и без
+    // тех же экземпляров пять карточек собирались заново: 31-42 мс на Pixel 6a, 18.11.2026
+    final items = <int, Widget>{};
+
     // кнопка действия стоит на линии пилюли, а её отступ панель сообщает после кадра
     return ValueListenableBuilder<double>(
       valueListenable: FloatingBar.bottomInset,
@@ -179,37 +183,8 @@ class SubscriptionsTab extends ConsumerWidget {
                                       ), animation);
                                     },
                                     itemCount: subs.length,
-                                    itemBuilder: (_, i) {
-                                      final sub = subs[i];
-                                      final isDesktop =
-                                          PlatformBootstrap.isDesktop;
-                                      final item = _SubItem(
-                                        sub: sub,
-                                        listIndex: i,
-                                        onDelete: () => ref
-                                            .read(
-                                              subscriptionsProvider.notifier,
-                                            )
-                                            .remove(sub.id),
-                                        onRefresh: () => ref
-                                            .read(
-                                              subscriptionsProvider.notifier,
-                                            )
-                                            .refreshTracked(sub),
-                                      );
-                                      return Padding(
-                                        key: ValueKey(sub.id),
-                                        padding: EdgeInsets.only(
-                                          bottom: i < subs.length - 1 ? 12 : 0,
-                                        ),
-                                        child: isDesktop
-                                            ? item
-                                            : ReorderableDelayedDragStartListener(
-                                                index: i,
-                                                child: item,
-                                              ),
-                                      );
-                                    },
+                                    itemBuilder: (_, i) =>
+                                        items[i] ??= _listItem(ref, subs, i),
                                   ),
                               ),
                               ),
@@ -233,6 +208,24 @@ class SubscriptionsTab extends ConsumerWidget {
             ),
           ),
       ),
+    );
+  }
+
+  Widget _listItem(WidgetRef ref, List<Subscription> subs, int i) {
+    final sub = subs[i];
+    final item = _SubItem(
+      sub: sub,
+      listIndex: i,
+      onDelete: () => ref.read(subscriptionsProvider.notifier).remove(sub.id),
+      onRefresh: () =>
+          ref.read(subscriptionsProvider.notifier).refreshTracked(sub),
+    );
+    return Padding(
+      key: ValueKey(sub.id),
+      padding: EdgeInsets.only(bottom: i < subs.length - 1 ? 12 : 0),
+      child: PlatformBootstrap.isDesktop
+          ? item
+          : ReorderableDelayedDragStartListener(index: i, child: item),
     );
   }
 
