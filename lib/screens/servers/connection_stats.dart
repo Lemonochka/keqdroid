@@ -45,18 +45,23 @@ class _ConnectionStats extends ConsumerWidget {
     final showAnyTraffic = showTraffic || showSplit;
     if (!showAnyTraffic && !showTime) return const SizedBox.shrink();
 
+    // готовый текст, а не сырые числа: байты и секунды меняются каждый тик, а то, что на экране, редко
     final stats = ref.watch(
       vpnStateProvider.select((a) {
         final v = a.value;
-        if (v == null) return (null, null, null, null);
-        return (v.downloadSpeed, v.uploadSpeed, v.totalDownload, v.duration);
+        return (
+          _formatVpnRate(v?.downloadSpeed),
+          _formatVpnRate(v?.uploadSpeed),
+          _formatVpnBytes(v?.totalDownload),
+          showTime ? _formatVpnDuration(v?.duration) : null,
+        );
       }),
     );
 
     final split = showSplit ? ref.watch(trafficSplitProvider).value : null;
 
     final l10n = context.l10n;
-    return StatStrip(
+    final strip = StatStrip(
       fill: fill,
       metrics: [
         if (showAnyTraffic) ...[
@@ -77,19 +82,19 @@ class _ConnectionStats extends ConsumerWidget {
             StatMetric(
               icon: Icons.arrow_downward_rounded,
               label: l10n.statsDownloadLabel,
-              value: _formatVpnRate(stats.$1),
+              value: stats.$1,
               template: _kRateTemplate,
             ),
             StatMetric(
               icon: Icons.arrow_upward_rounded,
               label: l10n.statsUploadLabel,
-              value: _formatVpnRate(stats.$2),
+              value: stats.$2,
               template: _kRateTemplate,
             ),
             StatMetric(
               icon: Icons.data_usage_rounded,
               label: l10n.statsInLabel,
-              value: _formatVpnBytes(stats.$3),
+              value: stats.$3,
               template: _kBytesTemplate,
             ),
           ],
@@ -98,13 +103,19 @@ class _ConnectionStats extends ConsumerWidget {
           StatMetric(
             icon: Icons.schedule_rounded,
             label: l10n.statsTimeLabel,
-            value: _formatVpnDuration(stats.$4),
+            value: stats.$4!,
             template: _kDurationTemplate,
           ),
       ],
     );
+    return _ownLayerOnPhone(strip);
   }
 }
+
+// цифры меняются раз в 1,5-2 с, и без своего слоя каждый тик перерисовывал шапку вместе с нижней панелью,
+// 209 объектов вместо 74. на ПК Skia ставит слой в целый пиксель, и строка дрожала бы при раскрытии
+Widget _ownLayerOnPhone(Widget child) =>
+    PlatformBootstrap.isDesktop ? child : RepaintBoundary(child: child);
 
 StatMetric _channelMetric(
   AppLocalizations l10n, {

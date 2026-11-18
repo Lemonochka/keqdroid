@@ -309,22 +309,26 @@ class _VpnHomeScreenState extends ConsumerState<VpnHomeScreen> {
           ),
         ],
       ),
+      // своим слоем: шапка и оверлеи над списком лежат в одном слое с панелью, и любая их перерисовка
+      // заново рисовала ~90 объектов панели, а её пружина при прокрутке так же задевала экран
       bottomNavigationBar: expanded
           ? null
-          : HalloweenIconScope(
-              child: style == null
-                  ? AppBottomNav(
-                      index: _navIndex,
-                      showConnectedBadge: isConnected,
-                      onTap: _selectTab,
-                    )
-                  : LiquidBottomNav(
-                      index: _navIndex,
-                      showConnectedBadge: isConnected,
-                      onTap: _selectTab,
-                      style: style,
-                      pages: _pageCtrl,
-                    ),
+          : RepaintBoundary(
+              child: HalloweenIconScope(
+                child: style == null
+                    ? AppBottomNav(
+                        index: _navIndex,
+                        showConnectedBadge: isConnected,
+                        onTap: _selectTab,
+                      )
+                    : LiquidBottomNav(
+                        index: _navIndex,
+                        showConnectedBadge: isConnected,
+                        onTap: _selectTab,
+                        style: style,
+                        pages: _pageCtrl,
+                      ),
+              ),
             ),
       ),
     );

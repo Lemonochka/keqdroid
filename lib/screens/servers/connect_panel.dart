@@ -221,12 +221,12 @@ class _UptimeLine extends ConsumerWidget {
       ),
     );
     if (!show) return const SizedBox.shrink();
-    final duration = ref.watch(
-      vpnStateProvider.select((a) => a.value?.duration),
+    final uptime = ref.watch(
+      vpnStateProvider.select((a) => _formatVpnDuration(a.value?.duration)),
     );
     final textTheme = Theme.of(context).textTheme;
     final color = AppTheme.textLight(context);
-    return Padding(
+    final line = Padding(
       padding: const EdgeInsets.only(top: ExpressiveSpacing.small),
       child: Semantics(
         label: context.l10n.statsTimeLabel,
@@ -240,7 +240,7 @@ class _UptimeLine extends ConsumerWidget {
             ),
             const SizedBox(width: 6),
             Text(
-              ltrIsolate(_formatVpnDuration(duration)),
+              ltrIsolate(uptime),
               style: textTheme.labelLarge?.copyWith(
                 color: color,
                 fontFeatures: const [FontFeature.tabularFigures()],
@@ -250,5 +250,6 @@ class _UptimeLine extends ConsumerWidget {
         ),
       ),
     );
+    return _ownLayerOnPhone(line);
   }
 }

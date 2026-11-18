@@ -50,6 +50,8 @@ class StatMetric {
   });
 }
 
+typedef _CellWidths = ({double tag, double slot});
+
 class StatStrip extends StatelessWidget {
   final List<StatMetric> metrics;
 
@@ -68,13 +70,22 @@ class StatStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (metrics.isEmpty) return const SizedBox.shrink();
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cellWidth = metrics
-            .map((m) => _cellWidth(context, m))
-            .reduce(max);
+        // замеры текста раз за раскладку: значения меняются каждый тик телеметрии
+        final valueStyle = _valueStyle(theme);
+        final tagStyle = _tagStyle(theme);
+        final widths = [
+          for (final m in metrics)
+            (
+              tag: _tagWidth(context, m, tagStyle),
+              slot: _slotWidth(context, m, valueStyle),
+            ),
+        ];
+        final cellWidth = widths.map(_cellWidth).reduce(max);
         final columns = statStripColumns(
           count: metrics.length,
           cellWidth: cellWidth,
@@ -82,9 +93,9 @@ class StatStrip extends StatelessWidget {
           maxWidth: constraints.maxWidth,
         );
 
-        final rows = <List<StatMetric>>[];
+        final rows = <List<int>>[];
         for (var i = 0; i < metrics.length; i += columns) {
-          rows.add(metrics.skip(i).take(columns).toList());
+          rows.add([for (var j = i; j < min(i + columns, metrics.length); j++) j]);
         }
         final table = Column(
           mainAxisSize: MainAxisSize.min,
@@ -98,7 +109,7 @@ class StatStrip extends StatelessWidget {
                   endIndent: _cellPadding,
                   color: scheme.outlineVariant,
                 ),
-              _buildRow(context, rows[r], cellWidth, columns),
+              _buildRow(context, rows[r], widths, cellWidth, columns),
             ],
           ],
         );
@@ -116,11 +127,13 @@ class StatStrip extends StatelessWidget {
 
   Widget _buildRow(
     BuildContext context,
-    List<StatMetric> row,
+    List<int> row,
+    List<_CellWidths> widths,
     double cellWidth,
     int columns,
   ) {
     final scheme = Theme.of(context).colorScheme;
+    Widget cell(int i) => _buildCell(context, metrics[row[i]], widths[row[i]]);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -133,26 +146,28 @@ class StatStrip extends StatelessWidget {
             ),
           if (fill)
             Expanded(
-              child: i < row.length
-                  ? _buildCell(context, row[i])
-                  : const SizedBox.shrink(),
+              child: i < row.length ? cell(i) : const SizedBox.shrink(),
             )
           else
             SizedBox(
               width: cellWidth,
-              child: i < row.length ? _buildCell(context, row[i]) : null,
+              child: i < row.length ? cell(i) : null,
             ),
         ],
       ],
     );
   }
 
-  Widget _buildCell(BuildContext context, StatMetric metric) {
+  Widget _buildCell(
+    BuildContext context,
+    StatMetric metric,
+    _CellWidths widths,
+  ) {
     final theme = Theme.of(context);
     final color = theme.colorScheme.onSurfaceVariant;
     final valueStyle = _valueStyle(theme);
-    final tagWidth = _tagWidth(context, metric, _tagStyle(theme));
-    final slotWidth = _slotWidth(context, metric, valueStyle);
+    final tagWidth = widths.tag;
+    final slotWidth = widths.slot;
 
     return Semantics(
       label: metric.label,
@@ -217,15 +232,12 @@ class StatStrip extends StatelessWidget {
     );
   }
 
-  double _cellWidth(BuildContext context, StatMetric metric) {
-    final theme = Theme.of(context);
-    final tagWidth = _tagWidth(context, metric, _tagStyle(theme));
-    return _cellPadding * 2 +
-        (tagWidth > 0 ? tagWidth + _gap : 0) +
-        ExpressiveIconSize.inline +
-        _gap +
-        _slotWidth(context, metric, _valueStyle(theme));
-  }
+  static double _cellWidth(_CellWidths w) =>
+      _cellPadding * 2 +
+      (w.tag > 0 ? w.tag + _gap : 0) +
+      ExpressiveIconSize.inline +
+      _gap +
+      w.slot;
 
   static TextStyle? _valueStyle(ThemeData theme) =>
       theme.textTheme.labelMedium?.copyWith(
@@ -245,7 +257,7 @@ class StatStrip extends StatelessWidget {
   ) =>
       metric.tag.isEmpty
           ? 0
-          : _measure(context, metric.tag, style).ceilToDouble();
+          : _measureFixed(context, metric.tag, style).ceilToDouble();
 
   static double _slotWidth(
     BuildContext context,
@@ -255,10 +267,30 @@ class StatStrip extends StatelessWidget {
     var width = 0.0;
     for (final line in metric.lines) {
       // образец в той же обёртке: изоляторы для движка обычные символы со своей шириной
-      width = max(width, _measure(context, ltrIsolate(line.template), style));
+      width = max(width, _measureFixed(context, ltrIsolate(line.template), style));
       width = max(width, _measure(context, ltrIsolate(line.value), style));
     }
     return width.ceilToDouble();
+  }
+
+  static final _fixedWidths =
+      <(String, TextStyle?, TextScaler, TextDirection), double>{};
+  static var _watchingFonts = false;
+
+  // образцы и метки не меняются, а меряются на каждом тике: на A55 это заметная доля кадра
+  static double _measureFixed(BuildContext context, String text, TextStyle? style) {
+    if (!_watchingFonts) {
+      _watchingFonts = true;
+      PaintingBinding.instance.systemFonts.addListener(_fixedWidths.clear);
+    }
+    if (_fixedWidths.length > 64) _fixedWidths.clear();
+    final key = (
+      text,
+      style,
+      MediaQuery.textScalerOf(context),
+      Directionality.of(context),
+    );
+    return _fixedWidths[key] ??= _measure(context, text, style);
   }
 
   static double _measure(BuildContext context, String text, TextStyle? style) {
