@@ -43,6 +43,7 @@ import '../services/vpn_engine.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../tunnel/app_routing_mode.dart';
 import '../tunnel/local_port_plan.dart';
+import '../tunnel/mihomo_session_shell.dart';
 import '../tunnel/vpn_backend.dart';
 import '../utils/app_locale.dart';
 import '../utils/app_routes.dart';
@@ -150,7 +151,9 @@ final exitIpProvider = FutureProvider.autoDispose<ExitIp?>((ref) async {
   final serverId = ref.watch(
     serversProvider.select((s) => s.activeServer?.id),
   );
-  if (!connected || serverId == null) return null;
+  // на mihomo сервер меняется без отключения, и вопрос в середине смены ушёл бы через прежний
+  final switching = ref.watch(vpnServerSwitchInProgressProvider);
+  if (!connected || serverId == null || switching) return null;
   for (final pause in _exitIpRetryPauses) {
     if (pause > Duration.zero) await Future<void>.delayed(pause);
     if (!ref.mounted) return null;

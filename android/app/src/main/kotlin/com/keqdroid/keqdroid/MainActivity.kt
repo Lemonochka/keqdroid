@@ -459,6 +459,17 @@ class MainActivity : FlutterFragmentActivity() {
                             )
                         }
                         "getMihomoApi" -> getMihomoApi(result)
+                        "reloadMihomoConfig" -> {
+                            val config = call.argument<String>("mihomoConfig")
+                            val binder = vpnServiceBinder
+                            if (config.isNullOrEmpty() || binder == null) {
+                                result.success(false)
+                            } else {
+                                binder.reloadMihomoConfig(config, call.argument<String>("serverName")) {
+                                    result.success(it)
+                                }
+                            }
+                        }
                         "getDialFailures" -> result.success(NativeHelper.dialFailures())
                         "getPhysicalNetworks" -> result.success(
                             mapOf(

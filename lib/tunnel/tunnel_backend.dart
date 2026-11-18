@@ -23,6 +23,9 @@ abstract class TunnelBackend {
 
   Future<void> stopSession();
 
+  // смена сервера на живом mihomo без пересборки туннеля. false значит «не вышло», и смена идёт стопом и стартом
+  Future<bool> reloadMihomoConfig(TunnelSessionRequest request) async => false;
+
   Future<bool> requestTunnelPermission();
 
   void setTrafficStatsPollingEnabled(bool enabled) {}

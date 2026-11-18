@@ -78,4 +78,27 @@ void main() {
     expect((await c.read(exitIpProvider.future))?.ip, '203.0.113.7');
     expect(calls, 1);
   });
+
+  // смена сервера на ходу не рвёт подключение: спроси выход сразу, ответил бы ещё прежний сервер
+  test('пока сервер меняется на ходу, выход не спрашивается, после смены спрашивается заново',
+      () async {
+    var country = 'PL';
+    var calls = 0;
+    final c = await container((_) async {
+      calls++;
+      return ExitIp(ip: '203.0.113.$calls', countryCode: country);
+    });
+    final sub = c.listen(exitIpProvider, (_, _) {});
+    addTearDown(sub.close);
+    expect((await c.read(exitIpProvider.future))?.countryCode, 'PL');
+
+    c.read(vpnServerSwitchInProgressProvider.notifier).set(true);
+    expect(await c.read(exitIpProvider.future), isNull);
+    expect(calls, 1);
+
+    country = 'FI';
+    c.read(vpnServerSwitchInProgressProvider.notifier).set(false);
+    expect((await c.read(exitIpProvider.future))?.countryCode, 'FI');
+    expect(calls, 2);
+  });
 }

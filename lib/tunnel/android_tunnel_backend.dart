@@ -117,6 +117,26 @@ class AndroidTunnelBackend implements TunnelBackend {
     }
   }
 
+  // номер дескриптора туннеля знает только сервис, конфиг дописывает и отдаёт ядру он
+  @override
+  Future<bool> reloadMihomoConfig(TunnelSessionRequest request) async {
+    final config = request.mihomoConfig;
+    if (config == null || config.isEmpty) return false;
+    try {
+      return await _method.invokeMethod<bool>('reloadMihomoConfig', {
+            'mihomoConfig': config,
+            if (request.serverName != null && request.serverName!.isNotEmpty)
+              'serverName': request.serverName,
+          }) ??
+          false;
+    } on PlatformException catch (e) {
+      AppLogger.instance.warn('mihomo reload failed', error: e);
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
   @override
   Future<void> stopSession() async {
     try {

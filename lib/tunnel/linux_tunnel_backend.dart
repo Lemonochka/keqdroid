@@ -14,6 +14,7 @@ import '../services/xray_route_decisions.dart';
 import '../utils/xray_session_log.dart';
 import '../services/ephemeral_xray_ping.dart';
 import '../utils/mihomo_api_session.dart';
+import 'mihomo_hot_reload.dart';
 import 'connection_mode.dart';
 import 'desktop_traffic_stats.dart';
 import 'linux_core_paths.dart';
@@ -996,6 +997,29 @@ $run''';
             '$label stopped unexpectedly (exit code $code). Disconnected.',
       ));
     }));
+  }
+
+  @override
+  Future<bool> reloadMihomoConfig(TunnelSessionRequest request) async {
+    final config = request.mihomoConfig;
+    final dir = _sessionDir;
+    final api = MihomoApiSession();
+    final port = api.port;
+    if (_mihomoProcess == null ||
+        _stoppingSession ||
+        dir == null ||
+        port == null ||
+        config == null ||
+        config.isEmpty ||
+        request.mode != _activeMode) {
+      return false;
+    }
+    if (!await putMihomoConfig(port: port, secret: api.secret, config: config)) {
+      return false;
+    }
+    // сбор диагностики кладёт в отчёт этот файл
+    await File(p.join(dir.path, 'mihomo.yaml')).writeAsString(config);
+    return true;
   }
 
   @override

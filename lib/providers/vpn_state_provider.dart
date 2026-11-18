@@ -31,6 +31,8 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   bool _awaitingSessionStart = false;
   bool _serverSwitchInProgress = false;
   bool _cancelRequested = false;
+  // сессия, которую поднял этот connect: смена сервера на mihomo берёт из неё порты, креды и API
+  _LiveSession? _live;
   Completer<void>? _disconnectWaiter;
   Timer? _androidPollTimer;
 
@@ -427,6 +429,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
 
     _connectInFlight = true;
+    _live = null;
     _cancelRequested = false;
     _awaitingSessionStart = true;
 
@@ -454,428 +457,12 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       } else {
         state = const AsyncData(VpnState(status: VpnStatus.connecting));
       }
-      final storage = ref.read(storageProvider);
-      final profile =
-          profileForServer(await storage.getRoutingProfiles(), server);
-      final saved = await storage.getSettings();
-      // «Всё остальное» профиля только в эту сессию: на диск настройки пишет лишь _saveDuringConnect
-      final stored = profile == null
-          ? saved
-          : saved.copyWith(finalOutbound: profile.finalOutbound);
-      final routes = profile?.routes ?? await storage.getRoutes();
-      if (profile != null) {
-        AppLogger.instance.info('Routing profile: ${profile.name}');
-      }
-
-      final subId = server.subscriptionId;
-      final template = subId == null ? null : storage.getClashTemplate(subId);
-      String? templated;
-      if (template != null) {
-        final choices = (await storage.getSubscriptions())
-                .where((s) => s.id == subId)
-                .firstOrNull
-                ?.groupChoices ??
-            const <String, String>{};
-        // кривой шаблон не повод не подключаться: сервер работает узлом, как без шаблона
-        try {
-          templated = templatedSessionConfig(
-            server: server,
-            template: template,
-            settings: stored,
-            choices: choices,
-          );
-        } catch (e, st) {
-          AppLogger.instance.warn('Provider template skipped', error: e, stackTrace: st);
-        }
-      }
-      if (templated != null) {
-        AppLogger.instance.info('Provider template: mihomo runs it whole');
-      }
-      final runConfig = templated ?? server.config;
-
-      // готовый конфиг исполняет ядро его языка, настройка решает только для обычной ссылки.
-      // выбираем до свёртки маршрутов: от ядра зависит, какие другие серверы встанут в конфиг
-      final resolved = resolveVpnBackend(
-        config: runConfig,
-        preference: stored.vpnCore,
-        mihomoAvailable: mihomoShipsHere,
-      );
-      final choice = templated != null &&
-              resolved.skip == VpnCoreSkip.clashConfig
-          ? (
-              backend: resolved.backend,
-              format: resolved.format,
-              skip: VpnCoreSkip.clashTemplate,
-            )
-          : resolved;
-      // режим сохранённый: если автозапуск откатится в прокси, генератор без туннеля правил по процессам и так не напишет
-      final appsRun = appRoutesRun(TunnelSessionBuilder.resolveMode(stored));
-      final routeServers = await _prepareRouteServers(
-        routeServerOutbounds(
-          routes: routes,
-          servers: ref.read(serversProvider).servers,
-          activeServerId: server.id,
-          core: choice.backend,
-          withApps: appsRun,
-        ),
-      );
-      final appRoutes = [
-        if (appsRun)
-          ...await _prepareAppRoutes(
-            routeAppRules(routes: routes, outbounds: routeServers),
-          ),
-        ...await _prepareAppRoutes(
-          routeProtocolRules(routes: routes, outbounds: routeServers),
-        ),
-      ];
-
-      // маршрут на сервер без своего выхода (пропал, совпал с активным, не встаёт в ядро) уходит через VPN.
-      // неизвестные geo-коды выбрасываем: xray на них падает целиком (SOCKS port not ready)
-      var settings = await GeoAssetService.sanitizeRules(
-        foldRoutes(
-          stored,
-          routes,
-          serverUsable: (r) => routeServers.any((o) => o.serverId == r.serverId),
-        ),
-      );
-      if (settings.xrayCore.dnsUseCustom) {
-        final onMihomo = choice.backend == VpnBackend.mihomo;
-        final dropped = onMihomo
-            ? MihomoConfigGen.droppedDnsServers(settings.xrayCore.dnsServers)
-            : XrayCoreSettings.xrayDnsServers(settings.xrayCore.dnsServers)
-                .dropped;
-        if (dropped.isNotEmpty) {
-          AppLogger.instance.warn(
-            'Custom DNS: ${dropped.length} address(es) dropped — the core '
-            'cannot run them: ${dropped.join(', ')}. Supported: '
-            '${onMihomo ? 'plain ip[:port], udp://, tcp://, https://, tls://, '
-                'quic://, dhcp://, localhost' : 'plain ip[:port], '
-                'https+local://, https://, h2c://, tcp://, quic+local://, '
-                'localhost, fakedns'}.',
-          );
-        }
-      }
-      final ruleLists = await _cachedRuleLists(settings);
-
-      final split = ref.read(splitTunnelingProvider);
-      final excludePkgs = split.excludePackages.toList();
-      final includePkgs = split.includePackages.toList();
-      final routingMode = routingModeFromSplit(
-        includePackages: split.includePackages,
-        excludePackages: split.excludePackages,
-      );
-      final processNames = (Platform.isWindows || Platform.isLinux)
-          ? processNamesForSplit(
-              includePackages: split.includePackages,
-              excludePackages: split.excludePackages,
-            )
-          : const <String>[];
-
-      var connectionMode = TunnelSessionBuilder.resolveMode(settings);
-
-      if (Platform.isAndroid && connectionMode != ConnectionMode.proxy) {
-        final permitted = await engine.requestVpnPermission();
-        if (!permitted) throw const VpnPermissionDeniedException();
-      }
-      if ((Platform.isWindows || Platform.isLinux) &&
-          connectionMode == ConnectionMode.proxy &&
-          routingMode != AppRoutingMode.allProxy) {
-        AppLogger.instance.warn(
-          'Split tunneling rules are ignored in Proxy mode on desktop: without '
-          'a tunnel the core cannot tell which process a connection belongs '
-          'to. The session runs as "all traffic" instead — switch to TUN mode '
-          'to apply per-process rules.',
-        );
-      }
-      if (Platform.isWindows && connectionMode == ConnectionMode.tun) {
-        final elevated = await engine.requestVpnPermission();
-        if (!elevated) {
-          if (autostartTunFallback) {
-            connectionMode = ConnectionMode.proxy;
-            AppLogger.instance.warn(
-              'Autostart: TUN requires admin rights, falling back to Proxy',
-            );
-            // иначе интерфейс остаётся в TUN, и повторный выбор TUN не срабатывает (next == current)
-            await _saveDuringConnect(
-              (saved) => saved.copyWith(
-                connectionMode: ConnectionMode.proxy.storageValue,
-              ),
-            );
-          } else {
-            AppLogger.instance.warn(
-              'TUN mode: app is not elevated. The core may fail to create routes.',
-            );
-          }
-        }
-      }
-
-      // настроенный порт может держать сосед, а на Windows диапазоны изымают Hyper-V и WSL,
-      // поэтому подбираем рабочий и настройки не переписываем
-      if (Platform.isWindows || Platform.isLinux) {
-        final portPlan = await LocalPortResolver.resolve(settings);
-        for (final change in portPlan.changes) {
-          AppLogger.instance.warn(change.describe());
-        }
-        settings = portPlan.applyTo(settings);
-        ActiveLocalPorts().set(
-          socksPort: portPlan.socksPort,
-          httpPort: portPlan.httpPort,
-        );
-      }
-
-      final creds = await engine.fetchSocksCredentials();
-      // в режиме прокси креды вписывают руками в чужое приложение, сессионные протухали бы на реконнекте
-      if (Platform.isAndroid &&
-          connectionMode == ConnectionMode.proxy &&
-          settings.proxyModeAuth) {
-        var user = settings.proxyModeUser;
-        var pass = settings.proxyModePass;
-        if (user.isEmpty || pass.isEmpty) {
-          user = randomProxyToken(12);
-          pass = randomProxyToken(20);
-          settings = settings.copyWith(proxyModeUser: user, proxyModePass: pass);
-          await _saveDuringConnect(
-            (saved) => saved.copyWith(proxyModeUser: user, proxyModePass: pass),
-          );
-        }
-        Socks5Credentials().init(user, pass);
-      } else {
-        Socks5Credentials().init(creds.username, creds.password);
-      }
-
-      final serverIp =
-          await _resolveFirstAddress(server.address) ?? server.address;
-
-      // системный прокси Windows/GNOME и поле прокси у Wi-Fi не умеют пароль: с auth браузеры
-      // спрашивают его без конца, а на Android ядро отбивает каждое соединение
-      final proxyModeNoAuth = connectionMode == ConnectionMode.proxy &&
-          (!Platform.isAndroid || !settings.proxyModeAuth);
-
-      // несовпадение ядра с выбором пишем в лог: раньше это выглядело как настройка не работает
-      if (choice.skip != null) {
-        AppLogger.instance.warn(
-          'Core preference "${settings.vpnCore}" is not used for this server: '
-          '${vpnCoreSkipLogReason(choice.skip!)}. Running it on '
-          '${choice.backend.wireValue}.',
-        );
-      }
-
-      final vpnBackend = choice.backend;
-      final mihomoPicked = vpnBackend == VpnBackend.mihomo;
-
-      final ownerGuard = ownerGuardFor(
-        android: Platform.isAndroid,
-        tun: connectionMode == ConnectionMode.tun,
-        routingMode: routingMode,
-        sdkInt: await ref.read(androidSdkIntProvider.future),
-      );
-
-      final mihomoApi = MihomoApiSession();
-      if (mihomoPicked) {
-        await mihomoApi.renew();
-      } else {
-        mihomoApi.clear();
-      }
-
-      final MihomoTunOptions? mihomoTun;
-      if (!mihomoPicked) {
-        mihomoTun = null;
-      } else if (Platform.isAndroid) {
-        mihomoTun = const MihomoTunOptions(
-          fromFileDescriptor: true,
-          // на Android без root работает только gvisor
-          stack: TunSettings.stackGvisor,
-          autoRoute: false,
-        );
-      } else if (connectionMode == ConnectionMode.tun) {
-        final picked = Platform.isLinux
-            ? await LinuxFirewalls.tunStack(settings.tun.stack)
-            : (stack: settings.tun.stack, blockedBy: null);
-        if (picked.blockedBy != null) {
-          AppLogger.instance.warn(
-            '${picked.blockedBy!.name} is on and drops the connections the '
-            '"${settings.tun.stack}" TUN stack accepts, so TCP would not go '
-            'through. This session uses the gvisor stack instead.',
-          );
-        }
-        mihomoTun = MihomoTunOptions(
-          device: kTunInterfaceName,
-          stack: picked.stack,
-          mtu: settings.tun.mtu,
-          autoRoute: settings.tun.autoRoute,
-          strictRoute:
-              settings.tun.strictRouteEnabled(windows: Platform.isWindows),
-        );
-      } else {
-        mihomoTun = null;
-      }
-
-      final clashGeoIndex =
-          mihomoPicked && (server.protocol == 'clash' || templated != null)
-              ? await GeoAssetService.index()
-              : null;
-      if (clashGeoIndex != null) {
-        final dropped = CustomClashConfig.tryParse(runConfig)
-                ?.withKnownGeo(clashGeoIndex)
-                .dropped ??
-            const <String>[];
-        if (dropped.isNotEmpty) {
-          AppLogger.instance.warn(
-            'Provider config: ${dropped.length} rule(s) were dropped — their '
-            'geo codes are not in the bundled databases: '
-            '${dropped.toSet().join(', ')}. mihomo refuses the whole config on '
-            'an unknown code. Their traffic now follows the next rules.',
-          );
-        }
-      }
-
-      final mihomoConfig = mihomoPicked
-          ? MihomoConfigGen.generate(
-              runConfig,
-              settings,
-              socksPort: settings.localPort,
-              // Dart HttpClient не умеет SOCKS, а пакет приложения исключён из TUN, так что http-порт нужен и тут
-              httpPort: settings.httpPort,
-              resolvedServerIp: serverIp,
-              localInboundsNoAuth: proxyModeNoAuth,
-              apiPort: mihomoApi.port,
-              apiSecret: mihomoApi.secret,
-              tun: mihomoTun,
-              routingMode: routingMode,
-              managedProcessNames: switch (routingMode) {
-                AppRoutingMode.onlySelected ||
-                AppRoutingMode.allExceptSelected =>
-                  processNames,
-                AppRoutingMode.allProxy => const <String>[],
-              },
-              appProcessName: Platform.isAndroid
-                  ? ''
-                  : p.basename(Platform.resolvedExecutable),
-              ruleLists: ruleLists,
-              routeServers: routeServers,
-              appRoutes: appRoutes,
-              ownerGuard: ownerGuard,
-              geoIndex: clashGeoIndex,
-            )
-          : null;
-
-      final customGeoIndex =
-          server.protocol == 'custom' ? await GeoAssetService.index() : null;
-      if (server.protocol == 'custom') {
-        final parsed = CustomXrayConfig.tryParse(server.config);
-        final dead = parsed == null
-            ? (rules: 0, tags: const <String>[])
-            : previewDeadInboundRules(
-                parsed.json,
-                ConfigGeneratorV2.appInboundTags,
-              );
-        if (dead.rules > 0) {
-          AppLogger.instance.warn(
-            'Provider config: ${dead.rules} routing rule(s) are bound to '
-            'inbound tags this app does not create '
-            '(${dead.tags.toSet().join(', ')}). The app replaces the config '
-            'inbounds with its own — those rules will never match, and their '
-            'traffic follows "unmatched traffic" in Settings → Routing.',
-          );
-        }
-      }
-      if (customGeoIndex != null && !customGeoIndex.isEmpty) {
-        final parsed = CustomXrayConfig.tryParse(server.config);
-        final lost = parsed == null
-            ? (tokens: const <String>[], removedRules: 0)
-            : previewUnknownGeo(parsed.json, customGeoIndex);
-        if (lost.removedRules > 0) {
-          final blocked =
-              settings.finalOutbound == AppSettings.finalOutboundBlock;
-          AppLogger.instance.warn(
-            'Provider config: ${lost.removedRules} routing rule(s) were '
-            'dropped — their geo codes are not in the bundled databases: '
-            '${lost.tokens.toSet().join(', ')}. The core exits on an unknown '
-            'code, so the rules cannot be kept. Their traffic now falls '
-            'through to "unmatched traffic" in Settings → Routing'
-            '${blocked ? ', which is set to BLOCK — that traffic will not '
-                'connect at all. Set it to Proxy or Bypass, or replace the '
-                'codes in the config.' : '.'}',
-          );
-        }
-      }
-
-      final desktop = Platform.isWindows || Platform.isLinux;
-      final xrayDesktopTun =
-          desktop && connectionMode == ConnectionMode.tun && !mihomoPicked;
-      final strictRoute =
-          settings.tun.strictRouteEnabled(windows: Platform.isWindows);
-      // IPv6-адрес на TUN при выключенном в системе IPv6 роняет ядро. строгий маршрут на Linux закрывал IPv6
-      // без маршрута (sing-tun, unreachable), теперь так же: захват и блок
-      final captureIpv6 = xrayDesktopTun &&
-          (settings.tun.blockIpv6Leak || (Platform.isLinux && strictRoute)) &&
-          await hostHasGlobalIpv6(excludeInterfaceName: kTunInterfaceName);
-
-      final listedSettings =
-          mihomoPicked ? settings : ruleLists.expand(settings);
-
-      final xrayConfig = mihomoPicked
-          ? ''
-          : ConfigGeneratorV2.generateConfig(
-              server.config,
-              listedSettings,
-              resolvedServerIp: serverIp,
-              localInboundsNoAuth: proxyModeNoAuth,
-              geoIndex: customGeoIndex,
-              nativeTunInbound: Platform.isAndroid &&
-                  connectionMode == ConnectionMode.tun &&
-                  !mihomoPicked,
-              desktopTun: xrayDesktopTun
-                  ? DesktopTunOptions(
-                      windows: Platform.isWindows,
-                      mtu: settings.tun.mtu,
-                      autoRoute: settings.tun.autoRoute,
-                      strictRoute: strictRoute,
-                      captureIpv6: captureIpv6,
-                      udpTimeoutSec: settings.tun.udpTimeoutSec,
-                      routingMode: routingMode,
-                      managedProcessNames:
-                          routingMode == AppRoutingMode.allProxy
-                              ? const []
-                              : processNames,
-                      appProcessName: p.basename(Platform.resolvedExecutable),
-                    )
-                  : null,
-              routeServers: routeServers,
-              appRoutes: appRoutes,
-              ownerGuard: ownerGuard,
-            );
-
-      if (mihomoPicked &&
-          connectionMode == ConnectionMode.tun &&
-          settings.tun.blockIpv6Leak &&
-          (Platform.isWindows || Platform.isLinux) &&
-          await hostHasGlobalIpv6(excludeInterfaceName: kTunInterfaceName)) {
-        AppLogger.instance.warn(
-          'This machine has global IPv6, but the tunnel here belongs to the '
-          'mihomo core, which keeps its own IPv6 handling — the TUN option '
-          '"keep IPv6 inside the tunnel" covers the xray core only. '
-          'IPv6 traffic can therefore bypass the tunnel; switch the core to '
-          'xray in Settings → About if that matters.',
-        );
-      }
-
-      final session = TunnelSessionBuilder.build(
-        settings: listedSettings,
-        xrayConfig: xrayConfig,
-        vpnBackend: vpnBackend,
-        mihomoConfig: mihomoConfig,
-        excludePackages: excludePkgs,
-        includePackages: includePkgs,
-        excludeProcesses: routingMode == AppRoutingMode.allExceptSelected
-            ? processNames
-            : const [],
-        includeProcesses: routingMode == AppRoutingMode.onlySelected
-            ? processNames
-            : const [],
-        serverName: server.displayName,
-        modeOverride: connectionMode,
-      );
+      final built = (await _buildSession(
+        server,
+        engine,
+        autostartTunFallback: autostartTunFallback,
+      ))!;
+      final session = built.request;
       await engine.startSession(session);
       _awaitingSessionStart = false;
 
@@ -897,6 +484,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       }
       if (sessionState.status == VpnStatus.connected) {
         state = AsyncData(sessionState);
+        _live = built;
       } else if (sessionState.status == VpnStatus.error) {
         // явно: при смене сервера ошибки из стрима отбрасываются, и без поллинга на десктопе UI застревал в подключении
         state = AsyncData(sessionState);
@@ -905,6 +493,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           status: VpnStatus.connected,
           activeMode: sessionState.activeMode,
         ));
+        _live = built;
       }
     } catch (e, st) {
       if (_cancelRequested) {
@@ -934,6 +523,447 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     }
   }
 
+  // сборка сессии для connect и для смены сервера на ходу. reuse: порты, креды и API работающего ядра;
+  // null значит, что на ходу эту сессию не поднять
+  Future<_LiveSession?> _buildSession(
+    ServerItem server,
+    VpnEngine engine, {
+    _LiveSession? reuse,
+    bool autostartTunFallback = false,
+  }) async {
+    final storage = ref.read(storageProvider);
+    final profile =
+        profileForServer(await storage.getRoutingProfiles(), server);
+    final saved = await storage.getSettings();
+    // «Всё остальное» профиля только в эту сессию: на диск настройки пишет лишь _saveDuringConnect
+    final stored = profile == null
+        ? saved
+        : saved.copyWith(finalOutbound: profile.finalOutbound);
+    final routes = profile?.routes ?? await storage.getRoutes();
+    if (profile != null) {
+      AppLogger.instance.info('Routing profile: ${profile.name}');
+    }
+
+    final subId = server.subscriptionId;
+    final template = subId == null ? null : storage.getClashTemplate(subId);
+    String? templated;
+    if (template != null) {
+      final choices = (await storage.getSubscriptions())
+              .where((s) => s.id == subId)
+              .firstOrNull
+              ?.groupChoices ??
+          const <String, String>{};
+      // кривой шаблон не повод не подключаться: сервер работает узлом, как без шаблона
+      try {
+        templated = templatedSessionConfig(
+          server: server,
+          template: template,
+          settings: stored,
+          choices: choices,
+        );
+      } catch (e, st) {
+        AppLogger.instance.warn('Provider template skipped', error: e, stackTrace: st);
+      }
+    }
+    if (templated != null) {
+      AppLogger.instance.info('Provider template: mihomo runs it whole');
+    }
+    final runConfig = templated ?? server.config;
+
+    // готовый конфиг исполняет ядро его языка, настройка решает только для обычной ссылки.
+    // выбираем до свёртки маршрутов: от ядра зависит, какие другие серверы встанут в конфиг
+    final resolved = resolveVpnBackend(
+      config: runConfig,
+      preference: stored.vpnCore,
+      mihomoAvailable: mihomoShipsHere,
+    );
+    final choice = templated != null &&
+            resolved.skip == VpnCoreSkip.clashConfig
+        ? (
+            backend: resolved.backend,
+            format: resolved.format,
+            skip: VpnCoreSkip.clashTemplate,
+          )
+        : resolved;
+    // на ходу меняется только конфиг mihomo: другое ядро значит стоп и старт
+    if (reuse != null && choice.backend != VpnBackend.mihomo) return null;
+    // режим сохранённый: если автозапуск откатится в прокси, генератор без туннеля правил по процессам и так не напишет
+    final appsRun = appRoutesRun(TunnelSessionBuilder.resolveMode(stored));
+    final routeServers = await _prepareRouteServers(
+      routeServerOutbounds(
+        routes: routes,
+        servers: ref.read(serversProvider).servers,
+        activeServerId: server.id,
+        core: choice.backend,
+        withApps: appsRun,
+      ),
+    );
+    final appRoutes = [
+      if (appsRun)
+        ...await _prepareAppRoutes(
+          routeAppRules(routes: routes, outbounds: routeServers),
+        ),
+      ...await _prepareAppRoutes(
+        routeProtocolRules(routes: routes, outbounds: routeServers),
+      ),
+    ];
+
+    // маршрут на сервер без своего выхода (пропал, совпал с активным, не встаёт в ядро) уходит через VPN.
+    // неизвестные geo-коды выбрасываем: xray на них падает целиком (SOCKS port not ready)
+    var settings = await GeoAssetService.sanitizeRules(
+      foldRoutes(
+        stored,
+        routes,
+        serverUsable: (r) => routeServers.any((o) => o.serverId == r.serverId),
+      ),
+    );
+    if (settings.xrayCore.dnsUseCustom) {
+      final onMihomo = choice.backend == VpnBackend.mihomo;
+      final dropped = onMihomo
+          ? MihomoConfigGen.droppedDnsServers(settings.xrayCore.dnsServers)
+          : XrayCoreSettings.xrayDnsServers(settings.xrayCore.dnsServers)
+              .dropped;
+      if (dropped.isNotEmpty) {
+        AppLogger.instance.warn(
+          'Custom DNS: ${dropped.length} address(es) dropped — the core '
+          'cannot run them: ${dropped.join(', ')}. Supported: '
+          '${onMihomo ? 'plain ip[:port], udp://, tcp://, https://, tls://, '
+              'quic://, dhcp://, localhost' : 'plain ip[:port], '
+              'https+local://, https://, h2c://, tcp://, quic+local://, '
+              'localhost, fakedns'}.',
+        );
+      }
+    }
+    final ruleLists = await _cachedRuleLists(settings);
+
+    final split = ref.read(splitTunnelingProvider);
+    final excludePkgs = split.excludePackages.toList();
+    final includePkgs = split.includePackages.toList();
+    final routingMode = routingModeFromSplit(
+      includePackages: split.includePackages,
+      excludePackages: split.excludePackages,
+    );
+    final processNames = (Platform.isWindows || Platform.isLinux)
+        ? processNamesForSplit(
+            includePackages: split.includePackages,
+            excludePackages: split.excludePackages,
+          )
+        : const <String>[];
+
+    var connectionMode = TunnelSessionBuilder.resolveMode(settings);
+
+    if (Platform.isAndroid && connectionMode != ConnectionMode.proxy) {
+      final permitted = await engine.requestVpnPermission();
+      if (!permitted) throw const VpnPermissionDeniedException();
+    }
+    if ((Platform.isWindows || Platform.isLinux) &&
+        connectionMode == ConnectionMode.proxy &&
+        routingMode != AppRoutingMode.allProxy) {
+      AppLogger.instance.warn(
+        'Split tunneling rules are ignored in Proxy mode on desktop: without '
+        'a tunnel the core cannot tell which process a connection belongs '
+        'to. The session runs as "all traffic" instead — switch to TUN mode '
+        'to apply per-process rules.',
+      );
+    }
+    if (Platform.isWindows && connectionMode == ConnectionMode.tun) {
+      final elevated = await engine.requestVpnPermission();
+      if (!elevated) {
+        if (autostartTunFallback) {
+          connectionMode = ConnectionMode.proxy;
+          AppLogger.instance.warn(
+            'Autostart: TUN requires admin rights, falling back to Proxy',
+          );
+          // иначе интерфейс остаётся в TUN, и повторный выбор TUN не срабатывает (next == current)
+          await _saveDuringConnect(
+            (saved) => saved.copyWith(
+              connectionMode: ConnectionMode.proxy.storageValue,
+            ),
+          );
+        } else {
+          AppLogger.instance.warn(
+            'TUN mode: app is not elevated. The core may fail to create routes.',
+          );
+        }
+      }
+    }
+
+    // настроенный порт может держать сосед, а на Windows диапазоны изымают Hyper-V и WSL,
+    // поэтому подбираем рабочий и настройки не переписываем
+    LocalPortPlan? portPlan;
+    if (Platform.isWindows || Platform.isLinux) {
+      // на ходу порты держит работающее ядро, и подбор принял бы их за чужие
+      final plan = reuse?.ports ?? await LocalPortResolver.resolve(settings);
+      if (reuse == null) {
+        for (final change in plan.changes) {
+          AppLogger.instance.warn(change.describe());
+        }
+        ActiveLocalPorts().set(
+          socksPort: plan.socksPort,
+          httpPort: plan.httpPort,
+        );
+      }
+      settings = plan.applyTo(settings);
+      portPlan = plan;
+    }
+
+    final creds = reuse?.creds ?? await engine.fetchSocksCredentials();
+    // в режиме прокси креды вписывают руками в чужое приложение, сессионные протухали бы на реконнекте
+    if (Platform.isAndroid &&
+        connectionMode == ConnectionMode.proxy &&
+        settings.proxyModeAuth) {
+      var user = settings.proxyModeUser;
+      var pass = settings.proxyModePass;
+      if (user.isEmpty || pass.isEmpty) {
+        user = randomProxyToken(12);
+        pass = randomProxyToken(20);
+        settings = settings.copyWith(proxyModeUser: user, proxyModePass: pass);
+        await _saveDuringConnect(
+          (saved) => saved.copyWith(proxyModeUser: user, proxyModePass: pass),
+        );
+      }
+      Socks5Credentials().init(user, pass);
+    } else {
+      Socks5Credentials().init(creds.username, creds.password);
+    }
+
+    final serverIp =
+        await _resolveFirstAddress(server.address) ?? server.address;
+
+    // системный прокси Windows/GNOME и поле прокси у Wi-Fi не умеют пароль: с auth браузеры
+    // спрашивают его без конца, а на Android ядро отбивает каждое соединение
+    final proxyModeNoAuth = connectionMode == ConnectionMode.proxy &&
+        (!Platform.isAndroid || !settings.proxyModeAuth);
+
+    // несовпадение ядра с выбором пишем в лог: раньше это выглядело как настройка не работает
+    if (choice.skip != null) {
+      AppLogger.instance.warn(
+        'Core preference "${settings.vpnCore}" is not used for this server: '
+        '${vpnCoreSkipLogReason(choice.skip!)}. Running it on '
+        '${choice.backend.wireValue}.',
+      );
+    }
+
+    final vpnBackend = choice.backend;
+    final mihomoPicked = vpnBackend == VpnBackend.mihomo;
+
+    final ownerGuard = ownerGuardFor(
+      android: Platform.isAndroid,
+      tun: connectionMode == ConnectionMode.tun,
+      routingMode: routingMode,
+      sdkInt: await ref.read(androidSdkIntProvider.future),
+    );
+
+    final mihomoApi = MihomoApiSession();
+    if (mihomoPicked) {
+      // external-controller ядро на ходу не перечитывает, поэтому API прежний
+      if (reuse == null) await mihomoApi.renew();
+    } else {
+      mihomoApi.clear();
+    }
+
+    final MihomoTunOptions? mihomoTun;
+    if (!mihomoPicked) {
+      mihomoTun = null;
+    } else if (Platform.isAndroid) {
+      mihomoTun = const MihomoTunOptions(
+        fromFileDescriptor: true,
+        // на Android без root работает только gvisor
+        stack: TunSettings.stackGvisor,
+        autoRoute: false,
+      );
+    } else if (connectionMode == ConnectionMode.tun) {
+      final picked = Platform.isLinux
+          ? await LinuxFirewalls.tunStack(settings.tun.stack)
+          : (stack: settings.tun.stack, blockedBy: null);
+      if (picked.blockedBy != null) {
+        AppLogger.instance.warn(
+          '${picked.blockedBy!.name} is on and drops the connections the '
+          '"${settings.tun.stack}" TUN stack accepts, so TCP would not go '
+          'through. This session uses the gvisor stack instead.',
+        );
+      }
+      mihomoTun = MihomoTunOptions(
+        device: kTunInterfaceName,
+        stack: picked.stack,
+        mtu: settings.tun.mtu,
+        autoRoute: settings.tun.autoRoute,
+        strictRoute:
+            settings.tun.strictRouteEnabled(windows: Platform.isWindows),
+      );
+    } else {
+      mihomoTun = null;
+    }
+
+    final clashGeoIndex =
+        mihomoPicked && (server.protocol == 'clash' || templated != null)
+            ? await GeoAssetService.index()
+            : null;
+    if (clashGeoIndex != null) {
+      final dropped = CustomClashConfig.tryParse(runConfig)
+              ?.withKnownGeo(clashGeoIndex)
+              .dropped ??
+          const <String>[];
+      if (dropped.isNotEmpty) {
+        AppLogger.instance.warn(
+          'Provider config: ${dropped.length} rule(s) were dropped — their '
+          'geo codes are not in the bundled databases: '
+          '${dropped.toSet().join(', ')}. mihomo refuses the whole config on '
+          'an unknown code. Their traffic now follows the next rules.',
+        );
+      }
+    }
+
+    final mihomoConfig = mihomoPicked
+        ? MihomoConfigGen.generate(
+            runConfig,
+            settings,
+            socksPort: settings.localPort,
+            // Dart HttpClient не умеет SOCKS, а пакет приложения исключён из TUN, так что http-порт нужен и тут
+            httpPort: settings.httpPort,
+            resolvedServerIp: serverIp,
+            localInboundsNoAuth: proxyModeNoAuth,
+            apiPort: mihomoApi.port,
+            apiSecret: mihomoApi.secret,
+            tun: mihomoTun,
+            routingMode: routingMode,
+            managedProcessNames: switch (routingMode) {
+              AppRoutingMode.onlySelected ||
+              AppRoutingMode.allExceptSelected =>
+                processNames,
+              AppRoutingMode.allProxy => const <String>[],
+            },
+            appProcessName: Platform.isAndroid
+                ? ''
+                : p.basename(Platform.resolvedExecutable),
+            ruleLists: ruleLists,
+            routeServers: routeServers,
+            appRoutes: appRoutes,
+            ownerGuard: ownerGuard,
+            geoIndex: clashGeoIndex,
+          )
+        : null;
+
+    final customGeoIndex =
+        server.protocol == 'custom' ? await GeoAssetService.index() : null;
+    if (server.protocol == 'custom') {
+      final parsed = CustomXrayConfig.tryParse(server.config);
+      final dead = parsed == null
+          ? (rules: 0, tags: const <String>[])
+          : previewDeadInboundRules(
+              parsed.json,
+              ConfigGeneratorV2.appInboundTags,
+            );
+      if (dead.rules > 0) {
+        AppLogger.instance.warn(
+          'Provider config: ${dead.rules} routing rule(s) are bound to '
+          'inbound tags this app does not create '
+          '(${dead.tags.toSet().join(', ')}). The app replaces the config '
+          'inbounds with its own — those rules will never match, and their '
+          'traffic follows "unmatched traffic" in Settings → Routing.',
+        );
+      }
+    }
+    if (customGeoIndex != null && !customGeoIndex.isEmpty) {
+      final parsed = CustomXrayConfig.tryParse(server.config);
+      final lost = parsed == null
+          ? (tokens: const <String>[], removedRules: 0)
+          : previewUnknownGeo(parsed.json, customGeoIndex);
+      if (lost.removedRules > 0) {
+        final blocked =
+            settings.finalOutbound == AppSettings.finalOutboundBlock;
+        AppLogger.instance.warn(
+          'Provider config: ${lost.removedRules} routing rule(s) were '
+          'dropped — their geo codes are not in the bundled databases: '
+          '${lost.tokens.toSet().join(', ')}. The core exits on an unknown '
+          'code, so the rules cannot be kept. Their traffic now falls '
+          'through to "unmatched traffic" in Settings → Routing'
+          '${blocked ? ', which is set to BLOCK — that traffic will not '
+              'connect at all. Set it to Proxy or Bypass, or replace the '
+              'codes in the config.' : '.'}',
+        );
+      }
+    }
+
+    final desktop = Platform.isWindows || Platform.isLinux;
+    final xrayDesktopTun =
+        desktop && connectionMode == ConnectionMode.tun && !mihomoPicked;
+    final strictRoute =
+        settings.tun.strictRouteEnabled(windows: Platform.isWindows);
+    // IPv6-адрес на TUN при выключенном в системе IPv6 роняет ядро. строгий маршрут на Linux закрывал IPv6
+    // без маршрута (sing-tun, unreachable), теперь так же: захват и блок
+    final captureIpv6 = xrayDesktopTun &&
+        (settings.tun.blockIpv6Leak || (Platform.isLinux && strictRoute)) &&
+        await hostHasGlobalIpv6(excludeInterfaceName: kTunInterfaceName);
+
+    final listedSettings =
+        mihomoPicked ? settings : ruleLists.expand(settings);
+
+    final xrayConfig = mihomoPicked
+        ? ''
+        : ConfigGeneratorV2.generateConfig(
+            server.config,
+            listedSettings,
+            resolvedServerIp: serverIp,
+            localInboundsNoAuth: proxyModeNoAuth,
+            geoIndex: customGeoIndex,
+            nativeTunInbound: Platform.isAndroid &&
+                connectionMode == ConnectionMode.tun &&
+                !mihomoPicked,
+            desktopTun: xrayDesktopTun
+                ? DesktopTunOptions(
+                    windows: Platform.isWindows,
+                    mtu: settings.tun.mtu,
+                    autoRoute: settings.tun.autoRoute,
+                    strictRoute: strictRoute,
+                    captureIpv6: captureIpv6,
+                    udpTimeoutSec: settings.tun.udpTimeoutSec,
+                    routingMode: routingMode,
+                    managedProcessNames:
+                        routingMode == AppRoutingMode.allProxy
+                            ? const []
+                            : processNames,
+                    appProcessName: p.basename(Platform.resolvedExecutable),
+                  )
+                : null,
+            routeServers: routeServers,
+            appRoutes: appRoutes,
+            ownerGuard: ownerGuard,
+          );
+
+    if (mihomoPicked &&
+        connectionMode == ConnectionMode.tun &&
+        settings.tun.blockIpv6Leak &&
+        (Platform.isWindows || Platform.isLinux) &&
+        await hostHasGlobalIpv6(excludeInterfaceName: kTunInterfaceName)) {
+      AppLogger.instance.warn(
+        'This machine has global IPv6, but the tunnel here belongs to the '
+        'mihomo core, which keeps its own IPv6 handling — the TUN option '
+        '"keep IPv6 inside the tunnel" covers the xray core only. '
+        'IPv6 traffic can therefore bypass the tunnel; switch the core to '
+        'xray in Settings → About if that matters.',
+      );
+    }
+
+    final session = TunnelSessionBuilder.build(
+      settings: listedSettings,
+      xrayConfig: xrayConfig,
+      vpnBackend: vpnBackend,
+      mihomoConfig: mihomoConfig,
+      excludePackages: excludePkgs,
+      includePackages: includePkgs,
+      excludeProcesses: routingMode == AppRoutingMode.allExceptSelected
+          ? processNames
+          : const [],
+      includeProcesses: routingMode == AppRoutingMode.onlySelected
+          ? processNames
+          : const [],
+      serverName: server.displayName,
+      modeOverride: connectionMode,
+    );
+    return (request: session, ports: portPlan, creds: creds);
+  }
+
   Future<void> cancelConnect() async {
     if (!_connectInFlight) {
       await disconnect();
@@ -954,6 +984,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   }
 
   Future<void> disconnect() async {
+    _live = null;
     state = const AsyncData(VpnState(status: VpnStatus.disconnecting));
     ActiveLocalPorts().clear();
     _persistActiveLocalHttpPort(VpnStatus.disconnecting);
@@ -1603,6 +1634,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     _serverSwitchInProgress = true;
     ref.read(vpnServerSwitchInProgressProvider.notifier).set(true);
     try {
+      if (status == VpnStatus.connected && await _switchInPlace()) return;
       state = const AsyncData(VpnState(status: VpnStatus.disconnecting));
       await ref.read(vpnEngineProvider).stopVpn();
       await _waitForDisconnected();
@@ -1610,6 +1642,37 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     } finally {
       _serverSwitchInProgress = false;
       ref.read(vpnServerSwitchInProgressProvider.notifier).set(false);
+    }
+  }
+
+  // туннель не снимается, и на время смены трафику некуда уйти мимо него. всё, что задаёт сам туннель
+  // и входы, обязано совпасть с работающей сессией, иначе стоп и старт
+  Future<bool> _switchInPlace() async {
+    final live = _live;
+    final server = ref.read(serversProvider).activeServer;
+    if (live == null ||
+        server == null ||
+        live.request.vpnBackend != VpnBackend.mihomo) {
+      return false;
+    }
+    final engine = ref.read(vpnEngineProvider);
+    try {
+      final built = await _buildSession(server, engine, reuse: live);
+      if (built == null || !sameTunnelShell(live.request, built.request)) {
+        AppLogger.instance.info('Server switch: the tunnel changes too, reconnecting');
+        return false;
+      }
+      if (!await engine.reloadMihomoConfig(built.request)) return false;
+      _live = built;
+      AppLogger.instance.info('Server switched in place, the tunnel stayed up');
+      return true;
+    } catch (e, st) {
+      AppLogger.instance.warn(
+        'Server switch in place failed, reconnecting',
+        error: e,
+        stackTrace: st,
+      );
+      return false;
     }
   }
 
@@ -1643,6 +1706,12 @@ final vpnStateProvider =
     AsyncNotifierProvider<VpnStateNotifier, VpnState>(VpnStateNotifier.new);
 
 typedef _AutoTarget = ({ServerItem server, String subId, String ownerId});
+
+typedef _LiveSession = ({
+  TunnelSessionRequest request,
+  LocalPortPlan? ports,
+  ({String username, String password}) creds,
+});
 
 class _AutoSelectMeasure {
   _AutoSelectMeasure(this.serverId);

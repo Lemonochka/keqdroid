@@ -67,6 +67,9 @@ class VpnEngine {
 
   Future<void> stopVpn() => _backend.stopSession();
 
+  Future<bool> reloadMihomoConfig(TunnelSessionRequest request) =>
+      _backend.reloadMihomoConfig(request);
+
   Future<bool> requestVpnPermission() => _backend.requestTunnelPermission();
 
   Future<

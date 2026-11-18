@@ -15,6 +15,7 @@ import '../services/debug_log_service.dart';
 import '../services/ephemeral_xray_ping.dart';
 import '../services/windows_desktop_service.dart';
 import '../utils/mihomo_api_session.dart';
+import 'mihomo_hot_reload.dart';
 import '../utils/desktop_tun.dart';
 import 'connection_mode.dart';
 import 'desktop_traffic_stats.dart';
@@ -533,6 +534,29 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
             '${details.isEmpty ? '' : '\n$details'}',
       ));
     }));
+  }
+
+  @override
+  Future<bool> reloadMihomoConfig(TunnelSessionRequest request) async {
+    final config = request.mihomoConfig;
+    final dir = _sessionDir;
+    final api = MihomoApiSession();
+    final port = api.port;
+    if (_mihomoProcess == null ||
+        _stoppingSession ||
+        dir == null ||
+        port == null ||
+        config == null ||
+        config.isEmpty ||
+        request.mode != _activeMode) {
+      return false;
+    }
+    if (!await putMihomoConfig(port: port, secret: api.secret, config: config)) {
+      return false;
+    }
+    // сбор диагностики кладёт в отчёт этот файл
+    await File('${dir.path}/mihomo.yaml').writeAsString(config);
+    return true;
   }
 
   @override

@@ -222,6 +222,12 @@ class KeqdisVpnService : VpnService() {
         fun getXrayPid()         = xrayPid
         // текущая сессия, а не настройка: ядро меняют на ходу, а работает то, с которым подключились
         fun getCoreKind()        = lastCoreKind
+        fun reloadMihomoConfig(config: String, serverName: String?, done: (Boolean) -> Unit) {
+            serviceScope.launch {
+                val ok = this@KeqdisVpnService.reloadMihomoConfig(config, serverName)
+                withContext(Dispatchers.Main) { done(ok) }
+            }
+        }
     }
     private val binder = LocalBinder()
 
@@ -771,6 +777,61 @@ class KeqdisVpnService : VpnService() {
                 }
             try { conn.responseCode in 200..299 } finally { conn.disconnect() }
         }.getOrDefault(false)
+    }
+
+    // смена сервера без пересборки туннеля: ApplyConfig в mihomo не трогает TUN при том же tun, интерфейс и fd прежние.
+    // false значит «не вышло», и Dart меняет сервер старым путём, стоп и старт
+    private suspend fun reloadMihomoConfig(config: String, serverName: String?): Boolean = opMutex.withLock {
+        if (status != VpnRunStatus.RUNNING || lastCoreKind != CORE_KIND_MIHOMO) return@withLock false
+        val path = lastXrayConfigPath ?: return@withLock false
+        val (port, secret) = mihomoApiCredentials() ?: return@withLock false
+        val tunFd = tunInterface?.fd
+        val text = runCatching {
+            if (tunFd != null) mihomoConfigWithTunFd(config, tunFd) else config
+        }.getOrElse {
+            NativeLog.w("KEQDIS", "mihomo reload: ${it.message}")
+            return@withLock false
+        }
+        if (!withContext(Dispatchers.IO) { putMihomoConfig(port, secret, text) }) return@withLock false
+        // ядро, поднятое заново после смерти или смены сети, и плитка читают конфиг из этого файла
+        runCatching { File(path).writeText(text) }
+        closeMihomoConnections()
+        currentServerName = serverName
+        getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_QS_LAST_SERVER_NAME, serverName)
+            .apply()
+        showControlNotification("Connected", isConnected = true, isTransitioning = false)
+        HomeWidget.refresh(this)
+        NativeLog.i("KEQDIS", "mihomo reload: server switched in place")
+        true
+    }
+
+    private fun putMihomoConfig(port: Int, secret: String, text: String): Boolean = runCatching {
+        val body = org.json.JSONObject().put("payload", text).toString().toByteArray(Charsets.UTF_8)
+        val conn = (URL("http://127.0.0.1:$port/configs?force=true").openConnection() as HttpURLConnection)
+            .apply {
+                requestMethod = "PUT"
+                doOutput = true
+                setRequestProperty("Authorization", "Bearer $secret")
+                setRequestProperty("Content-Type", "application/json")
+                connectTimeout = 1500
+                // разбор конфига и правил на слабом телефоне занимает секунды
+                readTimeout = 15000
+            }
+        try {
+            conn.outputStream.use { it.write(body) }
+            val code = conn.responseCode
+            if (code !in 200..299) {
+                val reason = conn.errorStream?.bufferedReader()?.use { it.readText() }
+                NativeLog.w("KEQDIS", "mihomo reload: HTTP $code ${reason?.take(300)}")
+            }
+            code in 200..299
+        } finally {
+            conn.disconnect()
+        }
+    }.getOrElse {
+        NativeLog.w("KEQDIS", "mihomo reload failed: ${it.message}")
+        false
     }
 
     // источник тот же, что у MainActivity.getMihomoApi, и единственный: сессию из плитки поднимает сервис
