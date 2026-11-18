@@ -1234,8 +1234,9 @@ class _MorphSideClip extends CustomClipper<Path> {
           ),
       );
     }
-    // настоящая Готово не выглядывает, когда задний край на отскоке заходит за неё
-    final edge = min(pill.startEdge + 1, pill.toStart - 1);
+    // настоящая Готово не выглядывает, когда задний край на отскоке заходит за неё;
+    // ровно по краю, с запасом в 1 dp буква подсказки торчала из-под скругления Авто
+    final edge = min(pill.startEdge, pill.toStart - 1);
     return Path()
       ..addRect(
         pill.ltr

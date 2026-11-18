@@ -466,7 +466,9 @@ class _ServerTile extends ConsumerWidget {
       context: context,
       showDragHandle: true,
       builder: (_) => SafeArea(
-        child: SingleChildScrollView(
+        child: SmoothScroll(
+          builder: (_, controller) => SingleChildScrollView(
+          controller: controller,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -635,6 +637,7 @@ class _ServerTile extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
             ],
+          ),
           ),
         ),
       ),

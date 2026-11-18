@@ -317,6 +317,48 @@ void main() {
     });
   });
 
+  // подсказка выбора начинается там же, где Авто, и торчала буквой из-под её скругления
+  testWidgets('в начале и в конце перехода подсказка не выглядывает из-под Авто', (
+    tester,
+  ) async {
+    await _pump(tester);
+    final autoLeft = tester.getRect(find.text('Auto')).left;
+
+    double? hintClipRight() {
+      for (final element in find.byType(ClipPath).evaluate()) {
+        final clipper = (element.widget as ClipPath).clipper;
+        if (clipper == null || '${clipper.runtimeType}' != '_MorphSideClip') continue;
+        final box = element.renderObject! as RenderBox;
+        final bounds = clipper.getClip(box.size).getBounds();
+        if (bounds.width > 0 && bounds.right < box.size.width) {
+          return box.localToGlobal(Offset(bounds.right, 0)).dx;
+        }
+      }
+      return null;
+    }
+
+    final rest = tester.getRect(
+      find.ancestor(of: find.text('Auto'), matching: find.byType(InkWell)).first,
+    );
+    await tester.longPress(find.text('Auto'));
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(hintClipRight(), isNotNull, reason: 'переход идёт');
+    expect(hintClipRight()!, lessThanOrEqualTo(rest.left));
+    expect(autoLeft, greaterThan(rest.left));
+
+    await _settle(tester);
+    await tester.tap(find.text('Done'));
+    double? last;
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+      final right = hintClipRight();
+      if (right == null) break;
+      last = right;
+    }
+    expect(last, isNotNull, reason: 'возврат шёл с переходом');
+    expect(last!, lessThanOrEqualTo(rest.left + 0.01));
+  });
+
   testWidgets('вне выделения пометку видно, только пока Авто включено',
       (tester) async {
     _skipped = {'n2'};

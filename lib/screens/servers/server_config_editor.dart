@@ -27,6 +27,7 @@ import 'clash_node_fields.dart';
 import 'editor_layers.dart';
 import 'xhttp_extra_fields.dart';
 import 'package:keqdroid/shared/ui/liquid_toast.dart';
+import 'package:keqdroid/shared/ui/smooth_scroll.dart';
 
 class ServerConfigEditorScreen extends ConsumerStatefulWidget {
   final String serverId;
@@ -249,7 +250,9 @@ class _ServerConfigEditorScreenState
       ServerNameUtils.cleanDisplayName(server.displayName),
     );
 
-    Widget body = SingleChildScrollView(
+    Widget body = SmoothScroll(
+      builder: (_, controller) => SingleChildScrollView(
+      controller: controller,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -297,6 +300,7 @@ class _ServerConfigEditorScreenState
             ),
           ),
         ],
+      ),
       ),
     );
 
