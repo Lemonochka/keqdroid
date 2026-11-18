@@ -90,7 +90,7 @@ A ready-made configuration keeps its own routing, DNS and outbounds. Inbounds an
 | Android | VPN | All device traffic goes through the tunnel | VPN permission on first connection |
 | Android | Proxy | Local SOCKS and HTTP proxy on `127.0.0.1` | None |
 | Windows | Proxy | System proxy | None |
-| Windows | TUN | All traffic goes through a virtual adapter | Administrator |
+| Windows | TUN | All traffic goes through a virtual adapter | Administrator once, to install the keqdroid service |
 | Linux | Proxy | System proxy on GNOME and KDE; manual setup elsewhere | None |
 | Linux | TUN | All traffic goes through a virtual adapter | Root through `pkexec`, or Passwordless TUN in Settings → Advanced → Permissions |
 
