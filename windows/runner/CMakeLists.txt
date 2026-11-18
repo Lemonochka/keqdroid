@@ -15,6 +15,7 @@ add_executable(${BINARY_NAME} WIN32
   "windows_traffic_stats.cpp"
   "windows_outbound_interface.cpp"
   "windows_process_memory.cpp"
+  "windows_screen_capture.cpp"
   "windows_tray.cpp"
   "windows_tun_adapters.cpp"
   "proxy_debug_log.cpp"

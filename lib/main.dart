@@ -23,6 +23,7 @@ import 'package:keqdroid/services/vpn_engine.dart';
 import 'package:keqdroid/screens/subscriptions_tab.dart';
 import 'package:keqdroid/screens/settings_tab.dart';
 import 'package:keqdroid/services/linux_background_service.dart';
+import 'package:keqdroid/services/linux_deep_links.dart';
 import 'package:keqdroid/services/memory_watch.dart';
 import 'package:keqdroid/services/storage_service.dart';
 import 'package:keqdroid/services/update_service.dart';
@@ -80,6 +81,7 @@ Future<void> main() async {
         if (!primary) {
           exit(0);
         }
+        LinuxDeepLinks.captureLaunchLink();
         await LinuxTunnelBackend.cleanupStaleState();
         await LinuxBackgroundService.instance.initWindowAndTray();
       }

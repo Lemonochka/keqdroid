@@ -1922,6 +1922,33 @@ class AppLocalizationsFa extends AppLocalizations {
   String get serversScanQrHint => 'لینک سرور یا لینک اشتراک';
 
   @override
+  String get desktopQrTitle => 'کد QR';
+
+  @override
+  String get desktopQrHint => 'از صفحه یا از تصویر';
+
+  @override
+  String get desktopQrFromScreen => 'از صفحه';
+
+  @override
+  String get desktopQrFromScreenHint => 'کدی که همین حالا روی صفحه باز است';
+
+  @override
+  String get desktopQrFromImage => 'از تصویر';
+
+  @override
+  String get desktopQrFromImageHint => 'PNG، JPG، WebP یا BMP دارای کد QR';
+
+  @override
+  String get desktopQrNotFoundScreen => 'روی صفحه کد QR پیدا نشد';
+
+  @override
+  String get desktopQrNotFoundImage => 'در تصویر کد QR پیدا نشد';
+
+  @override
+  String get desktopQrCaptureFailed => 'گرفتن تصویر صفحه ممکن نشد';
+
+  @override
   String qrSubscriptionAdded(Object name) {
     return 'اشتراک اضافه شد: $name';
   }
@@ -2009,6 +2036,9 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get hotkeysHintInApp => 'در لینوکس میانبرها وقتی کار می‌کنند که پنجرهٔ برنامه فوکوس داشته باشد. تا وقتی میانبری تعیین نکنید، همه غیرفعال‌اند.';
+
+  @override
+  String get hotkeysHintPortal => 'میانبرها در کل سیستم کار می‌کنند، حتی از سینی سیستم. سیستم هر میانبر را در پنجرهٔ خودش تأیید می‌کند و اگر آنجا ترکیب دیگری انتخاب کنید، همان کار می‌کند. تا وقتی میانبری تعیین نکنید، همه غیرفعال‌اند.';
 
   @override
   String get hotkeyActionToggleConnection => 'اتصال / قطع اتصال';

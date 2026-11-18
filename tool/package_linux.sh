@@ -163,7 +163,8 @@ write_desktop() { # $1 = exec name, $2 = dest file
 Type=Application
 Name=KeqDroid
 Comment=keqdroid proxy/VPN client
-Exec=$1
+Exec=$1 %u
+MimeType=x-scheme-handler/keqdroid;x-scheme-handler/keqdis;
 Icon=$APP
 Categories=Network;
 Terminal=false
@@ -393,7 +394,8 @@ package() {
 Type=Application
 Name=KeqDroid
 Comment=keqdroid proxy/VPN client
-Exec=$APP
+Exec=$APP %u
+MimeType=x-scheme-handler/keqdroid;x-scheme-handler/keqdis;
 Icon=$APP
 Categories=Network;
 Terminal=false

@@ -17,6 +17,17 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
   Map<String, String> _lastHotkeys = const {};
 
   @override
+  void initState() {
+    super.initState();
+    // подсказка зависит от того, кто держит сочетания на Linux: X11, портал или только окно
+    if (Platform.isLinux) {
+      unawaited(HotkeyService.linuxBackend().then((_) {
+        if (mounted) setState(() {});
+      }));
+    }
+  }
+
+  @override
   void dispose() {
     if (_recording != null) {
       _reapplyBindings();
@@ -176,9 +187,11 @@ class _HotkeySettingsScreenState extends ConsumerState<_HotkeySettingsScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          HotkeyService.isGlobal
-                              ? l10n.hotkeysHintGlobal
-                              : l10n.hotkeysHintInApp,
+                          HotkeyService.systemConfirmsBindings
+                              ? l10n.hotkeysHintPortal
+                              : HotkeyService.isGlobal
+                                  ? l10n.hotkeysHintGlobal
+                                  : l10n.hotkeysHintInApp,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.4, color: AppTheme.textLight(context)),
                         ),
                       ),

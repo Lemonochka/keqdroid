@@ -17,6 +17,13 @@ class LinuxDesktopEntry {
 
   static const marker = 'X-KeqDroid-AppImage=true';
 
+  // кнопки «Добавить в keqdroid» на страницах подписок, тот же список схем в tool/package_linux.sh
+  static const mimeTypes = 'x-scheme-handler/keqdroid;x-scheme-handler/keqdis;';
+
+  @visibleForTesting
+  static Future<void> Function(String appsDir) refreshMimeCache =
+      _updateDesktopDatabase;
+
   static Future<void> sync() async {
     try {
       final home = Platform.environment['HOME'];
@@ -55,6 +62,7 @@ class LinuxDesktopEntry {
 
       apps.createSync(recursive: true);
       entry.writeAsStringSync(content);
+      await refreshMimeCache(apps.path);
     } catch (e, st) {
       AppLogger.instance.warn(
         'Could not install the AppImage desktop entry',
@@ -75,8 +83,9 @@ class LinuxDesktopEntry {
       'Type=Application',
       'Name=KeqDroid',
       'Comment=keqdroid proxy/VPN client',
-      'Exec=${execArgument(appImage)}',
+      'Exec=${execArgument(appImage)} %u',
       'TryExec=${appImage.replaceAll(r'\', r'\\')}',
+      'MimeType=$mimeTypes',
       'Icon=keqdroid',
       'Categories=Network;',
       'Terminal=false',
@@ -85,6 +94,15 @@ class LinuxDesktopEntry {
       marker,
       '',
     ].join('\n');
+  }
+
+  // GIO читает MimeType из ярлыков сам, а xdg-mime вне GNOME и KDE ищет схему в mimeinfo.cache (defapp_generic в xdg-utils 1.1.3)
+  static Future<void> _updateDesktopDatabase(String appsDir) async {
+    try {
+      await Process.run('update-desktop-database', [appsDir]);
+    } on ProcessException {
+      // нет desktop-file-utils: ссылки откроются там, где среда читает ярлыки сама
+    }
   }
 
   static String execArgument(String path) {

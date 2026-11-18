@@ -1929,6 +1929,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serversScanQrHint => 'Server link or subscription link';
 
   @override
+  String get desktopQrTitle => 'QR code';
+
+  @override
+  String get desktopQrHint => 'From the screen or a picture';
+
+  @override
+  String get desktopQrFromScreen => 'From the screen';
+
+  @override
+  String get desktopQrFromScreenHint => 'A code that is open on the screen right now';
+
+  @override
+  String get desktopQrFromImage => 'From a picture';
+
+  @override
+  String get desktopQrFromImageHint => 'PNG, JPG, WebP or BMP with a QR code';
+
+  @override
+  String get desktopQrNotFoundScreen => 'No QR code found on the screen';
+
+  @override
+  String get desktopQrNotFoundImage => 'No QR code found in the picture';
+
+  @override
+  String get desktopQrCaptureFailed => 'Could not capture the screen';
+
+  @override
   String qrSubscriptionAdded(Object name) {
     return 'Subscription added: $name';
   }
@@ -2016,6 +2043,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hotkeysHintInApp => 'On Linux hotkeys work while the app window is focused. All hotkeys are disabled until you assign them.';
+
+  @override
+  String get hotkeysHintPortal => 'Hotkeys work system-wide, even from the tray. The system confirms each shortcut in its own dialog, and if you pick a different one there, that one works. All hotkeys are disabled until you assign them.';
 
   @override
   String get hotkeyActionToggleConnection => 'Connect / disconnect';

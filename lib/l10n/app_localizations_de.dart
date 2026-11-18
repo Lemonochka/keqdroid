@@ -1929,6 +1929,33 @@ class AppLocalizationsDe extends AppLocalizations {
   String get serversScanQrHint => 'Server- oder Abonnement-Link';
 
   @override
+  String get desktopQrTitle => 'QR-Code';
+
+  @override
+  String get desktopQrHint => 'Vom Bildschirm oder aus einem Bild';
+
+  @override
+  String get desktopQrFromScreen => 'Vom Bildschirm';
+
+  @override
+  String get desktopQrFromScreenHint => 'Ein Code, der gerade auf dem Bildschirm offen ist';
+
+  @override
+  String get desktopQrFromImage => 'Aus einem Bild';
+
+  @override
+  String get desktopQrFromImageHint => 'PNG, JPG, WebP oder BMP mit QR-Code';
+
+  @override
+  String get desktopQrNotFoundScreen => 'Auf dem Bildschirm wurde kein QR-Code gefunden';
+
+  @override
+  String get desktopQrNotFoundImage => 'Im Bild wurde kein QR-Code gefunden';
+
+  @override
+  String get desktopQrCaptureFailed => 'Der Bildschirm konnte nicht aufgenommen werden';
+
+  @override
   String qrSubscriptionAdded(Object name) {
     return 'Abonnement hinzugefügt: $name';
   }
@@ -2016,6 +2043,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get hotkeysHintInApp => 'Unter Linux funktionieren Kürzel, solange das App-Fenster im Fokus ist. Alle Kürzel sind inaktiv, bis du sie zuweist.';
+
+  @override
+  String get hotkeysHintPortal => 'Kürzel funktionieren systemweit, auch aus dem Infobereich. Das System bestätigt jedes Kürzel in einem eigenen Dialog; wählst du dort ein anderes, gilt dieses. Alle Kürzel sind inaktiv, bis du sie zuweist.';
 
   @override
   String get hotkeyActionToggleConnection => 'Verbinden / Trennen';

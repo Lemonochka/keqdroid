@@ -1024,6 +1024,15 @@
   "qrScanHint": "Richte die Kamera auf einen QR-Code",
   "qrScanCameraError": "Kamera nicht verfügbar",
   "serversScanQrHint": "Server- oder Abonnement-Link",
+  "desktopQrTitle": "QR-Code",
+  "desktopQrHint": "Vom Bildschirm oder aus einem Bild",
+  "desktopQrFromScreen": "Vom Bildschirm",
+  "desktopQrFromScreenHint": "Ein Code, der gerade auf dem Bildschirm offen ist",
+  "desktopQrFromImage": "Aus einem Bild",
+  "desktopQrFromImageHint": "PNG, JPG, WebP oder BMP mit QR-Code",
+  "desktopQrNotFoundScreen": "Auf dem Bildschirm wurde kein QR-Code gefunden",
+  "desktopQrNotFoundImage": "Im Bild wurde kein QR-Code gefunden",
+  "desktopQrCaptureFailed": "Der Bildschirm konnte nicht aufgenommen werden",
   "qrSubscriptionAdded": "Abonnement hinzugefügt: {name}",
   "@qrSubscriptionAdded": {
     "placeholders": {
@@ -1086,6 +1095,7 @@
   "settingsHotkeysSubtitle": "Kürzel für Verbindung, Modus und Server",
   "hotkeysHintGlobal": "Kürzel funktionieren systemweit, auch wenn das Fenster im Infobereich versteckt ist. Alle Kürzel sind inaktiv, bis du sie zuweist.",
   "hotkeysHintInApp": "Unter Linux funktionieren Kürzel, solange das App-Fenster im Fokus ist. Alle Kürzel sind inaktiv, bis du sie zuweist.",
+  "hotkeysHintPortal": "Kürzel funktionieren systemweit, auch aus dem Infobereich. Das System bestätigt jedes Kürzel in einem eigenen Dialog; wählst du dort ein anderes, gilt dieses. Alle Kürzel sind inaktiv, bis du sie zuweist.",
   "hotkeyActionToggleConnection": "Verbinden / Trennen",
   "hotkeyActionToggleTun": "TUN / Proxy umschalten",
   "hotkeyActionBestPing": "Zum Server mit bestem Ping wechseln",

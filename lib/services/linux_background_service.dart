@@ -9,6 +9,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../core/app_logger.dart';
 import 'linux_autostart.dart';
+import 'linux_deep_links.dart';
 import 'linux_desktop_entry.dart';
 import 'storage_service.dart';
 
@@ -63,10 +64,7 @@ class LinuxBackgroundService with WindowListener, TrayListener {
     final address = _lockAddress();
     try {
       _lock = await ServerSocket.bind(address, 0);
-      _lock!.listen((socket) {
-        socket.destroy();
-        unawaitedShow();
-      });
+      _lock!.listen(_readPeer);
       return true;
     } on SocketException catch (e) {
       if (e.osError?.errorCode != _addressInUse) {
@@ -76,20 +74,61 @@ class LinuxBackgroundService with WindowListener, TrayListener {
         );
         return true;
       }
+      final link = LinuxDeepLinks.launchLink();
       // второй запуск при входе поднял бы окно, которое первый спрятал в трей
-      if (LinuxAutostart.startedInTray()) return false;
+      if (link == null && LinuxAutostart.startedInTray()) return false;
       try {
         final s = await Socket.connect(
           address,
           0,
           timeout: const Duration(seconds: 2),
         );
-        s.add('show'.codeUnits);
+        s.add(utf8.encode(peerMessage(link)));
         await s.flush();
-        s.destroy();
+        // close, а не destroy: первому нужен конец потока, чтобы дочитать ссылку
+        await s.close();
       } catch (_) {}
       return false;
     }
+  }
+
+  @visibleForTesting
+  static String peerMessage(String? link) => link == null ? 'show' : 'link $link';
+
+  void _readPeer(Socket socket) {
+    final bytes = <int>[];
+    var handled = false;
+    void finish() {
+      if (handled) return;
+      handled = true;
+      socket.destroy();
+      handlePeerMessage(utf8.decode(bytes, allowMalformed: true));
+    }
+
+    // 0.37.4 и раньше второй запуск слал show и рвал сокет, конец потока приходит и тогда
+    final guard = Timer(const Duration(seconds: 2), finish);
+    socket.listen(
+      (chunk) {
+        if (bytes.length < 16 * 1024) bytes.addAll(chunk);
+      },
+      onDone: () {
+        guard.cancel();
+        finish();
+      },
+      onError: (_) {
+        guard.cancel();
+        finish();
+      },
+      cancelOnError: true,
+    );
+  }
+
+  @visibleForTesting
+  void handlePeerMessage(String message) {
+    unawaitedShow();
+    if (!message.startsWith('link ')) return;
+    final link = LinuxDeepLinks.fromCommandLine(['', message.substring(5)]);
+    if (link != null) LinuxDeepLinks.deliver(link);
   }
 
   Future<void> initWindowAndTray() async {

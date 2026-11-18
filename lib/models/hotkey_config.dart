@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart';
 
 enum HotkeyAction {
@@ -77,6 +78,25 @@ class HotkeyBinding {
       (alt ? 1 : 0) | (ctrl ? 2 : 0) | (shift ? 4 : 0) | (meta ? 8 : 0);
 
   int? get windowsKeyCode => HotkeyKeys.vkFor(key);
+
+  int? get linuxEvdevCode => HotkeyKeys.evdevFor(key);
+
+  // формат shortcuts-spec: модификаторы и имя keysym из xkbcommon через +
+  String? get portalTrigger {
+    final keysym = HotkeyKeys.keysymFor(key);
+    if (keysym == null) return null;
+    return [
+      if (ctrl) 'CTRL',
+      if (alt) 'ALT',
+      if (shift) 'SHIFT',
+      if (meta) 'LOGO',
+      keysym,
+    ].join('+');
+  }
+
+  // KDE спрашивает только про новые id и держит прежнее сочетание у знакомого, поэтому сочетание входит в id
+  String portalId(HotkeyAction action) =>
+      '${action.id}_${toToken().replaceAll('+', '_')}';
 
   bool matches(PhysicalKeyboardKey physical, HardwareKeyboard hk) {
     final token = HotkeyKeys.tokenForPhysical(physical);
@@ -177,6 +197,54 @@ class HotkeyKeys {
     'slash': _KeyEntry(PhysicalKeyboardKey.slash, 0xBF, '/'),
     'backslash': _KeyEntry(PhysicalKeyboardKey.backslash, 0xDC, '\\'),
   };
+
+  // linux/input-event-codes.h; раскладка на код не влияет, сочетание работает и на ЙЦУКЕН
+  static const Map<String, int> _evdev = {
+    'keyA': 30, 'keyB': 48, 'keyC': 46, 'keyD': 32, 'keyE': 18, 'keyF': 33,
+    'keyG': 34, 'keyH': 35, 'keyI': 23, 'keyJ': 36, 'keyK': 37, 'keyL': 38,
+    'keyM': 50, 'keyN': 49, 'keyO': 24, 'keyP': 25, 'keyQ': 16, 'keyR': 19,
+    'keyS': 31, 'keyT': 20, 'keyU': 22, 'keyV': 47, 'keyW': 17, 'keyX': 45,
+    'keyY': 21, 'keyZ': 44,
+    'digit0': 11, 'digit1': 2, 'digit2': 3, 'digit3': 4, 'digit4': 5,
+    'digit5': 6, 'digit6': 7, 'digit7': 8, 'digit8': 9, 'digit9': 10,
+    'f1': 59, 'f2': 60, 'f3': 61, 'f4': 62, 'f5': 63, 'f6': 64, 'f7': 65,
+    'f8': 66, 'f9': 67, 'f10': 68, 'f11': 87, 'f12': 88,
+    'space': 57, 'arrowLeft': 105, 'arrowUp': 103, 'arrowRight': 106,
+    'arrowDown': 108, 'home': 102, 'end': 107, 'pageUp': 104, 'pageDown': 109,
+    'insert': 110, 'delete': 111, 'backquote': 41, 'minus': 12, 'equal': 13,
+    'bracketLeft': 26, 'bracketRight': 27, 'semicolon': 39, 'quote': 40,
+    'comma': 51, 'period': 52, 'slash': 53, 'backslash': 43,
+  };
+
+  // имена из xkbcommon-keysyms.h без XKB_KEY_; буквы строчные, это клавиша базового слоя
+  static const Map<String, String> _keysyms = {
+    'space': 'space', 'arrowLeft': 'Left', 'arrowUp': 'Up',
+    'arrowRight': 'Right', 'arrowDown': 'Down', 'home': 'Home', 'end': 'End',
+    'pageUp': 'Page_Up', 'pageDown': 'Page_Down', 'insert': 'Insert',
+    'delete': 'Delete', 'backquote': 'grave', 'minus': 'minus',
+    'equal': 'equal', 'bracketLeft': 'bracketleft',
+    'bracketRight': 'bracketright', 'semicolon': 'semicolon',
+    'quote': 'apostrophe', 'comma': 'comma', 'period': 'period',
+    'slash': 'slash', 'backslash': 'backslash',
+  };
+
+  static int? evdevFor(String token) => _evdev[token];
+
+  static String? keysymFor(String token) {
+    final named = _keysyms[token];
+    if (named != null) return named;
+    if (token.startsWith('key') && token.length == 4) {
+      return token.substring(3).toLowerCase();
+    }
+    if (token.startsWith('digit') && token.length == 6) {
+      return token.substring(5);
+    }
+    if (isFunctionKey(token)) return token.toUpperCase();
+    return null;
+  }
+
+  @visibleForTesting
+  static Iterable<String> get allTokens => _entries.keys;
 
   static final Map<int, String> _byUsbHid = {
     for (final e in _entries.entries) e.value.physical.usbHidUsage: e.key,

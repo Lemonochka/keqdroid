@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import '../services/hotkey_service.dart';
+import '../services/linux_deep_links.dart';
 import '../utils/system_accent.dart';
 
 class VpnNativeBridge {
@@ -12,7 +13,8 @@ class VpnNativeBridge {
   static const channel = MethodChannel('keqdroid_vpn_channel');
 
   static bool get supportsNotificationLaunch => Platform.isAndroid;
-  static bool get supportsDeepLinks => Platform.isAndroid || Platform.isWindows;
+  static bool get supportsDeepLinks =>
+      Platform.isAndroid || Platform.isWindows || Platform.isLinux;
   static bool get supportsAutostartNotification => Platform.isWindows;
   static bool get supportsWindowVisibilityEvents => Platform.isWindows;
   static bool get supportsGlobalHotkeys => Platform.isWindows;
@@ -59,6 +61,8 @@ class VpnNativeBridge {
 
   static Future<String?> getPendingDeepLink() async {
     if (!supportsDeepLinks) return null;
+    // на Linux ссылку принимает Dart: из командной строки или от второго запуска
+    if (Platform.isLinux) return LinuxDeepLinks.takePending();
     return channel.invokeMethod<String>('getPendingDeepLink');
   }
 
@@ -175,6 +179,12 @@ class VpnNativeBridge {
     Future<void> Function(MethodCall call)? handler,
   ) {
     _launchHandler = handler;
+    if (Platform.isLinux) {
+      // как пуш onDeepLink без данных у Windows: сама ссылка ждёт getPendingDeepLink
+      LinuxDeepLinks.onArrived = handler == null
+          ? null
+          : () => unawaited(handler(const MethodCall('onDeepLink')));
+    }
     _syncMethodCallHandler();
   }
 

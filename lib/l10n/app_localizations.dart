@@ -3563,6 +3563,60 @@ abstract class AppLocalizations {
   /// **'Server link or subscription link'**
   String get serversScanQrHint;
 
+  /// No description provided for @desktopQrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'QR code'**
+  String get desktopQrTitle;
+
+  /// No description provided for @desktopQrHint.
+  ///
+  /// In en, this message translates to:
+  /// **'From the screen or a picture'**
+  String get desktopQrHint;
+
+  /// No description provided for @desktopQrFromScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'From the screen'**
+  String get desktopQrFromScreen;
+
+  /// No description provided for @desktopQrFromScreenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A code that is open on the screen right now'**
+  String get desktopQrFromScreenHint;
+
+  /// No description provided for @desktopQrFromImage.
+  ///
+  /// In en, this message translates to:
+  /// **'From a picture'**
+  String get desktopQrFromImage;
+
+  /// No description provided for @desktopQrFromImageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'PNG, JPG, WebP or BMP with a QR code'**
+  String get desktopQrFromImageHint;
+
+  /// No description provided for @desktopQrNotFoundScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'No QR code found on the screen'**
+  String get desktopQrNotFoundScreen;
+
+  /// No description provided for @desktopQrNotFoundImage.
+  ///
+  /// In en, this message translates to:
+  /// **'No QR code found in the picture'**
+  String get desktopQrNotFoundImage;
+
+  /// No description provided for @desktopQrCaptureFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not capture the screen'**
+  String get desktopQrCaptureFailed;
+
   /// No description provided for @qrSubscriptionAdded.
   ///
   /// In en, this message translates to:
@@ -3712,6 +3766,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'On Linux hotkeys work while the app window is focused. All hotkeys are disabled until you assign them.'**
   String get hotkeysHintInApp;
+
+  /// No description provided for @hotkeysHintPortal.
+  ///
+  /// In en, this message translates to:
+  /// **'Hotkeys work system-wide, even from the tray. The system confirms each shortcut in its own dialog, and if you pick a different one there, that one works. All hotkeys are disabled until you assign them.'**
+  String get hotkeysHintPortal;
 
   /// No description provided for @hotkeyActionToggleConnection.
   ///

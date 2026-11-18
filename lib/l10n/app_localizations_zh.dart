@@ -1922,6 +1922,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serversScanQrHint => '服务器或订阅链接';
 
   @override
+  String get desktopQrTitle => '二维码';
+
+  @override
+  String get desktopQrHint => '来自屏幕或图片';
+
+  @override
+  String get desktopQrFromScreen => '来自屏幕';
+
+  @override
+  String get desktopQrFromScreenHint => '当前屏幕上打开的二维码';
+
+  @override
+  String get desktopQrFromImage => '来自图片';
+
+  @override
+  String get desktopQrFromImageHint => '含二维码的 PNG、JPG、WebP 或 BMP';
+
+  @override
+  String get desktopQrNotFoundScreen => '屏幕上未找到二维码';
+
+  @override
+  String get desktopQrNotFoundImage => '图片中未找到二维码';
+
+  @override
+  String get desktopQrCaptureFailed => '无法截取屏幕';
+
+  @override
   String qrSubscriptionAdded(Object name) {
     return '已添加订阅：$name';
   }
@@ -2009,6 +2036,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get hotkeysHintInApp => '在 Linux 上，快捷键仅在应用窗口获得焦点时有效。所有快捷键在您分配之前均处于禁用状态。';
+
+  @override
+  String get hotkeysHintPortal => '快捷键全局生效，即使在托盘中也可用。系统会在自己的对话框中确认每个快捷键，如果您在那里选择了其他组合，则以系统中选择的为准。所有快捷键在您分配之前均处于禁用状态。';
 
   @override
   String get hotkeyActionToggleConnection => '连接 / 断开';

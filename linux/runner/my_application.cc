@@ -6,6 +6,8 @@
 #endif
 
 #include "flutter/generated_plugin_registrant.h"
+#include "global_hotkeys.h"
+#include "screen_capture.h"
 
 struct _MyApplication {
   GtkApplication parent_instance;
@@ -170,6 +172,10 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+  FlBinaryMessenger* messenger =
+      fl_engine_get_binary_messenger(fl_view_get_engine(view));
+  keqdroid_global_hotkeys_register(messenger);
+  keqdroid_screen_capture_register(messenger);
 
   self->window = window;
   self->start_in_tray = starts_in_tray(self->dart_entrypoint_arguments);

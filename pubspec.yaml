@@ -55,6 +55,7 @@ dependencies:
   keqtris:
     path: packages/keqtris
   video_player: ^2.14.1
+  zxing2: ^0.2.4
 
 # tray_manager собирает меню трея на Windows одним вызовом TrackPopupMenu, и в
 # опубликованном пакете он сделан с двумя отступлениями от документации Win32:

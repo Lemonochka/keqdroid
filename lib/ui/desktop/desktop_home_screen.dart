@@ -99,7 +99,11 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     if (!HotkeyService.isSupported) return;
     final settings = await ref.read(storageProvider).getSettings();
     final bindings = HotkeyService.parseBindings(settings.hotkeys);
-    var failed = await HotkeyService.apply(bindings);
+    final l10n = mounted ? AppLocalizations.of(context) : null;
+    var failed = await HotkeyService.apply(
+      bindings,
+      descriptions: l10n == null ? null : hotkeyDescriptions(l10n),
+    );
     // прошлый процесс после перезапуска ещё может держать RegisterHotKey
     for (var attempt = 0; failed.isNotEmpty && attempt < 3; attempt++) {
       await Future<void>.delayed(const Duration(seconds: 2));
@@ -493,3 +497,11 @@ class _DesktopTabHost extends StatelessWidget {
     );
   }
 }
+
+// подписи для окна портала на Wayland: там человек видит, что подтверждает
+Map<HotkeyAction, String> hotkeyDescriptions(AppLocalizations l10n) => {
+      HotkeyAction.toggleConnection: l10n.hotkeyActionToggleConnection,
+      HotkeyAction.toggleTunMode: l10n.hotkeyActionToggleTun,
+      HotkeyAction.bestPingServer: l10n.hotkeyActionBestPing,
+      HotkeyAction.toggleWindow: l10n.hotkeyActionToggleWindow,
+    };

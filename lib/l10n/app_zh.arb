@@ -1024,6 +1024,15 @@
   "qrScanHint": "将相机对准二维码",
   "qrScanCameraError": "相机不可用",
   "serversScanQrHint": "服务器或订阅链接",
+  "desktopQrTitle": "二维码",
+  "desktopQrHint": "来自屏幕或图片",
+  "desktopQrFromScreen": "来自屏幕",
+  "desktopQrFromScreenHint": "当前屏幕上打开的二维码",
+  "desktopQrFromImage": "来自图片",
+  "desktopQrFromImageHint": "含二维码的 PNG、JPG、WebP 或 BMP",
+  "desktopQrNotFoundScreen": "屏幕上未找到二维码",
+  "desktopQrNotFoundImage": "图片中未找到二维码",
+  "desktopQrCaptureFailed": "无法截取屏幕",
   "qrSubscriptionAdded": "已添加订阅：{name}",
   "@qrSubscriptionAdded": {
     "placeholders": {
@@ -1086,6 +1095,7 @@
   "settingsHotkeysSubtitle": "用于连接、模式和服务器的快捷键",
   "hotkeysHintGlobal": "快捷键全局生效，即使窗口已隐藏到托盘。所有快捷键在您分配之前均处于禁用状态。",
   "hotkeysHintInApp": "在 Linux 上，快捷键仅在应用窗口获得焦点时有效。所有快捷键在您分配之前均处于禁用状态。",
+  "hotkeysHintPortal": "快捷键全局生效，即使在托盘中也可用。系统会在自己的对话框中确认每个快捷键，如果您在那里选择了其他组合，则以系统中选择的为准。所有快捷键在您分配之前均处于禁用状态。",
   "hotkeyActionToggleConnection": "连接 / 断开",
   "hotkeyActionToggleTun": "切换 TUN / 代理",
   "hotkeyActionBestPing": "切换到延迟最低的服务器",

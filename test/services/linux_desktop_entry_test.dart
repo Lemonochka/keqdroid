@@ -12,7 +12,7 @@ void main() {
     test('ties the window to the entry by the app id', () {
       final text = LinuxDesktopEntry.contentFor(appImage, hidden: false);
       expect(text, contains('StartupWMClass=com.keqdroid.keqdroid\n'));
-      expect(text, contains('Exec="$appImage"\n'));
+      expect(text, contains('Exec="$appImage" %u\n'));
       expect(text, contains('TryExec=$appImage\n'));
       expect(text, contains(LinuxDesktopEntry.marker));
       expect(text, isNot(contains('NoDisplay')));
@@ -21,6 +21,35 @@ void main() {
     test('stays out of the menu when another entry already launches it', () {
       final text = LinuxDesktopEntry.contentFor(appImage, hidden: true);
       expect(text, contains('NoDisplay=true\n'));
+    });
+
+    test('opens keqdroid:// and keqdis:// links, hidden or not', () {
+      for (final hidden in [false, true]) {
+        final text = LinuxDesktopEntry.contentFor(appImage, hidden: hidden);
+        expect(
+          text,
+          contains(
+            'MimeType=x-scheme-handler/keqdroid;x-scheme-handler/keqdis;\n',
+          ),
+        );
+      }
+    });
+
+    test('the packages declare the same link schemes', () {
+      final script = File('tool/package_linux.sh').readAsStringSync();
+      final declared = RegExp(r'^MimeType=(.*)$', multiLine: true)
+          .allMatches(script)
+          .map((m) => m.group(1))
+          .toList();
+      // ярлык deb/rpm/AppImage и отдельный в PKGBUILD для AUR
+      expect(declared, hasLength(2));
+      expect(declared, everyElement(LinuxDesktopEntry.mimeTypes));
+      final execs = RegExp(r'^Exec=(.*)$', multiLine: true)
+          .allMatches(script)
+          .map((m) => m.group(1)!)
+          .toList();
+      expect(execs, hasLength(2));
+      expect(execs, everyElement(endsWith(' %u')));
     });
   });
 

@@ -7,6 +7,7 @@
 #include "windows_hotkeys.h"
 #include "windows_outbound_interface.h"
 #include "windows_process_memory.h"
+#include "windows_screen_capture.h"
 #include "windows_traffic_stats.h"
 #include "windows_tray.h"
 #include "windows_tun_adapters.h"
@@ -16,6 +17,7 @@
 
 #include <shellapi.h>
 #include <windows.h>
+#include <dwmapi.h>
 #include <wininet.h>
 #include <winhttp.h>
 
@@ -1629,6 +1631,51 @@ void RegisterKeqdroidTunnelChannel(flutter::FlutterEngine* engine) {
           status[flutter::EncodableValue("status")] =
               flutter::EncodableValue(std::string("disconnected"));
           result->Success(flutter::EncodableValue(status));
+          return;
+        }
+
+        if (call.method_name() == "captureScreenForQr") {
+          std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>>
+              shared_result(result.release());
+          HWND hwnd = WindowsTrayGetMainHwnd();
+          const bool hide = hwnd != nullptr && ::IsWindowVisible(hwnd) &&
+                            !::IsIconic(hwnd);
+          if (hide) {
+            // без переходов DWM окно гаснет за кадр, а не за ~200 мс анимации
+            BOOL off = TRUE;
+            ::DwmSetWindowAttribute(hwnd, DWMWA_TRANSITIONS_FORCEDISABLED, &off,
+                                    sizeof(off));
+            ::ShowWindow(hwnd, SW_HIDE);
+          }
+          std::thread([shared_result, hwnd, hide]() {
+            // кадр DWM уже без окна: с запасом на 30 Гц и медленный композитор в ВМ
+            if (hide) ::Sleep(150);
+            std::vector<uint8_t> gray;
+            int width = 0;
+            int height = 0;
+            const bool ok = KeqdroidCaptureScreenGray(&gray, &width, &height);
+            PostToPlatformThread([shared_result, hwnd, hide, ok,
+                                  gray = std::move(gray), width, height]() {
+              if (hide && ::IsWindow(hwnd)) {
+                ::ShowWindow(hwnd, SW_SHOW);
+                ::SetForegroundWindow(hwnd);
+                BOOL on = FALSE;
+                ::DwmSetWindowAttribute(hwnd, DWMWA_TRANSITIONS_FORCEDISABLED,
+                                        &on, sizeof(on));
+              }
+              if (!ok) {
+                shared_result->Error("CAPTURE_FAILED",
+                                     "Could not capture the screen");
+                return;
+              }
+              shared_result->Success(flutter::EncodableValue(flutter::EncodableMap{
+                  {flutter::EncodableValue("width"), flutter::EncodableValue(width)},
+                  {flutter::EncodableValue("height"),
+                   flutter::EncodableValue(height)},
+                  {flutter::EncodableValue("gray"), flutter::EncodableValue(gray)},
+              }));
+            });
+          }).detach();
           return;
         }
 

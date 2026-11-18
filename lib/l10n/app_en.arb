@@ -1108,6 +1108,15 @@
   "qrScanHint": "Point the camera at a QR code",
   "qrScanCameraError": "Camera unavailable",
   "serversScanQrHint": "Server link or subscription link",
+  "desktopQrTitle": "QR code",
+  "desktopQrHint": "From the screen or a picture",
+  "desktopQrFromScreen": "From the screen",
+  "desktopQrFromScreenHint": "A code that is open on the screen right now",
+  "desktopQrFromImage": "From a picture",
+  "desktopQrFromImageHint": "PNG, JPG, WebP or BMP with a QR code",
+  "desktopQrNotFoundScreen": "No QR code found on the screen",
+  "desktopQrNotFoundImage": "No QR code found in the picture",
+  "desktopQrCaptureFailed": "Could not capture the screen",
   "qrSubscriptionAdded": "Subscription added: {name}",
   "@qrSubscriptionAdded": {
     "placeholders": {
@@ -1170,6 +1179,7 @@
   "settingsHotkeysSubtitle": "Shortcuts for connection, mode and servers",
   "hotkeysHintGlobal": "Hotkeys work system-wide, even when the window is hidden in the tray. All hotkeys are disabled until you assign them.",
   "hotkeysHintInApp": "On Linux hotkeys work while the app window is focused. All hotkeys are disabled until you assign them.",
+  "hotkeysHintPortal": "Hotkeys work system-wide, even from the tray. The system confirms each shortcut in its own dialog, and if you pick a different one there, that one works. All hotkeys are disabled until you assign them.",
   "hotkeyActionToggleConnection": "Connect / disconnect",
   "hotkeyActionToggleTun": "Switch TUN / Proxy",
   "hotkeyActionBestPing": "Switch to the best-ping server",

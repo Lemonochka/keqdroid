@@ -57,6 +57,8 @@ import '../providers/traffic_split_provider.dart';
 import '../services/auto_server_select.dart';
 import '../services/exit_ip_service.dart';
 import '../services/file_dialog_service.dart';
+import '../services/qr_image_decoder.dart';
+import '../services/screen_qr_capture.dart';
 import '../services/mihomo_groups_api.dart';
 import '../services/ping_service.dart';
 import '../services/subscription_accent_service.dart';
@@ -859,6 +861,17 @@ class _ServersTabState extends ConsumerState<ServersTab>
                       Navigator.pop(ctx2);
                       _scanQrAndImport(ctx);
                     },
+                  )
+                else
+                  ExpressiveActionTile(
+                    icon: Icons.qr_code_scanner_rounded,
+                    title: l10n.desktopQrTitle,
+                    subtitle: l10n.desktopQrHint,
+                    accent: ExpressiveAccent.tertiary,
+                    onTap: () {
+                      Navigator.pop(ctx2);
+                      unawaited(_showDesktopQrSheet(ctx));
+                    },
                   ),
                 if (_chainCandidateCount >= 2)
                   ExpressiveActionTile(
@@ -886,7 +899,111 @@ class _ServersTabState extends ConsumerState<ServersTab>
   Future<void> _scanQrAndImport(BuildContext ctx) async {
     final raw = await QrScanScreen.scan(ctx);
     if (raw == null || raw.isEmpty || !ctx.mounted) return;
+    await _importQrText(ctx, raw);
+  }
 
+  // экран и картинка на ПК: вид шторки тот же, что у меню «Добавить»
+  Future<void> _showDesktopQrSheet(BuildContext ctx) async {
+    final screenWorks = await ScreenQrCapture.available();
+    if (!ctx.mounted) return;
+    final l10n = AppLocalizations.of(ctx)!;
+    await showModalBottomSheet<void>(
+      context: ctx,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetCtx) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                l10n.desktopQrTitle,
+                textAlign: TextAlign.center,
+                style: Theme.of(sheetCtx).textTheme
+                    .emphasized(Theme.of(sheetCtx).textTheme.titleLarge)
+                    ?.copyWith(color: AppTheme.text(sheetCtx)),
+              ),
+            ),
+            ExpressiveGroup(
+              children: [
+                if (screenWorks)
+                  ExpressiveActionTile(
+                    icon: Icons.screenshot_monitor_rounded,
+                    title: l10n.desktopQrFromScreen,
+                    subtitle: l10n.desktopQrFromScreenHint,
+                    accent: ExpressiveAccent.primary,
+                    onTap: () {
+                      Navigator.pop(sheetCtx);
+                      unawaited(_importQrFromScreen(ctx));
+                    },
+                  ),
+                ExpressiveActionTile(
+                  icon: Icons.image_rounded,
+                  title: l10n.desktopQrFromImage,
+                  subtitle: l10n.desktopQrFromImageHint,
+                  accent: ExpressiveAccent.secondary,
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    unawaited(_importQrFromImage(ctx));
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _importQrFromScreen(BuildContext ctx) async {
+    // шторка успевает уехать: окно прячется на время снимка и не должно мигнуть ею
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    final scan = await ScreenQrCapture.scan();
+    if (!ctx.mounted) return;
+    final l10n = AppLocalizations.of(ctx)!;
+    switch (scan.result) {
+      case ScreenQrResult.found:
+        await _importQrText(ctx, scan.text!);
+      case ScreenQrResult.notFound:
+        _showSnack(l10n.desktopQrNotFoundScreen);
+      case ScreenQrResult.failed:
+        _showSnack(l10n.desktopQrCaptureFailed);
+    }
+  }
+
+  Future<void> _importQrFromImage(BuildContext ctx) async {
+    final l10n = AppLocalizations.of(ctx)!;
+    String? text;
+    try {
+      final file = await AppFileDialogs.pickFile(
+        dialogTitle: l10n.desktopQrFromImage,
+        type: FileType.custom,
+        allowedExtensions: const ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'],
+      );
+      if (file == null) return;
+      final path = file.path;
+      text = path != null && path.isNotEmpty
+          ? await QrImageDecoder.fromFile(path)
+          : await QrImageDecoder.fromEncoded(await file.readAsBytes());
+    } on FileDialogUnavailableException catch (e) {
+      if (ctx.mounted) _showImportError(ctx, e, detailed: true);
+      return;
+    } catch (e, st) {
+      // битый или не картинка: движок не декодирует, для человека это тот же «кода нет»
+      AppLogger.instance.warn('QR picture could not be read', error: e, stackTrace: st);
+    }
+    if (!ctx.mounted) return;
+    if (text == null) {
+      _showSnack(l10n.desktopQrNotFoundImage);
+      return;
+    }
+    await _importQrText(ctx, text);
+  }
+
+  Future<void> _importQrText(BuildContext ctx, String raw) async {
     final tv = TvPairing.parse(raw);
     if (tv != null) {
       await sendSubscriptionToTv(ctx, ref, tv);

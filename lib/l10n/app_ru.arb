@@ -1026,6 +1026,15 @@
   "qrScanHint": "Наведите камеру на QR-код",
   "qrScanCameraError": "Камера недоступна",
   "serversScanQrHint": "Ссылка на сервер или подписку",
+  "desktopQrTitle": "QR-код",
+  "desktopQrHint": "С экрана или из картинки",
+  "desktopQrFromScreen": "С экрана",
+  "desktopQrFromScreenHint": "Код, открытый сейчас на экране",
+  "desktopQrFromImage": "Из картинки",
+  "desktopQrFromImageHint": "PNG, JPG, WebP или BMP с QR-кодом",
+  "desktopQrNotFoundScreen": "На экране не нашлось QR-кода",
+  "desktopQrNotFoundImage": "В картинке не нашлось QR-кода",
+  "desktopQrCaptureFailed": "Не удалось снять экран",
   "qrSubscriptionAdded": "Подписка добавлена: {name}",
   "@qrSubscriptionAdded": {
     "placeholders": {
@@ -1088,6 +1097,7 @@
   "settingsHotkeysSubtitle": "Сочетания для подключения, режима и серверов",
   "hotkeysHintGlobal": "Работают из любого окна и даже когда приложение свёрнуто в трей. Пока в строке «Не задано», сочетание не срабатывает.",
   "hotkeysHintInApp": "На Linux ловятся, только пока окно приложения в фокусе. Пока в строке «Не задано», сочетание не срабатывает.",
+  "hotkeysHintPortal": "Работают из любого окна и из трея. Сочетание подтверждает сама система в своём окне, и если там выбрать другое, сработает оно. Пока в строке «Не задано», сочетание не срабатывает.",
   "hotkeyActionToggleConnection": "Подключить / отключить",
   "hotkeyActionToggleTun": "Переключить TUN и Proxy",
   "hotkeyActionBestPing": "Перейти на сервер с лучшим пингом",

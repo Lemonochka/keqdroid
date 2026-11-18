@@ -1945,6 +1945,33 @@ class AppLocalizationsRu extends AppLocalizations {
   String get serversScanQrHint => 'Ссылка на сервер или подписку';
 
   @override
+  String get desktopQrTitle => 'QR-код';
+
+  @override
+  String get desktopQrHint => 'С экрана или из картинки';
+
+  @override
+  String get desktopQrFromScreen => 'С экрана';
+
+  @override
+  String get desktopQrFromScreenHint => 'Код, открытый сейчас на экране';
+
+  @override
+  String get desktopQrFromImage => 'Из картинки';
+
+  @override
+  String get desktopQrFromImageHint => 'PNG, JPG, WebP или BMP с QR-кодом';
+
+  @override
+  String get desktopQrNotFoundScreen => 'На экране не нашлось QR-кода';
+
+  @override
+  String get desktopQrNotFoundImage => 'В картинке не нашлось QR-кода';
+
+  @override
+  String get desktopQrCaptureFailed => 'Не удалось снять экран';
+
+  @override
   String qrSubscriptionAdded(Object name) {
     return 'Подписка добавлена: $name';
   }
@@ -2032,6 +2059,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get hotkeysHintInApp => 'На Linux ловятся, только пока окно приложения в фокусе. Пока в строке «Не задано», сочетание не срабатывает.';
+
+  @override
+  String get hotkeysHintPortal => 'Работают из любого окна и из трея. Сочетание подтверждает сама система в своём окне, и если там выбрать другое, сработает оно. Пока в строке «Не задано», сочетание не срабатывает.';
 
   @override
   String get hotkeyActionToggleConnection => 'Подключить / отключить';
