@@ -27,6 +27,7 @@ import 'package:keqdroid/services/linux_deep_links.dart';
 import 'package:keqdroid/services/memory_watch.dart';
 import 'package:keqdroid/services/storage_service.dart';
 import 'package:keqdroid/services/update_service.dart';
+import 'package:keqdroid/services/windows_prefs_store.dart';
 import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
 import 'package:keqdroid/shared/ui/app_theme.dart';
 import 'package:keqdroid/shared/ui/bottom_nav.dart';
@@ -47,7 +48,10 @@ Future<void> main() async {
     WidgetsFlutterBinding.ensureInitialized();
     // до всего остального: ошибка до runApp иначе не оставит следа
     await AppLogger.instance.enableFileLog();
-    if (Platform.isWindows) HttpOverrides.global = WindowsSystemTrust();
+    if (Platform.isWindows) {
+      HttpOverrides.global = WindowsSystemTrust();
+      WindowsPrefsStore.register();
+    }
     await PrefsRecovery.prepare();
 
     var crashlyticsReady = false;

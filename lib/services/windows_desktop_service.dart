@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import '../core/app_logger.dart';
 import '../models/app_settings.dart';
+import 'windows_prefs_store.dart';
 import 'windows_tun_service.dart';
 
 class WindowsDesktopService {
@@ -96,6 +98,7 @@ class WindowsDesktopService {
   static Future<bool> restartAsAdministrator() async {
     if (!Platform.isWindows) return false;
     try {
+      await _flushBeforeNativeExit();
       await _channel.invokeMethod<void>('restartAsAdministrator');
       return true;
     } on PlatformException {
@@ -201,6 +204,13 @@ class WindowsDesktopService {
 
   static Future<void> exitApp() async {
     if (!Platform.isWindows) return;
+    await _flushBeforeNativeExit();
     await _channel.invokeMethod<void>('exitApp');
+  }
+
+  // настройки и журнал пишутся не в потоке интерфейса, а нативный выход гасит процесс сразу
+  static Future<void> _flushBeforeNativeExit() async {
+    await WindowsPrefsStore.flushInstance();
+    await AppLogger.instance.flush();
   }
 }

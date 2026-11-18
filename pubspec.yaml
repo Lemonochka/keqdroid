@@ -19,6 +19,8 @@ dependencies:
   crypto: ^3.0.6
   cryptography: ^2.9.0
   shared_preferences: ^2.5.5
+  # своё хранилище на Windows (services/windows_prefs_store.dart) наследует интерфейс плагина
+  shared_preferences_platform_interface: ^2.4.2
   uuid: ^4.5.1
   file_picker: ^12.0.0-beta.5
   path_provider: ^2.1.5
