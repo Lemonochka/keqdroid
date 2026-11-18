@@ -8,6 +8,7 @@ import '../../models/app_settings.dart';
 import '../../providers/providers.dart';
 import '../../services/vpn_engine.dart';
 import '../../services/windows_desktop_service.dart';
+import '../../services/windows_tun_service.dart';
 import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/liquid_toast.dart';
 import '../../utils/error_messages.dart';
@@ -47,37 +48,11 @@ Future<void> applyDesktopConnectionMode(
 ) async {
   if (next == settings.connectionModeEnum) return;
 
-  // на Linux права даёт pkexec при подключении, перезапуск с админом нужен только Windows
-  if (next == ConnectionMode.tun && Platform.isWindows) {
-    final elevated = await WindowsDesktopService.isProcessElevated();
-    if (!elevated) {
-      if (!context.mounted) return;
-      final restart = await showDesktopTunAdminDialog(context);
-      if (restart != true) return;
-
-      await stopSessionBeforeElevation(
-        notifier: deps.vpn,
-        status: deps.status(),
-      );
-      await deps.settings.save(
-            settings.copyWith(
-              connectionMode: ConnectionMode.tun.storageValue,
-              connectionModeChosen: true,
-            ),
-          );
-      final ok = await WindowsDesktopService.restartAsAdministrator();
-      if (!ok && context.mounted) {
-        AppSnack.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.desktopTunAdminRestartFailed,
-            ),
-          ),
-        );
-      }
-      return;
-    }
+  // на Linux права даёт pkexec при подключении. на Windows без прав TUN поднимает служба keqdroid
+  if (next == ConnectionMode.tun && !await ensureWindowsTunService(context)) {
+    return;
   }
+  if (!context.mounted) return;
 
   final status = deps.status();
   final wasActive =
@@ -113,30 +88,61 @@ Future<void> applyDesktopConnectionMode(
   }
 }
 
-// перезапуск с правами просто зовёт PostQuitMessage: без остановки ядро жило дальше,
-// а системный прокси смотрел на порт, который вот-вот исчезнет
-Future<void> stopSessionBeforeElevation({
-  required VpnStateNotifier notifier,
-  required VpnStatus? status,
-}) async {
-  if (status != VpnStatus.connected && status != VpnStatus.connecting) return;
-  try {
-    await notifier.disconnect();
-  } catch (_) {}
+// true: можно подключаться в TUN. без прав и без службы спрашивает и ставит её, Windows покажет окно UAC
+Future<bool> ensureWindowsTunService(BuildContext context) async {
+  if (!Platform.isWindows) return true;
+  if (await WindowsDesktopService.isProcessElevated()) return true;
+  final state = await WindowsTunService.state();
+  if (state == TunServiceState.ready) return true;
+  if (!context.mounted) return false;
+  final install = await showDesktopTunServiceDialog(
+    context,
+    update: state == TunServiceState.outdated,
+  );
+  if (install != true) return false;
+  final result = await WindowsTunService.install();
+  if (result.ok && await WindowsTunService.state() == TunServiceState.ready) {
+    return true;
+  }
+  if (!result.cancelled && context.mounted) {
+    AppSnack.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.desktopTunServiceFailed),
+      ),
+    );
+  }
+  return false;
 }
 
-Future<bool?> showDesktopTunAdminDialog(BuildContext context) {
+// автозапуск с правами оставляет выбранным TUN, а запуск руками идёт без них: перед подключением ставим службу
+Future<bool> ensureTunReadyToConnect(
+  BuildContext context,
+  AppSettings? settings,
+) async {
+  if (!Platform.isWindows ||
+      settings?.connectionModeEnum != ConnectionMode.tun) {
+    return true;
+  }
+  return ensureWindowsTunService(context);
+}
+
+Future<bool?> showDesktopTunServiceDialog(
+  BuildContext context, {
+  required bool update,
+}) {
   final l10n = AppLocalizations.of(context)!;
   return showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: AppTheme.card(ctx),
       title: Text(
-        l10n.desktopTunAdminTitle,
+        l10n.desktopTunServiceTitle,
         style: TextStyle(color: AppTheme.text(ctx)),
       ),
       content: Text(
-        l10n.desktopTunAdminMessage,
+        update
+            ? l10n.desktopTunServiceUpdateMessage
+            : l10n.desktopTunServiceMessage,
         style: TextStyle(
           color: AppTheme.textLight(ctx),
           height: 1.4,
@@ -145,11 +151,13 @@ Future<bool?> showDesktopTunAdminDialog(BuildContext context) {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: Text(l10n.desktopTunAdminCancel),
+          child: Text(l10n.desktopTunServiceCancel),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(ctx, true),
-          child: Text(l10n.desktopTunAdminRestart),
+          child: Text(
+            update ? l10n.desktopTunServiceUpdate : l10n.desktopTunServiceInstall,
+          ),
         ),
       ],
     ),

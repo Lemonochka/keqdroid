@@ -14,6 +14,7 @@ import '../utils/xray_session_log.dart';
 import '../services/debug_log_service.dart';
 import '../services/ephemeral_xray_ping.dart';
 import '../services/windows_desktop_service.dart';
+import '../services/windows_tun_service.dart';
 import '../utils/mihomo_api_session.dart';
 import 'mihomo_hot_reload.dart';
 import '../utils/desktop_tun.dart';
@@ -74,6 +75,8 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   // пока идёт штатный стоп, вотчдог не должен принять наш kill за смерть ядра
   bool _stoppingSession = false;
+  // TUN без прав администратора: ядро поднимает служба KeqdroidTun от имени SYSTEM
+  bool _viaService = false;
 
   // отмена во время паузы между попытками: без счётчика повтор поднял бы ядро после нажатого Отключить
   int _stopEpoch = 0;
@@ -145,14 +148,19 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
       // _cleanupForRestart обнуляет режим, без возврата опрос счётчиков после трея не перезапустится
       _activeMode = request.mode;
 
-      // без прав администратора ядро просто умирает с exit code 1, отсекаем заранее.
+      // без прав администратора и без службы ядро просто умирает с exit code 1, отсекаем заранее.
       // слова administrator rights ловит explainError (UiErrorCode.tunAdmin)
+      _viaService = false;
       if (request.mode == ConnectionMode.tun && await _isElevated() == false) {
-        throw const VpnStartException(
-          'TUN mode needs administrator rights: the wintun adapter and the '
-          'system route table cannot be set up without them. Restart the app '
-          'as administrator, or use Proxy mode.',
-        );
+        if (await WindowsTunService.state() != TunServiceState.ready) {
+          throw const VpnStartException(
+            'TUN mode needs administrator rights: the wintun adapter and the '
+            'system route table cannot be set up without them. Turn TUN on '
+            'again in the app to install the keqdroid service, or use Proxy '
+            'mode.',
+          );
+        }
+        _viaService = true;
       }
 
       _sessionDir = await WindowsCorePaths.sessionDir();
@@ -230,22 +238,32 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     _xrayMetricsPort = metricsPort;
     _xrayStarted = false;
 
-    // wintun.dll ядро грузит по имени, то есть из своего каталога
-    _xrayProcess = await Process.start(
-      bin,
-      ['run', '-c', configFile.path],
-      workingDirectory: p.dirname(bin),
-      environment: _coreProcessEnvironment(
-        await WindowsCorePaths.geoAssetDir(),
-      ),
-      mode: ProcessStartMode.normal,
-    );
-    _coreOutputDone = _pipeProcessOutput(_xrayProcess!, _xrayLog, 'xray');
-    // в job сразу: адаптер ядро ждёт десятки секунд, и закрытое в это время приложение оставляло его сиротой
-    await WindowsDesktopService.registerSessionCoreProcesses(
-      xrayPid: _xrayProcess!.pid,
-      singboxPid: 0,
-    );
+    if (_viaService && isTun) {
+      _xrayProcess = await WindowsTunService.startCore(
+        kind: 'xray',
+        config: WindowsTunService.xrayForService(await configFile.readAsString()),
+        geoDir: await WindowsCorePaths.geoAssetDir(),
+        adapterIds: ourWintunInstanceIds(),
+      );
+      _coreOutputDone = _pipeProcessOutput(_xrayProcess!, _xrayLog, 'xray');
+    } else {
+      // wintun.dll ядро грузит по имени, то есть из своего каталога
+      _xrayProcess = await Process.start(
+        bin,
+        ['run', '-c', configFile.path],
+        workingDirectory: p.dirname(bin),
+        environment: _coreProcessEnvironment(
+          await WindowsCorePaths.geoAssetDir(),
+        ),
+        mode: ProcessStartMode.normal,
+      );
+      _coreOutputDone = _pipeProcessOutput(_xrayProcess!, _xrayLog, 'xray');
+      // в job сразу: адаптер ядро ждёт десятки секунд, и закрытое в это время приложение оставляло его сиротой
+      await WindowsDesktopService.registerSessionCoreProcesses(
+        xrayPid: _xrayProcess!.pid,
+        singboxPid: 0,
+      );
+    }
 
     if (isTun) {
       final ready = await _waitForXrayTun(_xrayProcess!);
@@ -315,20 +333,30 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
     final configFile = File('${_sessionDir!.path}/mihomo.yaml');
     await configFile.writeAsString(config);
 
-    final home = await WindowsCorePaths.mihomoHomeDir();
-
-    _mihomoProcess = await Process.start(
-      bin,
-      ['-d', home, '-f', configFile.path],
-      // wintun.dll ядро грузит по имени, то есть из каталога процесса
-      workingDirectory: p.dirname(bin),
-      mode: ProcessStartMode.normal,
-    );
-    _coreOutputDone = _pipeProcessOutput(_mihomoProcess!, _xrayLog, 'mihomo');
-    await WindowsDesktopService.registerSessionCoreProcesses(
-      xrayPid: _mihomoProcess!.pid,
-      singboxPid: 0,
-    );
+    if (_viaService && isTun) {
+      // ядро службы гаснет вместе с её каналом, job приложения ему не нужен и до SYSTEM не дотянется
+      _mihomoProcess = await WindowsTunService.startCore(
+        kind: 'mihomo',
+        config: config,
+        geoDir: await WindowsCorePaths.geoAssetDir(),
+        adapterIds: ourWintunInstanceIds(),
+      );
+      _coreOutputDone = _pipeProcessOutput(_mihomoProcess!, _xrayLog, 'mihomo');
+    } else {
+      final home = await WindowsCorePaths.mihomoHomeDir();
+      _mihomoProcess = await Process.start(
+        bin,
+        ['-d', home, '-f', configFile.path],
+        // wintun.dll ядро грузит по имени, то есть из каталога процесса
+        workingDirectory: p.dirname(bin),
+        mode: ProcessStartMode.normal,
+      );
+      _coreOutputDone = _pipeProcessOutput(_mihomoProcess!, _xrayLog, 'mihomo');
+      await WindowsDesktopService.registerSessionCoreProcesses(
+        xrayPid: _mihomoProcess!.pid,
+        singboxPid: 0,
+      );
+    }
 
     if (isTun) {
       final ready = await _waitForMihomoTun(
@@ -418,11 +446,15 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
         'Reinstall the app or use Proxy mode.',
       );
     }
-    // остаток ядра, убитого посреди ожидания: пока такой висел, 27.10.2026 Windows отказала и mihomo четыре раза подряд
-    final removed =
-        await WindowsDesktopService.removeStaleTunAdapters(ourWintunInstanceIds());
-    if (removed.isNotEmpty) {
-      AppLogger.instance.info('Removed stale TUN adapters: ${removed.join(', ')}');
+    // остаток ядра, убитого посреди ожидания: пока такой висел, 27.10.2026 Windows отказала и mihomo четыре раза подряд.
+    // без прав удалить адаптер может только служба, она делает это перед запуском ядра
+    if (!_viaService) {
+      final removed = await WindowsDesktopService.removeStaleTunAdapters(
+        ourWintunInstanceIds(),
+      );
+      if (removed.isNotEmpty) {
+        AppLogger.instance.info('Removed stale TUN adapters: ${removed.join(', ')}');
+      }
     }
     await _ensurePortsAvailable(request);
   }

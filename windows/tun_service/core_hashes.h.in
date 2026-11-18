@@ -1,0 +1,9 @@
+#ifndef KEQDROID_TUN_CORE_HASHES_H_
+#define KEQDROID_TUN_CORE_HASHES_H_
+
+// sha256 ядер из assets/bin/windows на момент сборки, пустая строка если файла не было
+#define KEQ_XRAY_SHA256 "@KEQ_XRAY_SHA256@"
+#define KEQ_MIHOMO_SHA256 "@KEQ_MIHOMO_SHA256@"
+#define KEQ_WINTUN_SHA256 "@KEQ_WINTUN_SHA256@"
+
+#endif  // KEQDROID_TUN_CORE_HASHES_H_

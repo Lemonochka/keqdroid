@@ -776,17 +776,20 @@ void CleanupStaleSystemProxy() {
   ApplySystemProxy(false, L"", L"", L"");
 }
 
+// TokenIsElevated говорит да и у токена runas /trustlevel, и при выключенном UAC, хотя группа администраторов
+// там только запрещающая и адаптер не создать. спрашиваем саму группу
 bool IsProcessElevated() {
-  HANDLE token = nullptr;
-  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+  SID_IDENTIFIER_AUTHORITY nt = SECURITY_NT_AUTHORITY;
+  PSID admins = nullptr;
+  if (!AllocateAndInitializeSid(&nt, 2, SECURITY_BUILTIN_DOMAIN_RID,
+                                DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0,
+                                &admins)) {
     return false;
   }
-  TOKEN_ELEVATION elevation = {};
-  DWORD size = sizeof(elevation);
-  const BOOL ok =
-      GetTokenInformation(token, TokenElevation, &elevation, sizeof(elevation), &size);
-  CloseHandle(token);
-  return ok && elevation.TokenIsElevated;
+  BOOL member = FALSE;
+  const BOOL ok = CheckTokenMembership(nullptr, admins, &member);
+  FreeSid(admins);
+  return ok && member;
 }
 
 bool RestartAsAdministrator() {
@@ -966,6 +969,10 @@ void DispatchWindowVisibilityToDart(bool visible) {
 }
 
 }  // namespace
+
+void KeqdroidPostToPlatformThread(std::function<void()> task) {
+  PostToPlatformThread(std::move(task));
+}
 
 void KeqdroidRequestAutostartConnect() {
   PostToPlatformThread([]() { DispatchAutostartConnectToDart(); });

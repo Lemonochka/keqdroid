@@ -59,6 +59,7 @@ import '../services/exit_ip_service.dart';
 import '../services/file_dialog_service.dart';
 import '../services/qr_image_decoder.dart';
 import '../services/screen_qr_capture.dart';
+import '../ui/desktop/desktop_connection_mode.dart';
 import '../services/mihomo_groups_api.dart';
 import '../services/ping_service.dart';
 import '../services/subscription_accent_service.dart';
@@ -1420,6 +1421,13 @@ class _ServersTabState extends ConsumerState<ServersTab>
         _showSnack(context.l10n.vpnSelectServerFirst);
         return;
       }
+      if (!await ensureTunReadyToConnect(
+        context,
+        ref.read(settingsNotifierProvider).value,
+      )) {
+        return;
+      }
+      if (!mounted) return;
       try {
         await ref.read(vpnStateProvider.notifier).connect();
       } catch (e) {

@@ -1703,19 +1703,25 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAutoConnectRequiresLogin => 'Zuerst „Beim Anmelden starten“ aktivieren';
 
   @override
-  String get desktopTunAdminTitle => 'Administratorrechte erforderlich';
+  String get desktopTunServiceTitle => 'Dienst für TUN';
 
   @override
-  String get desktopTunAdminMessage => 'Der TUN-Modus benötigt Administratorrechte. Starte die App als Administrator neu, der in der Seitenleiste gewählte Modus bleibt erhalten.';
+  String get desktopTunServiceMessage => 'Der TUN-Modus läuft über den keqdroid-Dienst. Er wird einmal installiert: Windows fragt nach der Erlaubnis, danach schaltet sich TUN ohne Nachfrage und ohne Neustart ein.';
 
   @override
-  String get desktopTunAdminRestart => 'Als Administrator neu starten';
+  String get desktopTunServiceUpdateMessage => 'Die App wurde aktualisiert, der keqdroid-Dienst für TUN muss mit aktualisiert werden. Windows fragt nach der Erlaubnis.';
 
   @override
-  String get desktopTunAdminCancel => 'Abbrechen';
+  String get desktopTunServiceInstall => 'Dienst installieren';
 
   @override
-  String get desktopTunAdminRestartFailed => 'Neustart als Administrator fehlgeschlagen';
+  String get desktopTunServiceUpdate => 'Dienst aktualisieren';
+
+  @override
+  String get desktopTunServiceCancel => 'Abbrechen';
+
+  @override
+  String get desktopTunServiceFailed => 'Der Dienst ließ sich nicht installieren';
 
   @override
   String get trayConnect => 'Verbinden';
@@ -2097,7 +2103,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get errorTunAdminMessage => 'Der TUN-Modus unter Windows benötigt Administratorrechte.';
 
   @override
-  String get errorTunAdminAction => 'Starte die App als Administrator oder wechsle in den Einstellungen in den Proxy-Modus.';
+  String get errorTunAdminAction => 'Schalte TUN in der Seitenleiste erneut ein: die App bietet an, ihren Dienst zu installieren. Oder wechsle in den Proxy-Modus.';
 
   @override
   String get errorTunAdapterRefusedTitle => 'Windows hat den Adapter abgelehnt';

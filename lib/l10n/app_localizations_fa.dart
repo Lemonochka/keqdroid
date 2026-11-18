@@ -1696,19 +1696,25 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsAutoConnectRequiresLogin => 'اول «اجرا هنگام ورود به سیستم» را روشن کنید';
 
   @override
-  String get desktopTunAdminTitle => 'دسترسی مدیر لازم است';
+  String get desktopTunServiceTitle => 'سرویس برای TUN';
 
   @override
-  String get desktopTunAdminMessage => 'حالت TUN به دسترسی مدیر نیاز دارد. برای استفاده از TUN برنامه را با دسترسی مدیر دوباره اجرا کنید. حالت فعلی در پنل کناری حفظ می‌شود.';
+  String get desktopTunServiceMessage => 'حالت TUN از طریق سرویس keqdroid کار می‌کند. این سرویس یک بار نصب می‌شود: ویندوز اجازه می‌خواهد و پس از آن TUN بدون پرسش و بدون راه‌اندازی دوباره روشن می‌شود.';
 
   @override
-  String get desktopTunAdminRestart => 'اجرای دوباره با دسترسی مدیر';
+  String get desktopTunServiceUpdateMessage => 'برنامه به‌روز شده و سرویس keqdroid برای TUN هم باید به‌روز شود. ویندوز اجازه می‌خواهد.';
 
   @override
-  String get desktopTunAdminCancel => 'لغو';
+  String get desktopTunServiceInstall => 'نصب سرویس';
 
   @override
-  String get desktopTunAdminRestartFailed => 'اجرای دوباره با دسترسی مدیر ممکن نشد';
+  String get desktopTunServiceUpdate => 'به‌روزرسانی سرویس';
+
+  @override
+  String get desktopTunServiceCancel => 'لغو';
+
+  @override
+  String get desktopTunServiceFailed => 'نصب سرویس انجام نشد';
 
   @override
   String get trayConnect => 'اتصال';
@@ -2090,7 +2096,7 @@ class AppLocalizationsFa extends AppLocalizations {
   String get errorTunAdminMessage => 'حالت TUN در ویندوز به دسترسی مدیر نیاز دارد.';
 
   @override
-  String get errorTunAdminAction => 'برنامه را با دسترسی مدیر اجرا کنید یا در تنظیمات به حالت پروکسی بروید.';
+  String get errorTunAdminAction => 'TUN را دوباره در پنل کناری روشن کنید: برنامه نصب سرویس خود را پیشنهاد می‌دهد. یا به حالت پروکسی بروید.';
 
   @override
   String get errorTunAdapterRefusedTitle => 'ویندوز آداپتور را نساخت';

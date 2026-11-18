@@ -3,9 +3,13 @@
 
 #include <flutter/flutter_engine.h>
 
+#include <functional>
 #include <string>
 
 void RegisterKeqdroidTunnelChannel(flutter::FlutterEngine* engine);
+
+// для своих потоков из других файлов раннера: канал Flutter отвечает только на потоке платформы
+void KeqdroidPostToPlatformThread(std::function<void()> task);
 
 // второй экземпляр с --autostart пересылает подключение
 void KeqdroidRequestAutostartConnect();

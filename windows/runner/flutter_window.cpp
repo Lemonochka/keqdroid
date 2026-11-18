@@ -8,6 +8,7 @@
 
 #include "deep_link.h"
 #include "tunnel_channel_handler.h"
+#include "windows_tun_service_client.h"
 #include "windows_hotkeys.h"
 #include "windows_tray.h"
 
@@ -68,6 +69,7 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   RegisterKeqdroidTunnelChannel(flutter_controller_->engine());
+  RegisterKeqdroidTunServiceChannel(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {

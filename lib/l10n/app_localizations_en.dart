@@ -1703,19 +1703,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAutoConnectRequiresLogin => 'Enable \"Start at login\" first';
 
   @override
-  String get desktopTunAdminTitle => 'Administrator rights required';
+  String get desktopTunServiceTitle => 'Service for TUN';
 
   @override
-  String get desktopTunAdminMessage => 'TUN mode needs administrator rights. Restart the app as administrator to use TUN. The current mode in the sidebar will be kept.';
+  String get desktopTunServiceMessage => 'TUN mode runs through the keqdroid service. It is installed once: Windows asks for permission, and after that TUN turns on without it and without a restart.';
 
   @override
-  String get desktopTunAdminRestart => 'Restart as administrator';
+  String get desktopTunServiceUpdateMessage => 'The app was updated, and the keqdroid service for TUN needs updating too. Windows asks for permission.';
 
   @override
-  String get desktopTunAdminCancel => 'Cancel';
+  String get desktopTunServiceInstall => 'Install the service';
 
   @override
-  String get desktopTunAdminRestartFailed => 'Could not restart as administrator';
+  String get desktopTunServiceUpdate => 'Update the service';
+
+  @override
+  String get desktopTunServiceCancel => 'Cancel';
+
+  @override
+  String get desktopTunServiceFailed => 'Could not install the service';
 
   @override
   String get trayConnect => 'Connect';
@@ -2097,7 +2103,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorTunAdminMessage => 'TUN mode on Windows needs Administrator rights.';
 
   @override
-  String get errorTunAdminAction => 'Run the app as administrator or switch to Proxy mode in settings.';
+  String get errorTunAdminAction => 'Turn TUN on again in the sidebar: the app offers to install its service. Or switch to Proxy mode.';
 
   @override
   String get errorTunAdapterRefusedTitle => 'Windows Refused the Adapter';

@@ -3143,35 +3143,47 @@ abstract class AppLocalizations {
   /// **'Enable \"Start at login\" first'**
   String get settingsAutoConnectRequiresLogin;
 
-  /// No description provided for @desktopTunAdminTitle.
+  /// No description provided for @desktopTunServiceTitle.
   ///
   /// In en, this message translates to:
-  /// **'Administrator rights required'**
-  String get desktopTunAdminTitle;
+  /// **'Service for TUN'**
+  String get desktopTunServiceTitle;
 
-  /// No description provided for @desktopTunAdminMessage.
+  /// No description provided for @desktopTunServiceMessage.
   ///
   /// In en, this message translates to:
-  /// **'TUN mode needs administrator rights. Restart the app as administrator to use TUN. The current mode in the sidebar will be kept.'**
-  String get desktopTunAdminMessage;
+  /// **'TUN mode runs through the keqdroid service. It is installed once: Windows asks for permission, and after that TUN turns on without it and without a restart.'**
+  String get desktopTunServiceMessage;
 
-  /// No description provided for @desktopTunAdminRestart.
+  /// No description provided for @desktopTunServiceUpdateMessage.
   ///
   /// In en, this message translates to:
-  /// **'Restart as administrator'**
-  String get desktopTunAdminRestart;
+  /// **'The app was updated, and the keqdroid service for TUN needs updating too. Windows asks for permission.'**
+  String get desktopTunServiceUpdateMessage;
 
-  /// No description provided for @desktopTunAdminCancel.
+  /// No description provided for @desktopTunServiceInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Install the service'**
+  String get desktopTunServiceInstall;
+
+  /// No description provided for @desktopTunServiceUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update the service'**
+  String get desktopTunServiceUpdate;
+
+  /// No description provided for @desktopTunServiceCancel.
   ///
   /// In en, this message translates to:
   /// **'Cancel'**
-  String get desktopTunAdminCancel;
+  String get desktopTunServiceCancel;
 
-  /// No description provided for @desktopTunAdminRestartFailed.
+  /// No description provided for @desktopTunServiceFailed.
   ///
   /// In en, this message translates to:
-  /// **'Could not restart as administrator'**
-  String get desktopTunAdminRestartFailed;
+  /// **'Could not install the service'**
+  String get desktopTunServiceFailed;
 
   /// No description provided for @trayConnect.
   ///
@@ -3866,7 +3878,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorTunAdminAction.
   ///
   /// In en, this message translates to:
-  /// **'Run the app as administrator or switch to Proxy mode in settings.'**
+  /// **'Turn TUN on again in the sidebar: the app offers to install its service. Or switch to Proxy mode.'**
   String get errorTunAdminAction;
 
   /// No description provided for @errorTunAdapterRefusedTitle.

@@ -1696,19 +1696,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsAutoConnectRequiresLogin => '请先启用“登录时启动”';
 
   @override
-  String get desktopTunAdminTitle => '需要管理员权限';
+  String get desktopTunServiceTitle => 'TUN 服务';
 
   @override
-  String get desktopTunAdminMessage => 'TUN 模式需要以管理员身份运行。请以管理员身份重启应用，侧栏中选择的模式会保留。';
+  String get desktopTunServiceMessage => 'TUN 模式通过 keqdroid 服务运行。服务只需安装一次：Windows 会请求您的许可，之后开启 TUN 无需再次确认，也无需重启。';
 
   @override
-  String get desktopTunAdminRestart => '以管理员身份重启';
+  String get desktopTunServiceUpdateMessage => '应用已更新，用于 TUN 的 keqdroid 服务也需要一起更新。Windows 会请求您的许可。';
 
   @override
-  String get desktopTunAdminCancel => '取消';
+  String get desktopTunServiceInstall => '安装服务';
 
   @override
-  String get desktopTunAdminRestartFailed => '无法以管理员身份重启';
+  String get desktopTunServiceUpdate => '更新服务';
+
+  @override
+  String get desktopTunServiceCancel => '取消';
+
+  @override
+  String get desktopTunServiceFailed => '无法安装服务';
 
   @override
   String get trayConnect => '连接';
@@ -2090,7 +2096,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorTunAdminMessage => 'Windows 上的 TUN 模式需要管理员权限。';
 
   @override
-  String get errorTunAdminAction => '以管理员身份运行应用，或在设置中切换到代理模式。';
+  String get errorTunAdminAction => '在侧栏中再次开启 TUN：应用会提示安装它的服务。或切换到代理模式。';
 
   @override
   String get errorTunAdapterRefusedTitle => 'Windows 未能创建网络适配器';

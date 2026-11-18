@@ -1719,19 +1719,25 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsAutoConnectRequiresLogin => 'Сначала включите «Запускать при входе в систему»';
 
   @override
-  String get desktopTunAdminTitle => 'Нужны права администратора';
+  String get desktopTunServiceTitle => 'Служба для TUN';
 
   @override
-  String get desktopTunAdminMessage => 'Для TUN нужны права администратора. Перезапустите приложение с ними, выбранный в боковой панели режим сохранится.';
+  String get desktopTunServiceMessage => 'Режим TUN работает через службу keqdroid. Её ставят один раз: Windows спросит разрешение, а дальше TUN включается без него и без перезапуска.';
 
   @override
-  String get desktopTunAdminRestart => 'Перезапустить от администратора';
+  String get desktopTunServiceUpdateMessage => 'Приложение обновилось, и службу keqdroid для TUN нужно обновить вместе с ним. Windows спросит разрешение.';
 
   @override
-  String get desktopTunAdminCancel => 'Отмена';
+  String get desktopTunServiceInstall => 'Поставить службу';
 
   @override
-  String get desktopTunAdminRestartFailed => 'Не удалось перезапустить от администратора';
+  String get desktopTunServiceUpdate => 'Обновить службу';
+
+  @override
+  String get desktopTunServiceCancel => 'Отмена';
+
+  @override
+  String get desktopTunServiceFailed => 'Не удалось поставить службу';
 
   @override
   String get trayConnect => 'Подключить';
@@ -2113,7 +2119,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorTunAdminMessage => 'Режим TUN на Windows требует прав администратора.';
 
   @override
-  String get errorTunAdminAction => 'Запустите приложение от имени администратора или переключитесь на режим Proxy в настройках.';
+  String get errorTunAdminAction => 'Включите TUN в боковой панели ещё раз: приложение предложит поставить свою службу. Или переключитесь на режим Proxy.';
 
   @override
   String get errorTunAdapterRefusedTitle => 'Windows не создала адаптер';

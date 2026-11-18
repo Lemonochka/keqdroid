@@ -166,6 +166,13 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
       _showHotkeySnack((l10n) => l10n.vpnSelectServerFirst);
       return;
     }
+    if (!await ensureTunReadyToConnect(
+      context,
+      ref.read(settingsNotifierProvider).value,
+    )) {
+      return;
+    }
+    if (!mounted) return;
     await ref.read(vpnStateProvider.notifier).connect();
   }
 

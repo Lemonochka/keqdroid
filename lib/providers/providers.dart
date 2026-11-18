@@ -40,6 +40,7 @@ import '../services/subscription_service.dart';
 import '../services/update_service.dart';
 import '../services/tunnel_session_builder.dart';
 import '../services/vpn_engine.dart';
+import '../services/windows_tun_service.dart';
 import '../platform/vpn_native_bridge.dart';
 import '../tunnel/app_routing_mode.dart';
 import '../tunnel/local_port_plan.dart';

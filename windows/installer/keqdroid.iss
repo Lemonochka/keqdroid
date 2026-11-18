@@ -82,7 +82,11 @@ var
   ResultCode: Integer;
 begin
   if CurStep = ssPostInstall then
+  begin
     Exec(ExpandConstant('{app}\keqdroid.exe'), '--adopt-autostart', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    // служба TUN доверяет только ядрам своей сборки: поставленную обновляем вместе с приложением, иначе нет ничего
+    Exec(ExpandConstant('{app}\keqdroid-tun.exe'), 'update', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end;
 end;
 
 procedure RemoveUserData;
@@ -100,8 +104,11 @@ var
   ResultCode: Integer;
 begin
   if CurUninstallStep = usUninstall then
+  begin
     // зависший прокси снимает только сам exe при старте, а после удаления старта не будет
-    Exec(ExpandConstant('{app}\keqdroid.exe'), '--uninstall-cleanup', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
+    Exec(ExpandConstant('{app}\keqdroid.exe'), '--uninstall-cleanup', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Exec(ExpandConstant('{app}\keqdroid-tun.exe'), 'uninstall', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end
   else if CurUninstallStep = usPostUninstall then
   begin
     if not UninstallSilent and
