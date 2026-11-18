@@ -96,6 +96,14 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 Set-Location $repoRoot
 
+# Release key for backup files (tool/new_backup_key.dart), kept out of git.
+# Without it the release would write backups that any build can open.
+$backupKeyFile = Join-Path $repoRoot 'secrets\backup_key.json'
+if (-not (Test-Path -LiteralPath $backupKeyFile)) {
+  throw "secrets\backup_key.json is missing. Restore it (in CI: the KEQDROID_BACKUP_KEY secret). Do not make a new one: backups of earlier releases need the old key."
+}
+$backupKeyDefine = "--dart-define-from-file=$backupKeyFile"
+
 function Repair-PubCacheEnv {
   # WSL/Docker sometimes leave PUB_CACHE=C:\root\.pub-cache on Windows hosts.
   # flutter gen-l10n runs dart format, which resolves package:flutter_lints via
@@ -305,7 +313,7 @@ if (-not $SkipAndroid) {
     # Gone before the build, so a build that silently produced nothing cannot
     # ship the previous ABI's APK under this name.
     if (Test-Path -LiteralPath $apkSrc) { Remove-Item -LiteralPath $apkSrc -Force }
-    flutter build apk --release --target-platform $apk.Platform
+    flutter build apk --release --target-platform $apk.Platform $backupKeyDefine
     if ($LASTEXITCODE -ne 0) { throw "flutter build apk failed for $($apk.Abi)" }
     if (-not (Test-Path -LiteralPath $apkSrc)) { throw "APK not found at $apkSrc" }
     Assert-ApkAbi $apkSrc $apk.Abi
@@ -325,7 +333,7 @@ if (-not $SkipWindows) {
   if ($LASTEXITCODE -ne 0) { throw "sync_windows_plugins.ps1 failed" }
 
   Write-Step "Building Windows (Release)"
-  flutter build windows --release
+  flutter build windows --release $backupKeyDefine
   if ($LASTEXITCODE -ne 0) { throw "flutter build windows failed" }
 
   $relDir = Join-Path $repoRoot 'build\windows\x64\runner\Release'

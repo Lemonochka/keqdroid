@@ -54,7 +54,15 @@ log "flutter pub get (in $REPO_DIR)"
 flutter pub get
 
 log "flutter build linux --release"
-flutter build linux --release
+# Release key for backup files (tool/new_backup_key.dart), kept out of git.
+# Without the file the build writes backups that any build can open.
+BACKUP_KEY_DEFINE=()
+if [ -f secrets/backup_key.json ]; then
+  BACKUP_KEY_DEFINE=(--dart-define-from-file=secrets/backup_key.json)
+else
+  log "secrets/backup_key.json missing: backups from this build use the public key"
+fi
+flutter build linux --release ${BACKUP_KEY_DEFINE[@]+"${BACKUP_KEY_DEFINE[@]}"}
 
 BUNDLE="$REPO_DIR/build/linux/x64/release/bundle"
 

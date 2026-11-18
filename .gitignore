@@ -62,3 +62,6 @@ lib/firebase_options.dart
 
 # Мост keqrnel и TUN на sing-box после переезда ПК на TUN самого xray: лежат локально, не в git
 /deprecated/
+
+# release key for backup files, tool/new_backup_key.dart
+secrets/

@@ -8,6 +8,8 @@
 #   GOOGLE_SERVICES_JSON     android/app/google-services.json
 #   UPDATE_SIGNING_KEY       Ed25519 PEM for tool/sign_sums.sh; the app checks
 #                            its public half (lib/services/release_signature.dart)
+#   KEQDROID_BACKUP_KEY      secrets/backup_key.json as is (tool/new_backup_key.dart),
+#                            the key of backup files; never replace it
 # Optional Windows code signing through SignPath Foundation, off until these
 # variables exist: SIGNPATH_ORGANIZATION_ID, SIGNPATH_PROJECT_SLUG,
 # SIGNPATH_SIGNING_POLICY_SLUG, and the secret SIGNPATH_API_TOKEN. The project
@@ -68,10 +70,13 @@ jobs:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEY_PROPERTIES: ${{ secrets.ANDROID_KEY_PROPERTIES }}
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          KEQDROID_BACKUP_KEY: ${{ secrets.KEQDROID_BACKUP_KEY }}
         run: |
-          foreach ($n in 'ANDROID_KEYSTORE_BASE64', 'ANDROID_KEY_PROPERTIES', 'GOOGLE_SERVICES_JSON') {
+          foreach ($n in 'ANDROID_KEYSTORE_BASE64', 'ANDROID_KEY_PROPERTIES', 'GOOGLE_SERVICES_JSON', 'KEQDROID_BACKUP_KEY') {
             if (-not [Environment]::GetEnvironmentVariable($n)) { throw "secret $n is not set" }
           }
+          New-Item -ItemType Directory -Force secrets | Out-Null
+          [IO.File]::WriteAllText("$PWD/secrets/backup_key.json", $env:KEQDROID_BACKUP_KEY)
           [IO.File]::WriteAllBytes("$PWD/android/app/upload-keystore.jks",
             [Convert]::FromBase64String(($env:ANDROID_KEYSTORE_BASE64 -replace '\s', '')))
           $props = @($env:ANDROID_KEY_PROPERTIES -split "`r?`n" |
@@ -138,6 +143,15 @@ jobs:
 
       - name: Flutter
         run: git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git /opt/flutter
+
+      # tool/new_backup_key.dart: without it Linux backups would open in any build
+      - name: Backup key
+        env:
+          KEQDROID_BACKUP_KEY: ${{ secrets.KEQDROID_BACKUP_KEY }}
+        run: |
+          if [ -z "$KEQDROID_BACKUP_KEY" ]; then echo "secret KEQDROID_BACKUP_KEY is not set" >&2; exit 1; fi
+          mkdir -p secrets
+          printf '%s' "$KEQDROID_BACKUP_KEY" > secrets/backup_key.json
 
       - name: Build and package
         env:
