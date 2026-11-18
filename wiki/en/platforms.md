@@ -16,7 +16,7 @@ You can connect and disconnect:
 - with the home screen widget;
 - with the “Connect” and “Disconnect” shortcuts that appear when you long-press the app icon.
 
-The notification can show speed and connection time: “Behaviour” → “Notifications”.
+The notification can show speed and connection time: “Updates and notifications” → “Notifications”.
 
 If the VPN was on, it turns itself back on after an app update and after the phone restarts.
 
@@ -62,7 +62,7 @@ Both versions use the same settings in `%APPDATA%\com.keqdroid\keqdroid\`, so on
 
 ### Modes
 
-In Proxy mode the app sets the system proxy itself, no admin rights needed. TUN mode does need admin rights: the app offers to restart with them, and your chosen mode is kept.
+In Proxy mode the app sets the system proxy itself, no admin rights needed. For TUN mode the app installs its own service once: Windows asks for permission, and after that TUN turns on without it and without a restart. After an app update the service needs updating too, and the app offers it.
 
 ### Tray and autostart
 

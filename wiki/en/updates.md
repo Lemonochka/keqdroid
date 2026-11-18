@@ -12,7 +12,7 @@ Drafts and pre-releases are not offered. When the VPN is on, the request to GitH
 
 ## New version dialog
 
-The dialog has “Update”, “Later” and “Skip this version” buttons. It shows up no more often than set in “Behaviour” → “Tell me about a new version”: every day, every 3 days (the default) or once a week. A skipped version no longer brings up the dialog, but settings still show that an update is available.
+The dialog has “Update”, “Later” and “Skip this version” buttons. It shows up no more often than set in “Updates and notifications” → “Tell me about a new version”: every day, every 3 days (the default) or once a week. A skipped version no longer brings up the dialog, but settings still show that an update is available.
 
 ## Authenticity check
 

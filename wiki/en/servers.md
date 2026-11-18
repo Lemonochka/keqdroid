@@ -22,7 +22,7 @@ By default a subscription updates every 12 hours. If the provider sets its own i
 | Android | about once an hour in the background, even when the app is closed; the system decides the exact time |
 | Windows, Linux | once an hour while the app is running (including when it sits in the tray), plus 2 minutes after launch and whenever you come back to the window |
 
-When the VPN is on, the subscription is downloaded through the server. On Android a background update can show a notification with the number of servers. Turn it on in “Behaviour” → “Subscription update notifications”.
+When the VPN is on, the subscription is downloaded through the server. On Android a background update can show a notification with the number of servers. Turn it on in “Updates and notifications” → “Subscription update notifications”.
 
 On update, servers that are still in the subscription keep their name, pin, ping results and Auto mark. If the provider changed a server's address or key, the app still recognizes it by name and protocol, as long as only one server in the subscription has that name.
 

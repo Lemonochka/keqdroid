@@ -8,7 +8,7 @@
 | DNS interception | yes | no |
 | per-app routes and split tunneling | work | don't work |
 | Fake IP | works | doesn't work |
-| what it needs | Android: VPN permission. Windows: admin rights. Linux: root | nothing |
+| what it needs | Android: VPN permission. Windows: permission once, to install the keqdroid service. Linux: root | nothing |
 
 In Proxy mode the app runs SOCKS on `127.0.0.1:2080` and HTTP on `127.0.0.1:2081`. On Windows it sets the system proxy itself, and browsers and most programs pick it up. On Linux the proxy is written into GNOME and KDE settings. Otherwise, set the address and port in the program manually.
 
