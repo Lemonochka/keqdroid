@@ -561,8 +561,9 @@ class _SubAnnounceBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final collapsed = ref.watch(
-      collapsedSubscriptionCardsProvider.select((m) => m[sub.id] ?? false),
-    );
+          collapsedSubscriptionCardsProvider.select((m) => m[sub.id] ?? false),
+        ) ||
+        _CardPreviewScope.of(context);
     return Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         child: Container(

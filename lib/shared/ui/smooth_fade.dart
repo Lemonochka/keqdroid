@@ -374,22 +374,35 @@ class _ScrollEdgeFadeState extends State<ScrollEdgeFade> {
   double _progress = 0;
 
   bool _onScroll(ScrollNotification n) {
-    if (n.depth != 0 || n.metrics.axis != Axis.vertical) return false;
-    final next = (n.metrics.extentBefore / 32).clamp(0.0, 1.0);
+    _follow(n.depth, n.metrics);
+    return false;
+  }
+
+  // содержимое стало короче окна (свернули карточку): позиция встаёт в 0 без прокрутки, приходит только это
+  bool _onMetrics(ScrollMetricsNotification n) {
+    _follow(n.depth, n.metrics);
+    return false;
+  }
+
+  void _follow(int depth, ScrollMetrics metrics) {
+    if (depth != 0 || metrics.axis != Axis.vertical) return;
+    final next = (metrics.extentBefore / 32).clamp(0.0, 1.0);
     if ((next - _progress).abs() > 0.01 || (next == 0) != (_progress == 0)) {
       setState(() => _progress = next);
     }
-    return false;
   }
 
   @override
   Widget build(BuildContext context) {
-    return NotificationListener<ScrollNotification>(
-      onNotification: _onScroll,
-      child: EdgeFadeMask(
-        top: widget.top * _progress,
-        bottom: widget.bottom,
-        child: widget.child,
+    return NotificationListener<ScrollMetricsNotification>(
+      onNotification: _onMetrics,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: _onScroll,
+        child: EdgeFadeMask(
+          top: widget.top * _progress,
+          bottom: widget.bottom,
+          child: widget.child,
+        ),
       ),
     );
   }

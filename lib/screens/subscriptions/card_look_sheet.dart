@@ -185,18 +185,31 @@ class _CardPreview extends StatelessWidget {
       overrides: [
         collapsedSubscriptionCardsProvider.overrideWith(_ExpandedCards.new),
       ],
-      child: ExcludeSemantics(
-        child: IgnorePointer(
-          child: _SubItem(
-            sub: sub,
-            listIndex: 0,
-            onDelete: () {},
-            onRefresh: () async {},
+      child: _CardPreviewScope(
+        child: ExcludeSemantics(
+          child: IgnorePointer(
+            child: _SubItem(
+              sub: sub,
+              listIndex: 0,
+              onDelete: () {},
+              onRefresh: () async {},
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+// объявление провайдера бывает на полэкрана, и под листание настроек оставалась полоска в 88 dp
+class _CardPreviewScope extends InheritedWidget {
+  const _CardPreviewScope({required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_CardPreviewScope>() != null;
+
+  @override
+  bool updateShouldNotify(_CardPreviewScope oldWidget) => false;
 }
 
 class _ExpandedCards extends CollapsedSubscriptionCardsNotifier {

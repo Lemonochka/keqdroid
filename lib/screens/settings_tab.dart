@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -128,6 +128,10 @@ part 'settings/theme_customization.dart';
 part 'settings/windows_desktop_settings.dart';
 part 'settings/xray_core_settings.dart';
 
+// полоса прокрутки на ПК рисуется внутри списка: поле под неё у самого списка, иначе она ложится на карточки
+double _settingsListInset() =>
+    PlatformBootstrap.isDesktop ? 16 : tabContentHorizontalInset();
+
 class SettingsTab extends ConsumerWidget {
   const SettingsTab({super.key});
 
@@ -141,6 +145,7 @@ class SettingsTab extends ConsumerWidget {
       body: SafeArea(
         child: DesktopPageLayout(
           maxWidth: 720,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(
             children: [
               Expanded(
@@ -151,9 +156,9 @@ class SettingsTab extends ConsumerWidget {
                     controller: controller,
                     physics: const ClampingScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(
-                      tabContentHorizontalInset(),
+                      _settingsListInset(),
                       24,
-                      tabContentHorizontalInset(),
+                      _settingsListInset(),
                       24,
                     ),
                     children: [
@@ -570,9 +575,9 @@ class _AppVersionSection extends StatelessWidget {
         }
         return Padding(
           padding: EdgeInsets.fromLTRB(
-            tabContentHorizontalInset(),
+            _settingsListInset(),
             0,
-            tabContentHorizontalInset(),
+            _settingsListInset(),
             24 + (floating ? FloatingBar.bottomMargin + FloatingBar.height : 0),
           ),
           child: Column(

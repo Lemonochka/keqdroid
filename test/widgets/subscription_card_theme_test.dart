@@ -453,6 +453,35 @@ void main() {
       expect(find.text('Реклама бота'), findsNWidgets(2));
     });
 
+    testWidgets('длинное объявление в образце не съедает место под настройки', (
+      tester,
+    ) async {
+      final long = List.filled(40, 'Длинное объявление провайдера.').join(' ');
+      await _openCardLookSheet(tester, cardThemeId: '', announce: long);
+
+      final texts = tester.widgetList<Text>(find.text(long)).toList();
+      expect(texts, hasLength(2), reason: 'карточка в списке и образец');
+      final inSheet = tester.widget<Text>(
+        find.descendant(of: find.byType(BottomSheet), matching: find.text(long)),
+      );
+      expect(inSheet.maxLines, 2);
+      final inList = texts.firstWhere((t) => !identical(t, inSheet));
+      expect(inList.maxLines, isNull, reason: 'в списке целиком, как было');
+
+      final sheet = tester.getSize(find.byType(BottomSheet)).height;
+      final settings = tester
+          .getSize(
+            find
+                .descendant(
+                  of: find.byType(BottomSheet),
+                  matching: find.byType(SingleChildScrollView),
+                )
+                .first,
+          )
+          .height;
+      expect(settings, greaterThan(sheet / 3));
+    });
+
     testWidgets('переключатель убирает часть и из образца тоже', (
       tester,
     ) async {
