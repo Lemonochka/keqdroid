@@ -56,9 +56,10 @@ class _DesktopSettingsScreenState
           );
       return;
     }
+    // allowElevation нужен выключению: старую задачу с правами без окна UAC не снять
     final ok = await WindowsDesktopService.applyLaunchAtStartup(
       enabled: next.launchAtStartup,
-      elevated: next.launchAtStartupElevated,
+      elevated: false,
       allowElevation: true,
     );
     final elevated = await WindowsDesktopService.isLaunchAtStartupElevated();
@@ -118,19 +119,6 @@ class _DesktopSettingsScreenState
                 _applyAutostart(settings.copyWith(launchAtStartup: v)),
               ),
             ),
-            if (!linux)
-              _AppearanceSwitchTile(
-                icon: Icons.admin_panel_settings_rounded,
-                title: l10n.settingsLaunchAtStartupAdmin,
-                value: settings.launchAtStartupElevated,
-                onChanged: settings.launchAtStartup
-                    ? (v) => unawaited(
-                          _applyAutostart(
-                            settings.copyWith(launchAtStartupElevated: v),
-                          ),
-                        )
-                    : null,
-              ),
             _AppearanceSwitchTile(
               icon: Icons.web_asset_off_rounded,
               title: l10n.settingsAutostartInTray,

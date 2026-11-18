@@ -974,6 +974,10 @@ void KeqdroidPostToPlatformThread(std::function<void()> task) {
   PostToPlatformThread(std::move(task));
 }
 
+bool KeqdroidProcessIsAdmin() {
+  return IsProcessElevated();
+}
+
 void KeqdroidRequestAutostartConnect() {
   PostToPlatformThread([]() { DispatchAutostartConnectToDart(); });
 }

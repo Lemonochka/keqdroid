@@ -983,7 +983,6 @@
   "settingsMinimizeToTray": "Minimize to tray on close",
   "settingsLaunchAtStartup": "Start with Windows",
   "settingsLaunchAtLogin": "Start at login",
-  "settingsLaunchAtStartupAdmin": "Start with admin rights",
   "settingsAutostartInTray": "Start in the tray, without a window",
   "settingsAutostartAdminFailed": "Administrator rights were not granted",
   "settingsAutoConnectOnAutostart": "Connect on autostart",

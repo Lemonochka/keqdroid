@@ -81,14 +81,32 @@ void main() {
   // раздел «Windows» в настройках строится по настоящей ОС, на раннере CI с Linux его нет
   final skip = !Platform.isWindows;
 
-  testWidgets('стоит между правами администратора и подключением', (tester) async {
+  testWidgets('стоит между запуском с Windows и подключением', (tester) async {
     await _openDesktopSettings(tester, autostart: true);
 
-    final admin = tester.getRect(find.text('Start with admin rights'));
+    final launch = tester.getRect(find.text('Start with Windows'));
     final tray = tester.getRect(find.text(_title));
     final connect = tester.getRect(find.text('Connect on autostart'));
-    expect(tray.top, greaterThan(admin.top));
+    expect(tray.top, greaterThan(launch.top));
     expect(tray.top, lessThan(connect.top));
+  }, skip: skip);
+
+  // TUN без прав поднимает служба, задача планировщика с правами больше не заводится
+  testWidgets('переключателя прав нет, автозапуск включается обычный', (tester) async {
+    final (storage, calls) = await _openDesktopSettings(tester, autostart: false);
+    expect(find.text('Start with admin rights'), findsNothing);
+    expect(find.byIcon(Icons.admin_panel_settings_rounded), findsNothing);
+
+    await tester.tap(find.text('Start with Windows'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await _frames(tester);
+
+    expect(
+      calls.where((c) => c.method == 'setLaunchAtStartup').last.arguments,
+      {'enabled': true, 'elevated': false, 'allowElevation': true},
+    );
+    final saved = (await tester.runAsync(storage.getSettings))!;
+    expect(saved.launchAtStartupElevated, isFalse);
   }, skip: skip);
 
   testWidgets('без автозапуска нажатие ничего не меняет', (tester) async {

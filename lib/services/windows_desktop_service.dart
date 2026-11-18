@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import '../models/app_settings.dart';
+import 'windows_tun_service.dart';
 
 class WindowsDesktopService {
   WindowsDesktopService._();
@@ -63,6 +64,27 @@ class WindowsDesktopService {
     } on PlatformException {
       return false;
     }
+  }
+
+  // приложение, запущенное старой задачей, уже с правами: и служба для TUN, и снятие задачи проходят без окна UAC.
+  // без службы задачу не трогаем, иначе после следующего входа TUN не поднимется
+  static Future<bool> retireElevatedAutostart({required bool tun}) async {
+    if (!Platform.isWindows) return false;
+    if (!await isProcessElevated() || !await isLaunchAtStartupElevated()) {
+      return false;
+    }
+    if (tun && await WindowsTunService.state() != TunServiceState.ready) {
+      final installed = await WindowsTunService.install();
+      if (!installed.ok ||
+          await WindowsTunService.state() != TunServiceState.ready) {
+        return false;
+      }
+    }
+    return applyLaunchAtStartup(
+      enabled: true,
+      elevated: false,
+      allowElevation: true,
+    );
   }
 
   static Future<bool> isProcessElevated() async {

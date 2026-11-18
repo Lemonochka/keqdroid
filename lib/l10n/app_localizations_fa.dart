@@ -1678,9 +1678,6 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsLaunchAtLogin => 'اجرا هنگام ورود به سیستم';
 
   @override
-  String get settingsLaunchAtStartupAdmin => 'اجرا با دسترسی مدیر';
-
-  @override
   String get settingsAutostartInTray => 'اجرا در سینی سیستم، بدون پنجره';
 
   @override

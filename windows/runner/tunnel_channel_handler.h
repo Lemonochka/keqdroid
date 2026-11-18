@@ -11,6 +11,8 @@ void RegisterKeqdroidTunnelChannel(flutter::FlutterEngine* engine);
 // для своих потоков из других файлов раннера: канал Flutter отвечает только на потоке платформы
 void KeqdroidPostToPlatformThread(std::function<void()> task);
 
+bool KeqdroidProcessIsAdmin();
+
 // второй экземпляр с --autostart пересылает подключение
 void KeqdroidRequestAutostartConnect();
 

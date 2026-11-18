@@ -3107,12 +3107,6 @@ abstract class AppLocalizations {
   /// **'Start at login'**
   String get settingsLaunchAtLogin;
 
-  /// No description provided for @settingsLaunchAtStartupAdmin.
-  ///
-  /// In en, this message translates to:
-  /// **'Start with admin rights'**
-  String get settingsLaunchAtStartupAdmin;
-
   /// No description provided for @settingsAutostartInTray.
   ///
   /// In en, this message translates to:

@@ -72,7 +72,6 @@ These settings are in the “Windows” section:
 |---|---|
 | “Minimize to tray on close” | the close button hides the window to the tray instead of quitting |
 | “Start with Windows” | the app starts when you sign in |
-| “Start with admin rights” | autostart with the rights TUN needs |
 | “Start in the tray, without a window” | no window opens on autostart |
 | “Connect on autostart” | after autostart the app connects to the selected server |
 

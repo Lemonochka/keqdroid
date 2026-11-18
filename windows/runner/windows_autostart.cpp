@@ -415,7 +415,7 @@ bool KeqdroidApplyAutostart(bool enabled, bool elevated, bool allow_elevation) {
         ok = task_now;
       } else {
         ok = DeleteElevatedTask();
-        task_now = false;
+        task_now = task_matches && !ok;
       }
     } else {
       // молча: UAC на каждом запуске и есть то, от чего настройка избавляет

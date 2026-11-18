@@ -899,7 +899,6 @@
   "settingsMinimizeToTray": "Beim Schließen in den Infobereich minimieren",
   "settingsLaunchAtStartup": "Mit Windows starten",
   "settingsLaunchAtLogin": "Beim Anmelden starten",
-  "settingsLaunchAtStartupAdmin": "Mit Administratorrechten starten",
   "settingsAutostartInTray": "Im Infobereich starten, ohne Fenster",
   "settingsAutostartAdminFailed": "Administratorrechte wurden nicht erteilt",
   "settingsAutoConnectOnAutostart": "Bei Autostart verbinden",

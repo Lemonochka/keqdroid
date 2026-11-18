@@ -901,7 +901,6 @@
   "settingsMinimizeToTray": "Сворачивать в трей при закрытии",
   "settingsLaunchAtStartup": "Запускать с Windows",
   "settingsLaunchAtLogin": "Запускать при входе в систему",
-  "settingsLaunchAtStartupAdmin": "Запускать с правами администратора",
   "settingsAutostartInTray": "Запускать в трее, без окна",
   "settingsAutostartAdminFailed": "Права администратора не выданы",
   "settingsAutoConnectOnAutostart": "Подключаться при автозапуске",

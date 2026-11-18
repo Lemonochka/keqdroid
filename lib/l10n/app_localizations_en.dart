@@ -1685,9 +1685,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLaunchAtLogin => 'Start at login';
 
   @override
-  String get settingsLaunchAtStartupAdmin => 'Start with admin rights';
-
-  @override
   String get settingsAutostartInTray => 'Start in the tray, without a window';
 
   @override

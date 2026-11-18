@@ -25,6 +25,7 @@ import '../../screens/subscriptions_tab.dart';
 import '../../services/update_service.dart';
 import '../../services/vpn_engine.dart';
 import '../../services/windows_desktop_service.dart';
+import '../../services/windows_tun_service.dart';
 import '../../services/windows_tray_menu.dart';
 import '../../shared/ui/app_theme.dart';
 import '../../shared/ui/halloween/halloween_icons.dart';
@@ -183,12 +184,12 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
         ? ConnectionMode.proxy
         : ConnectionMode.tun;
 
-    if (next == ConnectionMode.tun && Platform.isWindows) {
-      final elevated = await WindowsDesktopService.isProcessElevated();
-      if (!elevated) {
-        // молчаливый UAC из хоткея сбивает с толку, сперва показываем окно
-        await WindowsDesktopService.restoreMainWindow();
-      }
+    if (next == ConnectionMode.tun &&
+        Platform.isWindows &&
+        !await WindowsDesktopService.isProcessElevated() &&
+        await WindowsTunService.state() != TunServiceState.ready) {
+      // без службы спросим про неё, а окно в трее спрятало бы вопрос
+      await WindowsDesktopService.restoreMainWindow();
     }
     if (!mounted) return;
     await applyDesktopConnectionMode(context, DesktopModeDeps.of(ref), settings, next);
@@ -238,6 +239,28 @@ class _DesktopHomeScreenState extends ConsumerState<DesktopHomeScreen>
     await WindowsDesktopService.applySettings(settings);
 
     await _maybeAutostartConnect();
+    unawaited(_retireElevatedAutostart(settings));
+  }
+
+  // настройки запуска с правами больше нет, её задачу планировщика заменяют служба TUN и обычный автозапуск
+  Future<void> _retireElevatedAutostart(AppSettings settings) async {
+    try {
+      final retired = await WindowsDesktopService.retireElevatedAutostart(
+        tun: settings.connectionModeEnum == ConnectionMode.tun,
+      );
+      if (!retired || !mounted) return;
+      final current = await ref.read(settingsNotifierProvider.future);
+      if (!mounted) return;
+      await ref.read(settingsNotifierProvider.notifier).save(
+            current.copyWith(
+              launchAtStartup: true,
+              launchAtStartupElevated: false,
+            ),
+          );
+      AppLogger.instance.info('Elevated autostart task replaced by Run entry');
+    } catch (e) {
+      AppLogger.instance.warn('Elevated autostart not retired', error: e);
+    }
   }
 
   Future<void> _runStartupTasks() async {

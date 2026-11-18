@@ -1701,9 +1701,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsLaunchAtLogin => 'Запускать при входе в систему';
 
   @override
-  String get settingsLaunchAtStartupAdmin => 'Запускать с правами администратора';
-
-  @override
   String get settingsAutostartInTray => 'Запускать в трее, без окна';
 
   @override

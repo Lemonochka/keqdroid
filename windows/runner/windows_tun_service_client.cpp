@@ -356,7 +356,8 @@ void Install(Result result) {
     SHELLEXECUTEINFOW info = {};
     info.cbSize = sizeof(info);
     info.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
-    info.lpVerb = L"runas";
+    // приложение, запущенное старой задачей планировщика, уже с правами: ставит службу без окна UAC
+    info.lpVerb = KeqdroidProcessIsAdmin() ? L"open" : L"runas";
     info.lpFile = exe.c_str();
     info.lpParameters = params.c_str();
     info.nShow = SW_HIDE;

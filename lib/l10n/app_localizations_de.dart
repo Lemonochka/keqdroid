@@ -1685,9 +1685,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsLaunchAtLogin => 'Beim Anmelden starten';
 
   @override
-  String get settingsLaunchAtStartupAdmin => 'Mit Administratorrechten starten';
-
-  @override
   String get settingsAutostartInTray => 'Im Infobereich starten, ohne Fenster';
 
   @override
