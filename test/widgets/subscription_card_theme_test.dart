@@ -294,14 +294,13 @@ void main() {
       expect(Subscription.fromJson(json).cardThemeInServers, isTrue);
     });
 
-    // Тумблер обещает картинку («Картинка заполнит и шапку группы»), поэтому
-    // предлагать его там, где картинки нет, — обещание, которое некому
-    // выполнить: включённым он растил шапку группы на пустую полосу.
-    testWidgets('у рисованной темы тумблера нет', (tester) async {
+    // Рисунок тоже идёт в шапку группы, значит и выключать его там должно
+    // быть чем.
+    testWidgets('у рисованной темы тумблер тоже есть', (tester) async {
       await _openCardLookSheet(tester, cardThemeId: 'depth');
 
       expect(find.text('Backdrop'), findsOneWidget);
-      expect(find.text('Show in server list'), findsNothing);
+      expect(find.text('Show in server list'), findsOneWidget);
     });
 
     testWidgets('у своей картинки тумблер на месте', (tester) async {

@@ -172,7 +172,7 @@ class _GroupHeaderBackground extends StatelessWidget {
     bool groups = false,
   }) {
     final below = [
-      if (_showsImage(subscription)) fadeHeight,
+      if (_showsTheme(subscription)) fadeHeight,
       if (subscription?.autoSelectVisible == true || groups) autoRowHeight,
       0.0,
     ].reduce((a, b) => a > b ? a : b);
@@ -181,16 +181,19 @@ class _GroupHeaderBackground extends StatelessWidget {
 
   static const autoRowHeight = 40.0;
 
-  static bool _showsImage(Subscription? sub) =>
+  static bool _showsTheme(Subscription? sub) =>
       sub != null &&
       sub.cardThemeInServers &&
       sub.cardThemeId.isNotEmpty &&
-      resolveCardTheme(sub.cardThemeId).hasImage;
+      !resolveCardTheme(sub.cardThemeId).isPlain;
+
+  // рисунок в размере карточки, низом к раскрытой шапке: ужатый до её 76 dp он рассыпался на обрывки фигур
+  static const artHeight = 150.0;
 
   @override
   Widget build(BuildContext context) {
     final sub = subscription;
-    if (!_showsImage(sub)) return child;
+    if (!_showsTheme(sub)) return child;
     final theme = resolveCardTheme(sub!.cardThemeId);
 
     const outer = ExpressiveShape.extraLarge;
@@ -200,6 +203,24 @@ class _GroupHeaderBackground extends StatelessWidget {
     // гаснет по ходу всего сворачивания, а не за последний 1 dp. ниже 5% его нет: на отдаче
     // пружины группа снова приоткрывается на доли процента, и затемнение вспыхивало
     final fadeStrength = ((open - 0.05) / 0.95).clamp(0.0, 1.0);
+    final veils = Stack(
+      fit: StackFit.expand,
+      children: [
+        // у рисунка силу затемнения не выбрать, а cardVeil мог остаться от прошлой картинки
+        CardVeilOverlay(
+          color: surface,
+          veil: theme.hasImage ? sub.cardVeil : CardVeil.medium,
+        ),
+        if (open > 0)
+          // плавный вход и выход: на изломе линейного градиента глаз видел светлую полосу
+          SmoothFadeBox(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            color: surface,
+            curve: FadeCurve.eased(0, fadeStrength, start: fadeStart),
+          ),
+      ],
+    );
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(
@@ -219,24 +240,21 @@ class _GroupHeaderBackground extends StatelessWidget {
             top: -1,
             right: -1,
             bottom: -1,
-            child: theme.background(
-              context,
-              veil: CardVeil.none,
-              overlay: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CardVeilOverlay(color: surface, veil: sub.cardVeil),
-                  if (open > 0)
-                    // плавный вход и выход: на изломе линейного градиента глаз видел светлую полосу
-                    SmoothFadeBox(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      color: surface,
-                      curve: FadeCurve.eased(0, fadeStrength, start: fadeStart),
-                    ),
-                ],
-              ),
-            ),
+            child: theme.hasImage
+                ? theme.background(context, veil: CardVeil.none, overlay: veils)
+                : Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Positioned(
+                        top: _subCardRowHeight + fadeHeight + 2 - artHeight,
+                        left: 0,
+                        right: 0,
+                        height: artHeight,
+                        child: theme.background(context, veil: CardVeil.none),
+                      ),
+                      veils,
+                    ],
+                  ),
           ),
           Align(
             alignment: Alignment.topCenter,

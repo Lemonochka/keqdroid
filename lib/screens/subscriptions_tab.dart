@@ -1482,7 +1482,7 @@ class _CardThemePickerState extends State<_CardThemePicker> {
                   ?.copyWith(color: AppTheme.red(context)),
             ),
           ),
-        if (resolveCardTheme(currentId).hasImage)
+        if (!resolveCardTheme(currentId).isPlain)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: SwitchListTile(
