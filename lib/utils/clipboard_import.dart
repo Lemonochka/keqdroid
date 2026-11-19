@@ -40,26 +40,29 @@ Future<void> pasteSubscriptionFromClipboard(
   }
 }
 
-Future<void> pasteLinksFromClipboard(
+// false: в буфере не было текста
+Future<bool> pasteLinksFromClipboard(
   BuildContext context,
   WidgetRef ref,
 ) async {
   final data = await Clipboard.getData(Clipboard.kTextPlain);
   final raw = data?.text?.trim() ?? '';
-  if (raw.isEmpty || !context.mounted) return;
+  if (raw.isEmpty) return false;
+  if (!context.mounted) return true;
   final l10n = AppLocalizations.of(context)!;
   final result = await importPastedLinksInto(
     ref,
     raw,
     routingFallbackName: l10n.routingProfileNew,
   );
-  if (!context.mounted) return;
+  if (!context.mounted) return true;
   final error = result.firstError;
   final lines = [
     ?pastedLinksSummary(l10n, result),
     if (error != null) friendlyError(error, context),
   ];
   if (lines.isNotEmpty) _toast(context, lines.join('\n'));
+  return true;
 }
 
 class PastedLinksResult {

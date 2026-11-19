@@ -833,9 +833,12 @@ class _ServersTabState extends ConsumerState<ServersTab>
                   title: l10n.serversPasteLinks,
                   subtitle: l10n.serversPasteLinksHint,
                   accent: ExpressiveAccent.primary,
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(ctx2);
-                    _showPasteLinksSheet(ctx);
+                    // на телевизоре буфер пуст, и ссылку можно только набрать в поле
+                    if (!await pasteLinksFromClipboard(ctx, ref) && ctx.mounted) {
+                      _showPasteLinksSheet(ctx);
+                    }
                   },
                 ),
                 ExpressiveActionTile(

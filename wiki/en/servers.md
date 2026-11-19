@@ -36,7 +36,7 @@ The add menu on the “Servers” tab has these items:
 
 | Item | What you can add |
 |---|---|
-| “Paste link(s)” | server links, one per line, or a whole Xray, Clash, sing-box or AmneziaWG config |
+| “Paste link(s)” | from the clipboard: server links, one per line, or a whole Xray, Clash, sing-box or AmneziaWG config; with an empty clipboard a text field opens |
 | “Import file” | a file with links or a config |
 | “Scan QR code” (Android) | a server link, a subscription or a routing profile |
 | “Receive from phone” (Android TV) | a subscription from your phone, see [Platforms](/en/platforms#android-tv) |
