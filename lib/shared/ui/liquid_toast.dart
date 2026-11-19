@@ -18,6 +18,7 @@ class LiquidToast {
     this.duration = const Duration(seconds: 4),
     this.actionLabel,
     this.onAction,
+    this.inPlace = false,
   });
 
   final Widget message;
@@ -27,6 +28,9 @@ class LiquidToast {
   final Duration duration;
   final String? actionLabel;
   final VoidCallback? onAction;
+
+  // сменить текст стоящей капли, а не уводить её в край и выпускать заново
+  final bool inPlace;
 
   static final current = ValueNotifier<LiquidToast?>(null);
 
@@ -52,8 +56,10 @@ class AppSnack {
   final ScaffoldMessengerState _messenger;
   final ThemeData _theme;
 
-  void showSnackBar(SnackBar bar) {
+  // replace: итог сменяет стоящее уведомление (загрузку). SnackBar иначе встал бы в очередь за ним
+  void showSnackBar(SnackBar bar, {bool replace = false}) {
     if (!LiquidToast.enabled) {
+      if (replace) _messenger.hideCurrentSnackBar();
       _messenger.showSnackBar(bar);
       return;
     }
@@ -71,7 +77,16 @@ class AppSnack {
       duration: bar.duration,
       actionLabel: action?.label,
       onAction: action?.onPressed,
+      inPlace: replace,
     ));
+  }
+
+  void hideCurrent() {
+    if (LiquidToast.enabled) {
+      LiquidToast.hide();
+    } else {
+      _messenger.hideCurrentSnackBar();
+    }
   }
 }
 
@@ -107,6 +122,8 @@ class _LiquidToastHostState extends State<LiquidToastHost>
   double _height = FloatingBar.height;
   Timer? _timer;
   int _generation = 0;
+  // растёт, когда капля выходит из края заново: текст прошлой не проступает сквозь новую
+  int _appearance = 0;
 
   @override
   void initState() {
@@ -131,15 +148,18 @@ class _LiquidToastHostState extends State<LiquidToastHost>
     final next = LiquidToast.current.value;
     final generation = ++_generation;
     _timer?.cancel();
-    if (_shown != null && _t.value > 0) {
+    final inPlace = next != null && next.inPlace && _shown != null && _t.value > 0;
+    if (!inPlace && _shown != null && _t.value > 0) {
       await _sink();
       if (!mounted || generation != _generation) return;
     }
     setState(() {
       _shown = next;
+      if (inPlace) return;
+      _appearance++;
       _bar = FloatingBar.barOnScreen.value != null && !FloatingBar.hidden.value;
     });
-    _pull.value = 0;
+    if (!inPlace) _pull.value = 0;
     if (next == null) return;
     await ExpressiveMotion.springTo(_t, 1, spring: _riseSpring)
         .orCancel
@@ -283,7 +303,26 @@ class _LiquidToastHostState extends State<LiquidToastHost>
                             const BoxConstraints(minHeight: FloatingBar.height),
                         child: Opacity(
                           opacity: ((grow - 0.6) / 0.4).clamp(0.0, 1.0),
-                          child: _content(context, toast, ink),
+                          child: AnimatedSwitcher(
+                            key: ValueKey(_appearance),
+                            duration: ExpressiveMotion.durationDefault,
+                            // старый текст гаснет до того, как проявится новый: внахлёст строки читались кашей
+                            transitionBuilder: (child, animation) => FadeTransition(
+                              opacity: CurvedAnimation(
+                                parent: animation,
+                                curve: const Interval(0.5, 1),
+                              ),
+                              child: child,
+                            ),
+                            layoutBuilder: (current, previous) => Stack(
+                              alignment: AlignmentDirectional.centerStart,
+                              children: [...previous, ?current],
+                            ),
+                            child: KeyedSubtree(
+                              key: ObjectKey(toast),
+                              child: _content(context, toast, ink),
+                            ),
+                          ),
                         ),
                       ),
                     ),

@@ -2086,6 +2086,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clipboardNoSubscriptionLink => 'Clipboard has no subscription link (http/https)';
 
   @override
+  String get clipboardAdding => 'Adding…';
+
+  @override
   String get splitTunnelingReconnectHint => 'Changes apply after reconnecting the VPN';
 
   @override

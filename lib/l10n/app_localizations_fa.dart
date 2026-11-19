@@ -2079,6 +2079,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get clipboardNoSubscriptionLink => 'در کلیپ‌بورد لینک اشتراکی (http/https) نیست';
 
   @override
+  String get clipboardAdding => 'در حال افزودن…';
+
+  @override
   String get splitTunnelingReconnectHint => 'تغییرات بعد از اتصال دوبارهٔ VPN اعمال می‌شوند';
 
   @override

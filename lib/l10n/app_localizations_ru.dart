@@ -2102,6 +2102,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get clipboardNoSubscriptionLink => 'В буфере нет ссылки подписки (http/https)';
 
   @override
+  String get clipboardAdding => 'Добавляю…';
+
+  @override
   String get splitTunnelingReconnectHint => 'Изменения применятся после переподключения VPN';
 
   @override

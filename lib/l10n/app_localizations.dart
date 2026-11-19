@@ -3845,6 +3845,12 @@ abstract class AppLocalizations {
   /// **'Clipboard has no subscription link (http/https)'**
   String get clipboardNoSubscriptionLink;
 
+  /// No description provided for @clipboardAdding.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding…'**
+  String get clipboardAdding;
+
   /// No description provided for @splitTunnelingReconnectHint.
   ///
   /// In en, this message translates to:

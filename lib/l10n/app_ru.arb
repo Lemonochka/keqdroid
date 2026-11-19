@@ -1115,6 +1115,7 @@
   "hotkeyClearTooltip": "Сбросить сочетание",
   "hotkeyNoPingData": "Нет результатов пинга, сначала запустите проверку",
   "clipboardNoSubscriptionLink": "В буфере нет ссылки подписки (http/https)",
+  "clipboardAdding": "Добавляю…",
   "splitTunnelingReconnectHint": "Изменения применятся после переподключения VPN",
   "serversDeleteConfirm": "Удалить сервер «{name}»?",
   "@serversDeleteConfirm": {

@@ -2079,6 +2079,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clipboardNoSubscriptionLink => '剪贴板中没有订阅链接（http/https）';
 
   @override
+  String get clipboardAdding => '正在添加…';
+
+  @override
   String get splitTunnelingReconnectHint => '更改将在重新连接 VPN 后生效';
 
   @override

@@ -104,6 +104,64 @@ void main() {
     expect(LiquidToast.current.value, isNull);
   });
 
+  // загрузку сменяет её итог: уход в край и выход заново оставлял почти секунду пустоты
+  group('replace in place', () {
+    Future<BuildContext> showWaiting(WidgetTester tester) async {
+      final context = await _pump(tester);
+      AppSnack.of(context).showSnackBar(const SnackBar(
+        content: Text('жду'),
+        duration: Duration(minutes: 1),
+      ));
+      await tester.pumpAndSettle();
+      return context;
+    }
+
+    testWidgets('the drop stays where it is and its text changes', (tester) async {
+      LiquidToast.enabled = true;
+      final context = await showWaiting(tester);
+      final before = tester.getTopLeft(find.text('жду'));
+      AppSnack.of(context).showSnackBar(
+        const SnackBar(content: Text('готово')),
+        replace: true,
+      );
+      await tester.pump();
+      // смена текста идёт durationDefault, 350 мс
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('жду'), findsNothing);
+      expect(tester.getTopLeft(find.text('готово')), offsetMoreOrLessEquals(before));
+      // и уходит по своему сроку, как любое уведомление
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(LiquidToast.current.value, isNull);
+    });
+
+    testWidgets('an ordinary toast after another still leaves through the edge first',
+        (tester) async {
+      LiquidToast.enabled = true;
+      final context = await showWaiting(tester);
+      AppSnack.of(context).showSnackBar(const SnackBar(content: Text('готово')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('готово'), findsNothing);
+      await tester.pumpAndSettle();
+      expect(find.text('готово'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('outside Modern the snack bar is swapped, not queued behind the long one',
+        (tester) async {
+      final context = await showWaiting(tester);
+      AppSnack.of(context).showSnackBar(
+        const SnackBar(content: Text('готово')),
+        replace: true,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('жду'), findsNothing);
+      expect(find.text('готово'), findsOneWidget);
+    });
+  });
+
   group('swipe', () {
     Future<Finder> showDrop(WidgetTester tester,
         {TextDirection direction = TextDirection.ltr}) async {

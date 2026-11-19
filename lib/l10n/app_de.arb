@@ -1113,6 +1113,7 @@
   "hotkeyClearTooltip": "Kürzel entfernen",
   "hotkeyNoPingData": "Noch keine Ping-Ergebnisse, starte zuerst einen Ping-Test",
   "clipboardNoSubscriptionLink": "Die Zwischenablage enthält keinen Abonnement-Link (http/https)",
+  "clipboardAdding": "Wird hinzugefügt…",
   "splitTunnelingReconnectHint": "Änderungen gelten nach dem erneuten Verbinden des VPN",
   "serversDeleteConfirm": "Server „{name}“ wirklich löschen?",
   "@serversDeleteConfirm": {

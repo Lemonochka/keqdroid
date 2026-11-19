@@ -653,6 +653,7 @@
   "hotkeyClearTooltip": "پاک کردن میانبر",
   "hotkeyNoPingData": "هنوز نتیجهٔ پینگی نیست — اول یک بار پینگ بگیرید",
   "clipboardNoSubscriptionLink": "در کلیپ‌بورد لینک اشتراکی (http/https) نیست",
+  "clipboardAdding": "در حال افزودن…",
   "splitTunnelingReconnectHint": "تغییرات بعد از اتصال دوبارهٔ VPN اعمال می‌شوند",
   "serversDeleteConfirm": "مطمئنید که «{name}» حذف شود؟",
   "errorTunAdminMessage": "حالت TUN در ویندوز به دسترسی مدیر نیاز دارد.",

@@ -2086,6 +2086,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get clipboardNoSubscriptionLink => 'Die Zwischenablage enthält keinen Abonnement-Link (http/https)';
 
   @override
+  String get clipboardAdding => 'Wird hinzugefügt…';
+
+  @override
   String get splitTunnelingReconnectHint => 'Änderungen gelten nach dem erneuten Verbinden des VPN';
 
   @override

@@ -1113,6 +1113,7 @@
   "hotkeyClearTooltip": "清除快捷键",
   "hotkeyNoPingData": "暂无延迟数据，请先进行延迟测试",
   "clipboardNoSubscriptionLink": "剪贴板中没有订阅链接（http/https）",
+  "clipboardAdding": "正在添加…",
   "splitTunnelingReconnectHint": "更改将在重新连接 VPN 后生效",
   "serversDeleteConfirm": "确定要删除服务器“{name}”吗？",
   "@serversDeleteConfirm": {

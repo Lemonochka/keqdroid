@@ -1197,6 +1197,7 @@
   "hotkeyClearTooltip": "Clear shortcut",
   "hotkeyNoPingData": "No ping results yet, run a ping test first",
   "clipboardNoSubscriptionLink": "Clipboard has no subscription link (http/https)",
+  "clipboardAdding": "Adding…",
   "splitTunnelingReconnectHint": "Changes apply after reconnecting the VPN",
   "serversDeleteConfirm": "Are you sure you want to delete \"{name}\"?",
   "@serversDeleteConfirm": {
