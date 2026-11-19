@@ -77,11 +77,12 @@ class AppLogService {
     'ERROR': LogLevel.error,
   };
 
-  static Future<String> bundle({int tailEntries = 300}) async {
+  // null: все записи, что отдало чтение
+  static Future<String> bundle({int? tailEntries = 300}) async {
     final out = StringBuffer('# keqdroid log\n');
     for (final source in sources) {
       final entries = await read(source);
-      final tail = entries.length > tailEntries
+      final tail = tailEntries != null && entries.length > tailEntries
           ? entries.sublist(entries.length - tailEntries)
           : entries;
       out
@@ -91,7 +92,7 @@ class AppLogService {
         out.writeln(entry.text);
       }
     }
-    final core = await _coreTail(tailEntries);
+    final core = await _coreTail(tailEntries ?? 300);
     if (core.isNotEmpty) {
       out
         ..writeln()
@@ -106,6 +107,16 @@ class AppLogService {
         ..write(AppInternalsService.exitLines(exits));
     }
     return out.toString();
+  }
+
+  static Future<File> writeBundleFile(Directory dir, {DateTime? now}) async {
+    final at = now ?? DateTime.now();
+    String two(int v) => v.toString().padLeft(2, '0');
+    final name = 'keqdroid-log-${at.year}-${two(at.month)}-${two(at.day)}'
+        '-${two(at.hour)}${two(at.minute)}.txt';
+    final file = File('${dir.path}${Platform.pathSeparator}$name');
+    await file.writeAsString(await bundle(tailEntries: null), flush: true);
+    return file;
   }
 
   static Future<List<ProcessExit>> processExits() =>

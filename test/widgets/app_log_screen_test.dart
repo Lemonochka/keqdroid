@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/app/app.dart';
 import 'package:keqdroid/core/app_logger.dart';
@@ -78,5 +79,64 @@ void main() {
     await _frames(tester);
     expect(find.textContaining('subscription refreshed'), findsNothing);
     expect(find.textContaining('update task failed'), findsOneWidget);
+  });
+
+  testWidgets('на телефоне журнал уходит файлом через меню «Поделиться»', (tester) async {
+    final temp = Directory.systemTemp.createTempSync('app_log_share');
+    addTearDown(() => temp.deleteSync(recursive: true));
+    final messenger = tester.binding.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (call) async => temp.path,
+    );
+    String? sharedName;
+    String? sharedText;
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('dev.fluttercommunity.plus/share'),
+      (call) async {
+        final path = ((call.arguments as Map)['paths'] as List).single as String;
+        sharedName = File(path).uri.pathSegments.last;
+        sharedText = File(path).readAsStringSync();
+        return 'com.example.chosen';
+      },
+    );
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/path_provider'),
+        null,
+      );
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('dev.fluttercommunity.plus/share'),
+        null,
+      );
+    });
+
+    await tester.runAsync(() async {
+      for (var i = 0; i < 310; i++) {
+        AppLogger.instance.info('record ${i.toString().padLeft(3, '0')}');
+      }
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: appLogScreenForTest(shareAsFile: true),
+      ),
+    );
+    await _frames(tester);
+
+    expect(find.byTooltip('Copy the whole log'), findsNothing);
+    await tester.tap(find.byTooltip('Send the log as a file'));
+    for (var i = 0; i < 50 && (sharedText == null || temp.listSync().isNotEmpty); i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    expect(sharedName, matches(RegExp(r'^keqdroid-log-\d{4}-\d{2}-\d{2}-\d{4}\.txt$')));
+    expect(sharedText, contains('record 000'));
+    expect(sharedText, contains('record 309'));
+    // копию держит share_plus, наша в кэше не копится
+    expect(temp.listSync(), isEmpty);
   });
 }

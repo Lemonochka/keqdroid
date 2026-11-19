@@ -940,6 +940,7 @@
   "appLogOnlyProblems": "فقط مشکل‌ها",
   "appLogEmpty": "هنوز چیزی نیست",
   "appLogCopyAll": "کپی کل گزارش",
+  "appLogShareFile": "ارسال گزارش به‌صورت فایل",
   "settingsInternalsBuild": "برنامه و دستگاه",
   "settingsInternalsCopyAll": "کپی گزارش",
   "settingsInternalsCopied": "گزارش کپی شد",

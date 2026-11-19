@@ -2994,6 +2994,9 @@ class AppLocalizationsFa extends AppLocalizations {
   String get appLogCopyAll => 'کپی کل گزارش';
 
   @override
+  String get appLogShareFile => 'ارسال گزارش به‌صورت فایل';
+
+  @override
   String get settingsInternalsBuild => 'برنامه و دستگاه';
 
   @override

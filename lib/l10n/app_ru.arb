@@ -1464,6 +1464,7 @@
   "appLogOnlyProblems": "Только проблемы",
   "appLogEmpty": "Здесь пока пусто",
   "appLogCopyAll": "Скопировать весь журнал",
+  "appLogShareFile": "Отправить журнал файлом",
   "settingsInternalsBuild": "Приложение и устройство",
   "settingsInternalsCopyAll": "Скопировать отчёт",
   "settingsInternalsCopied": "Отчёт скопирован",

@@ -3002,6 +3002,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appLogCopyAll => 'Gesamtes Protokoll kopieren';
 
   @override
+  String get appLogShareFile => 'Protokoll als Datei senden';
+
+  @override
   String get settingsInternalsBuild => 'App und Gerät';
 
   @override

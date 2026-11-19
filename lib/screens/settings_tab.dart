@@ -102,6 +102,7 @@ import 'package:keqdroid/tunnel/vpn_backend.dart';
 import 'package:keqdroid/tunnel/local_port_plan.dart';
 import 'package:keqdroid/ui/responsive/desktop_page_layout.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:keqdroid/shared/ui/liquid_toast.dart';
 import 'package:keqdroid/utils/provider_routing.dart';
 import 'package:qr_flutter/qr_flutter.dart';

@@ -1602,6 +1602,7 @@
   "appLogOnlyProblems": "Problems only",
   "appLogEmpty": "Nothing here yet",
   "appLogCopyAll": "Copy the whole log",
+  "appLogShareFile": "Send the log as a file",
   "settingsInternalsBuild": "App and device",
   "settingsInternalsCopyAll": "Copy report",
   "settingsInternalsCopied": "Report copied to clipboard",

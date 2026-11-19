@@ -3024,6 +3024,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appLogCopyAll => 'Скопировать весь журнал';
 
   @override
+  String get appLogShareFile => 'Отправить журнал файлом';
+
+  @override
   String get settingsInternalsBuild => 'Приложение и устройство';
 
   @override

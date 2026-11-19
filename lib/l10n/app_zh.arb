@@ -1462,6 +1462,7 @@
   "appLogOnlyProblems": "仅显示问题",
   "appLogEmpty": "暂无内容",
   "appLogCopyAll": "复制完整日志",
+  "appLogShareFile": "以文件形式发送日志",
   "settingsInternalsBuild": "应用与设备",
   "settingsInternalsCopyAll": "复制报告",
   "settingsInternalsCopied": "报告已复制",

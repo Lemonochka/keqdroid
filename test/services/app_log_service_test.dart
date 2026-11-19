@@ -1,7 +1,52 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:keqdroid/core/app_logger.dart';
 import 'package:keqdroid/services/app_log_service.dart';
 
 void main() {
+  group('журнал файлом', () {
+    late Directory logs;
+    late Directory out;
+
+    setUp(() async {
+      logs = Directory.systemTemp.createTempSync('app_log_bundle');
+      out = Directory.systemTemp.createTempSync('app_log_out');
+      AppLogger.instance.enableFileLogIn(logs);
+      for (var i = 0; i < 310; i++) {
+        AppLogger.instance.info('record ${i.toString().padLeft(3, '0')}');
+      }
+      await AppLogger.instance.flush();
+    });
+
+    tearDown(() {
+      for (final dir in [logs, out]) {
+        try {
+          dir.deleteSync(recursive: true);
+        } catch (_) {}
+      }
+    });
+
+    test('файл несёт журнал целиком, от старых записей до свежих', () async {
+      final file = await AppLogService.writeBundleFile(
+        out,
+        now: DateTime(2026, 11, 19, 19, 7),
+      );
+
+      expect(file.uri.pathSegments.last, 'keqdroid-log-2026-11-19-1907.txt');
+      final text = await file.readAsString();
+      expect(text, contains('record 000'));
+      expect(text, contains('record 309'));
+    });
+
+    test('в буфер по-прежнему идут последние 300 записей', () async {
+      final text = await AppLogService.bundle();
+      expect(text, isNot(contains('record 009')));
+      expect(text, contains('record 010'));
+      expect(text, contains('record 309'));
+    });
+  });
+
   group('журнал приложения и нативной части', () {
     // Формат общий: так пишут и AppLogger в Dart, и NativeLog в Kotlin.
     const text = '2026-09-27T22:51:39.123456 [INFO] VPN connected\n'

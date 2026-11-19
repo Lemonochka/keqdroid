@@ -5567,6 +5567,12 @@ abstract class AppLocalizations {
   /// **'Copy the whole log'**
   String get appLogCopyAll;
 
+  /// No description provided for @appLogShareFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Send the log as a file'**
+  String get appLogShareFile;
+
   /// No description provided for @settingsInternalsBuild.
   ///
   /// In en, this message translates to:

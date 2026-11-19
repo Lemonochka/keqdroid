@@ -1,10 +1,14 @@
 part of '../settings_tab.dart';
 
 @visibleForTesting
-Widget appLogScreenForTest() => const _AppLogScreen();
+Widget appLogScreenForTest({bool? shareAsFile}) =>
+    _AppLogScreen(shareAsFile: shareAsFile);
 
 class _AppLogScreen extends StatefulWidget {
-  const _AppLogScreen();
+  const _AppLogScreen({this.shareAsFile});
+
+  // в буфер на телефоне журнал за месяц не влезал: вставка обрывалась на старых записях, и свежие пропадали
+  final bool? shareAsFile;
 
   @override
   State<_AppLogScreen> createState() => _AppLogScreenState();
@@ -39,6 +43,29 @@ class _AppLogScreenState extends State<_AppLogScreen> {
     );
   }
 
+  Future<void> _shareFile(AppLocalizations l10n) async {
+    File? file;
+    try {
+      file = await AppLogService.writeBundleFile(await getTemporaryDirectory());
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path, mimeType: 'text/plain')]),
+      );
+    } catch (e) {
+      if (mounted) {
+        AppSnack.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.subscriptionsShareFailed(friendlyError(e, context))),
+          ),
+        );
+      }
+    } finally {
+      // share_plus копирует файл в свой cache/share_plus до показа меню
+      try {
+        await file?.delete();
+      } catch (_) {}
+    }
+  }
+
   Future<void> _open(Widget screen) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
     if (mounted) unawaited(_load());
@@ -47,15 +74,23 @@ class _AppLogScreenState extends State<_AppLogScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final asFile = widget.shareAsFile ?? Platform.isAndroid;
     return ExpressivePage(
       title: l10n.appLogTitle,
       physics: const ClampingScrollPhysics(),
       actions: [
-        IconButton(
-          tooltip: l10n.appLogCopyAll,
-          icon: const Icon(Icons.copy_all_rounded),
-          onPressed: () => _copyAll(l10n),
-        ),
+        if (asFile)
+          IconButton(
+            tooltip: l10n.appLogShareFile,
+            icon: const Icon(Icons.share_rounded),
+            onPressed: () => _shareFile(l10n),
+          )
+        else
+          IconButton(
+            tooltip: l10n.appLogCopyAll,
+            icon: const Icon(Icons.copy_all_rounded),
+            onPressed: () => _copyAll(l10n),
+          ),
       ],
       children: [
         ExpressiveGroup(

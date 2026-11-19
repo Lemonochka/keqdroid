@@ -1462,6 +1462,7 @@
   "appLogOnlyProblems": "Nur Probleme",
   "appLogEmpty": "Noch leer",
   "appLogCopyAll": "Gesamtes Protokoll kopieren",
+  "appLogShareFile": "Protokoll als Datei senden",
   "settingsInternalsBuild": "App und Gerät",
   "settingsInternalsCopyAll": "Bericht kopieren",
   "settingsInternalsCopied": "Bericht kopiert",

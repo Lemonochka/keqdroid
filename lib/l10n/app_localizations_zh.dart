@@ -2992,6 +2992,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appLogCopyAll => '复制完整日志';
 
   @override
+  String get appLogShareFile => '以文件形式发送日志';
+
+  @override
   String get settingsInternalsBuild => '应用与设备';
 
   @override

@@ -3002,6 +3002,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appLogCopyAll => 'Copy the whole log';
 
   @override
+  String get appLogShareFile => 'Send the log as a file';
+
+  @override
   String get settingsInternalsBuild => 'App and device';
 
   @override
