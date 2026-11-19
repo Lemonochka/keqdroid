@@ -153,6 +153,10 @@ static void my_application_activate(GApplication* application) {
   use_software_rendering_without_gl(window);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
+  // с октября 2025 Dart по умолчанию в потоке GTK и ждёт, пока тот выводит кадр: на стенде 3840x2400
+  // 30 к/с с рывками до 58 мс вместо ровных 60. отдельный поток был умолчанием до flutter#176759
+  fl_dart_project_set_ui_thread_policy(project,
+                                       FL_UI_THREAD_POLICY_RUN_ON_SEPARATE_THREAD);
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);
 
