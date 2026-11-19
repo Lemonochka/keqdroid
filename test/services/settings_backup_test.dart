@@ -211,12 +211,12 @@ void main() {
       if (dir.existsSync()) await dir.delete(recursive: true);
     });
 
-    test('палитровая тема, вуаль и состав едут полями подписки', () async {
+    test('рисованная тема, вуаль и состав едут полями подписки', () async {
       const sub = Subscription(
         id: 's1',
         name: 'S',
         url: 'https://a',
-        cardThemeId: 'aurora',
+        cardThemeId: 'depth',
         cardThemeInServers: false,
         hiddenCardElements: {SubscriptionCardElement.usage},
         cardVeil: CardVeil.strong,
@@ -243,7 +243,7 @@ void main() {
         sections: {BackupSection.subscriptions},
       );
 
-      expect(saved!.single.cardThemeId, 'aurora');
+      expect(saved!.single.cardThemeId, 'depth');
       expect(saved!.single.cardThemeInServers, isFalse);
       expect(saved!.single.hiddenCardElements, sub.hiddenCardElements);
       expect(saved!.single.cardVeil, CardVeil.strong);
@@ -295,7 +295,7 @@ void main() {
         id: 's1',
         name: 'S',
         url: 'https://a',
-        cardThemeId: 'aurora',
+        cardThemeId: 'depth',
       );
       final from = _MockStorageService();
       when(() => from.getSubscriptions()).thenAnswer((_) async => [sub]);

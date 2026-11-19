@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../shared/ui/card_art.dart';
 import '../shared/ui/card_video_view.dart';
 import '../shared/ui/smooth_fade.dart';
 
@@ -52,14 +53,14 @@ class CardVeilOverlay extends StatelessWidget {
 class SubscriptionCardTheme {
   const SubscriptionCardTheme.plain()
       : id = '',
-        palette = null,
+        art = null,
         asset = null;
 
-  const SubscriptionCardTheme.palette(this.id, this.palette) : asset = null;
+  const SubscriptionCardTheme.art(this.id, this.art) : asset = null;
 
   SubscriptionCardTheme.file(String fileName, String directory)
       : id = '$filePrefix$fileName',
-        palette = null,
+        art = null,
         asset = '$directory/$fileName';
 
   static const filePrefix = 'file:';
@@ -71,10 +72,10 @@ class SubscriptionCardTheme {
   // id лежит в настройках подписок, переименование сбросит выбор
   final String id;
 
-  final CardPalette? palette;
+  final CardArt? art;
   final String? asset;
 
-  bool get isPlain => palette == null && asset == null;
+  bool get isPlain => art == null && asset == null;
 
   bool get hasImage => asset != null;
 
@@ -115,56 +116,38 @@ class SubscriptionCardTheme {
         overlay: overlay,
       );
     }
-    final palette = this.palette;
-    if (palette == null) return const SizedBox.shrink();
-    return CustomPaint(painter: _PaletteArtPainter(palette.colors(scheme)));
+    final art = this.art;
+    if (art == null) return const SizedBox.shrink();
+    return CustomPaint(
+      painter: CardArtPainter(
+        art,
+        scheme,
+        rtl: Directionality.of(context) == TextDirection.rtl,
+      ),
+    );
   }
-}
-
-enum CardPalette {
-  sunset,
-  aurora,
-  dusk,
-  mint,
-  ember;
-
-  List<Color> colors(ColorScheme scheme) => switch (this) {
-        CardPalette.sunset => [
-            scheme.primary,
-            scheme.tertiary,
-            scheme.primaryContainer,
-          ],
-        CardPalette.aurora => [
-            scheme.tertiary,
-            scheme.primary,
-            scheme.secondaryContainer,
-          ],
-        CardPalette.dusk => [
-            scheme.secondary,
-            scheme.primary,
-            scheme.tertiaryContainer,
-          ],
-        CardPalette.mint => [
-            scheme.tertiary,
-            scheme.secondary,
-            scheme.tertiaryContainer,
-          ],
-        CardPalette.ember => [
-            scheme.primary,
-            scheme.secondary,
-            scheme.primaryContainer,
-          ],
-      };
 }
 
 const kSubscriptionCardThemes = <SubscriptionCardTheme>[
   SubscriptionCardTheme.plain(),
-  SubscriptionCardTheme.palette('sunset', CardPalette.sunset),
-  SubscriptionCardTheme.palette('aurora', CardPalette.aurora),
-  SubscriptionCardTheme.palette('dusk', CardPalette.dusk),
-  SubscriptionCardTheme.palette('mint', CardPalette.mint),
-  SubscriptionCardTheme.palette('ember', CardPalette.ember),
+  SubscriptionCardTheme.art('halftone', CardArt.halftone),
+  SubscriptionCardTheme.art('depth', CardArt.depth),
+  SubscriptionCardTheme.art('cookieLayers', CardArt.cookieLayers),
+  SubscriptionCardTheme.art('cookieShift', CardArt.cookieShift),
+  SubscriptionCardTheme.art('shapePattern', CardArt.shapePattern),
+  SubscriptionCardTheme.art('shapeEdge', CardArt.shapeEdge),
+  SubscriptionCardTheme.art('shapeAccent', CardArt.shapeAccent),
 ];
+
+// прежние заготовки, их id остались в настройках подписок и в бэкапах
+String migrateCardThemeId(String id) => switch (id) {
+      'sunset' => 'halftone',
+      'aurora' => 'depth',
+      'dusk' => 'cookieLayers',
+      'mint' => 'shapePattern',
+      'ember' => 'cookieShift',
+      _ => id,
+    };
 
 SubscriptionCardTheme resolveCardTheme(String? id) {
   if (id == null || id.isEmpty) return const SubscriptionCardTheme.plain();
@@ -226,67 +209,4 @@ class _ImageBackground extends StatelessWidget {
       ],
     );
   }
-}
-
-class _PaletteArtPainter extends CustomPainter {
-  const _PaletteArtPainter(this.colors);
-
-  final List<Color> colors;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colors[0].withValues(alpha: 0.26),
-            colors[1].withValues(alpha: 0.14),
-          ],
-        ).createShader(rect),
-    );
-
-    void blob(Offset center, double radius, Color color, double alpha) {
-      canvas.drawCircle(
-        center,
-        radius,
-        Paint()
-          ..shader = RadialGradient(
-            colors: [
-              color.withValues(alpha: alpha),
-              color.withValues(alpha: 0),
-            ],
-          ).createShader(Rect.fromCircle(center: center, radius: radius)),
-      );
-    }
-
-    blob(
-      Offset(size.width * 0.86, size.height * 0.18),
-      size.height * 0.9,
-      colors[2],
-      0.34,
-    );
-    blob(
-      Offset(size.width * 0.12, size.height * 0.95),
-      size.height * 0.7,
-      colors[0],
-      0.20,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_PaletteArtPainter oldDelegate) =>
-      !listEquals(oldDelegate.colors, colors);
-}
-
-bool listEquals(List<Color> a, List<Color> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
 }

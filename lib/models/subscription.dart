@@ -204,7 +204,7 @@ class Subscription {
     // старые подписки без флага: имя по умолчанию было хостом из URL
     nameIsAuto:
         json['nameIsAuto'] as bool? ?? (name == Uri.tryParse(url)?.host),
-    cardThemeId: json['cardThemeId'] as String? ?? '',
+    cardThemeId: migrateCardThemeId(json['cardThemeId'] as String? ?? ''),
     cardThemeInServers: json['cardThemeInServers'] as bool? ?? true,
     hiddenCardElements:
         SubscriptionCardElement.setFromJson(json['cardHidden']),

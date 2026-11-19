@@ -188,7 +188,7 @@ void main() {
         enabled: true,
         userAgent: 'Happ/4.1.0',
       ),
-      cardThemeId: 'aurora',
+      cardThemeId: 'depth',
       cardThemeInServers: false,
       hiddenCardElements: const {
         SubscriptionCardElement.announce,

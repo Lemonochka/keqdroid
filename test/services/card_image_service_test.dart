@@ -61,10 +61,10 @@ void main() {
     expect(names(), ['sub1-300.jpg']);
   });
 
-  test('переход на палитру уносит картинку подписки', () async {
+  test('переход на рисунок уносит картинку подписки', () async {
     touch('sub1-100.jpg');
 
-    await CardImageService.prune('sub1', 'aurora');
+    await CardImageService.prune('sub1', 'depth');
 
     expect(names(), isEmpty);
   });
@@ -93,7 +93,7 @@ void main() {
     // сломанную миниатюру.
     expect(await CardImageService.resolvePath('file:sub1-999.jpg'), isNull);
     // Встроенная тема — не своя картинка.
-    expect(await CardImageService.resolvePath('aurora'), isNull);
+    expect(await CardImageService.resolvePath('depth'), isNull);
   });
 
   test('видео живёт вместе со своим постером, прошлое уходит целиком', () async {

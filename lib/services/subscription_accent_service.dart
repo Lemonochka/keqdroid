@@ -82,8 +82,7 @@ class SubscriptionAccentService {
     SubscriptionCardTheme theme,
     ColorScheme scheme,
   ) async {
-    final palette = theme.palette;
-    if (palette != null) return palette.colors(scheme).first;
+    if (theme.art != null) return scheme.primary;
 
     final asset = theme.still;
     if (asset == null) return null;

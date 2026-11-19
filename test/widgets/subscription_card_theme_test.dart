@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
@@ -11,6 +13,7 @@ import 'package:keqdroid/models/subscription_card_theme.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/subscriptions_tab.dart';
+import 'package:keqdroid/shared/ui/card_art.dart';
 import 'package:keqdroid/shared/ui/expressive_button_group.dart';
 
 import '../helpers/test_storage.dart';
@@ -108,6 +111,36 @@ void main() {
       expect(ids.toSet().length, ids.length);
     });
 
+    // набор утверждён 19.11.2026 по доске; id лежат в настройках подписок
+    test('набор заготовок и их id', () {
+      expect(kSubscriptionCardThemes.map((t) => t.id), [
+        '',
+        'halftone',
+        'depth',
+        'cookieLayers',
+        'cookieShift',
+        'shapePattern',
+        'shapeEdge',
+        'shapeAccent',
+      ]);
+    });
+
+    test('старые заготовки переезжают на новые рисунки, а не пропадают', () {
+      for (final old in ['sunset', 'aurora', 'dusk', 'mint', 'ember']) {
+        final sub = Subscription.fromJson(
+          {'id': 'a', 'name': 'n', 'url': 'u', 'cardThemeId': old},
+        );
+        final theme = resolveCardTheme(sub.cardThemeId);
+        expect(theme.art, isNotNull, reason: old);
+        // иначе в окошках выбора не горит ни одно
+        expect(
+          kSubscriptionCardThemes.map((t) => t.id),
+          contains(sub.cardThemeId),
+          reason: old,
+        );
+      }
+    });
+
     test('своя картинка собирается из каталога приложения', () {
       SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
       addTearDown(() => SubscriptionCardTheme.customDirectory = null);
@@ -163,22 +196,41 @@ void main() {
       SubscriptionCardTheme.customDirectory = '/data/app/card_themes';
       addTearDown(() => SubscriptionCardTheme.customDirectory = null);
 
-      // Палитра — не пустая тема, но и не картинка: её рисуют цветами схемы на
+      // Рисунок — не пустая тема, но и не картинка: его рисуют цветами схемы на
       // месте. Пока эти два вопроса отвечались одним `isPlain`, шапка группы
       // серверов вырастала на полосу под картинку, которой нет.
       for (final theme in kSubscriptionCardThemes.where((t) => !t.isPlain)) {
         expect(theme.hasImage, theme.asset != null, reason: 'тема ${theme.id}');
       }
-      expect(resolveCardTheme('aurora').isPlain, isFalse);
-      expect(resolveCardTheme('aurora').hasImage, isFalse);
+      expect(resolveCardTheme('depth').isPlain, isFalse);
+      expect(resolveCardTheme('depth').hasImage, isFalse);
       expect(resolveCardTheme('').hasImage, isFalse);
       expect(resolveCardTheme('file:sub-17.jpg').hasImage, isTrue);
     });
 
-    test('каждая палитровая тема даёт три опорных цвета', () {
-      const scheme = ColorScheme.dark();
-      for (final palette in CardPalette.values) {
-        expect(palette.colors(scheme), hasLength(3));
+    // подложка меняет размер с каждым кадром, пока карточка сворачивается
+    test('рисунки рисуются в обеих темах, в RTL и на любом размере', () {
+      for (final brightness in Brightness.values) {
+        final scheme = ColorScheme.fromSeed(
+          seedColor: const Color(0xFF4358E5),
+          brightness: brightness,
+        );
+        for (final art in CardArt.values) {
+          for (final size in const [
+            Size(332, 188),
+            Size(200, 88),
+            Size(920, 60),
+            Size(1, 1),
+            Size.zero,
+          ]) {
+            for (final rtl in [false, true]) {
+              final recorder = ui.PictureRecorder();
+              CardArtPainter(art, scheme, rtl: rtl)
+                  .paint(Canvas(recorder), size);
+              recorder.endRecording().dispose();
+            }
+          }
+        }
       }
     });
   });
@@ -189,9 +241,9 @@ void main() {
         id: 'a',
         name: 'n',
         url: 'https://example/sub',
-        cardThemeId: 'aurora',
+        cardThemeId: 'depth',
       );
-      expect(Subscription.fromJson(sub.toJson()).cardThemeId, 'aurora');
+      expect(Subscription.fromJson(sub.toJson()).cardThemeId, 'depth');
     });
 
     test('пустая тема не занимает места в хранилище', () {
@@ -221,13 +273,13 @@ void main() {
         id: 'a',
         name: 'n',
         url: 'u',
-        cardThemeId: 'aurora',
+        cardThemeId: 'depth',
         cardThemeInServers: false,
       );
       final restored = Subscription.fromJson(sub.toJson());
       expect(restored.cardThemeInServers, isFalse);
       // Выключили картинку в списке — сама тема карточки остаётся выбранной.
-      expect(restored.cardThemeId, 'aurora');
+      expect(restored.cardThemeId, 'depth');
     });
 
     test('включённое состояние не занимает места в хранилище', () {
@@ -245,8 +297,8 @@ void main() {
     // Тумблер обещает картинку («Картинка заполнит и шапку группы»), поэтому
     // предлагать его там, где картинки нет, — обещание, которое некому
     // выполнить: включённым он растил шапку группы на пустую полосу.
-    testWidgets('у палитровой темы тумблера нет', (tester) async {
-      await _openCardLookSheet(tester, cardThemeId: 'aurora');
+    testWidgets('у рисованной темы тумблера нет', (tester) async {
+      await _openCardLookSheet(tester, cardThemeId: 'depth');
 
       expect(find.text('Backdrop'), findsOneWidget);
       expect(find.text('Show in server list'), findsNothing);
@@ -297,8 +349,8 @@ void main() {
         .length;
   }
 
-  testWidgets('палитровая тема рисует подложку', (tester) async {
-    final withTheme = await pumpBackground(tester, 'sunset');
+  testWidgets('рисованная тема рисует подложку', (tester) async {
+    final withTheme = await pumpBackground(tester, 'halftone');
     final plain = await pumpBackground(tester, '');
     // Scaffold сам по себе тащит служебные CustomPaint, поэтому сравниваем с
     // тем же деревом без темы, а не с нулём.
@@ -323,6 +375,68 @@ void main() {
       );
       expect(tester.takeException(), isNull, reason: 'тема ${theme.id}');
     }
+  });
+
+  // текст карточки с начала строки, рисунок с другой стороны: в фарси текст справа
+  testWidgets('рисунок с края без текста, в RTL с другой стороны', (tester) async {
+    Future<(double, double)> ink(TextDirection direction) async {
+      final key = GlobalKey();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF4358E5),
+              brightness: Brightness.dark,
+            ),
+          ),
+          home: Directionality(
+            textDirection: direction,
+            child: Center(
+              child: RepaintBoundary(
+                key: key,
+                child: SizedBox(
+                  width: 300,
+                  height: 120,
+                  child: ColoredBox(
+                    color: Colors.black,
+                    child: Builder(
+                      builder: (context) => resolveCardTheme('cookieLayers')
+                          .background(context, veil: CardVeil.medium),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final boundary =
+          key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final bytes = await tester.runAsync(() async {
+        final image = await boundary.toImage();
+        final data = await image.toByteData();
+        image.dispose();
+        return data!.buffer.asUint8List();
+      });
+      var left = 0.0, right = 0.0;
+      for (var y = 0; y < 120; y++) {
+        for (var x = 0; x < 300; x++) {
+          final i = (y * 300 + x) * 4;
+          final v = (bytes![i] + bytes[i + 1] + bytes[i + 2]).toDouble();
+          if (x < 150) {
+            left += v;
+          } else {
+            right += v;
+          }
+        }
+      }
+      return (left, right);
+    }
+
+    final (ltrLeft, ltrRight) = await ink(TextDirection.ltr);
+    expect(ltrRight, greaterThan(ltrLeft * 2));
+    final (rtlLeft, rtlRight) = await ink(TextDirection.rtl);
+    expect(rtlLeft, greaterThan(rtlRight * 2));
   });
 
   /// Состав карточки и затемнение картинки — редактор оформления.
@@ -419,8 +533,8 @@ void main() {
       expect(find.text('Реклама бота'), findsNothing);
     });
 
-    testWidgets('у палитры затемнять нечего', (tester) async {
-      await _openCardLookSheet(tester, cardThemeId: 'aurora');
+    testWidgets('у рисунка затемнять нечего', (tester) async {
+      await _openCardLookSheet(tester, cardThemeId: 'depth');
 
       expect(find.text('Image dimming'), findsNothing);
     });
@@ -534,9 +648,9 @@ void main() {
     ) async {
       PlatformBootstrap.debugIsDesktopOverride = true;
       addTearDown(() => PlatformBootstrap.debugIsDesktopOverride = null);
-      await _pumpTab(tester, _sub(cardThemeId: 'aurora'));
+      await _pumpTab(tester, _sub(cardThemeId: 'depth'));
       final art = find.byWidgetPredicate(
-        (w) => w is CustomPaint && w.painter.runtimeType.toString() == '_PaletteArtPainter',
+        (w) => w is CustomPaint && w.painter is CardArtPainter,
       );
       final clip = find.ancestor(of: art, matching: find.byType(ClipRRect)).first;
       expect(tester.widget<ClipRRect>(clip).clipBehavior, Clip.antiAliasWithSaveLayer);

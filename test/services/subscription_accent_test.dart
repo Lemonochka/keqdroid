@@ -1,7 +1,6 @@
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:keqdroid/models/subscription_card_theme.dart';
 import 'package:keqdroid/services/subscription_accent_service.dart';
 
 /// Серверы подписки перекрашиваются под её карточку. Проверяем ровно то, из-за
@@ -13,20 +12,20 @@ void main() {
         brightness: brightness,
       );
 
-  group('палитровая тема', () {
+  group('рисованная тема', () {
     test('акцент берётся из той же роли, что нарисована на карточке', () async {
       final scheme = schemeOf(Brightness.light);
       final accent = await SubscriptionAccentService.resolve(
-        themeId: 'sunset',
+        themeId: 'halftone',
         scheme: scheme,
       );
 
       expect(accent, isNotNull);
-      // Sunset рисуется от primary — акцент группы обязан прийти оттуда же,
+      // Рисунки идут от оттенка primary, акцент группы обязан прийти оттуда же,
       // иначе карточка и её серверы разъедутся по цвету.
       expect(
         accent!.seed,
-        CardPalette.sunset.colors(scheme).first.harmonizeWith(scheme.primary),
+        scheme.primary.harmonizeWith(scheme.primary),
       );
     });
 
@@ -59,7 +58,7 @@ void main() {
     test('текст на заливке активного сервера читается', () async {
       for (final brightness in Brightness.values) {
         final accent = await SubscriptionAccentService.resolve(
-          themeId: 'ember',
+          themeId: 'cookieShift',
           scheme: schemeOf(brightness),
         );
         final ratio = _contrast(accent!.onContainer, accent.container);
@@ -76,7 +75,7 @@ void main() {
     test('подложка группы почти не уводит фон от темы', () async {
       final scheme = schemeOf(Brightness.dark);
       final accent = await SubscriptionAccentService.resolve(
-        themeId: 'mint',
+        themeId: 'shapePattern',
         scheme: scheme,
       );
       final base = scheme.surfaceContainerHigh;
@@ -90,7 +89,7 @@ void main() {
         () async {
       final scheme = schemeOf(Brightness.light);
       final accent = await SubscriptionAccentService.resolve(
-        themeId: 'aurora',
+        themeId: 'depth',
         scheme: scheme,
       );
       final base = scheme.outlineVariant;
@@ -104,11 +103,11 @@ void main() {
     test('повторный запрос отдаёт тот же объект — без пересчёта', () async {
       final scheme = schemeOf(Brightness.light);
       final first = await SubscriptionAccentService.resolve(
-        themeId: 'dusk',
+        themeId: 'cookieLayers',
         scheme: scheme,
       );
       expect(
-        SubscriptionAccentService.cached(themeId: 'dusk', scheme: scheme),
+        SubscriptionAccentService.cached(themeId: 'cookieLayers', scheme: scheme),
         same(first),
       );
     });
@@ -116,11 +115,11 @@ void main() {
     // Один ключ на обе яркости подсунул бы тёмные контейнеры светлой теме.
     test('светлая и тёмная тема кэшируются раздельно', () async {
       final light = await SubscriptionAccentService.resolve(
-        themeId: 'dusk',
+        themeId: 'cookieLayers',
         scheme: schemeOf(Brightness.light),
       );
       final dark = await SubscriptionAccentService.resolve(
-        themeId: 'dusk',
+        themeId: 'cookieLayers',
         scheme: schemeOf(Brightness.dark),
       );
       expect(light!.container, isNot(dark!.container));
