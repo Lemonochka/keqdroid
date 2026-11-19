@@ -20,7 +20,7 @@ flutter build apk --release                                  # arm64-v8a
 flutter build apk --release --target-platform android-arm    # armeabi-v7a
 ```
 
-A release build is signed with the key from `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`) and fails without it. Crashlytics is added only when `android/app/google-services.json` exists.
+A release build is signed with the key from `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`) and fails without it.
 
 After changing the Kotlin version in `android/settings.gradle.kts`, run `flutter clean`, otherwise plugins fail with "Unresolved reference".
 
@@ -28,11 +28,10 @@ After changing the Kotlin version in `android/settings.gradle.kts`, run `flutter
 
 ```powershell
 flutter pub get
-powershell -File tool/sync_windows_plugins.ps1
 flutter build windows --release
 ```
 
-The build lands in `build\windows\x64\runner\Release\`. `sync_windows_plugins.ps1` rewrites the committed plugin list (`windows/flutter/app_plugins.cmake`, `app_plugin_registrant.cc`) without Firebase, which is Android only and breaks the Windows link.
+The build lands in `build\windows\x64\runner\Release\`.
 
 If the build stops with MSB3073 on `INSTALL.vcxproj`, Defender may have removed a core from `assets/bin/windows/`. Restore it with `git restore` and build again.
 

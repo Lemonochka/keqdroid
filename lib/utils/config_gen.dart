@@ -345,7 +345,7 @@ class ConfigGeneratorV2 {
         uri = Uri.parse(trimmed);
       }
     } catch (e) {
-      // без самого конфига: в нём UUID и пароль, а ошибки уходят в логи и Crashlytics
+      // без самого конфига: в нём UUID и пароль, а ошибки уходят в журнал
       final scheme = RegExp(r'^([a-zA-Z][a-zA-Z0-9+.-]*):').firstMatch(trimmed)?.group(1);
       throw ArgumentError(
         'Invalid URI format in server config'

@@ -328,10 +328,6 @@ if (-not $SkipAndroid) {
 
 # --- Windows ---------------------------------------------------------------
 if (-not $SkipWindows) {
-  Write-Step "Syncing Windows plugins (strip Firebase)"
-  powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'sync_windows_plugins.ps1')
-  if ($LASTEXITCODE -ne 0) { throw "sync_windows_plugins.ps1 failed" }
-
   Write-Step "Building Windows (Release)"
   flutter build windows --release $backupKeyDefine
   if ($LASTEXITCODE -ne 0) { throw "flutter build windows failed" }

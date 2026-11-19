@@ -129,7 +129,7 @@ keqdroid has no servers of its own and collects no usage statistics. It connects
 - **`www.cloudflare.com/cdn-cgi/trace`**, through the connected server, to show the country of the exit;
 - **the latency test address** when servers are tested: `connectivitycheck.gstatic.com` by default, changeable in the settings; **`speed.cloudflare.com`** when you run a speed test.
 
-On Android, crash reports go to Google Firebase Crashlytics: the error with links, keys and tokens cut out, the stack trace and the device, OS and app version that Crashlytics attaches. The Windows and Linux builds do not include Firebase.
+Crash reports are not sent anywhere: errors are written only to the app log on the device.
 
 ## Code signing policy
 

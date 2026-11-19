@@ -20,7 +20,7 @@ flutter build apk --release                                  # arm64-v8a
 flutter build apk --release --target-platform android-arm    # armeabi-v7a
 ```
 
-Релизная сборка подписывается ключом из `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`) и без него падает. Crashlytics подключается, только если есть `android/app/google-services.json`.
+Релизная сборка подписывается ключом из `android/key.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`) и без него падает.
 
 После смены версии Kotlin в `android/settings.gradle.kts` нужен `flutter clean`, иначе плагины падают с "Unresolved reference".
 
@@ -28,11 +28,10 @@ flutter build apk --release --target-platform android-arm    # armeabi-v7a
 
 ```powershell
 flutter pub get
-powershell -File tool/sync_windows_plugins.ps1
 flutter build windows --release
 ```
 
-Готовая сборка лежит в `build\windows\x64\runner\Release\`. `sync_windows_plugins.ps1` переписывает закоммиченный список плагинов (`windows/flutter/app_plugins.cmake`, `app_plugin_registrant.cc`) без Firebase: он нужен только на Android и ломает линковку под Windows.
+Готовая сборка лежит в `build\windows\x64\runner\Release\`.
 
 Если сборка встала с MSB3073 на `INSTALL.vcxproj`, возможно, Defender унёс ядро из `assets/bin/windows/`. Его возвращают через `git restore` и собирают заново.
 

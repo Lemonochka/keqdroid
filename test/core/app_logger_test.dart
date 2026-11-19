@@ -3,8 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/core/app_logger.dart';
 
-/// На десктопе файл лога — единственный след поломки: Crashlytics только под
-/// Android, а developer.log в релизе не видно нигде.
+// файл лога единственный след поломки: developer.log в релизе не видно нигде
 void main() {
   late Directory dir;
 

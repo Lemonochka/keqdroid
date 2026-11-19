@@ -133,7 +133,7 @@ typedef TvOfferHandler = Future<String?> Function(TvSubscriptionOffer offer);
 
 class TvReceiveServer {
   TvReceiveServer._(this._server, this.pairing, this._onOffer) {
-    // обрыв посреди ответа иначе ушёл бы в Crashlytics как фатальный
+    // обрыв посреди ответа иначе ушёл бы в журнал необработанной ошибкой
     _server.listen(
       (request) => unawaited(_handle(request).catchError((Object _) {})),
       onError: (Object _) {},

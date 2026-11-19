@@ -1,26 +1,8 @@
 ﻿import java.util.Properties
 
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath("com.google.gms:google-services:4.4.2")
-        classpath("com.google.firebase:firebase-crashlytics-gradle:3.0.7")
-    }
-}
-
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
-}
-
-// google-services.json is gitignored — apply plugins only when the file exists locally
-val googleServicesJson = file("google-services.json")
-if (googleServicesJson.exists()) {
-    apply(plugin = "com.google.gms.google-services")
-    apply(plugin = "com.google.firebase.crashlytics")
 }
 
 val keystoreProperties = Properties()

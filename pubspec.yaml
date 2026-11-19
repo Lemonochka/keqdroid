@@ -37,8 +37,6 @@ dependencies:
   # Рисуем флаги из ассетов country_flags сами: его виджет не умеет часть
   # положенных в пакет картинок (🇪🇺, 🇺🇳, флаги субъектов). См. FlagArt.
   jovial_svg: ^1.1.30
-  firebase_core: ^4.10.0
-  firebase_crashlytics: ^5.2.3
   intl: ^0.20.2
   open_filex: ^4.5.0
   url_launcher: ^6.3.1
@@ -76,10 +74,6 @@ dev_dependencies:
   flutter_native_splash: ^2.4.1
   mocktail: ^1.0.4
   image: ^4.8.0
-
-# After `flutter pub get`, run `powershell -File tool/sync_windows_plugins.ps1`
-# before Windows builds — Firebase is Android-only and must be stripped from
-# the generated Windows plugin list.
 
 flutter_launcher_icons:
   android: true

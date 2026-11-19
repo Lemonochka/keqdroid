@@ -154,7 +154,7 @@ class _ServerPingPlaque extends ConsumerWidget {
                 start: _plaqueInner,
                 end: _plaqueOuter,
               ).resolve(Directionality.of(context)),
-              // неудачный пинг и так виден тут как N/A, а брошенное исключение уходило в Crashlytics фатальным
+              // неудачный пинг и так виден тут как N/A, а брошенное исключение падало в журнал необработанной ошибкой
               onTap: () => unawaited(
                 ref
                     .read(serversProvider.notifier)

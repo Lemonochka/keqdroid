@@ -4,19 +4,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'crashlytics_reporter.dart';
-import 'crashlytics_reporter_stub.dart'
-    if (dart.library.io) 'crashlytics_reporter_io.dart' as crashlytics;
-
 class AppLogger {
   AppLogger._();
 
   static final AppLogger instance = AppLogger._();
-
-  final CrashlyticsReporter _crashlytics =
-      crashlytics.createCrashlyticsReporter();
-
-  bool _crashlyticsEnabled = false;
 
   static const _maxLogBytes = 256 * 1024;
 
@@ -24,10 +15,6 @@ class AppLogger {
 
   final _pending = StringBuffer();
   Future<void>? _draining;
-
-  void setCrashlyticsEnabled(bool enabled) {
-    _crashlyticsEnabled = enabled;
-  }
 
   Future<void> enableFileLog() async {
     if (!Platform.isWindows && !Platform.isLinux && !Platform.isAndroid) return;
@@ -85,21 +72,8 @@ class AppLogger {
     Object error,
     StackTrace stackTrace, {
     String reason = 'Unhandled error',
-    bool fatal = false,
   }) async {
     _log('ERROR', reason, error: error, stackTrace: stackTrace);
-    if (_crashlyticsEnabled) {
-      final rawText = error.toString();
-      final redactedText = redactSensitive(rawText);
-      final Object sanitized =
-          redactedText == rawText ? error : _RedactedError(redactedText);
-      await _crashlytics.recordError(
-        sanitized,
-        stackTrace,
-        reason: redactSensitive(reason),
-        fatal: fatal,
-      );
-    }
   }
 
   static String redactSensitive(String input) {
@@ -177,13 +151,4 @@ class AppLogger {
 
   // перед выходом из процесса и перед чтением журнала
   Future<void> flush() => _draining ?? Future<void>.value();
-}
-
-class _RedactedError implements Exception {
-  final String message;
-
-  const _RedactedError(this.message);
-
-  @override
-  String toString() => message;
 }

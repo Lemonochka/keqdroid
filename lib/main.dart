@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:keqdroid/app/app.dart';
 import 'package:keqdroid/core/app_logger.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/platform/windows_cert_trust.dart';
 import 'package:keqdroid/services/background_service.dart';
@@ -54,18 +53,7 @@ Future<void> main() async {
     }
     await PrefsRecovery.prepare();
 
-    var crashlyticsReady = false;
     if (Platform.isAndroid) {
-      try {
-        await Firebase.initializeApp();
-        crashlyticsReady = true;
-      } catch (e, st) {
-        AppLogger.instance.warn(
-          'Firebase is not configured. Crash reporting is disabled.',
-          error: e,
-          stackTrace: st,
-        );
-      }
       await BackgroundService.init();
       await BackgroundService.registerPeriodicTask();
       await NotificationService.init();
@@ -91,8 +79,7 @@ Future<void> main() async {
       }
     }
 
-    AppLogger.instance.setCrashlyticsEnabled(crashlyticsReady && !kDebugMode);
-    if (crashlyticsReady) {
+    if (Platform.isAndroid) {
       FlutterError.onError = (details) {
         unawaited(AppLogger.instance.recordError(
           details.exception,
@@ -136,7 +123,6 @@ Future<void> main() async {
       error,
       stack,
       reason: 'runZonedGuarded unhandled error',
-      fatal: true,
     );
   });
 }
