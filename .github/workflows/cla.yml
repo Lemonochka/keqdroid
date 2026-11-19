@@ -1,0 +1,160 @@
+name: CLA
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  statuses: write
+
+concurrency:
+  group: cla-${{ github.event.pull_request.number || github.event.issue.number }}
+
+jobs:
+  cla:
+    if: github.event_name == 'pull_request_target' || github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      # код из pull request не скачивается и не запускается: у pull_request_target токен с правом записи
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const PHRASE = 'I have read the keqdroid CLA and I agree to its terms';
+            const BRANCH = 'cla-signatures';
+            const FILE = 'signatures.json';
+            const MARKER = '<!-- keqdroid-cla -->';
+            const { owner, repo } = context.repo;
+            const defaultBranch = context.payload.repository.default_branch;
+            const claUrl = `https://github.com/${owner}/${repo}/blob/${defaultBranch}/CLA.md`;
+            const norm = (s) => (s || '').trim().replace(/\s+/g, ' ').replace(/[.!]+$/, '').toLowerCase();
+            const isOwner = (u) => u.login.toLowerCase() === owner.toLowerCase();
+
+            if (context.eventName === 'issue_comment') {
+              const body = norm(context.payload.comment.body);
+              if (body !== norm(PHRASE) && body !== 'recheck') return;
+            }
+            const prNumber = context.eventName === 'issue_comment'
+              ? context.payload.issue.number
+              : context.payload.pull_request.number;
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+
+            const required = new Map();
+            const unlinked = new Set();
+            const need = (u) => {
+              if (u && u.type !== 'Bot' && !isOwner(u)) required.set(u.id, u.login);
+            };
+            need(pr.user);
+            const commits = await github.paginate(github.rest.pulls.listCommits,
+              { owner, repo, pull_number: prNumber, per_page: 100 });
+            for (const c of commits) {
+              if (c.author) need(c.author);
+              else unlinked.add(c.commit.author.name);
+            }
+
+            async function load() {
+              try {
+                const { data: ref } = await github.rest.git.getRef({ owner, repo, ref: `heads/${BRANCH}` });
+                try {
+                  const { data: file } = await github.rest.repos.getContent(
+                    { owner, repo, path: FILE, ref: ref.object.sha });
+                  return { head: ref.object.sha, list: JSON.parse(Buffer.from(file.content, 'base64').toString('utf8')) };
+                } catch (e) {
+                  if (e.status !== 404) throw e;
+                  return { head: ref.object.sha, list: [] };
+                }
+              } catch (e) {
+                if (e.status !== 404) throw e;
+                return { head: null, list: [] };
+              }
+            }
+
+            let { head, list } = await load();
+            const comments = await github.paginate(github.rest.issues.listComments,
+              { owner, repo, issue_number: prNumber, per_page: 100 });
+
+            // подписи берутся из всех комментариев PR: запуск, отменённый concurrency, их не теряет
+            const fresh = [];
+            const seen = new Set(list.map((s) => s.id));
+            const signers = comments.filter((c) => c.user.type !== 'Bot' && !isOwner(c.user)
+              && norm(c.body) === norm(PHRASE) && !seen.has(c.user.id));
+            if (signers.length) {
+              const { data: cla } = await github.rest.repos.getContent(
+                { owner, repo, path: 'CLA.md', ref: defaultBranch });
+              for (const c of signers) {
+                if (seen.has(c.user.id)) continue;
+                seen.add(c.user.id);
+                fresh.push({
+                  login: c.user.login,
+                  id: c.user.id,
+                  pull_request: prNumber,
+                  comment_id: c.id,
+                  comment_url: c.html_url,
+                  signed_at: c.created_at,
+                  cla_blob: cla.sha,
+                });
+              }
+            }
+
+            for (let attempt = 0; fresh.length && attempt < 5; attempt++) {
+              if (attempt) ({ head, list } = await load());
+              const ids = new Set(list.map((s) => s.id));
+              const add = fresh.filter((s) => !ids.has(s.id));
+              if (!add.length) break;
+              const next = list.concat(add);
+              const { data: blob } = await github.rest.git.createBlob(
+                { owner, repo, content: JSON.stringify(next, null, 2) + '\n', encoding: 'utf-8' });
+              const { data: tree } = await github.rest.git.createTree(
+                { owner, repo, tree: [{ path: FILE, mode: '100644', type: 'blob', sha: blob.sha }] });
+              const { data: commit } = await github.rest.git.createCommit({
+                owner, repo, tree: tree.sha, parents: head ? [head] : [],
+                message: `${add.map((s) => s.login).join(', ')} signed the CLA in #${prNumber}`,
+              });
+              try {
+                if (head) await github.rest.git.updateRef({ owner, repo, ref: `heads/${BRANCH}`, sha: commit.sha });
+                else await github.rest.git.createRef({ owner, repo, ref: `refs/heads/${BRANCH}`, sha: commit.sha });
+                list = next;
+                break;
+              } catch (e) {
+                if (e.status !== 422 && e.status !== 409) throw e;
+                if (attempt === 4) throw e;
+              }
+            }
+
+            const signed = new Set(list.map((s) => s.id));
+            const missing = [...required].filter(([id]) => !signed.has(id)).map(([, login]) => login);
+            const ok = missing.length === 0 && unlinked.size === 0;
+
+            await github.rest.repos.createCommitStatus({
+              owner, repo, sha: pr.head.sha, context: 'CLA', target_url: claUrl,
+              state: ok ? 'success' : 'failure',
+              description: ok ? 'All contributors have signed the CLA' : 'Waiting for the CLA to be signed',
+            });
+
+            const mine = comments.find((c) => c.user.type === 'Bot' && c.body.includes(MARKER));
+            let body;
+            if (ok) {
+              if (!mine) return;
+              body = `${MARKER}\nAll contributors have signed the [Contributor License Agreement](${claUrl}). Thank you!`;
+            } else {
+              const lines = [
+                MARKER,
+                `Thank you for the pull request! Before it can be merged, everyone who made commits in it needs to sign the [Contributor License Agreement](${claUrl}). To sign, read it and post a comment with exactly this text:`,
+                '',
+                '```',
+                PHRASE,
+                '```',
+                '',
+              ];
+              if (missing.length) lines.push(`Not signed yet: ${missing.map((l) => '@' + l).join(', ')}`);
+              if (unlinked.size) {
+                const names = [...unlinked].map((n) => '`' + String(n).replace(/[`\r\n]/g, '') + '`').join(', ');
+                lines.push('', `Commits by ${names} are not linked to a GitHub account. Add the commit email to your GitHub account, then comment recheck.`);
+              }
+              body = lines.join('\n');
+            }
+            if (!mine) await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
+            else if (mine.body !== body) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
