@@ -89,6 +89,8 @@ void main() {
         'enabled': true,
         'elevated': false,
         'allowElevation': true,
+        // выключатель в Диспетчере задач переход не трогает, только нажатие в настройках
+        'approve': false,
       });
     });
 

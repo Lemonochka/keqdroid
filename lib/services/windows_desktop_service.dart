@@ -38,6 +38,8 @@ class WindowsDesktopService {
     required bool enabled,
     required bool elevated,
     bool allowElevation = false,
+    // снять выключатель Диспетчера задач, только по нажатию человека
+    bool approve = false,
   }) async {
     if (!Platform.isWindows) return false;
     try {
@@ -45,6 +47,7 @@ class WindowsDesktopService {
             'enabled': enabled,
             'elevated': elevated,
             'allowElevation': allowElevation,
+            'approve': approve,
           }) ??
           false;
     } on PlatformException {
@@ -55,6 +58,16 @@ class WindowsDesktopService {
   static Future<bool> isLaunchAtStartupEnabled() async {
     if (!Platform.isWindows) return false;
     return await _channel.invokeMethod<bool>('isLaunchAtStartup') ?? false;
+  }
+
+  static Future<bool> isLaunchAtStartupBlocked() async {
+    if (!Platform.isWindows) return false;
+    try {
+      return await _channel.invokeMethod<bool>('isLaunchAtStartupBlocked') ??
+          false;
+    } on PlatformException {
+      return false;
+    }
   }
 
   // спрашиваем систему: задачу могли снести руками или перенести папку

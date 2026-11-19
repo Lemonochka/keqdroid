@@ -16,6 +16,9 @@ constexpr wchar_t kTaskName[] = L"KeqDroid Autostart";
 constexpr wchar_t kRunKey[] =
     L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 constexpr wchar_t kRunValue[] = L"KeqDroid";
+// выключатель вкладки Автозагрузка в Диспетчере задач, переживает удаление значения из Run
+constexpr wchar_t kApprovedKey[] =
+    L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run";
 
 // тот же ключ, где window_placement.cpp держит границы окна
 constexpr wchar_t kSettingsKey[] = L"Software\\KeqDroid";
@@ -319,6 +322,19 @@ bool SetRunValue(bool enable) {
   return status == ERROR_SUCCESS;
 }
 
+// формат не опубликован: включённое 02 и нули, выключенное 03 и время выключения. нечётный первый байт, как читает Firefox
+bool RunValueDisabledByUser() {
+  BYTE data[64] = {};
+  DWORD size = sizeof(data);
+  if (::RegGetValueW(HKEY_CURRENT_USER, kApprovedKey, kRunValue,
+                     RRF_RT_REG_BINARY, nullptr, data,
+                     &size) != ERROR_SUCCESS ||
+      size == 0) {
+    return false;
+  }
+  return (data[0] & 1) != 0;
+}
+
 bool TaskMatchesThisExe(const std::wstring& task_exe) {
   if (task_exe.empty()) return false;
   const std::wstring exe = CurrentExePath();
@@ -367,6 +383,23 @@ bool KeqdroidIsAutostartEnabled() {
       ::RegQueryValueExW(key, kRunValue, nullptr, &type, nullptr, &size);
   ::RegCloseKey(key);
   return status == ERROR_SUCCESS && type == REG_SZ;
+}
+
+bool KeqdroidIsAutostartBlocked() {
+  return RunValueDisabledByUser();
+}
+
+void KeqdroidUnblockAutostart() {
+  if (!RunValueDisabledByUser()) return;
+  HKEY key = nullptr;
+  if (::RegOpenKeyExW(HKEY_CURRENT_USER, kApprovedKey, 0, KEY_SET_VALUE,
+                      &key) != ERROR_SUCCESS) {
+    return;
+  }
+  // такое значение Диспетчер задач оставляет включённой записи
+  const BYTE enabled[12] = {0x02};
+  ::RegSetValueExW(key, kRunValue, 0, REG_BINARY, enabled, sizeof(enabled));
+  ::RegCloseKey(key);
 }
 
 void KeqdroidSetAutostartInTray(bool enabled) {

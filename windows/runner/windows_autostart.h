@@ -12,6 +12,11 @@ bool KeqdroidIsAutostartElevated();
 
 bool KeqdroidIsAutostartEnabled();
 
+// ключ Run на месте, но выключен в Диспетчере задач, и Windows его не запустит
+bool KeqdroidIsAutostartBlocked();
+// только по нажатию в настройках: на старте приложения выбор человека в Диспетчере задач не трогаем
+void KeqdroidUnblockAutostart();
+
 // в реестре, а не аргументом в команде автозапуска: задачу планировщика без UAC не переписать
 void KeqdroidSetAutostartInTray(bool enabled);
 bool KeqdroidAutostartInTray();

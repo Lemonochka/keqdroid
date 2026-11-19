@@ -12,6 +12,7 @@ import 'package:keqdroid/screens/settings_tab.dart';
 import 'package:keqdroid/services/linux_autostart.dart';
 import 'package:keqdroid/services/storage_service.dart';
 import 'package:keqdroid/services/vpn_engine.dart';
+import 'package:keqdroid/shared/ui/expressive_group.dart';
 import 'package:path/path.dart' as p;
 
 import '../helpers/fake_tunnel_backend.dart';
@@ -32,18 +33,26 @@ Future<void> _frames(WidgetTester tester) async {
 Future<(StorageService, List<MethodCall>)> _openDesktopSettings(
   WidgetTester tester, {
   required bool autostart,
+  bool blockedByWindows = false,
 }) async {
   tester.view.physicalSize = const Size(900, 1800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
   final calls = <MethodCall>[];
+  var blocked = blockedByWindows;
   final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   messenger.setMockMethodCallHandler(_channel, (call) async {
     calls.add(call);
+    if (call.method == 'setLaunchAtStartup' &&
+        call.arguments['enabled'] == true &&
+        call.arguments['approve'] == true) {
+      blocked = false;
+    }
     return switch (call.method) {
       'isLaunchAtStartup' => autostart,
       'isLaunchAtStartupElevated' => false,
+      'isLaunchAtStartupBlocked' => blocked,
       'setLaunchAtStartup' => true,
       _ => null,
     };
@@ -103,11 +112,64 @@ void main() {
 
     expect(
       calls.where((c) => c.method == 'setLaunchAtStartup').last.arguments,
-      {'enabled': true, 'elevated': false, 'allowElevation': true},
+      {'enabled': true, 'elevated': false, 'allowElevation': true, 'approve': true},
     );
     final saved = (await tester.runAsync(storage.getSettings))!;
     expect(saved.launchAtStartupElevated, isFalse);
   }, skip: skip);
+
+  group('выключен в Диспетчере задач', () {
+    Switch switchOf(WidgetTester tester, String title) => tester.widget<Switch>(
+          find.descendant(
+            of: find.widgetWithText(ExpressiveGroupTile, title),
+            matching: find.byType(Switch),
+          ),
+        );
+
+    // ключ Run на месте, но Windows его не запускает: переключатель не должен говорить «вкл»
+    testWidgets('показан выключенным, зависящие от него недоступны', (tester) async {
+      await _openDesktopSettings(tester, autostart: true, blockedByWindows: true);
+
+      expect(switchOf(tester, 'Start with Windows').value, isFalse);
+      expect(switchOf(tester, _title).onChanged, isNull);
+      expect(switchOf(tester, 'Connect on autostart').onChanged, isNull);
+      expect(find.text('Enable "Start with Windows" first'), findsOneWidget);
+    }, skip: skip);
+
+    testWidgets('нажатие включает и выключатель Windows', (tester) async {
+      final (storage, calls) =
+          await _openDesktopSettings(tester, autostart: true, blockedByWindows: true);
+
+      await tester.tap(find.text('Start with Windows'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await _frames(tester);
+
+      expect(
+        calls.where((c) => c.method == 'setLaunchAtStartup').last.arguments,
+        {'enabled': true, 'elevated': false, 'allowElevation': true, 'approve': true},
+      );
+      expect(switchOf(tester, 'Start with Windows').value, isTrue);
+      expect(switchOf(tester, _title).onChanged, isNotNull);
+      expect((await tester.runAsync(storage.getSettings))!.launchAtStartup, isTrue);
+    }, skip: skip);
+
+    // выбор в Диспетчере задач мог сделать сам человек: другие настройки его не снимают
+    testWidgets('другие переключатели выключатель Windows не трогают', (tester) async {
+      final (storage, calls) =
+          await _openDesktopSettings(tester, autostart: true, blockedByWindows: true);
+
+      await tester.tap(find.text('Minimize to tray on close'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await _frames(tester);
+
+      final launches = calls.where((c) => c.method == 'setLaunchAtStartup');
+      expect(launches, isNotEmpty);
+      expect(launches.every((c) => c.arguments['approve'] == false), isTrue);
+      expect(switchOf(tester, 'Start with Windows').value, isFalse);
+      // ключ Run не снимается, запись в Диспетчере задач остаётся
+      expect((await tester.runAsync(storage.getSettings))!.launchAtStartup, isTrue);
+    }, skip: skip);
+  });
 
   testWidgets('без автозапуска нажатие ничего не меняет', (tester) async {
     final (storage, calls) = await _openDesktopSettings(tester, autostart: false);

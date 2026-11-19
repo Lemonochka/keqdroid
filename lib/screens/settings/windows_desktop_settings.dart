@@ -10,6 +10,9 @@ class _DesktopSettingsScreen extends ConsumerStatefulWidget {
 
 class _DesktopSettingsScreenState
     extends ConsumerState<_DesktopSettingsScreen> {
+  // настройку не переписываем: ключ Run остаётся, и в Диспетчере задач запись можно включить обратно
+  var _blockedByWindows = false;
+
   @override
   void initState() {
     super.initState();
@@ -36,7 +39,9 @@ class _DesktopSettingsScreenState
     if (!Platform.isWindows) return;
     final elevated = await WindowsDesktopService.isLaunchAtStartupElevated();
     final run = await WindowsDesktopService.isLaunchAtStartupEnabled();
+    final blocked = await WindowsDesktopService.isLaunchAtStartupBlocked();
     if (!mounted) return;
+    setState(() => _blockedByWindows = blocked && !elevated);
     final settings = ref.read(settingsNotifierProvider).value;
     if (settings == null) return;
     final actual = settings.copyWith(
@@ -61,10 +66,13 @@ class _DesktopSettingsScreenState
       enabled: next.launchAtStartup,
       elevated: false,
       allowElevation: true,
+      approve: true,
     );
     final elevated = await WindowsDesktopService.isLaunchAtStartupElevated();
     final run = await WindowsDesktopService.isLaunchAtStartupEnabled();
+    final blocked = await WindowsDesktopService.isLaunchAtStartupBlocked();
     if (!mounted) return;
+    setState(() => _blockedByWindows = blocked && !elevated);
     await ref.read(settingsNotifierProvider.notifier).save(
           next.copyWith(
             launchAtStartup: elevated || run,
@@ -97,6 +105,7 @@ class _DesktopSettingsScreenState
         );
 
     final linux = Platform.isLinux;
+    final autostart = settings.launchAtStartup && !_blockedByWindows;
     return ExpressivePage(
       title: linux ? l10n.settingsDesktopTitleLinux : l10n.settingsDesktopTitle,
       physics: const ClampingScrollPhysics(),
@@ -114,7 +123,7 @@ class _DesktopSettingsScreenState
               title: linux
                   ? l10n.settingsLaunchAtLogin
                   : l10n.settingsLaunchAtStartup,
-              value: settings.launchAtStartup,
+              value: autostart,
               onChanged: (v) => unawaited(
                 _applyAutostart(settings.copyWith(launchAtStartup: v)),
               ),
@@ -123,7 +132,7 @@ class _DesktopSettingsScreenState
               icon: Icons.web_asset_off_rounded,
               title: l10n.settingsAutostartInTray,
               value: settings.autostartInTray,
-              onChanged: settings.launchAtStartup
+              onChanged: autostart
                   ? (v) => _save(settings.copyWith(autostartInTray: v))
                   : null,
             ),
@@ -131,13 +140,13 @@ class _DesktopSettingsScreenState
               icon: Icons.vpn_lock_rounded,
               title: l10n.settingsAutoConnectOnAutostart,
               value: settings.autoConnectLastServer,
-              onChanged: settings.launchAtStartup
+              onChanged: autostart
                   ? (v) => _save(settings.copyWith(autoConnectLastServer: v))
                   : null,
             ),
           ],
         ),
-        if (!settings.launchAtStartup)
+        if (!autostart)
           note(linux
               ? l10n.settingsAutoConnectRequiresLogin
               : l10n.settingsAutoConnectRequiresAutostart),

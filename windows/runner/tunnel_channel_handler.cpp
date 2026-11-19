@@ -1342,8 +1342,16 @@ void RegisterKeqdroidTunnelChannel(flutter::FlutterEngine* engine) {
             return value != nullptr && *value;
           };
           // UAC только по переключателю в настройках, на старте задачу планировщика не трогаем
-          result->Success(flutter::EncodableValue(KeqdroidApplyAutostart(
-              flag("enabled"), flag("elevated"), flag("allowElevation"))));
+          const bool ok = KeqdroidApplyAutostart(
+              flag("enabled"), flag("elevated"), flag("allowElevation"));
+          if (flag("enabled") && flag("approve")) KeqdroidUnblockAutostart();
+          result->Success(flutter::EncodableValue(ok));
+          return;
+        }
+
+        if (call.method_name() == "isLaunchAtStartupBlocked") {
+          result->Success(
+              flutter::EncodableValue(KeqdroidIsAutostartBlocked()));
           return;
         }
 
