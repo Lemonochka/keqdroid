@@ -1,0 +1,153 @@
+Reset, instead of accepting, a TCP connection to an IPv6 address from the tun
+when keqdroid closes IPv6 there, so the app goes on to its IPv4 address.
+
+On the desktop, with a global IPv6 address on the machine and IPv6 set to
+"Block" in the app, keqdroid gives the TUN an IPv6 address, routes ::/0 into it
+and closes it with
+AND,((IN-TYPE,TUN),(IP-CIDR6,::/0)),REJECT. Rules run after the stack has
+answered the SYN, so the app saw a connection open and then close, and Happy
+Eyeballs, having settled on IPv6, never tried IPv4: a browser opened no site
+at all (complaint of 19.11.2026, there on xray, which got the same fix in
+xray-tun-refuse-before-handshake.patch). Before this mihomo let IPv6 go
+around the tunnel instead.
+
+keqdroid-tun-close-ipv6: true now makes the tun listener refuse such a SYN
+before the handshake, through TCPRejecter from
+sing-tun-reject-before-handshake.patch, and the stack answers with a reset, as
+a port nobody listens on would. Without the key nothing changes. UDP has no
+handshake and is dropped by the rule. On Android keqdroid never writes the
+key: there the system closes IPv6 when the VPN has no IPv6 address.
+
+Applies after mihomo-uid-owner-handshake.patch, which brings
+RejectTCPBeforeHandshake; the name keeps it sorted after it.
+
+diff --git a/config/config.go b/config/config.go
+index f32f75e..3a79f5b 100644
+--- a/config/config.go
++++ b/config/config.go
+@@ -63,6 +63,7 @@ type General struct {
+ 	FindProcessMode   process.FindProcessMode `json:"find-process-mode"`
+ 	KeqdroidUDPPerExit bool                    `json:"-"`
+ 	KeqdroidOwnerGuard string                  `json:"-"`
++	KeqdroidTunCloseIPv6 bool                `json:"-"`
+ 	Sniffing          bool                    `json:"sniffing"`
+ 	GlobalUA          string                  `json:"global-ua"`
+ 	ETagSupport       bool                    `json:"etag-support"`
+@@ -446,6 +447,7 @@ type RawConfig struct {
+ 	FindProcessMode               process.FindProcessMode `yaml:"find-process-mode" json:"find-process-mode"`
+ 	KeqdroidUDPPerExit            bool                    `yaml:"keqdroid-udp-per-exit" json:"keqdroid-udp-per-exit"`
+ 	KeqdroidOwnerGuard            string                  `yaml:"keqdroid-owner-guard" json:"keqdroid-owner-guard"`
++	KeqdroidTunCloseIPv6          bool                    `yaml:"keqdroid-tun-close-ipv6" json:"keqdroid-tun-close-ipv6"`
+ 	GlobalClientFingerprint       string                  `yaml:"global-client-fingerprint" json:"global-client-fingerprint"`
+ 	GlobalUA                      string                  `yaml:"global-ua" json:"global-ua"`
+ 	ETagSupport                   bool                    `yaml:"etag-support" json:"etag-support"`
+@@ -804,6 +806,7 @@ func parseGeneral(cfg *RawConfig) (*General, error) {
+ 		FindProcessMode:   cfg.FindProcessMode,
+ 		KeqdroidUDPPerExit: cfg.KeqdroidUDPPerExit,
+ 		KeqdroidOwnerGuard: cfg.KeqdroidOwnerGuard,
++		KeqdroidTunCloseIPv6: cfg.KeqdroidTunCloseIPv6,
+ 		GlobalUA:          cfg.GlobalUA,
+ 		ETagSupport:       cfg.ETagSupport,
+ 		KeepAliveIdle:     cfg.KeepAliveIdle,
+diff --git a/hub/executor/executor.go b/hub/executor/executor.go
+index a373ce6..2933aef 100644
+--- a/hub/executor/executor.go
++++ b/hub/executor/executor.go
+@@ -396,6 +396,7 @@ func updateGeneral(general *config.General, logging bool) {
+ 	tunnel.SetFindProcessMode(general.FindProcessMode)
+ 	tunnel.SetUDPPerExit(general.KeqdroidUDPPerExit)
+ 	sing_tun.SetOwnerGuard(general.KeqdroidOwnerGuard)
++	sing_tun.SetTunCloseIPv6(general.KeqdroidTunCloseIPv6)
+ 	resolver.DisableIPv6 = !general.IPv6
+ 
+ 	dialer.SetTcpConcurrent(general.TCPConcurrent)
+diff --git a/listener/sing_tun/close_ipv6.go b/listener/sing_tun/close_ipv6.go
+new file mode 100644
+index 0000000..ca4d16b
+--- /dev/null
++++ b/listener/sing_tun/close_ipv6.go
+@@ -0,0 +1,22 @@
++package sing_tun
++
++import (
++	"sync/atomic"
++
++	M "github.com/metacubex/sing/common/metadata"
++)
++
++// keqdroid, see tool/patches/mihomo-v6-tun-reset.patch
++var tunCloseIPv6 atomic.Bool
++
++func SetTunCloseIPv6(enabled bool) {
++	tunCloseIPv6.Store(enabled)
++}
++
++func tunClosesIPv6(destination M.Socksaddr) bool {
++	if !tunCloseIPv6.Load() {
++		return false
++	}
++	addr := destination.Addr
++	return addr.IsValid() && addr.Is6() && !addr.Is4In6()
++}
+diff --git a/listener/sing_tun/close_ipv6_test.go b/listener/sing_tun/close_ipv6_test.go
+new file mode 100644
+index 0000000..1b11570
+--- /dev/null
++++ b/listener/sing_tun/close_ipv6_test.go
+@@ -0,0 +1,30 @@
++package sing_tun
++
++import (
++	"net/netip"
++	"testing"
++
++	M "github.com/metacubex/sing/common/metadata"
++)
++
++// keqdroid, mihomo-v6-tun-reset.patch: only IPv6 is refused, and only with the key
++func TestTunClosesIPv6(t *testing.T) {
++	v6 := M.SocksaddrFrom(netip.MustParseAddr("2001:db8::1"), 443)
++	v4 := M.SocksaddrFrom(netip.MustParseAddr("198.51.100.1"), 443)
++	mapped := M.SocksaddrFrom(netip.MustParseAddr("::ffff:198.51.100.1"), 443)
++	h := &ListenerHandler{}
++
++	SetTunCloseIPv6(false)
++	if h.RejectTCPBeforeHandshake(M.Socksaddr{}, v6) {
++		t.Fatal("refused IPv6 without keqdroid-tun-close-ipv6")
++	}
++
++	SetTunCloseIPv6(true)
++	t.Cleanup(func() { SetTunCloseIPv6(false) })
++	if !h.RejectTCPBeforeHandshake(M.Socksaddr{}, v6) {
++		t.Fatal("IPv6 not refused with keqdroid-tun-close-ipv6")
++	}
++	if h.RejectTCPBeforeHandshake(M.Socksaddr{}, v4) || h.RejectTCPBeforeHandshake(M.Socksaddr{}, mapped) {
++		t.Fatal("refused IPv4")
++	}
++}
+diff --git a/listener/sing_tun/owner_android.go b/listener/sing_tun/owner_android.go
+index 77b3ab3..989edeb 100644
+--- a/listener/sing_tun/owner_android.go
++++ b/listener/sing_tun/owner_android.go
+@@ -105,6 +105,9 @@ func askOwnerSocket(request string) (string, error) {
+ // sing-tun-reject-before-handshake.patch. An app outside the VPN gets a reset
+ // instead of a connection that opens and then dies at the first rule.
+ func (h *ListenerHandler) RejectTCPBeforeHandshake(source, destination M.Socksaddr) bool {
++	if tunClosesIPv6(destination) {
++		return true
++	}
+ 	if ownerSocket == "" || ownerGuardMode() == "" {
+ 		return false
+ 	}
+diff --git a/listener/sing_tun/owner_other.go b/listener/sing_tun/owner_other.go
+index 4099465..4010bec 100644
+--- a/listener/sing_tun/owner_other.go
++++ b/listener/sing_tun/owner_other.go
+@@ -8,4 +8,6 @@ func dnsFromOutsideVPN(string, M.Metadata) bool { return false }
+ 
+ func dnsWithoutOwner(string, M.Metadata) bool { return false }
+ 
+-func (h *ListenerHandler) RejectTCPBeforeHandshake(M.Socksaddr, M.Socksaddr) bool { return false }
++func (h *ListenerHandler) RejectTCPBeforeHandshake(_, destination M.Socksaddr) bool {
++	return tunClosesIPv6(destination)
++}
