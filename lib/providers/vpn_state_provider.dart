@@ -766,15 +766,49 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       mihomoApi.clear();
     }
 
+    final desktop = Platform.isWindows || Platform.isLinux;
+    final tunSession = connectionMode == ConnectionMode.tun;
+    final strictRoute =
+        settings.tun.strictRouteEnabled(windows: Platform.isWindows);
+    // IPv6-адрес на TUN при выключенном в системе IPv6 роняет ядро. строгий маршрут на Linux закрывал IPv6
+    // без маршрута (sing-tun, unreachable), теперь так же: захват и блок
+    final captureIpv6 = desktop &&
+        tunSession &&
+        (settings.tun.ipv6 != TunSettings.ipv6Bypass ||
+            (Platform.isLinux && strictRoute)) &&
+        await hostHasGlobalIpv6(excludeInterfaceName: kTunInterfaceName);
+    final ipv6ViaVpn = tunSession &&
+        settings.tun.ipv6 == TunSettings.ipv6Vpn &&
+        server.ipv6Exit == true &&
+        (!desktop || captureIpv6);
+    if (tunSession && settings.tun.ipv6 == TunSettings.ipv6Vpn) {
+      AppLogger.instance.info(switch ((ipv6ViaVpn, server.ipv6Exit)) {
+        (true, _) => 'IPv6 goes through the server: its check found IPv6.',
+        (false, true) =>
+          'IPv6 stays closed: this machine has no global IPv6 address.',
+        (false, false) =>
+          'IPv6 stays closed: the last check found no IPv6 at this server.',
+        (false, null) => 'IPv6 stays closed until a ping checks this server '
+            'for IPv6.',
+      });
+    }
+    // с UseIPv4 ядро не отдаёт AAAA, и IPv6 через сервер никто бы не выбрал
+    if (ipv6ViaVpn && settings.xrayCore.dnsQueryStrategy == 'UseIPv4') {
+      settings = settings.copyWith(
+        xrayCore: settings.xrayCore.copyWith(dnsQueryStrategy: 'UseIP'),
+      );
+    }
+
     final MihomoTunOptions? mihomoTun;
     if (!mihomoPicked) {
       mihomoTun = null;
     } else if (Platform.isAndroid) {
-      mihomoTun = const MihomoTunOptions(
+      mihomoTun = MihomoTunOptions(
         fromFileDescriptor: true,
         // на Android без root работает только gvisor
         stack: TunSettings.stackGvisor,
         autoRoute: false,
+        ipv6: ipv6ViaVpn ? TunSettings.ipv6Vpn : null,
       );
     } else if (connectionMode == ConnectionMode.tun) {
       final picked = Platform.isLinux
@@ -792,8 +826,10 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         stack: picked.stack,
         mtu: settings.tun.mtu,
         autoRoute: settings.tun.autoRoute,
-        strictRoute:
-            settings.tun.strictRouteEnabled(windows: Platform.isWindows),
+        strictRoute: strictRoute,
+        ipv6: ipv6ViaVpn
+            ? TunSettings.ipv6Vpn
+            : (captureIpv6 ? TunSettings.ipv6Close : TunSettings.ipv6Bypass),
       );
     } else {
       mihomoTun = null;
@@ -889,16 +925,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       }
     }
 
-    final desktop = Platform.isWindows || Platform.isLinux;
-    final xrayDesktopTun =
-        desktop && connectionMode == ConnectionMode.tun && !mihomoPicked;
-    final strictRoute =
-        settings.tun.strictRouteEnabled(windows: Platform.isWindows);
-    // IPv6-адрес на TUN при выключенном в системе IPv6 роняет ядро. строгий маршрут на Linux закрывал IPv6
-    // без маршрута (sing-tun, unreachable), теперь так же: захват и блок
-    final captureIpv6 = xrayDesktopTun &&
-        (settings.tun.blockIpv6Leak || (Platform.isLinux && strictRoute)) &&
-        await hostHasGlobalIpv6(excludeInterfaceName: kTunInterfaceName);
+    final xrayDesktopTun = desktop && tunSession && !mihomoPicked;
 
     final listedSettings =
         mihomoPicked ? settings : ruleLists.expand(settings);
@@ -914,6 +941,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             nativeTunInbound: Platform.isAndroid &&
                 connectionMode == ConnectionMode.tun &&
                 !mihomoPicked,
+            nativeTunIpv6: Platform.isAndroid && ipv6ViaVpn,
             desktopTun: xrayDesktopTun
                 ? DesktopTunOptions(
                     windows: Platform.isWindows,
@@ -921,6 +949,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
                     autoRoute: settings.tun.autoRoute,
                     strictRoute: strictRoute,
                     captureIpv6: captureIpv6,
+                    passIpv6: ipv6ViaVpn,
                     udpTimeoutSec: settings.tun.udpTimeoutSec,
                     routingMode: routingMode,
                     managedProcessNames:
@@ -934,20 +963,6 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             appRoutes: appRoutes,
             ownerGuard: ownerGuard,
           );
-
-    if (mihomoPicked &&
-        connectionMode == ConnectionMode.tun &&
-        settings.tun.blockIpv6Leak &&
-        (Platform.isWindows || Platform.isLinux) &&
-        await hostHasGlobalIpv6(excludeInterfaceName: kTunInterfaceName)) {
-      AppLogger.instance.warn(
-        'This machine has global IPv6, but the tunnel here belongs to the '
-        'mihomo core, which keeps its own IPv6 handling — the TUN option '
-        '"keep IPv6 inside the tunnel" covers the xray core only. '
-        'IPv6 traffic can therefore bypass the tunnel; switch the core to '
-        'xray in Settings → About if that matters.',
-      );
-    }
 
     final session = TunnelSessionBuilder.build(
       settings: listedSettings,
@@ -1148,6 +1163,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           measure.results[r.serverId] = entry(r);
         }
         measure.pings = results;
+        unawaited(ref.read(serversProvider.notifier).refreshIpv6Exits(results));
         if (AutoServerSelect.worthRecording(measure.results.values)) {
           unawaited(_autoSelectRecord(results));
         }

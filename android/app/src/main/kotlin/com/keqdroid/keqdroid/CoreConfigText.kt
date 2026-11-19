@@ -76,6 +76,30 @@ internal fun xrayConfigWithTunMtu(text: String): String {
     throw IllegalStateException("xray config has no tun inbound")
 }
 
+// IPv6 у интерфейса только если Dart пустил его через VPN: адрес лежит в конфиге, чтобы плитка и перезапуск
+// подняли интерфейс тем же. без адреса Android сам закрывает IPv6 (VpnService.Builder.allowFamily)
+internal fun tunIpv6Of(text: String, mihomo: Boolean): Pair<String, Int>? {
+    val root = JSONObject(text)
+    val addresses = if (mihomo) {
+        root.optJSONObject("tun")?.optJSONArray("inet6-address")
+    } else {
+        val inbounds = root.optJSONArray("inbounds")
+        (0 until (inbounds?.length() ?: 0))
+            .mapNotNull { inbounds?.optJSONObject(it) }
+            .firstOrNull { it.optString("protocol") == "tun" }
+            ?.optJSONObject("settings")
+            ?.optJSONArray("gateway")
+    } ?: return null
+    for (i in 0 until addresses.length()) {
+        val entry = addresses.optString(i)
+        if (!entry.contains(':')) continue
+        val address = entry.substringBefore('/')
+        val prefix = entry.substringAfter('/', "128").toIntOrNull() ?: continue
+        if (prefix in 0..128) return address to prefix
+    }
+    return null
+}
+
 internal fun mihomoConfigWithTunFd(text: String, tunFd: Int): String {
     val root = JSONObject(text)
     val tun = root.optJSONObject("tun")

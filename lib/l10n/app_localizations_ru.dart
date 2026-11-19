@@ -975,10 +975,25 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTunAutoRouteHint => 'Добавляет системные маршруты в туннель. Без него трафик в TUN не попадает.';
 
   @override
-  String get settingsTunIpv6 => 'Не выпускать IPv6 мимо туннеля';
+  String get settingsTunIpv6Title => 'IPv6';
 
   @override
-  String get settingsTunIpv6Hint => 'Даёт TUN-интерфейсу IPv6-адрес, иначе весь IPv6 идёт мимо туннеля.';
+  String get settingsTunIpv6Close => 'Закрывать';
+
+  @override
+  String get settingsTunIpv6Vpn => 'Пускать через VPN';
+
+  @override
+  String get settingsTunIpv6VpnHint => 'Работает с серверами, у которых есть IPv6';
+
+  @override
+  String get settingsTunIpv6Bypass => 'Пускать мимо VPN';
+
+  @override
+  String get settingsTunIpv6BypassHint => 'Сайты увидят ваш настоящий адрес IPv6';
+
+  @override
+  String get settingsVpnModeSection => 'VPN-режим';
 
   @override
   String get settingsFakeIp => 'Fake IP';

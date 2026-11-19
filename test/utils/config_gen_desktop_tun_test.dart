@@ -317,4 +317,58 @@ void main() {
     expect(ipv6['ip'], ['::/0']);
     expect(_tunSettings(config)['autoSystemRoutingTable'], ['0.0.0.0/0', '::/0']);
   });
+
+  group('IPv6 через VPN', () {
+    test('TUN берёт IPv6, а правила tun-ipv6 нет: ядро его не сбросит', () {
+      final config = _config(const DesktopTunOptions(
+        windows: true,
+        mtu: 9000,
+        captureIpv6: true,
+        passIpv6: true,
+      ));
+      expect(_rule(config, 'tun-ipv6'), isNull);
+      final tun = _tunSettings(config);
+      expect(tun['gateway'], contains(kTunInterfaceIpv6Prefix));
+      expect(tun['autoSystemRoutingTable'], ['0.0.0.0/0', '::/0']);
+    });
+
+    test('без захвата пропускать нечего, конфиг как без IPv6', () {
+      final passed = _config(const DesktopTunOptions(
+        windows: true,
+        mtu: 9000,
+        passIpv6: true,
+      ));
+      expect(passed, _config(_windows));
+    });
+
+    test('на Android адрес IPv6 в конфиге для VpnService, и только по флагу', () {
+      Map<String, dynamic> androidTun({required bool ipv6}) {
+        Socks5Credentials().init('u', 'p');
+        final config = jsonDecode(ConfigGeneratorV2.generateConfig(
+          _link,
+          const AppSettings(),
+          nativeTunInbound: true,
+          nativeTunIpv6: ipv6,
+        )) as Map<String, dynamic>;
+        return ((config['inbounds'] as List)
+                .cast<Map<String, dynamic>>()
+                .firstWhere((i) => i['tag'] == 'tun-in'))['settings']
+            as Map<String, dynamic>;
+      }
+
+      expect(androidTun(ipv6: true)['gateway'], [kTunInterfaceIpv6Prefix]);
+      expect(androidTun(ipv6: false).containsKey('gateway'), isFalse);
+    });
+
+    test('флаг Android на ПК ничего не меняет', () {
+      Socks5Credentials().init('u', 'p');
+      final config = jsonDecode(ConfigGeneratorV2.generateConfig(
+        _link,
+        const AppSettings(),
+        desktopTun: _windows,
+        nativeTunIpv6: true,
+      )) as Map<String, dynamic>;
+      expect(config, _config(_windows));
+    });
+  });
 }

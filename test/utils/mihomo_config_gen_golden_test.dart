@@ -234,6 +234,29 @@ void main() {
       );
     });
 
+    // TUN на ПК: адаптер, маршруты и судьбу IPv6 решает сам mihomo
+    _golden('desktop-tun', () {
+      return MihomoConfigGen.generate(
+        'vless://$_uuid@198.51.100.32:443?type=tcp&security=none#pctun',
+        _settings,
+        socksPort: 2080,
+        httpPort: 2081,
+        tun: _desktopTun,
+      );
+    });
+
+    _golden('desktop-tun-use-ip', () {
+      return MihomoConfigGen.generate(
+        'vless://$_uuid@198.51.100.32:443?type=tcp&security=none#pctun',
+        _settings.copyWith(
+          xrayCore: const XrayCoreSettings(dnsQueryStrategy: 'UseIP'),
+        ),
+        socksPort: 2080,
+        httpPort: 2081,
+        tun: _desktopTun,
+      );
+    });
+
     // авторские правила остаются после наших
     _golden('android-tun-custom-clash', () {
       return MihomoConfigGen.generate(
@@ -399,6 +422,12 @@ const _androidTun = MihomoTunOptions(
   fromFileDescriptor: true,
   stack: 'gvisor',
   autoRoute: false,
+);
+
+const _desktopTun = MihomoTunOptions(
+  device: 'tun-keqdis',
+  stack: 'gvisor',
+  mtu: 9000,
 );
 
 const _clashYaml = '''

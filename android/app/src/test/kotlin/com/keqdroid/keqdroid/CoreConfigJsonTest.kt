@@ -115,4 +115,23 @@ class CoreConfigJsonTest {
         assertNull(xraySessionLogLevel("""{"log":{"loglevel":"Info"}}"""))
         assertNull(xraySessionLogLevel("""{"log":{"loglevel":"debug"}}"""))
     }
+
+    @Test
+    fun `IPv6 of the tunnel comes from the config Dart wrote, for either core`() {
+        val xray = """{"inbounds":[{"tag":"socks-in","protocol":"socks"},""" +
+            """{"tag":"tun-in","protocol":"tun","settings":{"name":"tun0","gateway":["fdfe:dcba:9876::1/126"]}}]}"""
+        assertEquals("fdfe:dcba:9876::1" to 126, tunIpv6Of(xray, mihomo = false))
+
+        val mihomo = """{"tun":{"enable":true,"inet6-address":["fdfe:dcba:9876::1/126"]}}"""
+        assertEquals("fdfe:dcba:9876::1" to 126, tunIpv6Of(mihomo, mihomo = true))
+    }
+
+    @Test
+    fun `no IPv6 in the config leaves the tunnel IPv4 only, as before`() {
+        assertNull(tunIpv6Of("""{"inbounds":[{"tag":"tun-in","protocol":"tun","settings":{"name":"tun0","mtu":9000}}]}""", mihomo = false))
+        assertNull(tunIpv6Of("""{"tun":{"enable":true}}""", mihomo = true))
+        // пустой список у mihomo значит мимо VPN, на телефоне его не бывает, но и адреса из него нет
+        assertNull(tunIpv6Of("""{"tun":{"enable":true,"inet6-address":[]}}""", mihomo = true))
+        assertNull(tunIpv6Of("""{"inbounds":[{"protocol":"tun","settings":{"gateway":["172.19.0.1/30"]}}]}""", mihomo = false))
+    }
 }

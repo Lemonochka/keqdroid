@@ -20,6 +20,7 @@ class DesktopTunOptions {
     this.autoRoute = true,
     this.strictRoute = false,
     this.captureIpv6 = false,
+    this.passIpv6 = false,
     this.udpTimeoutSec = TunSettings.defaultUdpTimeoutSec,
     this.routingMode = AppRoutingMode.allProxy,
     this.managedProcessNames = const [],
@@ -31,6 +32,7 @@ class DesktopTunOptions {
   final bool autoRoute;
   final bool strictRoute;
   final bool captureIpv6;
+  final bool passIpv6;
   final int udpTimeoutSec;
   final AppRoutingMode routingMode;
   final List<String> managedProcessNames;

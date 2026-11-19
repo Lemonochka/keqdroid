@@ -1799,17 +1799,47 @@ abstract class AppLocalizations {
   /// **'Adds system routes into the tunnel. Without it nothing reaches TUN.'**
   String get settingsTunAutoRouteHint;
 
-  /// No description provided for @settingsTunIpv6.
+  /// No description provided for @settingsTunIpv6Title.
   ///
   /// In en, this message translates to:
-  /// **'Keep IPv6 inside the tunnel'**
-  String get settingsTunIpv6;
+  /// **'IPv6'**
+  String get settingsTunIpv6Title;
 
-  /// No description provided for @settingsTunIpv6Hint.
+  /// No description provided for @settingsTunIpv6Close.
   ///
   /// In en, this message translates to:
-  /// **'Gives the TUN interface an IPv6 address; without it all IPv6 bypasses the tunnel.'**
-  String get settingsTunIpv6Hint;
+  /// **'Block'**
+  String get settingsTunIpv6Close;
+
+  /// No description provided for @settingsTunIpv6Vpn.
+  ///
+  /// In en, this message translates to:
+  /// **'Through the VPN'**
+  String get settingsTunIpv6Vpn;
+
+  /// No description provided for @settingsTunIpv6VpnHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Works with servers that have IPv6'**
+  String get settingsTunIpv6VpnHint;
+
+  /// No description provided for @settingsTunIpv6Bypass.
+  ///
+  /// In en, this message translates to:
+  /// **'Around the VPN'**
+  String get settingsTunIpv6Bypass;
+
+  /// No description provided for @settingsTunIpv6BypassHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sites see your real IPv6 address'**
+  String get settingsTunIpv6BypassHint;
+
+  /// No description provided for @settingsVpnModeSection.
+  ///
+  /// In en, this message translates to:
+  /// **'VPN mode'**
+  String get settingsVpnModeSection;
 
   /// No description provided for @settingsFakeIp.
   ///

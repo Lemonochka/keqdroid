@@ -3,11 +3,13 @@ import 'dart:io';
 
 import '../models/app_settings.dart';
 import '../models/traffic_route.dart';
+import '../models/tun_settings.dart';
 import '../models/xray_core_settings.dart';
 import '../tunnel/app_routing_mode.dart';
 import 'app_routes.dart';
 import 'awg_profile.dart';
 import 'custom_clash_config.dart';
+import 'desktop_tun.dart';
 import 'exit_ip_probe.dart';
 import 'fake_ip.dart';
 import 'geo_asset_index.dart';
@@ -32,6 +34,7 @@ class MihomoTunOptions {
     this.autoRoute = true,
     this.strictRoute = false,
     this.fromFileDescriptor = false,
+    this.ipv6,
   });
 
   // file-descriptor и mtu в готовый конфиг дописывает нативный сервис, это его числа
@@ -48,6 +51,13 @@ class MihomoTunOptions {
   final bool autoRoute;
 
   final bool strictRoute;
+
+  // режим из TunSettings. null: семейство решает глобальный ipv6 ядра, как было до выбора
+  final String? ipv6;
+
+  bool get takesIpv6 => ipv6 == TunSettings.ipv6Close || ipv6 == TunSettings.ipv6Vpn;
+
+  bool get closesIpv6 => ipv6 == TunSettings.ipv6Close;
 
   bool get autoDetectInterface => autoRoute;
 }
@@ -188,6 +198,7 @@ class MihomoConfigGen {
         localInboundsNoAuth: localInboundsNoAuth,
         apiPort: apiPort,
         apiSecret: apiSecret,
+        tunIpv6: tun?.takesIpv6 ?? false,
       ),
       'mode': 'rule',
       'log-level': _logLevel(settings.xrayCore.logLevel),
@@ -199,6 +210,7 @@ class MihomoConfigGen {
       'find-process-mode': findProcess ? 'strict' : 'off',
       if (settings.xrayCore.udpPerAddress) udpPerExitKey: true,
       if (guard != OwnerGuard.off) ownerGuardKey: guard.name,
+      if (tun?.closesIpv6 ?? false) closeTunIpv6Key: true,
       'sniffer': buildSniffer(settings.xrayCore),
       if (buildHosts(settings.xrayCore).isNotEmpty)
         'hosts': buildHosts(settings.xrayCore),
@@ -235,6 +247,7 @@ class MihomoConfigGen {
         managedProcessNames: processRules ? managedProcessNames : const [],
         appProcessName: processRules ? appProcessName : '',
         tunOwned: tun != null,
+        closeTunIpv6: tun?.closesIpv6 ?? false,
         windows: windows,
         ruleLists: ruleLists,
         routeServers: routeServers,
@@ -256,6 +269,10 @@ class MihomoConfigGen {
         'auto-route': tun.autoRoute,
         'auto-detect-interface': tun.autoDetectInterface,
         if (tun.strictRoute) 'strict-route': true,
+        // пустой список сильнее умолчания ядра, адрес по нему же ставит VpnService на Android
+        if (tun.ipv6 == TunSettings.ipv6Bypass) 'inet6-address': const <String>[],
+        if (tun.ipv6 == TunSettings.ipv6Vpn)
+          'inet6-address': const [kTunInterfaceIpv6Prefix],
         'dns-hijack': const ['any:53'],
       };
 
@@ -290,6 +307,7 @@ class MihomoConfigGen {
         localInboundsNoAuth: localInboundsNoAuth,
         apiPort: apiPort,
         apiSecret: apiSecret,
+        tunIpv6: tun?.takesIpv6 ?? false,
       ),
       sniffer: buildSniffer(settings.xrayCore),
       logLevel: _logLevel(settings.xrayCore.logLevel),
@@ -323,6 +341,7 @@ class MihomoConfigGen {
           routeServers: routeServers,
           appRoutes: appRoutes,
         ),
+        if (tun?.closesIpv6 ?? false) closedTunIpv6Rule,
         // MATCH провайдера выброшен вместе с его правилами, остальное решает человек
         if (settings.ignoreProviderRules)
           'MATCH,${_customFinalTarget(settings, clash, routingMode, managedProcessNames)}',
@@ -353,6 +372,7 @@ class MihomoConfigGen {
           'find-process-mode': 'strict',
         if (settings.xrayCore.udpPerAddress) udpPerExitKey: true,
         if (ownerGuard != OwnerGuard.off) ownerGuardKey: ownerGuard.name,
+        if (tun?.closesIpv6 ?? false) closeTunIpv6Key: true,
         if (tun != null) 'tun': buildTun(tun),
         if (settings.lanSharing) 'listeners': buildLanListeners(settings),
         // наборы автора остаются: его правила на них ссылаются
@@ -379,6 +399,7 @@ class MihomoConfigGen {
     required bool localInboundsNoAuth,
     int? apiPort,
     String apiSecret = '',
+    bool tunIpv6 = false,
   }) {
     final creds = Socks5Credentials();
     return <String, dynamic>{
@@ -387,8 +408,9 @@ class MihomoConfigGen {
       'port': ?httpPort,
       'bind-address': '127.0.0.1',
       'allow-lan': false,
-      // глобальный ipv6: false режет AAAA независимо от dns.ipv6, берём из той же стратегии
-      'ipv6': settings.xrayCore.dnsQueryStrategy != 'UseIPv4',
+      // глобальный ipv6: false режет AAAA независимо от dns.ipv6, берём из той же стратегии.
+      // он же даёт TUN адрес IPv6 (config.go parseIPV6), а AAAA тогда режет dns.ipv6
+      'ipv6': settings.xrayCore.dnsQueryStrategy != 'UseIPv4' || tunIpv6,
       // глобальная авторизация на socks-port, LAN-листенеры из-под неё выведены своим users
       if (!localInboundsNoAuth)
         'authentication': ['${creds.username}:${creds.password}'],
@@ -1873,6 +1895,7 @@ class MihomoConfigGen {
     List<String> managedProcessNames = const [],
     String appProcessName = '',
     bool tunOwned = false,
+    bool closeTunIpv6 = false,
     bool? windows,
     RuleListDomains ruleLists = RuleListDomains.none,
     List<RouteServerOutbound> routeServers = const [],
@@ -1924,7 +1947,11 @@ class MihomoConfigGen {
         ? 'DIRECT'
         : _finalTarget(settings.finalOutbound, proxyTarget);
 
-    return [...rules, 'MATCH,$finalTarget'];
+    return [
+      ...rules,
+      if (closeTunIpv6) closedTunIpv6Rule,
+      'MATCH,$finalTarget',
+    ];
   }
 
   // читает только наш mihomo, tool/patches/mihomo-udp-per-exit.patch; чужой ключ ядро пропускает
@@ -1933,6 +1960,12 @@ class MihomoConfigGen {
   // читает только наш mihomo, tool/patches/mihomo-uid-owner-guard.patch: без ключа ядро не отличает приложение вне VPN,
   // со значением all проверяет и DNS, который перехватывает раньше правил
   static const ownerGuardKey = 'keqdroid-owner-guard';
+
+  // читает только наш mihomo, tool/patches/mihomo-v6-tun-reset.patch: TCP по IPv6 из TUN получает сброс до рукопожатия,
+  // и браузер сразу идёт на IPv4. правило ниже ловит остальное, UDP
+  static const closeTunIpv6Key = 'keqdroid-tun-close-ipv6';
+
+  static const closedTunIpv6Rule = 'AND,((IN-TYPE,TUN),(IP-CIDR6,::/0)),REJECT';
 
   // первым правилом, раньше авторских
   static String? outsideVpnRule(OwnerGuard guard) => switch (guard) {

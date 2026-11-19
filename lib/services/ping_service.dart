@@ -7,6 +7,7 @@ import '../models/app_settings.dart';
 import '../platform/platform_bootstrap.dart';
 import '../models/ping_test_config.dart';
 import '../models/server_item.dart';
+import '../models/tun_settings.dart';
 import '../services/vpn_engine.dart';
 import '../services/windows_desktop_service.dart';
 import '../tunnel/vpn_backend.dart';
@@ -816,6 +817,49 @@ class PingService {
         pingType: PingType.url,
       );
     }
+  }
+
+  // у имени только AAAA, ответ придёт, лишь если выход сервера ходит по IPv6. замер всегда идёт по https, а
+  // ipv6.msftconnecttest.com его не держит: 20.11 через два сервера с IPv6 он молчал, этот отвечал 204
+  static const ipv6ProbeUrl = 'https://ipv6.google.com/generate_204';
+
+  static const ipv6ProbeMaxAge = Duration(hours: 24);
+
+  // проверяют только при IPv6 через VPN и только живые: упавший замер не говорит ничего про IPv6
+  static List<ServerItem> dueForIpv6Probe(
+    Iterable<ServerItem> servers,
+    Iterable<PingResult> results,
+    AppSettings settings,
+    DateTime now,
+  ) {
+    if (settings.tun.ipv6 != TunSettings.ipv6Vpn) return const [];
+    final alive = {
+      for (final r in results)
+        if (r.success) r.serverId,
+    };
+    return [
+      for (final server in servers)
+        if (alive.contains(server.id) &&
+            (server.ipv6CheckedAt == null ||
+                now.difference(server.ipv6CheckedAt!) >= ipv6ProbeMaxAge))
+          server,
+    ];
+  }
+
+  static Future<Map<String, bool>> probeIpv6Exits(
+    List<ServerItem> servers,
+    AppSettings settings, {
+    Set<String> templateServers = const {},
+  }) async {
+    if (servers.isEmpty) return const {};
+    final results = await pingUrlBatch(
+      servers,
+      settings,
+      testUrl: ipv6ProbeUrl,
+      timeoutSeconds: 8,
+      templateServers: templateServers,
+    );
+    return {for (final r in results) r.serverId: r.success};
   }
 
   static Future<List<PingResult>> pingSpeedBatch(

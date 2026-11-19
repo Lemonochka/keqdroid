@@ -961,10 +961,25 @@ class AppLocalizationsFa extends AppLocalizations {
   String get settingsTunAutoRouteHint => 'مسیرهای سیستم را به تونل می‌افزاید. بدون آن چیزی به TUN نمی‌رسد.';
 
   @override
-  String get settingsTunIpv6 => 'نگه‌داشتن IPv6 داخل تونل';
+  String get settingsTunIpv6Title => 'IPv6';
 
   @override
-  String get settingsTunIpv6Hint => 'به رابط TUN آدرس IPv6 می‌دهد؛ بدون آن همهٔ IPv6 از تونل بیرون می‌ماند.';
+  String get settingsTunIpv6Close => 'مسدود کردن';
+
+  @override
+  String get settingsTunIpv6Vpn => 'از طریق VPN';
+
+  @override
+  String get settingsTunIpv6VpnHint => 'با سرورهایی کار می‌کند که IPv6 دارند';
+
+  @override
+  String get settingsTunIpv6Bypass => 'خارج از VPN';
+
+  @override
+  String get settingsTunIpv6BypassHint => 'سایت‌ها آدرس IPv6 واقعی شما را می‌بینند';
+
+  @override
+  String get settingsVpnModeSection => 'حالت VPN';
 
   @override
   String get settingsFakeIp => 'Fake IP';

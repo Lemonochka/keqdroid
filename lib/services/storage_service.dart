@@ -192,6 +192,23 @@ class StorageService {
         return out;
       });
 
+  Future<List<ServerItem>> applyIpv6Probe(
+    Map<String, bool> results,
+    DateTime checkedAt,
+  ) =>
+      _serial(() async {
+        final servers = await getServers();
+        var changed = false;
+        final out = servers.map((s) {
+          final hasIpv6 = results[s.id];
+          if (hasIpv6 == null) return s;
+          changed = true;
+          return s.copyWith(ipv6Exit: hasIpv6, ipv6CheckedAt: checkedAt);
+        }).toList();
+        if (changed) await _writeServers(out);
+        return out;
+      });
+
   Future<List<Subscription>> getSubscriptions() async {
     try {
       final raw = _prefs.getString(_kSubscriptions);

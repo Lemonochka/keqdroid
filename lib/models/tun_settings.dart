@@ -8,7 +8,7 @@ class TunSettings {
   final int udpTimeoutSec;
   final bool autoRoute;
 
-  final bool blockIpv6Leak;
+  final String ipv6;
 
   const TunSettings({
     this.stack = defaultStack,
@@ -16,7 +16,7 @@ class TunSettings {
     this.strictRoute = strictRouteAuto,
     this.udpTimeoutSec = defaultUdpTimeoutSec,
     this.autoRoute = true,
-    this.blockIpv6Leak = true,
+    this.ipv6 = ipv6Close,
   });
 
   static const stackSystem = 'system';
@@ -36,6 +36,11 @@ class TunSettings {
   static const strictRouteOn = 'on';
   static const strictRouteOff = 'off';
   static const strictRouteModes = [strictRouteAuto, strictRouteOn, strictRouteOff];
+
+  static const ipv6Close = 'close';
+  static const ipv6Vpn = 'vpn';
+  static const ipv6Bypass = 'bypass';
+  static const ipv6Modes = [ipv6Close, ipv6Vpn, ipv6Bypass];
 
   static const defaultMtu = 9000;
   static const minMtu = 576;
@@ -68,6 +73,11 @@ class TunSettings {
     return strictRouteModes.contains(v) ? v! : strictRouteAuto;
   }
 
+  static String normalizeIpv6(String? raw) {
+    final v = raw?.trim().toLowerCase();
+    return ipv6Modes.contains(v) ? v! : ipv6Close;
+  }
+
   static int clampMtu(int v) => v.clamp(minMtu, maxMtu);
 
   static int clampUdpTimeout(int v) =>
@@ -79,7 +89,9 @@ class TunSettings {
         'strictRoute': strictRoute,
         'udpTimeoutSec': udpTimeoutSec,
         'autoRoute': autoRoute,
-        'blockIpv6Leak': blockIpv6Leak,
+        'ipv6': ipv6,
+        // версии до выбора из трёх читают только переключатель
+        'blockIpv6Leak': ipv6 != ipv6Bypass,
         'defaultsVersion': _defaultsVersion,
       };
 
@@ -103,7 +115,9 @@ class TunSettings {
         (json['udpTimeoutSec'] as num?)?.toInt() ?? defaultUdpTimeoutSec,
       ),
       autoRoute: json['autoRoute'] as bool? ?? true,
-      blockIpv6Leak: json['blockIpv6Leak'] as bool? ?? true,
+      ipv6: json['ipv6'] is String
+          ? normalizeIpv6(json['ipv6'] as String)
+          : (json['blockIpv6Leak'] == false ? ipv6Bypass : ipv6Close),
     );
   }
 
@@ -113,7 +127,7 @@ class TunSettings {
     String? strictRoute,
     int? udpTimeoutSec,
     bool? autoRoute,
-    bool? blockIpv6Leak,
+    String? ipv6,
   }) =>
       TunSettings(
         stack: stack ?? this.stack,
@@ -121,7 +135,7 @@ class TunSettings {
         strictRoute: strictRoute ?? this.strictRoute,
         udpTimeoutSec: udpTimeoutSec ?? this.udpTimeoutSec,
         autoRoute: autoRoute ?? this.autoRoute,
-        blockIpv6Leak: blockIpv6Leak ?? this.blockIpv6Leak,
+        ipv6: ipv6 ?? this.ipv6,
       );
 
   @override
@@ -134,7 +148,7 @@ class TunSettings {
           strictRoute == other.strictRoute &&
           udpTimeoutSec == other.udpTimeoutSec &&
           autoRoute == other.autoRoute &&
-          blockIpv6Leak == other.blockIpv6Leak;
+          ipv6 == other.ipv6;
 
   @override
   int get hashCode => Object.hash(
@@ -143,7 +157,7 @@ class TunSettings {
         strictRoute,
         udpTimeoutSec,
         autoRoute,
-        blockIpv6Leak,
+        ipv6,
       );
 
   String toJsonString() => jsonEncode(toJson());

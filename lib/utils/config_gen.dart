@@ -31,26 +31,29 @@ class ConfigGeneratorV2 {
     String? resolvedServerIp,
     bool localInboundsNoAuth = false,
     bool nativeTunInbound = false,
+    bool nativeTunIpv6 = false,
     DesktopTunOptions? desktopTun,
     GeoAssetIndex? geoIndex,
     List<RouteServerOutbound> routeServers = const [],
     List<RouteAppRules> appRoutes = const [],
     OwnerGuard ownerGuard = OwnerGuard.off,
   }) {
-    return const JsonEncoder.withIndent('  ').convert(
-      _buildXrayConfig(
-        input,
-        settings,
-        resolvedServerIp: resolvedServerIp,
-        localInboundsNoAuth: localInboundsNoAuth,
-        nativeTunInbound: nativeTunInbound,
-        desktopTun: desktopTun,
-        geoIndex: geoIndex,
-        routeServers: routeServers,
-        appRoutes: appRoutes,
-        ownerGuard: ownerGuard,
-      ),
+    final config = _buildXrayConfig(
+      input,
+      settings,
+      resolvedServerIp: resolvedServerIp,
+      localInboundsNoAuth: localInboundsNoAuth,
+      nativeTunInbound: nativeTunInbound,
+      desktopTun: desktopTun,
+      geoIndex: geoIndex,
+      routeServers: routeServers,
+      appRoutes: appRoutes,
+      ownerGuard: ownerGuard,
     );
+    if (nativeTunInbound && desktopTun == null && nativeTunIpv6) {
+      _markNativeTunIpv6(config);
+    }
+    return const JsonEncoder.withIndent('  ').convert(config);
   }
 
   static String generatePingConfig(
@@ -2407,6 +2410,20 @@ class ConfigGeneratorV2 {
     };
   }
 
+  // на Android интерфейс строит VpnService, а xray адреса не читает: по этой записи сервис даёт интерфейсу IPv6
+  // и маршрут ::/0, и плитка с перезапуском берут её из того же конфига на диске
+  static void _markNativeTunIpv6(Map<String, dynamic> config) {
+    for (final inbound in (config['inbounds'] as List? ?? const [])) {
+      if (inbound is! Map<String, dynamic> || inbound['tag'] != _tunInboundTag) {
+        continue;
+      }
+      final settings = inbound['settings'];
+      if (settings is Map<String, dynamic>) {
+        settings['gateway'] = [kTunInterfaceIpv6Prefix];
+      }
+    }
+  }
+
   // впереди всего, как решал sing-box до xray: сначала DNS любой программы в перехват, потом кому туннель вообще не положен
   static List<Map<String, dynamic>> _desktopTunHeadRules(
     DesktopTunOptions tun, {
@@ -2473,7 +2490,7 @@ class ConfigGeneratorV2 {
     return [
       // по тегу tun-ipv6 ядро отвечает сбросом ещё до рукопожатия (tool/patches/xray-tun-refuse-before-handshake.patch),
       // без этого браузер видел обрыв и на IPv4 не откатывал, жалоба 19.11
-      if (tun.captureIpv6)
+      if (tun.captureIpv6 && !tun.passIpv6)
         rule('tun-ipv6', {
           'inboundTag': [_tunInboundTag],
           'ip': ['::/0'],

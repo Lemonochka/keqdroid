@@ -965,10 +965,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTunAutoRouteHint => 'Adds system routes into the tunnel. Without it nothing reaches TUN.';
 
   @override
-  String get settingsTunIpv6 => 'Keep IPv6 inside the tunnel';
+  String get settingsTunIpv6Title => 'IPv6';
 
   @override
-  String get settingsTunIpv6Hint => 'Gives the TUN interface an IPv6 address; without it all IPv6 bypasses the tunnel.';
+  String get settingsTunIpv6Close => 'Block';
+
+  @override
+  String get settingsTunIpv6Vpn => 'Through the VPN';
+
+  @override
+  String get settingsTunIpv6VpnHint => 'Works with servers that have IPv6';
+
+  @override
+  String get settingsTunIpv6Bypass => 'Around the VPN';
+
+  @override
+  String get settingsTunIpv6BypassHint => 'Sites see your real IPv6 address';
+
+  @override
+  String get settingsVpnModeSection => 'VPN mode';
 
   @override
   String get settingsFakeIp => 'Fake IP';

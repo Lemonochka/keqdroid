@@ -961,10 +961,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTunAutoRouteHint => '把系统路由加入隧道。关闭后流量不会进入 TUN。';
 
   @override
-  String get settingsTunIpv6 => '把 IPv6 留在隧道内';
+  String get settingsTunIpv6Title => 'IPv6';
 
   @override
-  String get settingsTunIpv6Hint => '为 TUN 接口分配 IPv6 地址；否则所有 IPv6 都绕过隧道。';
+  String get settingsTunIpv6Close => '阻止';
+
+  @override
+  String get settingsTunIpv6Vpn => '通过 VPN';
+
+  @override
+  String get settingsTunIpv6VpnHint => '适用于支持 IPv6 的服务器';
+
+  @override
+  String get settingsTunIpv6Bypass => '绕过 VPN';
+
+  @override
+  String get settingsTunIpv6BypassHint => '网站会看到您真实的 IPv6 地址';
+
+  @override
+  String get settingsVpnModeSection => 'VPN 模式';
 
   @override
   String get settingsFakeIp => 'Fake IP';

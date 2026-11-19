@@ -525,7 +525,7 @@ class KeqdisVpnService : VpnService() {
 
             // интерфейс раньше ядра: номер дескриптора нужен на старте. mihomo получает его в конфиге, xray в окружении
             if (isMihomo && !proxyOnly) {
-                val tun = buildTunInterface(excludePkgs, includePkgs)
+                val tun = buildTunInterface(excludePkgs, includePkgs, tunIpv6(xrayConfigPath, mihomo = true))
                 tunInterface = tun
                 val tunRawFd = tun.fd
                 injectTunFd(xrayConfigPath, tunRawFd)
@@ -544,7 +544,7 @@ class KeqdisVpnService : VpnService() {
                     coreKind,
                 )
             } else if (xrayOwnsTun) {
-                val tun = buildTunInterface(excludePkgs, includePkgs)
+                val tun = buildTunInterface(excludePkgs, includePkgs, tunIpv6(xrayConfigPath, mihomo = false))
                 tunInterface = tun
                 val tunRawFd = tun.fd
                 injectXrayTunMtu(xrayConfigPath)
@@ -911,7 +911,18 @@ class KeqdisVpnService : VpnService() {
         if (isMihomo && tunFd >= 0) awaitMihomoTun(from = logFrom)
     }
 
-    private fun buildTunInterface(exc: List<String>, inc: List<String>): ParcelFileDescriptor {
+    private fun tunIpv6(configPath: String, mihomo: Boolean): Pair<String, Int>? = runCatching {
+        tunIpv6Of(File(configPath).readText(), mihomo)
+    }.getOrElse {
+        NativeLog.w("KEQDIS", "tunIpv6: ${it.message}")
+        null
+    }
+
+    private fun buildTunInterface(
+        exc: List<String>,
+        inc: List<String>,
+        ipv6: Pair<String, Int>? = null,
+    ): ParcelFileDescriptor {
         val b = Builder()
             .setMtu(TUN_MTU)
             .addAddress(TUN_ADDRESS, TUN_PREFIX)
@@ -921,6 +932,10 @@ class KeqdisVpnService : VpnService() {
             .addDnsServer(TUN_DNS_ADDRESS)
             .setSession("keqdroid")
             .setBlocking(false)
+        if (ipv6 != null) {
+            b.addAddress(ipv6.first, ipv6.second).addRoute("::", 0)
+            NativeLog.i("KEQDIS", "buildTun: IPv6 ${ipv6.first}/${ipv6.second} goes through the VPN")
+        }
 
         // без этого VPN с target 10+ считается лимитной сетью даже на домашнем Wi-Fi. false: признак берётся у сети под туннелем
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) b.setMetered(false)

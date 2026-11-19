@@ -113,4 +113,46 @@ void main() {
     // Умолчание не сдвинулось: mips выбирают руками.
     expect(const TunSettings().stack, TunSettings.stackGvisor);
   });
+
+  group('IPv6', () {
+    test('по умолчанию закрыт', () {
+      expect(const TunSettings().ipv6, TunSettings.ipv6Close);
+      expect(TunSettings.fromJson(const {}).ipv6, TunSettings.ipv6Close);
+    });
+
+    test('выключенный переключатель прежних версий становится «мимо VPN»', () {
+      expect(
+        TunSettings.fromJson({'blockIpv6Leak': false}).ipv6,
+        TunSettings.ipv6Bypass,
+      );
+      expect(
+        TunSettings.fromJson({'blockIpv6Leak': true}).ipv6,
+        TunSettings.ipv6Close,
+      );
+    });
+
+    test('выбор переживает запись и чтение, мусор читается как закрыт', () {
+      for (final mode in TunSettings.ipv6Modes) {
+        final tun = TunSettings(ipv6: mode);
+        expect(TunSettings.fromJson(tun.toJson()), tun);
+      }
+      expect(
+        TunSettings.fromJson({'ipv6': 'maybe', 'blockIpv6Leak': false}).ipv6,
+        TunSettings.ipv6Close,
+      );
+    });
+
+    // копия настроек уезжает в прежнюю версию на другом устройстве
+    test('прежние версии читают переключатель так же, как он работал', () {
+      expect(
+        const TunSettings(ipv6: TunSettings.ipv6Bypass).toJson()['blockIpv6Leak'],
+        isFalse,
+      );
+      expect(
+        const TunSettings(ipv6: TunSettings.ipv6Vpn).toJson()['blockIpv6Leak'],
+        isTrue,
+      );
+      expect(const TunSettings().toJson()['blockIpv6Leak'], isTrue);
+    });
+  });
 }

@@ -553,7 +553,43 @@ class ServersNotifier extends Notifier<ServersState> {
           .applyPingUpdates(pending, DateTime.now());
       state = state.copyWith(servers: merged);
     }
+    unawaited(refreshIpv6Exits(results));
     return results;
+  }
+
+  bool _ipv6Probing = false;
+
+  Future<void> refreshIpv6Exits(List<PingResult> results) async {
+    if (_ipv6Probing) return;
+    _ipv6Probing = true;
+    try {
+      final storage = ref.read(storageProvider);
+      final settings = await storage.getSettings();
+      final due = PingService.dueForIpv6Probe(
+        state.servers,
+        results,
+        settings,
+        DateTime.now(),
+      );
+      if (due.isEmpty) return;
+      final probed = await PingService.probeIpv6Exits(
+        due,
+        settings,
+        templateServers:
+            templateServerIds(due, settings, storage.getClashTemplate),
+      );
+      if (probed.isEmpty) return;
+      final merged = await storage.applyIpv6Probe(probed, DateTime.now());
+      state = state.copyWith(servers: merged);
+      final carrying = probed.values.where((v) => v).length;
+      AppLogger.instance.info(
+        'IPv6 check: $carrying of ${probed.length} server(s) carry IPv6',
+      );
+    } catch (e, st) {
+      AppLogger.instance.debug('IPv6 check failed', error: e, stackTrace: st);
+    } finally {
+      _ipv6Probing = false;
+    }
   }
 
   // снимок в loading даёт null, и сырой TCP-замер ушёл бы в туннель мерить локальный конец
@@ -657,6 +693,7 @@ class ServersNotifier extends Notifier<ServersState> {
           lastPingType: PingService.pingTypeToStored(result.pingType),
         ),
       });
+      unawaited(refreshIpv6Exits([result]));
       if (!result.success) {
         throw Exception(result.error.isEmpty ? 'Ping failed' : result.error);
       }

@@ -153,6 +153,7 @@ class _XrayCoreSettingsScreenState extends ConsumerState<_XrayCoreSettingsScreen
         ],
         const _XrayGeneralSection(),
         if (Platform.isWindows || Platform.isLinux) const _XrayTunSection(),
+        if (Platform.isAndroid) const _VpnModeSection(),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           onPressed: () => _resetDefaults(settings),
@@ -1362,15 +1363,94 @@ class _XrayTunSection extends ConsumerWidget {
                 l10n.settingsTunAutoRouteHint,
               ),
             ),
-            if (xray)
-              SwitchListTile(
-                value: tun.blockIpv6Leak,
-                onChanged: (v) =>
-                    _saveXrayTun(ref, settings, tun.copyWith(blockIpv6Leak: v)),
-                activeThumbColor: accent,
-                title: Text(l10n.settingsTunIpv6),
-                subtitle: Text(l10n.settingsTunIpv6Hint),
-              ),
+            ..._ipv6Choice(context, ref, settings, desktop: true),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+List<Widget> _ipv6Choice(
+  BuildContext context,
+  WidgetRef ref,
+  AppSettings settings, {
+  required bool desktop,
+}) {
+  final l10n = AppLocalizations.of(context)!;
+  final accent = AppTheme.accent(context);
+  final tun = settings.tun;
+  return [
+    Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Text(
+        l10n.settingsTunIpv6Title,
+        style: Theme.of(context)
+            .textTheme
+            .titleSmall
+            ?.copyWith(color: AppTheme.text(context)),
+      ),
+    ),
+    RadioGroup<String>(
+      // мимо VPN телефон не пускает: без адреса IPv6 у интерфейса Android закрывает его сам
+      groupValue: !desktop && tun.ipv6 == TunSettings.ipv6Bypass
+          ? TunSettings.ipv6Close
+          : tun.ipv6,
+      onChanged: (v) {
+        if (v != null) _saveXrayTun(ref, settings, tun.copyWith(ipv6: v));
+      },
+      child: Column(
+        children: [
+          _xrayChoiceTile(
+            context: context,
+            value: TunSettings.ipv6Close,
+            accent: accent,
+            title: l10n.settingsTunIpv6Close,
+          ),
+          _xrayChoiceTile(
+            context: context,
+            value: TunSettings.ipv6Vpn,
+            accent: accent,
+            title: l10n.settingsTunIpv6Vpn,
+            subtitle: l10n.settingsTunIpv6VpnHint,
+          ),
+          if (desktop)
+            _xrayChoiceTile(
+              context: context,
+              value: TunSettings.ipv6Bypass,
+              accent: accent,
+              title: l10n.settingsTunIpv6Bypass,
+              subtitle: l10n.settingsTunIpv6BypassHint,
+            ),
+        ],
+      ),
+    ),
+  ];
+}
+
+class _VpnModeSection extends ConsumerWidget {
+  const _VpnModeSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings =
+        ref.watch(settingsNotifierProvider).value ?? const AppSettings();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _XrayCoreSectionHeader(
+          icon: Icons.lan_rounded,
+          title: l10n.settingsVpnModeSection,
+        ),
+        _xraySettingsCard(
+          context,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Text(l10n.settingsTunSectionNote),
+            ),
+            ..._ipv6Choice(context, ref, settings, desktop: false),
           ],
         ),
       ],

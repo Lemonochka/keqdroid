@@ -115,6 +115,8 @@ In these two fields a plain name matches only the domain itself, subdomains need
 
 `PreferIPv4` and `PreferIPv6` exist only on Xray: the core resolves both kinds of addresses but connects over IPv4 (or IPv6) first, and over the other one only if the site has no such addresses. mihomo only has `UseIPv4` and `UseIP`, and on mihomo `UseIPv4` turns IPv6 off completely, not just in DNS.
 
+In VPN mode the strategy doesn't decide what happens to IPv6 from programs, on either core. Whether it is blocked, goes through the VPN or (on a PC only) around it is chosen under “IPv6” in “Core settings”.
+
 ## Fake IP
 
 Normally a program waits for the core to find the site's real address, and when “Everything else” goes through the VPN, that's a query through the server. With Fake IP the core immediately answers with a stand-in address from `198.18.0.0/16` and remembers which site it gave it to. When the program connects to that address, the core sends the site name to the server, and the server looks up the real address. Opening a site for the first time gets faster by one round trip to the server.
