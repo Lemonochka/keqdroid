@@ -2471,7 +2471,8 @@ class ConfigGeneratorV2 {
     final unnamedSelection = tun.routingMode == AppRoutingMode.onlySelected &&
         tun.managedProcessNames.every((name) => name.trim().isEmpty);
     return [
-      // закрываем, а не проксируем: закрытый выход Happy Eyeballs откатывает на IPv4 за миллисекунды
+      // по тегу tun-ipv6 ядро отвечает сбросом ещё до рукопожатия (tool/patches/xray-tun-refuse-before-handshake.patch),
+      // без этого браузер видел обрыв и на IPv4 не откатывал, жалоба 19.11
       if (tun.captureIpv6)
         rule('tun-ipv6', {
           'inboundTag': [_tunInboundTag],

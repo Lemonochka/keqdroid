@@ -146,7 +146,11 @@ void main() {
       captureIpv6: true,
     )));
     final ipv6 = rules[rules.length - 2];
-    expect(ipv6['ruleTag'], 'tun-ipv6');
+    expect(
+      ipv6['ruleTag'],
+      'tun-ipv6',
+      reason: 'по этому тегу ядро отвечает сбросом до рукопожатия',
+    );
     expect(ipv6['ip'], ['::/0']);
     expect(ipv6['inboundTag'], ['tun-in']);
     expect(ipv6['outboundTag'], 'block');
@@ -282,5 +286,35 @@ void main() {
     );
     expect(_rule(config, 'tun-dns'), isNull);
     expect(_rule(config, 'tun-own'), isNotNull);
+  });
+
+  test('готовый конфиг с catch-all автора всё равно несёт правило tun-ipv6', () {
+    // ядро применяет правило по тегу отдельно от остальных, поэтому общий catch-all провайдера сброс не отменяет
+    final config = _config(
+      const DesktopTunOptions(windows: true, mtu: 9000, captureIpv6: true),
+      input: jsonEncode({
+        'outbounds': [
+          {
+            'tag': 'auto-5',
+            'protocol': 'vless',
+            'settings': {
+              'address': '198.51.100.43',
+              'port': 443,
+              'id': '00000000-0000-4000-8000-000000000000',
+              'encryption': 'none',
+            },
+          },
+        ],
+        'routing': {
+          'rules': [
+            {'type': 'field', 'network': 'tcp,udp', 'outboundTag': 'auto-5'},
+          ],
+        },
+      }),
+    );
+    final ipv6 = _rule(config, 'tun-ipv6')!;
+    expect(ipv6['inboundTag'], ['tun-in']);
+    expect(ipv6['ip'], ['::/0']);
+    expect(_tunSettings(config)['autoSystemRoutingTable'], ['0.0.0.0/0', '::/0']);
   });
 }

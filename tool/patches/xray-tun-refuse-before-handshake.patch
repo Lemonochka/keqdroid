@@ -1,0 +1,230 @@
+Reset, instead of accepting, a TCP connection from the tun that keqdroid's
+tun-ipv6 rule closes, so the app goes on to its IPv4 address.
+
+On the desktop, with a global IPv6 address on the machine and "Keep IPv6
+inside the tunnel" on, keqdroid routes ::/0 into the TUN and closes it with a
+rule tagged tun-ipv6 that leads to a blackhole. The stack answers a SYN before
+routing runs (proxy/tun/stack.go, and gVisor did so as well), so the app saw a
+connection open and then close. Happy Eyeballs had already settled on IPv6 and
+never tried IPv4: a browser on IPv6 (Chromium prefers it) opened no site at
+all, while Telegram and other IPv4 apps worked (complaint of 19.11.2026,
+Windows, mobile internet shared from a phone).
+
+proxy/tun now applies that one rule before the handshake, with
+Router.MatchRuleTag from xray-owner-guard.patch, and answers a match with a
+reset, as a port nobody listens on would. The rule matches the address and
+inbound tag only, so the check stays in the loop that reads the tun. No
+tun-ipv6 rule in the config (Android, or IPv6 not taken into the TUN) means no
+match and no change. UDP has no handshake and keeps being dropped by the rule
+itself.
+
+Applies after xray-owner-guard.patch (file names sort that way).
+
+Built by tool/build_xray_cores.ps1. Checked against xray-core v26.11.9.
+
+diff --git a/app/router/match_rule_tag_ipv6_test.go b/app/router/match_rule_tag_ipv6_test.go
+new file mode 100644
+index 0000000..d916a45
+--- /dev/null
++++ b/app/router/match_rule_tag_ipv6_test.go
+@@ -0,0 +1,64 @@
++package router_test
++
++import (
++	"context"
++	"testing"
++
++	"github.com/golang/mock/gomock"
++	. "github.com/xtls/xray-core/app/router"
++	"github.com/xtls/xray-core/common"
++	"github.com/xtls/xray-core/common/geodata"
++	"github.com/xtls/xray-core/common/net"
++	"github.com/xtls/xray-core/common/session"
++	"github.com/xtls/xray-core/features/routing"
++	routing_session "github.com/xtls/xray-core/features/routing/session"
++	"github.com/xtls/xray-core/testing/mocks"
++)
++
++// keqdroid: the tun asks the rule tagged tun-ipv6 before a handshake, see
++// tool/patches/xray-tun-refuse-before-handshake.patch. It takes IPv6 that
++// comes through the tun, NAT64 addresses as well, and nothing else.
++func TestMatchRuleTagTunIPv6(t *testing.T) {
++	config := &Config{
++		Rule: []*RoutingRule{
++			{
++				TargetTag:  &RoutingRule_Tag{Tag: "block"},
++				RuleTag:    "tun-ipv6",
++				InboundTag: []string{"tun-in"},
++				Ip: []*geodata.IPRule{
++					{
++						Value: &geodata.IPRule_Custom{
++							Custom: &geodata.CIDRRule{
++								Cidr: &geodata.CIDR{Ip: make([]byte, 16), Prefix: 0},
++							},
++						},
++					},
++				},
++			},
++		},
++	}
++
++	mockCtl := gomock.NewController(t)
++	defer mockCtl.Finish()
++
++	r := new(Router)
++	common.Must(r.Init(context.TODO(), config, mocks.NewDNSClient(mockCtl), nil, nil))
++
++	routingCtx := func(inbound string, dest net.Destination) routing.Context {
++		ctx := session.ContextWithInbound(context.Background(), &session.Inbound{Tag: inbound})
++		ctx = session.ContextWithOutbounds(ctx, []*session.Outbound{{Target: dest, OriginalTarget: dest}})
++		return routing_session.AsRoutingContext(ctx)
++	}
++
++	for _, ip := range []string{"2001:db8::1", "64:ff9b::808:808"} {
++		if !r.MatchRuleTag(routingCtx("tun-in", net.TCPDestination(net.ParseAddress(ip), 443)), "tun-ipv6") {
++			t.Error("tun-ipv6 should take ", ip, " from the tun")
++		}
++	}
++	if r.MatchRuleTag(routingCtx("tun-in", net.TCPDestination(net.ParseAddress("198.51.100.1"), 443)), "tun-ipv6") {
++		t.Error("tun-ipv6 must not take IPv4")
++	}
++	if r.MatchRuleTag(routingCtx("socks-in", net.TCPDestination(net.ParseAddress("2001:db8::1"), 443)), "tun-ipv6") {
++		t.Error("tun-ipv6 must not take what comes through another inbound")
++	}
++}
+diff --git a/proxy/tun/refuse_rule.go b/proxy/tun/refuse_rule.go
+new file mode 100644
+index 0000000..d8f01e3
+--- /dev/null
++++ b/proxy/tun/refuse_rule.go
+@@ -0,0 +1,33 @@
++package tun
++
++import (
++	"github.com/xtls/xray-core/common/net"
++	"github.com/xtls/xray-core/common/session"
++	"github.com/xtls/xray-core/features/routing"
++	routing_session "github.com/xtls/xray-core/features/routing/session"
++)
++
++// keqdroid, see tool/patches/xray-tun-refuse-before-handshake.patch: the rule
++// keqdroid writes on the desktop to close IPv6 inside the TUN
++const refusedRuleTag = "tun-ipv6"
++
++type tagRouter interface {
++	HasRuleTag(tag string) bool
++	MatchRuleTag(ctx routing.Context, tag string) bool
++}
++
++// refusedBeforeHandshake reports whether the rule tagged refusedRuleTag takes
++// the connection. The stack asks before it answers the SYN, so the app gets a
++// reset and goes on to its next address, as with a port nobody listens on.
++func (t *Handler) refusedBeforeHandshake(src, dst net.Destination) bool {
++	if t.instance == nil {
++		return false
++	}
++	router, _ := t.instance.GetFeature(routing.RouterType()).(tagRouter)
++	if router == nil || !router.HasRuleTag(refusedRuleTag) {
++		return false
++	}
++	ctx := session.ContextWithInbound(t.ctx, &session.Inbound{Source: src, Tag: t.tag})
++	ctx = session.ContextWithOutbounds(ctx, []*session.Outbound{{Target: dst, OriginalTarget: dst}})
++	return router.MatchRuleTag(routing_session.AsRoutingContext(ctx), refusedRuleTag)
++}
+diff --git a/proxy/tun/refuse_rule_test.go b/proxy/tun/refuse_rule_test.go
+new file mode 100644
+index 0000000..1169ec2
+--- /dev/null
++++ b/proxy/tun/refuse_rule_test.go
+@@ -0,0 +1,46 @@
++package tun
++
++import (
++	"context"
++	"net/netip"
++	"testing"
++	"time"
++
++	"github.com/xtls/xray-core/common/net"
++)
++
++type testRefuser func(src, dst net.Destination) bool
++
++func (r testRefuser) refusedBeforeHandshake(src, dst net.Destination) bool { return r(src, dst) }
++
++// keqdroid, xray-tun-refuse-before-handshake.patch: a SYN that the config
++// closes gets a reset and no connection, others open as before
++func TestRefusedBeforeHandshake(t *testing.T) {
++	conns := make(chan accepted, 2)
++	p, l := newPeer(t, "[fdfe:dcba:9876::1]:50000", "[2001:db8::1]:443")
++	s := &stack{ctx: context.Background(), tun: l, mtu: testMTU, window: tcpWindow, handle: accept(conns), conns: make(map[flow]*tcpConn), sockets: make(map[netip.AddrPort]*udpSocket)}
++	s.udp = newUdpConnectionHandler(s.handle, s.writeUDP, nil)
++	s.refuser = testRefuser(func(_, dst net.Destination) bool { return dst.Address.Family().IsIPv6() })
++	s.Start()
++	t.Cleanup(func() {
++		s.Close()
++		l.Close()
++	})
++
++	p.send(p.seq, tcpSyn, nil, nil)
++	if seg := p.receive(); seg.flags != tcpRst|tcpAck || seg.ack != p.seq+1 {
++		t.Fatal("not a reset: flags ", seg.flags, ", ack ", seg.ack)
++	}
++	select {
++	case a := <-conns:
++		t.Fatal("a refused connection was handed on, from ", a.conn.RemoteAddr())
++	case <-time.After(100 * time.Millisecond):
++	}
++
++	p.src, p.dst = netip.MustParseAddrPort("172.19.0.1:50001"), netip.MustParseAddrPort("198.51.100.1:443")
++	p.seq = 2000
++	p.connect(nil)
++	if a := take(t, conns); a.conn.RemoteAddr().String() != "172.19.0.1:50001" {
++		t.Fatal("connection from ", a.conn.RemoteAddr())
++	}
++}
+diff --git a/proxy/tun/stack.go b/proxy/tun/stack.go
+index 3291516..01ac8f8 100644
+--- a/proxy/tun/stack.go
++++ b/proxy/tun/stack.go
+@@ -95,6 +95,14 @@ type stack struct {
+ 	// keqdroid, owner_guard_android.go: guarding are the SYNs whose owner is being asked about
+ 	guard    handshakeGuard
+ 	guarding map[flow]struct{}
++
++	// keqdroid, refuse_rule.go: what the config closes gets a reset instead of a handshake
++	refuser handshakeRefuser
++}
++
++// keqdroid patch, see tool/patches/xray-tun-refuse-before-handshake.patch
++type handshakeRefuser interface {
++	refusedBeforeHandshake(src, dst net.Destination) bool
+ }
+ 
+ // keqdroid patch, see tool/patches/xray-owner-guard.patch
+@@ -134,6 +142,7 @@ func NewStack(ctx context.Context, options StackOptions, handler ConnectionHandl
+ 			// the tun inbound only, the stack of a WireGuard peer answers itself
+ 			s.icmp = newICMPDirect(s)
+ 			s.guard = h
++			s.refuser = h
+ 		}
+ 		s.udp = newUdpConnectionHandler(s.handle, s.writeUDP, exitOf)
+ 	}
+@@ -352,6 +361,17 @@ func (s *stack) handleTCP(p packet) {
+ 		return
+ 	}
+ 
++	// keqdroid patch, see tool/patches/xray-tun-refuse-before-handshake.patch: routing runs after the
++	// handshake, so a blocked connection opened and died, and Happy Eyeballs never tried the next address
++	if s.refuser != nil {
++		src := net.TCPDestination(net.IPAddress(f.src.Addr().AsSlice()), net.Port(f.src.Port()))
++		dst := net.TCPDestination(net.IPAddress(f.dst.Addr().AsSlice()), net.Port(f.dst.Port()))
++		if s.refuser.refusedBeforeHandshake(src, dst) {
++			s.refuse(f, seg)
++			return
++		}
++	}
++
+ 	if s.opening.Load() >= tcpOpening {
+ 		return
+ 	}
