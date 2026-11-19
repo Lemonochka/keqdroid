@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only launcher-shortcut labels, Quick Settings tile and home screen widget
-     texts live here: the app label stays hardcoded in AndroidManifest.xml, and
-     every other user-facing string comes from Flutter l10n (lib/l10n). Static
-     shortcuts, the tile and the widget run without a Flutter engine, so they
-     cannot reuse the Dart translations. -->
+<!-- Only launcher-shortcut labels, Quick Settings tile, home screen widget and
+     VPN notification texts live here: the app label stays hardcoded in
+     AndroidManifest.xml, and every other user-facing string comes from Flutter
+     l10n (lib/l10n). Static shortcuts, the tile, the widget and the VPN service
+     run without a Flutter engine, so they cannot reuse the Dart translations. -->
 <resources>
     <string name="shortcut_connect_short">Connect</string>
     <string name="shortcut_connect_long">Connect to VPN</string>
@@ -18,4 +18,14 @@
     <string name="widget_status_connecting">Connecting…</string>
     <string name="widget_status_error">Error</string>
     <string name="widget_clock_format">Connected · %s</string>
+    <string name="notif_action_connect">Connect</string>
+    <string name="notif_action_disconnect">Disconnect</string>
+    <string name="notif_status_connecting">Connecting…</string>
+    <string name="notif_status_connected">Connected</string>
+    <string name="notif_status_disconnected">Disconnected</string>
+    <string name="notif_status_error">Error</string>
+    <string name="notif_status_timeout">Connection timed out</string>
+    <string name="notif_status_proxy">Proxy · %1$s</string>
+    <string name="notif_channel_name">VPN Control</string>
+    <string name="notif_channel_description">VPN connection control and status</string>
 </resources>

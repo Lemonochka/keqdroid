@@ -13,4 +13,14 @@
     <string name="widget_status_connecting">Подключение…</string>
     <string name="widget_status_error">Ошибка</string>
     <string name="widget_clock_format">Подключено · %s</string>
+    <string name="notif_action_connect">Подключить</string>
+    <string name="notif_action_disconnect">Отключить</string>
+    <string name="notif_status_connecting">Подключение…</string>
+    <string name="notif_status_connected">Подключено</string>
+    <string name="notif_status_disconnected">Отключено</string>
+    <string name="notif_status_error">Ошибка</string>
+    <string name="notif_status_timeout">Не удалось подключиться: истекло время ожидания</string>
+    <string name="notif_status_proxy">Прокси · %1$s</string>
+    <string name="notif_channel_name">Управление VPN</string>
+    <string name="notif_channel_description">Состояние подключения VPN и управление им</string>
 </resources>

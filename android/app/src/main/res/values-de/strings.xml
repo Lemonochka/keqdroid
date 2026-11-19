@@ -13,4 +13,14 @@
     <string name="widget_status_connecting">Verbinden…</string>
     <string name="widget_status_error">Fehler</string>
     <string name="widget_clock_format">Verbunden · %s</string>
+    <string name="notif_action_connect">Verbinden</string>
+    <string name="notif_action_disconnect">Trennen</string>
+    <string name="notif_status_connecting">Verbinden…</string>
+    <string name="notif_status_connected">Verbunden</string>
+    <string name="notif_status_disconnected">Getrennt</string>
+    <string name="notif_status_error">Fehler</string>
+    <string name="notif_status_timeout">Zeitüberschreitung beim Verbinden</string>
+    <string name="notif_status_proxy">Proxy · %1$s</string>
+    <string name="notif_channel_name">VPN-Steuerung</string>
+    <string name="notif_channel_description">Status und Steuerung der VPN-Verbindung</string>
 </resources>

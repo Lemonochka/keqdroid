@@ -151,10 +151,10 @@ class VpnServiceRulesTest {
 
     @Test
     fun `notification shows what the settings ask for`() {
-        assertEquals("1m 5s  ·  ↓ 2.0 KB/s  ·  ↑ 10 B/s", notificationBody(true, true, 65_000, 2048, 10))
-        assertEquals("1m 5s", notificationBody(true, false, 65_000, 2048, 10))
-        assertEquals("↓ 2.0 KB/s  ·  ↑ 10 B/s", notificationBody(false, true, 65_000, 2048, 10))
-        assertEquals("Connected", notificationBody(false, false, 65_000, 2048, 10))
+        assertEquals("1m 5s  ·  ↓ 2.0 KB/s  ·  ↑ 10 B/s", notificationBody(true, true, 65_000, 2048, 10, "Подключено"))
+        assertEquals("1m 5s", notificationBody(true, false, 65_000, 2048, 10, "Подключено"))
+        assertEquals("↓ 2.0 KB/s  ·  ↑ 10 B/s", notificationBody(false, true, 65_000, 2048, 10, "Подключено"))
+        assertEquals("Подключено", notificationBody(false, false, 65_000, 2048, 10, "Подключено"))
     }
 
     @Test

@@ -13,4 +13,14 @@
     <string name="widget_status_connecting">در حال اتصال…</string>
     <string name="widget_status_error">خطا</string>
     <string name="widget_clock_format">متصل · %s</string>
+    <string name="notif_action_connect">اتصال</string>
+    <string name="notif_action_disconnect">قطع اتصال</string>
+    <string name="notif_status_connecting">در حال اتصال…</string>
+    <string name="notif_status_connected">متصل</string>
+    <string name="notif_status_disconnected">قطع شده</string>
+    <string name="notif_status_error">خطا</string>
+    <string name="notif_status_timeout">زمان اتصال به پایان رسید</string>
+    <string name="notif_status_proxy">پروکسی · %1$s</string>
+    <string name="notif_channel_name">کنترل VPN</string>
+    <string name="notif_channel_description">وضعیت و کنترل اتصال VPN</string>
 </resources>

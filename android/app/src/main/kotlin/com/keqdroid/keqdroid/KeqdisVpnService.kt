@@ -387,7 +387,7 @@ class KeqdisVpnService : VpnService() {
         try {
             startForeground(
                 NOTIFICATION_ID,
-                buildControlNotification("Connecting…", isConnected = false, isTransitioning = true)
+                buildControlNotification(getString(R.string.notif_status_connecting), isConnected = false, isTransitioning = true)
             )
         } catch (e: Exception) {
             // после перезапуска системой foreground разрешает исключение REASON_OP_ACTIVATE_VPN, и прошивка вправе его не признать.
@@ -470,7 +470,7 @@ class KeqdisVpnService : VpnService() {
             // вне мьютекса: возможно, завис его владелец
             runCatching { cleanup() }
             showControlNotification(
-                "Connection timed out",
+                getString(R.string.notif_status_timeout),
                 isConnected = false,
                 isTransitioning = false,
             )
@@ -494,7 +494,7 @@ class KeqdisVpnService : VpnService() {
     ) = opMutex.withLock {
         if (status == VpnRunStatus.RUNNING || status == VpnRunStatus.STARTING) {
             if (status == VpnRunStatus.RUNNING) {
-                showControlNotification("Connected", isConnected = true, isTransitioning = false)
+                showControlNotification(getString(R.string.notif_status_connected), isConnected = true, isTransitioning = false)
             }
             return@withLock
         }
@@ -602,7 +602,7 @@ class KeqdisVpnService : VpnService() {
             setStatus(VpnRunStatus.RUNNING)
             // в режиме прокси ключика VPN в статусбаре нет, без подписи непонятно, работает ли что-то
             showControlNotification(
-                if (proxyOnly) "Proxy · 127.0.0.1:$socksPort" else "Connected",
+                if (proxyOnly) getString(R.string.notif_status_proxy, "127.0.0.1:$socksPort") else getString(R.string.notif_status_connected),
                 isConnected = true,
                 isTransitioning = false,
             )
@@ -619,7 +619,7 @@ class KeqdisVpnService : VpnService() {
             NativeLog.e("KEQDIS", "startVpn failed: ${e.message}", e)
             setStatus(VpnRunStatus.ERROR, e.message)
             cleanup()
-            showControlNotification(e.message ?: "Error", isConnected = false, isTransitioning = false)
+            showControlNotification(e.message ?: getString(R.string.notif_status_error), isConnected = false, isTransitioning = false)
             stopForeground(STOP_FOREGROUND_REMOVE)
             unregisterNotificationReceiver()
             stopSelf(startId)
@@ -639,7 +639,7 @@ class KeqdisVpnService : VpnService() {
         setStatus(VpnRunStatus.STOPPED)
         handoverJob?.cancel()
         handoverJob = null
-        showControlNotification("Disconnected", isConnected = false, isTransitioning = false)
+        showControlNotification(getString(R.string.notif_status_disconnected), isConnected = false, isTransitioning = false)
         withContext(Dispatchers.Main) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         }
@@ -809,7 +809,7 @@ class KeqdisVpnService : VpnService() {
         getSharedPreferences(PREFS_QS, Context.MODE_PRIVATE).edit()
             .putString(KEY_QS_LAST_SERVER_NAME, serverName)
             .apply()
-        showControlNotification("Connected", isConnected = true, isTransitioning = false)
+        showControlNotification(getString(R.string.notif_status_connected), isConnected = true, isTransitioning = false)
         HomeWidget.refresh(this)
         NativeLog.i("KEQDIS", "mihomo reload: server switched in place")
         true
@@ -875,7 +875,7 @@ class KeqdisVpnService : VpnService() {
             cleanup()
             cleanupDone = true
             withContext(Dispatchers.Main) { stopForeground(STOP_FOREGROUND_REMOVE) }
-            showControlNotification("Error", isConnected = false, isTransitioning = false)
+            showControlNotification(getString(R.string.notif_status_error), isConnected = false, isTransitioning = false)
         }
     }
 
@@ -1335,6 +1335,7 @@ class KeqdisVpnService : VpnService() {
                         uptimeMs = System.currentTimeMillis() - startTime,
                         downloadSpeed = downloadSpeed.get(),
                         uploadSpeed = uploadSpeed.get(),
+                        connected = getString(R.string.notif_status_connected),
                     )
                     runCatching {
                         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(
@@ -1463,17 +1464,19 @@ class KeqdisVpnService : VpnService() {
         isTransitioning: Boolean
     ): Notification {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        // каналов до Android 8 нет, и вызов ронял службу на первом же уведомлении
+        // каналов до Android 8 нет, и вызов ронял службу на первом же уведомлении.
+        // повторный create с тем же id переименовывает канал: так он следует за языком телефона
+        val channelName = getString(R.string.notif_channel_name)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-            nm.getNotificationChannel(CHANNEL_ID_CONTROL) == null
+            nm.getNotificationChannel(CHANNEL_ID_CONTROL)?.name?.toString() != channelName
         ) {
             nm.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID_CONTROL,
-                    "VPN Control",
+                    channelName,
                     NotificationManager.IMPORTANCE_LOW
                 ).apply {
-                    description = "VPN connection control and status"
+                    description = getString(R.string.notif_channel_description)
                     setShowBadge(false)
                 }
             )
@@ -1515,7 +1518,7 @@ class KeqdisVpnService : VpnService() {
                 )
                 builder.addAction(
                     android.R.drawable.ic_menu_close_clear_cancel,
-                    "Disconnect",
+                    getString(R.string.notif_action_disconnect),
                     disconnectPending
                 )
             } else {
@@ -1555,7 +1558,7 @@ class KeqdisVpnService : VpnService() {
                 )
                 builder.addAction(
                     android.R.drawable.ic_menu_send,
-                    "Connect",
+                    getString(R.string.notif_action_connect),
                     connectPending
                 )
             }

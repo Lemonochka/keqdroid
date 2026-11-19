@@ -13,4 +13,14 @@
     <string name="widget_status_connecting">正在连接…</string>
     <string name="widget_status_error">错误</string>
     <string name="widget_clock_format">已连接 · %s</string>
+    <string name="notif_action_connect">连接</string>
+    <string name="notif_action_disconnect">断开</string>
+    <string name="notif_status_connecting">正在连接…</string>
+    <string name="notif_status_connected">已连接</string>
+    <string name="notif_status_disconnected">未连接</string>
+    <string name="notif_status_error">错误</string>
+    <string name="notif_status_timeout">连接超时</string>
+    <string name="notif_status_proxy">代理 · %1$s</string>
+    <string name="notif_channel_name">VPN 控制</string>
+    <string name="notif_channel_description">VPN 连接状态与控制</string>
 </resources>

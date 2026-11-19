@@ -114,6 +114,7 @@ internal fun notificationBody(
     uptimeMs: Long,
     downloadSpeed: Long,
     uploadSpeed: Long,
+    connected: String,
 ): String {
     val parts = ArrayList<String>(3)
     if (showUptime) parts.add(formatUptime(uptimeMs))
@@ -121,5 +122,5 @@ internal fun notificationBody(
         parts.add("↓ ${formatSpeed(downloadSpeed)}")
         parts.add("↑ ${formatSpeed(uploadSpeed)}")
     }
-    return if (parts.isEmpty()) "Connected" else parts.joinToString("  ·  ")
+    return if (parts.isEmpty()) connected else parts.joinToString("  ·  ")
 }
