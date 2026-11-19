@@ -35,4 +35,8 @@ internal object RoboSession {
     fun setLiveStatus(status: String) {
         KeqdisVpnService::class.java.getDeclaredField("liveStatus").apply { isAccessible = true }.set(null, status)
     }
+
+    fun setStartAcceptedAt(at: Long) {
+        KeqdisVpnService::class.java.getDeclaredField("startAcceptedAt").apply { isAccessible = true }.setLong(null, at)
+    }
 }

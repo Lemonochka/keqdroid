@@ -211,6 +211,7 @@ internal object HomeWidget {
                 QuickConnect.Tap.OpenApp -> open(app, QuickConnect.openAppIntent(app, connect = true))
                 QuickConnect.Tap.Window -> open(app, QuickConnect.quickConnectIntent(app))
                 is QuickConnect.Tap.Start -> {
+                    val sentAt = SystemClock.elapsedRealtime()
                     try {
                         if (Build.VERSION.SDK_INT >= 26) app.startForegroundService(tap.intent) else app.startService(tap.intent)
                     } catch (e: Exception) {
@@ -225,8 +226,8 @@ internal object HomeWidget {
                     waiting = true
                     handler.postDelayed({
                         runCatching {
-                            if (!QuickConnect.liveActive()) {
-                                NativeLog.e(TAG, "tap: service did not come up, likely blocked by the OEM")
+                            if (QuickConnect.startSwallowed(sentAt)) {
+                                NativeLog.e(TAG, "tap: service never got the start, likely blocked by the OEM")
                                 QuickConnect.rememberDirectStartBlocked(app)
                                 refresh(app)
                             }

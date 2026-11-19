@@ -99,6 +99,12 @@ class KeqdisVpnService : VpnService() {
         var connectedSince: Long = 0L
             private set
 
+        // по нему плитка и виджет узнают, что прошивка проглотила старт: onStartCommand тогда не приходит вовсе
+        @JvmStatic
+        @Volatile
+        var startAcceptedAt: Long = 0L
+            private set
+
         // для сторожа автовыбора: -1 пока сеть не слушаем. по счётчику смен он узнаёт новую сеть и кончает паузу
         @JvmStatic
         @Volatile
@@ -127,7 +133,8 @@ class KeqdisVpnService : VpnService() {
         // статус тут не годится: новый процесс чинит его в onCreate раньше onStartCommand
         const val KEY_QS_SESSION_WANTED = "qs_session_wanted"
 
-        const val KEY_QS_DIRECT_START_BLOCKED_ON = "qs_direct_start_blocked_on"
+        // имя сменено 19.11.2026: прежняя отметка ставилась и на упавший старт, и плитка навсегда уходила в окно
+        const val KEY_QS_DIRECT_START_BLOCKED_ON = "qs_direct_start_blocked_on_v2"
 
         fun snapshotStartIntent(context: Context): Intent? {
             val snapshot = SessionSnapshot.read(
@@ -392,7 +399,9 @@ class KeqdisVpnService : VpnService() {
             return START_NOT_STICKY
         }
 
-        // этого ждёт плитка (verifyStarted), чтобы отличить запрет системы от задержки. setStatus() нельзя:
+        startAcceptedAt = android.os.SystemClock.elapsedRealtime()
+
+        // плитка видит старт раньше, чем status за opMutex. setStatus() нельзя:
         // STARTING в status принимается за дубль-старт. только с холодного, иначе плитка откатилась бы с подключено
         if (status == VpnRunStatus.STOPPED || status == VpnRunStatus.ERROR) {
             liveStatus = "connecting"

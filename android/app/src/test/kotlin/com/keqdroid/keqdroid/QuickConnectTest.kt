@@ -99,6 +99,15 @@ class QuickConnectTest {
     }
 
     @Test
+    fun `only a start the service never got counts as swallowed by the firmware`() {
+        assertFalse(QuickConnect.startSwallowed(sentAt = 1_000, acceptedAt = 1_000))
+        assertFalse(QuickConnect.startSwallowed(sentAt = 1_000, acceptedAt = 1_040))
+        assertTrue(QuickConnect.startSwallowed(sentAt = 1_000, acceptedAt = 0))
+        // отметка прошлой сессии не в счёт
+        assertTrue(QuickConnect.startSwallowed(sentAt = 1_000, acceptedAt = 400))
+    }
+
+    @Test
     fun `an unknown status leaves the tile off`() {
         assertFalse(tileLook("").active)
         assertFalse(tileLook("paused").active)

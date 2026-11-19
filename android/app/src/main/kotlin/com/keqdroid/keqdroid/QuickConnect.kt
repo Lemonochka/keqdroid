@@ -25,6 +25,10 @@ internal object QuickConnect {
 
     fun liveActive(): Boolean = KeqdisVpnService.liveStatus.lowercase() in ACTIVE_STATUSES
 
+    // по liveStatus упавший или выключенный за 2,5 с старт выглядел проглоченным прошивкой,
+    // и плитка навсегда уходила в невидимое окно: шторка сворачивалась, приложение под ней открывалось заново
+    fun startSwallowed(sentAt: Long, acceptedAt: Long = KeqdisVpnService.startAcceptedAt): Boolean = acceptedAt < sentAt
+
     // запись в prefs переживает смерть процесса, туннель нет. liveStatus после перезапуска disconnected,
     // расхождение значит запись протухла
     fun isStale(persisted: String, liveActive: Boolean): Boolean = persisted in ACTIVE_STATUSES && !liveActive

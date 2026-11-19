@@ -77,6 +77,13 @@ class QuickConnectDecideTest {
     }
 
     @Test
+    fun `a block remembered by the old check that counted failed starts is forgotten`() {
+        saveSnapshot()
+        prefs().edit().putString("qs_direct_start_blocked_on", Build.FINGERPRINT).commit()
+        assertTrue(decide() is Tap.Start)
+    }
+
+    @Test
     fun `a running VPN is stopped by a tap`() {
         saveSnapshot()
         persist("CONNECTED")

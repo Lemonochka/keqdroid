@@ -138,6 +138,7 @@ class VpnQuickTileService : TileService() {
             QuickConnect.Tap.OpenApp -> openAppForConnect()
             QuickConnect.Tap.Window -> openQuickConnect()
             is QuickConnect.Tap.Start -> {
+                val sentAt = android.os.SystemClock.elapsedRealtime()
                 try {
                     if (Build.VERSION.SDK_INT >= 26) startForegroundService(tap.intent) else startService(tap.intent)
                 } catch (e: Exception) {
@@ -147,20 +148,19 @@ class VpnQuickTileService : TileService() {
                     openQuickConnect()
                     return
                 }
-                verifyStarted()
+                verifyStarted(sentAt)
             }
         }
     }
 
-    // отказ бывает без исключения: прошивки с Автозапуском старт молча глотают. сверяемся с liveStatus, его ставят прямо в onStartCommand,
-    // а рабочий статус за opMutex путал бы застрявший стоп с запретом системы.
+    // отказ бывает без исключения: прошивки с Автозапуском старт молча глотают.
     // меньше секунды не хватает здоровому старту, больше рискует закрытой шторкой
-    private fun verifyStarted() {
+    private fun verifyStarted(sentAt: Long) {
         android.os.Handler(mainLooper).postDelayed({
-            if (!QuickConnect.liveActive()) {
+            if (QuickConnect.startSwallowed(sentAt)) {
                 NativeLog.e(
                     "KEQDIS_QS",
-                    "onClick: service did not come up (live='${KeqdisVpnService.liveStatus.lowercase()}') — likely blocked by the OEM",
+                    "onClick: service never got the start (live='${KeqdisVpnService.liveStatus.lowercase()}') — likely blocked by the OEM",
                 )
                 QuickConnect.rememberDirectStartBlocked(this)
                 openQuickConnect(retryHelps = true)
