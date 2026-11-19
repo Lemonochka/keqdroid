@@ -49,7 +49,7 @@ static gboolean startup_watchdog_cb(gpointer user_data) {
   return G_SOURCE_REMOVE;
 }
 
-// иконка для X11: без неё WM рисует безликий значок. Wayland её не читает, там иконка от ярлыка (StartupWMClass в tool/package_linux.sh)
+// иконка для X11: без неё WM рисует безликий значок. Wayland её не читает, там иконка от ярлыка (tool/package_linux.sh)
 static void set_window_icon(GtkWindow* window) {
   g_autofree gchar* exe = g_file_read_link("/proc/self/exe", nullptr);
   if (exe == nullptr) return;

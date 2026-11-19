@@ -155,6 +155,8 @@ ICON_SRC="$REPO_DIR/assets/icon.png"
 # иконки не было нигде. Имя файла ярлыка прежнее, иначе после обновления
 # пропали бы значки, закреплённые в доке. Иконка ставится и под именем окна:
 # доки на wlroots ищут её в теме прямо по app_id.
+# KWin (Alt+Tab, обзор окон) ищет ярлык только по имени $APP_ID.desktop, иначе
+# рисует значок Wayland, поэтому рядом скрытый двойник под этим именем.
 APP_ID=com.keqdroid.keqdroid
 
 write_desktop() { # $1 = exec name, $2 = dest file
@@ -169,6 +171,18 @@ Icon=$APP
 Categories=Network;
 Terminal=false
 StartupWMClass=$APP_ID
+EOF
+}
+
+# без StartupWMClass: с этой строкой панель Plasma и GNOME привязали бы окно к двойнику, а не к закреплённому ярлыку
+write_window_entry() { # $1 = exec name, $2 = dest file
+  cat > "$2" <<EOF
+[Desktop Entry]
+Type=Application
+Name=KeqDroid
+Exec=$1 %u
+Icon=$APP
+NoDisplay=true
 EOF
 }
 
@@ -196,6 +210,7 @@ mkdir -p "$DEBROOT/DEBIAN" "$DEBROOT/opt/$APP" \
 cp -a "$PAYLOAD/." "$DEBROOT/opt/$APP/"
 ln -s "/opt/$APP/$APP" "$DEBROOT/usr/bin/$APP"
 write_desktop "$APP" "$DEBROOT/usr/share/applications/$APP.desktop"
+write_window_entry "$APP" "$DEBROOT/usr/share/applications/$APP_ID.desktop"
 if [ -n "$ICON_SRC" ]; then
   cp "$ICON_SRC" "$DEBROOT/usr/share/icons/hicolor/256x256/apps/$APP.png"
   cp "$ICON_SRC" "$DEBROOT/usr/share/icons/hicolor/256x256/apps/$APP_ID.png"
@@ -249,6 +264,8 @@ RPMTOP="$WORK/rpm"
 mkdir -p "$RPMTOP/BUILD" "$RPMTOP/RPMS" "$RPMTOP/SOURCES" "$RPMTOP/SPECS" "$RPMTOP/SRPMS"
 RPM_DESKTOP="$WORK/rpm-$APP.desktop"
 write_desktop "$APP" "$RPM_DESKTOP"
+RPM_WINDOW_DESKTOP="$WORK/rpm-$APP_ID.desktop"
+write_window_entry "$APP" "$RPM_WINDOW_DESKTOP"
 RPM_ICON_INSTALL=""
 RPM_ICON_FILE=""
 if [ -n "$ICON_SRC" ]; then
@@ -287,6 +304,7 @@ mkdir -p %{buildroot}/opt/$APP %{buildroot}/usr/bin
 cp -a "$PAYLOAD/." %{buildroot}/opt/$APP/
 ln -s /opt/$APP/$APP %{buildroot}/usr/bin/$APP
 install -Dm644 "$RPM_DESKTOP" %{buildroot}/usr/share/applications/$APP.desktop
+install -Dm644 "$RPM_WINDOW_DESKTOP" %{buildroot}/usr/share/applications/$APP_ID.desktop
 $RPM_ICON_INSTALL
 
 %files
@@ -294,6 +312,7 @@ $RPM_ICON_INSTALL
 /opt/$APP
 /usr/bin/$APP
 /usr/share/applications/$APP.desktop
+/usr/share/applications/$APP_ID.desktop
 $RPM_ICON_FILE
 EOF
 rpmbuild -bb --quiet \
@@ -400,6 +419,14 @@ Icon=$APP
 Categories=Network;
 Terminal=false
 StartupWMClass=$APP_ID
+DESKTOP
+  install -Dm644 /dev/stdin "\$pkgdir/usr/share/applications/$APP_ID.desktop" <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=KeqDroid
+Exec=$APP %u
+Icon=$APP
+NoDisplay=true
 DESKTOP
 }
 EOF

@@ -8,11 +8,13 @@ import 'package:path/path.dart' as p;
 import '../core/app_logger.dart';
 import 'linux_appimage_updater.dart';
 
-// на Wayland иконку окна среда берёт только из ярлыка со StartupWMClass
+// на Wayland иконку окна среда берёт только из ярлыка: GNOME и панель Plasma ищут его по StartupWMClass,
+// а KWin (Alt+Tab, обзор окон) только по имени app_id, для него скрытый двойник
 class LinuxDesktopEntry {
   LinuxDesktopEntry._();
 
   static const _fileName = 'keqdroid.desktop';
+  static const windowEntryFileName = 'com.keqdroid.keqdroid.desktop';
   static const _iconNames = ['keqdroid', 'com.keqdroid.keqdroid'];
 
   static const marker = 'X-KeqDroid-AppImage=true';
@@ -31,11 +33,13 @@ class LinuxDesktopEntry {
       final dataHome =
           Platform.environment['XDG_DATA_HOME'] ?? p.join(home, '.local', 'share');
       final apps = Directory(p.join(dataHome, 'applications'));
+      final appImage = LinuxAppImageUpdater.currentAppImagePath();
+      syncWindowEntry(apps.path, appImage);
+
       final entry = File(p.join(apps.path, _fileName));
       final existing = entry.existsSync() ? entry.readAsStringSync() : null;
       if (existing != null && !existing.contains(marker)) return;
 
-      final appImage = LinuxAppImageUpdater.currentAppImagePath();
       if (appImage == null) {
         if (existing != null) entry.deleteSync();
         return;
@@ -95,6 +99,35 @@ class LinuxDesktopEntry {
       '',
     ].join('\n');
   }
+
+  @visibleForTesting
+  static void syncWindowEntry(String appsDir, String? appImage) {
+    final file = File(p.join(appsDir, windowEntryFileName));
+    final existing = file.existsSync() ? file.readAsStringSync() : null;
+    if (existing != null && !existing.contains(marker)) return;
+    if (appImage == null) {
+      if (existing != null) file.deleteSync();
+      return;
+    }
+    final content = windowEntryFor(appImage);
+    if (content == existing) return;
+    Directory(appsDir).createSync(recursive: true);
+    file.writeAsStringSync(content);
+  }
+
+  // без StartupWMClass: с этой строкой панель Plasma и GNOME привязали бы окно к двойнику, а не к закреплённому ярлыку
+  @visibleForTesting
+  static String windowEntryFor(String appImage) => [
+        '[Desktop Entry]',
+        'Type=Application',
+        'Name=KeqDroid',
+        'Exec=${execArgument(appImage)} %u',
+        'TryExec=${appImage.replaceAll(r'\', r'\\')}',
+        'Icon=keqdroid',
+        'NoDisplay=true',
+        marker,
+        '',
+      ].join('\n');
 
   // GIO читает MimeType из ярлыков сам, а xdg-mime вне GNOME и KDE ищет схему в mimeinfo.cache (defapp_generic в xdg-utils 1.1.3)
   static Future<void> _updateDesktopDatabase(String appsDir) async {

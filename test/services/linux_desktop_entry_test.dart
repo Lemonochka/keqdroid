@@ -48,8 +48,95 @@ void main() {
           .allMatches(script)
           .map((m) => m.group(1)!)
           .toList();
-      expect(execs, hasLength(2));
+      // те же два ярлыка и два их скрытых двойника для KWin
+      expect(execs, hasLength(4));
       expect(execs, everyElement(endsWith(' %u')));
+    });
+
+    test('the packages ship a hidden twin named after the app id', () {
+      final script = File('tool/package_linux.sh').readAsStringSync();
+      final twins = RegExp(
+        r'^\[Desktop Entry\]\n(.*?)\n(?:EOF|DESKTOP)$',
+        multiLine: true,
+        dotAll: true,
+      )
+          .allMatches(script)
+          .map((m) => m.group(1)!)
+          .where((body) => body.contains('NoDisplay=true'))
+          .toList();
+      expect(twins, hasLength(2));
+      for (final twin in twins) {
+        expect(twin, contains('Icon='));
+        expect(twin, isNot(contains('StartupWMClass')));
+        expect(twin, isNot(contains('MimeType')));
+      }
+      expect(
+        script,
+        contains(
+          r'write_window_entry "$APP" "$DEBROOT/usr/share/applications/$APP_ID.desktop"',
+        ),
+      );
+      expect(
+        RegExp(r'^/usr/share/applications/\$APP_ID\.desktop$', multiLine: true)
+            .hasMatch(script),
+        isTrue,
+        reason: 'rpm %files',
+      );
+      expect(
+        script,
+        contains(r'"\$pkgdir/usr/share/applications/$APP_ID.desktop"'),
+      );
+    });
+  });
+
+  group('window entry for KWin', () {
+    const appImage = '/home/u/Apps/keqdroid-0.25.2-x86_64.AppImage';
+    late Directory apps;
+
+    setUp(() => apps = Directory.systemTemp.createTempSync('desktop_apps'));
+    tearDown(() => apps.deleteSync(recursive: true));
+
+    File twin() => File(p.join(apps.path, 'com.keqdroid.keqdroid.desktop'));
+
+    test('is named after the window app id', () {
+      expect(LinuxDesktopEntry.windowEntryFileName, 'com.keqdroid.keqdroid.desktop');
+    });
+
+    test('carries the icon and stays out of menus, link handlers and window matching', () {
+      final text = LinuxDesktopEntry.windowEntryFor(appImage);
+      expect(text, contains('Icon=keqdroid\n'));
+      expect(text, contains('NoDisplay=true\n'));
+      expect(text, contains('TryExec=$appImage\n'));
+      expect(text, contains(LinuxDesktopEntry.marker));
+      expect(text, isNot(contains('StartupWMClass')));
+      expect(text, isNot(contains('MimeType')));
+    });
+
+    test('is written when running from an AppImage', () {
+      LinuxDesktopEntry.syncWindowEntry(apps.path, appImage);
+      expect(twin().readAsStringSync(), LinuxDesktopEntry.windowEntryFor(appImage));
+    });
+
+    test('follows the AppImage when it moves', () {
+      LinuxDesktopEntry.syncWindowEntry(apps.path, '/old/keqdroid.AppImage');
+      LinuxDesktopEntry.syncWindowEntry(apps.path, appImage);
+      expect(twin().readAsStringSync(), LinuxDesktopEntry.windowEntryFor(appImage));
+    });
+
+    // перешли с AppImage на пакет: двойник из пакета лежит в /usr/share, свой в ~/.local больше не нужен
+    test('is removed when no longer running from an AppImage', () {
+      LinuxDesktopEntry.syncWindowEntry(apps.path, appImage);
+      LinuxDesktopEntry.syncWindowEntry(apps.path, null);
+      expect(twin().existsSync(), isFalse);
+    });
+
+    test('leaves a file it did not write alone', () {
+      const own = '[Desktop Entry]\nType=Application\nIcon=keqdroid\nNoDisplay=true\n';
+      twin().writeAsStringSync(own);
+      LinuxDesktopEntry.syncWindowEntry(apps.path, appImage);
+      expect(twin().readAsStringSync(), own);
+      LinuxDesktopEntry.syncWindowEntry(apps.path, null);
+      expect(twin().readAsStringSync(), own);
     });
   });
 
