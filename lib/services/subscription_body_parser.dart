@@ -436,11 +436,30 @@ abstract final class SubscriptionBodyParser {
     const maxQueueSize = 200;
     const maxDepth = 8;
 
-    final queue = <(Object?, int, bool)>[];
+    // в очередь идут только списки и объекты: строки из сотни узлов переполняли её,
+    // и обрезка выкидывала ещё не разобранные узлы, из ста доходило 25
+    final queue = <(Object, int)>[];
     final seen = <Object>{};
 
-    if (node != null) {
-      queue.add((node, 0, false));
+    void readString(String value, int depth, bool isDirect) {
+      if (depth > maxDepth) return;
+      if (isDirect) {
+        for (final uri in _extractUriLinks(value)) {
+          if (!_isMetadataConfig(uri)) found.add(uri);
+        }
+      } else if (depth <= 2) {
+        for (final v in _collectTextVariants(value)) {
+          for (final uri in _extractUriLinks(v)) {
+            if (!_isMetadataConfig(uri)) found.add(uri);
+          }
+        }
+      }
+    }
+
+    if (node is String) {
+      readString(node, 0, false);
+    } else if (node is List || node is Map) {
+      queue.add((node!, 0));
     }
 
     int iterations = 0;
@@ -458,32 +477,18 @@ abstract final class SubscriptionBodyParser {
         );
       }
 
-      final (current, depth, isDirect) = queue.removeAt(0);
+      final (current, depth) = queue.removeAt(0);
 
-      if (current == null || depth > maxDepth) continue;
-
-      if (current is String) {
-        if (isDirect) {
-          for (final uri in _extractUriLinks(current)) {
-            if (!_isMetadataConfig(uri)) found.add(uri);
-          }
-        } else {
-          if (depth <= 2) {
-            for (final v in _collectTextVariants(current)) {
-              for (final uri in _extractUriLinks(v)) {
-                if (!_isMetadataConfig(uri)) found.add(uri);
-              }
-            }
-          }
-        }
-        continue;
-      }
+      if (depth > maxDepth) continue;
 
       if (current is List) {
         final itemsToProcess = current.take(100);
         for (final item in itemsToProcess) {
-          if (seen.add(item as Object)) {
-            queue.add((item, depth + 1, false));
+          if (item is String) {
+            if (seen.add(item)) readString(item, depth + 1, false);
+          } else if ((item is List || item is Map) &&
+              seen.add(item as Object)) {
+            queue.add((item, depth + 1));
           }
         }
         continue;
@@ -512,12 +517,13 @@ abstract final class SubscriptionBodyParser {
                 value.startsWith('http://') ||
                 value.startsWith('https://');
             if (seen.add(value)) {
-              queue.add((value, depth + 1, isLikelyConfig));
+              readString(value, depth + 1, isLikelyConfig);
               entriesAdded++;
               if (entriesAdded >= 20) break;
             }
-          } else if (seen.add(value as Object)) {
-            queue.add((value, depth + 1, false));
+          } else if ((value is List || value is Map) &&
+              seen.add(value as Object)) {
+            queue.add((value, depth + 1));
             entriesAdded++;
             if (entriesAdded >= 20) break;
           }

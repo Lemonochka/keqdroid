@@ -63,7 +63,7 @@ void main() {
     _golden('xray-json-array');
     // ключи из выгрузок других клиентов: address, add, ps, passwd, vmess без type
     _golden('json-proxy-aliases');
-    // null в JSON обрывает обход на первом же узле, второй теряется; так сейчас и есть
+    // до 20.11.2026 null в JSON обрывал обход на первом же узле, и второй терялся
     _golden('json-proxy-null-field');
     _golden('mixed-links-and-config');
     _golden('fragment-with-spaces');
@@ -91,7 +91,7 @@ void main() {
       'json-base64-field',
       jsonEncode({'name': 'Panel', 'data': base64.encode(utf8.encode(plain))}),
     );
-    // очередь обхода JSON держит 200 значений: из сотни узлов доходит часть, так сейчас и есть
+    // до 20.11.2026 строки узлов переполняли очередь обхода, и из ста узлов доходило 25
     _goldenOf(
       'json-many-proxies',
       jsonEncode([

@@ -1,1 +1,2 @@
 trojan://password@198.51.100.160:443?security=tls&sni=null.example#Null%20One
+trojan://password@198.51.100.161:443?security=tls&sni=null2.example#Null%20Two
