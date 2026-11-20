@@ -166,7 +166,7 @@ void main() {
     'bar style survives a settings round trip and defaults to the mainland',
     () {
       expect(const AppSettings().bottomBarStyle, 'mainland');
-      // ленту убрали, яркий плюс переименован: у сохранивших их панель не откатывается в легаси
+      // ленту убрали, яркий плюс переименован: у сохранивших их панель не откатывается в Легаси
       expect(LiquidBarStyle.tryParse('strip'), LiquidBarStyle.mainland);
       expect(LiquidBarStyle.tryParse('brightPlus'), LiquidBarStyle.mainland);
       expect(LiquidBarStyle.tryParse('legacy'), isNull);
@@ -324,7 +324,7 @@ void main() {
     });
   });
 
-  // 483 dp: её телефон после масштаба 0,85, подписи влезают. в 360 подпись выбранной вкладки
+  // 483 dp: её телефон после масштаба 0,85, подписи влезают. В 360 подпись выбранной вкладки
   // обрезана, и край обрезки законно едет за пальцем: собирается только она
   for (final (width, selectedOnly) in [(483.0, false), (360.0, true)]) {
     testWidgets(

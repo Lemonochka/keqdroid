@@ -11,8 +11,8 @@ import 'package:keqdroid/utils/custom_xray_config.dart';
 import 'package:keqdroid/utils/geo_asset_index.dart';
 import 'package:keqdroid/utils/import_payload.dart';
 
-/// Готовый конфиг ядра, каким его отдают провайдеры: своя цепочка аутбаундов,
-/// свои правила роутинга и свой dns, имя в корневом `remarks` (v2rayNG).
+// Готовый конфиг ядра, каким его отдают провайдеры: своя цепочка аутбаундов,
+// свои правила роутинга и свой dns, имя в корневом remarks (v2rayNG).
 const _customConfig = '''
 {
   "remarks": "🇳🇱 Обход [Gold] - Нидерланды",
@@ -60,8 +60,8 @@ const _singboxConfig = '''
 }
 ''';
 
-/// sing-box с настоящими узлами. SSR здесь не для разнообразия: у его узла
-/// есть поле `protocol`, и по нему конфиг сходил за xray.
+// sing-box с настоящими узлами. SSR здесь не для разнообразия: у его узла
+// есть поле protocol, и по нему конфиг сходил за xray.
 const _singboxWithServers = '''
 {
   "outbounds": [
@@ -72,8 +72,8 @@ const _singboxWithServers = '''
 }
 ''';
 
-/// Готовый конфиг, который просит у ядра не связь с сервером, а доступ к
-/// устройству: порты управления, окружение, перезапись файлов, вход в локалку.
+// Готовый конфиг, который просит у ядра не связь с сервером, а доступ к
+// устройству: порты управления, окружение, перезапись файлов, вход в локалку.
 const _greedyConfig = '''
 {
   "remarks": "greedy",
@@ -132,7 +132,7 @@ void main() {
       ({String address, int port}) endpointOf(String outbound) =>
           CustomXrayConfig.tryParse('{"outbounds": [$outbound]}')!.endpoint;
 
-      // trojan/ss/socks — `servers`
+      // trojan/ss/socks: servers
       expect(
         endpointOf(
           '{"protocol": "trojan", "settings": {"servers": '
@@ -147,7 +147,7 @@ void main() {
         ),
         (address: 'b.example.com', port: 2053),
       );
-      // wireguard — endpoint строкой
+      // wireguard: endpoint строкой
       expect(
         endpointOf(
           '{"protocol": "wireguard", "settings": {"peers": '
@@ -202,7 +202,7 @@ void main() {
   });
 
   group('stripUnknownGeoFromConfig', () {
-    // База, в которой sberbank нет — как в поставляемой v2fly.
+    // База, в которой sberbank нет, как в поставляемой v2fly.
     const index = GeoAssetIndex(
       geoipCodes: {'ru', 'private'},
       geositeCodes: {'google', 'category-ads-all'},
@@ -227,9 +227,9 @@ void main() {
     });
 
     test('never widens a rule: a fully stripped condition drops it', () {
-      // Самое опасное место чистки. `ip` тут после выброса неизвестного кода
-      // пустеет, а `port` остаётся — оставить такое правило значит отправить
-      // напрямую ВЕСЬ трафик на 443 вместо одного geo-набора.
+      // Самое опасное место чистки. ip тут после выброса неизвестного кода
+      // пустеет, а port остаётся: такое правило отправило бы
+      // напрямую весь трафик на 443 вместо одного geo-набора.
       final config = _decode('''
 {
   "routing": {"rules": [
@@ -247,7 +247,7 @@ void main() {
       expect(rules.single['port'], '443');
     });
 
-    // Правило по программе — полноценное условие: раньше чистка считала его
+    // Правило по программе служит полноценным условием: раньше чистка считала его
     // пустым и молча выкидывала из готового конфига.
     test('keeps rules whose only condition is a process or a local port', () {
       final config = _decode('''
@@ -428,7 +428,7 @@ void main() {
       expect(authorRules.first['ip'], ['185.73.195.0/24']);
       expect(authorRules.last['outboundTag'], 'proxy');
 
-      // Dns и аутбаунды — авторские: серверы автора первые и в своём порядке,
+      // Dns и аутбаунды авторские: серверы автора первые и в своём порядке,
       // наш резерв лежит после них (см. CustomXrayConfig.mergeDns).
       expect(((config['dns'] as Map)['servers'] as List).take(2), [
         '1.1.1.1',
@@ -440,7 +440,7 @@ void main() {
       });
 
       // Уровень логов из настроек: без info ядро не печатает правила, и экран
-      // «Соединения» остаётся без вердиктов.
+      // Соединения остаётся без вердиктов.
       expect((config['log'] as Map)['loglevel'], 'info');
       // Своё поле имени ядру не отдаём.
       expect(config.containsKey('remarks'), isFalse);
@@ -486,7 +486,7 @@ void main() {
       expect(rules.first['inboundTag'], ['socks-lan', 'http-lan']);
       expect(rules.first['outboundTag'], 'proxy');
       expect(rules[1]['ruleTag'], 'lan-deny');
-      // Автор завёл blackhole сам — свой дописывать незачем.
+      // Автор завёл blackhole сам: свой дописывать незачем.
       expect(rules[1]['outboundTag'], 'block');
       // Защита LAN идёт раньше всего остального, включая пользовательские
       // списки: инбаунд слушает 0.0.0.0, и пускать в него кого попало нельзя.
@@ -539,8 +539,8 @@ void main() {
       expect(rules[block]['outboundTag'], 'block');
       expect(rules[direct]['outboundTag'], 'direct');
       expect(rules[tags.indexOf('user-block-ips')]['ip'], ['10.1.2.0/24']);
-      // Свои freedom/blackhole не нужны — у автора они уже есть. Свой
-      // `dns`-аутбаунд появляется всё равно: перехват DNS висел на авторском
+      // Свои freedom/blackhole не нужны: у автора они уже есть. Свой
+      // dns-аутбаунд появляется всё равно: перехват DNS висел на авторском
       // инбаунде, а инбаунды мы заменяем своими.
       expect(jsonEncode(config['outbounds']).contains('keq-direct'), isFalse);
       expect(jsonEncode(config['outbounds']).contains('keq-block'), isFalse);
@@ -591,7 +591,7 @@ void main() {
       expect(inbounds.single['port'], 28150);
 
       final rules = _rules(config);
-      // Сам сервер и приватные сети мимо туннеля, всё остальное — в прокси.
+      // Сам сервер и приватные сети мимо туннеля, всё остальное в прокси.
       expect(rules.first['ip'], ['203.0.113.9']);
       expect(rules.first['outboundTag'], 'keq-ping-direct');
       expect(rules[1]['domain'], ['full:nl1.example.com']);

@@ -16,8 +16,8 @@ import 'package:keqdroid/shared/ui/smooth_fade.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// Края списка серверов: карточки уходят в прозрачность, сверху только при
-/// прокрутке, снизу всегда.
+// Края списка серверов: карточки уходят в прозрачность, сверху только при
+// прокрутке, снизу всегда.
 
 class _FakeServers extends ServersNotifier {
   @override

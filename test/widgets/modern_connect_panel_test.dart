@@ -18,8 +18,8 @@ import 'package:keqdroid/shared/ui/stat_strip.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// Верх экрана серверов в двух видах: «Легаси» как было и «Модерн» одной
-/// панелью. Переключатель во «Внешнем виде» не должен оставлять мёртвый режим.
+// Верх экрана серверов в двух видах: Легаси как было и Модерн одной
+// панелью. Переключатель во Внешнем виде не должен оставлять мёртвый режим.
 
 class _FakeServers extends ServersNotifier {
   static final pinged = <String>[];

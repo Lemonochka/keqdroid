@@ -166,7 +166,7 @@ void main() {
 
     test('escapes reserved characters twice, as the spec requires', () {
       // Кавычка, доллар и обратный апостроф экранируются для кавычек, а
-      // получившийся обратный слеш — ещё раз как строковое значение ключа.
+      // получившийся обратный слеш ещё раз, как строковое значение ключа.
       expect(LinuxDesktopEntry.execArgument(r'/a"b$c`d'), r'"/a\\"b\\$c\\`d"');
       expect(LinuxDesktopEntry.execArgument(r'/a\b'), r'"/a\\\\b"');
       expect(LinuxDesktopEntry.execArgument('/100%/k'), '"/100%%/k"');

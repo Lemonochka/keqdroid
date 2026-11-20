@@ -74,8 +74,8 @@ void main() {
         'interval': '10-20',
       });
       // Резолв домена сервера остаётся на DNS-блоке конфига, а не на
-      // системном резолвере Go — иначе на Android он не отвечает. Живёт в
-      // `sockopt`: из настроек freedom ядро это поле убирает.
+      // системном резолвере Go: иначе на Android он не отвечает. Живёт в
+      // sockopt: из настроек freedom ядро это поле убирает.
       expect(settings.containsKey('domainStrategy'), isFalse);
       final stream = fragment['streamSettings'] as Map<String, dynamic>;
       expect((stream['sockopt'] as Map)['domainStrategy'], 'UseIPv4');
@@ -99,7 +99,7 @@ void main() {
                   as Map<String, dynamic>)['fragment']
               as Map<String, dynamic>);
       expect(fragment['length'], 80);
-      // 0 с tlshello — «разрезать, но отправить одним пакетом», значение рабочее.
+      // 0 с tlshello: разрезать, но отправить одним пакетом, значение рабочее.
       expect(fragment['interval'], 0);
 
       final broken = _generate(
@@ -135,7 +135,7 @@ void main() {
 
       final config = _generate(link, _withFragment());
 
-      // chain-0 — входной узел, он один дозванивается наружу.
+      // chain-0 служит входным узлом, он один дозванивается наружу.
       expect(_dialerProxyOf(_byTag(config, 'chain-0')), 'fragment');
       // Выходной узел продолжает ходить через своё звено, а не через фрагмент.
       expect(_dialerProxyOf(_byTag(config, 'proxy')), 'chain-0');

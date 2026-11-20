@@ -4,11 +4,11 @@ import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/services/auto_select_watchdog.dart';
 import 'package:keqdroid/services/auto_server_select.dart';
 
-/// Кого выбирает «Авто».
-///
-/// Неудачный замер обнуляет `pingMs`, поэтому «красный» сервер и «ни разу не
-/// меренный» в списке выглядят одинаково — различает их `lastTestedAt`, и
-/// путать их нельзя: первый не работал, а про второй мы просто не знаем.
+// Кого выбирает Авто.
+//
+// Неудачный замер обнуляет pingMs, поэтому красный сервер и ни разу не
+// меренный в списке выглядят одинаково. Различает их lastTestedAt, и
+// путать их нельзя: первый не работал, а про второй мы просто не знаем.
 ServerItem _server(
   String id, {
   required String sub,
@@ -62,7 +62,7 @@ void main() {
       _server('pl-vless', sub: 's1', ping: 40, tested: tested),
       _server('ru-hy2', sub: 's1', ping: 90, tested: tested),
     ];
-    // У обоих польских один адрес — как у двух протоколов на одном VPS.
+    // У обоих польских один адрес, как у двух протоколов на одном VPS.
     final samehost = [
       for (final s in servers)
         s.id.startsWith('pl')
@@ -108,7 +108,7 @@ void main() {
   });
 
   test('единственный сервер берём даже после отказа', () {
-    // «Совсем никого» и «один и тот же» — разные вещи: во втором случае
+    // Совсем никого и один и тот же отличаются: во втором случае
     // честнее попробовать ещё раз, чем не подключаться вовсе.
     final servers = [_server('a', sub: 's1', ping: 40, tested: tested)];
 
@@ -160,11 +160,11 @@ void main() {
       limit: 5,
     );
 
-    // Сам текущий — первым: уйти с него можно только по его же замеру.
+    // Сам текущий идёт первым: уйти с него можно только по его же замеру.
     expect(picked.first.id, 's7');
     expect(picked.length, 5);
     expect(picked.map((s) => s.id), isNot(contains('other-sub')));
-    // Соседи — по старым замерам, лучшие первыми.
+    // Соседи по старым замерам, лучшие первыми.
     expect(picked.skip(1).map((s) => s.id), ['s0', 's1', 's2', 's3']);
   });
 
@@ -278,7 +278,7 @@ void main() {
   test(
     'после теста скорости выбирается самый быстрый, а не самый медленный',
     () {
-      // У теста скорости в поле пинга кбит/с, и больше — лучше.
+      // У теста скорости в поле пинга кбит/с, и чем больше, тем лучше.
       final servers = [
         _server('slow', sub: 's1', ping: 3000, tested: tested, type: 'speed'),
         _server('fast', sub: 's1', ping: 90000, tested: tested, type: 'speed'),

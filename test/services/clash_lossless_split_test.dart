@@ -8,7 +8,7 @@ import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
 // ss-opts, dialer-proxy и smux ссылка не несёт (сверено по примерам docs/config/proxies mihomo).
-// пин, token v4 и версию UoT несёт: эти узлы обязаны остаться ссылками
+// Пин, token v4 и версию UoT несёт: эти узлы обязаны остаться ссылками
 const _profile = '''
 proxies:
   - name: Plain

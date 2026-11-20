@@ -3,8 +3,8 @@ import 'package:keqdroid/models/server_item.dart';
 
 import '../helpers/test_storage.dart';
 
-/// История замеров копится там же, куда пишется каждый пинг, — по кнопке, от
-/// судьи автовыбора и плановой проверки.
+// История замеров копится там же, куда пишется каждый пинг: по кнопке, от
+// судьи автовыбора и плановой проверки.
 void main() {
   ServerItem server(String id) => ServerItem(
     id: id,

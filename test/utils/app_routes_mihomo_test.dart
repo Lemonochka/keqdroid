@@ -12,8 +12,8 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 
 import '../helpers/mihomo_rules_sim.dart';
 
-/// Маршруты отдельных приложений на mihomo в десктопном TUN: правила по
-/// процессу между блокировкой и маршрутами всех приложений, как в ТЗ.
+// Маршруты отдельных приложений на mihomo в десктопном TUN: правила по
+// процессу между блокировкой и маршрутами всех приложений, как в ТЗ.
 const _active = 'ss://YWVzLTI1Ni1nY206dGVzdHBhc3M@203.0.113.10:8388#nl';
 const _de = 'ss://YWVzLTI1Ni1nY206dGVzdHBhc3M@198.51.100.7:8388#de';
 const _discordPath = r'C:\Apps\Discord\Discord.exe';
@@ -47,8 +47,8 @@ TrafficRoute _route(
   enabled: enabled,
 );
 
-/// Конфиг сессии так, как его собирает подключение: выходы серверов и
-/// маршруты приложений из одних и тех же маршрутов.
+// Конфиг сессии так, как его собирает подключение: выходы серверов и
+// маршруты приложений из одних и тех же маршрутов.
 Map<String, dynamic> _config(
   List<TrafficRoute> routes, {
   AppSettings settings = _settings,
@@ -139,7 +139,7 @@ void main() {
     target: RouteTarget.server,
     serverId: 'de',
   );
-  // «Весь трафик» Chrome заведён раньше «YouTube»: порядок проверки от этого
+  // Маршрут Весь трафик Chrome заведён раньше маршрута YouTube: порядок проверки от этого
   // не зависит.
   final routes = [chromeAll, chromeYoutube, firefoxBlock, discordAll];
 
@@ -158,7 +158,7 @@ void main() {
     expect(_go(c, 'chrome.exe', host: 'youtube.com'), 'keq-srv-0');
     expect(_go(c, 'chrome.exe', host: 'rr1.googlevideo.com'), 'keq-srv-0');
     expect(_go(c, 'chrome.exe', host: 'example.com'), 'DIRECT');
-    // Списки всех приложений до «весь трафик» Chrome не доходят.
+    // Списки всех приложений до маршрута Весь трафик Chrome не доходят.
     expect(_go(c, 'chrome.exe', host: 'telegram.org'), 'DIRECT');
   });
 
@@ -267,7 +267,7 @@ void main() {
       MihomoConfigGen.proxyName,
       'keq-srv-0',
     ]);
-    // Сайтов у выхода нет: «весь трафик» Discord не достаётся всем.
+    // Сайтов у выхода нет: маршрут Весь трафик для Discord не распространяется на другие приложения.
     expect(_go(c, 'chrome.exe', host: 'discord.com'), 'proxy');
   });
 

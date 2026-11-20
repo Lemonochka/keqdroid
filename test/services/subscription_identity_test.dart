@@ -11,7 +11,7 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockStorageService extends Mock implements StorageService {}
 
-/// Записывает заголовки каждого запроса и всегда отдаёт один и тот же ответ.
+// Записывает заголовки каждого запроса и всегда отдаёт один и тот же ответ.
 class _RecordingAdapter implements HttpClientAdapter {
   _RecordingAdapter({required this.body, required this.contentType});
 
@@ -30,7 +30,7 @@ class _RecordingAdapter implements HttpClientAdapter {
     Stream<List<int>>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    // Регистр имён заголовков dio нормализует по-своему — сравниваем по
+    // Регистр имён заголовков dio нормализует по-своему: сравниваем по
     // нижнему, как это делает и сам HTTP.
     requests.add({
       for (final e in options.headers.entries)
@@ -108,9 +108,9 @@ void main() {
 
     test('не-ASCII в полях устройства чистится до ASCII', () async {
       // dart:io кидает FormatException на кириллицу в значении заголовка и
-      // роняет ВЕСЬ запрос ещё до сети. На русской Windows это прилетало само
-      // из Platform.operatingSystemVersion («"Майкрософт Windows 11 Pro" 10.0
-      // (Build 26100)»), и любое обновление подписки падало «Ошибкой сети».
+      // роняет весь запрос ещё до сети. На русской Windows это прилетало само
+      // из Platform.operatingSystemVersion ("Майкрософт Windows 11 Pro" 10.0
+      // (Build 26100)), и любое обновление подписки падало Ошибкой сети.
       final adapter = plainAdapter();
       final service = serviceWith(adapter);
 
@@ -173,8 +173,8 @@ void main() {
     });
 
     test('custom hwid never becomes the device hwid', () async {
-      // Иначе подставной HWID утёк бы во все остальные подписки — и в те, что
-      // уже привязаны по настоящему.
+      // Иначе подставной HWID утёк бы во все остальные подписки, и в те, что
+      // уже привязаны по-настоящему.
       final adapter = plainAdapter();
       final service = serviceWith(adapter);
 
@@ -209,7 +209,7 @@ void main() {
   });
 
   group('pinned user agent', () {
-    // Панель отдаёт подписку html-страницей: без закреплённого UA это ровно
+    // Панель отдаёт подписку html-страницей: без закреплённого UA получается ровно
     // тот случай, ради которого и существует перебор запасных.
     _RecordingAdapter htmlAdapter() => _RecordingAdapter(
       body: '<html><body><pre>$_node</pre></body></html>',
@@ -244,43 +244,40 @@ void main() {
       expect(adapter.requests.length, greaterThan(1));
     });
 
-    test(
-      'does not overwrite the saved working UA of the subscription',
-      () async {
-        final adapter = plainAdapter();
-        final service = serviceWith(adapter);
-        when(() => storage.getServers()).thenAnswer((_) async => []);
-        when(() => storage.getActiveServerId()).thenReturn(null);
-        when(
-          () => storage.replaceServersBySubscription(any(), any()),
-        ).thenAnswer((_) async {});
-        when(() => storage.upsertSubscription(any())).thenAnswer((_) async {});
+    test('does not overwrite the saved working UA of the subscription', () async {
+      final adapter = plainAdapter();
+      final service = serviceWith(adapter);
+      when(() => storage.getServers()).thenAnswer((_) async => []);
+      when(() => storage.getActiveServerId()).thenReturn(null);
+      when(
+        () => storage.replaceServersBySubscription(any(), any()),
+      ).thenAnswer((_) async {});
+      when(() => storage.upsertSubscription(any())).thenAnswer((_) async {});
 
-        final result = await service.updateSubscription(
-          const Subscription(
-            id: 's1',
-            name: 'S',
-            url: 'https://example.com/sub',
-            userAgent: 'NekoBox/1.4.2',
-            fetchIdentity: SubscriptionFetchIdentity(
-              enabled: true,
-              userAgent: 'Happ/4.1.0',
-            ),
+      final result = await service.updateSubscription(
+        const Subscription(
+          id: 's1',
+          name: 'S',
+          url: 'https://example.com/sub',
+          userAgent: 'NekoBox/1.4.2',
+          fetchIdentity: SubscriptionFetchIdentity(
+            enabled: true,
+            userAgent: 'Happ/4.1.0',
           ),
-        );
+        ),
+      );
 
-        expect(result.success, isTrue);
-        // Закреплённый UA — выбор пользовательницы, а не «UA, который тут
-        // работает»: выключив подмену, она обязана вернуться к прежнему.
-        expect(result.subscription.userAgent, 'NekoBox/1.4.2');
-      },
-    );
+      expect(result.success, isTrue);
+      // Закреплённый UA остаётся выбором пользовательницы, а не UA, который тут
+      // работает: выключив подмену, она обязана вернуться к прежнему.
+      expect(result.subscription.userAgent, 'NekoBox/1.4.2');
+    });
   });
 
   group('user agent catalogue', () {
     test('the automatic rotation stays a short subset of the catalogue', () {
-      // Перебор делает по http-запросу на вариант: свалить в него весь каталог
-      // значит превратить неудачную загрузку в полминуты ожидания. Ручной
+      // Перебор делает по http-запросу на вариант: весь каталог в нём
+      // превратил бы неудачную загрузку в полминуты ожидания. Ручной
       // выбор в подписке для того и существует, чтобы каталог был широким.
       expect(SubscriptionService.clientUserAgents.length, lessThan(12));
       expect(
@@ -337,7 +334,7 @@ void main() {
     });
 
     test('an update with provider headers keeps the identity', () {
-      // withProfileHeaders собирает Subscription руками — забытое поле там
+      // withProfileHeaders собирает Subscription руками: забытое поле там
       // молча обнулялось бы на каждом обновлении подписки.
       const sub = Subscription(
         id: 's1',

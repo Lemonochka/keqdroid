@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/tunnel/wintun_adapters.dart';
 import 'package:keqdroid/utils/desktop_tun.dart';
 
-/// ID устройств сверены с журналом Kernel-PnP/Configuration на ПК, где
-/// 27.10.2026 Windows отказывала в адаптере: так их видит Windows.
+// ID устройств сверены с журналом Kernel-PnP/Configuration на ПК, где
+// 27.10.2026 Windows отказывала в адаптере: так их видит Windows.
 void main() {
   test('ID адаптеров совпадают с теми, что пишет Windows', () {
     expect(

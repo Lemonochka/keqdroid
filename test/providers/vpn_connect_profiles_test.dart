@@ -13,8 +13,8 @@ import 'package:keqdroid/services/vpn_engine.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// Подключение берёт маршруты и «Всё остальное» профиля подписки, к которой
-/// относится сервер; без включённого профиля работает «Основной».
+// Подключение берёт маршруты и пункт Всё остальное из профиля подписки, к которой
+// относится сервер; без включённого профиля работает Основной.
 class _Backend extends FakeTunnelBackend {
   VpnState current = VpnState.disconnected;
   TunnelSessionRequest? session;

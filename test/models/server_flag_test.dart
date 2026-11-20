@@ -115,12 +115,12 @@ void main() {
   group('ServerNameUtils поверх флагов', () {
     test('countryCode есть только у страновых флагов', () {
       expect(ServerNameUtils.extractCountryCode('🇩🇪 Germany 01'), 'DE');
-      // Субъект принадлежит стране — код у него её.
+      // Субъект принадлежит стране, и код у него её.
       expect(
         ServerNameUtils.extractCountryCode('🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scotland'),
         'GB',
       );
-      // Не-страна, но код региона у неё есть — он и возвращается.
+      // Не-страна, но код региона у неё есть: он и возвращается.
       expect(ServerNameUtils.extractCountryCode('🇪🇺 Europe'), 'EU');
       // А у 🏴‍☠️ и 🏁 кода нет, и придумывать его не надо.
       expect(ServerNameUtils.extractCountryCode('🏴‍☠️ Pirate'), isNull);

@@ -99,7 +99,7 @@ void main() {
 
       expect(item.protocol, 'chain');
       expect(item.displayName, 'DE → JP');
-      // Адрес — ВХОДНОЙ узел: только к нему подключается устройство.
+      // Адрес берётся у входного узла: только к нему подключается устройство.
       expect(item.address, 'de.example.com');
       expect(item.port, 443);
       expect(item.chainHopItems.length, 3);

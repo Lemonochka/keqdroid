@@ -4,10 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/utils/custom_xray_config.dart';
 import 'package:keqdroid/utils/deprecated_xray_fields.dart';
 
-/// Поля, которые xray объявил к удалению, в готовых конфигах провайдеров
-/// переводятся в новую запись по правилам самого ядра (xray 26.9.9,
-/// `infra/conf/dns_proxy.go`, `xray.go`, `transport_method.go`). После удаления
-/// поля ядро отказалось бы запускать такой конфиг целиком.
+// Поля, которые xray объявил к удалению, в готовых конфигах провайдеров
+// переводятся в новую запись по правилам самого ядра (xray 26.9.9,
+// infra/conf/dns_proxy.go, xray.go, transport_method.go). После удаления
+// поля ядро отказалось бы запускать такой конфиг целиком.
 void main() {
   Map<String, dynamic> configWith(Map<String, dynamic> outbound) => {
     'outbounds': [outbound],
@@ -48,7 +48,7 @@ void main() {
       ]);
     });
 
-    // Без nonIPQuery ядро считает режим reject — и блокируемые типы тоже
+    // Без nonIPQuery ядро считает режим reject, и блокируемые типы тоже
     // отвечает REFUSED, а не молчанием.
     test('blockTypes без режима — первым правилом, с REFUSED', () {
       expect(

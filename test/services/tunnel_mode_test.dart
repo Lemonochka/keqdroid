@@ -12,9 +12,9 @@ void main() {
     const vpn = AppSettings(connectionMode: 'tun', connectionModeChosen: true);
 
     test('на Android невыбранный режим читается как VPN, а не как дефолт', () {
-      // Дефолт поля — десктопный `proxy`, и до 0.13.0 на Android он лежал в
-      // настройках у всех: режим там просто не читался. Уважить его молча —
-      // значит выключить туннель каждому, кто обновится.
+      // Умолчание поля: десктопный proxy, и до 0.13.0 на Android он лежал в
+      // настройках у всех, а режим там просто не читался. Если молча уважить его,
+      // туннель выключится у каждого, кто обновится.
       const untouched = AppSettings();
       expect(untouched.connectionMode, 'proxy');
       expect(untouched.connectionModeChosen, isFalse);
@@ -25,7 +25,7 @@ void main() {
     });
 
     test('на десктопе невыбранный режим остаётся прокси', () {
-      // Там дефолт осмысленный: TUN требует прав администратора, и первое
+      // Там умолчание осмысленное: TUN требует прав администратора, и первое
       // подключение не должно упираться в UAC.
       expect(
         TunnelSessionBuilder.resolveMode(const AppSettings(), isAndroid: false),
@@ -34,7 +34,7 @@ void main() {
     });
 
     test('на Android выбор пользователя больше не игнорируется', () {
-      // До появления режима «прокси» здесь стояло жёсткое `tun`: другого пути
+      // До появления режима прокси здесь стояло жёсткое tun: другого пути
       // на Android не было. Настройка теперь доезжает.
       expect(
         TunnelSessionBuilder.resolveMode(proxy, isAndroid: true),

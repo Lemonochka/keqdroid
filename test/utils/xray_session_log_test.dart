@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/utils/xray_session_log.dart';
 
-/// xray сессии на десктопе работает не тише info: отказы дозвона до своего
-/// сервера xray 26.x пишет только там. Лог при этом должен остаться ровно
-/// таким, какой заказан в настройках.
+// xray сессии на десктопе работает не тише info: отказы дозвона до своего
+// сервера xray 26.x пишет только там. Лог при этом должен остаться ровно
+// таким, какой заказан в настройках.
 String _config(String? level) => jsonEncode({
   if (level != null) 'log': {'loglevel': level, 'access': 'none'},
   'outbounds': [
@@ -85,7 +85,7 @@ void main() {
     });
 
     test('строки без метки xray не режутся никогда', () {
-      // sing-box, mihomo и баннер: первая скобка у них — не уровень xray.
+      // sing-box, mihomo и баннер: первая скобка у них не уровень xray.
       for (final line in [
         'INFO[0012] inbound/tun[tun-in]: started',
         'time="2026-09-23T10:00:00Z" level=info msg="[TCP] 1.2.3.4 --> x"',

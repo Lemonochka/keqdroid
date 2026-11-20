@@ -7,12 +7,12 @@ import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// «Резолвер для отдельных доменов»: домен спрашивается там, где велели, и
-/// нигде больше.
-///
-/// Тонкость у xray: в списке `domains` голое имя ядро понимает как подстроку,
-/// поэтому запись обязана уезжать туда с префиксом — иначе `example.com`
-/// поймает и `notexample.community`.
+// Резолвер для отдельных доменов: домен спрашивается там, где велели, и
+// нигде больше.
+//
+// Тонкость у xray: в списке domains голое имя ядро понимает как подстроку,
+// поэтому запись обязана уезжать туда с префиксом, иначе example.com
+// поймает и notexample.community.
 const _vless =
     'vless://uuid@de.example.com:443?security=reality&pbk=pub&sid=aa&fp=chrome&sni=de.example.com&type=tcp#DE';
 

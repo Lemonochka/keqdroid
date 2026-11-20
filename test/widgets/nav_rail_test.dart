@@ -4,11 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/nav_rail.dart';
 
-/// Рейка вместо нижней панели на телефоне боком.
-///
-/// Спека запрещает резать подпись пункта навигации многоточием, а в рейке на
-/// подпись всего 88dp — длинные «Subscriptions» и «Abonnements» туда влезают
-/// только переносом. Проверяем на всех языках приложения.
+// Рейка вместо нижней панели на телефоне боком.
+//
+// Спека запрещает резать подпись пункта навигации многоточием, а в рейке на
+// подпись всего 88dp: длинные Subscriptions и Abonnements туда влезают
+// только переносом. Проверяем на всех языках приложения.
 Future<void> _pumpRail(
   WidgetTester tester, {
   required Locale locale,
@@ -86,7 +86,7 @@ void main() {
       onTap: (i) => selected = i,
     );
 
-    // Цель нажатия по спеке — вся ширина рейки, а не только индикатор 56dp.
+    // Цель нажатия по спеке занимает всю ширину рейки, а не только индикатор 56dp.
     final settings = tester.getCenter(find.byIcon(Icons.settings_rounded));
     await tester.tapAt(Offset(4, settings.dy));
     expect(selected, 2);

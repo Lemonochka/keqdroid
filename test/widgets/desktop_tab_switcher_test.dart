@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/ui/desktop/desktop_tab_switcher.dart';
 
-/// Вкладки ПК едут вдоль панели и при этом живут, как в IndexedStack: видна
-/// одна, скрытые не рисуются, не ловят нажатия и фокус и не крутят тикеры
-/// (гифки подписок на чужой вкладке).
+// Вкладки ПК едут вдоль панели и при этом живут, как в IndexedStack: видна
+// одна, скрытые не рисуются, не ловят нажатия и фокус и не крутят тикеры
+// (гифки подписок на чужой вкладке).
 class _Probe extends StatefulWidget {
   const _Probe(this.i);
   final int i;

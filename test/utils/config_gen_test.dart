@@ -10,10 +10,10 @@ void main() {
   const settings = AppSettings();
 
   test('переносит vcn и pcs из ссылки в tlsSettings', () {
-    // Регрессия с живого сервера: панель отдаёт `sni` чужого домена, а
+    // Регрессия с живого сервера: панель отдаёт sni чужого домена, а
     // сертификат велит проверять по настоящему имени и по отпечаткам. Пока мы
-    // эти два поля выбрасывали, ядро сверяло сертификат с маскировочным `sni`
-    // и роняло рукопожатие — сервер работал во всех клиентах, кроме нашего.
+    // эти два поля выбрасывали, ядро сверяло сертификат с маскировочным sni
+    // и роняло рукопожатие: сервер работал во всех клиентах, кроме нашего.
     Socks5Credentials().init('u', 'p');
     final config = ConfigGeneratorV2.generateConfig(
       'vless://uuid@vps1.example.org:8443?security=tls&type=tcp'
@@ -32,7 +32,7 @@ void main() {
     expect(tls['serverName'], 'spotify.com');
     expect(tls['verifyPeerCertByName'], 'vps1.example.org');
     // Список отпечатков ядро принимает одной строкой через запятую и само
-    // режет её на части — склеивать или разбирать нам нечего.
+    // режет её на части: склеивать или разбирать нам нечего.
     expect(
       tls['pinnedPeerCertSha256'],
       'c88234050d72a3e9430ec7738636806deaf85c3708fee0fd9202ebd917e2c843,'
@@ -57,7 +57,7 @@ void main() {
   });
 
   test('type=raw получает http-заголовок так же, как type=tcp', () {
-    // `raw` — новое имя транспорта в ядре, и ссылки с ним уже ходят.
+    // raw стал новым именем транспорта в ядре, и ссылки с ним уже ходят.
     // mihomo-генератор считал их одним транспортом давно, xray-генератор нет:
     // маскировка под http молча терялась.
     Socks5Credentials().init('u', 'p');
@@ -82,7 +82,7 @@ void main() {
 
   test('reality: pqv доезжает как mldsa65Verify', () {
     // Без ключа соединение встаёт, но без дополнительной post-quantum
-    // проверки — то есть тише, чем просил выдавший ссылку.
+    // проверки, то есть тише, чем просил выдавший ссылку.
     Socks5Credentials().init('u', 'p');
     final config = ConfigGeneratorV2.generateConfig(
       'vless://uuid@example.com:443?security=reality&pbk=pub&sid=12'
@@ -271,7 +271,7 @@ void main() {
       );
     });
 
-    // Разбор запроса по правилам HTML-формы читает `+` как пробел, и base64
+    // Разбор запроса по правилам HTML-формы читает + как пробел, и base64
     // приезжает испорченным: ядру это неотличимо от неверного ключа.
     test('плюс в base64-параметрах ссылки остаётся плюсом', () {
       Socks5Credentials().init('u', 'p');
@@ -287,8 +287,8 @@ void main() {
       expect(tls['pinnedPeerCertSha256'], 'QQ+WW/EE=');
     });
 
-    // Список портов прямо в адресе `Uri.parse` не берёт, и раньше ссылка
-    // разваливалась целиком — вместе с sni, obfs и всем остальным.
+    // Список портов прямо в адресе Uri.parse не берёт, и раньше ссылка
+    // разваливалась целиком, вместе с sni, obfs и всем остальным.
     test('hysteria2: список портов из адреса не ломает разбор ссылки', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(
@@ -303,7 +303,7 @@ void main() {
       expect((stream['tlsSettings'] as Map)['serverName'], 'hy2.example');
     });
 
-    // Отдельного поля под ранние данные у ядра нет: оно вынимает `ed` из пути
+    // Отдельного поля под ранние данные у ядра нет: оно вынимает ed из пути
     // само. Ссылка же несёт его и отдельным параметром.
     test('ранние данные из параметра ссылки переезжают в путь', () {
       Socks5Credentials().init('u', 'p');
@@ -343,8 +343,8 @@ void main() {
       expect((plain['wsSettings'] as Map)['path'], '/ws');
     });
 
-    // `Host` в `headers` ядро объявило к удалению, а удалённое поле роняет
-    // конфиг целиком. Имя уходит в отдельное `host`, заголовков не остаётся.
+    // Host в headers ядро объявило к удалению, а удалённое поле роняет
+    // конфиг целиком. Имя уходит в отдельное host, заголовков не остаётся.
     test('ws host goes to its own field, not to headers', () {
       Map<String, dynamic> wsOf(String link) {
         final map =
@@ -364,7 +364,7 @@ void main() {
       expect(withHost['host'], 'cdn.example');
       expect(withHost.containsKey('headers'), isFalse);
 
-      // Без `host` в ссылке — имя из SNI, как и прежде в заголовке.
+      // Без host в ссылке имя берётся из SNI, как и прежде в заголовке.
       final sniOnly = wsOf(
         'vless://uuid@198.51.100.10:443?type=ws&security=tls&sni=w.example'
         '&path=%2Fws',
@@ -375,8 +375,8 @@ void main() {
 
     test('custom direct CIDR bumps domainStrategy to IPIfNonMatch', () {
       Socks5Credentials().init('u', 'p');
-      // корпоративный диапазон в Direct: должен ловиться и по имени хоста,
-      // а не только по голому IP — для этого нужен IPIfNonMatch.
+      // корпоративный диапазон в Direct должен ловиться и по имени хоста,
+      // а не только по голому IP, для этого нужен IPIfNonMatch.
       final s = AppSettings(directRules: 'ru, 10.130.0.0/16');
       final config = ConfigGeneratorV2.generateConfig(
         'vless://uuid@example.com:443',
@@ -396,7 +396,7 @@ void main() {
 
     test('domainStrategy stays AsIs without custom IP rules', () {
       Socks5Credentials().init('u', 'p');
-      // дефолтные правила = только доменные суффиксы + приватные LAN → AsIs
+      // правила по умолчанию = только доменные суффиксы + приватные LAN → AsIs
       final config = ConfigGeneratorV2.generateConfig(
         'vless://uuid@example.com:443',
         settings,
@@ -472,7 +472,7 @@ void main() {
 
     test('newline-separated routing lists parse per line, same as commas', () {
       Socks5Credentials().init('u', 'p');
-      // UI обещает «по одному в строке или через запятую»; сплит только по ','
+      // UI обещает по одному в строке или через запятую; сплит только по ','
       // склеивал построчные записи в один несрабатывающий domain-токен.
       const s = AppSettings(directRules: 'yandex.ru\nvk.com\n192.168.50.0/24');
       final config = ConfigGeneratorV2.generateConfig(
@@ -522,8 +522,8 @@ void main() {
       expect(tlsSettings['serverName'], 'example.com');
     });
 
-    // Ядро отвергает `allowInsecure` безусловно и роняет при этом разбор всего
-    // конфига — подробности и остальные протоколы в removed_tls_fields_test.
+    // Ядро отвергает allowInsecure безусловно и роняет при этом разбор всего
+    // конфига: подробности и остальные протоколы в removed_tls_fields_test.
     test('Trojan TLS drops allowInsecure even when insecure=1', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(
@@ -539,8 +539,8 @@ void main() {
       expect(tls['serverName'], 'example.com');
     });
 
-    // Пустое поле ядро читает как Chrome (`GetFingerprint("")`), а он на наших
-    // сетях уходит в тишину, поэтому пишем свой отпечаток — как и для REALITY.
+    // Пустое поле ядро читает как Chrome (GetFingerprint("")), а он на наших
+    // сетях уходит в тишину, поэтому пишем свой отпечаток, как и для REALITY.
     test('VLESS TLS без fp получает firefox', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(
@@ -585,8 +585,8 @@ void main() {
       expect(tls.containsKey('fingerprint'), isFalse);
     });
 
-    // Ссылки на reality часто приходят без `fp`, и отпечаток в этом случае
-    // выбираем мы (см. `defaultTlsFingerprint`).
+    // Ссылки на reality часто приходят без fp, и отпечаток в этом случае
+    // выбираем мы (см. defaultTlsFingerprint).
     test('REALITY без fp получает firefox, а не chrome', () {
       Socks5Credentials().init('u', 'p');
       final config = ConfigGeneratorV2.generateConfig(
@@ -617,7 +617,7 @@ void main() {
       expect(reality['fingerprint'], 'chrome');
     });
 
-    // Скачивание по downloadSettings — отдельное подключение со своим TLS.
+    // Скачивание по downloadSettings идёт отдельным подключением со своим TLS.
     test('downloadSettings без fp получает тот же отпечаток', () {
       Socks5Credentials().init('u', 'p');
       const extra =
@@ -679,8 +679,8 @@ void main() {
 
     // Строку постквантового шифрования разбирает само ядро, и разбирает её по
     // длинам: ключ обязан декодироваться в 32 или 1184 байта, а всё короткое
-    // между точками считается паддингом. Любая правка строки по пути — и ядро
-    // отвечает «unsupported encryption», поэтому переносим дословно.
+    // между точками считается паддингом. Любая правка строки по пути, и ядро
+    // отвечает unsupported encryption, поэтому переносим дословно.
     test('VLESS переносит строку encryption дословно', () {
       Socks5Credentials().init('u', 'p');
       const encryption =
@@ -806,7 +806,7 @@ void main() {
     });
 
     // Меньше 5 секунд xray не принимает и отказывается от конфига целиком,
-    // mihomo такой интервал поднимает до 5 — здесь так же.
+    // mihomo такой интервал поднимает до 5: здесь так же.
     test('Hysteria2: интервал перебора не меньше 5 секунд', () {
       Socks5Credentials().init('u', 'p');
       Object? interval(String value) {
@@ -830,7 +830,7 @@ void main() {
     });
 
     // mKCP: xray 26 снял seed и header из kcpSettings и прежнюю обфускацию по
-    // умолчанию. Ссылка старого вида едет масками mkcp-legacy — в порядке,
+    // умолчанию. Ссылка старого вида едет масками mkcp-legacy в порядке,
     // который проверен трафиком против xray 25.12.8 (PROGRESS.md, G-12).
     group('mKCP', () {
       const base =
@@ -908,7 +908,7 @@ void main() {
         };
         final encoded = Uri.encodeComponent(jsonEncode(masks));
         expect(streamOf('$base&seed=other&fm=$encoded')['finalmask'], masks);
-        // Панель, которая не закодировала `+`: разбор формы сделал бы из
+        // Панель, которая не закодировала +: разбор формы сделал бы из
         // него пробел, и ключ маски приехал бы испорченным.
         final rawPlus = encoded.replaceAll('%2B', '+');
         expect(streamOf('$base&fm=$rawPlus')['finalmask'], masks);
@@ -1012,8 +1012,8 @@ void main() {
         );
         final map = jsonDecode(config) as Map<String, dynamic>;
         final rules = (map['routing'] as Map)['rules'] as List;
-        // xray matches geoip via the `ip` field (`geoip:ru`), never a top-level
-        // `geoip` key — a bare `geoip` rule trips "this rule has no effective fields".
+        // xray matches geoip via the ip field (geoip:ru), never a top-level
+        // geoip key: a bare geoip rule trips "this rule has no effective fields".
         final geoRule = rules.cast<Map<String, dynamic>>().firstWhere(
           (r) =>
               r['outboundTag'] == 'direct' &&
@@ -1022,7 +1022,7 @@ void main() {
         );
         expect(geoRule['ip'], contains('geoip:ru'));
         expect(geoRule['outboundTag'], 'direct');
-        // No rule may carry a bare `geoip` field — xray ignores it.
+        // No rule may carry a bare geoip field: xray ignores it.
         final badGeoRule = rules.cast<Map<String, dynamic>>().where(
           (r) => r['geoip'] != null,
         );
@@ -1094,10 +1094,10 @@ void main() {
       expect(dns['queryStrategy'], 'UseIP');
       final servers = (dns['servers'] as List).cast<Map<String, dynamic>>();
       // Первым идёт bootstrap на адрес сервера: его нельзя резолвить ничем, что
-      // само требует туннеля, — отсюда `+local`. Открытым UDP-53 его тоже не
+      // само требует туннеля, отсюда +local. Открытым UDP-53 его тоже не
       // ищем: у части провайдеров он подменяется. Поэтому пользовательский
-      // `https://` для bootstrap приводится к `https+local://`, а в общем списке
-      // остаётся как вписан. Пользовательские серверы — следом.
+      // https:// для bootstrap приводится к https+local://, а в общем списке
+      // остаётся как вписан. Пользовательские серверы идут следом.
       expect(servers.first['address'], 'https+local://dns.google/dns-query');
       expect(servers.first['domains'], ['full:example.com']);
       expect(servers[1]['address'], 'localhost');

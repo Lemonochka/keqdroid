@@ -50,8 +50,8 @@ class _FakeVpn extends VpnStateNotifier {
       const VpnState(status: VpnStatus.disconnected);
 }
 
-/// Списки «уже скачаны и свежие»: синхронизация только сверяет их и чистит
-/// лишнее, а что велено оставить, записывается.
+// Списки уже скачаны и свежие: синхронизация только сверяет их и чистит
+// лишнее, а что велено оставить, записывается.
 class _FakeLists extends RuleListService {
   Set<String>? kept;
 

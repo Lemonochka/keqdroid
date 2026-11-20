@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/shared/ui/horizontal_mouse_scroll.dart';
 
-/// Колесо над горизонтальной лентой внутри вертикальной страницы (выбор картинки подписки на ПК):
-/// листало страницу вниз, а карусель с привязкой возвращалась к той же картинке.
+// Колесо над горизонтальной лентой внутри вертикальной страницы (выбор картинки подписки на ПК):
+// листало страницу вниз, а карусель с привязкой возвращалась к той же картинке.
 
 Future<(ScrollController, CarouselController)> _pump(
   WidgetTester tester,

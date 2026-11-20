@@ -5,18 +5,18 @@ import 'package:keqdroid/tunnel/tunnel_session_request.dart';
 import 'package:keqdroid/tunnel/tunnel_state.dart';
 import 'package:keqdroid/tunnel/vpn_backend.dart';
 
-/// Бэкенд-пустышка для виджет-тестов.
-///
-/// Настоящий бэкенд выбирается по платформе, и на Linux его `dispose()` зовёт
-/// `gsettings`: виджет-тест экрана настроек запускал системный процесс и правил
-/// прокси рабочего стола у того, кто гонял тесты. На CI это роняло сами тесты
-/// («A Timer is still pending even after the widget tree was disposed» —
-/// `Process.run` заводит таймер под fake_async), а на машине разработчика
-/// молча меняло настройки GNOME. На Windows того же кода в `dispose()` нет,
-/// поэтому локально всё было зелёным, а на раннере — нет.
-///
-/// Экрану движок нужен не сам по себе: через него идут иконки приложений и
-/// прочая платформенная мелочь. Для этого хватает пустышки.
+// Бэкенд-пустышка для виджет-тестов.
+//
+// Настоящий бэкенд выбирается по платформе, и на Linux его dispose() зовёт
+// gsettings: виджет-тест экрана настроек запускал системный процесс и правил
+// прокси рабочего стола у того, кто гонял тесты. На CI это роняло сами тесты
+// (A Timer is still pending even after the widget tree was disposed:
+// Process.run заводит таймер под fake_async), а на машине разработчика
+// молча меняло настройки GNOME. На Windows того же кода в dispose() нет,
+// поэтому локально всё было зелёным, а на раннере нет.
+//
+// Экрану движок нужен не сам по себе: через него идут иконки приложений и
+// прочая платформенная мелочь. Для этого хватает пустышки.
 class FakeTunnelBackend extends TunnelBackend {
   final _ctrl = StreamController<VpnState>.broadcast();
 

@@ -6,7 +6,7 @@ void main() {
   test('defaults are gvisor/9000 — what sing-box itself would pick', () {
     const tun = TunSettings();
     // system-стек на Windows терминирует TCP листенером на адресе TUN и живёт
-    // правилом Windows Firewall; не встало правило — туннель поднят, а трафика
+    // правилом Windows Firewall; не встало правило, и туннель поднят, а трафика
     // нет. gvisor держит стек в процессе ядра и от фаервола не зависит.
     expect(tun.stack, 'gvisor');
     expect(tun.mtu, 9000);
@@ -66,7 +66,7 @@ void main() {
 
   test('прежняя пара умолчаний (system/1400) мигрирует на новую', () {
     // Настройки пишутся целиком при любом изменении, поэтому старая пара лежит
-    // почти у всех — и почти ни у кого не выбрана осознанно.
+    // почти у всех, и почти ни у кого не выбрана осознанно.
     final migrated = TunSettings.fromJson({
       'stack': 'system',
       'mtu': 1400,
@@ -78,7 +78,7 @@ void main() {
     expect(migrated.mtu, 9000);
 
     // …но только один раз: после записи маркер версии есть, и выбор
-    // пользователя (пусть даже совпавший со старым дефолтом) остаётся его.
+    // пользователя (пусть даже совпавший со старым умолчанием) остаётся его.
     final kept = TunSettings.fromJson(
       migrated.copyWith(stack: 'system', mtu: 1400).toJson(),
     );

@@ -6,9 +6,9 @@ import 'package:keqdroid/services/ping_service.dart';
 import 'package:keqdroid/tunnel/vpn_backend.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 
-/// Замер обязан подниматься тем же ядром, каким сервер поедет. Пока он всегда
-/// поднимал xray, «зелёный пинг» и «работает» были про разные ядра: сервер,
-/// живой на mihomo, краснел из-за того, что его не понял xray.
+// Замер обязан подниматься тем же ядром, каким сервер поедет. Пока он всегда
+// поднимал xray, зелёный пинг и надпись работает были про разные ядра: сервер,
+// живой на mihomo, краснел из-за того, что его не понял xray.
 void main() {
   const link = 'vless://uuid@nl.example:443?type=tcp&security=none#NL';
 
@@ -45,7 +45,7 @@ void main() {
     );
 
     test('по умолчанию на ссылке xray, как и на подключении', () {
-      // Не «замер решает сам»: он повторяет решение подключения, иначе снова
+      // Не замер решает сам: он повторяет решение подключения, иначе снова
       // мерил бы не то ядро.
       expect(
         PingService.pingCoreFor(link, const AppSettings()),
@@ -54,7 +54,7 @@ void main() {
     });
 
     test('формат ядра перебивает выбор', () {
-      // Готовый конфиг Clash исполняет только mihomo — тут выбирать нечего, и
+      // Готовый конфиг Clash исполняет только mihomo: тут выбирать нечего, и
       // мерить его xray было бы заведомо красным.
       const clash =
           'proxies:\n'
@@ -72,7 +72,7 @@ void main() {
     });
 
     test('AmneziaWG меряется mihomo, как и едет', () {
-      // Раньше профиль уходил в xray, который `.conf` не разбирает, и замер
+      // Раньше профиль уходил в xray, который .conf не разбирает, и замер
       // краснел всегда.
       const awg =
           '[Interface]\n'
@@ -115,7 +115,7 @@ void main() {
       // Десктоп ходит по HTTP: HttpClient из dart:io не умеет SOCKS вовсе.
       expect(pingConfig(httpInbound: true)['port'], 28150);
       expect(pingConfig(httpInbound: true).containsKey('socks-port'), isFalse);
-      // Android — по SOCKS, там пробу делает Java.
+      // Android меряет по SOCKS, там пробу делает Java.
       expect(pingConfig()['socks-port'], 28150);
       expect(pingConfig().containsKey('port'), isFalse);
     });
@@ -136,8 +136,8 @@ void main() {
     });
 
     test('меряют оба ядра одинаково: только IPv4', () {
-      // У xray в ping-режиме жёстко `queryStrategy: UseIPv4`. Разойдись эти
-      // двое — разница в цифрах оказалась бы разницей семейства адресов.
+      // У xray в ping-режиме жёстко queryStrategy: UseIPv4. Разойдись эти
+      // двое, и разница в цифрах оказалась бы разницей семейства адресов.
       final config = pingConfig();
       expect(config['ipv6'], isFalse);
       expect((config['dns'] as Map)['ipv6'], isFalse);
@@ -146,7 +146,7 @@ void main() {
     test('DNS замера не уходит в туннель, которого ещё нет', () {
       final dns = pingConfig()['dns'] as Map<String, dynamic>;
       for (final server in dns['nameserver'] as List) {
-        // `system` резолвит сама ОС, остальным нужен явный «мимо правил».
+        // system резолвит сама ОС, остальным нужен явный DNS в обход правил.
         if (server == 'system') continue;
         expect(server, endsWith('#DIRECT'));
       }

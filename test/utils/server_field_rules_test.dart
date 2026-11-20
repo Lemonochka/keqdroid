@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/utils/server_field_rules.dart';
 
-/// Правила взяты из ядра: `docs/config/transport.md` (матрицы «транспорт ×
-/// защита» и «протокол × защита»), `docs/config/outbounds/vless.md` (условия
-/// Vision) и `infra/conf/vless.go` (разбор `flow` и `encryption`).
+// Правила взяты из ядра: docs/config/transport.md (матрицы транспорт ×
+// защита и протокол × защита), docs/config/outbounds/vless.md (условия
+// Vision) и infra/conf/vless.go (разбор flow и encryption).
 void main() {
   group('Vision', () {
     test('живёт на TCP с TLS и с REALITY', () {
@@ -18,7 +18,7 @@ void main() {
           reason: security,
         );
       }
-      // `raw` — то же самое под новым именем.
+      // raw даёт то же самое под новым именем.
       expect(
         visionWorksWith(transport: 'raw', security: 'tls', encryption: ''),
         isTrue,
@@ -68,7 +68,7 @@ void main() {
     });
 
     test('с VLESS Encryption транспорт уже не важен', () {
-      // Документация: «VLESS Encryption 无底层传输限制».
+      // Документация: VLESS Encryption 无底层传输限制.
       expect(
         visionWorksWith(
           transport: 'xhttp',
@@ -98,7 +98,7 @@ void main() {
         ),
         [''],
       );
-      // У vmess и trojan `flow` нет вовсе.
+      // У vmess и trojan flow нет вовсе.
       expect(
         flowOptionsFor(
           protocol: 'trojan',

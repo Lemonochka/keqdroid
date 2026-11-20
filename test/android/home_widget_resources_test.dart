@@ -7,8 +7,8 @@ import 'package:keqdroid/app/app.dart';
 import 'package:keqdroid/platform/home_widget_sync.dart';
 import 'package:keqdroid/shared/ui/liquid_wave.dart';
 
-// ресурсы виджета рабочего стола собирает этот тест: вода считается той же физикой, что шапка приложения.
-// пересобрать: UPDATE_GOLDEN=1 flutter test test/android/home_widget_resources_test.dart
+// Ресурсы виджета рабочего стола собирает этот тест: вода считается той же физикой, что шапка приложения.
+// Пересобрать: UPDATE_GOLDEN=1 flutter test test/android/home_widget_resources_test.dart
 
 const _res = 'android/app/src/main/res';
 const _kotlin = 'android/app/src/main/kotlin/com/keqdroid/keqdroid';
@@ -165,7 +165,7 @@ $_header
 </vector>
 ''';
 
-// налив от кнопки цепочкой форм из LiquidWaveSim. гребни к концу тормозят до нуля, последняя форма
+// Налив от кнопки цепочкой форм из LiquidWaveSim. Гребни к концу тормозят до нуля, последняя форма
 // совпадает со стоячей картинкой, на которую виджет её потом меняет
 String _pourWater(_Kind k, _Layer l, _State from, _State to) {
   final xs = _waterXs(k);
@@ -667,8 +667,8 @@ String _content(_Kind k, String s, String indent) {
   throw ArgumentError(k.name);
 }
 
-// два одинаковых слоя: новый вид проявляется поверх старого, а старый под ним крутится дальше.
-// налив виден только на время перехода, потом на его месте стоячая картинка того же уровня
+// Два одинаковых слоя: новый вид проявляется поверх старого, а старый под ним крутится дальше.
+// Налив виден только на время перехода, потом на его месте стоячая картинка того же уровня
 String _slot(_Kind k, String s) {
   const i = '        ';
   final water = StringBuffer();

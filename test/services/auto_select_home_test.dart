@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/services/auto_select_home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// «Свой» сервер автовыбора: с какого увёз аварийный переезд и когда на него
-/// возвращаться.
+// Свой сервер автовыбора: с какого увёз аварийный переезд и когда на него
+// возвращаться.
 void main() {
   test('переезд запоминает сервер, с которого увёз', () {
     final home = AutoSelectHome.afterFailover(
@@ -43,7 +43,7 @@ void main() {
       fromId: 'a',
       toId: 'b',
     );
-    // Упал сосед, а судья увёз как раз на свой: теперь «свой» — сосед.
+    // Упал сосед, а судья увёз как раз на свой сервер: теперь своим становится сосед.
     final back = AutoSelectHome.afterFailover(
       first,
       subscriptionId: 's1',

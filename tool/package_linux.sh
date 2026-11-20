@@ -57,7 +57,7 @@ fi
 
 # --- geo data sanity (fail closed) ------------------------------------------
 # The bundle's root-level geoip.dat/geosite.dat come from assets/bin/linux/,
-# which linux/CMakeLists.txt installs wholesale — the flutter_assets copy under
+# which linux/CMakeLists.txt installs wholesale; the flutter_assets copy under
 # assets/bin/windows/ is pruned below. A stale bundle therefore ships old routing
 # data while producing a perfectly valid sha256, which is how Linux packages
 # silently kept months-old geo databases.
@@ -90,7 +90,7 @@ PAYLOAD="$WORK/payload"
 mkdir -p "$PAYLOAD"
 cp -a "$BUNDLE/." "$PAYLOAD/"
 rm -rf "$PAYLOAD/data/flutter_assets/assets/bin/windows"
-# И урезанная geoip — она ассет Flutter ради Android; на десктопе рядом с
+# Урезанная geoip тоже уходит: Flutter кладёт её ассетом ради Android, а на десктопе рядом с
 # бинарником лежит полная база, которую и читает ядро.
 rm -rf "$PAYLOAD/data/flutter_assets/assets/geo"
 echo "payload size: $(du -sh "$PAYLOAD" | cut -f1)"
@@ -101,7 +101,7 @@ echo "payload size: $(du -sh "$PAYLOAD" | cut -f1)"
 # lib (Arch/CachyOS) the app fails to even start. Copy the lib + its
 # ayatana/dbusmenu deps next to the plugin and repoint RUNPATHs at $ORIGIN so
 # the bundle is self-contained. (gtk/glib are assumed present on any desktop;
-# the .deb also declares the dep — harmless there.)
+# the .deb also declares the dep, which is harmless there.)
 log "bundling AppIndicator libs"
 command -v patchelf >/dev/null || { apt-get update -y >/dev/null && apt-get install -y patchelf >/dev/null; }
 PL_LIB="$PAYLOAD/lib"
@@ -149,9 +149,9 @@ normalize_modes "$PAYLOAD" "$APP" mihomo xray
 ICON_SRC="$REPO_DIR/assets/icon.png"
 [ -f "$ICON_SRC" ] || ICON_SRC=""
 
-# Окно называет себя id приложения (g_set_prgname в linux/runner): это его
-# WM_CLASS на X11 и app_id на Wayland. Окно с ярлыком, а значит и с иконкой,
-# среда связывает по StartupWMClass; со значением `keqdroid` связи не было, и
+# Окно называет себя id приложения (g_set_prgname в linux/runner), и этот id служит
+# его WM_CLASS на X11 и app_id на Wayland. Окно с ярлыком, а с ним и с иконкой,
+# среда связывает по StartupWMClass; со значением keqdroid связи не было, и
 # иконки не было нигде. Имя файла ярлыка прежнее, иначе после обновления
 # пропали бы значки, закреплённые в доке. Иконка ставится и под именем окна:
 # доки на wlroots ищут её в теме прямо по app_id.
@@ -255,7 +255,7 @@ echo "  -> $(basename "$DEB")"
 # AutoReqProv выключен намеренно. Автоматика прочла бы каждую .so бандла и
 # потребовала бы в том числе то, что лежит в нём же (libflutter_linux_gtk,
 # appindicator), а имена пакетов у Fedora и openSUSE разные. Зависимости
-# названы sonames — их резолвит любой rpm-дистрибутив. Build-id-ссылки тоже
+# названы sonames: их резолвит любой rpm-дистрибутив. Build-id-ссылки тоже
 # выключены: у любого другого Flutter-приложения libflutter_linux_gtk.so с тем
 # же build-id, и два пакета подрались бы за один файл в /usr/lib/.build-id.
 log ".rpm"
@@ -365,7 +365,7 @@ ARCH=$ARCH_AI APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGETOOL" \
 echo "  -> $(basename "$APPIMAGE")"
 
 # ============================================================================
-# 5) PKGBUILD + .SRCINFO (Arch / AUR) — builds from the release tar.gz
+# 5) PKGBUILD + .SRCINFO (Arch / AUR), builds from the release tar.gz
 # ============================================================================
 # Одни и те же поля уезжают в два файла, и расходиться им нельзя: AUR не
 # примет пакет, у которого .SRCINFO описывает не тот PKGBUILD.

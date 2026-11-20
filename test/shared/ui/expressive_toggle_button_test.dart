@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/shared/ui/expressive_toggle_button.dart';
 
-/// Жалоба: морф у «Авто» выглядел так, будто края прыгают, достраивая
-/// квадрат, а не меняется форма. Так и было — радиус ехал от 9999 к 8, и
-/// видимая часть перехода сваливалась в последние проценты анимации.
+// Жалоба: морф у Авто выглядел так, будто края прыгают, достраивая
+// квадрат, а не меняется форма. Так и было: радиус ехал от 9999 к 8, и
+// видимая часть перехода сваливалась в последние проценты анимации.
 Widget _host({required bool selected, VoidCallback? onPressed}) => MaterialApp(
   home: Scaffold(
     body: Center(
@@ -84,7 +84,7 @@ void main() {
     final box = tester.getRect(visual);
     expect(box.height, ExpressiveToggleButton.height);
 
-    // Два пикселя над нарисованной кнопкой — ещё её зона.
+    // Два пикселя над нарисованной кнопкой ещё входят в её зону.
     await tester.tapAt(Offset(box.center.dx, box.top - 2));
     await tester.pump();
     expect(taps, 1);

@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/server_flag.dart';
 import 'package:keqdroid/services/exit_ip_service.dart';
 
-/// Выход подключения: адрес и страна из трассировки Cloudflare, и только
-/// через локальный инбаунд ядра — прямой запрос показал бы адрес без VPN.
+// Выход подключения: адрес и страна из трассировки Cloudflare, и только
+// через локальный инбаунд ядра: прямой запрос показал бы адрес без VPN.
 void main() {
   const trace =
       'fl=12f34\n'
@@ -47,8 +47,8 @@ void main() {
 
   group('запрос', () {
     test('идёт через локальный прокси, а не напрямую', () async {
-      // Ответчик-«прокси»: запрос с абсолютным адресом приходит ему, а не
-      // хосту из адреса, — так и выглядит выход через HTTP-инбаунд ядра.
+      // Ответчик-прокси: запрос с абсолютным адресом приходит ему, а не
+      // хосту из адреса, так и выглядит выход через HTTP-инбаунд ядра.
       final proxy = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(() => proxy.close(force: true));
       final hosts = <String?>[];

@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/shared/ui/scroll_jump_overlay.dart';
 
-/// Кружок «на другой конец списка» на телефоне.
-///
-/// Половина ценного в нём — про «чтобы не мешался»: появляется от настоящей
-/// прокрутки, только когда до цели далеко, и уходит сам. Вторая половина — про
-/// направление: за серединой списка кнопка ведёт обратно наверх, иначе после
-/// первого же нажатия она бесполезна, а возвращаться приходится свайпами.
+// Кружок на другой конец списка на телефоне.
+//
+// Половина ценного в нём про то, чтобы не мешался: появляется от настоящей
+// прокрутки, только когда до цели далеко, и уходит сам. Вторая половина про
+// направление: за серединой списка кнопка ведёт обратно наверх, иначе после
+// первого же нажатия она бесполезна, а возвращаться приходится свайпами.
 Finder get _button => find.byIcon(Icons.arrow_downward_rounded);
 
 double _opacity(WidgetTester tester) => tester
@@ -16,7 +16,7 @@ double _opacity(WidgetTester tester) => tester
     )
     .opacity;
 
-/// Пол-оборота — та же стрелка, развёрнутая наверх.
+// Пол-оборота даёт ту же стрелку, развёрнутую наверх.
 double _turns(WidgetTester tester) => tester
     .widget<AnimatedRotation>(
       find.ancestor(of: _button, matching: find.byType(AnimatedRotation)),
@@ -53,8 +53,8 @@ Future<ScrollController> _pump(
   return controller;
 }
 
-/// Прокрутка на [offset] с добавочным свайпом: кнопка обязана подниматься от
-/// НАСТОЯЩЕГО движения, и тест ходит тем же путём, что палец.
+// Прокрутка на [offset] с добавочным свайпом: кнопка обязана подниматься от
+// настоящего движения, и тест ходит тем же путём, что палец.
 Future<void> _scrollTo(
   WidgetTester tester,
   ScrollController controller,
@@ -82,7 +82,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     expect(_opacity(tester), 1);
 
-    // Прокрутка кончилась — через паузу кнопка обязана убраться сама.
+    // Прокрутка кончилась, и через паузу кнопка обязана убраться сама.
     await tester.pumpAndSettle(const Duration(seconds: 2));
     expect(_opacity(tester), 0);
   });
@@ -110,7 +110,7 @@ void main() {
     await _scrollTo(tester, controller, middle + 200);
 
     expect(_opacity(tester), 1);
-    // Та же стрелка, развёрнутая на пол-оборота, — не вторая кнопка.
+    // Та же стрелка, развёрнутая на пол-оборота, а не вторая кнопка.
     expect(_turns(tester), 0.5);
 
     await tester.tap(_button);
@@ -127,7 +127,7 @@ void main() {
     await _scrollTo(tester, controller, controller.position.maxScrollExtent);
 
     // Раньше здесь кнопки не было вовсе: расстояние считалось до конца списка,
-    // а он уже под ногами. Наверх при этом — весь список.
+    // а он уже под ногами. Наверх при этом лежит весь список.
     expect(_opacity(tester), 1);
     expect(_turns(tester), 0.5);
   });
@@ -135,7 +135,7 @@ void main() {
   testWidgets('когда обе цели близко, кнопки нет — докрутить проще', (
     tester,
   ) async {
-    // 25 строк по 60 — прокрутки 900 при пороге 600: дальше середины до начала
+    // 25 строк по 60, прокрутки 900 при пороге 600: дальше середины до начала
     // 500, до конца 400, и целиться в кнопку дольше, чем свайпнуть.
     final controller = await _pump(tester, items: 25);
 

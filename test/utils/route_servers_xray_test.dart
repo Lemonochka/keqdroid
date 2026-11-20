@@ -7,8 +7,8 @@ import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/route_servers.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// «Другой сервер» маршрута на xray: отдельный аутбаунд и правила на него
-/// между «напрямую» и «через VPN».
+// Другой сервер маршрута на xray: отдельный аутбаунд и правила на него
+// между напрямую и через VPN.
 const _active =
     'vless://00000000-0000-4000-8000-000000000000@nl.example:443'
     '?type=tcp&security=tls&sni=nl.example#NL';

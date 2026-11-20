@@ -18,9 +18,9 @@ import 'package:path/path.dart' as p;
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// «Запускать в трее, без окна» на экране Windows и Linux: раннер решает,
-/// показывать ли окно, до первого кадра, поэтому флаг обязан доехать до
-/// нативной части сразу, а без автозапуска переключать его нечего.
+// Запускать в трее, без окна на экране Windows и Linux: раннер решает,
+// показывать ли окно, до первого кадра, поэтому флаг обязан доехать до
+// нативной части сразу, а без автозапуска переключать его нечего.
 const _channel = MethodChannel('keqdroid_vpn_channel');
 const _title = 'Start in the tray, without a window';
 
@@ -98,7 +98,7 @@ Future<(StorageService, List<MethodCall>)> _openDesktopSettings(
 }
 
 void main() {
-  // раздел «Windows» в настройках строится по настоящей ОС, на раннере CI с Linux его нет
+  // раздел Windows в настройках строится по настоящей ОС, на раннере CI с Linux его нет
   final skip = !Platform.isWindows;
 
   testWidgets('стоит между запуском с Windows и подключением', (tester) async {
@@ -149,7 +149,7 @@ void main() {
       ),
     );
 
-    // ключ Run на месте, но Windows его не запускает: переключатель не должен говорить «вкл»
+    // ключ Run на месте, но Windows его не запускает: переключатель не должен говорить вкл
     testWidgets('показан выключенным, зависящие от него недоступны', (
       tester,
     ) async {
@@ -195,7 +195,7 @@ void main() {
       );
     }, skip: skip);
 
-    // выбор в Диспетчере задач мог сделать сам человек: другие настройки его не снимают
+    // выбор в Диспетчере задач мог сделать сам пользователь: другие настройки его не снимают
     testWidgets('другие переключатели выключатель Windows не трогают', (
       tester,
     ) async {
@@ -271,7 +271,7 @@ void main() {
   }, skip: skip);
 
   group('Linux', () {
-    // раздел «Linux» есть только на настоящем Linux
+    // раздел Linux есть только на настоящем Linux
     final skip = !Platform.isLinux;
     late Directory dir;
 

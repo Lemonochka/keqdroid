@@ -2,9 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/connection_entry.dart';
 import 'package:keqdroid/services/xray_access_log_parser.dart';
 
-/// Строки — как их пишет xray: forkexec на Android дублирует вывод ядра в файл,
-/// добавляя свой префикс `MM-DD HH:MM:SS`, поэтому парсер обязан искать образцы
-/// в любом месте строки, а не с её начала.
+// Строки в том виде, как их пишет xray: forkexec на Android дублирует вывод ядра в файл,
+// добавляя свой префикс MM-DD HH:MM:SS, поэтому парсер обязан искать образцы
+// в любом месте строки, а не с её начала.
 const _log = '''
 08-05 12:34:55 2026/08/05 12:34:55.123456 [Info] app/dispatcher: Hit route rule: [proxy-geosite] so taking detour [proxy] for [tcp:www.youtube.com:443]
 08-05 12:34:55 2026/08/05 12:34:55.200000 from 127.0.0.1:53182 accepted tcp:www.youtube.com:443 [socks-in -> proxy]
@@ -15,7 +15,7 @@ const _log = '''
 08-05 12:34:58 2026/08/05 12:34:58.100000 from 127.0.0.1:53192 rejected tcp:doubleclick.net:443 [socks-in -> block]
 ''';
 
-/// Тот же трафик при уровне логов warning: строк роутинга нет вовсе.
+// Тот же трафик при уровне логов warning: строк роутинга нет вовсе.
 const _logWithoutRoutingLines = '''
 2026/08/05 12:34:55.200000 from 127.0.0.1:53182 accepted tcp:www.youtube.com:443 [socks-in -> proxy]
 2026/08/05 12:34:56.100000 from 127.0.0.1:53190 accepted tcp:vk.com:443 [socks-in -> direct]
@@ -56,7 +56,7 @@ void main() {
       final dns = _byHost(XrayAccessLogParser.parse(_log), '1.1.1.1');
       expect(dns.network, 'udp');
       expect(XrayAccessLogParser.isDefaultRoute(dns.rule), isTrue);
-      // `>>` в detour означает «роутер правило не выбрал».
+      // >> в detour говорит, что роутер правило не выбрал.
       expect(dns.outbound, 'proxy');
     });
 

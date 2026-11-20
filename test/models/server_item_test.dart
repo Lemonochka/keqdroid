@@ -28,9 +28,9 @@ void main() {
     });
 
     test('countryCode falls back to the config name after rename', () {
-      // в новом имени страны нет — флаг должен остаться от исходного имени
+      // в новом имени страны нет: флаг должен остаться от исходного имени
       expect(makeServer(customName: 'Мой сервер').countryCode, 'DE');
-      // а если в новом имени страна есть — берётся она
+      // а если в новом имени страна есть: берётся она
       expect(makeServer(customName: 'US Home').countryCode, 'US');
     });
 

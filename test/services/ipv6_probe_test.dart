@@ -18,7 +18,7 @@ typedef _Probe = ({
   int? httpStatus,
 });
 
-// отвечает только тем серверам, у которых «есть IPv6», и только на адрес проверки IPv6
+// отвечает только тем серверам, у которых есть IPv6, и только на адрес проверки IPv6
 class _Ipv6ExitBackend extends FakeTunnelBackend {
   _Ipv6ExitBackend(this.carrying);
 

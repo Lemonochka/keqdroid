@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/shared/ui/expressive.dart';
 
-/// Шкала обязана совпадать с `TypeScaleTokens` из androidx.compose.material3:
-/// выразительность M3E живёт в дельте между базой и усиленным вариантом, и
-/// если поднять базу, дельта схлопывается — экран снова читается «одним весом».
+// Шкала обязана совпадать с TypeScaleTokens из androidx.compose.material3:
+// выразительность M3E живёт в дельте между базой и усиленным вариантом, и
+// если поднять базу, дельта схлопывается, и экран снова читается одним весом.
 void main() {
   final scale = buildExpressiveTextTheme(Brightness.dark);
 
@@ -49,7 +49,7 @@ void main() {
   });
 
   // Трекинг меняют только три роли; паттерны в switch сравнивают int-константу
-  // с `double? fontSize`, поэтому проверяем, что совпадение вообще срабатывает.
+  // с double? fontSize, поэтому проверяем, что совпадение вообще срабатывает.
   group('трекинг усиленных вариантов', () {
     test('displayLarge −0.2 → 0', () {
       expect(scale.displayLarge!.letterSpacing, -0.2);

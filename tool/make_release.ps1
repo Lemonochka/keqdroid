@@ -107,7 +107,7 @@ $backupKeyDefine = "--dart-define-from-file=$backupKeyFile"
 function Repair-PubCacheEnv {
   # WSL/Docker sometimes leave PUB_CACHE=C:\root\.pub-cache on Windows hosts.
   # flutter gen-l10n runs dart format, which resolves package:flutter_lints via
-  # PUB_CACHE — a missing cache path aborts `flutter build apk`.
+  # PUB_CACHE, and a missing cache path aborts flutter build apk.
   $windowsCache = Join-Path $env:LOCALAPPDATA 'Pub\Cache'
   if (-not (Test-Path -LiteralPath $windowsCache)) { return }
 
@@ -369,16 +369,17 @@ if (-not $SkipWindows) {
   }
   Write-Host "    VC++ runtime OK"
 
-  # Гео-базы в бандле лежат ДВАЖДЫ, и вторая копия — мёртвый груз.
+  # The geo databases sit in the bundle twice, and the second copy is dead weight.
   #
-  # Рядом с exe их кладёт CMake, оттуда их и читает ядро (GeoAssetService._geoDir
-  # на Windows возвращает каталог рядом с исполняемым файлом). Вторая копия
-  # приезжает во flutter_assets: базы объявлены ассетами Flutter ради ANDROID —
-  # там их достаёт XrayGeoAssets через AssetManager, — а Flutter пакует ассеты во
-  # все платформы разом. На десктопе этот путь не читает никто.
+  # CMake puts them next to the exe, and the core reads them from there
+  # (GeoAssetService._geoDir on Windows returns the directory of the executable).
+  # The second copy comes in with flutter_assets: the databases are declared as
+  # Flutter assets for Android, where XrayGeoAssets pulls them through
+  # AssetManager, and Flutter packs assets into every platform at once. On desktop
+  # nobody reads that path.
   #
-  # Цена дубля: 6.0 МБ в zip и 27.5 МБ на диске после установки. Linux-упаковщик
-  # вырезает его давно (tool/package_linux.sh), Windows — не вырезал.
+  # The duplicate costs 6.0 MB in the zip and 27.5 MB on disk after install. The
+  # Linux packager has cut it for a long time (tool/package_linux.sh), Windows did not.
   foreach ($dup in @('data\flutter_assets\assets\bin\windows',
                      'data\flutter_assets\assets\geo')) {
     $dupPath = Join-Path $relDir $dup
@@ -388,8 +389,9 @@ if (-not $SkipWindows) {
     }
   }
 
-  # Шрифт иконок десктопная сборка Flutter не ужимает (флаг уходит в кавычках,
-  # см. шапку скрипта): без этого шага в пакете весь 1.6 МБ вместо 26 КБ.
+  # Flutter's desktop build does not shrink the icon font (the flag goes out in
+  # quotes, see the script header): without this step the package carries all
+  # 1.6 MB instead of 26 KB.
   Write-Step "Tree-shaking the icon font"
   powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'shake_icon_font.ps1') -BundleDir $relDir
   if ($LASTEXITCODE -ne 0) { throw "shake_icon_font.ps1 failed" }
@@ -430,7 +432,7 @@ if (-not $SkipLinux) {
 }
 
 # --- Full geo database ------------------------------------------------------
-# The APK carries a trimmed geoip.dat (four codes, 0.6 MB) — see
+# The APK carries a trimmed geoip.dat (four codes, 0.6 MB), see
 # tool/geo_lite.dart. GeoBaseDownloader fetches the full one from the LATEST
 # release, so every release has to carry it. Its own .sha256 stays: the
 # downloader in 0.15.0 - 0.18.0 knows no other place to look.

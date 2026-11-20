@@ -35,7 +35,7 @@ void main() {
 
     test('в цепочке с группой ищем по всем звеньям', () {
       // Пользовательский yaml вправе завести группы, и тогда рядом с DIRECT
-      // стоит имя группы — с какой стороны, зависит от версии ядра.
+      // стоит имя группы: с какой стороны, зависит от версии ядра.
       expect(channelOfChains(['MyGroup', 'DIRECT']), TrafficChannel.direct);
       expect(channelOfChains(['DIRECT', 'MyGroup']), TrafficChannel.direct);
       expect(channelOfChains(['MyGroup', 'node-1']), TrafficChannel.vpn);
@@ -223,7 +223,7 @@ void main() {
 
       expect(split.vpn.totalDownload, 500);
       expect(split.direct.totalDownload, 100);
-      // Скорость при этом — только за последний такт.
+      // Скорость при этом считается только за последний такт.
       expect(split.vpn.downloadSpeed, 200);
       expect(split.direct.downloadSpeed, 60);
     });
@@ -292,7 +292,7 @@ void main() {
 
   group('счёт переживает закрытие приложения', () {
     // Трекер, у которого по туннелю уже прошло 600 байт, а живое соединение
-    // «a» стоит на счётчике 700.
+    // a стоит на счётчике 700.
     TrafficSplitTracker counted() {
       final tracker = TrafficSplitTracker();
       tracker.add([
@@ -334,7 +334,7 @@ void main() {
         _c('a', chains: ['proxy'], download: 5700),
       ], session: 's1');
       expect(first.vpn.downloadSpeed, 0);
-      // А следующий такт — уже настоящая секунда.
+      // А следующий такт длится уже настоящую секунду.
       final second = restarted.add([
         _c('a', chains: ['proxy'], download: 5900),
       ], session: 's1');
@@ -371,7 +371,7 @@ void main() {
     test('перезапущенное ядро видно по его собственным суммам', () {
       // Реконнект из плитки поднимает ядро на том же конфиге: порт и токен те
       // же, метка сессии совпадает. Но свои общие суммы новое ядро начинает с
-      // нуля, и цифра меньше записанной означает, что счёт остался от прошлой
+      // нуля, и цифра меньше записанной говорит, что счёт остался от прошлой
       // жизни ядра.
       final saved = counted().stateFor(coreDownload: 700, coreUpload: 30)!;
       expect(
@@ -411,7 +411,7 @@ void main() {
         ),
         isNull,
       );
-      // Формат сменится — старую запись читать нечем, счёт начнётся заново.
+      // Формат сменится: старую запись читать нечем, счёт начнётся заново.
       expect(
         TrafficSplitState.fromJson(
           jsonDecode(

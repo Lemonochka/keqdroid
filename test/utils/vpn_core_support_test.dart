@@ -6,9 +6,9 @@ import 'package:keqdroid/tunnel/vpn_backend.dart';
 import 'package:keqdroid/utils/proxy_chain.dart';
 import 'package:keqdroid/utils/vpn_core_support.dart';
 
-/// Ядро выбирает ФОРМАТ сервера, а настройка — только там, где формат берут
-/// оба. Раньше несовпадение молча откатывалось на xray, и это выглядело как
-/// «включил mihomo — приложение пишет, что активное ядро xray».
+// Ядро выбирает формат сервера, а настройка решает только там, где формат берут
+// оба. Раньше несовпадение молча откатывалось на xray, и выглядело это так:
+// включил mihomo, а приложение пишет, что активное ядро xray.
 void main() {
   const link =
       'vless://uuid@example.com:443?type=tcp&security=reality'
@@ -150,9 +150,9 @@ AllowedIPs = 0.0.0.0/0
       expect(detectServerFormat(''), ServerFormat.unknown);
     });
 
-    // Профиль, у которого узлы за ссылкой: ключа `proxies` в нём нет вовсе.
-    // Такой конфиг обязан узнаваться и в YAML-, и в JSON-форме — сохраняется он
-    // всегда как JSON, и без этого сервер уезжал в «неизвестный формат», то
+    // Профиль, у которого узлы за ссылкой: ключа proxies в нём нет вовсе.
+    // Такой конфиг обязан узнаваться и в YAML-, и в JSON-форме: сохраняется он
+    // всегда как JSON, и без этого сервер уезжал в неизвестный формат, то
     // есть на xray, который его не разберёт.
     test('профиль на proxy-providers — тоже clash, в обеих формах', () {
       const providersYaml = '''
@@ -194,7 +194,7 @@ rules:
     });
 
     test('clash в json-форме не принимается за конфиг xray', () {
-      // У обоих корень `{`, различает их ключ: `proxies` против `outbounds`.
+      // У обоих корень {, различает их ключ: proxies против outbounds.
       final clashJson = jsonEncode({
         'proxies': [
           {
@@ -286,8 +286,8 @@ rules:
       expect(forLink.backend, VpnBackend.xray);
       expect(forLink.skip, VpnCoreSkip.platform);
 
-      // Формат, который умеет только отсутствующее ядро: подменять его другим
-      // нельзя — чужой формат оно не разберёт.
+      // Формат, который умеет только отсутствующее ядро, подменять другим
+      // нельзя: чужой формат оно не разберёт.
       final forClash = choose(clashYaml, mihomo: false);
       expect(forClash.backend, VpnBackend.mihomo);
       expect(forClash.skip, VpnCoreSkip.platform);
@@ -300,9 +300,9 @@ rules:
     });
   });
 
-  // «Ссылку умеют оба» было неправдой. Оба ядра молча пропускают незнакомый
+  // Утверждение ссылку умеют оба было неправдой. Оба ядра молча пропускают незнакомый
   // ключ, поэтому неверный выбор здесь не падает, а тихо уводит трафик не тем
-  // транспортом: подключение якобы есть, сервер не отвечает. Ниже — те самые
+  // транспортом: подключение якобы есть, сервер не отвечает. Ниже те самые
   // случаи, где ядро решает содержимое ссылки, а не её формат.
   group('какое ядро берёт эту ссылку', () {
     const both = {VpnBackend.xray, VpnBackend.mihomo};
@@ -363,14 +363,14 @@ rules:
       expect(backendsForLink('trojan://p@198.51.100.10:443?type=xhttp'), {
         VpnBackend.xray,
       });
-      // У VLESS xhttp есть и у mihomo — эта ссылка по-прежнему для обоих.
+      // У VLESS xhttp есть и у mihomo, эта ссылка по-прежнему для обоих.
       expect(
         backendsForLink('vless://$uuid@198.51.100.10:443?type=xhttp'),
         both,
       );
     });
 
-    // Маски finalmask (`fm` у 3X-UI) — только у xray: у mihomo их нет вовсе.
+    // Маски finalmask (fm у 3X-UI) есть только у xray, у mihomo их нет вовсе.
     test('ссылка с масками fm — только xray', () {
       final fm = Uri.encodeQueryComponent('{"udp":[{"type":"mkcp-legacy"}]}');
       expect(
@@ -389,7 +389,7 @@ rules:
         ),
         {VpnBackend.xray},
       );
-      // У VLESS и VMess `http-opts` есть — эти ссылки по-прежнему для обоих.
+      // У VLESS и VMess http-opts есть, эти ссылки по-прежнему для обоих.
       expect(
         backendsForLink('vless://$uuid@198.51.100.10:443?headerType=http'),
         both,

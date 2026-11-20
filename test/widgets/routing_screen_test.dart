@@ -53,7 +53,7 @@ class _FakeVpn extends VpnStateNotifier {
   Future<void> reconnectToActiveServer() async => reconnects++;
 }
 
-/// Списки по ссылкам без сети и диска: экран только показывает их состояние.
+// Списки по ссылкам без сети и диска: экран только показывает их состояние.
 class _FakeRuleLists extends RuleListsNotifier {
   _FakeRuleLists(this._statuses);
   final Map<String, RuleListStatus> _statuses;
@@ -62,8 +62,8 @@ class _FakeRuleLists extends RuleListsNotifier {
   Map<String, RuleListStatus> build() => _statuses;
 }
 
-/// Подписки без таймера синхронизации: шторка серверов читает их ради
-/// заголовков групп.
+// Подписки без таймера синхронизации: шторка серверов читает их ради
+// заголовков групп.
 class _FakeSubs extends SubscriptionsNotifier {
   _FakeSubs([this._subs = const []]);
   final List<Subscription> _subs;
@@ -165,8 +165,8 @@ Future<ProviderContainer> _pump(
   return container;
 }
 
-/// Тексты на экране без изоляторов направления, которыми код обкладывает
-/// адреса для фарси.
+// Тексты на экране без изоляторов направления, которыми код обкладывает
+// адреса для фарси.
 List<String> _texts(WidgetTester tester) => [
   for (final t in tester.widgetList<Text>(find.byType(Text)))
     (t.data ?? t.textSpan?.toPlainText() ?? '').replaceAll(
@@ -539,7 +539,7 @@ void main() {
       expect(texts, contains('doubleclick.net, criteo.com'));
       expect(texts, contains('→ блокировать'));
       expect(texts, contains('→ напрямую'));
-      // «Всё остальное» — последней строкой раздела всех приложений.
+      // Всё остальное стоит последней строкой раздела всех приложений.
       expect(
         texts.indexOf('ru, yandex.ru, vk.com'),
         lessThan(texts.indexOf('Всё остальное')),
@@ -618,7 +618,7 @@ void main() {
     testWidgets('новый маршрут: по умолчанию свои сайты через VPN', (
       tester,
     ) async {
-      // Ядро без своего туннеля приложений не различает, строки «Кто» тогда
+      // Ядро без своего туннеля приложений не различает, поэтому строки Кто тогда
       // нет: выбирать не из чего.
       await _pump(
         tester,
@@ -886,7 +886,7 @@ void main() {
       );
     });
 
-    // весь трафик всех приложений без протокола это «Всё остальное», с протоколом уже нет
+    // весь трафик всех приложений без протокола становится строкой Всё остальное, с протоколом уже нет
     testWidgets(
       'весь трафик для всех приложений есть, только когда задан протокол',
       (tester) async {
@@ -1103,7 +1103,7 @@ void main() {
           'big.oisd.nl — не загрузился, повтор при следующем подключении',
         ),
       );
-      // Скачанное раньше остаётся в силе — строка об этом, а не об ошибке.
+      // Скачанное раньше остаётся в силе: строка говорит об этом, а не об ошибке.
       expect(
         texts,
         contains(
@@ -1141,8 +1141,8 @@ void main() {
     expect(ru.settingsRoutingRouteCount(21), '21 маршрут');
     expect(ru.settingsRoutingRouteCount(5), '5 маршрутов');
   });
-  // Отдельные приложения: mihomo на ПК. Выбор — как в сплите, пометки на
-  // карточке — почему маршрут не сработает.
+  // Отдельные приложения поддерживает mihomo на ПК. Выбор устроен как в сплите, пометки на
+  // карточке объясняют, почему маршрут не сработает.
   group('отдельные приложения', () {
     const caps = RouteCapabilities(
       apps: true,
@@ -1240,7 +1240,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Кто'));
       await tester.pumpAndSettle();
-      // Выбранное раньше — сверху и с отметкой.
+      // Выбранное раньше стоит сверху и с отметкой.
       expect(find.text('Готово · 1'), findsOneWidget);
       await tester.tap(find.text('Все приложения').last);
       await tester.pumpAndSettle();
@@ -1371,7 +1371,7 @@ void main() {
       matching: f,
     );
 
-    // карточка профиля ниже раскрытого «Основного» и уходит за край экрана
+    // карточка профиля ниже раскрытого Основного и уходит за край экрана
     Future<void> tapInCard(WidgetTester tester, String id, String text) async {
       final f = inCard(id, find.text(text));
       await tester.ensureVisible(f);
@@ -1472,7 +1472,7 @@ void main() {
         profiles: const [games],
         subs: subs,
       );
-      // ширина, на которой «Все… · 1 маршрут» влезал в строку, а «Остальные…» уже нет
+      // ширина, на которой Все… · 1 маршрут влезал в строку, а Остальные… уже нет
       tester.view.physicalSize = const Size(660 * 2.625, 2400);
       await tester.tap(find.text('Основной'));
       await tester.pumpAndSettle();

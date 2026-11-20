@@ -15,8 +15,8 @@ import 'package:keqdroid/ui/desktop/sidebar_group_nav.dart';
 
 import '../helpers/test_storage.dart';
 
-/// Боковая панель ПК по спеке M3E: разделы как кнопки-переключатели, кнопка меню
-/// сворачивает панель, в узком окне она свёрнута сама.
+// Боковая панель ПК по спеке M3E: разделы как кнопки-переключатели, кнопка меню
+// сворачивает панель, в узком окне она свёрнута сама.
 class _Subs extends SubscriptionsNotifier {
   _Subs(this._subs);
 

@@ -47,7 +47,7 @@ void main() {
     });
 
     test('percent-encodes (does not throw on) a space in the host', () {
-      // Uri.parse is lenient with spaces — it encodes rather than throwing,
+      // Uri.parse is lenient with spaces: it encodes rather than throwing,
       // so we still go through the normal normalization path.
       expect(
         normalizeSubscriptionUrl('  http://Example.com/a b  '),

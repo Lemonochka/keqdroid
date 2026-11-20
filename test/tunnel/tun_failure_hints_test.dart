@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/tunnel/tun_failure_hints.dart';
 
-/// Наружу все падения TUN выглядели одинаково — «did not start (exit code 1)»
-/// плюс хвост лога, в котором пользователю нечего опознать. Причин же десяток,
-/// и почти каждая чинится в одно действие.
+// Наружу все падения TUN выглядели одинаково: did not start (exit code 1)
+// плюс хвост лога, в котором пользователю нечего опознать. Причин же десяток,
+// и почти каждая чинится в одно действие.
 void main() {
   String? id(String log, {bool windows = true}) =>
       tunFailureHint(log, windows: windows)?.id;
@@ -19,7 +19,7 @@ void main() {
     );
   });
 
-  // Строгий маршрут у xray — фильтры WFP, без них ядро TUN не поднимает.
+  // Строгий маршрут у xray держится на фильтрах WFP, без них ядро TUN не поднимает.
   test('Windows не дал фильтры строгого маршрута', () {
     expect(
       id(

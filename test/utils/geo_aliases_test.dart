@@ -120,7 +120,7 @@ void main() {
     });
   });
 
-  // Ranteis 12.11.2026: профиль Happ с geosite:ru-direct и своей Geositeurl. замена терялась,
+  // Ranteis 12.11.2026: профиль Happ с geosite:ru-direct и своей Geositeurl. Замена терялась,
   // когда ничего не выброшено, и mihomo с xray отказывали конфигу целиком
   group('профиль маршрутизации провайдера с ru-direct', () {
     final link =

@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 
-/// Общие чипы трафика и раздельные — один и тот же показатель в двух видах:
-/// раздельные рисуются ВМЕСТО общих. Включёнными разом они быть не должны,
-/// иначе включение общих ничего не меняет на экране и переключатель выглядит
-/// сломанным.
+// Общие чипы трафика и раздельные показывают одно и то же в двух видах:
+// раздельные рисуются вместо общих. Включёнными разом они быть не должны,
+// иначе включение общих ничего не меняет на экране и переключатель выглядит
+// сломанным.
 void main() {
   group('общие чипы трафика и разбивка', () {
     test('включённая разбивка гасит общие чипы', () {
@@ -25,7 +25,7 @@ void main() {
     });
 
     test('выключение соседа не трогает', () {
-      // Выключить оба — законное состояние: трафик не показываем вовсе.
+      // Оба выключить можно: трафик тогда не показываем вовсе.
       final s = const AppSettings().copyWith(
         showTrafficStats: false,
         showTrafficSplit: true,
@@ -62,7 +62,7 @@ void main() {
       expect(neither.showTrafficStats, isFalse);
       expect(neither.showTrafficSplit, isFalse);
 
-      // Настроек этих в json нет вовсе — умолчания как были.
+      // Настроек этих в json нет вовсе: умолчания как были.
       final fresh = AppSettings.fromJson(const {});
       expect(fresh.showTrafficStats, isTrue);
       expect(fresh.showTrafficSplit, isFalse);

@@ -7,10 +7,10 @@ import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/proxy_chain.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// Mux — надстройка над протоколом, а не над транспортом: клиент дозванивается
-/// до служебного адреса `v1.mux.cool`, а пачку разбирает сервер. Отсюда все
-/// правила ниже: где ядро эту пачку поймёт, там ключ `mux` и появляется, а где
-/// не поймёт — не появляется, иначе соединение молча не встанет.
+// Mux надстраивается над протоколом, а не над транспортом: клиент дозванивается
+// до служебного адреса v1.mux.cool, а пачку разбирает сервер. Отсюда все
+// правила ниже: где ядро эту пачку поймёт, там ключ mux и появляется, а где
+// не поймёт, не появляется, иначе соединение молча не встанет.
 const _mux = AppSettings(xrayCore: XrayCoreSettings(muxEnabled: true));
 
 const _uuid = '00000000-0000-4000-8000-000000000000';
@@ -141,7 +141,7 @@ void main() {
         '&sni=decoy.example&pbk=k&sid=aa&fp=chrome&flow=xtls-rprx-vision',
       );
       expect(mux?['concurrency'], -1);
-      // XUDP при этом остаётся — ради него всё и включают.
+      // XUDP при этом остаётся: ради него всё и включают.
       expect(
         mux?['xudpConcurrency'],
         XrayCoreSettings.defaultMuxXudpConcurrency,

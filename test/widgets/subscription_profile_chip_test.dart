@@ -156,7 +156,7 @@ void main() {
       find.byKey(const ValueKey('routing-profile-games')),
     );
     final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
-    // 96 под кнопкой «Новый профиль»
+    // 96 под кнопкой Новый профиль
     expect(card.bottom, lessThanOrEqualTo(screen.height - 96 + 0.5));
     expect(card.top, greaterThan(200), reason: 'не к верху: сдвиг минимальный');
   });

@@ -12,9 +12,9 @@ import 'package:keqdroid/tunnel/vpn_backend.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// TUN на ПК при Xray держит сам xray и только на gVisor: выбирать стек там
-/// нечего, и переключатель без эффекта прятать (мёртвых настроек не бывает).
-/// У mihomo стеки свои, выбор остаётся.
+// TUN на ПК при Xray держит сам xray и только на gVisor: выбирать стек там
+// нечего, и переключатель без эффекта прятать (мёртвых настроек не бывает).
+// У mihomo стеки свои, выбор остаётся.
 class _Settings extends SettingsNotifier {
   @override
   Future<AppSettings> build() async => const AppSettings();

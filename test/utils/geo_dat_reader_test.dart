@@ -15,7 +15,7 @@ void _varint(List<int> out, int value) {
   out.add(v);
 }
 
-/// `Domain { Type type = 1; string value = 2; }`
+// Domain { Type type = 1; string value = 2; }
 List<int> _domain(int type, String value) {
   final body = <int>[];
   if (type != 0) {
@@ -31,7 +31,7 @@ List<int> _domain(int type, String value) {
   return out..addAll(body);
 }
 
-/// `CIDR { bytes ip = 1; uint32 prefix = 2; }`
+// CIDR { bytes ip = 1; uint32 prefix = 2; }
 List<int> _cidr(List<int> ip, int prefix) {
   final body = <int>[0x0a];
   _varint(body, ip.length);
@@ -43,7 +43,7 @@ List<int> _cidr(List<int> ip, int prefix) {
   return out..addAll(body);
 }
 
-/// Одна запись верхнего уровня: `entry = 1` + код + тело.
+// Одна запись верхнего уровня: entry = 1 + код + тело.
 List<int> _entry(String code, List<int> body) {
   final entry = <int>[0x0a];
   _varint(entry, code.length);
@@ -91,7 +91,7 @@ void main() {
     expect(domains[2].type, GeoDomainType.regex);
     expect(domains[3].type, GeoDomainType.plain);
 
-    // Код ищется без учёта регистра — в файлах он заглавный.
+    // Код ищется без учёта регистра: в файлах он заглавный.
     expect((await GeoDatReader.domains(file, 'VK')).single.value, 'vk.com');
   });
 
@@ -156,8 +156,8 @@ void main() {
       () async {
         if (!geoip.existsSync() || !geosite.existsSync()) return;
 
-        // Их нет в базах v2fly, поэтому правила вида `geoip:telegram` раньше
-        // молча выкидывались санитайзером (жалоба «ТГ не учитывается»).
+        // Их нет в базах v2fly, поэтому правила вида geoip:telegram раньше
+        // молча выкидывались санитайзером (жалоба ТГ не учитывается).
         final ipCodes = await GeoDatReader.codes(geoip);
         expect(ipCodes, containsAll(['telegram', 'refilter', 'ru', 'private']));
 
@@ -185,7 +185,7 @@ void main() {
           );
         }
 
-        // Тело домерженной записи должно читаться, а не только её заголовок.
+        // Тело доклеенной записи должно читаться, а не только её заголовок.
         expect(await GeoDatReader.cidrs(geoip, 'telegram'), isNotEmpty);
         expect(await GeoDatReader.domains(geosite, 'refilter'), isNotEmpty);
       },

@@ -52,7 +52,7 @@ void main() {
         () => ConnectionsPollStats.instance.inFlight - base >= hung,
       );
 
-      // Отказ на соединении — тот же клиент сбрасывается и рвёт висящие.
+      // Отказ на соединении: тот же клиент сбрасывается и рвёт висящие.
       expect(await stats.queryClashTraffic(await closedLoopbackPort()), isNull);
 
       final results = await Future.wait(

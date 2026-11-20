@@ -5,19 +5,19 @@ import 'package:keqdroid/utils/geo_asset_index.dart';
 import 'package:keqdroid/utils/geo_dat_reader.dart';
 import 'package:keqdroid/utils/routing_presets.dart';
 
-/// Вшитая в APK база стран урезана до кодов, которые приложение выпускает само
-/// (`tool/geo_lite.dart`). Всё, чего в ней нет, санитайзер выбрасывает ДО
-/// генерации конфига — молча для пользователя, потому что иначе неизвестный код
-/// уронил бы конфиг ядра целиком.
-///
-/// Отсюда риск, ради которого этот файл и существует: добавить пресет с новой
-/// страной и забыть пересобрать урезанную базу. Приложение соберётся, тесты
-/// пройдут, а правило будет тихо пропадать у всех.
+// Вшитая в APK база стран урезана до кодов, которые приложение выпускает само
+// (tool/geo_lite.dart). Всё, чего в ней нет, санитайзер выбрасывает до
+// генерации конфига, молча для пользователя, потому что иначе неизвестный код
+// уронил бы конфиг ядра целиком.
+//
+// Отсюда риск, ради которого этот файл и существует: добавить пресет с новой
+// страной и забыть пересобрать урезанную базу. Приложение соберётся, тесты
+// пройдут, а правило будет тихо пропадать у всех.
 void main() {
   final lite = File('assets/geo/geoip-lite.dat');
 
-  /// Все `geoip:`-коды, которые приложение может положить в конфиг без участия
-  /// пользователя: пресеты маршрутизации плюс правила по умолчанию.
+  // Все geoip:-коды, которые приложение может положить в конфиг без участия
+  // пользователя: пресеты маршрутизации плюс правила по умолчанию.
   Set<String> presetGeoipCodes() {
     final out = <String>{};
     void scan(Iterable<String> values) {
@@ -25,7 +25,7 @@ void main() {
         for (final token in v.split(',')) {
           final t = token.trim().toLowerCase();
           if (!t.startsWith('geoip:')) continue;
-          // `geoip:!ru` — отрицание того же кода, в базе он один.
+          // geoip:!ru даёт отрицание того же кода, в базе он один.
           out.add(t.substring('geoip:'.length).replaceFirst('!', ''));
         }
       }
@@ -55,7 +55,7 @@ void main() {
       final needed = presetGeoipCodes()
         // Генераторы конфига дописывают его сами, в пресетах его нет.
         ..add('private')
-        // Их клали убранные пресеты; в списках у людей они остались.
+        // Их клали убранные пресеты; в списках у пользователей они остались.
         ..addAll(['ru', 'telegram']);
 
       final missing = needed.difference(present);
@@ -71,7 +71,7 @@ void main() {
 
   test('база по умолчанию не считается полной', () async {
     // Порог отделяет вшитую базу от догруженной, и обе стороны должны быть от
-    // него далеко: иначе «полная база» покажется установленной там, где её нет.
+    // него далеко: иначе полная база покажется установленной там, где её нет.
     final present = await GeoDatReader.codes(lite);
     expect(present.length, lessThan(GeoAssetIndex.fullGeoipCodeThreshold));
 
@@ -79,20 +79,17 @@ void main() {
     expect(index.hasFullGeoip, isFalse);
   });
 
-  test(
-    'дефолтные правила приложения не ссылаются на страны вне базы',
-    () async {
-      // Тот же вопрос с другой стороны: не «есть ли код в базе», а «что увидит
-      // человек сразу после установки». Санитайзер не должен выбросить ничего.
-      final present = await GeoDatReader.codes(lite);
-      final index = GeoAssetIndex(geoipCodes: present, geositeCodes: const {});
-      for (final code in presetGeoipCodes()) {
-        expect(
-          index.geoipCodes.contains(code),
-          isTrue,
-          reason: 'geoip:$code выпадет из маршрутизации на свежей установке',
-        );
-      }
-    },
-  );
+  test('дефолтные правила приложения не ссылаются на страны вне базы', () async {
+    // Тот же вопрос с другой стороны: не есть ли код в базе, а что увидит
+    // пользователь сразу после установки. Санитайзер не должен выбросить ничего.
+    final present = await GeoDatReader.codes(lite);
+    final index = GeoAssetIndex(geoipCodes: present, geositeCodes: const {});
+    for (final code in presetGeoipCodes()) {
+      expect(
+        index.geoipCodes.contains(code),
+        isTrue,
+        reason: 'geoip:$code выпадет из маршрутизации на свежей установке',
+      );
+    }
+  });
 }

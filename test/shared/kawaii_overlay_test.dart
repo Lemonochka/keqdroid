@@ -50,7 +50,7 @@ void main() {
     expect(lavender.flair, isTrue);
     expect(lavender.kawaii, KawaiiFlavor.lavender);
 
-    // Неизвестный id падает на дефолтный пресет.
+    // Неизвестный id падает на пресет по умолчанию.
     expect(resolveThemePreset('nope').id, kThemePresets.first.id);
   });
 }

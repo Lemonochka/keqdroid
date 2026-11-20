@@ -8,8 +8,8 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 const _server =
     'vless://11111111-1111-1111-1111-111111111111@example.com:443?type=tcp&security=none#test';
 
-/// Catch-all — последнее routing-правило: {outboundTag, network: 'tcp,udp'} без
-/// domain/ip/inboundTag.
+// Catch-all стоит последним routing-правилом: {outboundTag, network: 'tcp,udp'} без
+// domain/ip/inboundTag.
 String _finalTag(String configJson) {
   final map = jsonDecode(configJson) as Map<String, dynamic>;
   final rules = ((map['routing'] as Map)['rules'] as List)

@@ -7,16 +7,16 @@ import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/servers/server_config_editor.dart';
 
-/// `ListTile` рисует свой фон и чернила на БЛИЖАЙШЕМ `Material`-предке.
-///
-/// Секции редактора были `Container` с `BoxDecoration`, то есть ближе
-/// `SwitchListTile` оказывался крашеный `DecoratedBox` — и Flutter ронял ассерт
-/// «ListTile background color or ink splashes may be invisible» прямо при
-/// заходе в конфиг сервера. В дебаге это отваливший кусок экрана, в релизе —
-/// тихо съеденные чернила.
-///
-/// Ссылка с `security=tls`: только тогда в секции безопасности появляется
-/// тумблер `allowInsecure`, а с ним и весь этот случай.
+// ListTile рисует свой фон и чернила на ближайшем Material-предке.
+//
+// Секции редактора были Container с BoxDecoration, поэтому ближе к
+// SwitchListTile оказывался крашеный DecoratedBox, и Flutter ронял ассерт
+// ListTile background color or ink splashes may be invisible прямо при
+// заходе в конфиг сервера. В дебаге от этого отваливался кусок экрана, в релизе
+// тихо пропадали чернила.
+//
+// Ссылка с security=tls: только тогда в секции безопасности появляется
+// тумблер allowInsecure, а с ним и весь этот случай.
 const _tlsLink =
     'vless://716e3485-d4f9-4471-9660-fb4b0b838100@example.com:443'
     '?type=tcp&security=tls&sni=example.com#node';
@@ -68,7 +68,7 @@ void main() {
       reason: 'без тумблера тест ничего не проверяет',
     );
 
-    // Тап по тумблеру запускает чернила — тот самый путь, на который ругался
+    // Тап по тумблеру запускает чернила, тот самый путь, на который ругался
     // ассерт. Тумблер ниже края экрана 420x900: без прокрутки тап уходил мимо,
     // и тест проходил, ничего не проверив
     final toggle = find.byType(SwitchListTile).first;

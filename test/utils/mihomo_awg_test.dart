@@ -5,11 +5,11 @@ import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// AmneziaWG едет через mihomo: профиль `.conf` → `type: wireguard`.
-///
-/// Сверено с `adapter/outbound/wireguard.go` mihomo 1.19.30. Незнакомое поле
-/// ядро выбрасывает молча, поэтому проверяются имена и типы полей, а не только
-/// то, что конфиг собрался.
+// AmneziaWG едет через mihomo: профиль .conf → type: wireguard.
+//
+// Сверено с adapter/outbound/wireguard.go mihomo 1.19.30. Незнакомое поле
+// ядро выбрасывает молча, поэтому проверяются имена и типы полей, а не только
+// то, что конфиг собрался.
 Map<String, dynamic> _proxy(String conf) =>
     (MihomoConfigGen.build(
               conf,
@@ -66,7 +66,7 @@ void main() {
   });
 
   test('стек туннеля gVisor, а не умолчание ядра', () {
-    // С 1.19.32 «auto» у mihomo значит его новый стек mips; WireGuard и AWG у
+    // С 1.19.32 auto у mihomo выбирает его новый стек mips; WireGuard и AWG у
     // нас проверены на gVisor, на нём и остаются.
     expect(_proxy(_conf())['ip-stack'], {'mode': 'gvisor'});
   });
@@ -81,15 +81,15 @@ void main() {
       ),
     );
     final awg = _awg(p);
-    // Только `version: 3` включает у ядра amneziawg-go v3; без неё профиль
+    // Только version: 3 включает у ядра amneziawg-go v3; без неё профиль
     // уехал бы в старую реализацию.
     expect(awg['version'], 3);
-    // Числа — числами: у ядра это int-поля.
+    // Числа пишутся числами: у ядра они int-поля.
     expect(awg['jc'], 4);
     expect(awg['jmax'], 70);
     expect(awg['s2'], 574);
     expect(awg['s4'], 10);
-    // H — строкой: с AWG 2.0 это может быть диапазон.
+    // H пишется строкой: с AWG 2.0 там может быть диапазон.
     expect(awg['h1'], '100-200');
     expect(awg['h4'], '4');
     expect(awg['i1'], '<b 0xf6ab3267fa><c><t><r 10>');

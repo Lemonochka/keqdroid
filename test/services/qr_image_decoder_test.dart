@@ -11,7 +11,7 @@ const _link =
     'vless://0b8f6c1e-7d2a-4c55-9a1b-2f3e4d5c6b7a@pl.example.net:443'
     '?type=xhttp&security=reality&pbk=abc&sni=www.example.com#Польша';
 
-// кадр «экрана» с шумом и кодом где-то сбоку, как окно Telegram на втором мониторе
+// кадр экрана с шумом и кодом где-то сбоку, как окно Telegram на втором мониторе
 GrayImage _screen({
   required String text,
   bool eci = true,

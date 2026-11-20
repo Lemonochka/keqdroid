@@ -10,7 +10,7 @@ import 'package:image/image.dart' as img;
 
 const _size = 1024;
 
-/// доля квадрата под лого (как у типичных windows-иконок)
+// доля квадрата под лого (как у типичных windows-иконок)
 const _fill = 0.92;
 
 void main() {

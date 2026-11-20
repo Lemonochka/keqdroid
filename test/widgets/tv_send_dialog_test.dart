@@ -7,8 +7,8 @@ import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/screens/tv_send_dialog.dart';
 import 'package:keqdroid/services/tv_handoff.dart';
 
-/// Телефон после скана кода телевизора: выбор подписки и отправка. Отправка
-/// идёт настоящим сокетом на сервер приёма на 127.0.0.1.
+// Телефон после скана кода телевизора: выбор подписки и отправка. Отправка
+// идёт настоящим сокетом на сервер приёма на 127.0.0.1.
 void main() {
   // flutter_test подменяет HttpClient заглушкой, которая на всё отвечает 400,
   // а здесь проверяется настоящий обмен.
@@ -57,7 +57,7 @@ void main() {
     return result;
   }
 
-  /// Ждёт настоящий сетевой обмен: в тестах виджетов время ненастоящее.
+  // Ждёт настоящий сетевой обмен: в тестах виджетов время ненастоящее.
   Future<void> waitFor(WidgetTester tester, bool Function() done) async {
     for (var i = 0; i < 50 && !done(); i++) {
       await tester.runAsync(

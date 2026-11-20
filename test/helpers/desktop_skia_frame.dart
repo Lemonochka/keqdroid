@@ -4,10 +4,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Кадр, собранный из слоёв так, как его собирает движок на ПК. Skia с растровым
-/// кэшем ставит начало DisplayListLayer, OpacityLayer и клипа с saveLayer в целый
-/// пиксель экрана (ComputeIntegralTransCTM в engine/src/flutter/flow), а
-/// `matchesGoldenFile` рисует без кэша и этих прыжков не показывает.
+// Кадр, собранный из слоёв так, как его собирает движок на ПК. Skia с растровым
+// кэшем ставит начало DisplayListLayer, OpacityLayer и клипа с saveLayer в целый
+// пиксель экрана (ComputeIntegralTransCTM в engine/src/flutter/flow), а
+// matchesGoldenFile рисует без кэша и этих прыжков не показывает.
 class DesktopSkiaFrame {
   DesktopSkiaFrame._(this._rgba, this.width, this.height);
 
@@ -41,8 +41,8 @@ class DesktopSkiaFrame {
     return DesktopSkiaFrame._(rgba!, w, h);
   }
 
-  /// Верхний и нижний край того, что в столбце [x] покрывает [coverage] (0..1 на
-  /// пиксель), с долями пикселя по сглаживанию. Строки от [from] до [to].
+  // Верхний и нижний край того, что в столбце [x] покрывает [coverage] (0..1 на
+  // пиксель), с долями пикселя по сглаживанию. Строки от [from] до [to].
   ({double top, double bottom})? edges(
     int x,
     double Function(Color pixel) coverage, {

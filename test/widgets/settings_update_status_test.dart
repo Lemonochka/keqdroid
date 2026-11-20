@@ -13,7 +13,7 @@ import 'package:keqdroid/services/vpn_engine.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// Карточка версии в настройках по итогу фоновой проверки, без подмены провайдера.
+// Карточка версии в настройках по итогу фоновой проверки, без подмены провайдера.
 
 final _en = lookupAppLocalizations(const Locale('en'));
 

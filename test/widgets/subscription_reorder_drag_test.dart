@@ -14,8 +14,8 @@ import 'package:keqdroid/services/vpn_engine.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// Перенос карточки подписки под масштабом интерфейса: поднятая карточка едет
-/// за пальцем и не уезжает вбок.
+// Перенос карточки подписки под масштабом интерфейса: поднятая карточка едет
+// за пальцем и не уезжает вбок.
 
 class _FakeSubs extends SubscriptionsNotifier {
   @override

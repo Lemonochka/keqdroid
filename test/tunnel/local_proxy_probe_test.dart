@@ -5,8 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/tunnel/local_proxy_probe.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// Локальный вход ядра в режиме TUN: без пароля сессии отвечает 407, с ним
-/// пропускает проверочный запрос.
+// Локальный вход ядра в режиме TUN: без пароля сессии отвечает 407, с ним
+// пропускает проверочный запрос.
 Future<HttpServer> _sessionProxy(String user, String pass) async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   final expected = 'Basic ${base64.encode(utf8.encode('$user:$pass'))}';

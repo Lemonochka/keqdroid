@@ -49,7 +49,7 @@ void main() {
       final rebuilt = uri.build(
         managedParams: [MapEntry('security', security), MapEntry('sni', sni)],
       );
-      // неизвестные токены (weird, flag) — сырыми; fragment не тронут
+      // неизвестные токены (weird, flag) остаются сырыми; fragment не тронут
       expect(rebuilt, contains('weird=%2Fkeep%20me'));
       expect(rebuilt, contains('flag'));
       expect(rebuilt, endsWith('#Имя %23 сервера'));

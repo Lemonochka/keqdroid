@@ -158,7 +158,7 @@ void main() {
     expect(_anyErrorText, findsNothing);
   });
 
-  // срок подставляется как «3д назад», а не датой: было «expired on 3d ago», «am vor 3 Tg.»
+  // срок подставляется как 3д назад, а не датой: было expired on 3d ago, am vor 3 Tg.
   for (final (code, title) in const [
     ('en', 'Subscription expired 3d ago'),
     ('ru', 'Подписка истекла 3д назад'),

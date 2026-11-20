@@ -4,10 +4,10 @@ import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/models/subscription.dart';
 import 'package:keqdroid/utils/proxy_chain.dart';
 
-/// Разбиение на группы — общее у списка серверов и у бокового навигатора.
-/// Кнопка «перейти к группе», которой в списке нет (или которая там не на своём
-/// месте), — это не мелочь оформления, а сломанная навигация, поэтому порядок и
-/// состав закреплены тестом.
+// Разбиение на группы общее у списка серверов и у бокового навигатора.
+// Кнопка перейти к группе, которой в списке нет (или которая там не на своём
+// месте), уже не мелочь оформления, а сломанная навигация, поэтому порядок и
+// состав закреплены тестом.
 ServerItem _server(String id, {String? subscriptionId}) => ServerItem(
   id: id,
   config: 'vless://uuid@$id.example:443?type=tcp&security=none',

@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/subscription.dart';
 
-/// Две настройки автовыбора у подписки, и они не одно и то же: одна про то,
-/// видно ли переключатель, вторая — про то, включён ли он.
+// Две настройки автовыбора у подписки, и они не одно и то же: одна про то,
+// видно ли переключатель, вторая про то, включён ли он.
 void main() {
   const plain = Subscription(id: 'a', name: 'n', url: 'u');
 
   test('по умолчанию плашки нет и автовыбор выключен', () {
     expect(plain.autoSelectVisible, isFalse);
     expect(plain.autoSelect, isFalse);
-    // Умолчание в каждой записи — лишний шум в файле подписок.
+    // Умолчание в каждой записи только шумело бы в файле подписок.
     expect(plain.toJson().containsKey('autoSelectVisible'), isFalse);
     expect(plain.toJson().containsKey('autoSelect'), isFalse);
   });

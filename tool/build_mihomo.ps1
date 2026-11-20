@@ -210,28 +210,28 @@ if ($singTunPatches.Count -gt 0) {
 # //go:linkname, which Go 1.23+ refuses by default.
 $versionFlag = '-X "github.com/metacubex/mihomo/constant.Version={0}"' -f $Version
 
-# Теги сборки.
+# Build tags.
 #
-#   with_gvisor  - обязателен, см. шапку файла.
-#   no_tailscale - выкидывает клиент Tailscale.
-#   no_zerotier  - выкидывает клиент ZeroTier.
-#   no_easytier  - выкидывает клиент EasyTier (появился в v1.19.31).
+#   with_gvisor  - required, see the file header.
+#   no_tailscale - drops the Tailscale client.
+#   no_zerotier  - drops the ZeroTier client.
+#   no_easytier  - drops the EasyTier client (appeared in v1.19.31).
 #
-# Последние три — не экономия на спичках: каждый тянет собственный сетевой стек.
-# Tailscale с ZeroTier вдвоём дают 8.4 МБ из 52 у android-бинарника (52 232 545 ->
-# 43 385 185 при прочих равных, замерено на v1.19.30), а один EasyTier — ещё 10.8 МБ
-# (54 722 913 -> 43 909 473 на v1.19.31; на десктопе около 12 МБ). Без его тега
-# патч-релиз 1.19.30 -> 1.19.31 раздул бы бинарь на 11 МБ, и по одному размеру
-# было бы не понять, откуда.
+# The last three are not penny-pinching: each pulls in its own network stack.
+# Tailscale and ZeroTier together take 8.4 MB of 52 in the android binary (52 232 545 ->
+# 43 385 185 all else equal, measured on v1.19.30), and EasyTier alone another 10.8 MB
+# (54 722 913 -> 43 909 473 on v1.19.31; about 12 MB on desktop). Without its tag
+# the 1.19.30 -> 1.19.31 patch release would have grown the binary by 11 MB, and
+# the size alone would not tell why.
 #
-# Выкинуть их можно потому, что это mesh-VPN, а не прокси: наш генератор их не
-# выпускает, а в подписочных Clash-конфигах их не бывает. Остальные экзотические
-# аутбаунды (mieru, anytls, masque, openvpn, ssh, snell, ssr) тегов не имеют, и
-# резать их пришлось бы форком — а чужие конфиги клиент импортирует как серверы,
-# и какой протокол принесут завтра, мы не выбираем.
+# They can go because they are mesh VPNs, not proxies: our generator never emits
+# them, and subscription Clash configs do not carry them. The other exotic
+# outbounds (mieru, anytls, masque, openvpn, ssh, snell, ssr) have no tags, and
+# cutting them would take a fork, while the client imports foreign configs as
+# servers, and we do not choose which protocol arrives tomorrow.
 #
-# Побочный эффект ровно как у gvisor: конфиг с `type: tailscale` не запустится,
-# ядро скажет, что этого в сборке нет.
+# Side effect, same as with gvisor: a config with type: tailscale will not start,
+# the core says it is not in the build.
 $BuildTags = "with_gvisor,no_tailscale,no_zerotier,no_easytier"
 
 function Build-Mihomo {

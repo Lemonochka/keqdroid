@@ -26,7 +26,7 @@ void main() {
 
     test('порт живой сессии переживает круг запись→чтение→сброс', () async {
       // Его читает фоновый изолят: без записанного порта он обновляет
-      // подписки напрямую, а это мимо туннеля.
+      // подписки напрямую, мимо туннеля.
       final storage = await buildStorageService();
       expect(storage.getActiveLocalHttpPort(), isNull);
 
@@ -115,8 +115,8 @@ void main() {
     test(
       'getServers skips a corrupt entry instead of losing the whole list',
       () async {
-        // One valid record, one missing the required `config` field, one with a
-        // malformed `addedAt`. The two bad ones must be dropped, the good one kept.
+        // One valid record, one missing the required config field, one with a
+        // malformed addedAt. The two bad ones must be dropped, the good one kept.
         final raw = jsonEncode([
           {
             'id': 'good',

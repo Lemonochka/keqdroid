@@ -7,10 +7,10 @@ import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/rule_lists.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// Списки по ссылке в полях маршрутизации. Сама ссылка ядру непонятна и в
-/// конфиг попадать не должна ни у одного генератора: у xray она стала бы
-/// доменом `https://…`, у mihomo запятые в ней разрезали бы правило.
-/// Скачанные домены едут в конфиг отдельно — см. [RuleListDomains].
+// Списки по ссылке в полях маршрутизации. Сама ссылка ядру непонятна и в
+// конфиг попадать не должна ни у одного генератора: у xray она стала бы
+// доменом https://…, у mihomo запятые в ней разрезали бы правило.
+// Скачанные домены едут в конфиг отдельно: см. [RuleListDomains].
 const _server = 'vless://uuid@example.com:443?type=tcp&security=none#demo';
 
 const _plain = AppSettings(

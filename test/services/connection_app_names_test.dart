@@ -68,8 +68,8 @@ void main() {
       expect(result.entries.single.process, isEmpty);
     });
 
-    // Без сокета спрашивать нечем, и это надо СКАЗАТЬ: пустая колонка иначе
-    // читается как «ни у одного соединения нет владельца».
+    // Без сокета спрашивать нечем, и об этом надо сказать: пустая колонка иначе
+    // читается так, будто ни у одного соединения нет владельца.
     test('без исходного сокета колонка помечается недоступной', () async {
       final result = await ConnectionsService.withAppNamesFromSource(
         _snapshot([sourced(source: '')]),
@@ -79,7 +79,7 @@ void main() {
       expect(result.appNamesAvailable, isFalse);
     });
     // Домен в записи появляется от снифера, а система знает соединение по
-    // адресу: спросить по домену — значит не найти владельца никогда.
+    // адресу: по домену владельца не найти никогда.
     test('спрашивает по адресу, а не по подсмотренному домену', () async {
       List<Map<String, Object?>>? asked;
       await ConnectionsService.withAppNamesFromSource(

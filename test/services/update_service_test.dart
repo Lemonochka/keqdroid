@@ -8,8 +8,8 @@ import 'package:keqdroid/services/linux_install.dart';
 import 'package:keqdroid/services/update_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Сетевой слой по сценарию: каждый ответ — либо исключение, которое бросил бы
-/// dart:io, либо HTTP-ответ.
+// Сетевой слой по сценарию: каждый ответ либо исключение, которое бросил бы
+// dart:io, либо HTTP-ответ.
 class _ScriptedAdapter implements HttpClientAdapter {
   _ScriptedAdapter(this.script);
 
@@ -31,7 +31,7 @@ class _ScriptedAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
-// Текст с жалобы: рукопожатие с GitHub прошло, начало ответа — не TLS.
+// Текст с жалобы: рукопожатие с GitHub прошло, а начало ответа не TLS.
 // Dio получает его от dart:io как HttpException и заворачивает в unknown.
 final _brokenTls = HttpException(
   '\n\tWRONG_VERSION_NUMBER(tls_record.cc:127) error 268435703',
@@ -465,7 +465,7 @@ void main() {
 
   group('one SHA256SUMS for the whole release', () {
     // Так выглядит релиз с 0.19.0: рядом с ассетами нет ни одного .sha256,
-    // кроме geoip.dat.sha256 для загрузчика geo-базы в 0.15–0.18.
+    // кроме geoip.dat.sha256 для загрузчика geo-базы в 0.15-0.18.
     const names = [
       'PKGBUILD',
       'geoip.dat',
@@ -599,7 +599,7 @@ void main() {
       final arch = info(LinuxInstallKind.pacman);
       expect(arch.openInBrowser, isTrue);
       expect(arch.downloadUrl, 'https://example.invalid/releases/tag/v0.25.0');
-      // Размер — архива, из которого PKGBUILD собирает пакет.
+      // Размер архива, из которого PKGBUILD собирает пакет.
       expect(arch.apkSize, 'keqdroid-0.25.0-linux-x64.tar.gz'.length);
     });
 
@@ -613,8 +613,8 @@ void main() {
     });
 
     test('скачанный файл любого вида узнаётся по расширению', () {
-      // Без этого файл, выбранный для установки, падал бы на «Unsupported
-      // update file type» уже после загрузки.
+      // Без этого файл, выбранный для установки, падал бы на Unsupported
+      // update file type уже после загрузки.
       for (final kind in LinuxInstallKind.values) {
         final url = info(kind).downloadUrl;
         if (info(kind).openInBrowser) continue;

@@ -11,7 +11,7 @@ import 'package:keqdroid/shared/ui/liquid_toast.dart';
 import 'package:keqdroid/shared/ui/shape_loading_indicator.dart';
 import 'package:keqdroid/utils/clipboard_import.dart';
 
-/// Подписки без сети: настоящий `add` сразу качал бы её содержимое.
+// Подписки без сети: настоящий add сразу качал бы её содержимое.
 class _FakeSubs extends SubscriptionsNotifier {
   final added = <Subscription>[];
 
@@ -28,7 +28,7 @@ class _FakeSubs extends SubscriptionsNotifier {
   }
 }
 
-/// Серверы без хранилища: `_load()` настоящего полез бы в SharedPreferences.
+// Серверы без хранилища: _load() настоящего полез бы в SharedPreferences.
 class _FakeServers extends ServersNotifier {
   final added = <String>[];
 
@@ -41,7 +41,7 @@ class _FakeServers extends ServersNotifier {
 
 typedef _Paste = Future<Object?> Function(BuildContext context, WidgetRef ref);
 
-/// Кнопка «Вставить ссылку(и)» с пустого экрана серверов, без самого экрана.
+// Кнопка Вставить ссылку(и) с пустого экрана серверов, без самого экрана.
 Future<(_FakeSubs, _FakeServers)> _mount(
   WidgetTester tester,
   String clipboard, {

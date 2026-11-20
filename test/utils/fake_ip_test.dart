@@ -2,8 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/utils/fake_ip.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 
-/// Список «не подменять» один на все ядра: mihomo читает его как есть, xray и
-/// sing-box — переведённым в синтаксис правил.
+// Список не подменять один на все ядра: mihomo читает его как есть, xray и
+// sing-box в переводе на синтаксис правил.
 void main() {
   test('mihomo берёт тот же список', () {
     expect(MihomoConfigGen.fakeIpFilter, same(kFakeIpFilter));

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-// keqdis внутри приложения держит настройки и ссылки, а человеку на глаза попадать не должно
+// keqdis внутри приложения держит настройки и ссылки, а пользователю на глаза попадать не должно
 void main() {
   const main = 'android/app/src/main';
   const kotlin = '$main/kotlin/com/keqdroid/keqdroid';

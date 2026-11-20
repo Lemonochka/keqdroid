@@ -9,15 +9,15 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/screens/settings_tab.dart';
 
-/// `pumpAndSettle` тут не годится: журнал части опрашивается по таймеру.
+// pumpAndSettle тут не годится: журнал части опрашивается по таймеру.
 Future<void> _frames(WidgetTester tester) async {
   for (var i = 0; i < 10; i++) {
     await tester.pump(const Duration(milliseconds: 120));
   }
 }
 
-/// Даёт настоящему чтению файла журнала дойти до конца: в поддельном времени
-/// теста оно само не идёт.
+// Даёт настоящему чтению файла журнала дойти до конца: в поддельном времени
+// теста оно само не идёт.
 Future<void> _settle(WidgetTester tester, Finder until) async {
   for (var i = 0; i < 50 && until.evaluate().isEmpty; i++) {
     await tester.runAsync(
@@ -28,8 +28,8 @@ Future<void> _settle(WidgetTester tester, Finder until) async {
   await _frames(tester);
 }
 
-/// Вход в журнал говорит, в какой части проблемы, а журнал части с фильтром
-/// «только проблемы» прячет обычные строки и оставляет ошибки.
+// Вход в журнал говорит, в какой части проблемы, а журнал части с фильтром
+// только проблемы прячет обычные строки и оставляет ошибки.
 void main() {
   late Directory dir;
 
@@ -71,7 +71,7 @@ void main() {
     );
     await _settle(tester, find.text('1 problem'));
 
-    // Одна ошибка в app.log — и вход в журнал говорит это до того, как его
+    // Одна ошибка в app.log, и вход в журнал сообщает о ней до того, как его
     // открыли.
     expect(find.text('1 problem'), findsOneWidget);
 

@@ -2,10 +2,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/server_flag.dart';
 
-/// Картинки флагов мы берём из ассетов `country_flags` напрямую, минуя его
-/// виджет (его таблица кодов беднее набора ассетов). Цена — список [FlagArt]
-/// кодов и путь к ассету живут у нас и могут разойтись с пакетом при
-/// обновлении. Эти два теста именно это и ловят.
+// Картинки флагов мы берём из ассетов country_flags напрямую, минуя его
+// виджет (его таблица кодов беднее набора ассетов). Цена: список [FlagArt]
+// кодов и путь к ассету живут у нас и могут разойтись с пакетом при
+// обновлении. Эти два теста именно это и ловят.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 

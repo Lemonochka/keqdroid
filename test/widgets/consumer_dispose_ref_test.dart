@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Ловушка, из-за которой лог на десктопе заваливало ассертами
-/// `'_lifecycleState != _ElementLifecycle.defunct': is not true` — причём при
-/// подключении, отключении и смене режима, то есть там, где никакого отношения
-/// к виновному экрану уже нет.
-///
-/// `ConsumerStatefulElement.unmount()` сначала зовёт `super.unmount()`, а тот
-/// обнуляет `_widget` (значит `context.mounted == false`), ставит элементу
-/// `defunct` и только потом выполняет `State.dispose()`. Watch-подписки Riverpod
-/// закрывает ПОСЛЕ этого. Любой `ref.*` в `dispose()` бросает StateError, unmount
-/// обрывается на полпути — и подписка остаётся жить на мёртвом элементе, дёргая
-/// `markNeedsBuild()` на каждое последующее изменение любого провайдера.
-///
-/// Тест сторожит границу: `ref` в `dispose()` рвёт unmount, снимок из `build()`
-/// — нет. Экраны с сохранением по уходу (локальные порты, хоткеи) обязаны
-/// пользоваться вторым способом.
+// Ловушка, из-за которой лог на десктопе заваливало ассертами
+// '_lifecycleState != _ElementLifecycle.defunct': is not true, причём при
+// подключении, отключении и смене режима, то есть там, где никакого отношения
+// к виновному экрану уже нет.
+//
+// ConsumerStatefulElement.unmount() сначала зовёт super.unmount(), а тот
+// обнуляет _widget (после чего context.mounted == false), ставит элементу
+// defunct и только потом выполняет State.dispose(). Watch-подписки Riverpod
+// закрывает после этого. Любой ref.* в dispose() бросает StateError, unmount
+// обрывается на полпути, и подписка остаётся жить на мёртвом элементе, дёргая
+// markNeedsBuild() на каждое последующее изменение любого провайдера.
+//
+// Тест сторожит границу: ref в dispose() рвёт unmount, снимок из build()
+// нет. Экраны с сохранением по уходу (локальные порты, хоткеи) обязаны
+// пользоваться вторым способом.
 final _counter = NotifierProvider<_Counter, int>(_Counter.new);
 
 class _Counter extends Notifier<int> {
@@ -24,7 +24,7 @@ class _Counter extends Notifier<int> {
   int build() => 0;
 }
 
-/// Как было: `ref` в dispose().
+// Как было: ref в dispose().
 class _RefInDispose extends ConsumerStatefulWidget {
   const _RefInDispose();
 
@@ -43,7 +43,7 @@ class _RefInDisposeState extends ConsumerState<_RefInDispose> {
   Widget build(BuildContext context) => Text('${ref.watch(_counter)}');
 }
 
-/// Как стало: всё нужное снято в build, dispose к `ref` не прикасается.
+// Как стало: всё нужное снято в build, dispose к ref не прикасается.
 class _SnapshotInBuild extends ConsumerStatefulWidget {
   const _SnapshotInBuild({required this.onDispose});
 
@@ -70,8 +70,8 @@ class _SnapshotInBuildState extends ConsumerState<_SnapshotInBuild> {
 }
 
 void main() {
-  /// Монтирует [child], затем убирает его из того же контейнера — как уход с
-  /// экрана настроек не трогает ProviderScope приложения.
+  // Монтирует [child], затем убирает его из того же контейнера: так уход с
+  // экрана настроек не трогает ProviderScope приложения.
   Future<void> pumpThenDrop(WidgetTester tester, Widget child) async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
@@ -88,8 +88,8 @@ void main() {
   ) async {
     await pumpThenDrop(tester, const _RefInDispose());
 
-    // StateError вылетает ИЗ unmount(): всё, что Riverpod делает после
-    // super.unmount() — включая закрытие watch-подписок — уже не выполнится,
+    // StateError вылетает из unmount(): всё, что Riverpod делает после
+    // super.unmount(), включая закрытие watch-подписок, уже не выполнится,
     // и подписка остаётся висеть на defunct-элементе.
     final error = tester.takeException();
     expect(error, isStateError);

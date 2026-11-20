@@ -26,7 +26,7 @@ void main() {
     'AmneziaWG меряется тем типом, что выбран: url и speed больше не ICMP',
     () {
       // Раньше профиль всегда уходил в ICMP: url-замер поднимал xray, который
-      // `.conf` не разбирает. Теперь его меряет mihomo, как и везёт.
+      // .conf не разбирает. Теперь его меряет mihomo, как и везёт.
       final server = ServerItem(
         id: '3',
         config:
@@ -141,7 +141,7 @@ void main() {
 
   group('на Android подмена не зависит от activeMode', () {
     // Android всегда TUN, но android_tunnel_backend не заполняет activeMode,
-    // поэтому tunMode приходит false — и без поправки на платформу raw tcp
+    // поэтому tunMode приходит false, и без поправки на платформу raw tcp
     // мерил бы локальный конец туннеля (у пользователей это выглядело как
     // одинаковые 2-4 мс до любого сервера).
     test('tcp подменяется даже при tunMode: false', () {
@@ -169,7 +169,7 @@ void main() {
     });
 
     test('без подключения меряем как просили', () {
-      // Туннеля нет — raw tcp честен, подменять его нечем и незачем.
+      // Туннеля нет: raw tcp честен, подменять его нечем и незачем.
       expect(
         PingService.pingTypeForConnectionState(
           PingType.tcp,

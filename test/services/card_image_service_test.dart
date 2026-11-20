@@ -5,10 +5,10 @@ import 'package:keqdroid/models/subscription_card_theme.dart';
 import 'package:keqdroid/services/card_image_service.dart';
 import 'package:path/path.dart' as p;
 
-/// Сам выбор файла (диалог) не тестируется — тестируется всё, что вокруг:
-/// какие файлы считаются принадлежащими подписке и какие переживают уборку.
-/// Каталог подсовывается через [SubscriptionCardTheme.customDirectory]: это тот
-/// же кэш пути, которым пользуется приложение, path_provider тут не при чём.
+// Сам выбор файла (диалог) не тестируется, тестируется всё вокруг:
+// какие файлы считаются принадлежащими подписке и какие переживают уборку.
+// Каталог подсовывается через [SubscriptionCardTheme.customDirectory], тот
+// же кэш пути, которым пользуется приложение, path_provider тут ни при чём.
 void main() {
   late Directory dir;
 
@@ -88,10 +88,10 @@ void main() {
       await CardImageService.resolvePath('file:sub1-100.jpg'),
       p.join(dir.path, 'sub1-100.jpg'),
     );
-    // Картинку удалили мимо приложения — слайдер покажет кнопку выбора, а не
+    // Картинку удалили мимо приложения: слайдер покажет кнопку выбора, а не
     // сломанную миниатюру.
     expect(await CardImageService.resolvePath('file:sub1-999.jpg'), isNull);
-    // Встроенная тема — не своя картинка.
+    // Встроенная тема не считается своей картинкой.
     expect(await CardImageService.resolvePath('depth'), isNull);
   });
 

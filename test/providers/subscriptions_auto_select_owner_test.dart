@@ -6,10 +6,10 @@ import 'package:keqdroid/services/storage_service.dart';
 
 import '../helpers/test_storage.dart';
 
-/// «Авто» может гореть только в одной подписке: подключение одно, и выбирать
-/// для него сервер может только одна. Жалоба была такая: включила «Авто» во
-/// второй подписке — переехала на неё, а в первой кнопка так и осталась
-/// включённой.
+// Авто может гореть только в одной подписке: подключение одно, и выбирать
+// для него сервер может только одна. Жалоба была такая: включила Авто во
+// второй подписке, переехала на неё, а в первой кнопка так и осталась
+// включённой.
 Future<(ProviderContainer, StorageService)> _seed(
   List<Subscription> subs,
 ) async {
@@ -62,7 +62,7 @@ void main() {
   });
 
   test('подписке со спрятанной плашкой «Авто» не отдаётся', () async {
-    // Кнопки там не видно — выключить её было бы нечем.
+    // Кнопки там не видно: выключить её было бы нечем.
     final (c, _) = await _seed([_sub('a', visible: false)]);
     await c.read(subscriptionsProvider.notifier).handAutoSelectTo('a');
     expect(c.read(subscriptionsProvider).value!.single.autoSelect, isFalse);

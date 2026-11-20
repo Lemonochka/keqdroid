@@ -14,7 +14,7 @@ Map<String, dynamic> _proxy(Map<String, dynamic> config) =>
 List<String> _rules(Map<String, dynamic> config) =>
     (config['rules'] as List).cast<String>();
 
-/// `download-settings` у xhttp-ссылки [link] с таким [extra].
+// download-settings у xhttp-ссылки [link] с таким [extra].
 Map<String, dynamic> _download(String link, String extra) =>
     (_proxy(
               MihomoConfigGen.build(
@@ -81,9 +81,9 @@ void main() {
 
   group('прокси', () {
     test('vcn переносится в name-cert-verify, одиночный pcs — в fingerprint', () {
-      // То же, что делает xray-генератор со своими `verifyPeerCertByName` и
-      // `pinnedPeerCertSha256`: у ядра эта настройка описана как «меняет только
-      // цель проверки DNSName, не трогая SNI».
+      // То же, что делает xray-генератор со своими verifyPeerCertByName и
+      // pinnedPeerCertSha256: у ядра эта настройка описана так: меняет только
+      // цель проверки DNSName, не трогая SNI.
       final p = _proxy(
         MihomoConfigGen.build(
           'vless://uuid@vps1.example.org:8443?type=tcp&security=tls'
@@ -102,7 +102,7 @@ void main() {
     });
 
     test('несколько отпечатков в pcs не пиним вовсе', () {
-      // `fingerprint` у ядра — одна строка, а какой из отпечатков относится к
+      // fingerprint у ядра одной строкой, а какой из отпечатков относится к
       // листу цепочки, из ссылки не видно. Взятый наугад чужой отпечаток
       // закрыл бы соединение совсем.
       final p = _proxy(
@@ -161,8 +161,8 @@ void main() {
 
     // Отсечка на допуск к серверу, а не на поле в конфиге: xray с 26.9.9
     // отказывает приветствию TLS без ключа X25519MLKEM768, а mihomo без этого
-    // флага его вырезает. Без флага все REALITY-узлы отвечают «REALITY
-    // authentication failed», и выглядит это как разошедшиеся ключи.
+    // флага его вырезает. Без флага все REALITY-узлы отвечают REALITY
+    // authentication failed, и выглядит это как разошедшиеся ключи.
     test('reality: X25519MLKEM768 разрешён и у vless, и у trojan', () {
       for (final link in [
         'vless://uuid@nl.example:443?type=tcp&security=reality'
@@ -181,9 +181,9 @@ void main() {
       }
     });
 
-    // У mihomo пустой client-fingerprint значит «без uTLS», а не chrome, как у
-    // xray, — поэтому подставляем явно, и тот же, что xray-генератор
-    // (`defaultTlsFingerprint`).
+    // У mihomo пустой client-fingerprint выключает uTLS, а не выбирает chrome, как у
+    // xray, поэтому подставляем явно, и тот же, что xray-генератор
+    // (defaultTlsFingerprint).
     test('vless без fp получает firefox', () {
       final p = _proxy(
         MihomoConfigGen.build(
@@ -230,7 +230,7 @@ void main() {
     });
 
     // Живая ссылка провайдера: mihomo постквантовое шифрование VLESS умеет
-    // (`encryption` в proxies, разбор тот же, что у xray), но пока мы это поле
+    // (encryption в proxies, разбор тот же, что у xray), но пока мы это поле
     // выбрасывали, ядро подключалось открытым VLESS и сервер рвал соединение.
     test('vless переносит постквантовое шифрование', () {
       const encryption =
@@ -398,7 +398,7 @@ void main() {
 
   group('транспорт', () {
     // Из-за молчаливого отката на tcp сервер на xhttp отвечал так, будто дело
-    // в ключах REALITY: ядро поднималось, конфиг был «валидным», а описывал
+    // в ключах REALITY: ядро поднималось, конфиг был валидным, а описывал
     // другой сервер.
     test('xhttp переносится целиком, а не сводится к tcp', () {
       final p = _proxy(
@@ -445,16 +445,16 @@ void main() {
       final opts = p['xhttp-opts'] as Map;
       expect(opts['mode'], 'packet-up');
       expect(opts['x-padding-bytes'], '100-1000');
-      // hKeepAlivePeriod у mihomo число, остальное — строки: они принимают
-      // диапазоны вида `16-32`.
+      // hKeepAlivePeriod у mihomo число, остальное строки: они принимают
+      // диапазоны вида 16-32.
       expect(opts['reuse-settings'], {
         'max-concurrency': '16-32',
         'h-keep-alive-period': 45,
       });
     });
 
-    // Живая подписка: узел «белые списки» работал на xray и не работал на
-    // mihomo. Вид запроса описан в `extra` — где номер сессии, где счётчик,
+    // Живая подписка: узел белые списки работал на xray и не работал на
+    // mihomo. Вид запроса описан в extra: где номер сессии, где счётчик,
     // каким методом и куда уходят данные вверх; пока мы это выбрасывали,
     // mihomo слал запрос своего вида, и сервер отвечал 400.
     test('extra переносит форму запроса целиком', () {
@@ -486,8 +486,8 @@ void main() {
       });
     });
 
-    // Второе написание тех же настроек: панели пишут то `sessionKey`, то
-    // `sessionIDKey`, xray понимает оба.
+    // Второе написание тех же настроек: панели пишут то sessionKey, то
+    // sessionIDKey, xray понимает оба.
     test('extra принимает sessionID-написание', () {
       const extra =
           '{"sessionIDKey":"sid","sessionIDPlacement":"query",'
@@ -508,9 +508,9 @@ void main() {
       expect(opts['session-length'], '16-32');
     });
 
-    // Тот самый узел «белые списки»: ссылка включает обфускацию набивки и
+    // Тот самый узел белые списки: ссылка включает обфускацию набивки и
     // больше ничего про неё не говорит. xray в этом режиме шлёт заголовок
-    // `X-Padding`, сервер набивку проверяет и запрос без неё отвергает, а
+    // X-Padding, сервер набивку проверяет и запрос без неё отвергает, а
     // mihomo без явного размещения не набивает вовсе.
     test('обфускация набивки получает дефолты xray', () {
       const extra = '{"xPaddingObfsMode":true}';
@@ -549,7 +549,7 @@ void main() {
       expect(opts['x-padding-header'], 'X-Api-Key');
       expect(opts['x-padding-method'], 'tokenish');
       expect(opts['x-padding-bytes'], '50-150');
-      // ключ ссылка не назвала — его дописываем сами.
+      // ключ ссылка не назвала, его дописываем сами.
       expect(opts['x-padding-key'], 'x_padding');
     });
 
@@ -569,7 +569,7 @@ void main() {
       expect(opts.containsKey('x-padding-header'), isFalse);
     });
 
-    // Панели кладут эти поля и внутрь `xmux`, и рядом с ним.
+    // Панели кладут эти поля и внутрь xmux, и рядом с ним.
     test('reuse-settings собирается и из полей рядом с xmux', () {
       const extra =
           '{"hKeepAlivePeriod":30,"hMaxRequestTimes":"600-900",'
@@ -606,7 +606,7 @@ void main() {
       expect(opts['headers'], {'X-Token': 'abc'});
     });
 
-    // Закачка идёт REALITY напрямую, скачивание — обычным TLS через CDN.
+    // Закачка идёт REALITY напрямую, скачивание обычным TLS через CDN.
     // Незаданное mihomo берёт у основного подключения, так что без явных
     // полей скачивание ушло бы с его REALITY и SNI.
     test('downloadSettings: скачивание через CDN не наследует основное', () {
@@ -653,7 +653,7 @@ void main() {
       });
       expect(ds['servername'], 'decoy.example');
       expect(ds['client-fingerprint'], 'safari');
-      // Пин основного — к его сертификату, у скачивания сертификат чужой.
+      // Пин основного относится к его сертификату, у скачивания сертификат чужой.
       expect(ds['fingerprint'], '');
       expect(ds['path'], '/');
     });
@@ -793,10 +793,10 @@ void main() {
       expect(rules, contains('DOMAIN-SUFFIX,vk.com,DIRECT'));
       expect(rules, contains('GEOSITE,category-ru,DIRECT'));
       expect(rules, contains('GEOIP,ru,DIRECT'));
-      // Без `no-resolve`: умолчание снифера — подмена адреса назначения, и
+      // Без no-resolve: по умолчанию снифер подменяет адрес назначения, и
       // тогда пользовательские IP-правила обязаны резолвить домен, иначе они
-      // молча промахиваются (тот же случай, что `AsIs` → `IPIfNonMatch` у
-      // xray). Полный разбор — в тесте про no-resolve ниже.
+      // молча промахиваются (тот же случай, что AsIs → IPIfNonMatch у
+      // xray). Полный разбор в тесте про no-resolve ниже.
       expect(rules, contains('IP-CIDR,10.8.0.0/24,DIRECT'));
       expect(rules, contains('DOMAIN-SUFFIX,youtube.com,proxy'));
     });
@@ -830,7 +830,7 @@ void main() {
               resolvedServerIp: '203.0.113.7',
             ),
           );
-          // Резолв ради правила, защищающего от круга, — тот же круг.
+          // Резолв ради правила, защищающего от круга, даёт тот же круг.
           expect(rules, contains('IP-CIDR,203.0.113.7/32,DIRECT,no-resolve'));
           expect(rules, isNot(contains('IP-CIDR,203.0.113.7/32,DIRECT')));
           expect(rules, contains('IP-CIDR,192.168.0.0/16,DIRECT,no-resolve'));
@@ -838,7 +838,7 @@ void main() {
       },
     );
 
-    // Голый адрес mihomo у IP-CIDR не примет — нужен префикс.
+    // Голый адрес mihomo у IP-CIDR не примет: нужен префикс.
     test('голому IP дописывается префикс', () {
       final rules = _rules(
         MihomoConfigGen.build(
@@ -848,13 +848,13 @@ void main() {
         ),
       );
       expect(rules, contains('IP-CIDR,203.0.113.9/32,DIRECT,no-resolve'));
-      // no-resolve тут нет по той же причине, что и выше: умолчание — подмена
-      // адреса. Проверяем префикс, а не суффикс правила.
+      // no-resolve тут нет по той же причине, что и выше: по умолчанию подменяется
+      // адрес. Проверяем префикс, а не суффикс правила.
       expect(rules, contains('IP-CIDR,1.2.3.4/32,DIRECT'));
     });
 
-    // Шпаргалка обещает «ru — всё, что оканчивается на .ru», и так понимают
-    // слово xray и sing-box. `DOMAIN-KEYWORD` ловил буквы в любом месте: `su`
+    // Шпаргалка обещает, что ru ловит всё, что оканчивается на .ru, и так понимают
+    // слово xray и sing-box. DOMAIN-KEYWORD ловил буквы в любом месте: su
     // уводил напрямую AI Studio (alkalimakersuite-pa.clients6.google.com).
     test('голое слово — суффикс домена, а не буквы где угодно', () {
       final rules = _rules(
@@ -892,7 +892,7 @@ void main() {
       ),
     );
 
-    // Под `AsIs` xray не резолвит домен ради geoip. mihomo резолвил всегда, и
+    // Под AsIs xray не резолвит домен ради geoip. mihomo резолвил всегда, и
     // TikTok уходил напрямую: DNS из дома отдавал кэш Akamai внутри сети
     // провайдера, а его адрес по базе российский.
     test('AsIs: geoip не резолвит домен, как у xray', () {
@@ -913,7 +913,7 @@ void main() {
       // Соединение, пришедшее адресом, решается в прежнем порядке.
       expect(lazy, isNonNegative);
       expect(lazy, lessThan(proxyDomain));
-      // Резолв — только после всех доменов и перед финалом.
+      // Резолв идёт только после всех доменов и перед финалом.
       expect(proxyDomain, lessThan(resolving));
       expect(resolving, lessThan(rules.length - 1));
       expect(rules.last, 'MATCH,proxy');
@@ -959,7 +959,7 @@ void main() {
       expect((s['sniff'] as Map).keys, containsAll(['HTTP', 'TLS', 'QUIC']));
     });
 
-    // `routeOnly` у xray и `override-destination` у mihomo описывают одно и то
+    // routeOnly у xray и override-destination у mihomo описывают одно и то
     // же с разных сторон, поэтому значения инвертированы.
     test('override-destination — зеркало sniffingRouteOnly', () {
       bool overrideFor({required bool routeOnly}) =>
@@ -1011,7 +1011,7 @@ void main() {
       expect(dns['proxy-server-nameserver'], isNotEmpty);
     });
 
-    // Аналог `https://` вместо `https+local://` у xray: DNS прячем в туннель
+    // Аналог https:// вместо https+local:// у xray: DNS прячем в туннель
     // только когда туда же уходит всё остальное.
     test('глобал-прокси гонит DNS по правилам', () {
       Map<String, dynamic> dnsFor(String finalOutbound) =>
@@ -1042,7 +1042,7 @@ void main() {
                 'h2c://example.com/dns-query',
           ),
         ),
-        // h2c mihomo не знает — такая запись роняет разбор конфига целиком,
+        // h2c mihomo не знает: такая запись роняет разбор конфига целиком,
         // поэтому её выбрасываем, а не переносим как есть.
         [
           'https://1.1.1.1/dns-query#DIRECT',
@@ -1055,8 +1055,8 @@ void main() {
 
     // DNS через туннель спрашивает от имени сервера, и CDN отдаёт узлы у
     // сервера, а не у дома. Прямому соединению нужен ближний узел, поэтому
-    // его адрес — из дома, теми же серверами. `direct-nameserver` ядро читает
-    // без respect-rules, так что `#DIRECT` к ним дописывать не нужно.
+    // его адрес берётся из дома, теми же серверами. direct-nameserver ядро читает
+    // без respect-rules, так что #DIRECT к ним дописывать не нужно.
     group('прямые соединения', () {
       Map<String, dynamic> dnsOf(AppSettings s) => MihomoConfigGen.buildDns(s);
 
@@ -1167,8 +1167,8 @@ void main() {
     });
 
     test('+local переживает respect-rules', () {
-      // При глобал-прокси ядро подставляет `RULES` каждому серверу с пустым
-      // фрагментом, и «мимо туннеля» превращалось в «через туннель». Явное имя
+      // При глобал-прокси ядро подставляет RULES каждому серверу с пустым
+      // фрагментом, и правило мимо туннеля превращалось в правило через туннель. Явное имя
       // прокси во фрагменте эту подстановку перебивает.
       const core = XrayCoreSettings(
         dnsUseCustom: true,
@@ -1192,9 +1192,9 @@ void main() {
       );
     });
 
-    // По default-nameserver резолвятся ИМЕНА самих DoH-серверов, и ходит туда
-    // ядро всегда напрямую, мимо туннеля и мимо правил (`parseNameServer` с
-    // respectRules=false в config.go ядра). Что там лежит — то и видит
+    // По default-nameserver резолвятся имена самих DoH-серверов, и ходит туда
+    // ядро всегда напрямую, мимо туннеля и мимо правил (parseNameServer с
+    // respectRules=false в config.go ядра). Что там лежит, то и видит
     // провайдер, поэтому чужих адресов там быть не должно.
     group('bootstrap', () {
       List<String> bootstrapFor(String servers) =>
@@ -1217,13 +1217,13 @@ void main() {
       });
 
       test('запись переносится со схемой, а не голым адресом', () {
-        // Голый `9.9.9.9` — это UDP-53 мимо туннеля, то есть запрошенное имя
+        // Голый 9.9.9.9 даёт UDP-53 мимо туннеля, то есть запрошенное имя
         // открытым текстом. У DoH провайдер видит только TLS к 9.9.9.9.
         expect(
           bootstrapFor('https://9.9.9.9/dns-query').single,
           startsWith('https://'),
         );
-        // Умолчание — те же два адреса, что и были, но теперь тоже DoH.
+        // По умолчанию те же два адреса, что и были, но теперь тоже DoH.
         expect(
           MihomoConfigGen.buildDns(const AppSettings())['default-nameserver'],
           ['https://1.1.1.1/dns-query', 'https://8.8.8.8/dns-query'],
@@ -1231,8 +1231,8 @@ void main() {
       });
 
       test('серверы по именам в bootstrap не годятся', () {
-        // Им самим нужен резолв — ядро такую запись и не примет («default
-        // nameserver should be pure IP»). Берём из списка только адресные.
+        // Им самим нужен резолв, и ядро такую запись не примет (default
+        // nameserver should be pure IP). Берём из списка только адресные.
         expect(
           bootstrapFor(
             'https://dns.quad9.net/dns-query, '
@@ -1256,7 +1256,7 @@ void main() {
         expect(bootstrapFor('https://[2620:fe::fe]/dns-query'), [
           'https://[2620:fe::fe]/dns-query',
         ]);
-        // Имя с портом — всё ещё имя.
+        // Имя с портом всё ещё остаётся именем.
         expect(bootstrapFor('tls://dns.quad9.net:853'), ['1.1.1.1', '8.8.8.8']);
       });
     });
@@ -1302,7 +1302,7 @@ void main() {
         expect(withApi['external-controller'], '127.0.0.1:9971');
         expect(withApi['secret'], 's3cr3t');
 
-        // Пинг и спидтест поднимают ядро без API — управлять там нечем.
+        // Пинг и спидтест поднимают ядро без API, управлять там нечем.
         final withoutApi = MihomoConfigGen.build(
           'vless://uuid@nl.example:443?type=tcp&security=none',
           const AppSettings(),
@@ -1353,8 +1353,8 @@ void main() {
       expect(listeners.last['port'], '8080');
     });
 
-    // Разница «пусто» и «нет ключа» здесь решает всё: без ключа mihomo
-    // подставит глобальный `authentication`, то есть случайные креды
+    // Разница между пустым значением и отсутствием ключа здесь решает всё: без ключа mihomo
+    // подставит глобальный authentication, то есть случайные логин и пароль
     // приложения, и в раздачу не зайдёт никто.
     test('без пароля users пустой, но присутствует', () {
       final listeners =
@@ -1440,8 +1440,8 @@ void main() {
               as Map<String, dynamic>;
 
       expect(tun['enable'], isTrue);
-      // Имя своё: без него mihomo берёт `Meta`, а wintun считает GUID
-      // адаптера от имени — тот же GUID у любого mihomo-клиента на машине.
+      // Имя своё: без него mihomo берёт Meta, а wintun считает GUID
+      // адаптера от имени, и GUID совпал бы у любого mihomo-клиента на машине.
       expect(tun['device'], 'tun-keqdis');
       expect(tun['stack'], 'gvisor');
       expect(tun['mtu'], 9000);
@@ -1472,7 +1472,7 @@ void main() {
       expect(tun.containsKey('mtu'), isFalse);
       expect(tun.containsKey('file-descriptor'), isFalse);
       // Адреса и маршруты уже проставил VpnService, а netlink на Android 14+
-      // ядру запрещён — с автодетектом листенер не поднялся бы вовсе.
+      // ядру запрещён, и с автодетектом листенер не поднялся бы вовсе.
       expect(tun['auto-route'], isFalse);
       expect(tun['auto-detect-interface'], isFalse);
       // Владельца соединения непривилегированный процесс на Android не узнает.
@@ -1530,8 +1530,8 @@ void main() {
 
       expect(dns['enhanced-mode'], 'fake-ip');
       expect(dns['fake-ip-range'], '198.18.0.1/16');
-      // Локальные зоны и проверки связности — мимо подмены, иначе система
-      // рисует «интернета нет» поверх работающего туннеля.
+      // Локальные зоны и проверки связности идут мимо подмены, иначе система
+      // показывает нет интернета поверх работающего туннеля.
       expect(dns['fake-ip-filter'], contains('*.lan'));
       expect(dns['fake-ip-filter'], contains('connectivitycheck.gstatic.com'));
     });
@@ -1553,7 +1553,7 @@ void main() {
     });
 
     // Ядро стирает подменный адрес перед выбором правила и восстанавливает
-    // домен, поэтому IP-правилу с no-resolve сравнивать нечего — оно
+    // домен, поэтому IP-правилу с no-resolve сравнивать нечего, оно
     // промахивается всегда. Свой CIDR держится на копии с резолвом, которую
     // приносит подъём стратегии до IPIfNonMatch.
     test('свой CIDR работает и с подменными адресами', () {
@@ -1580,7 +1580,7 @@ void main() {
     });
 
     // Правило против круга обязано решать без резолва при любых настройках:
-    // резолв ради него — это тот же круг, только на шаг раньше.
+    // резолв ради него даёт тот же круг, только на шаг раньше.
     test('правило про сам сервер no-resolve не теряет', () {
       final rules =
           (MihomoConfigGen.build(
@@ -1636,12 +1636,12 @@ void main() {
       );
     });
 
-    // Замер url-пинга поднимает СВОЁ временное ядро отдельным процессом. Без
+    // Замер url-пинга поднимает своё временное ядро отдельным процессом. Без
     // этих правил туннель забирал его соединение к измеряемому серверу себе и
     // отдавал в прокси: замер ехал через живой туннель, мерил его задержку и
     // чаще всего не укладывался в таймаут. Зелёными оставались ровно те
-    // серверы, чей адрес уже вынесен [buildServerDirectRules], — подключённый и
-    // его соседи по адресу, то есть «пингуется два сервера из двадцати».
+    // серверы, чей адрес уже вынесен [buildServerDirectRules]: подключённый и
+    // его соседи по адресу, то есть пингуется два сервера из двадцати.
     test('временные ядра замера идут мимо туннеля', () {
       final rules = rulesFor(mode: AppRoutingMode.allProxy);
       for (final core in const [
@@ -1684,11 +1684,11 @@ void main() {
           'DIRECT',
         ),
       );
-      // Остальные приложения идут по спискам и «Всё остальное» (здесь прокси).
+      // Остальные приложения идут по спискам и Всё остальное (здесь прокси).
       expect(rules.last, 'MATCH,proxy');
     });
 
-    // Выбранным — ничего своего: они идут по общим спискам дальше.
+    // У выбранных ничего своего: они идут по общим спискам дальше.
     test('«только выбранные» пускает остальные приложения мимо туннеля', () {
       final rules = rulesFor(
         mode: AppRoutingMode.onlySelected,
@@ -1705,8 +1705,8 @@ void main() {
       expect(rules.last, 'MATCH,proxy');
     });
 
-    // В локальный инбаунд ходит ровно один процесс — он же был бы
-    // «владельцем» всего, поэтому правил там нет вовсе.
+    // В локальный инбаунд ходит ровно один процесс, он же был бы
+    // владельцем всего, поэтому правил там нет вовсе.
     test('без своего туннеля правил по процессам не бывает', () {
       final config = MihomoConfigGen.build(
         link,
@@ -1734,8 +1734,8 @@ void main() {
     expect(parsed['rules'], isA<List<Object?>>());
   });
 
-  // Маскировка под обычный HTTP-запрос поверх tcp. У ядра это отдельный
-  // `network`, а не флаг: без неё сервер ждёт запрос с заголовками, получает
+  // Маскировка под обычный HTTP-запрос поверх tcp. У ядра под неё отдельный
+  // network, а не флаг: без неё сервер ждёт запрос с заголовками, получает
   // голый поток и молчит.
   group('HTTP-маскировка', () {
     test('vless: headerType=http превращается в network http', () {
@@ -1791,8 +1791,8 @@ void main() {
     });
   });
 
-  // ECH прячет настоящее имя сервера в ClientHello. У xray поле `ech`
-  // двузначно, у mihomo под это два разных вида `ech-opts`.
+  // ECH прячет настоящее имя сервера в ClientHello. У xray поле ech
+  // двузначно, у mihomo для этого два разных вида ech-opts.
   // Плагин оборачивает трафик shadowsocks во что-то безобидное. Ссылка несёт
   // его одной строкой, и раньше она пропадала целиком: сервер ждал обёртку,
   // получал голый shadowsocks и не отвечал.
@@ -1846,10 +1846,10 @@ void main() {
   });
 
   // Ранние данные: первый пакет уезжает вместе с рукопожатием WebSocket. На
-  // подключение не влияет, на скорость первого запроса — да.
-  // Как упаковывать UDP: `packet` — адрес в каждом пакете, остальное — xudp.
-  // `none` и ссылка без параметра в конфиг ничего не пишут: mihomo без
-  // `packet-addr` всё равно включает xudp сам.
+  // подключение не влияет, на скорость первого запроса влияет.
+  // Как упаковывать UDP: packet кладёт адрес в каждый пакет, остальное уходит в xudp.
+  // none и ссылка без параметра в конфиг ничего не пишут: mihomo без
+  // packet-addr всё равно включает xudp сам.
   group('packetEncoding', () {
     Map<String, dynamic> proxyFor(String value) => MihomoConfigGen.buildProxy(
       'vless://uuid@198.51.100.10:443?type=tcp&security=none'
@@ -1916,7 +1916,7 @@ void main() {
       expect(opts['early-data-header-name'], 'Sec-WebSocket-Protocol');
     });
 
-    // v2rayN кладёт размер внутрь пути. Оставь его там — и сервер получит путь
+    // v2rayN кладёт размер внутрь пути. Оставь его там, и сервер получит путь
     // с хвостом, которого не ждёт.
     test('ed внутри пути вынимается из него', () {
       final proxy = MihomoConfigGen.buildProxy(
@@ -1972,7 +1972,7 @@ void main() {
     });
 
     // Ссылка называет DNS, у которого спросить запись. Самого адреса ядру не
-    // передать, но имя для запроса — да.
+    // передать, но имя для запроса передать можно.
     test('форма «имя+dns» включает запрос HTTPS-записи', () {
       final proxy = MihomoConfigGen.buildProxy(
         'vless://uuid@198.51.100.10:443?type=tcp&security=tls&sni=e.example'
@@ -1985,7 +1985,7 @@ void main() {
     });
 
     // Ловушка на ровном месте: разбор запроса по правилам HTML-формы читает
-    // `+` как пробел, и base64 приезжает испорченным.
+    // + как пробел, и base64 приезжает испорченным.
     test('плюс в base64 остаётся плюсом', () {
       final proxy = MihomoConfigGen.buildProxy(
         'vless://uuid@198.51.100.10:443?type=tcp&security=tls&sni=e.example'
@@ -2003,7 +2003,7 @@ void main() {
     });
   });
 
-  // TUIC — QUIC-протокол, которого у xray нет вовсе. Версия узнаётся по форме
+  // TUIC работает поверх QUIC, и у xray его нет вовсе. Версия узнаётся по форме
   // userInfo, и поля у версий в ядре разные.
   group('TUIC', () {
     test('v5: пара uuid:password', () {
@@ -2049,7 +2049,7 @@ void main() {
     });
   });
 
-  // AnyTLS: поток внутри обычного TLS. Имени пользователя у протокола нет —
+  // AnyTLS гонит поток внутри обычного TLS. Имени пользователя у протокола нет:
   // если в userInfo нет двоеточия, паролем работает всё, что там есть.
   group('AnyTLS', () {
     test('пароль из userInfo, с двоеточием и без', () {
@@ -2070,7 +2070,7 @@ void main() {
         'anytls://secret@198.51.100.31:443?sni=a.example&hpkp=QQ+WW/EE=',
       );
       expect(proxy['fingerprint'], 'QQ+WW/EE=');
-      // А отпечаток uTLS — наш общий по умолчанию.
+      // А отпечаток uTLS берётся наш общий по умолчанию.
       expect(proxy['client-fingerprint'], defaultTlsFingerprint);
     });
 
@@ -2121,7 +2121,7 @@ void main() {
     });
   });
 
-  // У mieru порт и транспорт — пара параметров запроса, а не часть адреса.
+  // У mieru порт и транспорт задаёт пара параметров запроса, а не часть адреса.
   group('Mieru', () {
     test('собирается со всеми полями', () {
       final proxy = MihomoConfigGen.buildProxy(
@@ -2158,7 +2158,7 @@ void main() {
 
   group('hysteria', () {
     // Схема одна на обе версии. Первую не собираем вовсе, вторую под этой же
-    // схемой терять нельзя — панели со старым шаблоном выдают именно её.
+    // схемой терять нельзя: панели со старым шаблоном выдают именно её.
     test('v1 отклоняется', () {
       expect(
         () => MihomoConfigGen.buildProxy(
@@ -2185,7 +2185,7 @@ void main() {
         'hysteria2://pwd@198.51.100.16:20000-20050,443?sni=hy2.example',
       );
       expect(proxy['server'], '198.51.100.16');
-      // В адресе остаётся первый порт списка — как это делает и само ядро.
+      // В адресе остаётся первый порт списка, как делает и само ядро.
       expect(proxy['port'], 20000);
       expect(proxy['ports'], '20000-20050,443');
       expect(proxy['sni'], 'hy2.example');

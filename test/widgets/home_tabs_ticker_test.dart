@@ -35,8 +35,8 @@ class _Connected extends VpnStateNotifier {
   Future<VpnState> build() async => const VpnState(status: VpnStatus.connected);
 }
 
-// вкладку за краем PageView может и не построить вовсе: тогда тикать там нечему.
-// не valuesOf: тот подписал бы вкладку на TickerMode, и её пересобирал бы уже тест
+// Вкладку за краем PageView может и не построить вовсе: тогда тикать там нечему.
+// Не valuesOf: тот подписал бы вкладку на TickerMode, и её пересобирал бы уже тест
 bool _ticking(WidgetTester tester, Type tab) {
   final found = find.byType(tab, skipOffstage: false).evaluate();
   return found.isNotEmpty &&

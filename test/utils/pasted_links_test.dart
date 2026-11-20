@@ -8,7 +8,7 @@ import 'package:keqdroid/utils/import_payload.dart';
 const _vless = 'vless://uuid@de.example.com:443?security=tls&type=tcp#DE';
 const _trojan = 'trojan://pass@nl.example.com:8443?sni=nl.example.com#NL';
 
-/// Вставка с учётом того, куда ушла каждая часть.
+// Вставка с учётом того, куда ушла каждая часть.
 class _Sink {
   final subscriptions = <String>[];
   final servers = <String>[];

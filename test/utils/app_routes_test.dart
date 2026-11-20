@@ -200,7 +200,7 @@ void main() {
         ),
         isEmpty,
       );
-      // А путь к другому файлу того же имени — нет.
+      // А путь к другому файлу того же имени уже нет.
       expect(
         appsOutsideSplit(
           [r'D:\Portable\firefox.exe'],

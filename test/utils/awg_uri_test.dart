@@ -6,7 +6,7 @@ import 'package:keqdroid/utils/awg_uri.dart';
 import 'package:keqdroid/utils/import_payload.dart';
 
 void main() {
-  // Ключи с '+' и '/' внутри — ровно те символы, на которых ломается разбор
+  // Ключи с '+' и '/' внутри: ровно те символы, на которых ломается разбор
   // query через Uri.queryParameters.
   const priv = '10YOue8MajJuVp5aQVVYv9Q7syNlHr/bTIsMkkRL/6M=';
   const pub = 'bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=';
@@ -100,7 +100,7 @@ void main() {
       final stored = ServersNotifier.normalizeImportedConfig(warp);
       expect(AwgProfile.isAwgConfig(stored), isTrue);
 
-      // Имя из #фрагмента и протокол — то же, что у импорта файлом.
+      // Имя из #фрагмента и протокол такие же, как у импорта файлом.
       final item = ServerItem.fromRaw(stored);
       expect(item.protocol, 'awg');
       expect(item.derivedName, 'WARP');
@@ -114,7 +114,7 @@ void main() {
       );
       expect(error, contains('AmneziaWG link'));
       expect(error, contains('private_key'));
-      // Нормализация битую ссылку не трогает — сообщение остаётся одно.
+      // Нормализация битую ссылку не трогает: сообщение остаётся одно.
       expect(
         ServersNotifier.normalizeImportedConfig(
           'wg://203.0.113.10:51820?public_key=$pub',

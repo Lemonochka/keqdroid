@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/utils/ssr_uri.dart';
 
-/// У SSR внутри base64 лежит всё: адрес, пароль, параметры и имя. Пока
-/// разборщика не было, сервер показывался куском base64 вместо адреса, пинг
-/// мерил несуществующий хост, а ключ сопоставления менялся при переименовании
-/// узла у провайдера.
+// У SSR внутри base64 лежит всё: адрес, пароль, параметры и имя. Пока
+// разборщика не было, сервер показывался куском base64 вместо адреса, пинг
+// мерил несуществующий хост, а ключ сопоставления менялся при переименовании
+// узла у провайдера.
 String _b64(String value) =>
     base64Url.encode(utf8.encode(value)).replaceAll('=', '');
 
@@ -47,7 +47,7 @@ void main() {
   });
 
   // Хвоста с параметрами может не быть вовсе: сервер описан уже первой
-  // половиной. Ядро такую ссылку пропускает, мы — берём.
+  // половиной. Ядро такую ссылку пропускает, а мы берём.
   test('ссылка без хвоста параметров разбирается', () {
     final payload = 'ssr.example:8388:origin:aes-256-cfb:plain:${_b64('pw')}';
     final parsed = SsrLink.tryParse('ssr://${_b64(payload)}');
@@ -64,7 +64,7 @@ void main() {
   test('мусор и чужие схемы — null, а не полупустой сервер', () {
     expect(SsrLink.tryParse('ssr://не-base64'), isNull);
     expect(SsrLink.tryParse('ss://YWVzOnB3@host:8388'), isNull);
-    // Полей должно быть ровно шесть: меньше — ссылка не та.
+    // Полей должно быть ровно шесть: если меньше, ссылка не та.
     expect(SsrLink.tryParse('ssr://${_b64('host:8388:origin')}'), isNull);
     expect(
       SsrLink.tryParse('ssr://${_b64('host:notaport:a:b:c:d/?')}'),

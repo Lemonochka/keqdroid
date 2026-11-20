@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/services/geo_base_downloader.dart';
 
-/// Где загрузчик полной geo-базы берёт хеш.
-///
-/// Только из подписанного SHA256SUMS: свой `geoip.dat.sha256` лежит в релизе
-/// ради версий 0.15–0.18, но подписи на нём нет.
+// Где загрузчик полной geo-базы берёт хеш.
+//
+// Только из подписанного SHA256SUMS: свой geoip.dat.sha256 лежит в релизе
+// ради версий 0.15-0.18, но подписи на нём нет.
 Map<String, dynamic> _asset(String name) => {
   'name': name,
   'browser_download_url': 'https://example.invalid/$name',

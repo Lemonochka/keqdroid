@@ -2,8 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/shared/ui/steady_baseline.dart';
 
-/// Строка с базовой линией в 10 dp от верха: в paint пишет, где эта линия
-/// оказалась на экране в физических пикселях, как её округлит Skia.
+// Строка с базовой линией в 10 dp от верха: в paint пишет, где эта линия
+// оказалась на экране в физических пикселях, как её округлит Skia.
 class _Line extends LeafRenderObjectWidget {
   const _Line(this.painted);
   final List<double> painted;

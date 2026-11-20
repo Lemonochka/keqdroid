@@ -84,7 +84,7 @@ PersistentKeepalive = 25
   });
 
   group('AmneziaWG 3.1', () {
-    // Ключ защиты заголовков — такой же 32-байтный base64, как ключи WG.
+    // Ключ защиты заголовков такой же 32-байтный base64, как ключи WG.
     const hpkBlock = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMA=';
 
     String withAwg31(String extra) => sample
@@ -127,7 +127,7 @@ DisableCookies = false''';
           'PersistentKeepalive = off',
         ),
       );
-      // `off` понимает wg-quick, но не ядро: оно уронило бы весь IpcSet.
+      // off понимает wg-quick, но не ядро: оно уронило бы весь IpcSet.
       expect(off.peer.persistentKeepalive, '0');
     });
 
@@ -170,7 +170,7 @@ DisableCookies = false''';
 
     test('never takes an unknown interface key for an AWG parameter', () {
       // Itime жил в AWG 2.0 и из v3 пропал: незнакомый ключ ядро не игнорирует,
-      // а отвечает `invalid UAPI device key` и не поднимает устройство вовсе.
+      // а отвечает invalid UAPI device key и не поднимает устройство вовсе.
       final p = AwgProfile.parse(withAwg31('Itime = 60\nTable = off'));
       expect(p.iface.awgParams.containsKey('itime'), isFalse);
       expect(p.iface.awgParams.containsKey('table'), isFalse);

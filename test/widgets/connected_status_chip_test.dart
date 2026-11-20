@@ -7,8 +7,8 @@ import 'package:keqdroid/services/exit_ip_service.dart';
 import 'package:keqdroid/shared/ui/connected_status_chip.dart';
 import 'package:keqdroid/shared/ui/server_avatar.dart';
 
-/// Чип «Подключено к …»: флаг выхода той же формы, что флаги серверов, а
-/// адрес — только по нажатию на флаг и ненадолго, вместо подписи.
+// Чип Подключено к …: флаг выхода той же формы, что флаги серверов, а
+// адрес показывается только по нажатию на флаг и ненадолго, вместо подписи.
 void main() {
   const label = 'Подключено к Node One';
   const ip = '45.131.212.234';

@@ -6,8 +6,8 @@ import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/fake_ip.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// Fake-ip на Android: TUN держит сам xray, подменный адрес отдаёт его
-/// `fakedns`, а обратно в домен его превращает снифер tun-инбаунда.
+// Fake-ip на Android: TUN держит сам xray, подменный адрес отдаёт его
+// fakedns, а обратно в домен его превращает снифер tun-инбаунда.
 const _link =
     'vless://0e0f3003-f4d9-46ef-b0b5-79c4223caa6c@198.51.100.25:443'
     '?type=tcp&security=none#t';
@@ -52,7 +52,7 @@ void main() {
   });
 
   // Ядро опрашивает по доменам, потом всех остальных по порядку, кроме
-  // `skipFallback` — подмена обязана быть первой в этом переборе.
+  // skipFallback: подмена обязана быть первой в этом переборе.
   test('fakedns — первый в общем переборе, исключения только за своих', () {
     final servers = _servers(_gen(_link, const AppSettings(fakeIp: true)));
     final fakeAt = servers.indexWhere((s) => _address(s) == 'fakedns');

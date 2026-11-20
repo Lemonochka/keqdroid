@@ -9,9 +9,9 @@ import 'package:keqdroid/utils/custom_clash_config.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// Готовый конфиг Clash в роли сервера — то же, чем для xray является
-/// готовый JSON: прокси, группы и правила авторские, наше дело — инбаунд,
-/// снифер и свои списки роутинга поверх.
+// Готовый конфиг Clash в роли сервера играет ту же роль, что для xray
+// готовый JSON: прокси, группы и правила авторские, наше дело в инбаунде,
+// снифере и своих списках роутинга поверх.
 const _yaml = '''
 # профиль панели
 port: 7890
@@ -136,7 +136,7 @@ void main() {
       expect(clash.proxies, hasLength(2));
       expect(clash.address, 'nl.example');
       expect(clash.port, 443);
-      // Цель для наших правил — ГРУППА, а не узел: пользователь переключает
+      // Цель для наших правил группа, а не узел: пользователь переключает
       // узлы внутри неё, и правило обязано ехать за его выбором.
       expect(clash.primaryTarget, '🚀 Proxy');
     });
@@ -352,8 +352,8 @@ proxies:
       expect(config['socks-port'], 2080);
       expect(config['bind-address'], '127.0.0.1');
       expect(config['authentication'], ['user:pass']);
-      // Порты автора и его api — мимо: в наш инбаунд ходит приложение с
-      // известными ему кредами, а api читает экран «Соединения».
+      // Порты автора и его api идут мимо: в наш инбаунд ходит приложение с
+      // известными ему логином и паролем, а api читает экран Соединения.
       expect(config.containsKey('port'), isFalse);
       expect(config.containsKey('mixed-port'), isFalse);
       expect(config['external-controller'], '127.0.0.1:39001');
@@ -506,7 +506,7 @@ dns:
     );
 
     test('tun автора удалён — туннель держит VpnService', () {
-      // С авторским `tun.enable` ядро полезет поднимать СВОЁ устройство
+      // С авторским tun.enable ядро полезет поднимать своё устройство
       // поверх нашего, и сессия умрёт на старте.
       expect(build().containsKey('tun'), isFalse);
     });
@@ -540,7 +540,7 @@ dns:
       expect(author, lessThan(ours));
       expect(ours, lessThan(match));
       expect(rules[match], 'MATCH,🚀 Proxy');
-      // «В прокси» у наших правил — авторская группа, а не наш выдуманный тег.
+      // В прокси у наших правил стоит авторская группа, а не наш выдуманный тег.
       expect(rules, contains('DOMAIN-SUFFIX,youtube.com,🚀 Proxy'));
     });
 
@@ -574,8 +574,8 @@ dns:
     });
   });
 
-  // 31.10.2026: узел «Ultima Free (YT no ads, no torrent)» из Clash-подписки ронял mihomo на старте,
-  // правило искало сервер «no torrent)». ссылкой тот же сервер работал
+  // 31.10.2026: узел Ultima Free (YT no ads, no torrent) из Clash-подписки ронял mihomo на старте,
+  // правило искало сервер с именем no torrent). Ссылкой тот же сервер работал
   group('запятая в имени узла', () {
     const name = '🇫🇮 Ultima Free (YT no ads, no torrent)';
     const yaml =
@@ -642,7 +642,7 @@ rules:
   });
 
   // 02.11.2026: у провайдера имя узла начиналось или кончалось пробелом (Германия, Россия Москва).
-  // без шаблона такой сервер ядро не запускало: proxy [🇩🇪 ⚡ Германия] not found
+  // Без шаблона такой сервер ядро не запускало: proxy [🇩🇪 ⚡ Германия] not found
   group('пробел по краю имени узла', () {
     String node(String name) => SubscriptionService.clashNodeConfigs('''
 proxies:

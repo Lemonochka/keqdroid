@@ -12,17 +12,17 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// Креды локального входа у приложения и у ядра.
-///
-/// На Pixel 6a 12.11.2026 они разошлись, и всё своё приложение (обновление,
-/// подписки) получало 407 от своего же прокси до перезапуска. Теперь
-/// приложение берёт креды у работающего ядра каждый раз, как сессия
-/// оказывается подключённой.
+// Логин и пароль локального входа у приложения и у ядра.
+//
+// На Pixel 6a 12.11.2026 они разошлись, и всё своё приложение (обновление,
+// подписки) получало 407 от своего же прокси до перезапуска. Теперь
+// приложение берёт их у работающего ядра каждый раз, как сессия
+// оказывается подключённой.
 class _Backend extends FakeTunnelBackend {
   final states = StreamController<VpnState>.broadcast();
   VpnState current = VpnState.disconnected;
 
-  /// Креды, с которыми поднято ядро; null — ядра нет.
+  // Логин и пароль, с которыми поднято ядро; null, если ядра нет.
   ({String username, String password})? core;
 
   @override

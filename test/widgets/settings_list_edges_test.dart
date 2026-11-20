@@ -16,7 +16,7 @@ import 'package:keqdroid/shared/ui/smooth_fade.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// Края списка настроек: верх не гаснет, низ плавно уходит под версию, и над версией нет линии.
+// Края списка настроек: верх не гаснет, низ плавно уходит под версию, и над версией нет линии.
 
 class _ManySubs extends SubscriptionsNotifier {
   @override

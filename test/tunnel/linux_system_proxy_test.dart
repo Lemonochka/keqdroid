@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/tunnel/linux_system_proxy.dart';
 
-/// gsettings и kreadconfig/kwriteconfig в памяти. gsettings отдаёт значения в
-/// записи GVariant: строки в кавычках, числа и списки как есть — так же, как
-/// настоящий, иначе снимок и возврат проверялись бы не на тех данных.
+// gsettings и kreadconfig/kwriteconfig в памяти. gsettings отдаёт значения в
+// записи GVariant (строки в кавычках, числа и списки как есть), так же, как
+// настоящий, иначе снимок и возврат проверялись бы не на тех данных.
 class _FakeDesktop {
   _FakeDesktop({this.hasGsettings = true, this.hasKde = false});
 

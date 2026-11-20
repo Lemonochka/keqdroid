@@ -6,10 +6,10 @@ import 'package:keqdroid/models/xray_core_settings.dart';
 import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// `xhttpSettings.extra` у xray — не «дополнительные поля», а ЗАМЕНА всего
-/// блока XHTTP (`SplitHTTPConfig.Build` оставляет от внешнего только host,
-/// path и mode). Панели xray 25+ складывают туда все настройки транспорта,
-/// поэтому потерянный `extra` — это клиент с дефолтным XHTTP вместо серверного.
+// xhttpSettings.extra у xray не дополнительные поля, а замена всего
+// блока XHTTP (SplitHTTPConfig.Build оставляет от внешнего только host,
+// path и mode). Панели xray 25+ складывают туда все настройки транспорта,
+// поэтому без extra клиент работает с XHTTP по умолчанию вместо серверного.
 Map<String, dynamic> _xhttp(
   String uri, {
   AppSettings settings = const AppSettings(),
@@ -36,7 +36,7 @@ void main() {
         'xPaddingBytes': '92-1412',
         'noGRPCHeader': true,
       });
-      // host/path/mode остаются снаружи — их xray берёт именно оттуда.
+      // host/path/mode остаются снаружи: их xray берёт именно оттуда.
       expect(xhttp['path'], '/');
       expect(xhttp['mode'], 'auto');
     });

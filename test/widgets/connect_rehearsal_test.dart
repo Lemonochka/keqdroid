@@ -16,9 +16,9 @@ import 'package:keqdroid/ui/desktop/connect_rehearsal_host.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// Репетиция подключения на Windows: копия шапки и строки сервера проигрывает
-/// подключение под вкладками, чтобы шейдеры собрались до настоящего нажатия.
-/// Настоящий VPN, курсор и ввод она трогать не должна.
+// Репетиция подключения на Windows: копия шапки и строки сервера проигрывает
+// подключение под вкладками, чтобы шейдеры собрались до настоящего нажатия.
+// Настоящий VPN, курсор и ввод она трогать не должна.
 
 class _FakeServers extends ServersNotifier {
   @override

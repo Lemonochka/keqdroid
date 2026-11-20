@@ -50,7 +50,7 @@ Future<void> _pumpTab(
   await tester.pumpAndSettle();
 }
 
-/// Доводит до открытой шторки идентичности из формы добавления подписки.
+// Доводит до открытой шторки идентичности из формы добавления подписки.
 Future<void> _openIdentitySheet(WidgetTester tester) async {
   await tester.tap(find.byIcon(Icons.add_rounded));
   await tester.pumpAndSettle();
@@ -115,32 +115,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'на невысоком экране шторка и список прокручиваются, а не рвутся',
-    (tester) async {
-      // 360×640 — нижняя граница живых телефонов. Пять строк выбора плюс кнопки
-      // туда не влезают по построению: список обязан прокручиваться, а не
-      // уходить в overflow, который в релизе виден только пропавшим виджетом.
-      tester.view.physicalSize = const Size(360, 640);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets('на невысоком экране шторка и список прокручиваются, а не рвутся', (
+    tester,
+  ) async {
+    // 360×640 соответствует нижней границе живых телефонов. Пять строк выбора плюс кнопки
+    // туда не влезают по построению: список обязан прокручиваться, а не
+    // уходить в overflow, который в релизе виден только пропавшим виджетом.
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
-      await _pumpTab(tester);
-      await _openIdentitySheet(tester);
-      await tester.tap(find.byType(Switch));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
+    await _pumpTab(tester);
+    await _openIdentitySheet(tester);
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
 
-      // Список вариантов длиннее экрана — проверяем и его.
-      await tester.tap(find.text('User-Agent'));
-      await tester.pumpAndSettle();
-      await tester.drag(find.byType(ListView).last, const Offset(0, -300));
-      await tester.pumpAndSettle();
+    // Список вариантов длиннее экрана: проверяем и его.
+    await tester.tap(find.text('User-Agent'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+    await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('UA, которого нет в каталоге, вписывается руками', (
     tester,
@@ -162,7 +161,7 @@ void main() {
     await tester.tap(find.text('Use this value'));
     await tester.pumpAndSettle();
 
-    // Регистр UA значим — приводить его к нижнему, как HWID, нельзя.
+    // Регистр UA значим: приводить его к нижнему, как HWID, нельзя.
     expect(find.textContaining('MyClient/9.9'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -198,7 +197,7 @@ void main() {
     tester,
   ) async {
     // Regression: список UA длиннее любого экрана, и без потолка шторка
-    // занимала окно целиком — ручка уезжала под рамку (на ноутбуке под
+    // занимала окно целиком: ручка уезжала под рамку (на ноутбуке под
     // вебкамеру), фона для закрытия тапом не оставалось совсем.
     tester.view.physicalSize = const Size(1600, 1400);
     tester.view.devicePixelRatio = 1.0;
@@ -213,8 +212,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.getRect(find.byType(BottomSheet).last).top, greaterThan(400));
-    // И по ширине это колонка, а не строка во весь монитор. Меряем по
-    // содержимому: `constraints` Flutter применяет ВНУТРИ BottomSheet, и сам
+    // И по ширине получается колонка, а не строка во весь монитор. Меряем по
+    // содержимому: constraints Flutter применяет внутри BottomSheet, и сам
     // он остаётся во всю ширину окна.
     expect(tester.getRect(find.byType(SearchBar)).width, lessThan(600));
 

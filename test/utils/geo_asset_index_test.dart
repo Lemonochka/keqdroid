@@ -4,8 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/utils/geo_asset_index.dart';
 
-/// Собирает v2fly-подобный .dat: `repeated entry = 1`, у записи первое поле —
-/// `string country_code = 1`, за ним произвольное тело (у нас — bytes-поле 2).
+// Собирает v2fly-подобный .dat: repeated entry = 1, у записи первое поле
+// string country_code = 1, за ним произвольное тело (у нас bytes-поле 2).
 Uint8List buildGeoDat(Map<String, int> codesWithBodySize) {
   void writeVarint(List<int> out, int value) {
     var v = value;
@@ -23,7 +23,7 @@ Uint8List buildGeoDat(Map<String, int> codesWithBodySize) {
     writeVarint(entry, code.length);
     entry.addAll(code.codeUnits);
     if (bodySize > 0) {
-      entry.add(0x12); // field 2, wire type 2 — тело записи
+      entry.add(0x12); // field 2, wire type 2: тело записи
       writeVarint(entry, bodySize);
       entry.addAll(List<int>.filled(bodySize, 0x41));
     }
@@ -103,14 +103,14 @@ void main() {
     final geoip = File('assets/bin/windows/geoip.dat');
 
     test('geosite.dat parses into the codes the presets rely on', () async {
-      if (!geosite.existsSync()) return; // сборка без geo-баз — не наш случай
+      if (!geosite.existsSync()) return; // сборка без geo-баз, не наш случай
       final codes = await GeoAssetIndex.readCodes(geosite);
       expect(codes.length, greaterThan(100));
       expect(
         codes,
         containsAll(['category-ads-all', 'category-ru', 'yandex', 'youtube']),
       );
-      // Коды хранятся заглавными — индекс обязан отдавать нижний регистр.
+      // Коды хранятся заглавными: индекс обязан отдавать нижний регистр.
       expect(codes.any((c) => c != c.toLowerCase()), isFalse);
     });
 

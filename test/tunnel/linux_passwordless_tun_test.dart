@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
 
-/// Беспарольный TUN держится на строках, которые живут в трёх местах: теле
-/// обёртки, правиле polkit и проверке «установлено ли». Разойдись они — и
-/// правило разрешало бы не тот файл, хелпер не узнавал бы сам себя, а старый
-/// хелпер, запускавший от root что угодно, не снимался бы.
+// Беспарольный TUN держится на строках, которые живут в трёх местах: теле
+// обёртки, правиле polkit и проверке, установлено ли. Разойдись они, и
+// правило разрешало бы не тот файл, хелпер не узнавал бы сам себя, а старый
+// хелпер, запускавший от root что угодно, не снимался бы.
 void main() {
   final body = LinuxTunnelBackend.tunWrapperBodyForTest;
   const helper = LinuxTunnelBackend.polkitHelperPathForTest;

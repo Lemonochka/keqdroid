@@ -6,10 +6,10 @@ import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/removed_tls_fields.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// `allowInsecure` ядро отвергает безусловно (26.7.28,
-/// `infra/conf/transport_security.go`), и падает при этом разбор ВСЕГО конфига.
-/// То есть один сервер с `insecure=1` в подписке лишал связи все остальные, а
-/// наружу это выглядело как «SOCKS port not ready».
+// allowInsecure ядро отвергает безусловно (26.7.28,
+// infra/conf/transport_security.go), и падает при этом разбор всего конфига.
+// То есть один сервер с insecure=1 в подписке лишал связи все остальные, а
+// наружу это выглядело как SOCKS port not ready.
 void main() {
   setUp(() => Socks5Credentials().init('u', 'p'));
 
@@ -37,7 +37,7 @@ void main() {
           ),
         );
         expect(tls.containsKey('allowInsecure'), isFalse);
-        // Остальное из ссылки на месте — выкидываем ровно одно поле.
+        // Остальное из ссылки на месте: выкидываем ровно одно поле.
         expect(tls['serverName'], 'example.com');
       });
     }
@@ -134,7 +134,7 @@ void main() {
   });
 
   // Готовый конфиг отдаётся ядру почти как есть, поэтому авторское
-  // `allowInsecure` доезжало бы до ядра и роняло всю сессию.
+  // allowInsecure доезжало бы до ядра и роняло всю сессию.
   group('готовый (custom) конфиг', () {
     String authorConfig() => jsonEncode({
       'outbounds': [

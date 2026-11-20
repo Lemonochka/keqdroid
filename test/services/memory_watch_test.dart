@@ -52,9 +52,9 @@ void main() {
       expect(schedule.onSize(300 * _mb), isNull);
       expect(schedule.onSize(700 * _mb), contains('grew by 400 MB'));
       expect(schedule.onBeat(at(1)).reason, 'growing');
-      expect(schedule.onSize(760 * _mb), isNull); // +60 MB — ещё растёт
+      expect(schedule.onSize(760 * _mb), isNull); // +60 MB, ещё растёт
       expect(schedule.onBeat(at(2)).reason, 'growing');
-      expect(schedule.onSize(765 * _mb), isNull); // +5 MB — успокоилось
+      expect(schedule.onSize(765 * _mb), isNull); // +5 MB, успокоилось
       expect(schedule.onBeat(at(3)).reason, isNull);
     });
 
@@ -64,7 +64,7 @@ void main() {
       expect(schedule.onSize(1030 * _mb), 'now above 1024 MB');
       expect(schedule.onSize(1200 * _mb), isNull);
       expect(schedule.onSize(2100 * _mb), contains('now above 2048 MB'));
-      // Перепрыгнул сразу два порога — сказать надо о последнем.
+      // Перепрыгнул сразу два порога: сказать надо о последнем.
       expect(schedule.onSize(9000 * _mb), contains('now above 8192 MB'));
     });
   });

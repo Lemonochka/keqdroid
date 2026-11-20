@@ -4,11 +4,11 @@ import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/models/connection_entry.dart';
 import 'package:keqdroid/screens/settings/connection_tile.dart';
 
-/// Экран «Соединения» дважды показывал пустоту при непустом счётчике: оба раза
-/// плитка падала внутри списка (сначала в paint на разноцветной рамке со
-/// скруглением, потом в layout на Row со stretch при неограниченной высоте), а
-/// исключение молча гасилось на уровне render object'а. Поэтому проверяем
-/// плитку именно так, как она живёт в приложении — пачкой внутри ListView.
+// Экран Соединения дважды показывал пустоту при непустом счётчике: оба раза
+// плитка падала внутри списка (сначала в paint на разноцветной рамке со
+// скруглением, потом в layout на Row со stretch при неограниченной высоте), а
+// исключение молча гасилось на уровне render object'а. Поэтому проверяем
+// плитку именно так, как она живёт в приложении: пачкой внутри ListView.
 Widget _screen(
   List<ConnectionEntry> entries, {
   bool showProcess = false,
@@ -72,8 +72,8 @@ ConnectionEntry _entry({
   decidedByCore: decidedByCore,
 );
 
-/// Ровно тот набор, что бывает на живом экране: все вердикты, оба состояния
-/// правила, длинные значения и запись без части полей.
+// Ровно тот набор, что бывает на живом экране: все вердикты, оба состояния
+// правила, длинные значения и запись без части полей.
 List<ConnectionEntry> _sevenConnections() => [
   _entry(host: 'www.google.com'),
   _entry(host: 'ya.ru', outbound: 'direct', rule: 'direct-ru'),

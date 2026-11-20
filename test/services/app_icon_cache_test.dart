@@ -4,11 +4,11 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/services/app_icon_cache.dart';
 
-/// Однопиксельный PNG в base64 — содержимое неважно, важен сам факт байтов.
+// Однопиксельный PNG в base64: содержимое неважно, важен сам факт байтов.
 const _png =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
-/// Выемка иконок под контролем теста: каждый вызов виден и завершается вручную.
+// Выемка иконок под контролем теста: каждый вызов виден и завершается вручную.
 class _FakeFetch {
   final calls = <String>[];
   final _pending = <String, Completer<String?>>{};
@@ -60,14 +60,14 @@ void main() {
       unawaited(cache.request(path));
     }
 
-    // Первые два ушли в работу сразу, остальные ждут — канал не заваливается.
+    // Первые два ушли в работу сразу, остальные ждут: канал не заваливается.
     expect(fetch.calls, ['a', 'b']);
 
     fetch.complete('a', _png);
     await Future<void>.delayed(Duration.zero);
 
-    // Очередь разбирается с конца: свежий запрос — это то, что сейчас перед
-    // глазами, а «c» к этому моменту уже уехало вверх.
+    // Очередь разбирается с конца: свежий запрос показывает то, что сейчас перед
+    // глазами, а c к этому моменту уже уехало вверх.
     expect(fetch.calls, ['a', 'b', 'd']);
   });
 
@@ -77,7 +77,7 @@ void main() {
 
     unawaited(cache.request('visible'));
     final dropped = cache.request('scrolled-away');
-    // Первый запрос уже в работе, второй ждёт очереди — и не дожидается.
+    // Первый запрос уже в работе, второй ждёт очереди и не дожидается.
     cache.release('scrolled-away');
 
     fetch.complete('visible', _png);
@@ -100,7 +100,7 @@ void main() {
     fetch.complete('started', _png);
     await Future<void>.delayed(Duration.zero);
 
-    // Работа всё равно сделана — глупо выбрасывать результат.
+    // Работа всё равно сделана: глупо выбрасывать результат.
     expect(cache.has('started'), isTrue);
     expect(cache.peek('started'), base64Decode(_png));
   });

@@ -13,8 +13,8 @@ import 'package:keqdroid/utils/server_sort.dart';
 const _de = 'vless://uuid-de@de.example.com:443?security=tls&type=tcp#DE-1';
 const _nl = 'trojan://pass@nl.example.com:8443?sni=nl.example.com#NL-2';
 
-/// Список серверов без хранилища: экран читает только его, а `_load()` из
-/// настоящего нотифаера полез бы в SharedPreferences.
+// Список серверов без хранилища: экран читает только его, а _load() из
+// настоящего провайдера полез бы в SharedPreferences.
 class _FakeServers extends ServersNotifier {
   _FakeServers(this._state);
 
@@ -42,8 +42,8 @@ class _FakeSettings extends SettingsNotifier {
   Future<AppSettings> build() async => _settings;
 }
 
-/// Настоящий нотифаер режимов сортировки читает их из хранилища, которого в
-/// тесте нет (storageProvider намеренно бросает без override).
+// Настоящий провайдер режимов сортировки читает их из хранилища, которого в
+// тесте нет (storageProvider намеренно бросает без override).
 class _FakeSortModes extends ServerSortModesNotifier {
   _FakeSortModes(this._modes);
 
@@ -159,7 +159,7 @@ void main() {
   });
 
   testWidgets('узлы в выборе разложены по подпискам', (tester) async {
-    // Без заголовков одинаковые имена из разных подписок не различить —
+    // Без заголовков одинаковые имена из разных подписок не различить:
     // выбор входа и выхода превращался в угадайку.
     await _pumpEditor(
       tester,
@@ -177,7 +177,7 @@ void main() {
     expect(find.text('Alpha Sub'), findsOneWidget);
     expect(find.text('Beta Sub'), findsOneWidget);
     expect(find.text('Manual servers'), findsOneWidget);
-    // Тёзки из разных подписок остаются оба — группа объясняет, кто есть кто.
+    // Тёзки из разных подписок остаются оба: группа объясняет, кто есть кто.
     expect(find.text('NL-1'), findsNWidgets(2));
   });
 
@@ -206,7 +206,7 @@ void main() {
       ),
     ];
 
-    // так и было: человек хотел AWG в цепочку, а xray его не связывает
+    // так и было: пользователь хотел AWG в цепочку, а xray его не связывает
     testWidgets('mihomo показывает AWG и свои протоколы', (tester) async {
       await _pumpEditor(
         tester,
@@ -248,7 +248,7 @@ void main() {
     tester,
   ) async {
     // Иначе один и тот же набор серверов выглядит в приложении двумя разными
-    // списками: на главной по алфавиту, в выборе узла — как пришло.
+    // списками: на главной по алфавиту, в выборе узла как пришло.
     await _pumpEditor(
       tester,
       subscriptions: [_sub('s1', 'Alpha Sub')],

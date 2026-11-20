@@ -5,9 +5,9 @@ import 'package:keqdroid/models/traffic_split.dart';
 import 'package:keqdroid/services/traffic_split_store.dart';
 import 'package:path/path.dart' as p;
 
-/// Каталог подсовывается через [TrafficSplitStore.directoryOverride] — тем же
-/// приёмом, что у картинок карточек: path_provider в тестах не отвечает, а
-/// проверять надо как раз работу с настоящими файлами.
+// Каталог подсовывается через [TrafficSplitStore.directoryOverride] тем же
+// приёмом, что у картинок карточек: path_provider в тестах не отвечает, а
+// проверять надо как раз работу с настоящими файлами.
 void main() {
   late Directory dir;
 

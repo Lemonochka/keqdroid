@@ -3,13 +3,13 @@ import 'package:keqdroid/models/connection_entry.dart';
 import 'package:keqdroid/services/connections_service.dart';
 import 'package:keqdroid/services/xray_access_log_parser.dart';
 
-/// Живой лог xray 26.7.11 с Android (сокращён, домены настоящие).
-///
-/// Главное, что из него видно: домен НИКОГДА не попадает в access-строку. Её
-/// назначение инбаунд записывает в момент приёма соединения, а сниффер читает
-/// SNI позже — поэтому `accepted tcp:216.58.198.162:443`, хотя строкой выше
-/// ядро уже назвало `googleads.g.doubleclick.net`. Связать их можно только
-/// через идентификатор сессии в квадратных скобках.
+// Живой лог xray 26.7.11 с Android (сокращён, домены настоящие).
+//
+// Главное, что из него видно: домен никогда не попадает в access-строку. Её
+// назначение инбаунд записывает в момент приёма соединения, а сниффер читает
+// SNI позже, поэтому accepted tcp:216.58.198.162:443, хотя строкой выше
+// ядро уже назвало googleads.g.doubleclick.net. Связать их можно только
+// через идентификатор сессии в квадратных скобках.
 const _log = '''
 08-09 22:43:37 2026/08/09 18:43:37.228543 [Warning] core: Xray 26.7.11 started
 08-09 22:43:40 2026/08/09 18:43:40.300259 [Info] [2637336328] proxy/socks: TCP Connect request to tcp:8.8.8.8:853
@@ -73,7 +73,7 @@ void main() {
     });
 
     test('order inside the log does not matter', () {
-      // Эта access-строка стоит РАНЬШЕ строк своей сессии — в живом логе
+      // Эта access-строка стоит раньше строк своей сессии: в живом логе
       // ядро пишет их из разных горутин и порядок не гарантирован.
       final snapshot = XrayAccessLogParser.parse(_log);
       final entry = _find(snapshot, 'notifications-pa.googleapis.com:443');
@@ -142,7 +142,7 @@ void main() {
 
       expect(closed.closed, isTrue);
       // Порт в строке закрытия свой (42870), с клиентским (36948) он не
-      // совпадает — связь только через идентификатор сессии.
+      // совпадает, связь только через идентификатор сессии.
       expect(closed.source, '127.0.0.1:36948');
     });
 
@@ -159,9 +159,9 @@ void main() {
     test(
       'closing one connection does not close the neighbour to the same host',
       () {
-        // Два TCP-соединения к одному адресу: закрылось второе. Access-строка
-        // идентификатора сессии не несёт, и «последняя сессия этого назначения
-        // выигрывает» помечала закрытыми оба — живое соединение выглядело
+        // Два TCP-соединения к одному адресу, закрылось второе. Access-строка
+        // идентификатора сессии не несёт, и правило последняя сессия этого назначения
+        // выигрывает помечало закрытыми оба: живое соединение выглядело
         // мёртвым и уезжало из списка.
         const log = '''
 08-09 22:50:01 2026/08/09 18:50:01.000000 [Info] [1000] proxy/socks: TCP Connect request to tcp:5.5.5.5:443
@@ -250,7 +250,7 @@ void main() {
     test(
       'the owner is asked by a bare address the system understands',
       () async {
-        // С приставкой `tcp:` система не находила владельца ни разу.
+        // С приставкой tcp: система не находила владельца ни разу.
         List<Map<String, Object?>>? asked;
         await ConnectionsService.withAppNamesFromSource(
           XrayAccessLogParser.parse(tunLog),

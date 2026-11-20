@@ -8,11 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/utils/local_vpn_proxy.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// Прокси-заглушка: отвечает на запрос с абсолютным URI (так HttpClient ходит
-/// к http-адресам через прокси) и записывает первую строку запроса.
-///
-/// С [requireAuth] ведёт себя как локальный инбаунд с включённой
-/// аутентификацией: без `Proxy-Authorization` отвечает 407.
+// Прокси-заглушка: отвечает на запрос с абсолютным URI (так HttpClient ходит
+// к http-адресам через прокси) и записывает первую строку запроса.
+//
+// С [requireAuth] ведёт себя как локальный инбаунд с включённой
+// аутентификацией: без Proxy-Authorization отвечает 407.
 class _RecordingProxy {
   _RecordingProxy({this.requireAuth = false});
 
@@ -46,15 +46,15 @@ class _RecordingProxy {
   Future<void> stop() => _server.close(force: true);
 }
 
-/// Локальный инбаунд с паролем, который меняется между сессиями.
-///
-/// На сырых сокетах, а не на HttpServer: отказ повторяет Xray байт в байт
-/// (`proxy/http/server.go`), а CONNECT надо принимать как есть. Считает
-/// запросы — по их числу и видно, повторяет ли клиент отвергнутый пароль.
+// Локальный инбаунд с паролем, который меняется между сессиями.
+//
+// На сырых сокетах, а не на HttpServer: отказ повторяет Xray байт в байт
+// (proxy/http/server.go), а CONNECT надо принимать как есть. Считает
+// запросы: по их числу и видно, повторяет ли клиент отвергнутый пароль.
 class _SessionProxy {
   late final ServerSocket _server;
 
-  /// Логин и пароль, которые инбаунд принимает сейчас; null — никакие.
+  // Логин и пароль, которые инбаунд принимает сейчас; null, если никакие.
   (String, String)? accepted;
   final requestLines = <String>[];
   final authHeaders = <String?>[];
@@ -117,8 +117,8 @@ class _SessionProxy {
   Future<void> stop() => _server.close();
 }
 
-/// Адаптер вместо сети для скачивания: за туннелем заглушки TLS не поднять.
-/// Отказ тем же текстом, что бросает dart:io на 407 в ответ на CONNECT.
+// Адаптер вместо сети для скачивания: за туннелем заглушки TLS не поднять.
+// Отказ тем же текстом, что бросает dart:io на 407 в ответ на CONNECT.
 class _TunnelAdapter implements HttpClientAdapter {
   _TunnelAdapter(this.acceptedUser);
 
@@ -227,7 +227,7 @@ void main() {
         await expectLater(fetch(client), throwsA(isA<SocketException>()));
         expect(proxy.requestLines, isEmpty);
 
-        port = proxy.port; // «подключили VPN»
+        port = proxy.port; // подключили VPN
         expect(await fetch(client), 'proxied');
         expect(proxy.requestLines, ['GET $url']);
       },
@@ -235,9 +235,9 @@ void main() {
   });
 
   group('прокси с аутентификацией', () {
-    // Креды регистрируются внутри findProxy, а не при создании клиента:
+    // Логин и пароль регистрируются внутри findProxy, а не при создании клиента:
     // на Android после пересоздания изолята они приезжают из нативного
-    // сервиса позже. Проверяем, что «позже» всё равно срабатывает — на этом
+    // сервиса позже. Проверяем, что позже всё равно срабатывает: на этом
     // же пути живёт проверка обновлений.
     test('запрос доходит с Proxy-Authorization', () async {
       final proxy = _RecordingProxy(requireAuth: true);
@@ -269,8 +269,8 @@ void main() {
       'креды из синглтона, появившиеся после сборки клиента, применяются',
       () async {
         // Ровно случай Android: VpnService пережил пересоздание Flutter-движка,
-        // свежий изолят видит connected, а креды подтягиваются из нативного
-        // сервиса асинхронно — уже после того, как клиент собран.
+        // свежий изолят видит connected, а логин и пароль подтягиваются из нативного
+        // сервиса асинхронно, уже после того, как клиент собран.
         final proxy = _RecordingProxy(requireAuth: true);
         await proxy.start();
         addTearDown(proxy.stop);
@@ -281,7 +281,7 @@ void main() {
         configureHttpClientForLocalVpnProxy(client, () => proxy.port);
         addTearDown(() => client.close(force: true));
 
-        // «приехали» из нативного сервиса уже после сборки клиента
+        // приехали из нативного сервиса уже после сборки клиента
         Socks5Credentials().init('late', 'creds');
 
         final req = await client.getUrl(Uri.parse('http://example.test/sub'));
@@ -300,8 +300,8 @@ void main() {
     // Случай с телефона, где процесс за четверть часа дорос до 3 ГБ: клиент
     // подписок живёт всё время работы приложения, а пароль инбаунда новый на
     // каждое подключение. Запомненный dart:io пароль прокси он повторяет на
-    // каждый 407 без конца — флаг «уже пробовали» у паролей прокси не
-    // ставится никогда, — и каждый повтор держит в памяти весь предыдущий.
+    // каждый 407 без конца: флаг уже пробовали у паролей прокси не
+    // ставится никогда, и каждый повтор держит в памяти весь предыдущий.
     late _SessionProxy proxy;
     late HttpClient client;
 
@@ -347,7 +347,7 @@ void main() {
     });
 
     test('CONNECT после переподключения тоже идёт с новым паролем', () async {
-      // Подписки — это https, то есть туннель CONNECT через инбаунд: именно
+      // Подписки ходят по https, то есть туннелем CONNECT через инбаунд: именно
       // там на телефоне и крутилась петля.
       Socks5Credentials().init('userA', 'passA');
       proxy.accepted = ('userA', 'passA');
@@ -358,7 +358,7 @@ void main() {
       proxy.requestLines.clear();
       proxy.authHeaders.clear();
 
-      // Падает на TLS за открытым туннелем — главное, что падает, а не
+      // Падает на TLS за открытым туннелем: главное, что падает, а не
       // повторяет старый пароль до бесконечности.
       await expectLater(
         get('https://example.test/sub').timeout(const Duration(seconds: 5)),

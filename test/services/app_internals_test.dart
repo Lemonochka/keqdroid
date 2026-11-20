@@ -27,8 +27,8 @@ void main() {
     });
 
     test('(devel) — это отсутствие версии, а не версия', () {
-      // keqrnel собирается из рабочего дерева: показывать «(devel)» как версию
-      // ядра значит врать, панель в этом случае говорит про движки внутри.
+      // keqrnel собирается из рабочего дерева: показывать (devel) как версию
+      // ядра было бы враньём, панель в этом случае говорит про движки внутри.
       expect(AppInternalsService.formatVersion('(devel)'), isNull);
       expect(AppInternalsService.formatVersion(''), isNull);
       expect(AppInternalsService.formatVersion(null), isNull);
@@ -163,7 +163,7 @@ void main() {
       );
 
       expect(report, contains('status: disconnected'));
-      // На Android режима нет вовсе — прочерк, а не выдуманный TUN.
+      // На Android режима нет вовсе: прочерк, а не выдуманный TUN.
       expect(report, contains('mode: n/a'));
       expect(report, isNot(contains('pid ')));
       expect(report, isNot(contains('elevated:')));
@@ -202,7 +202,7 @@ void main() {
           'vpn=connected "athena kill"',
         ),
       );
-      // Без пометки о VPN и без описания — так и пишем, не выдумывая.
+      // Без пометки о VPN и без описания: так и пишем, не выдумывая.
       expect(
         report,
         contains(
@@ -235,7 +235,7 @@ void main() {
       expect(exit.reasonName, 'SIGNALED');
       expect(exit.status, 9);
       expect(exit.importance, 125);
-      // Пустое описание — это отсутствие описания.
+      // Пустое описание приравнено к отсутствию описания.
       expect(exit.description, isNull);
       expect(exit.vpnWasOn, isTrue);
     });
@@ -264,7 +264,7 @@ void main() {
     });
 
     test('причины сводятся к тому, что можно сказать человеку', () {
-      // Коды — ApplicationExitInfo.REASON_*.
+      // Коды из ApplicationExitInfo.REASON_*.
       expect(exitWith(0).cause, ProcessExitCause.system); // UNKNOWN
       expect(exitWith(1).cause, ProcessExitCause.self); // EXIT_SELF
       expect(exitWith(2).cause, ProcessExitCause.system); // SIGNALED
@@ -303,7 +303,7 @@ void main() {
   });
 
   group('версия Windows', () {
-    // Жалоба: «почему у меня 11 винда, а пишет что десятая». В реестре у
+    // Жалоба: почему у меня 11 винда, а пишет, что десятая. В реестре у
     // одиннадцатой и правда записана десятка, отличает их только сборка.
     test('сборка 22000 и выше — это 11', () {
       expect(

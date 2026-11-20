@@ -31,9 +31,9 @@ void main() {
       expect(l10n.navSubscriptions, 'اشتراک‌ها');
       expect(l10n.settingsRoutingTitle, 'مسیریابی');
       // Термины сверены с Hiddify, v2rayNG, v2rayN и NekoBox, а не переведены
-      // дословно. «Мимо VPN» — «مستقیم»: «دور زدن» в Иране читается как обход
+      // дословно. Мимо VPN переводится как مستقیم: слово دور زدن в Иране читается как обход
       // блокировок, то есть наоборот, через VPN. Те же слова и у списков, и у
-      // «всего остального», и у своих правил.
+      // всего остального, и у своих правил.
       expect(l10n.settingsRoutingProxyTitle, 'پروکسی');
       expect(l10n.settingsRoutingDirectTitle, 'مستقیم');
       expect(l10n.settingsRoutingBlockTitle, 'مسدود');
@@ -59,8 +59,8 @@ void main() {
     });
 
     test('technical values are isolated from the RTL paragraph', () {
-      // Без изолята «621.8 / ∞ GiB» в персидском абзаце показывается как
-      // «GiB ∞ / 621.8», а пинг — как «ms 266».
+      // Без изолята 621.8 / ∞ GiB в персидском абзаце показывается как
+      // GiB ∞ / 621.8, а пинг как ms 266.
       const usage = '621.8 / ∞ GiB';
       final wrapped = ltrIsolate(usage);
 
@@ -72,7 +72,7 @@ void main() {
     });
 
     test('names are laid out in their own direction', () {
-      // Латинское имя сервера в персидском интерфейсе — строка слева
+      // Латинское имя сервера в персидском интерфейсе: строка слева
       // направо, иначе многоточие встаёт не с того края.
       expect(
         contentDirection(
@@ -85,7 +85,7 @@ void main() {
         contentDirection('🇩🇪 آلمان ۱', fallback: TextDirection.ltr),
         TextDirection.rtl,
       );
-      // Одни цифры и значки — решает интерфейс.
+      // Одни цифры и значки: решает интерфейс.
       expect(
         contentDirection('🇩🇪 01', fallback: TextDirection.rtl),
         TextDirection.rtl,
@@ -103,8 +103,8 @@ void main() {
         (k) => !k.startsWith('@') && !fa.containsKey(k),
       );
       expect(missing, isEmpty, reason: 'без перевода покажется английский');
-      // Схему URL разворачивали руками, чтобы справа налево она «смотрелась»:
-      // на экране выходила каша. Направление ставят метки, а не перестановка.
+      // Схему URL разворачивали руками, чтобы справа налево она смотрелась,
+      // а на экране выходила каша. Направление ставят метки, а не перестановка.
       expect(
         fa.values.whereType<String>().where((v) => v.contains('//:')),
         isEmpty,
@@ -119,7 +119,7 @@ void main() {
     });
 
     test('placeholders survive translation', () async {
-      // Плейсхолдеры — контракт с кодом: потеряется имя, и строка не соберётся.
+      // Плейсхолдеры держат контракт с кодом: потеряется имя, и строка не соберётся.
       final fa = await AppLocalizations.delegate.load(const Locale('fa'));
 
       expect(fa.vpnConnectedTo('سرور من'), contains('سرور من'));

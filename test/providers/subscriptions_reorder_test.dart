@@ -9,7 +9,7 @@ import '../helpers/test_storage.dart';
 Subscription _sub(String id) =>
     Subscription(id: id, name: id, url: 'https://example.com/$id');
 
-/// Builds a container whose subscriptionsProvider is seeded with [ids] in order.
+// Builds a container whose subscriptionsProvider is seeded with [ids] in order.
 Future<(ProviderContainer, StorageService)> _seed(List<String> ids) async {
   final storage = await buildStorageService();
   await storage.saveSubscriptions(ids.map(_sub).toList());
@@ -62,7 +62,7 @@ void main() {
       () async {
         // onReorderItem already adjusts the index, so the migrated call passes
         // fromReorderableList: false with the adjusted newIndex (2). Must match
-        // the legacy true/3 outcome above — guards the onReorderItem migration.
+        // the legacy true/3 outcome above: guards the onReorderItem migration.
         final (c, _) = await _seed(['a', 'b', 'c', 'd']);
         await c
             .read(subscriptionsProvider.notifier)

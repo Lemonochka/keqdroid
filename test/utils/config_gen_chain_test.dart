@@ -49,7 +49,7 @@ void main() {
             .cast<Map<String, dynamic>>()
             .map((o) => o['tag'])
             .toList();
-        // Выходной узел первым: в xray первый аутбаунд — основной.
+        // Выходной узел первым: в xray первый аутбаунд считается основным.
         expect(tags, [
           'proxy',
           'chain-0',
@@ -59,12 +59,12 @@ void main() {
           'dns-out',
         ]);
 
-        // Вход набирается напрямую, дальше — через предыдущее звено.
+        // Вход набирается напрямую, дальше через предыдущее звено.
         expect(_dialerProxyOf(_outboundByTag(config, 'chain-0')), isNull);
         expect(_dialerProxyOf(_outboundByTag(config, 'chain-1')), 'chain-0');
         expect(_dialerProxyOf(_outboundByTag(config, 'proxy')), 'chain-1');
 
-        // Порядок узлов сохраняется: chain-0 — вход, proxy — выход.
+        // Порядок узлов сохраняется: chain-0 на входе, proxy на выходе.
         expect(
           (_outboundByTag(config, 'chain-0')['settings']
               as Map<String, dynamic>)['address'],
@@ -192,9 +192,9 @@ void main() {
         return quic?['udpHop'];
       }
 
-      // Внешнему узлу перебор портов оставляем — он звонит сам.
+      // Внешнему узлу перебор портов оставляем: он звонит сам.
       expect(udpHopOf('chain-0'), isNotNull);
-      // За dialerProxy перебор не проверен — отбрасываем его, а не соединение.
+      // За dialerProxy перебор не проверен: отбрасываем его, а не соединение.
       expect(udpHopOf('proxy'), isNull);
     });
 

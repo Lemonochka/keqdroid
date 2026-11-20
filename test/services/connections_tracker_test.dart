@@ -63,10 +63,10 @@ void main() {
         (e) => e.host == 'www.youtube.com',
       );
       expect(youtube.count, 3);
-      // Время начала — самое раннее из свёрнутых, а не последнее увиденное.
+      // Время начала берётся самое раннее из свёрнутых, а не последнее увиденное.
       expect(youtube.startedAt, t0);
       expect(youtube.rule, 'proxy-geosite');
-      // Локальный сокет у группы не один — показывать чей-то один нельзя.
+      // Локальный сокет у группы не один: показывать чей-то один нельзя.
       expect(youtube.source, isEmpty);
       expect(snapshot.entries.firstWhere((e) => e.host == 'vk.com').count, 1);
     });
@@ -183,7 +183,7 @@ void main() {
       );
 
       // Следующий опрос: в хвосте лога соединения уже нет, но ядро не сообщало
-      // о его закрытии — значит оно живо, и строка обязана остаться.
+      // о его закрытии, поэтому оно живо, и строка обязана остаться.
       final later = tracker.merge(
         _log(const []),
         sessionToken: 'log:',
@@ -194,34 +194,31 @@ void main() {
       expect(later.entries.single.host, 'www.youtube.com');
     });
 
-    test(
-      'drops it once the core reported the closure and the linger passed',
-      () {
-        final tracker = ConnectionsTracker(
-          closedLinger: const Duration(seconds: 45),
-        );
-        tracker.merge(
-          _log([_entry(source: 'a:1')]),
-          sessionToken: 'log:',
-          now: t0,
-        );
-        final closed = tracker.merge(
-          _log([_entry(source: 'a:1', closed: true)]),
-          sessionToken: 'log:',
-          now: t0.add(const Duration(seconds: 5)),
-        );
-        expect(closed.entries.single.closed, isTrue);
+    test('drops it once the core reported the closure and the linger passed', () {
+      final tracker = ConnectionsTracker(
+        closedLinger: const Duration(seconds: 45),
+      );
+      tracker.merge(
+        _log([_entry(source: 'a:1')]),
+        sessionToken: 'log:',
+        now: t0,
+      );
+      final closed = tracker.merge(
+        _log([_entry(source: 'a:1', closed: true)]),
+        sessionToken: 'log:',
+        now: t0.add(const Duration(seconds: 5)),
+      );
+      expect(closed.entries.single.closed, isTrue);
 
-        final gone = tracker.merge(
-          // Строка о закрытии всё ещё в хвосте лога — это не повод показывать её
-          // вечно: отсчёт идёт от момента закрытия.
-          _log([_entry(source: 'a:1', closed: true)]),
-          sessionToken: 'log:',
-          now: t0.add(const Duration(seconds: 55)),
-        );
-        expect(gone.entries, isEmpty);
-      },
-    );
+      final gone = tracker.merge(
+        // Строка о закрытии всё ещё в хвосте лога, но это не повод показывать её
+        // вечно: отсчёт идёт от момента закрытия.
+        _log([_entry(source: 'a:1', closed: true)]),
+        sessionToken: 'log:',
+        now: t0.add(const Duration(seconds: 55)),
+      );
+      expect(gone.entries, isEmpty);
+    });
 
     test('first poll shows live connections, not the whole log history', () {
       final tracker = ConnectionsTracker(
@@ -268,7 +265,7 @@ void main() {
         sessionToken: 'log:',
         now: t0,
       );
-      // Закрылась только сейчас — «давняя» отсечка первого опроса тут не при
+      // Закрылась только сейчас: давняя отсечка первого опроса тут не при
       // делах, строка обязана мелькнуть.
       final closed = tracker.merge(
         _log([_entry(source: 'a:1', startedAt: started, closed: true)]),
@@ -295,7 +292,7 @@ void main() {
         unreportedTtl: const Duration(seconds: 30),
       );
       // Без строк роутинга (уровень логов ниже info) ядро не пишет и
-      // «connection ends» — держать соединение «живым» тут нечем.
+      // connection ends: держать соединение живым тут нечем.
       tracker.merge(
         _log([_entry(source: 'a:1')], ruleInfoAvailable: false),
         sessionToken: 'log:',
@@ -347,7 +344,7 @@ void main() {
         now: t0,
       );
       // Свежий разбор потерял имя владельца (система отдаёт его только для
-      // живых сокетов) — однажды выясненное не должно пропадать из строки.
+      // живых сокетов): однажды выясненное не должно пропадать из строки.
       final next = tracker.merge(
         _log([_entry(source: 'a:1', host: 'www.youtube.com')]),
         sessionToken: 'log:',
@@ -420,7 +417,7 @@ void main() {
         sessionToken: 'log:',
         now: t0.add(const Duration(seconds: 12)),
       );
-      // Закрытое ушло вниз, живое наверх — при том, что начиналось раньше.
+      // Закрытое ушло вниз, живое наверх, при том, что начиналось раньше.
       expect(snapshot.entries.first.host, 'old.example.com');
       expect(snapshot.entries.last.host, 'new.example.com');
       expect(snapshot.entries.last.closed, isTrue);

@@ -5,15 +5,15 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/utils/go_build_info.dart';
 
-/// Собирает блок build info в том виде, в каком его кладёт в бинарь Go 1.18+:
-/// метка, размер указателя, флаги, затем две строки с длиной-uvarint впереди.
+// Собирает блок build info в том виде, в каком его кладёт в бинарь Go 1.18+:
+// метка, размер указателя, флаги, затем две строки с длиной-uvarint впереди.
 Uint8List buildBlob({
   required String goVersion,
   required String modinfo,
   int flags = 0x02,
   bool frame = true,
 }) {
-  // Маркеры — намеренно невалидный UTF-8: ровно из-за них рамку нельзя резать
+  // Маркеры намеренно невалидны в UTF-8: ровно из-за них рамку нельзя резать
   // после декодирования.
   final head = List<int>.filled(16, 0xf9);
   final tail = List<int>.filled(16, 0xf2);
@@ -40,7 +40,7 @@ Uint8List buildBlob({
     8, // ptrSize
     flags,
     // Слоты под указатели на версию и модули: в inline-варианте они нулевые,
-    // но заголовок всё равно занимает 32 байта — строки идут только за ними.
+    // но заголовок всё равно занимает 32 байта, строки идут только за ними.
     ...List<int>.filled(16, 0),
     ...uvarint(version.length),
     ...version,
@@ -73,8 +73,8 @@ void main() {
     });
 
     test('флаги сборки: по ним видно, что ядро умеет', () {
-      // `-tags` решает судьбу TUN: без `with_gvisor` ядро падает на СТАРТЕ со
-      // `stack: gvisor`, а это наше умолчание.
+      // -tags решает судьбу TUN: без with_gvisor ядро падает на старте со
+      // stack: gvisor, а именно он у нас по умолчанию.
       final info = GoBuildInfo.parse(
         buildBlob(
           goVersion: 'go1.26.0',
@@ -114,15 +114,15 @@ void main() {
       expect(info.depVersion('github.com/xtls/xray-core'), 'v1.2.3');
       expect(info.depVersion('xtls/xray-core'), 'v1.2.3');
       // Хвост совпадает по границе сегмента, а не по подстроке: иначе
-      // `ray-core` и `core` выдавали бы чужую версию за свою.
+      // ray-core и core выдавали бы чужую версию за свою.
       expect(info.depVersion('core'), isNull);
       expect(info.depVersion('нет-такого'), isNull);
     });
 
     test('мажорная версия в пути модуля не прячет зависимость', () {
       // Выпуск мажора переименовывает модуль целиком: amneziawg-go 3.1 живёт
-      // по пути `…/amneziawg-go/v3`. Панель обязана показать его версию, не
-      // дожидаясь, пока кто-нибудь допишет `/v3` в свой список движков.
+      // по пути …/amneziawg-go/v3. Панель обязана показать его версию, не
+      // дожидаясь, пока кто-нибудь допишет /v3 в свой список движков.
       final info = GoBuildInfo.parse(
         buildBlob(
           goVersion: 'go1.26.0',
@@ -199,7 +199,7 @@ void main() {
 
   group('поставляемые ядра', () {
     // Бинари лежат в репозитории, но на голом клоне без них тест не должен
-    // краснеть — он проверяет ФОРМАТ, а не наличие файла.
+    // краснеть: он проверяет формат, а не наличие файла.
     Future<void> expectCore(
       String path,
       void Function(GoBuildInfo info) checks,
@@ -218,7 +218,7 @@ void main() {
       checks(info!);
     }
 
-    // xray для ПК собран из того же дерева, что libxray: версия в `mod`.
+    // xray для ПК собран из того же дерева, что libxray: версия в mod.
     test('xray.exe сам является xray-core', () async {
       await expectCore('assets/bin/windows/xray.exe', (info) {
         expect(info.goVersion, startsWith('go1.'));
@@ -227,7 +227,7 @@ void main() {
       });
     });
 
-    // libxray тоже сам xray-core, и его версия лежит в `mod`, не в `dep`.
+    // libxray тоже сам xray-core, и его версия лежит в mod, не в dep.
     test('libxray сам является xray-core', () async {
       await expectCore('android/app/src/main/jniLibs/arm64-v8a/libxray.so', (
         info,

@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/services/rule_list_service.dart';
 
-/// Списки по ссылкам: скачивание, кэш на диске и что из него уходит ядру.
-/// Подключение сети не ждёт, поэтому всё, что ядро получает, берётся из кэша,
-/// а неудачное обновление не должно отнимать скачанное раньше.
+// Списки по ссылкам: скачивание, кэш на диске и что из него уходит ядру.
+// Подключение сети не ждёт, поэтому всё, что ядро получает, берётся из кэша,
+// а неудачное обновление не должно отнимать скачанное раньше.
 void main() {
   late Directory root;
   late HttpServer server;
@@ -50,7 +50,7 @@ void main() {
     expect(result.domains, 2);
     expect(result.loaded, isTrue);
 
-    // Новый экземпляр — как после перезапуска приложения.
+    // Новый экземпляр, как после перезапуска приложения.
     final again = await service().status(url('/ads.txt'));
     expect(again.domains, 2);
     expect(again.updatedAt, isNotNull);

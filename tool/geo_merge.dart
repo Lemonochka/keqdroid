@@ -1,23 +1,24 @@
-// Домерживает отдельные коды из чужой geo-базы в нашу поставляемую.
+// Доклеивает отдельные коды из чужой geo-базы в нашу поставляемую.
 //
 // Зачем: в v2fly geoip.dat лежат только страны (+ private/test), поэтому
-// популярнейшие правила вида `geoip:telegram` в приложении не работали вообще —
+// популярнейшие правила вида geoip:telegram в приложении не работали вообще:
 // xray падает на неизвестном коде, а санитайзер выкидывал такой токен молча.
 // Тянуть целиком базы Loyalsoldier (17 МБ) или runetfreedom (72 МБ) незачем:
 // нужны единицы категорий, и весят они килобайты.
 //
-// Формат позволяет это делать дописыванием: `GeoIPList`/`GeoSiteList` — это
-// `repeated entry = 1`, так что валидный protobuf получается простой
+// Формат позволяет это делать дописыванием: GeoIPList/GeoSiteList устроены как
+// repeated entry = 1, так что валидный protobuf получается простой
 // конкатенацией записей. Существующие коды не трогаем (при дубликате ядро
 // берёт первый), поэтому наша база остаётся приоритетной.
 //
 // Использование:
 //   dart run tool/geo_merge.dart --base assets/bin/windows/geoip.dat \
 //       --source /tmp/loyal_geoip.dat --codes telegram,google,netflix
-//   dart run tool/geo_merge.dart --base assets/bin/windows/geosite.dat //       --list /tmp/whitelist.txt --codes ru-whitelist
+//   dart run tool/geo_merge.dart --base assets/bin/windows/geosite.dat \
+//       --list /tmp/whitelist.txt --codes ru-whitelist
 //   dart run tool/geo_merge.dart ... --dry-run   # только отчёт по весу
 //
-// --list собирает geosite-код из текста: домен на строку, каждый вместе с поддоменами
+//       --list собирает geosite-код из текста: домен на строку, каждый вместе с поддоменами
 
 import 'dart:convert';
 import 'dart:io';
@@ -60,7 +61,7 @@ Future<int> main(List<String> args) async {
     sourceCodes = {for (final r in await GeoDatReader.records(source)) r.code};
   }
 
-  // geoip-записи несут CIDR'ы, geosite — домены; в отчёт печатаем и то и то,
+  // geoip-записи несут CIDR'ы, geosite несут домены; в отчёт печатаем и то и то,
   // чтобы сразу видеть, что перенеслась настоящая запись, а не пустышка.
   final isGeoip = opts.base.toLowerCase().contains('geoip');
 
@@ -73,8 +74,8 @@ Future<int> main(List<String> args) async {
     final code = raw.trim().toLowerCase();
     if (code.isEmpty) continue;
     if (existing.contains(code)) {
-      // Свой код важнее чужого: перезаписывать страну из другой базы — не то,
-      // что просили, а дубликат ядро всё равно разрешит в пользу первого.
+      // Свой код важнее чужого: перезаписывать страну из другой базы никто не
+      // просил, а дубликат ядро всё равно разрешит в пользу первого.
       skipped.add(code);
       continue;
     }
@@ -139,7 +140,7 @@ Future<int> main(List<String> args) async {
   await base.writeAsBytes(appended, mode: FileMode.append, flush: true);
 
   // Пересчитываем базу тем же ридером, которым её читает приложение: битую
-  // конкатенацию лучше поймать здесь, чем «SOCKS port not ready» у юзера.
+  // конкатенацию лучше поймать здесь, чем SOCKS port not ready у пользователя.
   final verify = await GeoDatReader.codes(base);
   final lost = added.keys.where((c) => !verify.contains(c)).toList();
   if (lost.isNotEmpty) {
@@ -150,7 +151,7 @@ Future<int> main(List<String> args) async {
   return 0;
 }
 
-/// Одна запись верхнего уровня: `entry = 1` (тег 0x0a) + varint-длина + тело.
+// Одна запись верхнего уровня: entry = 1 (тег 0x0a) + varint-длина + тело.
 List<int> _encodeRecord(Uint8List body) => _lengthField(1, body);
 
 List<int> _lengthField(int field, List<int> bytes) {
@@ -187,8 +188,8 @@ List<String>? _listDomains(List<String> lines) {
   return domains.toList();
 }
 
-// GeoSite { code = 1; repeated Domain domain = 2 }, Domain { type = 1; value = 2 }, тип 2 это домен с поддоменами.
-// код заглавными: xray ищет запись побайтно по коду в верхнем регистре
+// GeoSite { code = 1; repeated Domain domain = 2 }, Domain { type = 1; value = 2 }, тип 2 задаёт домен с поддоменами.
+// Код заглавными: xray ищет запись побайтно по коду в верхнем регистре
 Uint8List _geositeBody(String code, List<String> domains) =>
     Uint8List.fromList([
       ..._lengthField(1, utf8.encode(code.toUpperCase())),

@@ -3,10 +3,10 @@ import 'package:keqdroid/models/connection_entry.dart';
 import 'package:keqdroid/services/xray_access_log_parser.dart';
 import 'package:keqdroid/services/xray_route_decisions.dart';
 
-/// Как ядро печатает решения, когда работает встроенным движком за sing-box:
-/// своих инбаундов у него нет, access-строк («from … accepted …») тоже, но
-/// маршрут оно всё равно выбирает и логирует — и это единственный источник
-/// настоящего вердикта, потому что clash_api видит только «отдал движку».
+// Как ядро печатает решения, когда работает встроенным движком за sing-box:
+// своих инбаундов у него нет, access-строк (from … accepted …) тоже, но
+// маршрут оно всё равно выбирает и логирует, и только отсюда виден
+// настоящий вердикт, потому что clash_api видит только передачу движку.
 const _engineLog = '''
 2026/08/05 22:09:06.100000 [Info] app/dispatcher: Hit route rule: [direct-domains] so taking detour [direct] for [tcp:cloudcdn-m9-5.cdn.yandex.net:443]
 2026/08/05 22:09:23.200000 [Info] app/dispatcher: Hit route rule: [proxy-geoip] so taking detour [proxy] for [tcp:149.154.167.41:443]

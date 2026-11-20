@@ -13,8 +13,8 @@ import 'package:keqdroid/utils/process_name_utils.dart';
 
 import '../helpers/fake_tunnel_backend.dart';
 
-/// Списки берём из состояния, а не из хранилища: настоящий нотифаер лезет в
-/// SharedPreferences, которых в тесте нет.
+// Списки берём из состояния, а не из хранилища: настоящий провайдер лезет в
+// SharedPreferences, которых в тесте нет.
 class _FakeSplit extends SplitTunnelingNotifier {
   _FakeSplit(this._state);
 
@@ -23,8 +23,8 @@ class _FakeSplit extends SplitTunnelingNotifier {
   @override
   SplitTunnelingState build() => _state;
 
-  /// Настоящий toggle пишет в SharedPreferences; здесь нужен только сдвиг
-  /// состояния — экран слушает именно его. Сам расчёт — настоящий.
+  // Настоящий toggle пишет в SharedPreferences; здесь нужен только сдвиг
+  // состояния, экран слушает именно его. Сам расчёт настоящий.
   @override
   Future<void> toggleApp(AppInfo app, {required bool include}) async {
     state = include
@@ -70,8 +70,8 @@ AppInfo _app(String pkg, String name, {bool running = false}) => AppInfo(
       '$name.exe',
 );
 
-/// Список в том виде, в каком его отдаёт Windows: имя процесса с настоящим
-/// регистром и полный путь.
+// Список в том виде, в каком его отдаёт Windows: имя процесса с настоящим
+// регистром и полный путь.
 final _windowsApps = <AppInfo>[
   const AppInfo(
     packageName: 'Discord.exe',
@@ -95,8 +95,8 @@ final _apps = <AppInfo>[
   _app('com.valve.steam', 'Steam'),
 ];
 
-/// Отмечена ли строка: выбор на экране несёт сегмент списка, а не отдельный
-/// значок, — по нему и спрашиваем.
+// Отмечена ли строка: выбор на экране несёт сегмент списка, а не отдельный
+// значок, по нему и спрашиваем.
 bool _isRowSelected(WidgetTester tester, String title) {
   final segment = tester.widget<ExpressiveListSegment>(
     find
@@ -130,8 +130,8 @@ Future<void> _pump(
         ),
         settingsNotifierProvider.overrideWith(_FakeSettings.new),
         vpnStateProvider.overrideWith(() => _FakeVpn(status)),
-        // Без этого экран поднимает НАСТОЯЩИЙ бэкенд туннеля (через него идут
-        // иконки приложений), а на Linux его dispose зовёт gsettings — тест
+        // Без этого экран поднимает настоящий бэкенд туннеля (через него идут
+        // иконки приложений), а на Linux его dispose зовёт gsettings: тест
         // падал на CI и правил прокси рабочего стола. См. FakeTunnelBackend.
         vpnEngineProvider.overrideWithValue(
           VpnEngine.withBackend(FakeTunnelBackend()),
@@ -165,7 +165,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Telegram'), findsOneWidget);
-    // Подписи режимов должны помещаться целиком — ради этого селектор и стоит
+    // Подписи режимов должны помещаться целиком: ради этого селектор и стоит
     // на сегментах списка, а не на связанной группе кнопок с одной строкой.
     expect(find.text('Все кроме выбранных'), findsOneWidget);
     expect(find.text('Только выбранные'), findsOneWidget);
@@ -196,7 +196,7 @@ void main() {
     expect(find.textContaining('переподключ'), findsWidgets);
   });
 
-  // 12.11.2026, просьба из чата: «а можно сюда тоже кнопку переподключиться как в правилах?»
+  // 12.11.2026, просьба из чата: а можно сюда тоже кнопку переподключиться, как в правилах?
   testWidgets('переподключиться можно прямо из напоминания', (tester) async {
     _FakeVpn.reconnects = 0;
     await _pump(tester, status: VpnStatus.connected);
@@ -219,9 +219,9 @@ void main() {
 
   group('дубли строк', () {
     testWidgets('выбранное приложение не удваивается', (tester) async {
-      // Windows отдаёт `Discord.exe`, и в списке исключений лежит ровно оно.
+      // Windows отдаёт Discord.exe, и в списке исключений лежит ровно оно.
       // Пока сравнение шло по сырой строке против набора в нижнем регистре,
-      // запись считалась «добавленной руками» и приписывалась второй строкой.
+      // запись считалась добавленной руками и приписывалась второй строкой.
       await _pump(tester, apps: _windowsApps, excludes: {'Discord.exe'});
 
       expect(find.text('Discord.exe'), findsOneWidget);
@@ -252,7 +252,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      // Считаем сегменты, а не подписи: три из них — селектор режимов,
+      // Считаем сегменты, а не подписи: три из них заняты селектором режимов,
       // остальные и есть строки списка.
       expect(
         find.byType(ExpressiveListSegment),
@@ -262,10 +262,10 @@ void main() {
     });
   });
 
-  // Отмеченное в списке сохраняется именем — программа, обновившаяся в новую
-  // папку, остаётся в сплите; путь, указанный вручную, — «только этот файл».
+  // Отмеченное в списке сохраняется именем: программа, обновившаяся в новую
+  // папку, остаётся в сплите; путь, указанный вручную, держит только этот файл.
   group('путь и имя', () {
-    // Две строки в тестовом окне ложатся под плавающую кнопку «Добавить», и
+    // Две строки в тестовом окне ложатся под плавающую кнопку Добавить, и
     // нажатие по координатам ловит она. Зовём обработчик самой строки.
     Future<void> tapRow(WidgetTester tester, String title) async {
       tester

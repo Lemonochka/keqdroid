@@ -36,7 +36,7 @@ Future<void> pumpBadge(
 }
 
 void main() {
-  // Сами контуры — из androidx_graphics_shapes, их геометрию проверяет сама
+  // Сами контуры взяты из androidx_graphics_shapes, их геометрию проверяет сама
   // библиотека. Здесь проверяется то, что вокруг: доезжает ли выбор до
   // виджета, переживает ли хранилище и не разъезжается ли набор с подписями.
   testWidgets('без расширения темы бейдж остаётся круглым', (tester) async {
@@ -81,10 +81,10 @@ void main() {
       final path = shape.border(56).getOuterPath(rect);
       final bounds = path.getBounds();
       // Фигура должна занимать габарит, а не жаться в его углу: именно так
-      // выглядела бы неверно отмасштабированная — мельче соседей в ряду.
+      // выглядела бы неверно отмасштабированная, мельче соседей в ряду.
       expect(bounds.width, greaterThan(40), reason: '${shape.id} мельчит');
       expect(bounds.width, lessThan(60), reason: '${shape.id} вылезает');
-      // Центр внутри — контур замкнут, заливка не потечёт.
+      // Центр внутри: контур замкнут, заливка не потечёт.
       expect(path.contains(rect.center), isTrue, reason: shape.id);
     }
   });

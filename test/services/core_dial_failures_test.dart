@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/services/core_dial_failures.dart';
 
-/// Какие строки вывода ядра — отказ дозвона до сервера.
-///
-/// Строки взяты в том виде, в каком ядра их пишут (формат — из исходников
-/// mihomo 1.19.31, xray 26.9.9 и sing-box 1.13: tunnel.logMetadataErr,
-/// vless/outbound, route/conn.go). На Android то же правило живёт в
-/// forkexec.c, и расходиться им нельзя: одна и та же настройка на телефоне и
-/// на ПК должна срабатывать от одних и тех же событий.
+// Какие строки вывода ядра считаются отказом дозвона до сервера.
+//
+// Строки взяты в том виде, в каком ядра их пишут (формат из исходников
+// mihomo 1.19.31, xray 26.9.9 и sing-box 1.13: tunnel.logMetadataErr,
+// vless/outbound, route/conn.go). На Android то же правило живёт в
+// forkexec.c, и расходиться им нельзя: одна и та же настройка на телефоне и
+// на ПК должна срабатывать от одних и тех же событий.
 void main() {
   group('отказ до сервера — считается', () {
     test('mihomo', () {
@@ -37,7 +37,7 @@ void main() {
 
     test('xray с XHTTP: отказ приходит строкой транспорта', () {
       // Живой тест: погашенный Vless на XHTTP, строка как есть из лога.
-      // «failed to find an available destination» у XHTTP не бывает — он
+      // failed to find an available destination у XHTTP не бывает: он
       // отдаёт соединение сразу, а дозванивается потом.
       expect(
         CoreDialFailures.isServerDialFailure(
@@ -88,7 +88,7 @@ void main() {
     });
 
     test('мёртвый сайт на прямом маршруте', () {
-      // Мёртвый сайт — не мёртвый сервер.
+      // Мёртвый сайт ещё не мёртвый сервер.
       expect(
         CoreDialFailures.isServerDialFailure(
           'level=warning msg="[TCP] dial DIRECT (match GeoSite/category-ru) '
@@ -116,7 +116,7 @@ void main() {
     });
 
     test('UDP — сервер без UDP живой', () {
-      // Каждый QUIC-запрос ютуба к серверу без UDP — отказ, и от одного
+      // Каждый QUIC-запрос ютуба к серверу без UDP кончается отказом, и от одного
       // открытого видео живой сервер выглядел бы мёртвым.
       expect(
         CoreDialFailures.isServerDialFailure(

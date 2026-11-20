@@ -20,7 +20,7 @@ void main() {
   });
 
   test('карточки НЕ темнеют вслед за фоном', () {
-    // Первая версия тянула к чёрному и лестницу тоже — карточки сливались с
+    // Первая версия тянула к чёрному и лестницу тоже: карточки сливались с
     // фоном. Контраст карточки к фону обязан вырасти, а не упасть.
     final base = _scheme(Brightness.dark);
     final amoled = applyAmoledBlack(base);
@@ -37,7 +37,7 @@ void main() {
   });
 
   test('вставка внутри карточки не проваливается в фон', () {
-    // AppTheme.inset — это surfaceContainerLowest. Если покрасить его чёрным,
+    // AppTheme.inset берёт surfaceContainerLowest. Если покрасить его чёрным,
     // вставки внутри карточек выглядят дырами до фона страницы.
     final amoled = applyAmoledBlack(_scheme(Brightness.dark));
     expect(amoled.surfaceContainerLowest, isNot(amoled.surface));

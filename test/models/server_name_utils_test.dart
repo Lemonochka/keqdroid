@@ -12,7 +12,7 @@ void main() {
       // Регресс: "cloudflARE" содержит "are" (ARE=ОАЭ) → раньше ложный флаг 🇦🇪.
       expect(ServerNameUtils.extractCountryCode('Cloudflare Warp-1'), isNull);
       expect(ServerNameUtils.extractCountryCode('Cloudflare Warp'), isNull);
-      // "southamPTon" → "pt", "united kiNGdom" → "ng" — тоже больше не ловятся.
+      // "southamPTon" → "pt", "united kiNGdom" → "ng" тоже больше не ловятся.
       expect(ServerNameUtils.extractCountryCode('Southampton'), isNull);
       expect(ServerNameUtils.extractCountryCode('United Kingdom'), isNot('NG'));
     });

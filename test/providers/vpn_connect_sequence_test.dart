@@ -8,23 +8,23 @@ import 'package:keqdroid/utils/socks5_credentials.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// Предохранитель на порядок шагов `VpnStateNotifier.connect()`.
-///
-/// Шаги связаны не логикой, а временем: креды нужны раньше, чем из них соберут
-/// конфиг, а конфиг — раньше, чем сессия уедет в нативную часть. Перестановка
-/// не падает с исключением, она даёт сессию с пустым паролем или со вчерашним
-/// конфигом, и видно это только на живом подключении.
-///
-/// Тест намеренно проверяет не весь список вызовов, а тот его порядок, который
-/// одинаков на всех платформах: ветки про права VPN и подбор портов разные у
-/// Android, Windows и Linux, и прибивать их гвоздями здесь значило бы красить
-/// тест в цвет машины, на которой он запущен.
+// Предохранитель на порядок шагов VpnStateNotifier.connect().
+//
+// Шаги связаны не логикой, а временем: логин и пароль нужны раньше, чем из них соберут
+// конфиг, а конфиг раньше, чем сессия уедет в нативную часть. Перестановка
+// не падает с исключением, она даёт сессию с пустым паролем или со вчерашним
+// конфигом, и видно это только на живом подключении.
+//
+// Тест намеренно проверяет не весь список вызовов, а тот его порядок, который
+// одинаков на всех платформах: ветки про права VPN и подбор портов разные у
+// Android, Windows и Linux, и прибитые здесь гвоздями, они красили бы
+// тест в цвет машины, на которой он запущен.
 class _RecordingBackend extends FakeTunnelBackend {
   final List<String> calls = [];
   TunnelSessionRequest? session;
 
-  /// Состояние, которое движок отдаёт на запрос. `connecting` в начале означало
-  /// бы «сессия уже поднимается» и увело бы connect() в другую ветку.
+  // Состояние, которое движок отдаёт на запрос. connecting в начале сказало бы,
+  // что сессия уже поднимается, и увело бы connect() в другую ветку.
   VpnState current = VpnState.disconnected;
 
   @override
@@ -39,7 +39,7 @@ class _RecordingBackend extends FakeTunnelBackend {
     return true;
   }
 
-  /// Что отдаст нативная часть на следующее подключение.
+  // Что отдаст нативная часть на следующее подключение.
   ({String username, String password}) creds = (
     username: 'user-from-native',
     password: 'pass-from-native',
@@ -87,7 +87,7 @@ Future<(ProviderContainer, _RecordingBackend)> _container() async {
   addTearDown(container.dispose);
 
   // Список серверов и состояние туннеля грузятся асинхронно в build()
-  // нотифаеров. Не дождаться их — значит поймать гонку: build() завершится
+  // провайдеров. Если их не дождаться, ловится гонка: build() завершится
   // после connect() и перепишет его результат нативным состоянием.
   container.read(serversProvider);
   await container.read(vpnStateProvider.future);
@@ -126,7 +126,7 @@ void main() {
 
     await container.read(vpnStateProvider.notifier).connect();
 
-    // Первый запрос — отсечка «сессия уже поднята кем-то другим» (плитка,
+    // Первый запрос отсекает сессию, уже поднятую кем-то другим (плитка,
     // автозапуск). Без него connect() поднимал бы вторую поверх первой.
     expect(backend.calls.first, 'getCurrentState');
     expect(
@@ -148,11 +148,11 @@ void main() {
       // Конфиг собран генератором, а не проброшен ссылкой как есть.
       expect(session.xrayConfig, contains('"outbounds"'));
       expect(session.xrayConfig, contains('198.51.100.10'));
-      // Креды из нативной части обязаны попасть в синглтон, из которого их
+      // Логин и пароль из нативной части обязаны попасть в синглтон, из которого их
       // читает генератор инбаундов: именно этот пароль закрывает локальный порт
-      // от посторонних на устройстве. Не «где-то в строке конфига» — инбаунд
+      // от посторонних на устройстве. Не где-то в строке конфига: инбаунд
       // бывает и без авторизации (её снимает sing-box на десктопном TUN), а вот
-      // разъехаться креды не имеют права никогда.
+      // разъехаться логин и пароль не имеют права никогда.
       expect(Socks5Credentials().username, 'user-from-native');
       expect(Socks5Credentials().password, 'pass-from-native');
       if (session.xrayConfig.contains('"auth": "password"')) {
@@ -168,7 +168,7 @@ void main() {
     // переподключения тот же, поэтому сверять только его было бы мало.
     final (container, backend) = await _container();
     final storage = container.read(storageProvider);
-    // connect() пишет их без await — ждём записи, но недолго.
+    // connect() пишет их без await: ждём записи, но недолго.
     Future<void> until(bool Function() done) async {
       for (var i = 0; i < 100 && !done(); i++) {
         await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -213,7 +213,7 @@ void main() {
 
     await container.read(vpnStateProvider.notifier).connect();
 
-    // getCurrentState приходит от самого нотифаера при построении — важно, что
+    // getCurrentState приходит от самого провайдера при построении: важно, что
     // до сессии дело не дошло.
     expect(backend.calls, isNot(contains('startSession')));
     expect(backend.session, isNull);

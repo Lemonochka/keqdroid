@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/services/connections_service.dart';
 
-/// Ответ `GET /connections` у sing-box и mihomo одинаков по форме, но
-/// «правило» они пишут по-разному, и экран должен читать оба.
+// Ответ GET /connections у sing-box и mihomo одинаков по форме, но
+// правило они пишут по-разному, и экран должен читать оба.
 void main() {
   Map<String, dynamic> conn({
     required String rule,
@@ -35,7 +35,7 @@ void main() {
   });
 
   // Catch-all не несёт информации: под него попадает всё, что не поймали
-  // остальные правила. У sing-box он зовётся final, у mihomo — Match.
+  // остальные правила. У sing-box он зовётся final, у mihomo Match.
   test('финальное правило прячут оба ядра', () {
     expect(
       ConnectionsService.entryFromClashJson(conn(rule: 'Match'))!.rule,
@@ -64,7 +64,7 @@ void main() {
     );
   });
 
-  // у xray звенья цепочки в журнал не попадают, у mihomo это его Inner-соединение к следующему узлу
+  // у xray звенья цепочки в журнал не попадают, у mihomo туда пишется его Inner-соединение к следующему узлу
   test('соединение звена цепочки не показывается', () {
     final hop = {
       ...conn(rule: ''),

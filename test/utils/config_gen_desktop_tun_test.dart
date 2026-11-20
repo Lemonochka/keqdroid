@@ -10,9 +10,9 @@ import 'package:keqdroid/utils/desktop_tun.dart';
 import 'package:keqdroid/utils/proxy_chain.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// TUN на ПК держит сам xray. Здесь то, что раньше решал sing-box перед
-/// xray: кто идёт мимо туннеля, куда девается IPv6, как ведут себя режимы
-/// сплита. Порядок правил целиком фиксируют голдены vless-desktop-tun-*.
+// TUN на ПК держит сам xray. Здесь то, что раньше решал sing-box перед
+// xray: кто идёт мимо туннеля, куда девается IPv6, как ведут себя режимы
+// сплита. Порядок правил целиком фиксируют голдены vless-desktop-tun-*.
 const _link =
     'vless://00000000-0000-4000-8000-000000000000@198.51.100.40:443'
     '?type=tcp&security=tls&sni=pc.example#pc';
@@ -115,7 +115,7 @@ void main() {
       '!firefox.exe',
       r'!C:\Apps\chat.exe',
     ]);
-    // финал остаётся настройкой «всё остальное»: выбранные идут по всем правилам
+    // финал остаётся настройкой Всё остальное: выбранные идут по всем правилам
     expect(_rules(config).last['outboundTag'], 'proxy');
   });
 

@@ -4,9 +4,9 @@ import 'package:keqdroid/platform/platform_bootstrap.dart';
 import 'package:keqdroid/ui/responsive/desktop_page_layout.dart';
 import 'package:keqdroid/ui/responsive/window_breakpoints.dart';
 
-/// Раскладка выбирается по ширине окна, а не по платформе. До этого телефон
-/// боком получал ту же вертикальную раскладку, и шапка экрана серверов съедала
-/// всю высоту — списку не оставалось места.
+// Раскладка выбирается по ширине окна, а не по платформе. До этого телефон
+// боком получал ту же вертикальную раскладку, и шапка экрана серверов съедала
+// всю высоту, и списку не оставалось места.
 Future<({bool expanded, double contentWidth})> _probe(
   WidgetTester tester,
   Size screen,

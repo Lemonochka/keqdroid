@@ -5,10 +5,10 @@ import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// `ruleTag` — единственный способ узнать, ПО КАКОМУ правилу ушло соединение:
-/// xray печатает «Hit route rule: [tag] so taking detour [proxy] for [...]», и по
-/// этому тегу дебаг-экран «Соединения» показывает правило. Без тега в логе только
-/// «taking detour [proxy]» — куда ушло, но не почему.
+// ruleTag остаётся единственным способом узнать, по какому правилу ушло соединение:
+// xray печатает Hit route rule: [tag] so taking detour [proxy] for [...], и по
+// этому тегу дебаг-экран Соединения показывает правило. Без тега в логе только
+// taking detour [proxy]: куда ушло, но не почему.
 const _server = 'vless://uuid@example.com:443?type=tcp&security=none#demo';
 
 List<Map<String, dynamic>> _rules(String config) =>
@@ -96,8 +96,8 @@ void main() {
 
       final out = outbounds(config).firstWhere((o) => o['tag'] == 'dns-out');
       expect(out['protocol'], 'dns');
-      // Прежний `nonIPQuery: reject` в новой записи: A/AAAA отвечает ядро,
-      // остальное — REFUSED. Старое поле рядом не лежит: с ним и `rules`
+      // Прежний nonIPQuery: reject в новой записи: A/AAAA отвечает ядро,
+      // остальным REFUSED. Старое поле рядом не лежит: с ним и rules
       // вместе ядро конфиг не примет.
       final settings = out['settings'] as Map;
       expect(settings.containsKey('nonIPQuery'), isFalse);
@@ -107,7 +107,7 @@ void main() {
       ]);
     });
 
-    // Инбаунд LAN-прокси слушает 0.0.0.0: перехвати мы DNS раньше `lan-deny` —
+    // Инбаунд LAN-прокси слушает 0.0.0.0: перехвати мы DNS раньше lan-deny,
     // получили бы резолвер, открытый в интернет.
     test('перехват стоит ПОСЛЕ запрета входа в LAN-инбаунды', () {
       final rules = _rules(
@@ -123,7 +123,7 @@ void main() {
     });
 
     // Адрес сервера обязан резолвиться в обход туннеля: за ним туда не сходить,
-    // туннеля ещё нет. Но «в обход туннеля» — это `+local`, а не открытый
+    // туннеля ещё нет. Но обход туннеля делается через +local, а не открытый
     // UDP-53: голый 53-й у части провайдеров подменяется, и домены узлов, к
     // которым подключается пользователь, уходили бы провайдеру открытым текстом.
     test('адрес сервера резолвится локально, DoH уходит в туннель', () {
@@ -153,7 +153,7 @@ void main() {
         ),
         isTrue,
       );
-      // Системный резолвер — последний и обрывающий: без `finalQuery` промах по
+      // Системный резолвер стоит последним и обрывает перебор: без finalQuery промах по
       // адресу сервера ушёл бы в общий DoH, а тот здесь ведёт в туннель.
       expect(bootstrap.first['finalQuery'], isNull);
       expect(bootstrap.last['finalQuery'], isTrue);
@@ -179,8 +179,8 @@ void main() {
       );
     });
 
-    // «Остальное — direct»: `final` увёл бы DoH к резолверу мимо прокси, а при
-    // `block` — вовсе в blackhole, и DNS умер бы целиком.
+    // При Всё остальное = direct final увёл бы DoH к резолверу мимо прокси, а при
+    // block вовсе в blackhole, и DNS умер бы целиком.
     test('вне глобал-прокси DoH остаётся прямым', () {
       for (final mode in [
         AppSettings.finalOutboundDirect,

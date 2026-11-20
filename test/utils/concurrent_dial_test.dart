@@ -8,12 +8,12 @@ import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/proxy_chain.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// Гонка адресов при дозвоне: одна настройка, две разные ручки у ядер.
-///
-/// У mihomo это глобальный `tcp-concurrent`, у xray — `sockopt.happyEyeballs`
-/// на конкретном аутбаунде, и там важно, кто именно звонит наружу: за
-/// `dialerProxy` ядро гонку не исполняет вовсе, поэтому с фрагментацией она
-/// обязана оказаться на freedom-аутбаунде, а в цепочке её быть не должно.
+// Гонка адресов при дозвоне: одна настройка, две разные ручки у ядер.
+//
+// У mihomo за неё отвечает глобальный tcp-concurrent, у xray sockopt.happyEyeballs
+// на конкретном аутбаунде, и там важно, кто именно звонит наружу: за
+// dialerProxy ядро гонку не исполняет вовсе, поэтому с фрагментацией она
+// обязана оказаться на freedom-аутбаунде, а в цепочке её быть не должно.
 const _vless =
     'vless://uuid@de.example.com:443?security=reality&pbk=pub&sid=aa&fp=chrome&sni=de.example.com&type=tcp#DE';
 const _second =
@@ -59,7 +59,7 @@ void main() {
       final config = _xray(_vless, _settings(concurrent: true));
 
       // Оба числа обязаны быть больше нуля: с нулём ядро молча возвращается
-      // к перебору адресов по очереди, и настройка не значит ничего.
+      // к перебору адресов по очереди, и настройка ничего не делает.
       for (final tag in ['proxy', 'direct']) {
         final happy = _happy(_byTag(config, tag));
         expect(happy, isNotNull, reason: tag);
@@ -72,7 +72,7 @@ void main() {
       final config = _xray(_vless, _settings(concurrent: true, fragment: true));
 
       // Прокси-аутбаунд теперь дозванивается через freedom, и ядро его
-      // собственную гонку игнорирует — держать её там значит врать конфигом.
+      // собственную гонку игнорирует: держать её там было бы враньём в конфиге.
       expect(_happy(_byTag(config, 'proxy')), isNull);
       expect(_happy(_byTag(config, 'fragment')), isNotNull);
     });

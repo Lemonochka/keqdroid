@@ -11,18 +11,18 @@ import 'package:keqdroid/utils/socks_uri.dart';
 import 'package:keqdroid/utils/ssr_uri.dart';
 import 'package:keqdroid/utils/vpn_core_support.dart';
 
-/// Перевод узлов sing-box в ссылки. Поля — `option/*.go` sing-box.
-///
-/// Здесь проверяется ссылка, а не конфиг ядра: что ссылка доезжает до ядра,
-/// стережёт перепись (generator_link_params_test.dart). Последняя группа
-/// связывает одно с другим — каждую ссылку корпуса собирает то ядро, которое
-/// для неё выбирает правило, иначе перевод дал бы сервер, который не
-/// поднимется.
+// Перевод узлов sing-box в ссылки. Поля по option/*.go sing-box.
+//
+// Здесь проверяется ссылка, а не конфиг ядра: что ссылка доезжает до ядра,
+// стережёт перепись (generator_link_params_test.dart). Последняя группа
+// связывает одно с другим: каждую ссылку корпуса собирает то ядро, которое
+// для неё выбирает правило, иначе перевод дал бы сервер, который не
+// поднимется.
 
 const _uuid = '00000000-0000-4000-8000-000000000000';
 const _corpus = 'test/fixtures/subscription_payloads/singbox-outbounds.txt';
 
-/// Конфиг вокруг узлов — со служебными аутбаундами, как его отдают панели.
+// Конфиг вокруг узлов со служебными аутбаундами, как его отдают панели.
 String _config(
   List<Map<String, Object?>> outbounds, {
   List<Map<String, Object?>> endpoints = const [],
@@ -219,8 +219,8 @@ void main() {
       );
     });
 
-    // transport/v2rayhttp/client.go: HTTP/2 — только поверх TLS, без него —
-    // HTTP/1.1, то есть маскировка `headerType=http`, а не транспорт h2.
+    // transport/v2rayhttp/client.go: HTTP/2 только поверх TLS, без него
+    // HTTP/1.1, то есть маскировка headerType=http, а не транспорт h2.
     test('http: с TLS — HTTP/2, без TLS — маскировка поверх tcp', () {
       const transport = {
         'type': 'http',
@@ -413,7 +413,7 @@ void main() {
       expect(query['sid'], 'ab');
     });
 
-    // Генераторы собирают trojan всегда с TLS — в ссылках это чинит опечатку,
+    // Генераторы собирают trojan всегда с TLS: в ссылках это чинит опечатку,
     // а здесь дало бы не тот сервер.
     test('без TLS — в пропущенных, а не сервером с чужим TLS', () {
       expect(_skipped(_node('trojan', {'password': 'password'})), {
@@ -444,7 +444,7 @@ void main() {
       );
     });
 
-    // sing-box без номера берёт вторую версию, mihomo — первую: номер обязан
+    // sing-box без номера берёт вторую версию, mihomo первую: номер обязан
     // ехать явно.
     test('UDP-over-TCP всегда с номером версии', () {
       Map<String, String> uot(Object value) => _query(
@@ -605,7 +605,7 @@ void main() {
       }
     });
 
-    // Пин sing-box — хэш открытого ключа, а наши ядра сверяют хэш сертификата
+    // Пин sing-box хэширует открытый ключ, а наши ядра сверяют хэш сертификата
     // целиком (GenerateCertHash у xray): переложить одно в другое нельзя.
     test('пин открытого ключа не выдаётся за пин сертификата', () {
       const tls = {
@@ -625,8 +625,8 @@ void main() {
       );
     });
 
-    // Пустой отпечаток sing-box читает как chrome, но это его умолчание, а не
-    // выбор автора: остаётся наше (tls_fingerprint.dart).
+    // Пустой отпечаток sing-box читает как chrome, но так у него по умолчанию, а не
+    // по выбору автора: остаётся наше (tls_fingerprint.dart).
     test('uTLS без отпечатка не превращается в chrome', () {
       final query = _query(
         _link(
@@ -662,7 +662,7 @@ void main() {
           },
         }),
       );
-      // `+` в значении читается по RFC 3986, а не как поле формы: разбор
+      // + в значении читается по RFC 3986, а не как поле формы: разбор
       // формы сделал бы из него пробел.
       final raw = Uri.parse(
         link,

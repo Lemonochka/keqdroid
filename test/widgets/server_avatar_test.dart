@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/models/server_flag.dart';
 import 'package:keqdroid/shared/ui/server_avatar.dart';
 
-/// Раньше кругляш умел ровно один вид флага — страновой, и только тот, что
-/// знает таблица кодов пакета. Всё остальное (🇪🇺, 🏴󠁧󠁢󠁳󠁣󠁴󠁿, 🏴‍☠️) сваливалось
-/// в букву протокола или в белый квадрат со знаком вопроса.
+// Раньше кругляш умел ровно один вид флага, страновой, и только тот, что
+// знает таблица кодов пакета. Всё остальное (🇪🇺, 🏴󠁧󠁢󠁳󠁣󠁴󠁿, 🏴‍☠️) сваливалось
+// в букву протокола или в белый квадрат со знаком вопроса.
 Widget _host(ServerFlag? flag) => MaterialApp(
   theme: ThemeData(
     colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7B61FF)),
@@ -90,13 +90,13 @@ void main() {
   testWidgets('эмодзи-флаг заполняет кружок, а не сидит в его середине', (
     tester,
   ) async {
-    // Страновые флаги приходят картинкой и рисуются cover — эмодзи рядом с
+    // Страновые флаги приходят картинкой и рисуются cover: эмодзи рядом с
     // ними выглядел вдвое мельче, потому что кегль был меньше диаметра.
     await tester.pumpWidget(_host(const FlagGlyph('🎌')));
     final glyph = tester.widget<Text>(find.text('🎌'));
 
     expect(glyph.style!.fontSize, greaterThan(40));
-    // И при этом не раздувает сам кружок — лишнее срезает ClipOval.
+    // И при этом не раздувает сам кружок: лишнее срезает ClipOval.
     expect(tester.getSize(find.byType(ServerAvatar)), const Size(40, 40));
   });
 
@@ -108,7 +108,7 @@ void main() {
 
       expect(find.byKey(flatFlagKey), findsOneWidget);
       expect(find.text('🏴‍☠️'), findsNothing);
-      // Череп остаётся эмблемой поверх полотнища — рисовать его вручную незачем.
+      // Череп остаётся эмблемой поверх полотнища: рисовать его вручную незачем.
       expect(find.text('☠️'), findsOneWidget);
     });
 
@@ -122,7 +122,7 @@ void main() {
     });
 
     testWidgets('флаг узнаётся и без вариационного селектора', (tester) async {
-      // 🏳️‍🌈 приходит и как 1F3F3 FE0F 200D 1F308, и без FE0F — это один флаг.
+      // 🏳️‍🌈 приходит и как 1F3F3 FE0F 200D 1F308, и без FE0F, а флаг один и тот же.
       await tester.pumpWidget(
         _host(const FlagGlyph('\u{1F3F3}\u{200D}\u{1F308}')),
       );
@@ -195,8 +195,8 @@ void main() {
   });
 
   group('кружок без флага', () {
-    // Просьба пользователей: «пусть иконка сервера без локации подстраивается
-    // под цвета темы, а не будет синей». Цвет стал настройкой, поэтому тест
+    // Просьба пользователей: пусть иконка сервера без локации подстраивается
+    // под цвета темы, а не будет синей. Цвет стал настройкой, поэтому тест
     // сторожит оба её положения.
     Widget host(ServerIconPalette palette) => MaterialApp(
       theme: ThemeData(

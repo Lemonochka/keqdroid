@@ -7,7 +7,7 @@ import 'package:keqdroid/utils/server_config_form.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
 // 12.11.2026: у vmess редактор показывал режим, extra, seed и прочее, а при сохранении молча терял.
-// проверяем не ключи ссылки, а то, что из правки получит ядро
+// Проверяем не ключи ссылки, а то, что из правки получит ядро
 const _id = '716e3485-d4f9-4471-9660-fb4b0b838100';
 
 String _vmess(Map<String, Object?> json) =>

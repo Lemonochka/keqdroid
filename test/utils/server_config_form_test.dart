@@ -97,7 +97,7 @@ void main() {
     expect(form.protocol, 'trojan');
   });
 
-  // 12.11.2026: в «Остальных параметрах» висел "mode": "auto", а режим уже стоял в «Транспорте»
+  // 12.11.2026: в Остальных параметрах висел "mode": "auto", а режим уже стоял в Транспорте
   group('host, path и mode из extra', () {
     String xhttp(String query, Map<String, Object?> extra) =>
         'vless://716e3485-d4f9-4471-9660-fb4b0b838100@example.com:443'

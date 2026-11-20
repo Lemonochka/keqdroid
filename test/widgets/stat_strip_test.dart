@@ -31,7 +31,7 @@ final _four = <StatMetric>[
   ),
 ];
 
-/// Две ячейки-канала: слева всё про туннель, справа всё про обход.
+// Две ячейки-канала: слева всё про туннель, справа всё про обход.
 List<StatMetric> _channelsOf(String vpnDown, String directDown) => [
   StatMetric.channel(
     tag: 'VPN',
@@ -96,7 +96,7 @@ Future<Size> _pumpStrip(
         body: Center(
           child: SizedBox(
             width: width,
-            // Через `Align`, а не `Row`: `Row` отдаёт ребёнку НЕограниченную
+            // Через Align, а не Row: Row отдаёт ребёнку НЕограниченную
             // ширину по главной оси, и полоса не узнала бы про тесноту окна.
             child: Align(child: StatStrip(metrics: metrics)),
           ),
@@ -122,7 +122,7 @@ void main() {
   testWidgets('на широком экране всё в одну строку', (tester) async {
     final size = await _pumpStrip(tester, _four);
 
-    // Одна строка — значит высота порядка одной ячейки, а не двух.
+    // Одна строка даёт высоту порядка одной ячейки, а не двух.
     expect(size.height, lessThan(60));
     expect(find.byType(Divider), findsNothing);
   });
@@ -136,7 +136,7 @@ void main() {
     // Ровно два ряда: между ними один горизонтальный разделитель.
     expect(find.byType(Divider), findsOneWidget);
     expect(narrow.height, greaterThan(wide.height));
-    // И половина прежней ширины — колонки не разъезжаются.
+    // И половина прежней ширины, колонки не разъезжаются.
     expect(narrow.width, lessThan(wide.width));
     expect(tester.takeException(), isNull);
   });
@@ -174,8 +174,8 @@ void main() {
   testWidgets('канал занимает одну ячейку, а не колонку из них', (
     tester,
   ) async {
-    // Все числа туннеля стоят вместе, все числа обхода — вместе: иначе ответ
-    // на «а сюда что-нибудь идёт» приходится собирать из соседних ячеек.
+    // Все числа туннеля стоят вместе, все числа обхода тоже вместе, иначе ответ
+    // на вопрос а сюда что-нибудь идёт приходится собирать из соседних ячеек.
     await _pumpStrip(tester, _channels);
 
     // Подпись канала одна на ячейку, а не по одной на строку.

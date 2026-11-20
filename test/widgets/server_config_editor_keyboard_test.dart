@@ -7,9 +7,9 @@ import 'package:keqdroid/models/server_item.dart';
 import 'package:keqdroid/providers/providers.dart';
 import 'package:keqdroid/screens/servers/server_config_editor.dart';
 
-/// Готовый конфиг из подписки: у него нет share-ссылки, поэтому редактор
-/// открывается в сыром режиме с окном на 26 строк — самый высокий экран
-/// приложения, и именно на нём всплывает клавиатура.
+// Готовый конфиг из подписки: у него нет share-ссылки, поэтому редактор
+// открывается в сыром режиме с окном на 26 строк. Это самый высокий экран
+// приложения, и именно на нём всплывает клавиатура.
 const _customConfig = '''
 {
   "dns": { "servers": ["1.1.1.1", "1.0.0.1"] },
@@ -54,7 +54,7 @@ class _FakeSettings extends SettingsNotifier {
   Future<AppSettings> build() async => const AppSettings();
 }
 
-/// Экран под роутом: возврат назад обязан пройти через настоящий pop.
+// Экран под роутом: возврат назад обязан пройти через настоящий pop.
 Future<void> _pumpEditor(WidgetTester tester, ServerItem server) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -90,7 +90,7 @@ Future<void> _pumpEditor(WidgetTester tester, ServerItem server) async {
   await tester.pumpAndSettle();
 }
 
-/// Клавиатура в тесте — это отъедающий низ экрана `viewInsets`.
+// Клавиатура в тесте изображается viewInsets, отъедающим низ экрана.
 void _setKeyboard(WidgetTester tester, double height) {
   tester.view.viewInsets = FakeViewPadding(bottom: height);
 }
@@ -99,7 +99,7 @@ void main() {
   final server = ServerItem.fromRaw(_customConfig);
 
   setUp(() {
-    // 360×640 — обычный телефон; на нём клавиатура съедает больше половины.
+    // 360×640 соответствует обычному телефону; на нём клавиатура съедает больше половины.
     // Physical, а не logical: dpr держим 1.0.
   });
 
@@ -119,7 +119,7 @@ void main() {
     await _pumpEditor(tester, server);
     expect(tester.takeException(), isNull);
 
-    // Клавиатура вверх — фокус в окне сырого конфига.
+    // Клавиатура вверх, фокус в окне сырого конфига.
     await tester.tap(find.byType(TextField).first);
     _setKeyboard(tester, 320);
     await tester.pumpAndSettle();
@@ -152,7 +152,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Ломаем json, потом чиним: на этом переключается высота окна (26↔10
-    // строк) и пересобирается форма — всё под клавиатурой.
+    // строк) и пересобирается форма, всё под клавиатурой.
     await tester.enterText(find.byType(TextField).first, 'not a config');
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

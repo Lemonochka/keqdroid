@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/shared/ui/accent_edge_card.dart';
 
-/// Карточка всегда живёт в вертикальном списке, а он раздаёт детям
-/// неограниченную высоту — проверять её в чём-то с конечной высотой
-/// бессмысленно: так не видно ни переполнения, ни бесконечных constraint'ов.
+// Карточка всегда живёт в вертикальном списке, а он раздаёт детям
+// неограниченную высоту: проверять её в чём-то с конечной высотой
+// бессмысленно, так не видно ни переполнения, ни бесконечных constraint'ов.
 Widget _inList(Widget child) => MaterialApp(
   theme: ThemeData(
     colorScheme: ColorScheme.fromSeed(
@@ -18,11 +18,11 @@ Widget _inList(Widget child) => MaterialApp(
 void main() {
   group('AccentEdgeCard', () {
     // Регрессия №1: цветная полоска была левой стороной Border вместе с
-    // borderRadius — такую рамку Flutter не рисует и бросает в paint-фазе.
-    // Регрессия №2: полоску во всю высоту нельзя делать через Row со stretch —
-    // в списке это tightFor(height: infinity) и падение уже в layout.
+    // borderRadius: такую рамку Flutter не рисует и бросает в paint-фазе.
+    // Регрессия №2: полоску во всю высоту нельзя делать через Row со stretch:
+    // в списке получается tightFor(height: infinity) и падение уже в layout.
     // Оба раза исключение глотается на уровне render object'а: приложение живо,
-    // но содержимое карточки не доходит до экрана, и экран «Соединения»
+    // но содержимое карточки не доходит до экрана, и экран Соединения
     // выглядит пустым при непустом счётчике.
     testWidgets('lays out and paints inside a list without throwing', (
       tester,

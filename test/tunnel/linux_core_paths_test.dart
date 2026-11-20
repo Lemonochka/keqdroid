@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/tunnel/linux_core_paths.dart';
 
-/// Ядро в кэше меняется только переименованием готового файла: прямая запись
-/// с обрезкой давала полузаписанный бинарь тем замерам, что запускали его в
-/// ту же секунду.
+// Ядро в кэше меняется только переименованием готового файла: прямая запись
+// с обрезкой давала полузаписанный бинарь тем замерам, что запускали его в
+// ту же секунду.
 void main() {
   late Directory tmp;
 
@@ -71,7 +71,7 @@ void main() {
     tearDown(() => LinuxCorePaths.cacheRootOverride = null);
 
     // Раскладка, ждавшая сама себя, вешала подключение навсегда: ядро не
-    // запускалось, а на экране висело «Подключение…».
+    // запускалось, а на экране висело Подключение….
     test('finishes, and so does the next call', () async {
       final first = await LinuxCorePaths.stageExecutable(
         core.path,

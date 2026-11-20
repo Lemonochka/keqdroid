@@ -26,9 +26,9 @@ class _Vpn extends VpnStateNotifier {
   void emit(VpnStatus status) => state = AsyncData(VpnState(status: status));
 }
 
-/// Значок в трее: зелёная точка горит, только пока VPN подключён. В ico по
-/// кадру на каждый масштаб экрана: из одного кадра 256 Windows ужимала значок
-/// до 16 пикселей сама, и он выходил рваным рядом с соседними.
+// Значок в трее: зелёная точка горит, только пока VPN подключён. В ico по
+// кадру на каждый масштаб экрана: из одного кадра 256 Windows ужимала значок
+// до 16 пикселей сама, и он выходил рваным рядом с соседними.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 

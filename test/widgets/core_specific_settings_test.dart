@@ -11,12 +11,12 @@ import 'package:keqdroid/services/vpn_engine.dart';
 import '../helpers/fake_tunnel_backend.dart';
 import '../helpers/test_storage.dart';
 
-/// Настройки, которых у второго ядра нет, показываются только при своём ядре.
-///
-/// Жалоба звучала так: настройка стоит на экране у всех, включаешь — ничего не
-/// происходит, и только потом читаешь мелкий текст под ней о том, что она про
-/// другое ядро. Теперь при чужом ядре её на экране нет вовсе, и тест сторожит
-/// обе стороны: и что она пропала, и что при своём ядре она на месте.
+// Настройки, которых у второго ядра нет, показываются только при своём ядре.
+//
+// Жалоба звучала так: настройка стоит на экране у всех, включаешь, и ничего не
+// происходит, и только потом читаешь мелкий текст под ней о том, что она про
+// другое ядро. Теперь при чужом ядре её на экране нет вовсе, и тест сторожит
+// обе стороны: и что она пропала, и что при своём ядре она на месте.
 class _FakeSettings extends SettingsNotifier {
   _FakeSettings(this._settings);
   final AppSettings _settings;
@@ -28,7 +28,7 @@ class _FakeSettings extends SettingsNotifier {
   Future<void> save(AppSettings settings) async => state = AsyncData(settings);
 }
 
-/// `pumpAndSettle` тут не годится: в настройках живёт бесконечная анимация.
+// pumpAndSettle тут не годится: в настройках живёт бесконечная анимация.
 Future<void> _frames(WidgetTester tester) async {
   for (var i = 0; i < 10; i++) {
     await tester.pump(const Duration(milliseconds: 120));
@@ -84,7 +84,7 @@ void main() {
 
     await _openAppearance(tester, AppSettings.vpnCoreXray);
     expect(find.text('VPN and direct traffic separately'), findsNothing);
-    // Соседние переключатели той же группы на месте — спрятана ровно одна
+    // Соседние переключатели той же группы на месте: спрятана ровно одна
     // строка, а не вся секция.
     expect(find.text('Traffic speed and volume'), findsOneWidget);
   });

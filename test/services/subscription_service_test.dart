@@ -203,7 +203,7 @@ void main() {
     late _UaGateAdapter adapter;
 
     // сервис с UA-зависимым фейк-адаптером; базовый браузерный UA как в
-    // проде (_buildDio) — per-request UA обязан его переопределять
+    // проде (_buildDio), а UA запроса обязан его переопределять
     SubscriptionService buildService(bool Function(String ua) isAllowed) {
       final dio = Dio(
         BaseOptions(
@@ -257,7 +257,7 @@ void main() {
       () async {
         // Regression: панели, маршрутизирующие по UA, отдают неизвестным UA
         // html-страницу подписки (её бэкенд может лежать → 502), а известным
-        // клиентским — payload. UA-ретрай обязан жить и в error-ветке: dio
+        // клиентским отдают payload. Повтор с другим UA обязан жить и в ветке ошибки: dio
         // кидает на 502 до того, как успешная ветка (200+html) до него дойдёт.
         service = buildService((ua) => ua == 'v2rayNG/2.2.6');
 
@@ -378,7 +378,7 @@ void main() {
     });
 
     // Ключ сопоставления серверов при обновлении подписки. Ошибка здесь не
-    // видна сразу: сервер просто теряет пинг, избранное и «активный».
+    // видна сразу: сервер просто теряет пинг, избранное и активный.
     test('vmess-ссылка AEAD опознаётся по uuid, а не по одному адресу', () {
       const first =
           'vmess://aaaaaaaa-1111-2222-3333-444444444444'
@@ -390,7 +390,7 @@ void main() {
       final keyOne = SubscriptionService.stableKeyForTest(first);
       expect(keyOne, contains('aaaaaaaa-1111-2222-3333-444444444444'));
       expect(keyOne, isNot(SubscriptionService.stableKeyForTest(second)));
-      // Имя и параметры меняются у провайдера постоянно — ключ не должен.
+      // Имя и параметры меняются у провайдера постоянно, а ключ не должен.
       expect(
         SubscriptionService.stableKeyForTest(
           'vmess://aaaaaaaa-1111-2222-3333-444444444444'
@@ -506,7 +506,7 @@ void main() {
   group('SubscriptionService._parseBody with Clash payloads', () {
     // Панель отдаёт такое, когда у подписки выставлена идентичность
     // clash-клиента. Узлы важнее профиля: их видно списком, между ними
-    // переключаются, каждый пингуется — и они работают на любом ядре.
+    // переключаются, каждый пингуется, и они работают на любом ядре.
     const reality = '''
 proxies:
   - name: "NL Reality"
@@ -531,8 +531,8 @@ rules:
 ''';
 
     test('узел REALITY переживает перевод в ссылку целиком', () {
-      // Ключ REALITY и отпечаток лежат ВЛОЖЕННЫМИ картами. Построчный сканер
-      // их не видел, и ссылка собиралась «успешно» — без pbk, то есть
+      // Ключ REALITY и отпечаток лежат вложенными картами. Построчный сканер
+      // их не видел, и ссылка собиралась успешно, но без pbk, то есть
       // молча неподключаемая.
       final configs = SubscriptionService.parseBodyForTest(reality);
       expect(configs, hasLength(1));
@@ -546,16 +546,16 @@ rules:
       expect(uri.queryParameters['fp'], 'chrome');
       expect(uri.queryParameters['flow'], 'xtls-rprx-vision');
       expect(uri.queryParameters['sni'], 'www.example.org');
-      // `type` у Clash — это протокол, а не транспорт: подставленный в
-      // транспорт, он давал ссылку с несуществующим `type=vless`.
+      // type у Clash обозначает протокол, а не транспорт: подставленный в
+      // транспорт, он давал ссылку с несуществующим type=vless.
       expect(uri.queryParameters['type'], 'tcp');
     });
 
     test(
       'узел type: hysteria уходит в mihomo первой версией, hysteria2 рядом переводится',
       () {
-        // `type: hysteria` у Clash — всегда первая версия. Раньше ему
-        // приписывался `version=2`, и он уезжал в ядро как hysteria2: конфиг не
+        // type: hysteria у Clash всегда первая версия. Раньше ему
+        // приписывался version=2, и он уезжал в ядро как hysteria2: конфиг не
         // того протокола и сервер, который не отвечает.
         const mixed = '''
 proxies:
@@ -589,7 +589,7 @@ rules:
       },
     );
 
-    // Стадия 2: узлы этих типов у Clash молча выпадали — `_proxyMapToUri`
+    // Стадия 2: узлы этих типов у Clash молча выпадали: _proxyMapToUri
     // отвечал на них null, и в списке их просто не было.
     test('узлы tuic, anytls, ssr и mieru переводятся в ссылки', () {
       const profile = '''
@@ -728,10 +728,10 @@ rules:
       expect(ws.queryParameters['eh'], 'Sec-WebSocket-Protocol');
       expect(ws.queryParameters['host'], 'cdn.example');
 
-      // `network: http` у Clash — это маскировка поверх tcp. В vmess-json она
-      // пишется `net: tcp` + `type: http`, а `net: http` оба генератора читают
-      // как HTTP/2 — узел собирался не тем транспортом. Host у http-opts —
-      // заголовок, а не поле.
+      // network: http у Clash задаёт маскировку поверх tcp. В vmess-json она
+      // пишется net: tcp + type: http, а net: http оба генератора читают
+      // как HTTP/2: узел собирался не тем транспортом. Host у http-opts
+      // приходит заголовком, а не полем.
       final masq =
           jsonDecode(
                 utf8.decode(
@@ -759,7 +759,7 @@ rules:
     });
 
     // Ветка vmess собирала свой json мимо общих разборщиков и теряла то, что
-    // vless и trojan переносят. Главное — имя gRPC-сервиса: без него vmess на
+    // vless и trojan переносят. Главное в имени gRPC-сервиса: без него vmess на
     // gRPC из Clash не подключался вовсе.
     test('vmess из Clash несёт то же, что vless: gRPC, sni, отпечаток, '
         'ранние данные', () {
@@ -863,7 +863,7 @@ rules:
       expect(SubscriptionService.unsupportedClashNodes(profile), {'vmess': 1});
     });
 
-    // `spx` — это spiderX у REALITY, а у Clash такого поля нет вовсе. Туда
+    // spx у REALITY задаёт spiderX, а у Clash такого поля нет вовсе. Туда
     // уезжал флаг постквантового ключа, то есть в ядро ехал мусор.
     test('флаг постквантового ключа не выдаётся за spiderX', () {
       const profile = '''
@@ -1030,8 +1030,8 @@ rules:
     });
 
     test('профиль без разбираемых узлов остаётся конфигом целиком', () {
-      // Узлы приходят из `proxy-providers` (в сеть за ними мы не ходим), но
-      // сам конфиг рабочий — его исполнит mihomo, как написал автор.
+      // Узлы приходят из proxy-providers (в сеть за ними мы не ходим), но
+      // сам конфиг рабочий: его исполнит mihomo, как написал автор.
       const providerProfile = '''
 proxies:
   - name: "direct-ish"
@@ -1061,9 +1061,9 @@ rules:
     });
 
     // Ровно то, что панели отдают clash-клиентам чаще всего: ни одного
-    // `proxies`, весь список узлов за ссылкой. Раньше такая подписка
-    // отказывалась обновляться с «Unsupported subscription format: Clash YAML»
-    // — при том, что Clash приложение как раз исполняет.
+    // proxies, весь список узлов за ссылкой. Раньше такая подписка
+    // отказывалась обновляться с Unsupported subscription format: Clash YAML
+    // при том, что Clash приложение как раз исполняет.
     const providersOnly = '''
 mixed-port: 7890
 proxy-providers:
@@ -1086,14 +1086,14 @@ rules:
 
       final server = ServerItem.fromRaw(configs.single);
       expect(server.protocol, 'clash');
-      // Своего адреса у такого профиля нет и быть не может — список ещё не
+      // Своего адреса у такого профиля нет и быть не может: список ещё не
       // скачан. Это не болванка, и отказывать по этому признаку нельзя.
       expect(server.address, isEmpty);
       expect(server.config, contains('proxy-providers'));
     });
 
-    // Без групп правилу некуда указывать: `primaryTarget` вернул бы DIRECT, то
-    // есть подключение «работает», а прокси нет. Лучше отказ с причиной.
+    // Без групп правилу некуда указывать: primaryTarget вернул бы DIRECT, то
+    // есть подключение работает, а прокси нет. Лучше отказ с причиной.
     test('провайдеры без групп — отказ, и причина названа', () {
       const noGroups = '''
 proxy-providers:
@@ -1133,8 +1133,8 @@ proxies:
   });
 
   group('SubscriptionService._parseBody with ready-made core configs', () {
-    // Провайдеры отдают не только списки ссылок, но и «сервера с готовым
-    // роутингом» — конфиг xray целиком, имя в корневом `remarks` (v2rayNG).
+    // Провайдеры отдают не только списки ссылок, но и сервера с готовым
+    // роутингом: конфиг xray целиком, имя в корневом remarks (v2rayNG).
     const custom =
         '{"remarks": "🇳🇱 Обход - Нидерланды", '
         '"routing": {"rules": [{"type": "field", "protocol": ["bittorrent"], '
@@ -1150,7 +1150,7 @@ proxies:
       expect(server.protocol, 'custom');
       expect(server.displayName, '🇳🇱 Обход - Нидерланды');
       expect(server.address, 'nl1.example.com');
-      // Авторский роутинг доезжает до сервера как есть — в нём весь смысл.
+      // Авторский роутинг доезжает до сервера как есть: в нём весь смысл.
       expect(server.config, contains('bittorrent'));
     });
 
@@ -1182,7 +1182,7 @@ proxies:
 
     test('refuses a provider stub instead of adding a dead server', () {
       // Панель отдаёт валидный конфиг ядра без сервера (истёкшая подписка,
-      // непривязанный HWID). Такой «сервер» подключался бы молча мимо туннеля,
+      // непривязанный HWID). Такой сервер подключался бы молча мимо туннеля,
       // поэтому обновление должно падать, и падать понятно.
       const stub =
           '{"remarks": "Subscription", "outbounds": '
@@ -1220,7 +1220,7 @@ proxies:
       ]);
     });
 
-    // Раньше отказ был на весь формат, теперь — только когда брать нечего, и
+    // Раньше отказ был на весь формат, теперь только когда брать нечего, и
     // тогда в тексте видно, каких узлов мы не умеем.
     test('a sing-box config with nothing to run says what it held', () {
       const singbox =
@@ -1448,7 +1448,7 @@ class _BodyAdapter implements HttpClientAdapter {
   );
 }
 
-/// payload — только UA, прошедшим [isAllowed]; остальным 502 (nginx-заглушка).
+// payload получают только UA, прошедшие [isAllowed]; остальным 502 (nginx-заглушка).
 class _UaGateAdapter implements HttpClientAdapter {
   _UaGateAdapter({required this.isAllowed});
 

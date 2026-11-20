@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/utils/bidi.dart';
 
-/// Технические значения в RTL-локали.
-///
-/// Проверяется не текст, а ГЕОМЕТРИЯ: обе ошибки этого класса — про порядок на
-/// экране при полностью правильных строках, и обычный `expect(find.text(...))`
-/// их не видит вовсе.
+// Технические значения в RTL-локали.
+//
+// Проверяется не текст, а геометрия: обе ошибки этого класса про порядок на
+// экране при полностью правильных строках, и обычный expect(find.text(...))
+// их не видит вовсе.
 const _usedKey = Key('used');
 const _limitKey = Key('limit');
 
@@ -42,7 +42,7 @@ void main() {
     testWidgets('a bare Row mirrors the parts — this was the bug', (
       tester,
     ) async {
-      // Страховка от «починили и не заметили, что чинить было нечего»: без
+      // Страховка на случай, когда починили и не заметили, что чинить было нечего: без
       // LtrBlock порядок действительно обратный.
       await _pumpUsageRow(
         tester,
@@ -71,7 +71,7 @@ void main() {
     });
 
     testWidgets('the block still hugs the RTL start edge', (tester) async {
-      // Смысл LtrBlock — только внутренний порядок. Если он утащит блок к
+      // Смысл LtrBlock только во внутреннем порядке. Если он утащит блок к
       // левому краю, персидская карточка развалится по-другому.
       const wide = Size(400, 200);
       await tester.binding.setSurfaceSize(wide);

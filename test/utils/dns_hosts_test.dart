@@ -7,11 +7,11 @@ import 'package:keqdroid/utils/config_gen.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// «Свои адреса для доменов» — одно поле на два ядра, и маски у них разные.
-///
-/// Голый ключ xray разбирает как полное совпадение, поэтому `*.` переезжает в
-/// `domain:`; у mihomo та же маска пишется как `+.`, потому что звёздочка там
-/// значит ровно один уровень.
+// Свои адреса для доменов: одно поле на два ядра, и маски у них разные.
+//
+// Голый ключ xray разбирает как полное совпадение, поэтому *. переезжает в
+// domain:; у mihomo та же маска пишется как +., потому что звёздочка там
+// покрывает ровно один уровень.
 const _vless =
     'vless://uuid@de.example.com:443?security=reality&pbk=pub&sid=aa&fp=chrome&sni=de.example.com&type=tcp#DE';
 
@@ -29,7 +29,7 @@ void main() {
 
       expect(parsed.entries, {
         'example.com': ['10.0.0.5'],
-        // Системный hosts пишется «адрес домен», и так тоже понимаем.
+        // Системный hosts пишется как адрес домен, и так тоже понимаем.
         'other.example.com': ['10.0.0.6'],
       });
       expect(parsed.dropped, isEmpty);
@@ -79,7 +79,7 @@ void main() {
         'example.com\n# комментарий\nexample.com 1.1.1.1 second.example.com\n',
       );
 
-      // Строка без адреса и смесь «адрес плюс чужой домен» — обе не годятся
+      // Строка без адреса и смесь из адреса и чужого домена не годятся
       // ни одному ядру, и обе обязаны попасть в dropped, а не исчезнуть.
       expect(parsed.entries, isEmpty);
       expect(parsed.dropped.length, 2);

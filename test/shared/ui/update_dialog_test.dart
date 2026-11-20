@@ -12,7 +12,7 @@ import 'package:keqdroid/shared/ui/update_dialog.dart';
 import 'package:keqdroid/tunnel/tunnel_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Настройки не приходят никогда: загрузка стоит на старте и в сеть не идёт.
+// Настройки не приходят никогда: загрузка стоит на старте и в сеть не идёт.
 class _StuckStorage extends StorageService {
   _StuckStorage(super.prefs);
 

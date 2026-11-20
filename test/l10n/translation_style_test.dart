@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 
-/// Словарь немецкого и китайского сверен с клиентами на этих языках (Clash
-/// Verge, Mullvad, Proton, WireGuard, AOSP; v2rayN, v2rayNG, NekoBox, Hiddify,
-/// Throne, FlClash). Хозяйка этих языков не читает, поэтому новая строка с
-/// чужим термином или английской пунктуацией ловится здесь, а не на экране.
+// Словарь немецкого и китайского сверен с клиентами на этих языках (Clash
+// Verge, Mullvad, Proton, WireGuard, AOSP; v2rayN, v2rayNG, NekoBox, Hiddify,
+// Throne, FlClash). Хозяйка этих языков не читает, поэтому новая строка с
+// чужим термином или английской пунктуацией ловится здесь, а не на экране.
 void main() {
   Map<String, String> strings(String locale) {
     final raw =
@@ -19,7 +19,7 @@ void main() {
     };
   }
 
-  // Пример адреса подписки печатается как есть, многоточие в нём — часть URL.
+  // Пример адреса подписки печатается как есть, многоточие в нём входит в URL.
   const urlExample = 'subscriptionUrlHint';
 
   List<String> offending(Map<String, String> s, RegExp pattern) => [
@@ -47,7 +47,7 @@ void main() {
     });
 
     test('keeps one word per thing', () {
-      // «Abo», «Core», «Provider» стояли вперемешку с полными словами.
+      // Abo, Core, Provider стояли вперемешку с полными словами.
       expect(
         offending(de, RegExp(r'\bAbos?\b|\bAbo-|\bCore\b|\bProvider\b')),
         isEmpty,
@@ -64,12 +64,12 @@ void main() {
     final cjk = RegExp(r'[一-鿿]');
 
     test('uses the terms of Chinese proxy clients', () {
-      // 服务商 — как у v2rayN/v2rayNG; 您 — как у Android и почти всех клиентов.
+      // 服务商 как у v2rayN/v2rayNG; 您 как у Android и почти всех клиентов.
       expect(offending(zh, RegExp('提供商|你')), isEmpty);
     });
 
     test('uses mainland punctuation', () {
-      // 「」 — кавычки Тайваня и Гонконга; в упрощённом письме “”.
+      // 「」 ставят на Тайване и в Гонконге, в упрощённом письме приняты фигурные двойные кавычки.
       expect(offending(zh, RegExp(r'「|」|\.\.\.')), isEmpty);
       final asciiParens = [
         for (final e in zh.entries)

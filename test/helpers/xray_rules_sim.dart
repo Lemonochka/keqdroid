@@ -26,8 +26,8 @@ class XrayConn {
   final String network;
 }
 
-/// Тег выхода первого совпавшего правила; ни одно не совпало — первый выход,
-/// как default route у ядра.
+// Тег выхода первого совпавшего правила; если ни одно не совпало, первый выход,
+// как default route у ядра.
 String? simulateXray(Map<String, dynamic> config, XrayConn conn) {
   final fallback =
       ((config['outbounds'] as List).first as Map)['tag'] as String?;

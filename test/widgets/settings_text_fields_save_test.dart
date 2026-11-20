@@ -154,7 +154,7 @@ void main() {
       expect(fake.saves, isEmpty);
     });
 
-    // AnimatedCrossFade прячет поля в ExcludeFocus, и это тоже потеря фокуса
+    // AnimatedCrossFade прячет поля в ExcludeFocus, и фокус при этом тоже теряется
     testWidgets('выключили XMUX посреди ввода: введённое не пропало', (
       tester,
     ) async {

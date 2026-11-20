@@ -8,9 +8,9 @@ import 'package:keqdroid/utils/desktop_tun.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// Переключатель «UDP по маршрутам для каждого адреса»: ядра включают раздельные
-/// UDP-потоки по метке в конфиге (xray — выход keq-udp-per-exit, mihomo —
-/// ключ keqdroid-udp-per-exit). Выключен — конфиг прежний.
+// Переключатель UDP по маршрутам для каждого адреса: ядра включают раздельные
+// UDP-потоки по метке в конфиге (xray: выход keq-udp-per-exit, mihomo:
+// ключ keqdroid-udp-per-exit). Выключен, и конфиг прежний.
 const _link =
     'vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443'
     '?type=tcp&security=reality&pbk=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'

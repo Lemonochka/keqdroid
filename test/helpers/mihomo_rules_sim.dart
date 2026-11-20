@@ -1,18 +1,18 @@
-/// Куда mihomo отправит соединение: первое совпавшее правило, как в
-/// `tunnel.match`.
-///
-/// Логические правила и `SUB-RULE` разбираются тем же способом, что в ядре
-/// (`rules/logic/logic.go`: скобки считаются стеком, берутся только верхние
-/// диапазоны), поэтому сломанная вложенность ловится здесь, а не на машине
-/// пользователя. Понимает типы, которые пишут наши генераторы; geo-правила
-/// не совпадают никогда — тесты на них не опираются.
+// Куда mihomo отправит соединение: первое совпавшее правило, как в
+// tunnel.match.
+//
+// Логические правила и SUB-RULE разбираются тем же способом, что в ядре
+// (rules/logic/logic.go: скобки считаются стеком, берутся только верхние
+// диапазоны), поэтому сломанная вложенность ловится здесь, а не на машине
+// пользователя. Понимает типы, которые пишут наши генераторы; geo-правила
+// не совпадают никогда: тесты на них не опираются.
 library;
 
 import 'dart:io' show InternetAddress;
 
-/// Соединение глазами ядра. [inType] — тип входа: `TUN`, `HTTP`, `SOCKS5`.
-/// [path] пустой — процесс лежит в `C:\Apps\<process>`. [resolvesTo] — адрес,
-/// который ядро получит, если правилу понадобится резолв домена.
+// Соединение глазами ядра. В inType тип входа: TUN, HTTP, SOCKS5.
+// При пустом path процесс лежит в C:\Apps\<process>. В resolvesTo адрес,
+// который ядро получит, если правилу понадобится резолв домена.
 class SimConn {
   const SimConn({
     this.process = '',
@@ -37,8 +37,8 @@ class SimConn {
   String get path => _path ?? (process.isEmpty ? '' : 'C:\\Apps\\$process');
 }
 
-/// Цель первого совпавшего правила. Нет совпадения и `MATCH` — `DIRECT`, как
-/// у ядра.
+// Цель первого совпавшего правила. Без совпадения и без MATCH уходит в DIRECT, как
+// у ядра.
 String simulateMihomo(Map<String, dynamic> config, SimConn conn) {
   final rules = [for (final r in config['rules'] as List) '$r'];
   final subRules = <String, List<String>>{
@@ -60,9 +60,9 @@ String simulateMihomo(Map<String, dynamic> config, SimConn conn) {
   return 'DIRECT';
 }
 
-/// Цели всех правил, которых ядро не найдёт: та же проверка, что в
-/// `config.parseRules` — у `SUB-RULE` цель — набор, у остальных — выход.
-/// Пустой список — конфиг по этой части разберётся.
+// Цели всех правил, которых ядро не найдёт: та же проверка, что в
+// config.parseRules, где у SUB-RULE целью служит набор, у остальных выход.
+// Пустой список говорит, что конфиг по этой части разберётся.
 List<String> unknownMihomoTargets(Map<String, dynamic> config) {
   final outbounds = <String>{
     'DIRECT',
@@ -102,7 +102,7 @@ List<String> unknownMihomoTargets(Map<String, dynamic> config) {
   return problems;
 }
 
-/// Верхние подправила логического правила, как `Logic.parsePayload`.
+// Верхние подправила логического правила, как Logic.parsePayload.
 List<String> mihomoLogicParts(String payload) {
   if (!payload.startsWith('(') || !payload.endsWith(')')) {
     throw FormatException('payload format error: $payload');
@@ -137,8 +137,8 @@ class _Parsed {
   final List<String> params;
 }
 
-/// `ParseRulePayload` ядра: у логических правил и регулярок запятые остаются
-/// в полезной нагрузке, цель — последний элемент.
+// ParseRulePayload ядра: у логических правил и регулярок запятые остаются
+// в полезной нагрузке, а цель стоит последним элементом.
 _Parsed _parse(String raw, {required bool needTarget}) {
   var item = raw.split(',').map((s) => s.trim()).toList();
   final type = item.first.toUpperCase();
@@ -183,8 +183,8 @@ class _Sim {
   final Map<String, List<String>> subRules;
   final Map<String, List<String>> providers;
 
-  /// Адрес назначения; правило с резолвом заполняет его, и дальше его видят
-  /// все следующие правила — как `metadata.DstIP` в ядре.
+  // Адрес назначения; правило с резолвом заполняет его, и дальше его видят
+  // все следующие правила, как metadata.DstIP в ядре.
   String dstIp;
 
   String? matchTop(String raw) {

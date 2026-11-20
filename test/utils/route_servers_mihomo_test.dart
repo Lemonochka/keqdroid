@@ -5,9 +5,9 @@ import 'package:keqdroid/utils/mihomo_config_gen.dart';
 import 'package:keqdroid/utils/route_servers.dart';
 import 'package:keqdroid/utils/socks5_credentials.dart';
 
-/// «Другой сервер» маршрута на mihomo: отдельный выход в конфиге сессии и
-/// правила на него между «напрямую» и «через VPN» — там, где ТЗ ставит его
-/// в разделе всех приложений.
+// Другой сервер маршрута на mihomo: отдельный выход в конфиге сессии и
+// правила на него между напрямую и через VPN, там, где ТЗ ставит его
+// в разделе всех приложений.
 const _active =
     'vless://00000000-0000-4000-8000-000000000000@nl.example:443'
     '?type=tcp&security=tls&sni=nl.example#NL';

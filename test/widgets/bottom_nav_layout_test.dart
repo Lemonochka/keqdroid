@@ -3,13 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/l10n/app_localizations.dart';
 import 'package:keqdroid/shared/ui/bottom_nav.dart';
 
-/// Геометрия нижней навигации.
-///
-/// Функциональные тесты (переключение вкладки, бейдж) проходили и на полностью
-/// сломанной раскладке: пилюля выбранного пункта растягивалась на весь экран,
-/// потому что `Align` с `widthFactor`, но без `heightFactor`, растёт в высоту до
-/// максимума ограничений — а `bottomNavigationBar` получает от `Scaffold`
-/// высоту всего экрана. Здесь проверяем именно размеры.
+// Геометрия нижней навигации.
+//
+// Функциональные тесты (переключение вкладки, бейдж) проходили и на полностью
+// сломанной раскладке: пилюля выбранного пункта растягивалась на весь экран,
+// потому что Align с widthFactor, но без heightFactor, растёт в высоту до
+// максимума ограничений, а bottomNavigationBar получает от Scaffold
+// высоту всего экрана. Здесь проверяем именно размеры.
 Future<void> _pumpNav(
   WidgetTester tester, {
   required int index,
@@ -45,7 +45,7 @@ void main() {
 
     final size = tester.getSize(find.byType(AppBottomNav));
     expect(size.height, lessThan(120));
-    // Цель нажатия M3 — не меньше 48 логических пикселей.
+    // Цель нажатия M3 не меньше 48 логических пикселей.
     expect(size.height, greaterThanOrEqualTo(48));
     expect(tester.takeException(), isNull);
   });
@@ -92,8 +92,8 @@ void main() {
   ) async {
     // Самое опасное место не покой, а переход: доля ряда под пункт и его
     // отступы обязаны ехать вместе. Когда доля падала мгновенно, а отступы
-    // ещё анимировались, пункт переполнял ряд на промежуточных кадрах —
-    // покадровая проверка, а не pumpAndSettle.
+    // ещё анимировались, пункт переполнял ряд на промежуточных кадрах,
+    // поэтому проверка покадровая, а не pumpAndSettle.
     tester.view.physicalSize = const Size(288, 700);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);

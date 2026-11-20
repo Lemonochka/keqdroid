@@ -12,11 +12,11 @@ import 'package:keqdroid/services/vpn_engine.dart';
 
 import '../helpers/fake_tunnel_backend.dart';
 
-/// Редактор и параметры, которые приложение давно исполняет.
-///
-/// Жалоба: «недавно добавлены новые параметры и их поддержка, а настроить их на
-/// этом экране нельзя». Здесь сторожим обе стороны: что поля видны и что при
-/// сохранении ссылка не теряет то, чего редактор раньше не знал.
+// Редактор и параметры, которые приложение давно исполняет.
+//
+// Жалоба: недавно добавлены новые параметры и их поддержка, а настроить их на
+// этом экране нельзя. Здесь сторожим обе стороны: что поля видны и что при
+// сохранении ссылка не теряет то, чего редактор раньше не знал.
 class _FakeServers extends ServersNotifier {
   _FakeServers(this._state);
 
@@ -49,7 +49,7 @@ Future<_FakeServers> _open(WidgetTester tester, String link) async {
         serversProvider.overrideWith(() => servers),
         settingsNotifierProvider.overrideWith(_FakeSettings.new),
         // Сохранение спрашивает состояние туннеля, а настоящий бэкенд на Linux
-        // в dispose зовёт gsettings — на раннере это роняло тест, на Windows
+        // в dispose зовёт gsettings: на раннере это роняло тест, на Windows
         // того же кода нет и было зелено (см. FakeTunnelBackend).
         vpnEngineProvider.overrideWithValue(
           VpnEngine.withBackend(FakeTunnelBackend()),
@@ -76,7 +76,7 @@ void main() {
     );
 
     // Раньше в списке транспортов не было ни mkcp, ни httpupgrade, и сервер на
-    // них показывался как tcp — с чужими полями.
+    // них показывался как tcp, с чужими полями.
     expect(find.text('kcp'), findsWidgets);
     expect(find.text('Seed'), findsOneWidget);
     expect(find.text('MTU'), findsOneWidget);
@@ -90,7 +90,7 @@ void main() {
         '&mode=stream-one&x_padding_bytes=100-1000&path=%2Fdl#node';
     final servers = await _open(tester, link);
 
-    // Правим адрес — иначе редактор честно ничего не пересобирает.
+    // Правим адрес: иначе редактор честно ничего не пересобирает.
     await tester.enterText(find.byType(TextField).first, 'edited.example.com');
     await tester.pumpAndSettle();
     // Кнопка ниже сгиба: без прокрутки tap попадёт мимо экрана и промолчит.
@@ -162,7 +162,7 @@ void main() {
     });
   });
 
-  // 12.11.2026: «зачем информация про паддинг в двух местах дублируется»
+  // 12.11.2026: зачем информация про паддинг в двух местах дублируется
   group('набивка в одном месте', () {
     const base =
         'vless://716e3485-d4f9-4471-9660-fb4b0b838100@example.com:443'
@@ -268,7 +268,7 @@ void main() {
     expect(find.text('xtls-rprx-vision'), findsWidgets);
   });
 
-  // 31.10.2026: extra XHTTP был одной строкой JSON, её «никак не потыкать, не посмотреть»
+  // 31.10.2026: extra XHTTP был одной строкой JSON, её никак не потыкать, не посмотреть
   group('extra XHTTP полями', () {
     const extra =
         '{"xPaddingBytes":"50-150","xmux":{"maxConcurrency":"16-32"},'
@@ -303,7 +303,7 @@ void main() {
       expect(find.text('noGRPCHeader'), findsOneWidget);
     });
 
-    // 12.11.2026: «если нажать на кнопку свернуть то ничего не свернётся»
+    // 12.11.2026: если нажать на кнопку свернуть, то ничего не свернётся
     testWidgets('«Скрыть пустые» прячет раскрытое', (tester) async {
       await _open(tester, link);
       expect(find.text('uplinkHTTPMethod'), findsNothing);
@@ -388,7 +388,7 @@ void main() {
     });
   });
 
-  // 31.10.2026: сервер из Clash-подписки открывался красным «нет outbounds, это не конфиг Xray»
+  // 31.10.2026: сервер из Clash-подписки открывался красной ошибкой нет outbounds, это не конфиг Xray
   group('узел Clash', () {
     const clash =
         '{"name":"DE","proxies":[{"name":"DE","type":"hysteria2",'

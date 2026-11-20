@@ -3,13 +3,13 @@ import 'package:keqdroid/models/app_settings.dart';
 import 'package:keqdroid/tunnel/app_routing_mode.dart';
 import 'package:keqdroid/utils/mihomo_config_gen.dart';
 
-/// Режим сплита без правил по процессам отправлял ВЕСЬ трафик мимо прокси.
-///
-/// «Только выбранные» без имён процессов держит финал `DIRECT`. Там, где ядро
-/// владельца соединения не знает (десктопный proxy-режим — туннеля у ядра нет;
-/// Android — владельца не отдаёт система), имён нет, и ядро честно исполняло
-/// финал на всём: `[TCP] ... match Match using DIRECT` на каждое соединение
-/// при живом «подключено», то есть «прокси-режим не работает вообще».
+// Режим сплита без правил по процессам отправлял весь трафик мимо прокси.
+//
+// Только выбранные без имён процессов держит финал DIRECT. Там, где ядро
+// владельца соединения не знает (десктопный proxy-режим, где туннеля у ядра нет;
+// Android, где владельца не отдаёт система), имён нет, и ядро честно исполняло
+// финал на всём: [TCP] ... match Match using DIRECT на каждое соединение
+// при статусе подключено, то есть прокси-режим не работает вообще.
 const _link = 'vless://uuid@example.com:443?type=tcp&security=none';
 
 List<String> _rules(Map<String, dynamic> config) =>
@@ -25,7 +25,7 @@ void main() {
       const AppSettings(),
       socksPort: 2080,
       httpPort: 2081,
-      // Туннеля у ядра нет — это и есть proxy-режим десктопа.
+      // Туннеля у ядра нет: и есть proxy-режим десктопа.
       routingMode: split,
       managedProcessNames: selected,
       appProcessName: 'keqdroid.exe',
