@@ -578,7 +578,7 @@ class SubscriptionService {
           (e.type == DioExceptionType.unknown && e.error is IOException);
 
       if (isRetryable && attempt == 0) {
-        await Future.delayed(const Duration(seconds: 2));
+        await Future<void>.delayed(const Duration(seconds: 2));
         return _fetchWithRetry(
           url,
           cancelToken: cancelToken,
@@ -1666,7 +1666,7 @@ class SubscriptionService {
       if (current is List) {
         final itemsToProcess = current.take(100);
         for (final item in itemsToProcess) {
-          if (seen.add(item)) {
+          if (seen.add(item as Object)) {
             queue.add((item, depth + 1, false));
           }
         }
@@ -1699,7 +1699,7 @@ class SubscriptionService {
               entriesAdded++;
               if (entriesAdded >= 20) break;
             }
-          } else if (seen.add(value)) {
+          } else if (seen.add(value as Object)) {
             queue.add((value, depth + 1, false));
             entriesAdded++;
             if (entriesAdded >= 20) break;

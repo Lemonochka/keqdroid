@@ -1249,7 +1249,7 @@ class ConfigGeneratorV2 {
     return servers.any((server) {
       final address = switch (server) {
         String s => s,
-        Map m => m['address']?.toString() ?? '',
+        Map<Object?, Object?> m => m['address']?.toString() ?? '',
         _ => '',
       };
       return address.trim().toLowerCase() == 'fakedns';
@@ -1263,7 +1263,7 @@ class ConfigGeneratorV2 {
     for (final server in servers) {
       final address = switch (server) {
         String s => s,
-        Map m => m['address']?.toString() ?? '',
+        Map<Object?, Object?> m => m['address']?.toString() ?? '',
         _ => '',
       }
           .trim()

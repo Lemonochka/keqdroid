@@ -29,7 +29,7 @@ class _BehaviourSettingsCard extends StatelessWidget {
       accent: ExpressiveAccent.secondary,
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const _BehaviourSettingsScreen()),
+        MaterialPageRoute<void>(builder: (_) => const _BehaviourSettingsScreen()),
       ),
     );
   }

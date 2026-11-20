@@ -17,13 +17,13 @@ class ReleaseSignature {
     'pMuHfej/dlfiszKhI7UCgfX3Ljch5YiCSv9TzIRRzpw=',
   ];
 
-  static Map<String, dynamic>? sumsAsset(List? assets) =>
+  static Map<String, dynamic>? sumsAsset(List<Object?>? assets) =>
       _byName(assets, sumsName);
 
-  static Map<String, dynamic>? signatureAsset(List? assets) =>
+  static Map<String, dynamic>? signatureAsset(List<Object?>? assets) =>
       _byName(assets, signatureName);
 
-  static Map<String, dynamic>? _byName(List? assets, String name) {
+  static Map<String, dynamic>? _byName(List<Object?>? assets, String name) {
     if (assets == null) return null;
     final wanted = name.toLowerCase();
     for (final asset in assets) {

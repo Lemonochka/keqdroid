@@ -414,7 +414,7 @@ void main() {
       // локальные loopback-инбаунды не затронуты LAN-кредами
       final socksIn = inbounds.firstWhere((i) => i['tag'] == 'socks-in');
       final accounts =
-          ((socksIn['settings'] as Map)['accounts'] as List).cast<Map>();
+          ((socksIn['settings'] as Map)['accounts'] as List).cast<Map<Object?, Object?>>();
       expect(accounts.single['user'], 'u');
     });
 

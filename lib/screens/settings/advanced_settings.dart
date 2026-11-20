@@ -22,7 +22,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
                 accent: ExpressiveAccent.primary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const _PingSettingsScreen()),
+                  MaterialPageRoute<void>(builder: (_) => const _PingSettingsScreen()),
                 ),
               ),
               _SettingsCard(
@@ -32,7 +32,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
                 accent: ExpressiveAccent.secondary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
+                  MaterialPageRoute<void>(
                     builder: (_) => const _XrayCoreSettingsScreen(),
                   ),
                 ),
@@ -46,7 +46,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
                 accent: ExpressiveAccent.tertiary,
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const _RoutingScreen()),
+                  MaterialPageRoute<void>(builder: (_) => const _RoutingScreen()),
                 ),
               ),
             ],
@@ -65,7 +65,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
                     accent: ExpressiveAccent.secondary,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      MaterialPageRoute<void>(
                         builder: (_) => const _HotkeySettingsScreen(),
                       ),
                     ),
@@ -78,7 +78,7 @@ class _AdvancedSettingsScreen extends ConsumerWidget {
                     accent: ExpressiveAccent.primary,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      MaterialPageRoute<void>(
                         builder: (_) => const _PermissionsScreen(),
                       ),
                     ),

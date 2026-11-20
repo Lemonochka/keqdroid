@@ -478,11 +478,11 @@ void main() {
     });
 
     test('xray: DNS поднятого сайта идёт раньше резолвера обхода', () {
-      List<Map> servers(List<TrafficRoute> routes) => [
+      List<Map<Object?, Object?>> servers(List<TrafficRoute> routes) => [
             for (final s in (_xray(routes)['dns'] as Map)['servers'] as List)
               if (s is Map) s,
           ];
-      bool has(Map s, String domain) =>
+      bool has(Map<Object?, Object?> s, String domain) =>
           (s['domains'] as List?)?.contains(domain) ?? false;
 
       // голое слово ru генератор пишет зоной

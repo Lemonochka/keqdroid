@@ -435,7 +435,7 @@ dns:
       expect((config['proxy-groups'] as List), hasLength(1));
       final reality =
           (config['proxies'] as List).first as Map<String, dynamic>;
-      expect(reality['reality-opts'], isA<Map>());
+      expect(reality['reality-opts'], isA<Map<Object?, Object?>>());
       expect(reality['flow'], 'xtls-rprx-vision');
     });
 
@@ -547,7 +547,7 @@ rules:
       final match = (config['rules'] as List).cast<String>().lastWhere(
             (r) => r.startsWith('MATCH'),
           );
-      final groups = (config['proxy-groups'] as List).cast<Map>();
+      final groups = (config['proxy-groups'] as List).cast<Map<Object?, Object?>>();
       final target = groups.firstWhere((g) => g['name'] == _coreTarget(match));
       expect(target['proxies'], [name]);
       expect(((config['proxies'] as List).single as Map)['name'], name);
@@ -606,7 +606,7 @@ proxies:
         final match = (config['rules'] as List).cast<String>().lastWhere(
               (r) => r.startsWith('MATCH'),
             );
-        final groups = (config['proxy-groups'] as List).cast<Map>();
+        final groups = (config['proxy-groups'] as List).cast<Map<Object?, Object?>>();
         final target = groups.firstWhere((g) => g['name'] == _coreTarget(match));
         expect(target['proxies'], [name]);
         expect(((config['proxies'] as List).single as Map)['name'], name);

@@ -55,7 +55,7 @@ bool _matches(Map<String, dynamic> rule, XrayConn conn, String ip) {
       throw UnsupportedError('симулятор не знает поля $key');
     }
   }
-  if (rule['inboundTag'] case final List tags when !tags.contains(conn.inbound)) {
+  if (rule['inboundTag'] case final List<Object?> tags when !tags.contains(conn.inbound)) {
     return false;
   }
   if (rule['source'] != null) return false;
@@ -66,15 +66,15 @@ bool _matches(Map<String, dynamic> rule, XrayConn conn, String ip) {
   if (rule['port'] case final Object p when !_portMatches('$p', conn.port)) {
     return false;
   }
-  if (rule['ip'] case final List ips
+  if (rule['ip'] case final List<Object?> ips
       when ip.isEmpty || !ips.any((e) => _ipMatches('$e', ip))) {
     return false;
   }
-  if (rule['domain'] case final List domains
+  if (rule['domain'] case final List<Object?> domains
       when conn.host.isEmpty || !domains.any((e) => _domainMatches('$e', conn.host))) {
     return false;
   }
-  if (rule['process'] case final List names when !names.contains(conn.process)) {
+  if (rule['process'] case final List<Object?> names when !names.contains(conn.process)) {
     return false;
   }
   return true;

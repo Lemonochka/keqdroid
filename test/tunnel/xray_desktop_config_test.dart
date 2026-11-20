@@ -37,7 +37,7 @@ void main() {
           '1': {'connIdle': 60},
         },
       },
-      'outbounds': const [],
+      'outbounds': const <Object?>[],
     });
     expect(
       ((config['policy'] as Map)['levels'] as Map)['1'],

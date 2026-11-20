@@ -322,7 +322,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
   Future<VpnState> _awaitNativeConnectOutcome(VpnEngine engine) async {
     for (var i = 0; i < 150; i++) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
       if (_cancelRequested) {
         return const VpnState(status: VpnStatus.disconnected);
       }
@@ -1711,7 +1711,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       }
     }
     // ядру и туннелю нужно осесть перед новым connect
-    await Future.delayed(const Duration(milliseconds: 350));
+    await Future<void>.delayed(const Duration(milliseconds: 350));
   }
 
   Future<void> toggle() async {

@@ -84,7 +84,7 @@ void main() {
     test('перехват DNS продолжает работать: правило не привязано к инбаунду',
         () {
       final rules =
-          ((_config()['routing'] as Map)['rules'] as List).cast<Map>();
+          ((_config()['routing'] as Map)['rules'] as List).cast<Map<Object?, Object?>>();
       final dns = rules.firstWhere((r) => r['ruleTag'] == 'dns-out');
       expect(dns.containsKey('inboundTag'), isFalse);
     });

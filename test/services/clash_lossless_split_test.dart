@@ -163,7 +163,7 @@ rules:
           socksPort: 3001,
         )) as Map<String, dynamic>;
         final main = (probe['proxies'] as List)
-            .cast<Map>()
+            .cast<Map<Object?, Object?>>()
             .firstWhere((p) => p['name'] == MihomoConfigGen.proxyName);
         expect(main['dialer-proxy'], isNot(MihomoConfigGen.proxyName));
         expect(

@@ -280,7 +280,7 @@ class SubscriptionsTab extends ConsumerWidget {
     final accentContainerColor = AppTheme.accentContainer(context);
     final onAccentContainerColor = AppTheme.onAccentContainer(context);
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -1002,7 +1002,7 @@ class _SubCardDetailsState extends ConsumerState<_SubCardDetails>
                             .update((m) => {...m, profile.id: true});
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
+                          MaterialPageRoute<void>(
                             builder: (_) =>
                                 routingScreen(focusProfileId: profile.id),
                           ),

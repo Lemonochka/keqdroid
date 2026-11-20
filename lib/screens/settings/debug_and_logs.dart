@@ -65,7 +65,7 @@ class _DebugModeCard extends ConsumerWidget {
             OutlinedButton.icon(
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const _XrayLogsScreen()),
+                MaterialPageRoute<void>(builder: (_) => const _XrayLogsScreen()),
               ),
               icon: const Icon(Icons.terminal_rounded),
               label: Text(l10n.settingsOpenXrayLogs),
@@ -74,7 +74,7 @@ class _DebugModeCard extends ConsumerWidget {
             OutlinedButton.icon(
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const _ConnectionsScreen()),
+                MaterialPageRoute<void>(builder: (_) => const _ConnectionsScreen()),
               ),
               icon: const Icon(Icons.lan_rounded),
               label: Text(l10n.settingsOpenConnections),

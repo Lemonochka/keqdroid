@@ -256,7 +256,7 @@ class CustomClashConfig {
   // группа, до которой доходят только по dialer-proxy, звено цепочки: правило на неё вело бы мимо самого узла
   Set<String> get _hopGroups {
     final raw = map['proxy-groups'];
-    final groups = <String, Map>{
+    final groups = <String, Map<Object?, Object?>>{
       if (raw is List)
         for (final group in raw)
           if (group is Map && group['name'] != null) group['name'].toString(): group,

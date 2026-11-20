@@ -1166,7 +1166,7 @@ class _ServersTabState extends ConsumerState<ServersTab>
     bool loading = false;
     // снек-бар был бы скрыт за модальным барьером
     String? sheetError;
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: ctx,
       isScrollControlled: true,
       showDragHandle: true,

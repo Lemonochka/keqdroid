@@ -239,11 +239,11 @@ class UpdateService {
       latestVersion: latestTag,
       // pacman обновляет pacman: ведём на страницу релиза, keqdroid-bin в AUR может и не быть
       downloadUrl: linuxKind == LinuxInstallKind.pacman
-          ? (latestRelease['html_url'] ??
+          ? (latestRelease['html_url'] as String? ??
               'https://github.com/$_owner/$_repo/releases/latest')
-          : asset['browser_download_url'],
-      releaseNotes: latestRelease['body'],
-      apkSize: asset['size'] ?? 0,
+          : asset['browser_download_url'] as String,
+      releaseNotes: latestRelease['body'] as String?,
+      apkSize: asset['size'] as int? ?? 0,
       openInBrowser: linuxKind == LinuxInstallKind.pacman ||
           linuxKind == LinuxInstallKind.readOnly ||
           (Platform.isWindows && _shouldOpenDesktopAssetInBrowser(asset)),
@@ -264,7 +264,7 @@ class UpdateService {
 
     // двух страниц хватает, больше только жжёт лимит 60 запросов в час
     for (var page = 1; page <= 2; page++) {
-      final Response response;
+      final Response<Object?> response;
       try {
         response = await _getReleasesPage(dio, page);
       } on DioException catch (e) {
@@ -283,7 +283,7 @@ class UpdateService {
       final releases = response.data as List;
       if (releases.isEmpty) break;
 
-      for (final release in releases) {
+      for (final release in releases.cast<Map<String, dynamic>>()) {
         final tagName = (release['tag_name'] ?? '').toString();
         if (!_isValidReleaseTag(tagName)) {
           continue;
@@ -291,7 +291,7 @@ class UpdateService {
         if (release['prerelease'] == true) continue;
         if (release['draft'] == true) continue;
         if (_releaseDate(release) == null) continue;
-        filtered.add(Map<String, dynamic>.from(release as Map));
+        filtered.add(Map<String, dynamic>.from(release));
       }
 
       if (releases.length < 100) break;
@@ -307,10 +307,10 @@ class UpdateService {
   }
 
   // один повтор: WRONG_VERSION_NUMBER бывает разовым, таймауты не повторяем
-  static Future<Response> _getReleasesPage(Dio dio, int page) async {
+  static Future<Response<Object?>> _getReleasesPage(Dio dio, int page) async {
     for (var attempt = 0;; attempt++) {
       try {
-        return await dio.get(
+        return await dio.get<Object?>(
           'https://api.github.com/repos/$_owner/$_repo/releases',
           queryParameters: {'per_page': 100, 'page': page},
           options: Options(headers: {'Accept': 'application/vnd.github+json'}),
@@ -354,11 +354,11 @@ class UpdateService {
   // APK своей ABI, arm64 на 32-битную прошивку не встанет;
   // первый .apk брать нельзя, его выбирают версии до 32-битного APK
   static Map<String, dynamic>? _findApkAsset(
-    List? assets, {
+    List<Object?>? assets, {
     required bool arm32,
   }) {
     if (assets == null) return null;
-    for (final asset in assets) {
+    for (final asset in assets.cast<Map<String, dynamic>>()) {
       final name = (asset['name'] ?? '').toString().toLowerCase();
       if (name.endsWith('.apk') && name.contains(_arm32ApkMarker) == arm32) {
         return asset;
@@ -368,7 +368,7 @@ class UpdateService {
   }
 
   static Map<String, dynamic>? _findAssetForCurrentPlatform(
-    List? assets, {
+    List<Object?>? assets, {
     bool windowsInstalled = false,
   }) {
     if (Platform.isWindows) {
@@ -378,7 +378,7 @@ class UpdateService {
   }
 
   static String? findAssetNameForPlatform(
-    List? assets,
+    List<Object?>? assets,
     String platform, {
     LinuxInstallKind linuxKind = LinuxInstallKind.appImage,
   }) {
@@ -395,19 +395,19 @@ class UpdateService {
 
   // без установщика в релизе установленная копия возьмёт zip: обновится, хоть версия в «Приложениях» и отстанет
   static Map<String, dynamic>? _findWindowsAsset(
-    List? assets, {
+    List<Object?>? assets, {
     bool installed = false,
   }) {
     if (assets == null) return null;
     if (installed) {
-      for (final asset in assets) {
+      for (final asset in assets.cast<Map<String, dynamic>>()) {
         final name = (asset['name'] ?? '').toString().toLowerCase();
         if (name.endsWith(WindowsInstall.setupSuffix)) return asset;
       }
     }
     const preferred = ['.zip', '.msix', '.msi', '.exe'];
     for (final ext in preferred) {
-      for (final asset in assets) {
+      for (final asset in assets.cast<Map<String, dynamic>>()) {
         final name = (asset['name'] ?? '').toString().toLowerCase();
         if (name.endsWith(ext)) return asset;
       }
@@ -417,7 +417,7 @@ class UpdateService {
 
   // файл того же вида, что установлен: AppImage вместо deb оставлял старую версию
   static Map<String, dynamic>? _findLinuxAsset(
-    List? assets,
+    List<Object?>? assets,
     LinuxInstallKind kind,
   ) {
     if (assets == null) return null;
@@ -431,7 +431,7 @@ class UpdateService {
         const ['-linux-x64.tar.gz'],
     };
     for (final suffix in preferredSuffixes) {
-      for (final asset in assets) {
+      for (final asset in assets.cast<Map<String, dynamic>>()) {
         final name = (asset['name'] ?? '').toString().toLowerCase();
         if (name.endsWith(suffix)) return asset;
       }
@@ -440,22 +440,22 @@ class UpdateService {
   }
 
   static Map<String, dynamic>? checksumAssetFor(
-    List? assets,
+    List<Object?>? assets,
     String assetName,
   ) =>
       _findChecksumAsset(assets, assetName);
 
   // хеш либо в <имя>.sha256 рядом, либо в общем SHA256SUMS/checksums.txt, с 0.19.0 только общий
   static Map<String, dynamic>? _findChecksumAsset(
-    List? assets,
+    List<Object?>? assets,
     String assetName,
   ) {
     if (assets == null || assetName.isEmpty) return null;
     final target = '${assetName.toLowerCase()}.sha256';
 
-    for (final asset in assets) {
+    for (final asset in assets.cast<Map<String, dynamic>>()) {
       final name = (asset['name'] ?? '').toString().toLowerCase();
-      if (name == target) return asset as Map<String, dynamic>;
+      if (name == target) return asset;
     }
 
     const shared = {
@@ -464,9 +464,9 @@ class UpdateService {
       'checksums.txt',
       'checksums.sha256',
     };
-    for (final asset in assets) {
+    for (final asset in assets.cast<Map<String, dynamic>>()) {
       final name = (asset['name'] ?? '').toString().toLowerCase();
-      if (shared.contains(name)) return asset as Map<String, dynamic>;
+      if (shared.contains(name)) return asset;
     }
 
     return null;

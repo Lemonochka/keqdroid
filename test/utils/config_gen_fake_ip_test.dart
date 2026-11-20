@@ -29,7 +29,7 @@ String _address(Object? s) =>
     s is String ? s : ((s as Map)['address'] as String);
 
 Map<String, dynamic> _tunSniffing(Map<String, dynamic> c) =>
-    ((c['inbounds'] as List).cast<Map>().firstWhere((i) => i['tag'] == 'tun-in')
+    ((c['inbounds'] as List).cast<Map<Object?, Object?>>().firstWhere((i) => i['tag'] == 'tun-in')
         ['sniffing'] as Map)
         .cast<String, dynamic>();
 

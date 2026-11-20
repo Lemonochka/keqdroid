@@ -19,7 +19,7 @@ void _showSubscriptionEditSheet(
   final accentContainerColor = AppTheme.accentContainer(context);
   final onAccentContainerColor = AppTheme.onAccentContainer(context);
 
-  showModalBottomSheet(
+  showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,

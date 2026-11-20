@@ -82,7 +82,8 @@ class MemoryWatch {
         polls: common.polls,
         cores: {
           for (final entry in cores.entries)
-            if (entry.value case final Map core when core['ok'] == true)
+            if (entry.value case final Map<Object?, Object?> core
+                when core['ok'] == true)
               entry.key: core['privateBytes'] as int,
         },
       );

@@ -124,7 +124,8 @@ class VpnNativeBridge {
   static Future<({int port, String secret})?> getMihomoApi() async {
     if (!Platform.isAndroid) return null;
     try {
-      final result = await channel.invokeMethod<Map>('getMihomoApi');
+      final result =
+          await channel.invokeMethod<Map<Object?, Object?>>('getMihomoApi');
       final port = result?['port'] as int? ?? 0;
       final secret = result?['secret'] as String? ?? '';
       if (port <= 0 || secret.isEmpty) return null;

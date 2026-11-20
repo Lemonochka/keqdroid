@@ -196,7 +196,7 @@ class SettingsTab extends ConsumerWidget {
                               accent: ExpressiveAccent.secondary,
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(
+                                MaterialPageRoute<void>(
                                   builder: (_) =>
                                       const _DesktopSettingsScreen(),
                                 ),
@@ -209,7 +209,7 @@ class SettingsTab extends ConsumerWidget {
                             accent: ExpressiveAccent.primary,
                             onTap: () => Navigator.push(
                               context,
-                              MaterialPageRoute(
+                              MaterialPageRoute<void>(
                                 builder: (_) => const _AdvancedSettingsScreen(),
                               ),
                             ),
@@ -226,7 +226,7 @@ class SettingsTab extends ConsumerWidget {
                             accent: ExpressiveAccent.secondary,
                             onTap: () => Navigator.push(
                               context,
-                              MaterialPageRoute(
+                              MaterialPageRoute<void>(
                                 builder: (_) => const _BackupRestoreScreen(),
                               ),
                             ),
@@ -238,7 +238,7 @@ class SettingsTab extends ConsumerWidget {
                             accent: ExpressiveAccent.tertiary,
                             onTap: () => Navigator.push(
                               context,
-                              MaterialPageRoute(
+                              MaterialPageRoute<void>(
                                 builder: (_) => const _AppInternalsScreen(),
                               ),
                             ),
@@ -432,7 +432,7 @@ class _SplitTunnelingSettingsCard extends ConsumerWidget {
       accent: ExpressiveAccent.tertiary,
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => SplitTunnelingScreen()),
+        MaterialPageRoute<void>(builder: (_) => SplitTunnelingScreen()),
       ),
     );
   }

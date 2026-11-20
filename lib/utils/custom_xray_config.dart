@@ -586,7 +586,7 @@ class CustomXrayConfig {
     final raw = rule['inboundTag'];
     final ruleTags = switch (raw) {
       String s => [s],
-      List l => [for (final t in l) t.toString()],
+      List<Object?> l => [for (final t in l) t.toString()],
       _ => const <String>[],
     }.where((t) => t.trim().isNotEmpty).toList();
     if (ruleTags.isEmpty) continue;

@@ -31,7 +31,7 @@ class _ThemeCustomizationCard extends ConsumerWidget {
       accent: ExpressiveAccent.primary,
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => _ThemeCustomizationScreen(settings: settings)),
+        MaterialPageRoute<void>(builder: (_) => _ThemeCustomizationScreen(settings: settings)),
       ),
     );
   }

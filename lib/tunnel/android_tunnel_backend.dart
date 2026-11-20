@@ -37,7 +37,7 @@ class AndroidTunnelBackend implements TunnelBackend {
           _stateCtrl.add(VpnState(status: VpnStatus.fromString(e)));
         }
       },
-      onError: (e) => _stateCtrl.add(
+      onError: (Object e) => _stateCtrl.add(
         VpnState(status: VpnStatus.error, errorMessage: e.toString()),
       ),
       cancelOnError: false,
@@ -56,7 +56,7 @@ class AndroidTunnelBackend implements TunnelBackend {
   @override
   Future<({String username, String password})> fetchSocksCredentials() async {
     try {
-      final result = await _method.invokeMethod<Map>('getSocksCredentials');
+      final result = await _method.invokeMethod<Map<Object?, Object?>>('getSocksCredentials');
       if (result == null) {
         throw const VpnException('getSocksCredentials returned null');
       }
@@ -76,7 +76,7 @@ class AndroidTunnelBackend implements TunnelBackend {
       fetchActiveSocksCredentials() async {
     try {
       final result =
-          await _method.invokeMethod<Map>('getActiveSocksCredentials');
+          await _method.invokeMethod<Map<Object?, Object?>>('getActiveSocksCredentials');
       final username = result?['username'] as String? ?? '';
       final password = result?['password'] as String? ?? '';
       if (username.isEmpty || password.isEmpty) return null;
@@ -172,7 +172,7 @@ class AndroidTunnelBackend implements TunnelBackend {
   @override
   Future<VpnState> getCurrentState() async {
     try {
-      final result = await _method.invokeMethod<Map>('getStatus');
+      final result = await _method.invokeMethod<Map<Object?, Object?>>('getStatus');
       if (result == null) return VpnState.disconnected;
       return VpnState.fromMap(result.cast<Object?, Object?>());
     } on PlatformException catch (e) {
@@ -250,7 +250,7 @@ class AndroidTunnelBackend implements TunnelBackend {
       _pingProgressListeners[batchId] = (map) => onEach(_urlTestResult(map));
     }
     try {
-      final result = await _method.invokeMethod<List>('xrayUrlTestMulti', {
+      final result = await _method.invokeMethod<List<Object?>>('xrayUrlTestMulti', {
         'config': config,
         'core': core.wireValue,
         'testUrl': testUrl,
@@ -312,7 +312,7 @@ class AndroidTunnelBackend implements TunnelBackend {
   }) async {
     if (items.isEmpty) return [];
     try {
-      final result = await _method.invokeMethod<List>('xrayUrlTestBatch', {
+      final result = await _method.invokeMethod<List<Object?>>('xrayUrlTestBatch', {
         'socksPort': socksPort,
         'core': core.wireValue,
         'testUrl': testUrl,
@@ -364,7 +364,7 @@ class AndroidTunnelBackend implements TunnelBackend {
   }) async {
     if (items.isEmpty) return [];
     try {
-      final result = await _method.invokeMethod<List>('xraySpeedTestBatch', {
+      final result = await _method.invokeMethod<List<Object?>>('xraySpeedTestBatch', {
         'socksPort': socksPort,
         'core': core.wireValue,
         'downloadUrl': downloadUrl,

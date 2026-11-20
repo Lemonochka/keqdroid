@@ -1562,8 +1562,8 @@ void main() {
       socksPort: 2080,
     );
     final parsed = jsonDecode(raw) as Map<String, dynamic>;
-    expect(parsed['proxies'], isA<List>());
-    expect(parsed['rules'], isA<List>());
+    expect(parsed['proxies'], isA<List<Object?>>());
+    expect(parsed['rules'], isA<List<Object?>>());
   });
 
   // Маскировка под обычный HTTP-запрос поверх tcp. У ядра это отдельный

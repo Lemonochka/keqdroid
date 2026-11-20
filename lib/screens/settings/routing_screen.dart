@@ -589,7 +589,7 @@ class _RoutingScreenState extends ConsumerState<_RoutingScreen> {
   ) {
     Navigator.push(
       context,
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (_) => _RouteEditorScreen(initial: route, profileId: profileId),
       ),
     );
@@ -1203,7 +1203,7 @@ Future<RouteTarget?> _showTargetSheet(
 }
 
 void _showRoutingCheatSheet(BuildContext context, AppLocalizations l10n) {
-  showModalBottomSheet(
+  showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,

@@ -308,7 +308,9 @@ void main() {
         ),
       );
 
-      final restored = Subscription.fromJson(jsonDecode(jsonEncode(sub.toJson())));
+      final restored = Subscription.fromJson(
+        jsonDecode(jsonEncode(sub.toJson())) as Map<String, dynamic>,
+      );
 
       expect(restored.fetchIdentity, sub.fetchIdentity);
     });

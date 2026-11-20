@@ -148,7 +148,7 @@ class _AppInternalsScreen extends ConsumerWidget {
             accent: ExpressiveAccent.tertiary,
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const _AppLogScreen()),
+              MaterialPageRoute<void>(builder: (_) => const _AppLogScreen()),
             ),
           ),
         ],

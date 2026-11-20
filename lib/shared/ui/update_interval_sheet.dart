@@ -17,7 +17,7 @@ void showUpdateIntervalSheet(
   final textLightColor = AppTheme.textLight(context);
   final textColor = AppTheme.text(context);
 
-  showModalBottomSheet(
+  showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,

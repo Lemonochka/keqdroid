@@ -264,7 +264,7 @@ class SettingsBackupService {
       final raw = backup.data['subscriptions'];
       if (raw is! List) throw FormatException('Invalid subscriptions section');
       final subs = raw
-          .whereType<Map>()
+          .whereType<Map<Object?, Object?>>()
           .map((e) => Subscription.fromJson(Map<String, dynamic>.from(e)))
           .toList();
       // картинки раньше подписок, иначе первый кадр нарисует карточку без файла
@@ -286,7 +286,7 @@ class SettingsBackupService {
       if (items is! List) throw FormatException('Invalid servers.items section');
 
       final servers = items
-          .whereType<Map>()
+          .whereType<Map<Object?, Object?>>()
           .map((e) => ServerItem.fromJson(Map<String, dynamic>.from(e)))
           .toList();
       await storage.saveServers(servers);

@@ -8,7 +8,7 @@ void _showSubscriptionShareSheet(
 }) {
   final l10n = AppLocalizations.of(context)!;
   final qrKey = GlobalKey();
-  showModalBottomSheet(
+  showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,

@@ -225,7 +225,7 @@ void main() {
 
     test('работает и без туннеля: условия на процесс у такого правила нет', () {
       final rule = ((_xray(routes)['routing'] as Map)['rules'] as List)
-          .cast<Map>()
+          .cast<Map<Object?, Object?>>()
           .firstWhere((r) => r['ruleTag'] == 'keq-proto-0-domains');
       expect(rule.containsKey('process'), isFalse);
       expect(rule.containsKey('inboundTag'), isFalse);

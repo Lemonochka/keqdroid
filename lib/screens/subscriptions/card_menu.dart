@@ -93,7 +93,7 @@ void _showSubscriptionDeleteDialog(
   final textLightColor = AppTheme.textLight(context);
   final redColor = AppTheme.red(context);
 
-  showDialog(
+  showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: cardColor,

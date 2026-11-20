@@ -99,7 +99,7 @@ void main() {
     test('каждое правило привязано к своей пробе', () {
       final rules = (merged['routing']['rules'] as List).cast<Map<String, dynamic>>();
       for (final rule in rules) {
-        expect(rule['inboundTag'], isA<List>(), reason: 'правило без inboundTag ловит чужие пробы');
+        expect(rule['inboundTag'], isA<List<Object?>>(), reason: 'правило без inboundTag ловит чужие пробы');
       }
       final catchAll = rules.where((r) => r['network'] == 'tcp,udp').toList();
       expect(catchAll.length, 2);
@@ -239,7 +239,7 @@ rules:
         ),
       ) as Map<String, dynamic>;
       final proxies = [for (final p in merged['proxies'] as List) p['name']];
-      final groups = (merged['proxy-groups'] as List).cast<Map>();
+      final groups = (merged['proxy-groups'] as List).cast<Map<Object?, Object?>>();
       expect(proxies.toSet(), hasLength(proxies.length));
       expect(groups.single['name'], '${MihomoConfigGen.proxyName}-1');
       expect(groups.single['proxies'], everyElement(isIn(proxies)));
@@ -352,7 +352,7 @@ rules:
     });
 
     test('mihomo: листенеры http, проба на ПК говорит CONNECT', () {
-      final listeners = (mihomo()['listeners'] as List).cast<Map>();
+      final listeners = (mihomo()['listeners'] as List).cast<Map<Object?, Object?>>();
       expect(listeners.map((l) => l['type']), ['http', 'http']);
       expect(listeners.map((l) => l['port']), ['3001', '3002']);
     });
@@ -374,7 +374,7 @@ rules:
     });
 
     test('xray: инбаунды http на своих портах', () {
-      final inbounds = (xray()['inbounds'] as List).cast<Map>();
+      final inbounds = (xray()['inbounds'] as List).cast<Map<Object?, Object?>>();
       expect(inbounds.map((i) => i['protocol']), ['http', 'http']);
       expect(inbounds.map((i) => i['port']), [3001, 3002]);
     });

@@ -67,7 +67,7 @@ class _AppLogScreenState extends State<_AppLogScreen> {
   }
 
   Future<void> _open(Widget screen) async {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    await Navigator.push(context, MaterialPageRoute<void>(builder: (_) => screen));
     if (mounted) unawaited(_load());
   }
 
