@@ -146,11 +146,20 @@ void main() {
         'padding': filler,
       }),
     );
-    // простой список такого размера не разбирается вовсе
-    _goldenErrorOf(
-      'large-plain-list',
-      List.filled(1700, _read('plain-uri-list')).join('\n'),
-    );
+    // до 20.11.2026 простой список такого размера не разбирался вовсе; теперь он идёт
+    // по строкам и даёт то же, что короткий, в том числе завёрнутый в base64
+    test('large-plain-list', () {
+      final plain = _read('plain-uri-list');
+      final large = List.filled(1700, plain).join('\n');
+      expect(large.length, greaterThan(1 << 20));
+      final expected = SubscriptionBodyParser.parseBody(plain);
+      expect(SubscriptionBodyParser.parseBody(large), expected);
+      expect(
+        SubscriptionBodyParser.parseBody(base64.encode(utf8.encode(large))),
+        expected,
+      );
+    });
+    _goldenErrorOf('large-junk', List.filled(1100, 'x' * 1000).join('\n'));
   });
 
   group('golden: payload без серверов', () {

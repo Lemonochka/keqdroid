@@ -23,6 +23,8 @@ abstract final class SubscriptionBodyParser {
     if (original.length > _maxVariantLength) {
       final large = _parseLargeStructured(original);
       if (large.isNotEmpty) return large;
+      final listed = _parseLargeLinkList(original);
+      if (listed.isNotEmpty) return listed;
     }
     final candidates = _collectTextVariants(original);
 
@@ -100,6 +102,50 @@ abstract final class SubscriptionBodyParser {
     final nodes = _extractConfigsFromStructuredContent(body);
     if (nodes.isNotEmpty) return nodes;
     return _extractClashConfigs(body);
+  }
+
+  // сборники на тысячи ссылок: регулярка идёт по каждой строке отдельно, по всему тексту она роняла стек
+  static List<String> _parseLargeLinkList(String body) {
+    var text = body;
+    for (
+      var i = 0;
+      i < 2 && !text.contains('://') && _isBase64Text(text);
+      i++
+    ) {
+      final decoded = tryDecodeBase64Flexible(text);
+      if (decoded == null) return const [];
+      text = decoded;
+    }
+    final lines = [
+      for (final line in LineSplitter.split(text))
+        if (line.isNotEmpty && line.length <= _maxVariantLength) line,
+    ];
+    final links = <String>{
+      for (final line in lines) ..._extractUriLinks(line),
+      for (final line in lines) ..._extractUriLinks(_htmlUnescape(line)),
+      for (final line in lines)
+        ..._extractUriLinks(_jsUnescape(_htmlUnescape(line))),
+    };
+    return links.where((c) => !_isMetadataConfig(c)).toList();
+  }
+
+  static bool _isBase64Text(String text) {
+    for (final c in text.codeUnits) {
+      final ok =
+          (c >= 0x41 && c <= 0x5a) ||
+          (c >= 0x61 && c <= 0x7a) ||
+          (c >= 0x30 && c <= 0x39) ||
+          c == 0x2b ||
+          c == 0x2f ||
+          c == 0x3d ||
+          c == 0x2d ||
+          c == 0x5f ||
+          c == 0x0a ||
+          c == 0x0d ||
+          c == 0x20;
+      if (!ok) return false;
+    }
+    return true;
   }
 
   static List<String> _extractCustomConfigs(String content) {
