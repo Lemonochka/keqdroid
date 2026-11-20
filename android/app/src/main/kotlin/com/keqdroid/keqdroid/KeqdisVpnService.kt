@@ -1508,9 +1508,8 @@ class KeqdisVpnService : VpnService() {
 
         if (!isTransitioning) {
             if (isConnected) {
-                val disconnectIntent = Intent(BROADCAST_ACTION_DISCONNECT).apply {
-                    setPackage(packageName)
-                }
+                // цепочкой, а не в apply: внутри apply CodeQL не видит setPackage и считает намерение неявным
+                val disconnectIntent = Intent(BROADCAST_ACTION_DISCONNECT).setPackage(packageName)
                 val disconnectPending = PendingIntent.getBroadcast(
                     this, 1,
                     disconnectIntent,

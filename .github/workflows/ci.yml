@@ -5,6 +5,9 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  contents: read
+
 env:
   # the same as release.yml and the local SDK
   FLUTTER_VERSION: '3.44.4'
