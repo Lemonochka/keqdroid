@@ -1,4 +1,4 @@
-﻿package com.keqdroid.keqdroid
+package com.keqdroid.keqdroid
 
 import android.app.PendingIntent
 import android.content.BroadcastReceiver

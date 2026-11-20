@@ -1,4 +1,4 @@
-﻿package com.keqdroid.keqdroid
+package com.keqdroid.keqdroid
 
 import android.app.Activity
 import android.app.WallpaperManager
@@ -31,7 +31,15 @@ import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -44,12 +52,12 @@ import java.net.Socket
 class MainActivity : FlutterFragmentActivity() {
 
     companion object {
-        const val METHOD_CHANNEL         = "keqdroid_vpn_channel"
-        const val EVENT_CHANNEL          = "keqdroid_vpn_status"
-        const val PING_PROGRESS_CHANNEL  = "keqdroid_ping_progress"
-        const val EXTRA_LAUNCH_ACTION    = "action"
+        const val METHOD_CHANNEL = "keqdroid_vpn_channel"
+        const val EVENT_CHANNEL = "keqdroid_vpn_status"
+        const val PING_PROGRESS_CHANNEL = "keqdroid_ping_progress"
+        const val EXTRA_LAUNCH_ACTION = "action"
         // те же строки в res/xml/shortcuts.xml и в servers_tab на стороне Dart
-        const val LAUNCH_ACTION_CONNECT    = "connect_from_notification"
+        const val LAUNCH_ACTION_CONNECT = "connect_from_notification"
         const val LAUNCH_ACTION_DISCONNECT = "disconnect_from_shortcut"
 
         fun launchActionIntent(context: Context, action: String): Intent =
@@ -58,7 +66,7 @@ class MainActivity : FlutterFragmentActivity() {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 .putExtra(EXTRA_LAUNCH_ACTION, action)
 
-        private const val ICON_SIZE_PX   = 96
+        private const val ICON_SIZE_PX = 96
         // отдельно от FlutterSharedPreferences: читаем в onCreate, до подъёма Flutter
         private const val PREFS_WINDOW = "keqdis_window"
         private const val KEY_WINDOW_BACKGROUND = "window_background"
@@ -366,8 +374,8 @@ class MainActivity : FlutterFragmentActivity() {
 
                         "startVpn" -> {
                             val backend = call.argument<String>("vpnBackend") ?: "xray"
-                            val socksPort       = call.argument<Int>("socksPort") ?: 2080
-                            val serverName      = call.argument<String>("serverName")
+                            val socksPort = call.argument<Int>("socksPort") ?: 2080
+                            val serverName = call.argument<String>("serverName")
                             val excludePackages = call.argument<List<*>>("excludePackages")
                                 ?.filterIsInstance<String>() ?: emptyList()
                             val includePackages = call.argument<List<*>>("includePackages")
@@ -429,7 +437,7 @@ class MainActivity : FlutterFragmentActivity() {
                                 else -> result.error("UNSUPPORTED_BACKEND", "Unsupported VPN backend: $backend", null)
                             }
                         }
-                        "stopVpn"              -> stopVpn(result)
+                        "stopVpn" -> stopVpn(result)
                         "requestVpnPermission" -> requestVpnPermission(result)
                         "saveDocument" -> saveDocument(
                             call.argument<String>("fileName") ?: "",
@@ -437,7 +445,7 @@ class MainActivity : FlutterFragmentActivity() {
                             call.argument<ByteArray>("bytes") ?: ByteArray(0),
                             result,
                         )
-                        "getSocksCredentials"  -> {
+                        "getSocksCredentials" -> {
                             // свежие логин и пароль уйдут в сервис через Intent при startVpn, так конфиг ядра и прокси приложения совпадают
                             pendingSocksUsername = randomToken(16)
                             pendingSocksPassword = randomToken(24)
@@ -485,8 +493,8 @@ class MainActivity : FlutterFragmentActivity() {
                             ),
                         )
                         "getPing" -> {
-                            val addr    = call.argument<String>("address") ?: ""
-                            val port    = call.argument<Int>("port") ?: 0
+                            val addr = call.argument<String>("address") ?: ""
+                            val port = call.argument<Int>("port") ?: 0
                             val timeout = call.argument<Int>("timeoutMs") ?: 5000
                             getPing(addr, port, timeout, result)
                         }
@@ -736,7 +744,7 @@ class MainActivity : FlutterFragmentActivity() {
                                 result,
                             )
                         }
-                        else        -> result.notImplemented()
+                        else -> result.notImplemented()
                     }
                 }
             }
@@ -1259,7 +1267,7 @@ class MainActivity : FlutterFragmentActivity() {
                         includeSystem || !isSys
                     }
                     .map { info ->
-                        val label   = pm.getApplicationLabel(info).toString()
+                        val label = pm.getApplicationLabel(info).toString()
                         val iconB64 = runCatching {
                             drawableToBase64(pm.getApplicationIcon(info.packageName))
                         }.getOrNull()
@@ -1277,8 +1285,8 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun drawableToBase64(d: Drawable): String {
-        val size   = ICON_SIZE_PX
-        val bmp    = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val size = ICON_SIZE_PX
+        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         d.setBounds(0, 0, size, size)
         d.draw(canvas)
@@ -1471,7 +1479,7 @@ internal fun launchActionFrom(className: String?, action: () -> String?): String
 
 internal fun randomToken(length: Int): String {
     val chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    val rng   = java.security.SecureRandom()
+    val rng = java.security.SecureRandom()
     return buildString(length) { repeat(length) { append(chars[rng.nextInt(chars.length)]) } }
 }
 

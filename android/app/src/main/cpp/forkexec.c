@@ -1,4 +1,4 @@
-﻿#include <sys/socket.h>
+#include <sys/socket.h>
 #include <sys/un.h>
 #include <stdint.h>
 #include <unistd.h>

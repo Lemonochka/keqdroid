@@ -1,4 +1,4 @@
-﻿package com.keqdroid.keqdroid
+package com.keqdroid.keqdroid
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -19,7 +19,19 @@ import android.os.ParcelFileDescriptor
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -35,31 +47,31 @@ typealias StatusListener = (status: String, extra: String?) -> Unit
 class KeqdisVpnService : VpnService() {
 
     companion object {
-        const val ACTION_START         = "com.keqdis.vpn.START"
-        const val ACTION_STOP          = "com.keqdis.vpn.STOP"
-        const val ACTION_TOGGLE         = "com.keqdis.vpn.TOGGLE"
-        const val EXTRA_XRAY_CONFIG    = "xray_config_path"
+        const val ACTION_START = "com.keqdis.vpn.START"
+        const val ACTION_STOP = "com.keqdis.vpn.STOP"
+        const val ACTION_TOGGLE = "com.keqdis.vpn.TOGGLE"
+        const val EXTRA_XRAY_CONFIG = "xray_config_path"
         const val EXTRA_SOCKS_USERNAME = "socks_username"
         const val EXTRA_SOCKS_PASSWORD = "socks_password"
-        const val EXTRA_SERVER_NAME    = "server_name"
-        const val EXTRA_VPN_BACKEND    = "vpn_backend"
+        const val EXTRA_SERVER_NAME = "server_name"
+        const val EXTRA_VPN_BACKEND = "vpn_backend"
         // строка в лог ядра: откуда сессия, если её поднял не пользователь
-        const val EXTRA_LOG_NOTE       = "log_note"
-        const val VPN_BACKEND_XRAY     = "xray"
-        const val VPN_BACKEND_MIHOMO   = "mihomo"
+        const val EXTRA_LOG_NOTE = "log_note"
+        const val VPN_BACKEND_XRAY = "xray"
+        const val VPN_BACKEND_MIHOMO = "mihomo"
 
-        const val CORE_KIND_XRAY       = "xray"
-        const val CORE_KIND_MIHOMO     = "mihomo"
+        const val CORE_KIND_XRAY = "xray"
+        const val CORE_KIND_MIHOMO = "mihomo"
         // движок остался со времён keqrnel: на Android он всегда chain, поле живёт ради старых записей плитки
-        const val EXTRA_CORE_ENGINE    = "core_engine"
-        const val CORE_ENGINE_CHAIN    = "chain"
-        const val CORE_ENGINE_KEQRNEL  = "keqrnel"
+        const val EXTRA_CORE_ENGINE = "core_engine"
+        const val CORE_ENGINE_CHAIN = "chain"
+        const val CORE_ENGINE_KEQRNEL = "keqrnel"
         // в режиме прокси establish() не зовётся, нет ни интерфейса, ни диалога разрешения;
         // ядро слушает 127.0.0.1, а loopback на Android общий для всех приложений
-        const val EXTRA_TUNNEL_MODE    = "tunnel_mode"
-        const val TUNNEL_MODE_VPN      = "tun"
-        const val TUNNEL_MODE_PROXY    = "proxy"
-        const val CORE_LOG_FILE        = "core_logs.txt"
+        const val EXTRA_TUNNEL_MODE = "tunnel_mode"
+        const val TUNNEL_MODE_VPN = "tun"
+        const val TUNNEL_MODE_PROXY = "proxy"
+        const val CORE_LOG_FILE = "core_logs.txt"
 
         // без второй строки пустой хвост лога читается как логи не пишутся
         const val CORE_GONE_HINT =
@@ -68,16 +80,16 @@ class KeqdisVpnService : VpnService() {
                 "the usual killers are the child process limits of Android 12+ " +
                 "and vendor battery savers"
         // только по этой строке видно, взял ли mihomo наш дескриптор (listener/listener.go, ReCreateTun)
-        const val MIHOMO_TUN_READY     = "[TUN] Tun adapter listening at:"
-        const val MIHOMO_TUN_FAILED    = "Start TUN listening error:"
-        const val NOTIFICATION_ID      = 1337
-        const val CHANNEL_ID_CONTROL   = "keqdis_vpn_control"
-        const val TUN_ADDRESS          = "172.19.0.1"
-        const val TUN_PREFIX           = 30
-        const val TUN_MTU              = 1400
+        const val MIHOMO_TUN_READY = "[TUN] Tun adapter listening at:"
+        const val MIHOMO_TUN_FAILED = "Start TUN listening error:"
+        const val NOTIFICATION_ID = 1337
+        const val CHANNEL_ID_CONTROL = "keqdis_vpn_control"
+        const val TUN_ADDRESS = "172.19.0.1"
+        const val TUN_PREFIX = 30
+        const val TUN_MTU = 1400
         // второй хост нашей /30, слушать на нём некому: запрос всё равно уйдёт в tun0 и попадёт в перехват 53;
         // держать в паре с _androidTunDns в Dart
-        const val TUN_DNS_ADDRESS      = "172.19.0.2"
+        const val TUN_DNS_ADDRESS = "172.19.0.2"
 
         const val BROADCAST_ACTION_DISCONNECT = "com.keqdis.vpn.NOTIF_DISCONNECT"
 
@@ -123,7 +135,7 @@ class KeqdisVpnService : VpnService() {
         const val KEY_QS_LAST_SOCKS_PORT = "qs_last_socks_port"
         const val KEY_QS_LAST_BACKEND = "qs_last_backend"
         const val KEY_QS_LAST_CORE_ENGINE = "qs_last_core_engine"
-        const val KEY_QS_LAST_CORE_KIND   = "qs_last_core_kind"
+        const val KEY_QS_LAST_CORE_KIND = "qs_last_core_kind"
         // плитка обязана переподключаться тем же режимом, иначе из только прокси поднимала бы полноценный VPN
         const val KEY_QS_LAST_TUNNEL_MODE = "qs_last_tunnel_mode"
         const val KEY_QS_LAST_SERVER_NAME = "qs_last_server_name"
@@ -210,10 +222,10 @@ class KeqdisVpnService : VpnService() {
         }
     )
     @Volatile private var statusListener: StatusListener? = null
-    private var startTime     = 0L
-    private val uploadTotal   = AtomicLong(0)
+    private var startTime = 0L
+    private val uploadTotal = AtomicLong(0)
     private val downloadTotal = AtomicLong(0)
-    private val uploadSpeed   = AtomicLong(0)
+    private val uploadSpeed = AtomicLong(0)
     private val downloadSpeed = AtomicLong(0)
 
     private var notificationActionReceiver: BroadcastReceiver? = null
@@ -329,7 +341,7 @@ class KeqdisVpnService : VpnService() {
 
     private fun startSession(intent: Intent, startId: Int, logNote: String? = null): Int {
         val backend = intent.getStringExtra(EXTRA_VPN_BACKEND) ?: VPN_BACKEND_XRAY
-        val socksPort   = intent.getIntExtra("socks_port", 2080)
+        val socksPort = intent.getIntExtra("socks_port", 2080)
         val excludePkgs = intent.getStringArrayListExtra("exclude_packages") ?: arrayListOf()
         val includePkgs = intent.getStringArrayListExtra("include_packages") ?: arrayListOf()
         currentServerName = intent.getStringExtra(EXTRA_SERVER_NAME)
@@ -1268,7 +1280,7 @@ class KeqdisVpnService : VpnService() {
                 "${if (coreKind == CORE_KIND_MIHOMO) "mihomo" else "Xray"} " +
                     "exited on startup${coreLogTail()}"
             )
-            pid <= 0  -> throw IllegalStateException("fork() for Xray failed (pid=$pid)")
+            pid <= 0 -> throw IllegalStateException("fork() for Xray failed (pid=$pid)")
             else -> {}
         }
         NativeLog.i("KEQDIS", "Xray started pid=$pid")
