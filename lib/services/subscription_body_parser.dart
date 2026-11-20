@@ -1499,22 +1499,7 @@ abstract final class SubscriptionBodyParser {
     DateTime? expiresAt;
 
     for (final remark in remarks) {
-      final dateMatch = RegExp(
-        r'(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})',
-      ).firstMatch(remark);
-      if (dateMatch != null && expiresAt == null) {
-        final d = int.tryParse(dateMatch.group(1)!);
-        final m = int.tryParse(dateMatch.group(2)!);
-        var y = int.tryParse(dateMatch.group(3)!);
-        if (d != null && m != null && y != null) {
-          if (y < 100) y += 2000;
-          try {
-            expiresAt = DateTime(y, m, d, 23, 59, 59);
-          } on Object {
-            // дата битая
-          }
-        }
-      }
+      expiresAt ??= _expiryIn(remark);
 
       final trafficMatch = RegExp(
         r'(\d+(?:[.,]\d+)?)\s*(kb|mb|gb|tb|кб|мб|гб|тб)\s*[/|]\s*(\d+(?:[.,]\d+)?|∞|infinity|unlimited)\s*(kb|mb|gb|tb|кб|мб|гб|тб)?',
@@ -1545,6 +1530,40 @@ abstract final class SubscriptionBodyParser {
     }
 
     return (usedBytes: usedBytes, totalBytes: totalBytes, expiresAt: expiresAt);
+  }
+
+  // соседняя цифра или точка отсекают куски IP: в 185.12.34.56 сидит 85.12.34
+  static final _yearFirstDate = RegExp(
+    r'(?<![\d.])(\d{4})[./-](\d{1,2})[./-](\d{1,2})(?!\d)(?!\.\d)',
+  );
+  static final _dayFirstDate = RegExp(
+    r'(?<![\d.])(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})(?!\d)(?!\.\d)',
+  );
+
+  static DateTime? _expiryIn(String remark) {
+    final yearFirst = _yearFirstDate.firstMatch(remark);
+    if (yearFirst != null) {
+      final date = _validDate(
+        int.parse(yearFirst[1]!),
+        int.parse(yearFirst[2]!),
+        int.parse(yearFirst[3]!),
+      );
+      if (date != null) return date;
+    }
+    final dayFirst = _dayFirstDate.firstMatch(remark);
+    if (dayFirst == null) return null;
+    var year = int.parse(dayFirst[3]!);
+    if (year < 100) year += 2000;
+    return _validDate(year, int.parse(dayFirst[2]!), int.parse(dayFirst[1]!));
+  }
+
+  // DateTime не бросает на 19-м месяце или 31 февраля, а молча переносит дату вперёд
+  static DateTime? _validDate(int year, int month, int day) {
+    if (year < 2000 || year > 2100 || month < 1 || month > 12 || day < 1) {
+      return null;
+    }
+    final date = DateTime(year, month, day, 23, 59, 59);
+    return date.month == month && date.day == day ? date : null;
   }
 
   static int? _toBytes(String? value, String? unitRaw) {

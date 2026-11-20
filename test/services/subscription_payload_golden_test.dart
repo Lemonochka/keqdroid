@@ -209,8 +209,20 @@ void main() {
 
   group('golden: трафик и срок из имён', () {
     _goldenMeta('meta-in-remarks');
-    // дата 2026-01-01 читается как 26.01.01, то есть 2001 год; так сейчас и есть
+    // дата 2026-01-01 до 20.11.2026 читалась как 26.01.01, то есть 2001 год
     _goldenMeta('metadata-stub');
+    String named(String name) =>
+        'vless://00000000-0000-4000-8000-000000000000@198.51.100.210:443?type=tcp#$name';
+    // адрес в имени давал срок в 2035 году, версия ядра в 2032, 31 февраля уезжало в март
+    _goldenMetaOf(
+      'meta-date-traps',
+      [
+        named('DE 185.12.34.56'),
+        named('mihomo 1.19.31'),
+        named('Срок 31.02.2027'),
+      ].join('\n'),
+    );
+    _goldenMetaOf('meta-date-sentence-end', named('Подписка до 15.03.2027.'));
     _goldenMeta('plain-uri-list');
 
     final meta = _read('meta-in-remarks');
