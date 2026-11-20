@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
+import '../models/probe_results.dart';
 import '../services/core_dial_failures.dart';
 import '../services/xray_connection_lines.dart';
 import '../services/xray_route_decisions.dart';
@@ -1180,7 +1181,7 @@ $run''';
   @override
   Future<
     List<
-      ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+      ServerUrlTestResult
     >?
   >
   xrayUrlTestMulti({
@@ -1207,7 +1208,7 @@ $run''';
   @override
   Future<
     List<
-      ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+      ServerUrlTestResult
     >
   >
   xrayUrlTestBatch({
@@ -1241,7 +1242,7 @@ $run''';
   }
 
   @override
-  Future<List<({String id, bool success, int? kbps, String error})>>
+  Future<List<ServerSpeedTestResult>>
   xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,

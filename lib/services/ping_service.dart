@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/app_logger.dart';
 import '../models/app_settings.dart';
+import '../models/probe_results.dart';
 import '../platform/platform_bootstrap.dart';
 import '../models/ping_test_config.dart';
 import '../models/server_item.dart';
@@ -639,7 +640,7 @@ class PingService {
         );
     final reported = <String>{};
 
-    List<({String id, bool success, int? latencyMs, String error, int? httpStatus})>?
+    List<ServerUrlTestResult>?
         raw;
     try {
       raw = await _engine.xrayUrlTestMulti(

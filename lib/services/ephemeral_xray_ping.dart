@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 
 import '../core/app_logger.dart';
+import '../models/probe_results.dart';
 import '../platform/windows_cert_trust.dart';
 import '../tunnel/linux_core_paths.dart';
 import '../tunnel/windows_core_paths.dart';
@@ -132,12 +133,7 @@ class EphemeralXrayPing {
   }
 
   static Future<
-      ({
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })> urlTest({
+      UrlTestResult> urlTest({
     required String xrayConfigJson,
     required int socksPort,
     required String testUrl,
@@ -155,13 +151,7 @@ class EphemeralXrayPing {
 
   static Future<
       List<
-          ({
-            String id,
-            bool success,
-            int? latencyMs,
-            String error,
-            int? httpStatus,
-          })>> urlTestBatch({
+          ServerUrlTestResult>> urlTestBatch({
     required List<({String id, String xrayConfigJson})> items,
     required int socksPort,
     required String testUrl,
@@ -171,13 +161,7 @@ class EphemeralXrayPing {
   }) async {
     if (items.isEmpty) return [];
     // по очереди: у всех элементов пачки один socksPort
-    final out = <({
-      String id,
-      bool success,
-      int? latencyMs,
-      String error,
-      int? httpStatus,
-    })>[];
+    final out = <ServerUrlTestResult>[];
     for (final item in items) {
       final r = await _runSingle(
         xrayConfigJson: item.xrayConfigJson,
@@ -202,13 +186,7 @@ class EphemeralXrayPing {
   // длины он принял бы за ответ, и живые соседи негодного сервера ушли бы в красные
   static Future<
       List<
-          ({
-            String id,
-            bool success,
-            int? latencyMs,
-            String error,
-            int? httpStatus,
-          })>?> urlTestMulti({
+          ServerUrlTestResult>?> urlTestMulti({
     required String configJson,
     required List<(String id, int port)> probes,
     required String testUrl,
@@ -217,7 +195,7 @@ class EphemeralXrayPing {
     bool keepAlive = true,
     int concurrency = 16,
     void Function(
-      ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+      ServerUrlTestResult
           item,
     )? onEach,
   }) async {
@@ -338,7 +316,7 @@ class EphemeralXrayPing {
   }
 
   static Future<
-      List<({String id, bool success, int? kbps, String error})>> speedTestBatch({
+      List<ServerSpeedTestResult>> speedTestBatch({
     required List<({String id, String xrayConfigJson})> items,
     required int socksPort,
     required String downloadUrl,
@@ -347,7 +325,7 @@ class EphemeralXrayPing {
   }) async {
     if (items.isEmpty) return [];
     return _runSerial(() async {
-      final out = <({String id, bool success, int? kbps, String error})>[];
+      final out = <ServerSpeedTestResult>[];
       for (final item in items) {
         final r = await _runSpeedSingle(
           xrayConfigJson: item.xrayConfigJson,
@@ -379,12 +357,7 @@ class EphemeralXrayPing {
       core == VpnBackend.mihomo && sinceCoreStart < coreWakeupGrace;
 
   static Future<
-      ({
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })> _runSingle({
+      UrlTestResult> _runSingle({
     required String xrayConfigJson,
     required int socksPort,
     required String testUrl,
@@ -490,7 +463,7 @@ class EphemeralXrayPing {
     }
   }
 
-  static Future<({bool success, int? kbps, String error})> _runSpeedSingle({
+  static Future<SpeedTestResult> _runSpeedSingle({
     required String xrayConfigJson,
     required int socksPort,
     required String downloadUrl,
@@ -561,7 +534,7 @@ class EphemeralXrayPing {
     }
   }
 
-  static Future<({bool success, int? kbps, String error})> _downloadProbeViaSocks({
+  static Future<SpeedTestResult> _downloadProbeViaSocks({
     required String downloadUrl,
     required int socksPort,
     required int timeoutMs,
@@ -610,12 +583,7 @@ class EphemeralXrayPing {
 
   @visibleForTesting
   static Future<
-      ({
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })> httpProbeViaSocks({
+      UrlTestResult> httpProbeViaSocks({
     required String testUrl,
     required int socksPort,
     required int timeoutMs,
@@ -668,7 +636,7 @@ class EphemeralXrayPing {
       reader = _HttpResponseReader(tls);
 
       // первая попытка платит за рукопожатие, вторая меряет чистое время ответа
-      ({bool success, int? latencyMs, String error, int? httpStatus})? best;
+      UrlTestResult? best;
       final attempts = keepAlive ? 2 : 1;
       for (var attempt = 0; attempt < attempts; attempt++) {
         final sw = Stopwatch()..start();

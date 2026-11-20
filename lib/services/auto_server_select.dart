@@ -1,4 +1,5 @@
 import '../models/ping_sample.dart';
+import '../models/probe_results.dart';
 import '../models/server_item.dart';
 
 abstract final class AutoServerSelect {
@@ -167,7 +168,7 @@ abstract final class AutoServerSelect {
   // не ответил никто: виновата сеть (лифт, метро, переезд с Wi-Fi), а не серверы;
   // такой провал сутки штрафовал бы лучших и уводил их в конец очереди замеров
   static bool worthRecording(
-    Iterable<({String id, bool success, int? latencyMs})> results,
+    Iterable<ServerLatency> results,
   ) =>
       results.any((r) => r.success);
 
@@ -192,17 +193,17 @@ abstract final class AutoServerSelect {
   // пока текущий не ответил, соседи ничего не решают: дальний сервер иначе проигрывал бы гонку живым
   static AutoSelectVerdict judge({
     required String currentId,
-    required Iterable<({String id, bool success, int? latencyMs})> results,
+    required Iterable<ServerLatency> results,
     required bool batchComplete,
     int Function(String id, int latencyMs)? score,
   }) {
-    int rank(({String id, bool success, int? latencyMs}) r) {
+    int rank(ServerLatency r) {
       final ms = r.latencyMs ?? 1 << 30;
       return score == null ? ms : score(r.id, ms);
     }
 
-    ({String id, bool success, int? latencyMs})? current;
-    ({String id, bool success, int? latencyMs})? best;
+    ServerLatency? current;
+    ServerLatency? best;
     for (final r in results) {
       if (r.id == currentId) {
         current = r;

@@ -1,9 +1,10 @@
+import '../models/probe_results.dart';
 import 'tunnel_session_request.dart';
 import 'vpn_backend.dart';
 import 'tunnel_state.dart';
 
 typedef UrlTestProgress = void Function(
-  ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+  ServerUrlTestResult
       result,
 );
 
@@ -41,13 +42,7 @@ abstract class TunnelBackend {
   Future<String?> getAppIcon(String path) async => null;
 
   Future<
-      List<({
-        String id,
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })>> xrayUrlTestBatch({
+      List<ServerUrlTestResult>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -58,13 +53,7 @@ abstract class TunnelBackend {
 
   Future<({int down, int up})?> sessionTrafficCounters() async => null;
 
-  Future<List<({
-        String id,
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })>?> xrayUrlTestMulti({
+  Future<List<ServerUrlTestResult>?> xrayUrlTestMulti({
     required String config,
     required List<(String id, int port)> probes,
     VpnBackend core = VpnBackend.xray,
@@ -77,12 +66,7 @@ abstract class TunnelBackend {
       null;
 
   Future<
-      List<({
-        String id,
-        bool success,
-        int? kbps,
-        String error,
-      })>> xraySpeedTestBatch({
+      List<ServerSpeedTestResult>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,

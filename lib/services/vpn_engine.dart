@@ -1,3 +1,4 @@
+import '../models/probe_results.dart';
 import '../tunnel/connection_mode.dart';
 import '../tunnel/tunnel_backend.dart';
 import '../tunnel/tunnel_backend_factory.dart';
@@ -73,13 +74,7 @@ class VpnEngine {
   Future<bool> requestVpnPermission() => _backend.requestTunnelPermission();
 
   Future<
-      List<({
-        String id,
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })>> xrayUrlTestBatch({
+      List<ServerUrlTestResult>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -99,13 +94,7 @@ class VpnEngine {
   Future<({int down, int up})?> sessionTrafficCounters() =>
       _backend.sessionTrafficCounters();
 
-  Future<List<({
-        String id,
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })>?> xrayUrlTestMulti({
+  Future<List<ServerUrlTestResult>?> xrayUrlTestMulti({
     required String config,
     required List<(String id, int port)> probes,
     VpnBackend core = VpnBackend.xray,
@@ -126,7 +115,7 @@ class VpnEngine {
         onEach: onEach,
       );
 
-  Future<({bool success, int? latencyMs, String error, int? httpStatus})>
+  Future<UrlTestResult>
       xrayUrlTest({
     required String xrayConfig,
     required int socksPort,
@@ -156,12 +145,7 @@ class VpnEngine {
   }
 
   Future<
-      List<({
-        String id,
-        bool success,
-        int? kbps,
-        String error,
-      })>> xraySpeedTestBatch({
+      List<ServerSpeedTestResult>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -176,7 +160,7 @@ class VpnEngine {
         timeoutMs: timeoutMs,
       );
 
-  Future<({bool success, int? kbps, String error})> xraySpeedTest({
+  Future<SpeedTestResult> xraySpeedTest({
     required String xrayConfig,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,

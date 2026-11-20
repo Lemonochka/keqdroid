@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
+import '../models/probe_results.dart';
 import '../utils/socks5_credentials.dart';
 import 'tunnel_backend.dart';
 import 'tunnel_session_request.dart';
@@ -231,13 +232,7 @@ class AndroidTunnelBackend implements TunnelBackend {
   Future<String?> getAppIcon(String path) async => null;
 
   @override
-  Future<List<({
-        String id,
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })>?> xrayUrlTestMulti({
+  Future<List<ServerUrlTestResult>?> xrayUrlTestMulti({
     required String config,
     required List<(String id, int port)> probes,
     VpnBackend core = VpnBackend.xray,
@@ -277,7 +272,7 @@ class AndroidTunnelBackend implements TunnelBackend {
     }
   }
 
-  static ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+  static ServerUrlTestResult
       _urlTestResult(Map<Object?, Object?> map) => (
             id: map['id'] as String? ?? '',
             success: map['success'] as bool? ?? false,
@@ -307,13 +302,7 @@ class AndroidTunnelBackend implements TunnelBackend {
 
   @override
   Future<
-      List<({
-        String id,
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })>> xrayUrlTestBatch({
+      List<ServerUrlTestResult>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -366,12 +355,7 @@ class AndroidTunnelBackend implements TunnelBackend {
 
   @override
   Future<
-      List<({
-        String id,
-        bool success,
-        int? kbps,
-        String error,
-      })>> xraySpeedTestBatch({
+      List<ServerSpeedTestResult>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,

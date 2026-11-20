@@ -1144,7 +1144,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
     List<ServerItem> servers,
   ) {
     final measure = _AutoSelectMeasure(currentId);
-    ({String id, bool success, int? latencyMs}) entry(PingResult r) =>
+    ServerLatency entry(PingResult r) =>
         (id: r.serverId, success: r.success, latencyMs: r.latencyMs);
     measure.done = () async {
       try {
@@ -1740,7 +1740,7 @@ class _AutoSelectMeasure {
 
   final String serverId;
 
-  final results = <String, ({String id, bool success, int? latencyMs})>{};
+  final results = <String, ServerLatency>{};
   List<PingResult> pings = const [];
   bool complete = false;
   Future<void> done = Future<void>.value();
@@ -1748,7 +1748,7 @@ class _AutoSelectMeasure {
 
   Future<void> get changed => complete ? Future<void>.value() : _changed.future;
 
-  void add(({String id, bool success, int? latencyMs}) result) {
+  void add(ServerLatency result) {
     results[result.id] = result;
     _signal();
   }

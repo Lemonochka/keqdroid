@@ -12,6 +12,7 @@ import '../l10n/app_localizations.dart';
 import '../models/app_info.dart';
 import '../models/app_settings.dart';
 import '../models/ping_test_config.dart';
+import '../models/probe_results.dart';
 import '../models/routing_profile.dart';
 import '../models/server_group.dart';
 import '../models/tun_settings.dart';

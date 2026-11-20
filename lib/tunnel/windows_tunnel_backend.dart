@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 
 import '../core/app_logger.dart';
 import '../core/exceptions.dart';
+import '../models/probe_results.dart';
 import '../services/core_dial_failures.dart';
 import '../services/xray_connection_lines.dart';
 import '../services/xray_route_decisions.dart';
@@ -754,7 +755,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
   @override
   Future<
     List<
-      ({String id, bool success, int? latencyMs, String error, int? httpStatus})
+      ServerUrlTestResult
     >?
   >
   xrayUrlTestMulti({
@@ -780,13 +781,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   @override
   Future<
-      List<({
-        String id,
-        bool success,
-        int? latencyMs,
-        String error,
-        int? httpStatus,
-      })>> xrayUrlTestBatch({
+      List<ServerUrlTestResult>> xrayUrlTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
@@ -820,12 +815,7 @@ class WindowsTunnelBackend with DesktopTrafficStats implements TunnelBackend {
 
   @override
   Future<
-      List<({
-        String id,
-        bool success,
-        int? kbps,
-        String error,
-      })>> xraySpeedTestBatch({
+      List<ServerSpeedTestResult>> xraySpeedTestBatch({
     required List<(String id, String xrayConfig)> items,
     required int socksPort,
     VpnBackend core = VpnBackend.xray,
