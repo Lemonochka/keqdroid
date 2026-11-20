@@ -37,6 +37,7 @@ class ConfigGeneratorV2 {
     List<RouteServerOutbound> routeServers = const [],
     List<RouteAppRules> appRoutes = const [],
     OwnerGuard ownerGuard = OwnerGuard.off,
+    bool resolveTargets = false,
   }) {
     final config = _buildXrayConfig(
       input,
@@ -53,8 +54,47 @@ class ConfigGeneratorV2 {
     if (nativeTunInbound && desktopTun == null && nativeTunIpv6) {
       _markNativeTunIpv6(config);
     }
+    if (resolveTargets) {
+      _resolveTargetsAtExits(
+        config,
+        ipv6: desktopTun?.passIpv6 == true || nativeTunIpv6,
+      );
+    }
     return const JsonEncoder.withIndent('  ').convert(config);
   }
+
+  // узел не обслуживает имена (NamesFallback): адрес ищет само ядро своим DNS, а не нашедши, шлёт имя как раньше.
+  // звенья под dialerProxy не трогаем, им адрес следующего узла резолвит предыдущее
+  static void _resolveTargetsAtExits(
+    Map<String, dynamic> config, {
+    required bool ipv6,
+  }) {
+    final outbounds = config['outbounds'];
+    if (outbounds is! List) return;
+    final hops = <String>{
+      for (final o in outbounds)
+        if (o is Map) ...[
+          ?((o['streamSettings'] as Map?)?['sockopt'] as Map?)?['dialerProxy']
+              ?.toString(),
+          ?(o['proxySettings'] as Map?)?['tag']?.toString(),
+        ],
+    };
+    for (final o in outbounds) {
+      if (o is! Map) continue;
+      final tag = o['tag']?.toString() ?? '';
+      final protocol = o['protocol']?.toString().toLowerCase() ?? '';
+      if (_localProtocols.contains(protocol) ||
+          hops.contains(tag) ||
+          tag.startsWith('keq-')) {
+        continue;
+      }
+      final own = o['targetStrategy'];
+      if (own is String && own.isNotEmpty) continue;
+      o['targetStrategy'] = ipv6 ? 'UseIP' : 'UseIPv4';
+    }
+  }
+
+  static const _localProtocols = {'freedom', 'blackhole', 'dns', 'loopback'};
 
   static String generatePingConfig(
     String input,

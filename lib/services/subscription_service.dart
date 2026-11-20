@@ -1465,7 +1465,8 @@ class SubscriptionService {
         if (stableMatch != null && usedOldIds.add(stableMatch.id)) {
           // правленный руками конфиг не затираем, пока сервер тот же
           if (stableMatch.configOverridden) return stableMatch;
-          return stableMatch.copyWith(config: config);
+          // узел мог смениться, запасной режим проверится заново
+          return stableMatch.copyWith(config: config, namesFallbackAt: null);
         }
         return null;
       }).toList();
@@ -1497,7 +1498,7 @@ class SubscriptionService {
             same.length == 1 &&
             unmatchedNew[key] == 1 &&
             usedOldIds.add(same.single.id)) {
-          return same.single.copyWith(config: config);
+          return same.single.copyWith(config: config, namesFallbackAt: null);
         }
         return ServerItem.fromRaw(config, subscriptionId: sub.id);
       }

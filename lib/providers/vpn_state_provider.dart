@@ -49,6 +49,24 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
   @visibleForTesting
   Future<void> debugAutoSelectRecheck() => _autoSelect.recheckTick();
 
+  late final _namesFallback = _NamesFallbackMonitor(
+    ref: () => ref,
+    live: () => _live,
+    vpnState: () => state.value,
+    reconnect: reconnectToActiveServer,
+    now: () => (debugNamesFallbackClock ?? DateTime.now)(),
+    probe: (port) => (debugNamesProbe ?? NamesFallback.probe)(port),
+  );
+
+  @visibleForTesting
+  static DateTime Function()? debugNamesFallbackClock;
+
+  @visibleForTesting
+  static Future<NamesVerdict> Function(int httpPort)? debugNamesProbe;
+
+  @visibleForTesting
+  Future<void> debugNamesFallbackCheck() => _namesFallback.check();
+
   void _applyNativeState(VpnState s) {
     if (s.status == VpnStatus.connected) {
       unawaited(syncSocksCredentialsFromService());
@@ -232,6 +250,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
         localProxyCredentialsSync = null;
       }
       _autoSelect.stop();
+      _namesFallback.stop();
       _sub?.cancel();
       _stopAndroidPolling();
       _androidLifecycle?.dispose();
@@ -477,6 +496,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       if (sessionState.status == VpnStatus.connected) {
         state = AsyncData(sessionState);
         _live = built;
+        _namesFallback.connected();
       } else if (sessionState.status == VpnStatus.error) {
         // явно: при смене сервера ошибки из стрима отбрасываются, и без поллинга на десктопе UI застревал в подключении
         state = AsyncData(sessionState);
@@ -488,6 +508,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
           ),
         );
         _live = built;
+        _namesFallback.connected();
       }
     } catch (e, st) {
       if (_cancelRequested) {
@@ -934,6 +955,24 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
 
     final xrayDesktopTun = desktop && tunSession && !mihomoPicked;
 
+    // проверка ходит через локальный вход и смотрит именно сервер, поэтому только там, где всё остальное через VPN
+    final namesCheck =
+        desktop &&
+        !mihomoPicked &&
+        settings.finalOutbound == AppSettings.finalOutboundProxy;
+    final resolveTargets =
+        !mihomoPicked &&
+        NamesFallback.active(
+          server,
+          (debugNamesFallbackClock ?? DateTime.now)(),
+        );
+    if (resolveTargets) {
+      AppLogger.instance.info(
+        'This server did not open sites by name lately, so the core finds '
+        'their addresses itself and sends the server addresses.',
+      );
+    }
+
     final listedSettings = mihomoPicked ? settings : ruleLists.expand(settings);
 
     final xrayConfig = mihomoPicked
@@ -968,6 +1007,7 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
             routeServers: routeServers,
             appRoutes: appRoutes,
             ownerGuard: ownerGuard,
+            resolveTargets: resolveTargets,
           );
 
     final session = TunnelSessionBuilder.build(
@@ -986,7 +1026,14 @@ class VpnStateNotifier extends AsyncNotifier<VpnState> {
       serverName: server.displayName,
       modeOverride: connectionMode,
     );
-    return (request: session, ports: portPlan, creds: creds);
+    return (
+      request: session,
+      ports: portPlan,
+      creds: creds,
+      serverId: server.id,
+      namesCheck: namesCheck,
+      resolvesTargets: resolveTargets,
+    );
   }
 
   Future<void> cancelConnect() async {
@@ -1120,4 +1167,7 @@ typedef _LiveSession = ({
   TunnelSessionRequest request,
   LocalPortPlan? ports,
   ({String username, String password}) creds,
+  String serverId,
+  bool namesCheck,
+  bool resolvesTargets,
 });

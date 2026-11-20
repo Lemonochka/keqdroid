@@ -33,6 +33,7 @@ import '../services/geo_asset_service.dart';
 import '../services/linux_firewall.dart';
 import '../services/expiry_reminder.dart';
 import '../services/mihomo_groups_api.dart';
+import '../services/names_fallback.dart';
 import '../services/notification_service.dart';
 import '../services/ping_service.dart';
 import '../services/rule_list_service.dart';
@@ -88,6 +89,7 @@ import 'ui_state_providers.dart';
 export 'ui_state_providers.dart';
 
 part 'auto_select_monitor.dart';
+part 'names_fallback_monitor.dart';
 part 'routes_provider.dart';
 part 'rule_lists_provider.dart';
 part 'servers_provider.dart';

@@ -560,6 +560,14 @@ class ServersNotifier extends Notifier<ServersState> {
     return results;
   }
 
+  Future<void> setNamesFallback(String serverId, DateTime? at) async {
+    final merged = await ref
+        .read(storageProvider)
+        .applyNamesFallback(serverId, at);
+    if (!ref.mounted) return;
+    state = state.copyWith(servers: merged);
+  }
+
   bool _ipv6Probing = false;
 
   Future<void> refreshIpv6Exits(List<PingResult> results) async {

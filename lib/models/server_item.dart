@@ -36,6 +36,8 @@ class ServerItem {
   // null: ещё не проверяли; проверка идёт в замере, только когда IPv6 пускают через VPN
   final bool? ipv6Exit;
   final DateTime? ipv6CheckedAt;
+  // узел не обслуживал имена, адрес ищет наше ядро; действует сутки (NamesFallback)
+  final DateTime? namesFallbackAt;
 
   String? _cachedDerivedName;
   ServerFlag? _cachedFlag;
@@ -70,6 +72,7 @@ class ServerItem {
     this.pingSamples = const [],
     this.ipv6Exit,
     this.ipv6CheckedAt,
+    this.namesFallbackAt,
   }) : addedAt = addedAt ?? DateTime.now();
 
   factory ServerItem.fromRaw(
@@ -117,6 +120,9 @@ class ServerItem {
     ipv6CheckedAt: json['ipv6CheckedAt'] is String
         ? DateTime.tryParse(json['ipv6CheckedAt'] as String)
         : null,
+    namesFallbackAt: json['namesFallbackAt'] is String
+        ? DateTime.tryParse(json['namesFallbackAt'] as String)
+        : null,
   );
 
   Map<String, dynamic> toJson() => {
@@ -138,6 +144,8 @@ class ServerItem {
     if (ipv6Exit != null) 'ipv6Exit': ipv6Exit,
     if (ipv6CheckedAt != null)
       'ipv6CheckedAt': ipv6CheckedAt!.toIso8601String(),
+    if (namesFallbackAt != null)
+      'namesFallbackAt': namesFallbackAt!.toIso8601String(),
   };
 
   ServerItem copyWith({
@@ -157,6 +165,7 @@ class ServerItem {
     List<PingSample>? pingSamples,
     Object? ipv6Exit = _sentinel,
     Object? ipv6CheckedAt = _sentinel,
+    Object? namesFallbackAt = _sentinel,
   }) => ServerItem(
     id: id ?? this.id,
     config: config ?? this.config,
@@ -182,6 +191,9 @@ class ServerItem {
     ipv6CheckedAt: ipv6CheckedAt == _sentinel
         ? this.ipv6CheckedAt
         : ipv6CheckedAt as DateTime?,
+    namesFallbackAt: namesFallbackAt == _sentinel
+        ? this.namesFallbackAt
+        : namesFallbackAt as DateTime?,
   );
 
   bool get isPinned => pinnedAt != null;

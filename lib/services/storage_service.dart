@@ -204,6 +204,19 @@ class StorageService {
     return out;
   });
 
+  Future<List<ServerItem>> applyNamesFallback(String serverId, DateTime? at) =>
+      _serial(() async {
+        final servers = await getServers();
+        var changed = false;
+        final out = servers.map((s) {
+          if (s.id != serverId || s.namesFallbackAt == at) return s;
+          changed = true;
+          return s.copyWith(namesFallbackAt: at);
+        }).toList();
+        if (changed) await _writeServers(out);
+        return out;
+      });
+
   Future<List<Subscription>> getSubscriptions() async {
     try {
       final raw = _prefs.getString(_kSubscriptions);
