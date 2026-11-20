@@ -6,9 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keqdroid/core/exceptions.dart';
 import 'package:keqdroid/services/xray_route_decisions.dart';
+import 'package:keqdroid/tunnel/connection_mode.dart';
+import 'package:keqdroid/tunnel/desktop_core_session.dart';
 import 'package:keqdroid/tunnel/linux_tunnel_backend.dart';
 import 'package:keqdroid/tunnel/tun_failure_hints.dart';
 import 'package:keqdroid/tunnel/tunnel_backend.dart';
+import 'package:keqdroid/tunnel/tunnel_session_request.dart';
 import 'package:keqdroid/tunnel/tunnel_state.dart';
 import 'package:keqdroid/tunnel/windows_tunnel_backend.dart';
 
@@ -554,6 +557,114 @@ void main() {
       });
     });
   }
+
+  group('общая основа', () {
+    test('штатный стоп с эмитами, перезапуск без них', () async {
+      final s = _Session();
+
+      await s.stopSession();
+      await s.restart();
+
+      expect(s.stops, [true, false]);
+      expect(s.stoppingDuringStop, [true, true]);
+      expect(s.stopping, isFalse);
+    });
+
+    test('упавшая остановка не оставляет флаг поднятым', () async {
+      final s = _Session()..failStop = true;
+
+      await expectLater(s.stopSession(), throwsStateError);
+      expect(s.stopping, isFalse);
+    });
+
+    test('сторож глушит ядро, которого нет в сессии', () async {
+      final s = _Session();
+      final core = FakeCoreProcess();
+      s.watch(core, 'xray');
+
+      core.exit(1);
+      await pumpEventQueue();
+
+      expect(s.stops, isEmpty);
+      expect(s.states, isEmpty);
+    });
+
+    test(
+      'каталог сессии удаляется целиком, пустой и пропавший молча',
+      () async {
+        final dir = await Directory.systemTemp.createTemp('keqdis_session_');
+        await File('${dir.path}/xray.json').writeAsString('{}');
+        await Directory('${dir.path}/geo').create();
+
+        await deleteSessionDir(dir);
+        expect(dir.existsSync(), isFalse);
+
+        await deleteSessionDir(dir);
+        await deleteSessionDir(null);
+      },
+    );
+
+    test('свободный порт правда свободен', () async {
+      final port = await freeLoopbackPort();
+      final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
+      await s.close();
+    });
+
+    test('занятый HTTP-порт останавливает запуск', () async {
+      final busy = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(busy.close);
+      final request = TunnelSessionRequest(
+        mode: ConnectionMode.proxy,
+        xrayConfig: '{}',
+        socksPort: await _closedPort(),
+        httpPort: busy.port,
+      );
+
+      await expectLater(
+        ensureLocalPortsFree(request),
+        throwsA(
+          isA<VpnStartException>().having(
+            (e) => e.message,
+            'message',
+            startsWith('HTTP port ${busy.port} '),
+          ),
+        ),
+      );
+    });
+
+    test('exitCodeOrNull не ждёт живой процесс', () async {
+      final core = FakeCoreProcess();
+      expect(await exitCodeOrNull(core), isNull);
+      core.exit(-15);
+      expect(await exitCodeOrNull(core), -15);
+    });
+  });
+}
+
+class _Session with DesktopCoreSession {
+  final states = <VpnState>[];
+  final stops = <bool>[];
+  final stoppingDuringStop = <bool>[];
+  bool failStop = false;
+
+  @override
+  Iterable<Process?> get sessionCores => const [];
+
+  @override
+  void emit(VpnState state) => states.add(state);
+
+  @override
+  Future<void> stopSessionInner({bool emitStates = true}) async {
+    stops.add(emitStates);
+    stoppingDuringStop.add(stoppingSession);
+    if (failStop) throw StateError('stop failed');
+  }
+
+  bool get stopping => stoppingSession;
+
+  Future<void> restart() => cleanupForRestart();
+
+  void watch(Process process, String label) => watchCoreExit(process, label);
 }
 
 Future<int> _closedPort() async {
