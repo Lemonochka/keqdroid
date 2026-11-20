@@ -1,0 +1,17 @@
+# panel export, tab indented
+proxies:
+	- name: "Tab One"
+	  type: trojan
+	  server: 198.51.100.110
+	  port: 443
+	  password: 'password'
+	  sni: tab.example
+	- name: Tab Two
+	  type: vless
+	  server: 198.51.100.111
+	  port: 443
+	  uuid: 00000000-0000-4000-8000-000000000000
+	  tls: true
+	  servername: tab2.example
+rules:
+	- MATCH,DIRECT

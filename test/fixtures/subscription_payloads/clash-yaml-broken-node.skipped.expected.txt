@@ -1,0 +1,2 @@
+{vless: 1}
+1 of type vless

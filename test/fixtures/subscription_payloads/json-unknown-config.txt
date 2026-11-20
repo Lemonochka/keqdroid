@@ -1,0 +1,4 @@
+{
+  "inbounds": [{ "port": 1080, "listen": "127.0.0.1" }],
+  "note": "an inbound-only config, nothing to connect through"
+}

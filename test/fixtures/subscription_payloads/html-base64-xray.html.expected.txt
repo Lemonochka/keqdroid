@@ -1,0 +1,25 @@
+{
+  "remarks": "Mixed Ready",
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "trojan",
+      "settings": {
+        "servers": [
+          {
+            "address": "198.51.100.81",
+            "port": 443,
+            "password": "password"
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "mixed2.example"
+        }
+      }
+    }
+  ]
+}

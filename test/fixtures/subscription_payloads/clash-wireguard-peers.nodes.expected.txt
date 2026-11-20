@@ -1,0 +1,1 @@
+{"name":"wg","proxies":[{"name":"wg","type":"wireguard","ip":"172.16.0.2","ipv6":"2001:db8::5","private-key":"cGFzc3dvcmQtcGFzc3dvcmQtcGFzc3dvcmQtcGFzcw==","peers":[{"server":"203.0.113.60","port":2408,"public-key":"cGFzc3dvcmQtcGFzc3dvcmQtcGFzc3dvcmQtcGFzcw==","allowed-ips":["0.0.0.0/0"],"reserved":[1,2,3]}],"udp":true}],"rules":["MATCH,wg"]}

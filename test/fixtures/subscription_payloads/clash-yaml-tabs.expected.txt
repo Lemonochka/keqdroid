@@ -1,0 +1,2 @@
+trojan://password@198.51.100.110:443?security=tls&sni=tab.example#Tab%20One
+vless://00000000-0000-4000-8000-000000000000@198.51.100.111:443?security=tls&sni=tab2.example#Tab%20Two

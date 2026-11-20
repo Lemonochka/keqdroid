@@ -1,0 +1,2 @@
+{brook: 2, unknown: 1}
+2 of type brook, 1 of type unknown

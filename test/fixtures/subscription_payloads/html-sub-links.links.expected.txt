@@ -1,0 +1,8 @@
+https://panel.example/sub/0000
+https://panel.example/subscription?format=raw&client=v2ray
+https://panel.example/page/sub/relative
+https://panel.example/api/v1/client/subscribe
+https://panel.example/sub/frame
+https://panel.example/sub/redirect
+https://panel.example/api/nodes?token=0000
+https://panel.example/sub/json

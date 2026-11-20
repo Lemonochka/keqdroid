@@ -1,0 +1,1 @@
+Provider returned service links because no hosts are configured for this subscription. Open provider panel and add/assign hosts in the Hosts tab.

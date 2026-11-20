@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Panel</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js"></script>
+</head>
+<body>
+  <a href="/login">Sign in</a>
+  <a href="/register?ref=sub">Register</a>
+  <a href="/sub/0000">Download subscription</a>
+  <a href="https://cdn.panel.example/sub/logo.png">Logo</a>
+  <a href="/subscription?format=raw&amp;client=v2ray">Raw list</a>
+  <a href="sub/relative">Relative</a>
+  <div data-url="/api/v1/client/subscribe"></div>
+  <iframe src="/sub/frame"></iframe>
+  <a href="/about">About</a>
+  <script>
+    fetch('/api/nodes?token=0000');
+    axios.get("https:\/\/panel.example\/sub\/json");
+    open("/subscription/alt");
+    window.location.href = "/sub/redirect";
+  </script>
+</body>
+</html>

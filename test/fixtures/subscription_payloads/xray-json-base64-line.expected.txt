@@ -1,0 +1,26 @@
+{
+  "remarks": "Mixed Ready",
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "trojan",
+      "settings": {
+        "servers": [
+          {
+            "address": "198.51.100.81",
+            "port": 443,
+            "password": "password"
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "mixed2.example"
+        }
+      }
+    }
+  ]
+}
+vless://00000000-0000-4000-8000-000000000000@198.51.100.10:443?type=tcp&security=reality&sni=decoy.example&pbk=publickey&sid=aabb&fp=chrome#Node%20One

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Entities</title></head>
+<body>
+  <pre>
+vless&#58;//00000000-0000-4000-8000-000000000000@198.51.100.170:443?type=tcp&amp;security=tls&amp;sni=entity.example#Entity%20Decimal
+trojan&#x3a;//password@198.51.100.171:443?security=tls&amp;sni=entity2.example#Entity Hex
+  </pre>
+  <script>
+    var nodes = ["trojan\u003a//password@198.51.100.172:443?security=tls&sni=entity3.example#Entity Unicode"];
+  </script>
+</body>
+</html>

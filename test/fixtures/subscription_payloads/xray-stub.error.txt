@@ -1,0 +1,1 @@
+Subscription returned an Xray config without a server address. This is usually a provider stub: check subscription status and HWID binding in the provider panel.

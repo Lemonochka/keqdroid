@@ -1,0 +1,8 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Config</title></head>
+<body>
+  <p>Import this config into your client.</p>
+  <textarea readonly>{"remarks":"HTML Ready","outbounds":[{"tag":"proxy","protocol":"trojan","settings":{"servers":[{"address":"198.51.100.180","port":443,"password":"password"}]},"streamSettings":{"network":"tcp","security":"tls","tlsSettings":{"serverName":"htmljson.example"}}}]}</textarea>
+</body>
+</html>

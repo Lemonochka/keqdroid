@@ -1,0 +1,14 @@
+proxies:
+  - name: "Subscription is not active"
+    type: vless
+    server: ""
+    port: 443
+    uuid: 00000000-0000-4000-8000-000000000000
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [Subscription is not active]
+
+rules:
+  - MATCH,PROXY

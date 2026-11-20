@@ -1,0 +1,19 @@
+{
+  "remarks": "Subscription is not active",
+  "outbounds": [
+    {
+      "tag": "proxy",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "",
+            "port": 443,
+            "users": [{ "id": "00000000-0000-4000-8000-000000000000", "encryption": "none" }]
+          }
+        ]
+      }
+    },
+    { "tag": "direct", "protocol": "freedom" }
+  ]
+}

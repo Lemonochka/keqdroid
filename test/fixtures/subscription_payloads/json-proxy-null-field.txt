@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Null One",
+    "type": "trojan",
+    "server": "198.51.100.160",
+    "port": 443,
+    "password": "password",
+    "sni": "null.example",
+    "alpn": null
+  },
+  {
+    "name": "Null Two",
+    "type": "trojan",
+    "server": "198.51.100.161",
+    "port": 443,
+    "password": "password",
+    "sni": "null2.example"
+  }
+]

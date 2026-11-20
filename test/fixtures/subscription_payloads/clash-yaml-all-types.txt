@@ -1,0 +1,184 @@
+proxies:
+  - name: "Vmess WS"
+    type: vmess
+    server: 198.51.100.130
+    port: 443
+    uuid: 00000000-0000-4000-8000-000000000000
+    alterId: 0
+    cipher: auto
+    tls: true
+    servername: vmess.example
+    network: ws
+    ws-opts:
+      path: /vmess
+      headers:
+        Host: cdn.vmess.example
+      max-early-data: 2048
+      early-data-header-name: Sec-WebSocket-Protocol
+  - name: "Vmess H2"
+    type: vmess
+    server: 198.51.100.131
+    port: 443
+    uuid: 00000000-0000-4000-8000-000000000000
+    alterId: 0
+    cipher: auto
+    tls: true
+    network: h2
+    h2-opts:
+      host: [h2.example]
+      path: /h2
+  - name: "Vless HTTP"
+    type: vless
+    server: 198.51.100.132
+    port: 80
+    uuid: 00000000-0000-4000-8000-000000000000
+    network: http
+    http-opts:
+      method: GET
+      path: [/http]
+      headers:
+        Host: [http.example]
+  - name: "Vless Reality gRPC"
+    type: vless
+    server: 198.51.100.133
+    port: 443
+    uuid: 00000000-0000-4000-8000-000000000000
+    tls: true
+    servername: reality.example
+    client-fingerprint: chrome
+    network: grpc
+    grpc-opts:
+      grpc-service-name: grpc-svc
+    reality-opts:
+      public-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      short-id: 0123abcd
+  - name: "Vless XHTTP ECH"
+    type: vless
+    server: 198.51.100.134
+    port: 443
+    uuid: 00000000-0000-4000-8000-000000000000
+    tls: true
+    servername: xhttp.example
+    alpn: [h2, http/1.1]
+    network: xhttp
+    xhttp-opts:
+      path: /xhttp
+      host: xhttp.example
+      mode: packet-up
+    ech-opts:
+      enable: true
+      config: AEX+DQBBAAAgACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  - name: "SS obfs"
+    type: ss
+    server: 198.51.100.135
+    port: 8388
+    cipher: aes-128-gcm
+    password: password
+    plugin: obfs
+    plugin-opts:
+      mode: http
+      host: obfs.example
+  - name: "SS v2ray-plugin"
+    type: ss
+    server: 198.51.100.136
+    port: 443
+    cipher: chacha20-ietf-poly1305
+    password: password
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket
+      tls: true
+      host: v2ray.example
+      path: /ws
+  - name: "SS UoT"
+    type: ss
+    server: 198.51.100.137
+    port: 8388
+    cipher: aes-256-gcm
+    password: password
+    udp-over-tcp: true
+    udp-over-tcp-version: 2
+  - name: "SSR"
+    type: ssr
+    server: 198.51.100.138
+    port: 8389
+    cipher: aes-256-cfb
+    password: password
+    obfs: tls1.2_ticket_auth
+    protocol: auth_sha1_v4
+    obfs-param: ssr.example
+    protocol-param: "1:password"
+  - name: "TUIC v5"
+    type: tuic
+    server: 198.51.100.139
+    port: 443
+    uuid: 00000000-0000-4000-8000-000000000000
+    password: password
+    alpn: [h3]
+    sni: tuic.example
+    congestion-controller: bbr
+    udp-relay-mode: native
+  - name: "TUIC v4"
+    type: tuic
+    server: 198.51.100.140
+    port: 443
+    token: token
+    disable-sni: true
+  - name: "AnyTLS"
+    type: anytls
+    server: 198.51.100.141
+    port: 443
+    password: password
+    sni: anytls.example
+    client-fingerprint: chrome
+    fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  - name: "Mieru"
+    type: mieru
+    server: 198.51.100.142
+    port-range: 2090-2099
+    username: client
+    password: password
+    transport: TCP
+    multiplexing: MULTIPLEXING_LOW
+    handshake-mode: HANDSHAKE_NO_WAIT
+    traffic-pattern: GgQIARAK
+  - name: "Hy2"
+    type: hysteria2
+    server: 198.51.100.143
+    port: 443
+    ports: 20000-20050
+    hop-interval: 30
+    password: password
+    sni: hy2.example
+    skip-cert-verify: true
+    obfs: salamander
+    obfs-password: password
+    alpn: [h3]
+    up: 30
+    down: 100
+  - name: "Hy1"
+    type: hysteria
+    server: 198.51.100.144
+    port: 443
+    auth-str: password
+    up: 30
+    down: 100
+  - name: "Brook One"
+    type: brook
+    server: 198.51.100.145
+    port: 9999
+  - name: "Brook Two"
+    type: brook
+    server: 198.51.100.146
+    port: 9999
+  - name: "No Type"
+    server: 198.51.100.147
+    port: 9999
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [Vmess WS, Vless Reality gRPC, Hy2]
+
+rules:
+  - MATCH,PROXY

@@ -1,0 +1,15 @@
+vmess://eyJ2IjoiMiIsInBzIjoiVm1lc3MgV1MiLCJhZGQiOiIxOTguNTEuMTAwLjEzMCIsInBvcnQiOiI0NDMiLCJpZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMCIsImFpZCI6IjAiLCJzY3kiOiJhdXRvIiwibmV0Ijoid3MiLCJ0eXBlIjoibm9uZSIsImhvc3QiOiJjZG4udm1lc3MuZXhhbXBsZSIsInBhdGgiOiIvdm1lc3M/ZWQ9MjA0OCIsInRscyI6InRscyIsInNuaSI6InZtZXNzLmV4YW1wbGUifQ==
+vmess://eyJ2IjoiMiIsInBzIjoiVm1lc3MgSDIiLCJhZGQiOiIxOTguNTEuMTAwLjEzMSIsInBvcnQiOiI0NDMiLCJpZCI6IjAwMDAwMDAwLTAwMDAtNDAwMC04MDAwLTAwMDAwMDAwMDAwMCIsImFpZCI6IjAiLCJzY3kiOiJhdXRvIiwibmV0IjoiaDIiLCJ0eXBlIjoibm9uZSIsImhvc3QiOiJoMi5leGFtcGxlIiwicGF0aCI6Ii9oMiIsInRscyI6InRscyJ9
+vless://00000000-0000-4000-8000-000000000000@198.51.100.132:80?type=tcp&path=%2Fhttp&host=http.example&headerType=http&method=GET#Vless%20HTTP
+vless://00000000-0000-4000-8000-000000000000@198.51.100.133:443?type=grpc&serviceName=grpc-svc&security=reality&pbk=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&sid=0123abcd&sni=reality.example&fp=chrome#Vless%20Reality%20gRPC
+vless://00000000-0000-4000-8000-000000000000@198.51.100.134:443?type=xhttp&path=%2Fxhttp&host=xhttp.example&mode=packet-up&security=tls&sni=xhttp.example&alpn=h2%2Chttp%2F1.1&ech=AEX%2BDQBBAAAgACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA#Vless%20XHTTP%20ECH
+ss://YWVzLTEyOC1nY206cGFzc3dvcmQ@198.51.100.135:8388?plugin=obfs-local%3Bobfs%3Dhttp%3Bobfs-host%3Dobfs.example#SS%20obfs
+ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTpwYXNzd29yZA@198.51.100.136:443?plugin=v2ray-plugin%3Btls%3Bmode%3Dwebsocket%3Bhost%3Dv2ray.example%3Bpath%3D%2Fws#SS%20v2ray-plugin
+ss://YWVzLTI1Ni1nY206cGFzc3dvcmQ@198.51.100.137:8388?uot=1&udp-over-tcp-version=2#SS%20UoT
+ssr://MTk4LjUxLjEwMC4xMzg6ODM4OTphdXRoX3NoYTFfdjQ6YWVzLTI1Ni1jZmI6dGxzMS4yX3RpY2tldF9hdXRoOmNHRnpjM2R2Y21RLz9vYmZzcGFyYW09YzNOeUxtVjRZVzF3YkdVJnByb3RvcGFyYW09TVRwd1lYTnpkMjl5WkEmcmVtYXJrcz1VMU5T
+tuic://00000000-0000-4000-8000-000000000000:password@198.51.100.139:443?sni=tuic.example&alpn=h3&congestion_control=bbr&udp_relay_mode=native#TUIC%20v5
+tuic://token@198.51.100.140:443?disable_sni=1#TUIC%20v4
+anytls://password@198.51.100.141:443?sni=anytls.example&fp=chrome&hpkp=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa#AnyTLS
+mierus://client:password@198.51.100.142?port=2090-2099&protocol=TCP&multiplexing=MULTIPLEXING_LOW&handshake-mode=HANDSHAKE_NO_WAIT&traffic-pattern=GgQIARAK#Mieru
+hy2://198.51.100.143:443?auth=password&version=2&sni=hy2.example&insecure=1&obfs=salamander&obfs-password=password&alpn=h3&up=30&down=100&mport=20000-20050&hop-interval=30#Hy2
+{"name":"Hy1","proxies":[{"name":"Hy1","type":"hysteria","server":"198.51.100.144","port":443,"auth-str":"password","up":30,"down":100}],"rules":["MATCH,Hy1"]}

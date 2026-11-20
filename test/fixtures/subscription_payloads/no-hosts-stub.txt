@@ -1,0 +1,2 @@
+vless://00000000-0000-4000-8000-000000000000@0.0.0.0:1?type=tcp#Did you forget to add hosts?
+vless://00000000-0000-4000-8000-000000000000@0.0.0.0:1?type=tcp#Check Hosts tab

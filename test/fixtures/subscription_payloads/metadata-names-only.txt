@@ -1,0 +1,2 @@
+vless://00000000-0000-4000-8000-000000000000@198.51.100.150:443?type=tcp&security=tls&sni=names.example#Осталось дней: 5
+vless://00000000-0000-4000-8000-000000000000@198.51.100.151:443?type=tcp&security=tls&sni=names2.example#Traffic: 10 GB

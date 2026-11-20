@@ -1,0 +1,1 @@
+Provider returned service links (0.0.0.0:1) instead of real nodes. This usually means HWID is required but not bound/approved yet in provider panel.

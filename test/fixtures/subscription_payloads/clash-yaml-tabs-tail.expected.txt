@@ -1,0 +1,2 @@
+ss://YWVzLTEyOC1nY206cGFzc3dvcmQ@198.51.100.112:8388#Tail%20SS
+hy2://198.51.100.113:443?auth=password&version=2&sni=tail.example#Tail%20Hy2

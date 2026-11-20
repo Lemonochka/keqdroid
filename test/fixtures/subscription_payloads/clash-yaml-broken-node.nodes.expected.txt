@@ -1,0 +1,2 @@
+trojan://password@198.51.100.50:443?security=tls&sni=good.example#Good%20One
+ss://YWVzLTEyOC1nY206cGFzc3dvcmQ@198.51.100.51:8388#Good%20Two

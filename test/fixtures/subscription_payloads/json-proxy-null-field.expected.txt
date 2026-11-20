@@ -1,0 +1,1 @@
+trojan://password@198.51.100.160:443?security=tls&sni=null.example#Null%20One

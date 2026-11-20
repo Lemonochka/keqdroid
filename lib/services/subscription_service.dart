@@ -1237,6 +1237,24 @@ class SubscriptionService {
   static List<String> parseBodyForTest(String content) => _parseBody(content);
 
   @visibleForTesting
+  static List<String>? extractConfigsFromHtmlForTest(String html) =>
+      _extractConfigsFromHtml(html);
+
+  @visibleForTesting
+  static List<String> extractSubscriptionUrlsFromHtmlForTest(
+    String html, {
+    required String baseUrl,
+  }) => _extractSubscriptionUrlsFromHtml(html, baseUrl: baseUrl);
+
+  @visibleForTesting
+  static ({int? usedBytes, int? totalBytes, DateTime? expiresAt})
+  extractMetaFromBodyForTest(String content) => _extractMetaFromBody(content);
+
+  @visibleForTesting
+  static String? skippedNodesSummaryForTest(Map<String, int> counts) =>
+      _skippedNodesSummary(counts);
+
+  @visibleForTesting
   static String stableKeyForTest(String rawConfig) => _stableKey(rawConfig);
 
   static Future<List<String>> _parseBodyOffThread(String content) =>

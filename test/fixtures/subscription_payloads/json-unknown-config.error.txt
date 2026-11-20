@@ -1,0 +1,1 @@
+Unsupported subscription format: JSON config (only Xray, sing-box and Clash configs are supported)

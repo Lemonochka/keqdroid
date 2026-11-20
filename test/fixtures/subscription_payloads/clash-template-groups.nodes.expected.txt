@@ -1,0 +1,3 @@
+trojan://p1@de.example.com:443?security=tls&sni=de.example.com#%F0%9F%87%A9%F0%9F%87%AA%20Germany
+trojan://p2@fi.example.com:443?security=tls&sni=fi.example.com#%F0%9F%87%AB%F0%9F%87%AE%20Finland
+trojan://p3@lv.example.com:443?security=tls&sni=lv.example.com#%F0%9F%87%B1%F0%9F%87%BB%20Latvia
